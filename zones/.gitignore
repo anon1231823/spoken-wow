@@ -1,0 +1,5 @@
+# Raw MediaWiki API responses. Regenerate with `node tools/scrape.mjs`.
+tools/cache/
+
+# macOS
+.DS_Store

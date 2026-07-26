@@ -1,0 +1,9 @@
+{
+  "_comment": [
+    "Hand-written lore that wins over the scraped wiki text, keyed by uiMapID.",
+    "Use this when a wiki intro is entirely post-vanilla, or when you simply want",
+    "to write better copy than the wiki has. Supply `full` and optionally `short`;",
+    "`short` is derived from `full` when omitted. These are the only lore strings",
+    "in the project that are yours rather than CC BY-SA."
+  ]
+}
