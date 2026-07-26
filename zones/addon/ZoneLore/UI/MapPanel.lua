@@ -6,10 +6,9 @@
 local ADDON_NAME, ZoneLore = ...
 
 local PADDING = 16
-local SCROLL_STEP = 28
 local INFO_LINE_HEIGHT = 16
 
-local panel, header, infoLine, scroll, scrollChild, body, footer
+local panel, header, infoLine, body, footer
 
 --------------------------------------------------------------------------------
 -- Construction
@@ -67,41 +66,9 @@ local function BuildPanel()
 	footer:SetJustifyH("LEFT")
 	footer:SetText("Lore: warcraft.wiki.gg (CC BY-SA 4.0)")
 
-	-- A plain ScrollFrame rather than UIPanelScrollFrameTemplate: no dependency
-	-- on a template whose presence on 11509 is unverified, and the lore entries
-	-- are short enough that a wheel is sufficient navigation.
-	scroll = CreateFrame("ScrollFrame", nil, panel)
-	scroll:SetPoint("TOPLEFT", infoLine, "BOTTOMLEFT", 0, -6)
-	scroll:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT", 0, 6)
-	-- A ScrollFrame already clips its scroll child; this is belt-and-braces and
-	-- guarded because it is not confirmed present on 11509.
-	if scroll.SetClipsChildren then
-		scroll:SetClipsChildren(true)
-	end
-	scroll:EnableMouseWheel(true)
-	scroll:SetScript("OnMouseWheel", function(self, delta)
-		local range = self:GetVerticalScrollRange() or 0
-		local target = self:GetVerticalScroll() - (delta * SCROLL_STEP)
-		if target < 0 then
-			target = 0
-		elseif target > range then
-			target = range
-		end
-		self:SetVerticalScroll(target)
-	end)
-
-	scrollChild = CreateFrame("Frame", nil, scroll)
-	scrollChild:SetWidth(width - PADDING * 2)
-	scrollChild:SetHeight(1)
-	scroll:SetScrollChild(scrollChild)
-
-	body = scrollChild:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-	body:SetPoint("TOPLEFT", scrollChild, "TOPLEFT", 0, 0)
-	body:SetWidth(width - PADDING * 2)
-	body:SetJustifyH("LEFT")
-	body:SetJustifyV("TOP")
-	body:SetWordWrap(true)
-	body:SetSpacing(2)
+	body = ZoneLore:CreateTextView(panel)
+	body.frame:SetPoint("TOPLEFT", infoLine, "BOTTOMLEFT", 0, -6)
+	body.frame:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT", 0, 6)
 
 	ZoneLore.panel = panel
 end
@@ -121,12 +88,8 @@ local function ApplyAnchors()
 	end
 end
 
-local function ApplyFont()
-	local size = ZoneLore:Get("fontSize")
-	local fontPath = GameFontHighlight:GetFont()
-	if fontPath then
-		body:SetFont(fontPath, size, "")
-	end
+local function SetBody(text)
+	body:SetText(text)
 end
 
 -- Maximised, the map fills the screen and a side panel would sit off-screen, so
@@ -156,13 +119,6 @@ end
 --------------------------------------------------------------------------------
 -- Content
 --------------------------------------------------------------------------------
-
-local function SetBody(text)
-	body:SetText(text or "")
-	ApplyFont()
-	scrollChild:SetHeight((body:GetStringHeight() or 0) + 8)
-	scroll:SetVerticalScroll(0)
-end
 
 local function Refresh(mapID)
 	if not panel then
@@ -240,7 +196,6 @@ function ZoneLore:SetupMapPanel()
 
 	BuildPanel()
 	ApplyAnchors()
-	ApplyFont()
 
 	-- Re-evaluate visibility whenever the map changes shape. Leatrix_Maps hooks
 	-- this same set; these are the paths that resize or re-dock the map frame.

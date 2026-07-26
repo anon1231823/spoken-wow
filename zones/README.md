@@ -14,8 +14,8 @@ retail or the Anniversary/TBC client.
 | M1 wiki scraper → generated lore data | done, 49 zones |
 | M2 world map side panel | done, tested in-game |
 | M2.5 subzone lore on map click | done; mechanism tested in-game, now all 46 zones |
-| M3 hover preview on the map | done, **untested in-game** |
-| M4 minimap button + standalone lore window | not started |
+| M3 hover preview on the map | done, tested in game |
+| M4 minimap button + standalone lore window | done, **untested in-game** |
 | M5 options panel | not started |
 
 ## Layout
@@ -23,12 +23,18 @@ retail or the Anniversary/TBC client.
 ```
 addon/ZoneLore/          the addon itself (this is what WoW loads)
   ZoneLore.toc
+  embeds.xml             loads the bundled libraries
   Core.lua               namespace, saved variables, events, zone/subzone lookup
   Data/Zones.lua         GENERATED -- do not edit by hand
   Data/Subzones.lua      GENERATED -- do not edit by hand
+  UI/TextView.lua        shared scrolling wrapped-text widget
   UI/MapPanel.lua        the world map side panel
   UI/SubzoneClick.lua    resolves a map click to a subzone
   UI/HoverPreview.lua    lore tooltip while hovering the map
+  UI/LoreWindow.lua      standalone browsable lore window
+  UI/MinimapButton.lua   LibDBIcon minimap button
+  Libs/                  LibStub, CallbackHandler-1.0, LibDataBroker-1.1,
+                         LibDBIcon-1.0 (copied from AI_VoiceOver_Continued)
 tools/
   lib/wiki.mjs           shared fetching, era filter, Lua emission
   scrape.mjs             warcraft.wiki.gg -> Data/Zones.lua
@@ -225,6 +231,34 @@ while the map is open, throttled to 100ms. It uses its own tooltip rather than
 itself when `WorldMapFrame:IsCanvasMouseFocus()` is false -- that is exactly when
 the cursor is over a pin and Blizzard's tooltip should be the only one showing.
 
+## Minimap button and lore window
+
+A minimap button (LibDBIcon) is the entry point that does not need the world map
+open. Its tooltip shows lore for wherever the player is standing -- the subzone if
+there is one, otherwise the zone. **Left-click** opens the lore window,
+**right-click** toggles the world map panel. `/zl minimap` hides or shows it.
+
+The lore window is movable, closes on Escape, and browses everything: the left
+column lists all zones, and clicking one expands its subzones beneath it.
+
+### Why the list is an accordion
+
+Only one zone expands at a time. That caps the row count at about 108 (49 zones
+plus Ashenvale's 59 subzones), which is few enough that every row can be a real
+button with no view virtualisation. Expanding everything at once would be 1353
+rows, so the accordion is a constraint rather than a preference.
+
+Zones are sorted alphabetically by the name the *client* reports, not by uiMapID,
+which is meaningless to a reader.
+
+### Library-owned saved variables
+
+LibDBIcon writes two keys directly into `ZoneLoreDB`: `hide` and `minimapPos`.
+Neither is in `Core.lua`'s defaults table, because a default there would fight the
+library. `minimapPos` is seeded once in `UI/MinimapButton.lua` so the button does
+not start at angle 0 underneath other addons' buttons. ZoneLore's own
+`showMinimapButton` option is authoritative and is mirrored onto `hide`.
+
 ### Fixing a zone by hand
 
 Add an entry to `tools/seed/overrides.json` keyed by uiMapID with `full` (and
@@ -252,7 +286,9 @@ here:     node tools/seed-from-dump.mjs           # report differences
 /zl                         status for the current zone and subzone
 /zl verify                  check all 49 entries against this client
 /zl panel                   toggle the world map panel
+/zl window                  open the browsable lore window
 /zl hover                   toggle the hover preview tooltip
+/zl minimap                 show or hide the minimap button
 /zl debug                   report area names on map click
 /zl dump                    enumerate the map tree (dev)
 ```

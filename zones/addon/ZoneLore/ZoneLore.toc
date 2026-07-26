@@ -1,7 +1,7 @@
 ## Interface: 11509
 ## Title: ZoneLore
 ## Notes: Shows additional lore about zones on the world map and minimap.
-## Version: 0.1.0
+## Version: 0.2.0
 ## Author: rusty
 ## SavedVariables: ZoneLoreDB
 ## LoadSavedVariablesFirst: true
@@ -9,9 +9,14 @@
 ## X-License: Addon code MIT. Zone lore text from warcraft.wiki.gg, CC BY-SA 4.0.
 ## X-Credits: Lore text sourced from warcraft.wiki.gg contributors (CC BY-SA 4.0).
 
+embeds.xml
+
 Core.lua
 Data/Zones.lua
 Data/Subzones.lua
+UI/TextView.lua
 UI/MapPanel.lua
 UI/SubzoneClick.lua
 UI/HoverPreview.lua
+UI/LoreWindow.lua
+UI/MinimapButton.lua

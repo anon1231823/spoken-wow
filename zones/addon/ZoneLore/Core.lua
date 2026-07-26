@@ -28,8 +28,9 @@ local defaults = {
 	fontSize = 12,
 	showHoverPreview = true,
 	showMinimapButton = true,
-	minimapPos = 204,
 	debug = false,
+	-- `hide` and `minimapPos` are intentionally absent: LibDBIcon owns those keys
+	-- inside ZoneLoreDB and writes them itself. See UI/MinimapButton.lua.
 }
 
 --------------------------------------------------------------------------------
@@ -299,6 +300,9 @@ local function SetupHooks()
 	if ZoneLore.SetupHoverPreview then
 		ZoneLore:SetupHoverPreview()
 	end
+	if ZoneLore.SetupLoreWindow then
+		ZoneLore:SetupLoreWindow()
+	end
 	if ZoneLore.SetupMinimapButton then
 		ZoneLore:SetupMinimapButton()
 	end
@@ -450,8 +454,10 @@ end
 local function CmdHelp()
 	ZoneLore:Print("commands:")
 	ZoneLore:Print("  /zl            -- status for the current zone and subzone")
+	ZoneLore:Print("  /zl window     -- open the browsable lore window")
 	ZoneLore:Print("  /zl panel      -- toggle the world map panel")
 	ZoneLore:Print("  /zl hover      -- toggle the hover preview tooltip")
+	ZoneLore:Print("  /zl minimap    -- show or hide the minimap button")
 	ZoneLore:Print("  /zl debug      -- report area names on map click")
 	ZoneLore:Print("  /zl verify     -- check data against this client")
 	ZoneLore:Print("  /zl dump       -- enumerate the map tree (dev)")
@@ -470,6 +476,15 @@ SlashCmdList["ZONELORE"] = function(msg)
 		ZoneLore:Set("showMapPanel", enabled)
 		ZoneLore:Print("world map panel %s", enabled and "enabled" or "disabled")
 		Dispatch(ZoneLore.mapChangedCallbacks, ZoneLore:GetDisplayedMapID())
+	elseif cmd == "window" or cmd == "w" then
+		if ZoneLore.ToggleLoreWindow then
+			ZoneLore:ToggleLoreWindow()
+		end
+	elseif cmd == "minimap" then
+		if ZoneLore.ToggleMinimapButton then
+			local enabled = ZoneLore:ToggleMinimapButton()
+			ZoneLore:Print("minimap button %s", enabled and "shown" or "hidden")
+		end
 	elseif cmd == "hover" then
 		local enabled = not ZoneLore:Get("showHoverPreview")
 		ZoneLore:Set("showHoverPreview", enabled)
