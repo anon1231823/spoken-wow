@@ -1,5 +1,8 @@
 from dotenv import load_dotenv
-load_dotenv()
+# override=True so this project's .env wins over ambient shell variables. Generic
+# names like MYSQL_PASSWORD are commonly exported by other projects, and without
+# this the connection silently uses the wrong credentials.
+load_dotenv(override=True)
 import os
 
 MYSQL_HOST = os.getenv("MYSQL_HOST")

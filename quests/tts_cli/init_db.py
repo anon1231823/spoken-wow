@@ -10,6 +10,11 @@ from tqdm import tqdm
 VMANGOS_DB_DUMP_URL = "https://api.github.com/repos/vmangos/core/releases/tags/db_latest"
 EXPORTED_FILES = ['assets/sql/exported/CreatureDisplayInfo.sql',
                   'assets/sql/exported/CreatureDisplayInfoExtra.sql']
+# The vmangos release zip extracts to assets/sql/mysql-dump and ships four database
+# dumps. Only the world database (mangos.sql) is used here - characters/logon/logs
+# are unrelated realm data and would land as junk tables in MYSQL_DATABASE.
+DB_DUMP_DIR = 'assets/sql/mysql-dump'
+DB_DUMP_FILES = ['mangos.sql']
 
 
 def download_and_extract_latest_db_dump():
@@ -71,10 +76,12 @@ def import_sql_files_to_database():
     cursor.execute(f"USE {MYSQL_DATABASE};")
 
     sql_files = []
-    for dirpath, _, filenames in os.walk("assets/sql/db_dump"):
-        for filename in filenames:
-            if filename.endswith(".sql"):
-                sql_files.append(os.path.join(dirpath, filename))
+    for filename in DB_DUMP_FILES:
+        path = os.path.join(DB_DUMP_DIR, filename)
+        if not os.path.isfile(path):
+            print(f"Error: expected dump {path} not found. Did the download step run?")
+            exit(1)
+        sql_files.append(path)
 
     chunk_size = 1024 * 1024  # 1MB
     delimiter = b";\n"
