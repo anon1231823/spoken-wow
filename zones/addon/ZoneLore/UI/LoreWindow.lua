@@ -224,13 +224,41 @@ local function RenderList()
 	end
 
 	listChild:SetHeight(math.max(#list * ROW_HEIGHT, 1))
+	return list
 end
 
-function ZoneLore:RefreshLoreWindow()
+-- Bring the selected row into view. Only used when opening the window: doing it
+-- on every refresh would yank the list out from under a click.
+local function ScrollToSelection(list)
+	if not selection then
+		return
+	end
+	for i, item in ipairs(list) do
+		if IsSelected(item) then
+			local viewHeight = listScroll:GetHeight() or 0
+			-- GetVerticalScrollRange is stale until the next layout pass, right
+			-- after listChild:SetHeight, so derive the range instead.
+			local range = math.max(0, (#list * ROW_HEIGHT) - viewHeight)
+			local target = ((i - 1) * ROW_HEIGHT) - (viewHeight / 2) + (ROW_HEIGHT / 2)
+			if target < 0 then
+				target = 0
+			elseif target > range then
+				target = range
+			end
+			listScroll:SetVerticalScroll(target)
+			return
+		end
+	end
+end
+
+function ZoneLore:RefreshLoreWindow(scrollToSelection)
 	if not window then
 		return
 	end
-	RenderList()
+	local list = RenderList()
+	if scrollToSelection then
+		ScrollToSelection(list)
+	end
 	ShowEntry()
 end
 
@@ -323,6 +351,18 @@ end
 -- Public
 --------------------------------------------------------------------------------
 
+-- The zone the player is standing in, resolved to something we actually have
+-- lore for. C_Map.GetBestMapForUnit can return an indoor or micro map (an inn,
+-- a dungeon) that is not itself a key in Zones, so walk up to its parent.
+local function CurrentZoneID()
+	local playerMap = ZoneLore:GetPlayerMapID()
+	if not playerMap then
+		return nil
+	end
+	local _, resolved = ZoneLore:GetLoreWithFallback(playerMap)
+	return resolved
+end
+
 function ZoneLore:ToggleLoreWindow()
 	if not window then
 		return
@@ -332,18 +372,29 @@ function ZoneLore:ToggleLoreWindow()
 		return
 	end
 
-	-- Open on wherever the player is standing, which is nearly always what you
-	-- want when opening it from the minimap.
-	if not selection then
-		local playerMap = ZoneLore:GetPlayerMapID()
-		if playerMap and ZoneLore.Zones[playerMap] then
-			selection = { mapID = playerMap, key = nil }
-			expandedZone = playerMap
+	-- Re-sync to where the player is standing on *every* open, not just the
+	-- first. Opening from the minimap should always land on the current zone;
+	-- keeping the previous selection made it show wherever you last browsed.
+	local current = CurrentZoneID()
+	if current then
+		-- Standing in a subzone we have lore for is more specific than the zone,
+		-- so prefer it. Either way the parent zone is expanded.
+		local subZone = GetSubZoneText()
+		local subEntry, subKey
+		if subZone and subZone ~= "" then
+			subEntry, subKey = ZoneLore:GetSubzoneLore(current, subZone)
+		end
+
+		expandedZone = current
+		if subEntry then
+			selection = { mapID = current, key = subKey }
+		else
+			selection = { mapID = current, key = nil }
 		end
 	end
 
 	window:Show()
-	ZoneLore:RefreshLoreWindow()
+	ZoneLore:RefreshLoreWindow(true)
 end
 
 function ZoneLore:SetupLoreWindow()

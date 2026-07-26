@@ -241,6 +241,13 @@ there is one, otherwise the zone. **Left-click** opens the lore window,
 The lore window is movable, closes on Escape, and browses everything: the left
 column lists all zones, and clicking one expands its subzones beneath it.
 
+It re-syncs to where the player is standing on **every** open, not just the first,
+and scrolls that row into view. If the player is standing in a subzone that has
+lore, that subzone is selected rather than the zone, since it is the more specific
+answer. The player's map is resolved through `GetLoreWithFallback`, because
+`C_Map.GetBestMapForUnit` can return an indoor or micro map -- an inn, a dungeon --
+which is not itself a key in `Zones`.
+
 ### Why the list is an accordion
 
 Only one zone expands at a time. That caps the row count at about 108 (49 zones
