@@ -13,7 +13,7 @@ retail or the Anniversary/TBC client.
 | M0 skeleton, saved vars, slash commands | done, tested in-game |
 | M1 wiki scraper → generated lore data | done, 49 zones |
 | M2 world map side panel | done, tested in-game |
-| M2.5 subzone lore on map click | done, **untested in-game** |
+| M2.5 subzone lore on map click | done; mechanism tested in-game, now all 46 zones |
 | M3 hover preview on the map | not started |
 | M4 minimap button + standalone lore window | not started |
 | M5 options panel | not started |
@@ -66,6 +66,49 @@ response under `tools/cache/` (gitignored) so iterating on text cleanup never
 re-hits the wiki, and throttles to one request per 500ms with an identifying
 User-Agent.
 
+### Source: prefer the wiki's Classic-specific pages
+
+warcraft.wiki.gg keeps **separate `<Name> (Classic)` articles** for places whose
+description changed after vanilla. These are written about the 1.x world rather
+than filtered down from an all-expansions article, so they are era-correct at the
+source:
+
+| | general page | `(Classic)` page |
+|---|---|---|
+| Durotar | "borders the **Northern** Barrens" (Cata split) | "borders **the Barrens**" |
+| Darkshore | Auberdine absent (Cataclysm destroyed it) | "the port of **Auberdine**" |
+
+**39 of the 46 zone maps** have one; the exceptions are Moonglade and the six
+capital cities, which fall back to the general page. For subzones only a couple
+have a `(Classic)` variant, so most still come from the general page.
+
+`fetchClassicTitleIndex` builds the lookup from `Category:Classic zones` and
+`Category:Classic subzones` in two requests, and `classicVariant` handles the
+wiki dropping a leading article ("The Barrens" → "Barrens (Classic)"). The
+`(Classic)` suffix never reaches the addon — display names and lookup keys are
+always derived from the bare title. Pass `--no-classic` to ignore these pages.
+
+The era filter still runs over Classic pages as a safety net, and still earns its
+keep on a handful (Blasted Lands, Loch Modan, Eastern Plaguelands, Silithus).
+
+Two alternatives were checked and rejected: `Category:Classic subzones` (83 pages)
+is only a tag over pages already fetched — Auberdine is in
+`Category:Darkshore subzones` already, so there was no coverage gap — and the
+wiki's revision history reaches back to 2004, so a pre-Cataclysm-2010 revision was
+viable, but it needs raw wikitext parsing and would still contain TBC and WotLK
+content.
+
+### Thin leads fall back to article sections
+
+Some pages lead with one sentence and keep the description under a heading:
+`Elwynn Forest (Classic)` opens with "Elwynn Forest is the starting zone for
+playable humans." and puts the real text under `== Geography ==`, which
+`exintro` skips. When a lead comes in under the threshold (300 chars for zones,
+200 for subzones), `fetchLoreText` re-fetches the full article and takes the
+lore-bearing sections — Geography, Description, History, Lore, Overview — capped
+on a paragraph boundary. Elwynn went 55 → 804 chars. Quest tables, NPC lists and
+"Patch changes" are never included.
+
 ### The era filter
 
 Wiki zone intros narrate a zone across *every* expansion, so an unfiltered scrape
@@ -92,8 +135,7 @@ regression fails loudly rather than shipping.
 ## Subzones
 
 Click a subzone on a zone map and the panel swaps to that subzone's lore, with a
-"< Back to \<Zone\>" link. Currently covers **Tirisfal Glades** and **Silverpine
-Forest** (78 subzones).
+"< Back to \<Zone\>" link. Covers **1304 subzones across all 46 zone maps**.
 
 ```sh
 node tools/scrape-subzones.mjs              # all zones in the seed
@@ -101,11 +143,27 @@ node tools/scrape-subzones.mjs --list 1420  # just list the wiki category
 node tools/scrape-subzones.mjs --zone 1420 --verbose
 ```
 
-Adding a zone is one line in `tools/seed/subzones.json` plus a re-run. Coverage on
-the wiki is good: Ashenvale 59 subzones, Durotar 43, Dun Morogh 40, Stormwind City
-39, Elwynn Forest 30. Every zone tried has a `Category:<Zone> subzones` except
-The Barrens, which needs a `category` override. All 49 zones would be roughly
-1500 pages, about 13 minutes at the 500ms throttle.
+Counts range from Ashenvale's 59 down to Alterac Mountains' 5. A full run is about
+1300 pages, roughly 11 minutes at the 500ms throttle; with a warm
+`tools/cache/` it is under a minute.
+
+Azeroth (947), Kalimdor (1414) and Eastern Kingdoms (1415) are deliberately
+excluded: they are not Zone-type maps, so a click on them is Blizzard's own
+navigation and `UI/SubzoneClick.lua` ignores them. 44 of the 46 resolve their
+category from the zone name; The Barrens and The Hinterlands need a `category`
+override because the wiki drops the leading article. For the Barrens the vanilla
+`Barrens subzones` category is correct, not the Cataclysm-split
+`Northern Barrens subzones`.
+
+Category queries are pinned to `cmnamespace=0`: `cmtype=page` alone lets through
+project and talk pages that have been miscategorised on the wiki, which is how
+`Warcraft Wiki talk:Village pump/Archive11` first turned up as a Hillsbrad
+subzone.
+
+`Data/Subzones.lua` is about 1 MB. That is well within what addons ship
+(`AI_VoiceOverData_Vanilla` in the same AddOns folder is 3.1 MB), but if load time
+becomes a concern the file is a candidate for splitting per zone behind
+`## LoadOnDemand`.
 
 ### Why subzone lore is keyed by name
 

@@ -5,6 +5,7 @@
 //   node tools/scrape.mjs --refresh       # re-fetch everything
 //   node tools/scrape.mjs --only 1411     # single zone, useful when tuning
 //   node tools/scrape.mjs --no-era-filter # keep post-vanilla sentences
+//   node tools/scrape.mjs --no-classic    # ignore "(Classic)" pages
 //   node tools/scrape.mjs --verbose       # show what the era filter dropped
 //
 // Requires Node 18+ (built-in fetch). No dependencies.
@@ -15,9 +16,9 @@ import { writeFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
   ROOT,
-  cleanExtract,
-  extractFromResponse,
-  fetchExtract,
+  classicVariant,
+  fetchClassicTitleIndex,
+  fetchLoreText,
   luaString,
   makeShort,
   readJson,
@@ -30,10 +31,15 @@ const SEED = join(ROOT, "tools/seed/zones.json");
 const OVERRIDES = join(ROOT, "tools/seed/overrides.json");
 const OUT = join(ROOT, "addon/ZoneLore/Data/Zones.lua");
 
+// Below this, a page's lead is too thin to show and the full-article section
+// fallback is tried instead.
+const MIN_INTRO_CHARS = 300;
+
 const argv = process.argv.slice(2);
 const flags = {
   refresh: argv.includes("--refresh"),
   eraFilter: !argv.includes("--no-era-filter"),
+  noClassic: argv.includes("--no-classic"),
   verbose: argv.includes("--verbose"),
   only: (() => {
     const i = argv.indexOf("--only");
@@ -82,34 +88,48 @@ async function main() {
       `(era filter ${flags.eraFilter ? "on" : "off"})`
   );
 
+  // Prefer the purpose-written "(Classic)" article wherever the wiki has one.
+  const classicIndex = flags.noClassic
+    ? new Set()
+    : await fetchClassicTitleIndex({ refresh: flags.refresh });
+  if (!flags.noClassic) {
+    console.log(`${classicIndex.size} Classic-specific page titles available`);
+  }
+
   const entries = [];
   const problems = [];
   let fetched = 0;
   let cached = 0;
 
+  let classicUsed = 0;
+
   for (const [idStr, meta] of targets) {
     const mapID = Number(idStr);
-    const title = meta.wiki || meta.name;
+    const classicTitle = classicVariant(meta.name, classicIndex);
+    const title = classicTitle || meta.wiki || meta.name;
+    if (classicTitle) classicUsed++;
 
-    let result;
+    let lore;
     try {
-      result = await fetchExtract(title, { refresh: flags.refresh });
+      lore = await fetchLoreText(title, {
+        refresh: flags.refresh,
+        minChars: MIN_INTRO_CHARS,
+        eraFilter: flags.eraFilter,
+        verbose: flags.verbose,
+      });
     } catch (err) {
       problems.push(`${title} (${mapID}): ${err.message}`);
       continue;
     }
-    result.cached ? cached++ : fetched++;
+    fetched += lore.fetches;
+    cached += lore.cacheHits;
 
-    const found = extractFromResponse(result.json, title);
-    if (!found) {
+    if (lore.missing) {
       problems.push(`${title} (${mapID}): no extract returned -- check the page title`);
       continue;
     }
 
-    const cleaned = cleanExtract(found.text, {
-      eraFilter: flags.eraFilter,
-      verbose: flags.verbose,
-    });
+    const { cleaned, usedSections } = lore;
     const override = overrides[idStr];
 
     // A hand-written override wins outright, and is the escape hatch for zones
@@ -128,10 +148,12 @@ async function main() {
       name: meta.name,
       short: override?.short ?? makeShort(full),
       full,
-      source: sourceUrl(found.resolvedTitle),
+      source: sourceUrl(lore.resolvedTitle),
     });
 
     const note = [];
+    note.push(classicTitle ? "classic" : "|general|");
+    if (usedSections) note.push("sections");
     if (override) note.push("override");
     if (cleaned.droppedCount) note.push(`-${cleaned.droppedCount} sentence`);
     console.log(
@@ -153,7 +175,10 @@ async function main() {
     console.log(`\nwrote ${OUT} (${entries.length} zones)`);
   }
 
-  console.log(`fetched ${fetched}, from cache ${cached}`);
+  console.log(
+    `fetched ${fetched}, from cache ${cached}; ` +
+      `${classicUsed}/${entries.length} from a (Classic) page`
+  );
   if (problems.length) {
     console.log(`\n${problems.length} problem(s):`);
     for (const p of problems) console.log(`  ! ${p}`);

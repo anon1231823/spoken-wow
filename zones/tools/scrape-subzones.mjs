@@ -23,20 +23,25 @@ import { writeFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
   ROOT,
-  cleanExtract,
-  extractFromResponse,
+  classicVariant,
   fetchCategoryMembers,
-  fetchExtract,
+  fetchClassicTitleIndex,
+  fetchLoreText,
   luaString,
   makeShort,
   normaliseKey,
   readJson,
   sourceUrl,
+  stripClassicSuffix,
   withoutComments,
 } from "./lib/wiki.mjs";
 
 const SEED = join(ROOT, "tools/seed/subzones.json");
 const OUT = join(ROOT, "addon/ZoneLore/Data/Subzones.lua");
+
+// Subzone leads are naturally shorter than zone leads, so the threshold for
+// falling back to the full article's lore sections is lower.
+const MIN_INTRO_CHARS = 200;
 
 const argv = process.argv.slice(2);
 const arg = (name) => {
@@ -133,11 +138,16 @@ async function main() {
     process.exit(1);
   }
 
+  // Prefer purpose-written "(Classic)" articles wherever the wiki has them.
+  const classicIndex = await fetchClassicTitleIndex({ refresh: flags.refresh });
+  console.log(`${classicIndex.size} Classic-specific page titles available`);
+
   const byZone = new Map();
   const stats = new Map();
   const problems = [];
   let fetched = 0;
   let cached = 0;
+  let classicUsed = 0;
 
   for (const [idStr, meta] of targets) {
     const mapID = Number(idStr);
@@ -164,36 +174,46 @@ async function main() {
     for (const title of candidates) {
       if (excluded.has(title)) continue;
 
-      let result;
-      try {
-        result = await fetchExtract(title, { refresh: flags.refresh });
-      } catch (err) {
-        problems.push(`${title}: ${err.message}`);
-        continue;
-      }
-      result.cached ? cached++ : fetched++;
+      // Prefer a purpose-written "(Classic)" article where one exists. The key
+      // and display name always come from the bare title, so the suffix never
+      // reaches the addon.
+      const classicTitle = classicVariant(title, classicIndex);
+      const fetchTitle = classicTitle || title;
 
-      const found = extractFromResponse(result.json, title);
-      if (!found) {
-        problems.push(`${title}: no extract (page may be a stub or missing)`);
+      let lore;
+      try {
+        lore = await fetchLoreText(fetchTitle, {
+          refresh: flags.refresh,
+          minChars: MIN_INTRO_CHARS,
+          verbose: flags.verbose,
+        });
+      } catch (err) {
+        problems.push(`${fetchTitle}: ${err.message}`);
         continue;
       }
+      fetched += lore.fetches;
+      cached += lore.cacheHits;
+
+      if (lore.missing) {
+        problems.push(`${fetchTitle}: no extract (page may be a stub or missing)`);
+        continue;
+      }
+      if (classicTitle) classicUsed++;
 
       // A subzone page that redirects to its parent zone would just duplicate
       // the zone lore already shown by the panel.
-      if (normaliseKey(found.resolvedTitle) === normaliseKey(meta.name)) {
+      if (normaliseKey(stripClassicSuffix(lore.resolvedTitle)) === normaliseKey(meta.name)) {
         skippedZoneDup++;
         continue;
       }
 
-      const cleaned = cleanExtract(found.text, { verbose: flags.verbose });
-      if (!cleaned.full) {
+      if (!lore.cleaned.full) {
         skippedFiltered++;
         continue;
       }
 
-      // Key on the wiki title. Aliases add extra keys for client names that do
-      // not normalise onto the title.
+      // Key on the bare wiki title. Aliases add extra keys for client names that
+      // do not normalise onto it.
       const keys = new Set([normaliseKey(title)]);
       for (const [clientName, wikiTitle] of Object.entries(aliases)) {
         if (wikiTitle === title) keys.add(normaliseKey(clientName));
@@ -201,10 +221,10 @@ async function main() {
 
       for (const key of keys) {
         entries.set(key, {
-          name: title,
-          short: makeShort(cleaned.full),
-          full: cleaned.full,
-          source: sourceUrl(found.resolvedTitle),
+          name: stripClassicSuffix(title),
+          short: makeShort(lore.cleaned.full),
+          full: lore.cleaned.full,
+          source: sourceUrl(lore.resolvedTitle),
         });
       }
     }
@@ -232,7 +252,9 @@ async function main() {
     console.log(`\nwrote ${OUT} (${byZone.size} zones, ${total} subzone keys)`);
   }
 
-  console.log(`fetched ${fetched}, from cache ${cached}`);
+  console.log(
+    `fetched ${fetched}, from cache ${cached}, ${classicUsed} from a (Classic) page`
+  );
   if (problems.length) {
     console.log(`\n${problems.length} problem(s):`);
     for (const p of problems) console.log(`  ! ${p}`);

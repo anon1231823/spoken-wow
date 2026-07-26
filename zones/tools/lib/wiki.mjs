@@ -217,6 +217,67 @@ export async function fetchExtract(title, opts = {}) {
   return cachedQuery(query, title, opts);
 }
 
+// The whole article as plain text, headings included. Used only when a page's
+// lead is too thin to be worth showing -- Elwynn Forest (Classic) leads with the
+// single sentence "Elwynn Forest is the starting zone for playable humans." and
+// keeps the actual description under == Geography ==.
+export async function fetchFullExtract(title, opts = {}) {
+  const query =
+    `action=query&format=json&formatversion=2&redirects=1` +
+    `&prop=extracts&explaintext=1&titles=${encodeURIComponent(title)}`;
+  return cachedQuery(query, `${title}#full`, opts);
+}
+
+// Sections whose prose is lore rather than game data. Everything else in a wiki
+// article -- quest tables, NPC lists, "Patch changes", "References" -- is noise
+// for this purpose.
+const LORE_SECTIONS = /^(geography|description|history|lore|overview|the zone)$/i;
+
+// Split explaintext output on its "== Heading ==" lines. The lead section comes
+// back with a null heading.
+export function splitSections(plaintext) {
+  const sections = [];
+  let current = { heading: null, lines: [] };
+
+  for (const line of plaintext.split("\n")) {
+    const m = line.match(/^\s*(=+)\s*(.+?)\s*\1\s*$/);
+    if (m) {
+      sections.push(current);
+      current = { heading: m[2], lines: [] };
+    } else {
+      current.lines.push(line);
+    }
+  }
+  sections.push(current);
+
+  return sections.map((s) => ({ heading: s.heading, text: s.lines.join("\n").trim() }));
+}
+
+// Lead section plus any lore-bearing sections, capped at maxChars on a paragraph
+// boundary so the panel never gets a wall of text.
+export function buildFromSections(plaintext, { maxChars = 2200 } = {}) {
+  const sections = splitSections(plaintext);
+  const parts = [];
+
+  for (const s of sections) {
+    if (!s.text) continue;
+    if (s.heading === null || LORE_SECTIONS.test(s.heading)) {
+      parts.push(s.text);
+    }
+  }
+
+  let out = "";
+  for (const part of parts) {
+    for (const para of part.split(/\n+/)) {
+      const trimmed = para.trim();
+      if (!trimmed) continue;
+      if (out && out.length + trimmed.length + 2 > maxChars) return out;
+      out = out ? out + "\n\n" + trimmed : trimmed;
+    }
+  }
+  return out;
+}
+
 // All page members of a category, following continuation.
 export async function fetchCategoryMembers(category, opts = {}) {
   const members = [];
@@ -224,11 +285,16 @@ export async function fetchCategoryMembers(category, opts = {}) {
   let page = 0;
 
   do {
+    // cmnamespace=0 restricts to article space. cmtype=page alone still lets
+    // through project and talk pages that have been miscategorised on the wiki
+    // (e.g. "Warcraft Wiki talk:Village pump/Archive11" sits in a subzone
+    // category). The cache key carries the namespace so old cached responses
+    // from before this restriction are not reused.
     const query =
       `action=query&format=json&formatversion=2&list=categorymembers&cmtype=page` +
-      `&cmlimit=500&cmtitle=${encodeURIComponent("Category:" + category)}` +
+      `&cmnamespace=0&cmlimit=500&cmtitle=${encodeURIComponent("Category:" + category)}` +
       (cont ? `&cmcontinue=${encodeURIComponent(cont)}` : "");
-    const { json } = await cachedQuery(query, `category-${category}-${page}`, opts);
+    const { json } = await cachedQuery(query, `category-ns0-${category}-${page}`, opts);
     for (const m of json?.query?.categorymembers || []) {
       members.push(m.title);
     }
@@ -237,6 +303,90 @@ export async function fetchCategoryMembers(category, opts = {}) {
   } while (cont);
 
   return members;
+}
+
+//------------------------------------------------------------------------------
+// Classic-specific pages
+//
+// The wiki keeps separate articles for places whose description changed after
+// vanilla, titled "<Name> (Classic)". These are written about the 1.x world, so
+// they are natively era-correct rather than filtered down from an
+// all-expansions article -- Darkshore (Classic) still describes the port of
+// Auberdine, which Cataclysm destroyed. 39 of the 46 Era zone maps have one.
+//
+// The era filter still runs over them as a safety net; it earns its keep on a
+// few pages (Blasted Lands (Classic) has one post-vanilla sentence).
+//------------------------------------------------------------------------------
+
+export async function fetchClassicTitleIndex(opts = {}) {
+  const titles = new Set();
+  for (const category of ["Classic zones", "Classic subzones"]) {
+    for (const title of await fetchCategoryMembers(category, opts)) {
+      if (/ \(Classic\)$/.test(title)) titles.add(title);
+    }
+  }
+  return titles;
+}
+
+// Returns the "(Classic)" title for a place, or null if the wiki has none.
+// The wiki drops a leading article: "The Barrens" -> "Barrens (Classic)".
+export function classicVariant(name, index) {
+  if (!index || index.size === 0) return null;
+  const candidates = [
+    `${name} (Classic)`,
+    `${name.replace(/^The\s+/, "")} (Classic)`,
+  ];
+  return candidates.find((c) => index.has(c)) || null;
+}
+
+// "Durotar (Classic)" -> "Durotar", for display and lookup keys.
+export function stripClassicSuffix(title) {
+  return title.replace(/\s*\(Classic\)$/, "");
+}
+
+// Fetch a page's lore text: the lead section, or -- when the lead is too thin to
+// be worth showing -- the lore-bearing sections of the full article. Returns null
+// when the page has no usable text at all.
+//
+// Counters are reported back so callers can log cache behaviour.
+export async function fetchLoreText(title, opts = {}) {
+  const { refresh = false, minChars = 300, eraFilter = true, verbose = false } = opts;
+
+  const res = await fetchExtract(title, { refresh });
+  const found = extractFromResponse(res.json, title);
+  if (!found) {
+    return { missing: true, fetches: res.cached ? 0 : 1, cacheHits: res.cached ? 1 : 0 };
+  }
+
+  let cleaned = cleanExtract(found.text, { eraFilter, verbose });
+  let usedSections = false;
+  let fetches = res.cached ? 0 : 1;
+  let cacheHits = res.cached ? 1 : 0;
+
+  if (cleaned.full.length < minChars) {
+    const fullRes = await fetchFullExtract(title, { refresh });
+    fullRes.cached ? cacheHits++ : fetches++;
+    const fullFound = extractFromResponse(fullRes.json, title);
+    if (fullFound) {
+      const fromSections = cleanExtract(buildFromSections(fullFound.text), {
+        eraFilter,
+        verbose,
+      });
+      if (fromSections.full.length > cleaned.full.length) {
+        cleaned = fromSections;
+        usedSections = true;
+      }
+    }
+  }
+
+  return {
+    missing: false,
+    cleaned,
+    usedSections,
+    resolvedTitle: found.resolvedTitle,
+    fetches,
+    cacheHits,
+  };
 }
 
 export function extractFromResponse(json, title) {
