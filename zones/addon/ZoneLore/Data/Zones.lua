@@ -2,7 +2,7 @@
 -- be overwritten. Adjust tools/seed/zones.json or the scraper instead.
 --
 -- Lore text from warcraft.wiki.gg, licensed CC BY-SA 4.0.
--- Page intros only, with post-vanilla paragraphs filtered out for Classic Era.
+-- Page intros only, with post-vanilla sentences filtered out for Classic Era.
 
 local _, ZoneLore = ...
 

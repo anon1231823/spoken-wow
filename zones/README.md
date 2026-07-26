@@ -10,30 +10,34 @@ retail or the Anniversary/TBC client.
 
 | Milestone | State |
 |---|---|
-| M0 skeleton, saved vars, slash commands | done, untested in-game |
+| M0 skeleton, saved vars, slash commands | done, tested in-game |
 | M1 wiki scraper → generated lore data | done, 49 zones |
-| M2 world map side panel | done, untested in-game |
+| M2 world map side panel | done, tested in-game |
+| M2.5 subzone lore on map click | done, **untested in-game** |
 | M3 hover preview on the map | not started |
 | M4 minimap button + standalone lore window | not started |
 | M5 options panel | not started |
 
-Nothing has been run inside WoW yet — see [Verifying in-game](#verifying-in-game).
-
 ## Layout
 
 ```
-addon/ZoneLore/       the addon itself (this is what WoW loads)
+addon/ZoneLore/          the addon itself (this is what WoW loads)
   ZoneLore.toc
-  Core.lua            namespace, saved variables, events, zone resolution
-  Data/Zones.lua      GENERATED -- do not edit by hand
-  UI/MapPanel.lua     the world map side panel
+  Core.lua               namespace, saved variables, events, zone/subzone lookup
+  Data/Zones.lua         GENERATED -- do not edit by hand
+  Data/Subzones.lua      GENERATED -- do not edit by hand
+  UI/MapPanel.lua        the world map side panel
+  UI/SubzoneClick.lua    resolves a map click to a subzone
 tools/
-  scrape.mjs          warcraft.wiki.gg -> Data/Zones.lua
-  validate.mjs        checks the generated Lua without a Lua interpreter
-  seed-from-dump.mjs  compares the seed against a live client map dump
-  seed/zones.json     uiMapID -> wiki page title
-  seed/overrides.json hand-written lore that beats the scraped text
-scripts/deploy.sh     install into the Classic Era AddOns folder
+  lib/wiki.mjs           shared fetching, era filter, Lua emission
+  scrape.mjs             warcraft.wiki.gg -> Data/Zones.lua
+  scrape-subzones.mjs    warcraft.wiki.gg -> Data/Subzones.lua
+  validate.mjs           checks the generated Lua without a Lua interpreter
+  seed-from-dump.mjs     compares the seed against a live client map dump
+  seed/zones.json        uiMapID -> wiki page title
+  seed/subzones.json     which parent zones to scrape subzones for
+  seed/overrides.json    hand-written lore that beats the scraped text
+scripts/deploy.sh        install into the Classic Era AddOns folder
 ```
 
 ## Installing for development
@@ -85,6 +89,53 @@ reference is cheaper than wrong-era geography; use `overrides.json` if one shows
 `tools/validate.mjs` re-checks the generated file for leaks, so a filter
 regression fails loudly rather than shipping.
 
+## Subzones
+
+Click a subzone on a zone map and the panel swaps to that subzone's lore, with a
+"< Back to \<Zone\>" link. Currently covers **Tirisfal Glades** and **Silverpine
+Forest** (78 subzones).
+
+```sh
+node tools/scrape-subzones.mjs              # all zones in the seed
+node tools/scrape-subzones.mjs --list 1420  # just list the wiki category
+node tools/scrape-subzones.mjs --zone 1420 --verbose
+```
+
+Adding a zone is one line in `tools/seed/subzones.json` plus a re-run. Coverage on
+the wiki is good: Ashenvale 59 subzones, Durotar 43, Dun Morogh 40, Stormwind City
+39, Elwynn Forest 30. Every zone tried has a `Category:<Zone> subzones` except
+The Barrens, which needs a `category` override. All 49 zones would be roughly
+1500 pages, about 13 minutes at the 500ms throttle.
+
+### Why subzone lore is keyed by name
+
+Subzones are **areas, not uiMapIDs** — `C_Map.GetMapInfoAtPosition` cannot see
+them, because it only returns child *maps*. The API that resolves a cursor
+position to a subzone is `MapUtil.FindBestAreaNameAtMouse`, and it returns a
+**name string, not an ID**. So `Data/Subzones.lua` is keyed by parent uiMapID and
+then by a canonical form of the name.
+
+That canonical form matters because the client and wiki disagree cosmetically:
+the wiki titles a page **"Bulwark"** while the client reports **"The Bulwark"**.
+`normaliseKey` (JS) and `ZoneLore:NormaliseAreaKey` (Lua) both lower-case, drop a
+leading "the", strip apostrophes and collapse punctuation to single spaces, so
+both sides meet at `bulwark`. `tools/validate.mjs` asserts the two
+implementations stay in step and that every generated key is already canonical —
+a non-canonical key would be silently unreachable.
+
+If a client name still misses, `tools/seed/subzones.json` has an `aliases` section
+mapping a client-reported name to a wiki page title. Use `/zl debug` in-game to
+see the raw name.
+
+### Post-vanilla subzones are kept on purpose
+
+Silverpine's category includes Cataclysm-era places like Forsaken High Command and
+the Gilneas Liberation Front Base Camp, and the text filter does not reliably
+catch them. They are left in: lookup is driven by what the client reports, and the
+Era client never reports an area that does not exist in 1.15.9, so those rows are
+inert and cost only file size. What matters is that areas which *do* exist carry
+no post-vanilla text, which the sentence filter handles.
+
 ### Fixing a zone by hand
 
 Add an entry to `tools/seed/overrides.json` keyed by uiMapID with `full` (and
@@ -109,11 +160,18 @@ here:     node tools/seed-from-dump.mjs           # report differences
 
 ```
 /console scriptErrors 1     surface Lua errors (do this first)
-/zl                         status for the current zone
+/zl                         status for the current zone and subzone
 /zl verify                  check all 49 entries against this client
 /zl panel                   toggle the world map panel
+/zl debug                   report area names on map click
 /zl dump                    enumerate the map tree (dev)
 ```
+
+For subzones, `/zl debug` then clicking around a Tirisfal or Silverpine map prints
+the raw area name, the key it normalised to, and whether lore was found — which is
+how to spot a name that needs an alias. `/zl` on its own also reports the subzone
+you are standing in via `GetSubZoneText()`, so mismatches can be found just by
+walking around with the map closed.
 
 Manual pass worth doing: open the map in a starting zone, walk across a zone
 border with the map open, click up to the continent and back down, minimize and

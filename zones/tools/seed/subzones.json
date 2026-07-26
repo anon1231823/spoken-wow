@@ -1,0 +1,30 @@
+{
+  "_comment": [
+    "Which parent zones to scrape subzone lore for, keyed by uiMapID.",
+    "Subzones are enumerated from 'Category:<name> subzones' on warcraft.wiki.gg;",
+    "set `category` to override that, and `exclude` to drop specific pages.",
+    "",
+    "Starting with Tirisfal Glades and Silverpine Forest. Adding a zone is one",
+    "line here plus a re-run of `node tools/scrape-subzones.mjs`. Coverage checked",
+    "against the wiki: Durotar 43, Ashenvale 59, Dun Morogh 40, Stormwind City 39,",
+    "Elwynn Forest 30 -- every zone tried has the category except The Barrens,",
+    "which needs a `category` override.",
+    "",
+    "`aliases` maps a name the CLIENT reports to the wiki page title, for cases",
+    "where normalisation is not enough to make them meet. Normalisation already",
+    "handles case, a leading 'the', and apostrophes, so 'The Bulwark' finds the",
+    "page titled 'Bulwark' with no alias needed. Use `/zl debug` in-game to see",
+    "the raw name the client reports for an area."
+  ],
+
+  "zones": {
+    "1420": { "name": "Tirisfal Glades" },
+    "1421": { "name": "Silverpine Forest" }
+  },
+
+  "aliases": {
+    "_comment": "parent uiMapID -> { client-reported name: wiki page title }",
+    "1420": {},
+    "1421": {}
+  }
+}

@@ -1,11 +1,15 @@
 -- ZoneLore -- the lore panel docked to the side of the world map.
+--
+-- Shows lore for the zone the map is displaying, or for a subzone the player
+-- clicked (see UI/SubzoneClick.lua), with a link back to the zone.
 
 local ADDON_NAME, ZoneLore = ...
 
 local PADDING = 16
 local SCROLL_STEP = 28
+local INFO_LINE_HEIGHT = 16
 
-local panel, header, subheader, scroll, scrollChild, body, footer
+local panel, header, infoLine, scroll, scrollChild, body, footer
 
 --------------------------------------------------------------------------------
 -- Construction
@@ -33,10 +37,29 @@ local function BuildPanel()
 	header:SetJustifyH("LEFT")
 	header:SetWordWrap(true)
 
-	subheader = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
-	subheader:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
-	subheader:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", 0, -2)
-	subheader:SetJustifyH("LEFT")
+	-- One fixed-height slot under the header, used either as a caption or as the
+	-- "back to zone" link. Keeping it always present means the scroll frame below
+	-- never has to be re-anchored as the content type changes.
+	infoLine = CreateFrame("Button", nil, panel)
+	infoLine:SetHeight(INFO_LINE_HEIGHT)
+	infoLine:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -2)
+	infoLine:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", 0, -2)
+	infoLine.text = infoLine:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+	infoLine.text:SetAllPoints()
+	infoLine.text:SetJustifyH("LEFT")
+	infoLine:SetScript("OnClick", function()
+		ZoneLore:ClearSubzone()
+	end)
+	infoLine:SetScript("OnEnter", function(self)
+		if self:IsEnabled() then
+			self.text:SetTextColor(1, 1, 1)
+		end
+	end)
+	infoLine:SetScript("OnLeave", function(self)
+		if self:IsEnabled() then
+			self.text:SetTextColor(0.4, 0.73, 1)
+		end
+	end)
 
 	footer = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
 	footer:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", PADDING, PADDING - 4)
@@ -48,7 +71,7 @@ local function BuildPanel()
 	-- on a template whose presence on 11509 is unverified, and the lore entries
 	-- are short enough that a wheel is sufficient navigation.
 	scroll = CreateFrame("ScrollFrame", nil, panel)
-	scroll:SetPoint("TOPLEFT", subheader, "BOTTOMLEFT", 0, -8)
+	scroll:SetPoint("TOPLEFT", infoLine, "BOTTOMLEFT", 0, -6)
 	scroll:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT", 0, 6)
 	-- A ScrollFrame already clips its scroll child; this is belt-and-braces and
 	-- guarded because it is not confirmed present on 11509.
@@ -118,9 +141,28 @@ local function ShouldShow()
 	return true
 end
 
+local function SetCaption(text)
+	infoLine:Disable()
+	infoLine.text:SetTextColor(0.5, 0.5, 0.5)
+	infoLine.text:SetText(text or "")
+end
+
+local function SetBackLink(zoneName)
+	infoLine:Enable()
+	infoLine.text:SetTextColor(0.4, 0.73, 1)
+	infoLine.text:SetText("< Back to " .. zoneName)
+end
+
 --------------------------------------------------------------------------------
 -- Content
 --------------------------------------------------------------------------------
+
+local function SetBody(text)
+	body:SetText(text or "")
+	ApplyFont()
+	scrollChild:SetHeight((body:GetStringHeight() or 0) + 8)
+	scroll:SetVerticalScroll(0)
+end
 
 local function Refresh(mapID)
 	if not panel then
@@ -141,31 +183,50 @@ local function Refresh(mapID)
 	panel:Show()
 
 	local zoneName = ZoneLore:GetMapName(mapID) or ("uiMapID " .. tostring(mapID))
-	local entry, foundOn = ZoneLore:GetLoreWithFallback(mapID)
+
+	-- A selection only applies to the map it was made on; navigating elsewhere
+	-- drops it. Checking here rather than on the map-changed callback keeps this
+	-- independent of the order modules register their callbacks.
+	local selected = ZoneLore.selected
+	if selected and selected.mapID ~= mapID then
+		ZoneLore.selected = nil
+		selected = nil
+	end
+
+	if selected then
+		-- Prefer the name the client reported, which is what the player sees on
+		-- the map ("The Bulwark"), over the wiki page title ("Bulwark").
+		header:SetText(selected.areaName or selected.entry.name or "")
+		SetBackLink(zoneName)
+		SetBody(selected.entry.full or selected.entry.short or "")
+		return
+	end
 
 	header:SetText(zoneName)
 
+	local entry, foundOn = ZoneLore:GetLoreWithFallback(mapID)
 	if entry then
 		-- Fallback hit an ancestor (a dungeon or micro-map inheriting its zone's
 		-- lore); say so rather than silently mislabelling the text.
 		if foundOn ~= mapID then
-			subheader:SetText("lore for " .. (ZoneLore:GetMapName(foundOn) or "parent zone"))
+			SetCaption("lore for " .. (ZoneLore:GetMapName(foundOn) or "parent zone"))
 		else
-			subheader:SetText("")
+			local subzones = ZoneLore.Subzones[mapID]
+			if subzones and next(subzones) then
+				SetCaption("click a subzone on the map for more")
+			else
+				SetCaption("")
+			end
 		end
-		body:SetText(entry.full or entry.short or "")
+		SetBody(entry.full or entry.short or "")
 	else
-		subheader:SetText("")
-		body:SetText("|cff888888No lore recorded for " .. zoneName .. " yet.|r")
+		SetCaption("")
+		SetBody("|cff888888No lore recorded for " .. zoneName .. " yet.|r")
 	end
-
-	ApplyFont()
-	scrollChild:SetHeight((body:GetStringHeight() or 0) + 8)
-	scroll:SetVerticalScroll(0)
 end
 
-ZoneLore.RefreshMapPanel = function(_, mapID)
-	Refresh(mapID)
+function ZoneLore:RefreshPanel()
+	Refresh(ZoneLore:GetDisplayedMapID())
 end
 
 --------------------------------------------------------------------------------

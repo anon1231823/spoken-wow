@@ -1,19 +1,20 @@
 #!/usr/bin/env node
-// Sanity-checks addon/ZoneLore/Data/Zones.lua without a Lua interpreter.
+// Sanity-checks the generated Lua data files without a Lua interpreter.
 //
 //   node tools/validate.mjs
 //
-// The definitive test is loading the addon in-game, but a bad string escape
-// there costs a relog to discover, so check the mechanical properties here:
-// balanced structure, properly terminated strings, no raw newlines or control
-// characters inside strings, no post-vanilla lore leaking through the filter.
+// The definitive test is loading the addon in-game, but a bad string escape there
+// costs a relog to discover, so check the mechanical properties here: balanced
+// structure, properly terminated strings, no raw newlines or control characters
+// inside strings, deterministic ordering, and no post-vanilla lore leaking
+// through the era filter.
 
 import { readFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
+import { ROOT, normaliseKey } from "./lib/wiki.mjs";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const DATA = join(ROOT, "addon/ZoneLore/Data/Zones.lua");
+const ZONES = join(ROOT, "addon/ZoneLore/Data/Zones.lua");
+const SUBZONES = join(ROOT, "addon/ZoneLore/Data/Subzones.lua");
 
 // Terms that should never survive the era filter. Case-sensitive where the
 // lower-case word is legitimate vanilla lore ("the black dragonflight").
@@ -29,109 +30,181 @@ const FORBIDDEN = [
   /\bN'Zoth\b/,
   /\bBroken Isles\b/,
   /\bIcecrown Citadel\b/,
+  /\bphas(?:ed|ing)\b/i,
 ];
 
 const problems = [];
-const src = await readFile(DATA, "utf8");
-const lines = src.split("\n");
+const note = (msg) => problems.push(msg);
 
-// --- structure -------------------------------------------------------------
+// Every generated field line, at any nesting depth.
+const FIELD = /^\t+(name|short|full|source) = "(.*)",$/;
 
-const opens = (src.match(/\{/g) || []).length;
-const closes = (src.match(/\}/g) || []).length;
-if (opens !== closes) {
-  problems.push(`unbalanced braces: ${opens} '{' vs ${closes} '}'`);
-}
+function checkStrings(src, label) {
+  let fields = 0;
 
-if (!/^local _, ZoneLore = \.\.\.$/m.test(src)) {
-  problems.push("missing the `local _, ZoneLore = ...` vararg header");
-}
-if (!/^ZoneLore\.Zones = \{$/m.test(src)) {
-  problems.push("missing the `ZoneLore.Zones = {` assignment");
-}
+  src.split("\n").forEach((line, i) => {
+    const lineNo = i + 1;
+    if (!/^\t+\w+ = /.test(line)) return;
 
-// --- per-entry -------------------------------------------------------------
-
-const ids = [...src.matchAll(/^\t\[(\d+)\] = \{$/gm)].map((m) => Number(m[1]));
-if (ids.length === 0) {
-  problems.push("no zone entries found");
-}
-
-const seen = new Set();
-for (const id of ids) {
-  if (seen.has(id)) problems.push(`duplicate uiMapID ${id}`);
-  seen.add(id);
-}
-
-const sorted = [...ids].sort((a, b) => a - b);
-if (ids.join(",") !== sorted.join(",")) {
-  problems.push("entries are not sorted by uiMapID (output is not deterministic)");
-}
-
-// --- strings ---------------------------------------------------------------
-
-const FIELD = /^\t\t(name|short|full|source) = "(.*)",$/;
-const fieldCounts = { name: 0, short: 0, full: 0, source: 0 };
-
-lines.forEach((line, i) => {
-  const lineNo = i + 1;
-  if (!/^\t\t\w+ = /.test(line)) return;
-
-  const m = line.match(FIELD);
-  if (!m) {
-    problems.push(`${lineNo}: field line does not parse as a terminated Lua string: ${line.slice(0, 70)}`);
-    return;
-  }
-
-  const [, field, body] = m;
-  fieldCounts[field]++;
-
-  // Walk the string body checking that every " and \ is escaped.
-  for (let j = 0; j < body.length; j++) {
-    const ch = body[j];
-    if (ch === "\\") {
-      const next = body[j + 1];
-      if (next === undefined) {
-        problems.push(`${lineNo}: ${field} ends with a dangling backslash`);
-      } else if (!'\\"nrt'.includes(next)) {
-        problems.push(`${lineNo}: ${field} has unknown escape \\${next}`);
-      }
-      j++; // consume the escaped character
-    } else if (ch === '"') {
-      problems.push(`${lineNo}: ${field} contains an unescaped double quote`);
-    } else if (ch.charCodeAt(0) < 0x20) {
-      problems.push(`${lineNo}: ${field} contains a raw control character (0x${ch.charCodeAt(0).toString(16)})`);
+    const m = line.match(FIELD);
+    if (!m) {
+      note(`${label}:${lineNo}: field line is not a terminated Lua string: ${line.slice(0, 70)}`);
+      return;
     }
-  }
 
-  if ((field === "full" || field === "short") && body.trim().length === 0) {
-    problems.push(`${lineNo}: ${field} is empty`);
-  }
+    const [, field, bodyText] = m;
+    fields++;
 
-  if (field === "full" || field === "short") {
-    for (const re of FORBIDDEN) {
-      if (re.test(body)) {
-        problems.push(`${lineNo}: post-vanilla term ${re} leaked into ${field}`);
+    // Walk the body checking that every " and \ is escaped.
+    for (let j = 0; j < bodyText.length; j++) {
+      const ch = bodyText[j];
+      if (ch === "\\") {
+        const next = bodyText[j + 1];
+        if (next === undefined) {
+          note(`${label}:${lineNo}: ${field} ends with a dangling backslash`);
+        } else if (!'\\"nrt'.includes(next)) {
+          note(`${label}:${lineNo}: ${field} has unknown escape \\${next}`);
+        }
+        j++; // consume the escaped character
+      } else if (ch === '"') {
+        note(`${label}:${lineNo}: ${field} contains an unescaped double quote`);
+      } else if (ch.charCodeAt(0) < 0x20) {
+        note(
+          `${label}:${lineNo}: ${field} contains a raw control character ` +
+            `(0x${ch.charCodeAt(0).toString(16)})`
+        );
       }
     }
-  }
-});
 
-for (const [field, count] of Object.entries(fieldCounts)) {
-  if (count !== ids.length) {
-    problems.push(`${count} '${field}' fields for ${ids.length} entries -- some are missing`);
+    if ((field === "full" || field === "short") && bodyText.trim().length === 0) {
+      note(`${label}:${lineNo}: ${field} is empty`);
+    }
+
+    if (field === "full" || field === "short") {
+      for (const re of FORBIDDEN) {
+        if (re.test(bodyText)) {
+          note(`${label}:${lineNo}: post-vanilla term ${re} leaked into ${field}`);
+        }
+      }
+    }
+  });
+
+  return fields;
+}
+
+function checkBraces(src, label) {
+  const opens = (src.match(/\{/g) || []).length;
+  const closes = (src.match(/\}/g) || []).length;
+  if (opens !== closes) {
+    note(`${label}: unbalanced braces, ${opens} '{' vs ${closes} '}'`);
   }
 }
 
-// --- report ----------------------------------------------------------------
+function checkHeader(src, label, tableName) {
+  if (!/^local _, ZoneLore = \.\.\.$/m.test(src)) {
+    note(`${label}: missing the 'local _, ZoneLore = ...' vararg header`);
+  }
+  if (!new RegExp(`^ZoneLore\\.${tableName} = \\{$`, "m").test(src)) {
+    note(`${label}: missing the 'ZoneLore.${tableName} = {' assignment`);
+  }
+}
+
+//------------------------------------------------------------------------------
+// Zones.lua
+//------------------------------------------------------------------------------
+
+const zonesSrc = await readFile(ZONES, "utf8");
+checkBraces(zonesSrc, "Zones.lua");
+checkHeader(zonesSrc, "Zones.lua", "Zones");
+
+const zoneIDs = [...zonesSrc.matchAll(/^\t\[(\d+)\] = \{$/gm)].map((m) => Number(m[1]));
+if (zoneIDs.length === 0) note("Zones.lua: no zone entries found");
+
+const seenZones = new Set();
+for (const id of zoneIDs) {
+  if (seenZones.has(id)) note(`Zones.lua: duplicate uiMapID ${id}`);
+  seenZones.add(id);
+}
+if (zoneIDs.join(",") !== [...zoneIDs].sort((a, b) => a - b).join(",")) {
+  note("Zones.lua: entries are not sorted by uiMapID (output is not deterministic)");
+}
+
+const zoneFields = checkStrings(zonesSrc, "Zones.lua");
+if (zoneFields !== zoneIDs.length * 4) {
+  note(`Zones.lua: ${zoneFields} field lines for ${zoneIDs.length} entries (expected 4 each)`);
+}
+
+//------------------------------------------------------------------------------
+// Subzones.lua
+//------------------------------------------------------------------------------
+
+const subSrc = await readFile(SUBZONES, "utf8");
+checkBraces(subSrc, "Subzones.lua");
+checkHeader(subSrc, "Subzones.lua", "Subzones");
+
+const subParents = [...subSrc.matchAll(/^\t\[(\d+)\] = \{$/gm)].map((m) => Number(m[1]));
+const subKeys = [...subSrc.matchAll(/^\t\t\["([^"]*)"\] = \{$/gm)].map((m) => m[1]);
+
+if (subParents.length === 0) note("Subzones.lua: no parent zones found");
+if (subKeys.length === 0) note("Subzones.lua: no subzone entries found");
+
+// Every parent zone must itself be a known zone, or the panel can never reach it.
+for (const parent of subParents) {
+  if (!seenZones.has(parent)) {
+    note(`Subzones.lua: parent uiMapID ${parent} is not present in Zones.lua`);
+  }
+}
+
+// Keys must already be in canonical form -- the addon normalises the client's
+// area name and looks it up directly, so a non-canonical key is unreachable.
+for (const key of subKeys) {
+  const canonical = normaliseKey(key);
+  if (key !== canonical) {
+    note(`Subzones.lua: key "${key}" is not canonical (expected "${canonical}") -- unreachable`);
+  }
+}
+
+const subFields = checkStrings(subSrc, "Subzones.lua");
+if (subFields !== subKeys.length * 4) {
+  note(`Subzones.lua: ${subFields} field lines for ${subKeys.length} entries (expected 4 each)`);
+}
+
+//------------------------------------------------------------------------------
+// Lua/JS normalisation parity
+//
+// Core.lua reimplements normaliseKey in Lua. If the two drift, lookups silently
+// miss, so check the Lua source still performs the same steps in the same order.
+//------------------------------------------------------------------------------
+
+const coreSrc = await readFile(join(ROOT, "addon/ZoneLore/Core.lua"), "utf8");
+const expectedSteps = [
+  /key = name:lower\(\)/,
+  /key = key:gsub\("'", ""\)/,
+  /key = key:gsub\("\^the%s\+", ""\)/,
+  /key = key:gsub\("\[\^a-z0-9\]\+", " "\)/,
+];
+for (const step of expectedSteps) {
+  if (!step.test(coreSrc)) {
+    note(`Core.lua: NormaliseAreaKey no longer matches lib/wiki.mjs normaliseKey (missing ${step})`);
+  }
+}
+
+//------------------------------------------------------------------------------
+// Report
+//------------------------------------------------------------------------------
 
 if (problems.length) {
-  console.error(`FAIL -- ${problems.length} problem(s) in ${DATA}:`);
+  console.error(`FAIL -- ${problems.length} problem(s):`);
   for (const p of problems) console.error(`  ! ${p}`);
   process.exit(1);
 }
 
 console.log(
-  `OK -- ${ids.length} zones, ${(src.length / 1024).toFixed(1)} KB, ` +
-    `uiMapID ${sorted[0]}..${sorted[sorted.length - 1]}, no era leaks`
+  `OK -- Zones.lua: ${zoneIDs.length} zones ` +
+    `(${(zonesSrc.length / 1024).toFixed(1)} KB, uiMapID ${Math.min(...zoneIDs)}..${Math.max(...zoneIDs)})`
 );
+console.log(
+  `     Subzones.lua: ${subKeys.length} subzones across ${subParents.length} zones ` +
+    `(${(subSrc.length / 1024).toFixed(1)} KB), all keys canonical`
+);
+console.log("     no era leaks, Lua/JS key normalisation in step");

@@ -6,9 +6,15 @@ local ADDON_NAME, ZoneLore = ...
 ZoneLore.name = ADDON_NAME
 ZoneLore.version = C_AddOns.GetAddOnMetadata(ADDON_NAME, "Version") or "dev"
 
--- Populated by Data/Zones.lua (generated). Declared here so every other file can
--- rely on the table existing even when the data file is empty or failed to load.
+-- Populated by Data/Zones.lua and Data/Subzones.lua (both generated). Declared
+-- here so every other file can rely on the tables existing even when a data file
+-- is empty or failed to load.
 ZoneLore.Zones = ZoneLore.Zones or {}
+ZoneLore.Subzones = ZoneLore.Subzones or {}
+
+-- The subzone the player clicked on the world map, or nil to show zone lore:
+-- { mapID = <parent uiMapID>, areaName = <client name>, entry = <lore> }
+ZoneLore.selected = nil
 
 -- Callbacks fired when the lore shown to the player should change. UI modules
 -- register into this rather than each hooking WorldMapFrame independently.
@@ -23,6 +29,7 @@ local defaults = {
 	showHoverPreview = true,
 	showMinimapButton = true,
 	minimapPos = 204,
+	debug = false,
 }
 
 --------------------------------------------------------------------------------
@@ -128,6 +135,64 @@ function ZoneLore:GetLoreWithFallback(mapID)
 end
 
 --------------------------------------------------------------------------------
+-- Subzones
+--
+-- Subzones are areas, not uiMapIDs, and MapUtil.FindBestAreaNameAtMouse returns
+-- a name rather than an ID -- so lore is keyed by name, scoped to the parent
+-- zone. Client and wiki disagree on cosmetic details ("The Bulwark" versus a
+-- page titled "Bulwark"), so both sides are reduced to the same canonical key.
+--
+-- This must stay in step with normaliseKey in tools/lib/wiki.mjs.
+--------------------------------------------------------------------------------
+
+function ZoneLore:NormaliseAreaKey(name)
+	if type(name) ~= "string" then
+		return nil
+	end
+	local key = name:lower()
+	key = key:gsub("'", "")
+	key = key:gsub("^the%s+", "")
+	key = key:gsub("[^a-z0-9]+", " ")
+	key = key:gsub("^%s+", "")
+	key = key:gsub("%s+$", "")
+	if key == "" then
+		return nil
+	end
+	return key
+end
+
+-- Returns the lore entry and the key that was looked up. The key is returned
+-- even on a miss so /zl debug can report what failed to match.
+function ZoneLore:GetSubzoneLore(parentMapID, areaName)
+	local key = self:NormaliseAreaKey(areaName)
+	if not key then
+		return nil, nil
+	end
+	local zoneTable = self.Subzones[parentMapID]
+	if not zoneTable then
+		return nil, key
+	end
+	return zoneTable[key], key
+end
+
+function ZoneLore:SelectSubzone(mapID, areaName, entry)
+	self.selected = { mapID = mapID, areaName = areaName, entry = entry }
+	if self.RefreshPanel then
+		self:RefreshPanel()
+	end
+end
+
+function ZoneLore:ClearSubzone()
+	if not self.selected then
+		return
+	end
+	self.selected = nil
+	if self.RefreshPanel then
+		self:RefreshPanel()
+	end
+end
+
+--------------------------------------------------------------------------------
 -- Callback dispatch
 --------------------------------------------------------------------------------
 
@@ -172,6 +237,9 @@ local function SetupHooks()
 
 	if ZoneLore.SetupMapPanel then
 		ZoneLore:SetupMapPanel()
+	end
+	if ZoneLore.SetupSubzoneClicks then
+		ZoneLore:SetupSubzoneClicks()
 	end
 	if ZoneLore.SetupHoverPreview then
 		ZoneLore:SetupHoverPreview()
@@ -279,12 +347,24 @@ end
 local function CmdStatus()
 	local playerMap = ZoneLore:GetPlayerMapID()
 	local shownMap = ZoneLore:GetDisplayedMapID()
-	local count = 0
+
+	local zoneCount = 0
 	for _ in pairs(ZoneLore.Zones) do
-		count = count + 1
+		zoneCount = zoneCount + 1
 	end
 
-	ZoneLore:Print("v%s -- %d zones loaded", ZoneLore.version, count)
+	local subzoneZones, subzoneCount = 0, 0
+	for _, tbl in pairs(ZoneLore.Subzones) do
+		subzoneZones = subzoneZones + 1
+		for _ in pairs(tbl) do
+			subzoneCount = subzoneCount + 1
+		end
+	end
+
+	ZoneLore:Print(
+		"v%s -- %d zones, %d subzones across %d zones",
+		ZoneLore.version, zoneCount, subzoneCount, subzoneZones
+	)
 	ZoneLore:Print("player is in: %s (uiMapID %s)", tostring(ZoneLore:GetMapName(playerMap)), tostring(playerMap))
 	ZoneLore:Print("map is showing: %s (uiMapID %s)", tostring(ZoneLore:GetMapName(shownMap)), tostring(shownMap))
 
@@ -294,12 +374,29 @@ local function CmdStatus()
 	else
 		ZoneLore:Print("|cffffcc00no lore recorded for the current zone|r")
 	end
+
+	-- Report the subzone the player is standing in. This exercises the same
+	-- name-keyed lookup the map click uses, without needing the map open, so a
+	-- name mismatch can be spotted just by walking around.
+	local subZone = GetSubZoneText()
+	if subZone and subZone ~= "" then
+		local subEntry, key = ZoneLore:GetSubzoneLore(playerMap, subZone)
+		ZoneLore:Print(
+			'standing in subzone "%s" -> key "%s" -> %s',
+			subZone, tostring(key), subEntry and "lore found" or "|cffffcc00no lore|r"
+		)
+	end
+
+	if ZoneLore:Get("debug") then
+		ZoneLore:Print("|cff66bbffdebug mode is on|r")
+	end
 end
 
 local function CmdHelp()
 	ZoneLore:Print("commands:")
-	ZoneLore:Print("  /zl            -- status for the current zone")
+	ZoneLore:Print("  /zl            -- status for the current zone and subzone")
 	ZoneLore:Print("  /zl panel      -- toggle the world map panel")
+	ZoneLore:Print("  /zl debug      -- report area names on map click")
 	ZoneLore:Print("  /zl verify     -- check data against this client")
 	ZoneLore:Print("  /zl dump       -- enumerate the map tree (dev)")
 end
@@ -317,6 +414,10 @@ SlashCmdList["ZONELORE"] = function(msg)
 		ZoneLore:Set("showMapPanel", enabled)
 		ZoneLore:Print("world map panel %s", enabled and "enabled" or "disabled")
 		Dispatch(ZoneLore.mapChangedCallbacks, ZoneLore:GetDisplayedMapID())
+	elseif cmd == "debug" then
+		local enabled = not ZoneLore:Get("debug")
+		ZoneLore:Set("debug", enabled)
+		ZoneLore:Print("debug mode %s", enabled and "on -- click the map to see area names" or "off")
 	elseif cmd == "help" then
 		CmdHelp()
 	else
