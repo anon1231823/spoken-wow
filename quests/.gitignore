@@ -6,6 +6,7 @@ sql-data
 sql/db_dump
 assets/sql/db_dump
 assets/sql/mysql-dump
+tools/.lines_cache.pkl
 generated
 .vscode/settings.json
 .DS_Store
