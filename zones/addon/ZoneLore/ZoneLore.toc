@@ -14,3 +14,4 @@ Data/Zones.lua
 Data/Subzones.lua
 UI/MapPanel.lua
 UI/SubzoneClick.lua
+UI/HoverPreview.lua

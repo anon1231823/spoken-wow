@@ -14,7 +14,7 @@ retail or the Anniversary/TBC client.
 | M1 wiki scraper → generated lore data | done, 49 zones |
 | M2 world map side panel | done, tested in-game |
 | M2.5 subzone lore on map click | done; mechanism tested in-game, now all 46 zones |
-| M3 hover preview on the map | not started |
+| M3 hover preview on the map | done, **untested in-game** |
 | M4 minimap button + standalone lore window | not started |
 | M5 options panel | not started |
 
@@ -28,11 +28,13 @@ addon/ZoneLore/          the addon itself (this is what WoW loads)
   Data/Subzones.lua      GENERATED -- do not edit by hand
   UI/MapPanel.lua        the world map side panel
   UI/SubzoneClick.lua    resolves a map click to a subzone
+  UI/HoverPreview.lua    lore tooltip while hovering the map
 tools/
   lib/wiki.mjs           shared fetching, era filter, Lua emission
   scrape.mjs             warcraft.wiki.gg -> Data/Zones.lua
   scrape-subzones.mjs    warcraft.wiki.gg -> Data/Subzones.lua
   validate.mjs           checks the generated Lua without a Lua interpreter
+  lua-syntax-check.py    block-balance check for the addon's Lua
   seed-from-dump.mjs     compares the seed against a live client map dump
   seed/zones.json        uiMapID -> wiki page title
   seed/subzones.json     which parent zones to scrape subzones for
@@ -194,6 +196,35 @@ Era client never reports an area that does not exist in 1.15.9, so those rows ar
 inert and cost only file size. What matters is that areas which *do* exist carry
 no post-vanilla text, which the sentence filter handles.
 
+## Hover preview
+
+Hovering a zone on a continent map, or a subzone on a zone map, shows that place's
+`short` lore in a tooltip at the cursor. `/zl hover` toggles it.
+
+It deliberately shows nothing when there is no lore for what is under the cursor,
+and nothing for the zone you are already looking at, since the panel is showing
+that already.
+
+### Why a tooltip and not the map's area label
+
+The original plan was to replace the area-label data provider's `OnUpdate` and
+pass lore as the label's `description`, which is the mechanism `Leatrix_Maps` uses
+for zone levels and fishing skill. That was abandoned on purpose: only one addon
+can own that script, `ZoneLore` sorts after `Leatrix_Maps` so it would load second
+and win, and winning would silently disable a feature of an addon already
+installed here. A "conflict guard" in that design is really just choosing which
+addon loses.
+
+A separate tooltip shares no state, cannot conflict, and has far more room for
+prose than the area label's single small description line. The cost is that it
+looks less native than text under the map's big centred zone name.
+
+The driver is a frame parented to `WorldMapFrame`, so its `OnUpdate` only runs
+while the map is open, throttled to 100ms. It uses its own tooltip rather than
+`GameTooltip` because map pins own `GameTooltip` while hovered, and it suppresses
+itself when `WorldMapFrame:IsCanvasMouseFocus()` is false -- that is exactly when
+the cursor is over a pin and Blizzard's tooltip should be the only one showing.
+
 ### Fixing a zone by hand
 
 Add an entry to `tools/seed/overrides.json` keyed by uiMapID with `full` (and
@@ -221,9 +252,14 @@ here:     node tools/seed-from-dump.mjs           # report differences
 /zl                         status for the current zone and subzone
 /zl verify                  check all 49 entries against this client
 /zl panel                   toggle the world map panel
+/zl hover                   toggle the hover preview tooltip
 /zl debug                   report area names on map click
 /zl dump                    enumerate the map tree (dev)
 ```
+
+Before logging in, `python3 tools/lua-syntax-check.py` balances block keywords and
+delimiters across the addon's Lua. It is not a parser and cannot catch typos or
+runtime errors, but a missing `end` otherwise costs a relog to find.
 
 For subzones, `/zl debug` then clicking around a Tirisfal or Silverpine map prints
 the raw area name, the key it normalised to, and whether lore was found — which is

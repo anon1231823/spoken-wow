@@ -175,6 +175,61 @@ function ZoneLore:GetSubzoneLore(parentMapID, areaName)
 	return zoneTable[key], key
 end
 
+function ZoneLore:IsZoneMap(mapID)
+	local info = mapID and C_Map.GetMapInfo(mapID)
+	if not info then
+		return false
+	end
+	local zoneType = (Enum and Enum.UIMapType and Enum.UIMapType.Zone) or 3
+	return info.mapType == zoneType
+end
+
+-- Subzone name under a normalised canvas position, or nil.
+function ZoneLore:GetAreaNameAt(mapID, x, y)
+	if not (MapUtil and MapUtil.FindBestAreaNameAtMouse) then
+		return nil
+	end
+	local ok, name = pcall(MapUtil.FindBestAreaNameAtMouse, mapID, x, y)
+	if ok then
+		return name
+	end
+	return nil
+end
+
+-- What the cursor is over, at a normalised canvas position on the map `mapID`.
+-- Shared by the click handler and the hover preview so both agree.
+--
+-- Returns kind ("zone"|"subzone"), display name, lore entry, and the resolved
+-- uiMapID for the "zone" case. Returns nil when nothing is resolvable.
+function ZoneLore:ResolveAt(mapID, x, y)
+	if not mapID or not x or not y then
+		return nil
+	end
+
+	-- A child *map* under the cursor: a zone on a continent map, or a dungeon
+	-- entrance on a zone map. Prefer this when we actually have lore for it.
+	local childInfo = C_Map.GetMapInfoAtPosition(mapID, x, y)
+	if childInfo and childInfo.mapID and childInfo.mapID ~= mapID then
+		local entry = self:GetLore(childInfo.mapID)
+		if entry then
+			return "zone", childInfo.name or entry.name, entry, childInfo.mapID
+		end
+	end
+
+	-- Otherwise fall back to the area (subzone) name, which has no uiMapID.
+	local areaName = self:GetAreaNameAt(mapID, x, y)
+	if areaName then
+		local entry = self:GetSubzoneLore(mapID, areaName)
+		if entry then
+			return "subzone", areaName, entry, nil
+		end
+		-- Name but no lore: still useful to the caller for debug reporting.
+		return "subzone", areaName, nil, nil
+	end
+
+	return nil
+end
+
 function ZoneLore:SelectSubzone(mapID, areaName, entry)
 	self.selected = { mapID = mapID, areaName = areaName, entry = entry }
 	if self.RefreshPanel then
@@ -396,6 +451,7 @@ local function CmdHelp()
 	ZoneLore:Print("commands:")
 	ZoneLore:Print("  /zl            -- status for the current zone and subzone")
 	ZoneLore:Print("  /zl panel      -- toggle the world map panel")
+	ZoneLore:Print("  /zl hover      -- toggle the hover preview tooltip")
 	ZoneLore:Print("  /zl debug      -- report area names on map click")
 	ZoneLore:Print("  /zl verify     -- check data against this client")
 	ZoneLore:Print("  /zl dump       -- enumerate the map tree (dev)")
@@ -414,6 +470,13 @@ SlashCmdList["ZONELORE"] = function(msg)
 		ZoneLore:Set("showMapPanel", enabled)
 		ZoneLore:Print("world map panel %s", enabled and "enabled" or "disabled")
 		Dispatch(ZoneLore.mapChangedCallbacks, ZoneLore:GetDisplayedMapID())
+	elseif cmd == "hover" then
+		local enabled = not ZoneLore:Get("showHoverPreview")
+		ZoneLore:Set("showHoverPreview", enabled)
+		if not enabled and ZoneLore.HideHoverPreview then
+			ZoneLore.HideHoverPreview()
+		end
+		ZoneLore:Print("hover preview %s", enabled and "enabled" or "disabled")
 	elseif cmd == "debug" then
 		local enabled = not ZoneLore:Get("debug")
 		ZoneLore:Set("debug", enabled)

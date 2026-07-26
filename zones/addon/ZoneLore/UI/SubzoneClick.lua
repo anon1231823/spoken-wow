@@ -14,26 +14,6 @@ local DRAG_TOLERANCE = 0.01
 
 local downX, downY
 
-local function IsZoneMap(mapID)
-	local info = mapID and C_Map.GetMapInfo(mapID)
-	if not info then
-		return false
-	end
-	local zoneType = (Enum and Enum.UIMapType and Enum.UIMapType.Zone) or 3
-	return info.mapType == zoneType
-end
-
-local function AreaNameAt(mapID, x, y)
-	if not MapUtil or not MapUtil.FindBestAreaNameAtMouse then
-		return nil
-	end
-	local ok, name = pcall(MapUtil.FindBestAreaNameAtMouse, mapID, x, y)
-	if ok then
-		return name
-	end
-	return nil
-end
-
 local function HandleClick(x, y)
 	local mapID = WorldMapFrame.mapID
 	if not mapID then
@@ -42,11 +22,11 @@ local function HandleClick(x, y)
 
 	-- On a continent or world map a click is navigation to a child zone; leave
 	-- that to Blizzard's own handlers rather than hijacking it.
-	if not IsZoneMap(mapID) then
+	if not ZoneLore:IsZoneMap(mapID) then
 		return
 	end
 
-	local areaName = AreaNameAt(mapID, x, y)
+	local areaName = ZoneLore:GetAreaNameAt(mapID, x, y)
 	local debug = ZoneLore:Get("debug")
 
 	if not areaName then
