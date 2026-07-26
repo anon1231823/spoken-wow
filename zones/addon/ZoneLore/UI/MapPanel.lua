@@ -185,6 +185,17 @@ function ZoneLore:RefreshPanel()
 	Refresh(ZoneLore:GetDisplayedMapID())
 end
 
+-- Re-apply width, side and font after an options change. TextView re-wraps itself
+-- when the width actually changes, via its OnSizeChanged.
+function ZoneLore:ApplyPanelOptions()
+	if not panel then
+		return
+	end
+	panel:SetWidth(ZoneLore:Get("panelWidth"))
+	ApplyAnchors()
+	Refresh(ZoneLore:GetDisplayedMapID())
+end
+
 --------------------------------------------------------------------------------
 -- Setup
 --------------------------------------------------------------------------------

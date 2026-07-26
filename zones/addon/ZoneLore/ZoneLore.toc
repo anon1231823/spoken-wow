@@ -20,3 +20,4 @@ UI/SubzoneClick.lua
 UI/HoverPreview.lua
 UI/LoreWindow.lua
 UI/MinimapButton.lua
+UI/Options.lua

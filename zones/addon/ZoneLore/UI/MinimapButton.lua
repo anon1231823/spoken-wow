@@ -83,16 +83,14 @@ function ZoneLore:SetupMinimapButton()
 	icon = dbicon
 	icon:Register("ZoneLore", dataObject, ZoneLoreDB)
 
-	if ZoneLore:Get("showMinimapButton") then
-		icon:Show("ZoneLore")
-	else
-		icon:Hide("ZoneLore")
-	end
+	ZoneLore:ApplyMinimapButton()
 end
 
-function ZoneLore:ToggleMinimapButton()
-	local enabled = not ZoneLore:Get("showMinimapButton")
-	ZoneLore:Set("showMinimapButton", enabled)
+-- Bring the button in line with the showMinimapButton option. Idempotent, so
+-- callers that have already written the option (the options panel) use this
+-- rather than the toggle.
+function ZoneLore:ApplyMinimapButton()
+	local enabled = ZoneLore:Get("showMinimapButton") and true or false
 	ZoneLoreDB.hide = not enabled
 	if icon then
 		if enabled then
@@ -102,4 +100,9 @@ function ZoneLore:ToggleMinimapButton()
 		end
 	end
 	return enabled
+end
+
+function ZoneLore:ToggleMinimapButton()
+	ZoneLore:Set("showMinimapButton", not ZoneLore:Get("showMinimapButton"))
+	return ZoneLore:ApplyMinimapButton()
 end

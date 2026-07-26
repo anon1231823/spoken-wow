@@ -306,6 +306,9 @@ local function SetupHooks()
 	if ZoneLore.SetupMinimapButton then
 		ZoneLore:SetupMinimapButton()
 	end
+	if ZoneLore.SetupOptions then
+		ZoneLore:SetupOptions()
+	end
 end
 
 local events = CreateFrame("Frame")
@@ -454,6 +457,7 @@ end
 local function CmdHelp()
 	ZoneLore:Print("commands:")
 	ZoneLore:Print("  /zl            -- status for the current zone and subzone")
+	ZoneLore:Print("  /zl options    -- open the settings panel")
 	ZoneLore:Print("  /zl window     -- open the browsable lore window")
 	ZoneLore:Print("  /zl panel      -- toggle the world map panel")
 	ZoneLore:Print("  /zl hover      -- toggle the hover preview tooltip")
@@ -476,6 +480,10 @@ SlashCmdList["ZONELORE"] = function(msg)
 		ZoneLore:Set("showMapPanel", enabled)
 		ZoneLore:Print("world map panel %s", enabled and "enabled" or "disabled")
 		Dispatch(ZoneLore.mapChangedCallbacks, ZoneLore:GetDisplayedMapID())
+	elseif cmd == "options" or cmd == "config" or cmd == "opt" then
+		if ZoneLore.OpenOptions then
+			ZoneLore:OpenOptions()
+		end
 	elseif cmd == "window" or cmd == "w" then
 		if ZoneLore.ToggleLoreWindow then
 			ZoneLore:ToggleLoreWindow()

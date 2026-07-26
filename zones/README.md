@@ -16,7 +16,7 @@ retail or the Anniversary/TBC client.
 | M2.5 subzone lore on map click | done; mechanism tested in-game, now all 46 zones |
 | M3 hover preview on the map | done, tested in game |
 | M4 minimap button + standalone lore window | done, **untested in-game** |
-| M5 options panel | not started |
+| M5 options panel and polish | done, **untested in-game** |
 
 ## Layout
 
@@ -33,6 +33,7 @@ addon/ZoneLore/          the addon itself (this is what WoW loads)
   UI/HoverPreview.lua    lore tooltip while hovering the map
   UI/LoreWindow.lua      standalone browsable lore window
   UI/MinimapButton.lua   LibDBIcon minimap button
+  UI/Options.lua         settings panel
   Libs/                  LibStub, CallbackHandler-1.0, LibDataBroker-1.1,
                          LibDBIcon-1.0 (copied from AI_VoiceOver_Continued)
 tools/
@@ -266,6 +267,35 @@ library. `minimapPos` is seeded once in `UI/MinimapButton.lua` so the button doe
 not start at angle 0 underneath other addons' buttons. ZoneLore's own
 `showMinimapButton` option is authoritative and is mirrored onto `hide`.
 
+## Options
+
+`/zl options`, or Game Menu -> Options -> AddOns -> ZoneLore. Registered with
+`Settings.RegisterCanvasLayoutCategory`, which exists on 11509 -- Leatrix_Maps,
+Leatrix_Plus, Leatrix_Sounds, Syndicator and Baganator all use it.
+`InterfaceOptions_AddCategory` is the legacy-only path and is deliberately not
+used.
+
+Exposed: map panel on/off, panel side, panel width, font size, hover preview
+on/off, minimap button on/off, and the debug area-name reporting. Everything
+applies immediately -- no reload -- via `ZoneLore:ApplyPanelOptions()`.
+
+Widget templates were chosen from what addons already running on this client use
+rather than from memory: `UICheckButtonTemplate` (`Syndicator/Options`) and
+`UISliderTemplate` (`Syndicator/Options`, `Leatrix_Maps`, `Leatrix_Plus`).
+`SetObeyStepOnDrag` is called behind a presence check.
+
+### The scrollbar
+
+`UI/TextView.lua` now draws a track and a draggable thumb, auto-hidden when the
+text fits. This is hand-rolled rather than inherited from `ScrollFrameTemplate`.
+That template *does* give a native bar on 11509 -- `Leatrix_Plus` uses it -- but
+only through XML `KeyValues` naming a `scrollBarTemplate`, and none of that
+plumbing can be checked without launching the game. For cosmetic polish a
+deterministic 50 lines beat untestable inheritance. The wheel works either way.
+
+This closes the last item left over from sidestepping
+`UIPanelScrollFrameTemplate` back in M2.
+
 ### Fixing a zone by hand
 
 Add an entry to `tools/seed/overrides.json` keyed by uiMapID with `full` (and
@@ -293,6 +323,7 @@ here:     node tools/seed-from-dump.mjs           # report differences
 /zl                         status for the current zone and subzone
 /zl verify                  check all 49 entries against this client
 /zl panel                   toggle the world map panel
+/zl options                 open the settings panel
 /zl window                  open the browsable lore window
 /zl hover                   toggle the hover preview tooltip
 /zl minimap                 show or hide the minimap button
