@@ -100,6 +100,23 @@ filesystem, so building the two together is what stops a line going silent.
 
 `install` moves any existing install aside to `<module>.replaced` rather than deleting it.
 
+### Browsing the corpus
+
+Nothing in a filename identifies an NPC — quest audio is `{questID}-{accept|complete}.mp3`
+and gossip audio is a content hash — so an NPC's lines are scattered across ~9,500 files
+with no shared key. The web explorer reassembles that view:
+
+```bash
+cd web && pnpm install && pnpm dev     # http://localhost:3000
+```
+
+Search by NPC name or id, or quest title or id, and play any line in the browser. It reads
+`corpus/corpus.json.gz` and the `audio/` store directly and writes nothing — no database,
+no ElevenLabs key, no game install. Run `import-audio` first, or every line shows as a gap.
+
+Lines with no audio are marked. `no audio` is a real gap; `progress` and `invalid-chars`
+are lines the generator deliberately never voices.
+
 ### Language Client Selection
 Currently there are no voice translations available for languages other than english. However, if you want to use the addon with a non English client, you can still do so by creating the lookup tables in the client's respective language.
 
