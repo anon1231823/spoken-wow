@@ -14,6 +14,14 @@ function plural(count: number, noun: string): string {
   return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
 }
 
+function Key({ children }: { children: React.ReactNode }) {
+  return (
+    <kbd className="bg-muted rounded border border-b-2 px-1.5 py-px font-mono text-[11px]">
+      {children}
+    </kbd>
+  );
+}
+
 export default function Explorer() {
   const router = useRouter();
   const params = useSearchParams();
@@ -108,9 +116,14 @@ export default function Explorer() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
+      // The shadcn Select trigger is a <button role="combobox">, not a <select>, so
+      // checking tagName alone would let space both toggle audio and open the dropdown.
+      const target = event.target instanceof HTMLElement ? event.target : null;
       const typing =
-        event.target instanceof HTMLElement &&
-        ["INPUT", "SELECT", "TEXTAREA"].includes(event.target.tagName);
+        !!target &&
+        (["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName) ||
+          target.isContentEditable ||
+          !!target.closest('[role="combobox"],[role="listbox"],[role="dialog"]'));
 
       if (event.key === "/" && !typing) {
         event.preventDefault();
@@ -154,7 +167,7 @@ export default function Explorer() {
         onMissingOnly={(value) => updateUrl({ missing: value })}
       />
 
-      <div className="summary">
+      <div className="text-muted-foreground pt-3 pb-1 text-sm">
         {idle
           ? "Type an NPC name or id, or a quest title or id."
           : loading && !result
@@ -174,10 +187,12 @@ export default function Explorer() {
         />
       ))}
 
-      {result && result.npcs.length === 0 && <div className="summary">No matches.</div>}
+      {result && result.npcs.length === 0 && (
+        <div className="text-muted-foreground py-2 text-sm">No matches.</div>
+      )}
 
-      <p className="hint">
-        <kbd>/</kbd> search · <kbd>space</kbd> play/pause · <kbd>j</kbd> <kbd>k</kbd> next
+      <p className="text-muted-foreground mt-6 flex flex-wrap items-center gap-1.5 text-xs">
+        <Key>/</Key> search · <Key>space</Key> play/pause · <Key>j</Key> <Key>k</Key> next
         and previous line
       </p>
 

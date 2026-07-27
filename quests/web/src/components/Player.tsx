@@ -12,13 +12,13 @@ type Props = { line: ResultLine | null };
  */
 const Player = forwardRef<HTMLAudioElement, Props>(function Player({ line }, ref) {
   return (
-    <div className="player">
-      <div className="player-inner">
-        <div className="player-meta">
-          <div className="player-title">
+    <div className="bg-card fixed inset-x-0 bottom-0 border-t px-5 py-2.5">
+      <div className="mx-auto flex max-w-4xl items-center gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium">
             {line ? `${line.npcName} · ${line.lineId}` : "Nothing playing"}
           </div>
-          <div className="player-text">
+          <div className="text-muted-foreground truncate text-xs">
             {line ? line.text : "Pick a line to hear it."}
           </div>
         </div>
@@ -26,6 +26,7 @@ const Player = forwardRef<HTMLAudioElement, Props>(function Player({ line }, ref
           ref={ref}
           controls
           preload="none"
+          className="w-[320px] max-w-[45%] shrink-0"
           src={line ? `/api/audio/${line.audioPath}` : undefined}
         />
       </div>

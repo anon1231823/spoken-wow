@@ -2,6 +2,16 @@
 
 import { forwardRef } from "react";
 
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Filter } from "@/lib/search";
 
 type Props = {
@@ -18,33 +28,37 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
   ref,
 ) {
   return (
-    <div className="search">
-      <input
+    <div className="bg-background sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b py-3">
+      <Input
         ref={ref}
         type="search"
         value={query}
         placeholder="NPC name or id, quest title or id…"
         aria-label="Search"
         autoFocus
+        className="min-w-0 flex-1 basis-64"
         onChange={(e) => onQuery(e.target.value)}
       />
-      <select
-        value={filter}
-        aria-label="Search in"
-        onChange={(e) => onFilter(e.target.value as Filter)}
-      >
-        <option value="any">NPC or quest</option>
-        <option value="npc">NPC only</option>
-        <option value="quest">Quest only</option>
-      </select>
-      <label className="toggle">
-        <input
-          type="checkbox"
+      <Select value={filter} onValueChange={(value) => onFilter(value as Filter)}>
+        <SelectTrigger className="w-40" aria-label="Search in">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="any">NPC or quest</SelectItem>
+          <SelectItem value="npc">NPC only</SelectItem>
+          <SelectItem value="quest">Quest only</SelectItem>
+        </SelectContent>
+      </Select>
+      <div className="flex items-center gap-2 whitespace-nowrap">
+        <Checkbox
+          id="missing-only"
           checked={missingOnly}
-          onChange={(e) => onMissingOnly(e.target.checked)}
+          onCheckedChange={(value) => onMissingOnly(value === true)}
         />
-        missing audio only
-      </label>
+        <Label htmlFor="missing-only" className="text-muted-foreground text-sm">
+          missing audio only
+        </Label>
+      </div>
     </div>
   );
 });
