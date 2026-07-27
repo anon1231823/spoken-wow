@@ -3,3 +3,6 @@ tools/cache/
 
 # macOS
 .DS_Store
+
+# Packaged addon zips. Rebuild with `make package`.
+dist/
