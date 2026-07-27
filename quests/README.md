@@ -17,8 +17,10 @@ Three stages, and only the first needs a database:
 | Stage | Input | Output | Who runs it |
 | --- | --- | --- | --- |
 | `extract` | vmangos world DB | `corpus/corpus.json.gz` | a maintainer, when vmangos ships a new dump |
-| synthesize | corpus + voice config | mp3s in `audio/` | anyone producing lines |
-| build | corpus + `audio/` | addon data module | anyone cutting a release |
+| `import-audio` | an existing sound pack | `audio/` | once, to adopt audio you already have |
+| `synthesize` | corpus + voice config | mp3s in `audio/` | anyone producing lines |
+| `build` | corpus + `audio/` | `dist/AI_VoiceOverData_Vanilla/` | anyone cutting a release |
+| `install` | the built module | WoW AddOns folder | to try it in game |
 
 The corpus is **committed** — 17,507 lines, 2 MB gzipped — so producing audio needs no
 database, no dump, and no Docker.
@@ -81,6 +83,22 @@ from tts_cli.corpus import load_corpus, lines_in_area
 corpus = load_corpus()
 elwynn = lines_in_area(corpus, map_id=0, x_range=(-9900, -9000), y_range=(-600, 900))
 ```
+
+### Producing a data module
+
+```bash
+python cli-main.py import-audio                       # adopt an existing pack, once
+python cli-main.py synthesize --npc 240 --dry-run     # what would be made, and its cost
+python cli-main.py synthesize --npc 240               # make it
+python cli-main.py build                              # dist/AI_VoiceOverData_Vanilla/
+python cli-main.py install --force                    # into the AddOns folder
+```
+
+`build` emits the sounds, every lookup table and a `sound_length_table.lua` computed from
+the mp3s it just copied. The addon resolves sounds through that table rather than the
+filesystem, so building the two together is what stops a line going silent.
+
+`install` moves any existing install aside to `<module>.replaced` rather than deleting it.
 
 ### Language Client Selection
 Currently there are no voice translations available for languages other than english. However, if you want to use the addon with a non English client, you can still do so by creating the lookup tables in the client's respective language.

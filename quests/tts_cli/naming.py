@@ -50,6 +50,20 @@ def filename_from_line_id(line_id: str) -> str:
     return base
 
 
+def gossip_hash_from_line_id(line_id: str) -> str:
+    """The bare text hash for a gossip line, without any m-/f- prefix.
+
+    Gossip lookup tables store the unprefixed hash: the addon adds the player's gender
+    prefix at resolve time (DataModules:AddPlayerGenderToFilename) and falls back to the
+    bare name, so storing a prefixed hash would make the line unreachable for the other
+    gender.
+    """
+    kind, *rest = line_id.split(":")
+    if kind != "g":
+        raise ValueError(f"{line_id!r} is not a gossip line")
+    return rest[0]
+
+
 def subfolder_from_line_id(line_id: str) -> str:
     """Which sounds/ subdirectory a line lives in."""
     kind = line_id.split(":", 1)[0]

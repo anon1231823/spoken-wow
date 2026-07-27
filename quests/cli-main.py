@@ -1,15 +1,20 @@
 """Command line entry point for the voiceline production pipeline.
 
-Three stages, only the first of which needs a database:
+Only `extract` needs a database:
 
-    extract   vmangos MySQL -> corpus/corpus.json.gz   (maintainer only, rare)
-    ...       corpus + audio store -> synthesized audio (everyday)
-    ...       corpus + audio store -> data module        (build the artifact)
+    init-db       download and import the vmangos dump      maintainer, rare
+    extract       world DB -> corpus/corpus.json.gz         maintainer, rare
+    import-audio  an existing sound pack -> audio/          once
+    synthesize    corpus + voice config -> audio/           everyday
+    build         corpus + audio/ -> dist/<module>          per release
+    install       dist/<module> -> WoW AddOns               per release
 """
 import argparse
 
 from tqdm import tqdm
 
+from tts_cli.build import (DEFAULT_ADDONS_DIR, DEFAULT_DIST_DIR,
+                           DEFAULT_MODULE_NAME, build_module, install_module)
 from tts_cli.corpus import DEFAULT_CORPUS_PATH, load_corpus
 from tts_cli.env_vars import ELEVENLABS_API_KEY
 from tts_cli.select import estimate, select_lines, unique_by_file
@@ -56,6 +61,23 @@ syn.add_argument("--dry-run", action="store_true",
                  help="Report what would be generated and what it would cost")
 syn.add_argument("--store", default=DEFAULT_STORE_DIR)
 syn.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
+
+bld = subparsers.add_parser(
+    "build",
+    help="Assemble the addon data module from the corpus and the audio store.")
+bld.add_argument("--store", default=DEFAULT_STORE_DIR)
+bld.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
+bld.add_argument("--dist", default=DEFAULT_DIST_DIR)
+bld.add_argument("--module", default=DEFAULT_MODULE_NAME)
+bld.add_argument("--version", default="0.1")
+
+ins = subparsers.add_parser(
+    "install", help="Copy the built module into a WoW AddOns folder.")
+ins.add_argument("--addons", default=DEFAULT_ADDONS_DIR)
+ins.add_argument("--dist", default=DEFAULT_DIST_DIR)
+ins.add_argument("--module", default=DEFAULT_MODULE_NAME)
+ins.add_argument("--force", action="store_true",
+                 help="Replace an existing install, moving it aside first")
 
 subparsers.add_parser(
     "gen_lookup_tables",
@@ -137,6 +159,21 @@ elif args.mode == "synthesize":
             failed += 1
             print(f"\n  {line['lineId']}: {exc}")
     print(f"\nsynthesized {done}, failed {failed}")
+
+elif args.mode == "build":
+    report = build_module(load_corpus(args.corpus), args.store, args.dist,
+                          args.module, args.version, progress=True)
+    print(f"\nbuilt {report['moduleDir']}")
+    print(f"  audio files {report['audioFiles']}")
+    for name, rows in sorted(report["tableRows"].items()):
+        print(f"  {name:<32} {rows:>6} entries")
+
+elif args.mode == "install":
+    import os as _os
+    report = install_module(_os.path.join(args.dist, args.module), args.addons, args.force)
+    print(f"installed {report['target']}")
+    if report["replaced"]:
+        print(f"previous install moved to {report['replaced']}")
 
 elif args.mode == "gen_lookup_tables":
     from tts_cli import utils
