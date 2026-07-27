@@ -8,47 +8,78 @@ Contribute voices on [allvoice.ai](https://allvoice.ai) so I can give each NPC a
 ### [allvoice code](https://github.com/allvoice/allvoice-website)
 
 ## Overview
-- tts cli to create audio files for quests and gossip text.
-- in game addon for playing generated voiceovers
 
-- cli uses data fetched from a local MySQL database and ElevenLabs tts for speech
+A pipeline for producing AI voiceovers for WoW Classic dialog. The sound pack and the addon
+data module are build outputs of this project.
 
+Three stages, and only the first needs a database:
+
+| Stage | Input | Output | Who runs it |
+| --- | --- | --- | --- |
+| `extract` | vmangos world DB | `corpus/corpus.json.gz` | a maintainer, when vmangos ships a new dump |
+| synthesize | corpus + voice config | mp3s in `audio/` | anyone producing lines |
+| build | corpus + `audio/` | addon data module | anyone cutting a release |
+
+The corpus is **committed** — 17,507 lines, 2 MB gzipped — so producing audio needs no
+database, no dump, and no Docker.
 
 ## Below is for developers only. Go to [releases](https://github.com/mrthinger/wow-voiceover/releases) if youre looking to install the addon.
 
 ## Requirements
-- python 3.10+
-- docker (for the database)
+
+- Python 3.10+
+- Docker — **only** to refresh the corpus (see "Refreshing the corpus")
 
 ## Installation
-1. Make a python virtual environment. (make sure to source it after creating)
+
+1. Create and activate a virtual environment:
 ```bash
-python -m venv .venv
+python -m venv .venv && source .venv/bin/activate
 ```
-2. Install the required packages.
+2. Install the everyday dependencies — five pure-Python packages, no compiled extensions
+   and no database client:
 ```bash
 pip install -r requirements.txt
 ```
-3. Copy the .env.example file to .env and fill in your ElevenLabs API Key and database credentials. The included database values are fine if you're going to use the docker-compose file.
+3. Copy `.env.example` to `.env` and fill in your ElevenLabs API key:
 ```bash
 cp .env.example .env
 ```
-4. Start the MySQL DB
+
+That's it. The committed corpus already contains every line's text, voice and metadata.
+
+## Refreshing the corpus
+
+Only needed when vmangos publishes a new database dump, or when the extraction needs a
+column it didn't previously capture.
+
 ```bash
+pip install -r requirements-extract.txt   # adds pandas, numpy, PyMySQL
 docker compose up -d
+python cli-main.py init-db                # download and import the vmangos dump
+python cli-main.py extract                # writes corpus/corpus.json.gz
 ```
-5. Seed the MySQL DB
-```bash
-python cli-main.py init-db
-```
+
+Commit the resulting corpus; the diff is reviewable.
 
 ## Voice Setup
 The generation scripts assume you have voices created in Elevenlabs named in the format `race-gender`. For the exact races the script checks your elevenlabs account for, refer to `tts_cli\consts.py`. Gender will always either be `male` or `female`. ex: `orc-male`. You will need to create your own voice clones. A good place to get samples is @ https://www.wowhead.com/sounds/npc-greetings/name:orc 
 ## Usage
-To use the interactive CLI tool, run the following command:
 
 ```bash
-python cli-main.py
+python cli-main.py --help
+```
+
+Selecting what to voice used to mean dragging a rectangle over a map image, which filtered
+NPCs by world coordinates. That picker is gone — selection is now a filter over the corpus,
+by NPC, quest, or spawn area. Spawn positions are carried in the corpus, so area selection
+still works with no GUI and no database:
+
+```python
+from tts_cli.corpus import load_corpus, lines_in_area
+
+corpus = load_corpus()
+elwynn = lines_in_area(corpus, map_id=0, x_range=(-9900, -9000), y_range=(-600, 900))
 ```
 
 ### Language Client Selection
