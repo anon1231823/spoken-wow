@@ -15,8 +15,8 @@ export default function NpcResult({ npc, currentLineId, onPlay }: Props) {
       <header className="npc-head">
         <span className="npc-name">{npc.npcName}</span>
         <span className="npc-meta">
-          {npc.npcType} {npc.npcId} · {npc.voice} · {npc.lineCount} lines ·{" "}
-          {npc.audioCount} with audio
+          {npc.npcType} {npc.npcId} · {npc.voice} · {npc.lineCount}{" "}
+          {npc.lineCount === 1 ? "line" : "lines"} · {npc.audioCount} with audio
         </span>
       </header>
       {npc.quests.map((quest) => (

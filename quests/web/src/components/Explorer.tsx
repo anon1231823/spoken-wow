@@ -10,6 +10,10 @@ import type { Filter, ResultLine, SearchResult } from "@/lib/search";
 
 const DEBOUNCE_MS = 200;
 
+function plural(count: number, noun: string): string {
+  return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 export default function Explorer() {
   const router = useRouter();
   const params = useSearchParams();
@@ -156,7 +160,7 @@ export default function Explorer() {
           : loading && !result
             ? "Searching…"
             : result
-              ? `${result.lineCount.toLocaleString()} lines across ${result.npcCount.toLocaleString()} NPCs` +
+              ? `${plural(result.lineCount, "line")} across ${plural(result.npcCount, "NPC")}` +
                 (result.truncated ? `, showing the first ${result.npcs.length}` : "")
               : ""}
       </div>
