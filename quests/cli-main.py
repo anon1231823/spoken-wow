@@ -8,12 +8,18 @@ Three stages, only the first of which needs a database:
 """
 import argparse
 
-from tts_cli.corpus import DEFAULT_CORPUS_PATH, extract, load_corpus
+from tqdm import tqdm
+
+from tts_cli.corpus import DEFAULT_CORPUS_PATH, load_corpus
+from tts_cli.env_vars import ELEVENLABS_API_KEY
+from tts_cli.select import estimate, select_lines, unique_by_file
 from tts_cli.store import DEFAULT_SOURCE_DIR, DEFAULT_STORE_DIR, import_audio
-from tts_cli.init_db import download_and_extract_latest_db_dump, import_sql_files_to_database
-from tts_cli.sql_queries import query_dataframe_for_all_quests_and_gossip
-from tts_cli.tts_utils import TTSProcessor
-from tts_cli import utils
+from tts_cli.synthesize import synthesize_line
+from tts_cli.voice_config import apply_pronunciation, load_pronunciation
+from tts_cli.voices import fetch_voice_map
+
+# init-db, extract and gen_lookup_tables are imported inside their branches: they pull in
+# pandas and PyMySQL, which the everyday path deliberately does not install.
 
 parser = argparse.ArgumentParser(description="Voiceline production pipeline for WoW dialog")
 subparsers = parser.add_subparsers(dest="mode", help="Available modes")
@@ -33,6 +39,24 @@ imp.add_argument("--source", default=DEFAULT_SOURCE_DIR,
 imp.add_argument("--store", default=DEFAULT_STORE_DIR)
 imp.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
 
+syn = subparsers.add_parser(
+    "synthesize",
+    help="Render selected corpus lines into the audio store.")
+syn.add_argument("--line-id")
+syn.add_argument("--npc", help="NPC id or name substring")
+syn.add_argument("--quest", help="Quest id or title substring")
+syn.add_argument("--voice", help="e.g. human-male")
+syn.add_argument("--missing", action="store_true",
+                 help="Only lines with no audio in the store")
+syn.add_argument("--area", nargs=5, type=float, metavar=("MAP", "X1", "X2", "Y1", "Y2"),
+                 help="Only NPCs spawned in this world-coordinate box")
+syn.add_argument("--force", action="store_true", help="Replace audio already in the store")
+syn.add_argument("--limit", type=int)
+syn.add_argument("--dry-run", action="store_true",
+                 help="Report what would be generated and what it would cost")
+syn.add_argument("--store", default=DEFAULT_STORE_DIR)
+syn.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
+
 subparsers.add_parser(
     "gen_lookup_tables",
     help="Generate the addon lookup tables and sound length table.") \
@@ -41,11 +65,14 @@ subparsers.add_parser(
 args = parser.parse_args()
 
 if args.mode == "init-db":
+    from tts_cli.init_db import (download_and_extract_latest_db_dump,
+                                 import_sql_files_to_database)
     download_and_extract_latest_db_dump()
     import_sql_files_to_database()
     print("Database initialized successfully.")
 
 elif args.mode == "extract":
+    from tts_cli.corpus import extract
     corpus = extract(args.out)
     print(f"Wrote {corpus['lineCount']} lines "
           f"and spawns for {len(corpus['spawns'])} NPCs to {args.out}")
@@ -61,7 +88,61 @@ elif args.mode == "import-audio":
     if len(report["unmatched"]) > 10:
         print(f"    ... and {len(report['unmatched']) - 10} more")
 
+elif args.mode == "synthesize":
+    corpus = load_corpus(args.corpus)
+    area = (int(args.area[0]), (args.area[1], args.area[2]), (args.area[3], args.area[4])) \
+        if args.area else None
+    selected = select_lines(corpus, args.store, npc=args.npc, quest=args.quest,
+                            voice=args.voice, line_id=args.line_id,
+                            missing=args.missing, area=area)
+    targets = unique_by_file([l for l in selected if l["generatable"]])
+    if args.limit:
+        targets = targets[:args.limit]
+
+    est = estimate(targets)
+    print(f"selected {len(selected)} lines -> {est['files']} files, "
+          f"{est['characters']:,} characters")
+    print(f"voices needed: {', '.join(est['voices']) or 'none'}")
+
+    if args.dry_run or not targets:
+        # Show what will actually be spoken, after pronunciation rules - that is the
+        # thing worth eyeballing before spending characters.
+        rules = load_pronunciation()
+        for line in targets[:10]:
+            spoken = apply_pronunciation(line["text"], rules)
+            flag = "*" if spoken != line["text"] else " "
+            print(f"  {flag} {line['lineId']:<26} {line['voice']:<14} {spoken[:52]}")
+        if len(targets) > 10:
+            print(f"    ... and {len(targets) - 10} more")
+        if any(apply_pronunciation(l["text"], rules) != l["text"] for l in targets):
+            print("  (* = pronunciation rules changed the spoken text)")
+        raise SystemExit(0)
+
+    voice_map = fetch_voice_map(ELEVENLABS_API_KEY)
+    unavailable = sorted(set(est["voices"]) - set(voice_map))
+    if unavailable:
+        raise SystemExit(
+            f"missing ElevenLabs voices: {', '.join(unavailable)}\n"
+            "Voice clones must be named race-gender (e.g. orc-male); "
+            "cloning requires a paid plan.")
+
+    done = failed = 0
+    for line in tqdm(targets, unit="line", desc="Synthesizing"):
+        try:
+            synthesize_line(line, voice_map[line["voice"]], args.store, force=args.force)
+            done += 1
+        except FileExistsError:
+            pass
+        except Exception as exc:
+            failed += 1
+            print(f"\n  {line['lineId']}: {exc}")
+    print(f"\nsynthesized {done}, failed {failed}")
+
 elif args.mode == "gen_lookup_tables":
+    from tts_cli import utils
+    from tts_cli.sql_queries import query_dataframe_for_all_quests_and_gossip
+    from tts_cli.tts_utils import TTSProcessor
+
     tts_processor = TTSProcessor()
     language_number = utils.language_code_to_language_number(args.lang)
     print(f"Selected language: {args.lang}")
