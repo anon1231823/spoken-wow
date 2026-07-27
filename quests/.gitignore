@@ -22,3 +22,6 @@ generated
 tools/.lines_cache.pkl
 AI_VoiceOver/AI_VoiceOver.toc
 RELEASE
+
+# Planning artifacts from the superpowers skills: useful locally, noise in review
+docs/superpowers/
