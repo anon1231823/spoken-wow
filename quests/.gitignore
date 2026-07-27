@@ -1,12 +1,27 @@
 __pycache__
 datagrip
 .venv
-sql-data
 .env
-sql/db_dump
-assets/sql/db_dump
-generated
 .vscode/settings.json
 .DS_Store
+
+# vmangos dumps, needed only to refresh the corpus
+sql-data
+sql/db_dump
+assets/sql/db_dump
+assets/sql/mysql-dump
+
+# The audio store: ~1.1 GB of generated mp3s. Not committable, but this is the most
+# expensive artifact the project owns - back it up.
+audio/
+
+# Built data module
+dist/
+
+generated
+tools/.lines_cache.pkl
 AI_VoiceOver/AI_VoiceOver.toc
 RELEASE
+
+# Planning artifacts from the superpowers skills: useful locally, noise in review
+docs/superpowers/

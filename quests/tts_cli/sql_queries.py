@@ -148,6 +148,29 @@ WHERE
     return df
 
 
+def query_spawns():
+    """Every creature and gameobject spawn point, as (type, template_id, map, x, y).
+
+    A template can spawn many times, so this is one row per spawn rather than one per
+    entity. The type is carried because creature and gameobject IDs are separate spaces
+    that overlap - creature 68 is a Stormwind City Guard while gameobject 68 is a Wanted
+    Poster - so keying spawns by bare ID silently mixes them.
+
+    Items are absent by design: they are carried in inventory and have no world position.
+
+    Carried into the corpus so zone-based selection stays possible without the database -
+    see tts_cli/corpus.py.
+    """
+    db = make_connection()
+    rows = []
+    with db.cursor() as cursor:
+        for entity_type, table in (("creature", "creature"), ("gameobject", "gameobject")):
+            cursor.execute(f"SELECT id, map, position_x, position_y FROM {table}")
+            rows.extend((entity_type, *row) for row in cursor.fetchall())
+    db.close()
+    return rows
+
+
 def query_dataframe_for_all_quests_and_gossip(lang: int = 0):
     db = make_connection()
     sql_query = '''

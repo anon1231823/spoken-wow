@@ -1,0 +1,8 @@
+# Corpus extraction only: vmangos MySQL -> corpus/corpus.json.gz.
+# Needed by a maintainer refreshing the corpus, and by nobody else - the corpus is
+# committed, so producing audio never touches a database.
+-r requirements.txt
+pandas==1.5.3
+numpy==1.24.2
+PyMySQL==1.0.2
+cryptography

@@ -1,157 +1,154 @@
+"""Command line entry point for the voiceline production pipeline.
+
+Three stages, only the first of which needs a database:
+
+    extract   vmangos MySQL -> corpus/corpus.json.gz   (maintainer only, rare)
+    ...       corpus + audio store -> synthesized audio (everyday)
+    ...       corpus + audio store -> data module        (build the artifact)
+"""
 import argparse
-from prompt_toolkit.shortcuts import checkboxlist_dialog, radiolist_dialog, yes_no_dialog
-from tts_cli.sql_queries import query_dataframe_for_all_quests_and_gossip, query_dataframe_for_area
-from tts_cli.tts_utils import TTSProcessor
-from tts_cli.init_db import download_and_extract_latest_db_dump, import_sql_files_to_database
-from tts_cli.consts import RACE_DICT_INV, GENDER_DICT_INV, race_gender_tuple_to_strings
-from tts_cli.wrath_model_extraction import write_model_data
-from tts_cli.zone_selector import KalimdorZoneSelector, EasternKingdomsZoneSelector
-from tts_cli import utils
 
+from tqdm import tqdm
 
-def prompt_user(tts_processor):
+from tts_cli.corpus import DEFAULT_CORPUS_PATH, load_corpus
+from tts_cli.env_vars import ELEVENLABS_API_KEY
+from tts_cli.select import estimate, select_lines, unique_by_file
+from tts_cli.store import DEFAULT_SOURCE_DIR, DEFAULT_STORE_DIR, import_audio
+from tts_cli.synthesize import synthesize_line
+from tts_cli.voice_config import apply_pronunciation, load_pronunciation
+from tts_cli.voices import fetch_voice_map
 
-    #map
-    map_choices = [
-        (-1, "All (includes dungeons)"),
-        (0, "Eastern Kingdoms"),
-        (1, "Kalimdor"),
-    ]
-    map_id = radiolist_dialog(
-        title="Select a map",
-        text="Choose a map:",
-        values=map_choices,
-    ).run()
+# init-db, extract and gen_lookup_tables are imported inside their branches: they pull in
+# pandas and PyMySQL, which the everyday path deliberately does not install.
 
-    if map_id >= 0:
-        if map_id == 0:
-            zone_selector = EasternKingdomsZoneSelector()
-        else:
-            zone_selector = KalimdorZoneSelector()
-
-        #area
-        (xrange, yrange) = zone_selector.select_zone()
-
-        df = query_dataframe_for_area(xrange, yrange, map_id)
-    else:
-        (xrange, yrange) = 'all', 'all'
-        df = query_dataframe_for_all_quests_and_gossip()
-    
-    # Get unique race-gender combinations
-    unique_race_gender_combos = df[[
-        'DisplayRaceID', 'DisplaySexID']].drop_duplicates().values
-    # Convert the unique race-gender combinations to a tuple
-    race_gender_tuple = tuple(map(tuple, unique_race_gender_combos))
-
-
-    #voices
-    voice_map = tts_processor.get_voice_map()
-    required_voices_for_zone_complete = race_gender_tuple_to_strings(
-        race_gender_tuple)
-
-    available_voices = set(voice_map.keys())
-    required_voices = set(required_voices_for_zone_complete)
-    missing_voices = required_voices - available_voices
-    selectable_voices = required_voices.intersection(available_voices)
-
-
-    voice_choices = [(voice_name, f"{voice_name} (found)")
-                     for voice_name in selectable_voices]
-    voice_choices.sort()
-
-    if missing_voices:
-        missing_choices = [(voice_name, f"{voice_name} (missing)")
-                          for voice_name in missing_voices]
-        missing_choices.sort()
-        voice_choices += missing_choices
-
-    all_found_option = 'all-found'
-    voice_choices.insert(0, (all_found_option, all_found_option))
-
-    selected_voices = checkboxlist_dialog(
-        title="Choose Voices",
-        text=f"Select the voices you want to use. These are all of the voices needed to generate text in the selected area. Selecting a missing voice does nothing.",
-        values=voice_choices,
-    ).run()
-
-    if all_found_option in selected_voices:
-        selected_voices = selectable_voices
-    else:
-        # Filter out the missing voices from the selected_voices list
-        selected_voices = [
-            voice for voice in selected_voices if voice not in missing_voices]
-
-    selected_race_gender = []
-    for voice in selected_voices:
-        race, gender = voice.split('-')
-        selected_race_gender.append(
-            (RACE_DICT_INV[race], GENDER_DICT_INV[gender]))
-
-    selected_voice_names = race_gender_tuple_to_strings(selected_race_gender)
-
-
-    #text estimate
-    # Calculate the total amount of characters of non-progress and unique text
-    estimate_df = tts_processor.preprocess_dataframe(df)
-    estimate_df = estimate_df.loc[estimate_df['voice_name'].isin(selected_voice_names)]
-    estimate_df = estimate_df.loc[~estimate_df['source'].str.contains('progress')]
-    estimate_df = estimate_df[['text', 'DisplayRaceID',
-                       'DisplaySexID']].drop_duplicates()
-    total_characters = estimate_df['text'].str.len().sum()
-
-
-    confirmed = yes_no_dialog(
-        title="Summary",
-        text=f"Selected Map: {map_choices[map_id][1]}\n"
-             f"Coordinate Range: x={xrange}, y={yrange}\n"
-             f"Selected Voices: {', '.join(selected_voice_names)}\n"
-             f"Approximate Text Characters: {total_characters}",
-        yes_text='Generate',
-        no_text='Cancel'
-    ).run()
-
-    if not confirmed:
-        exit(0)
-
-    return df, selected_voice_names
-
-
-parser = argparse.ArgumentParser(
-    description="Text-to-Speech CLI for WoW dialog")
-
+parser = argparse.ArgumentParser(description="Voiceline production pipeline for WoW dialog")
 subparsers = parser.add_subparsers(dest="mode", help="Available modes")
-subparsers.add_parser("init-db", help="Initialize the database")
-subparsers.add_parser("interactive", help="Interactive mode")
-subparsers.add_parser("extract_model_data", help="Generate info about which NPC entry uses which model.")
-subparsers.add_parser("gen_lookup_tables", help="Generate the lookup tables for all quests and gossip in the game. Also recomputes the sound length table.") \
-          .add_argument("--lang", default="enUS")
+
+subparsers.add_parser(
+    "init-db",
+    help="Download the vmangos dump and import it. Needed only before 'extract'.")
+subparsers.add_parser(
+    "extract",
+    help="Query the world DB and write the committed corpus. The only stage needing MySQL.") \
+    .add_argument("--out", default=DEFAULT_CORPUS_PATH)
+imp = subparsers.add_parser(
+    "import-audio",
+    help="Copy existing mp3s into the project's audio store.")
+imp.add_argument("--source", default=DEFAULT_SOURCE_DIR,
+                 help="Sound pack to import from (default: the _classic_era_ install).")
+imp.add_argument("--store", default=DEFAULT_STORE_DIR)
+imp.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
+
+syn = subparsers.add_parser(
+    "synthesize",
+    help="Render selected corpus lines into the audio store.")
+syn.add_argument("--line-id")
+syn.add_argument("--npc", help="NPC id or name substring")
+syn.add_argument("--quest", help="Quest id or title substring")
+syn.add_argument("--voice", help="e.g. human-male")
+syn.add_argument("--missing", action="store_true",
+                 help="Only lines with no audio in the store")
+syn.add_argument("--area", nargs=5, type=float, metavar=("MAP", "X1", "X2", "Y1", "Y2"),
+                 help="Only NPCs spawned in this world-coordinate box")
+syn.add_argument("--force", action="store_true", help="Replace audio already in the store")
+syn.add_argument("--limit", type=int)
+syn.add_argument("--dry-run", action="store_true",
+                 help="Report what would be generated and what it would cost")
+syn.add_argument("--store", default=DEFAULT_STORE_DIR)
+syn.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
+
+subparsers.add_parser(
+    "gen_lookup_tables",
+    help="Generate the addon lookup tables and sound length table.") \
+    .add_argument("--lang", default="enUS")
 
 args = parser.parse_args()
 
-def interactive_mode():
-    tts_processor = TTSProcessor()
-    df, selected_voice_names = prompt_user(tts_processor)
-    df = tts_processor.preprocess_dataframe(df)
-    tts_processor.tts_dataframe(df, selected_voice_names)
-
-
 if args.mode == "init-db":
+    from tts_cli.init_db import (download_and_extract_latest_db_dump,
+                                 import_sql_files_to_database)
     download_and_extract_latest_db_dump()
     import_sql_files_to_database()
     print("Database initialized successfully.")
-elif args.mode == "interactive":
-    interactive_mode()
+
+elif args.mode == "extract":
+    from tts_cli.corpus import extract
+    corpus = extract(args.out)
+    print(f"Wrote {corpus['lineCount']} lines "
+          f"and spawns for {len(corpus['spawns'])} NPCs to {args.out}")
+
+elif args.mode == "import-audio":
+    report = import_audio(args.source, args.store, load_corpus(args.corpus), progress=True)
+    print(f"\nadopted        {report['adopted']}")
+    print(f"already stored {report['alreadyPresent']}")
+    print(f"unmatched      {len(report['unmatched'])}  (no corpus line; not imported)")
+    print(f"still missing  {report['missing']}  (generatable lines with no audio)")
+    for rel in report["unmatched"][:10]:
+        print(f"    unmatched: {rel}")
+    if len(report["unmatched"]) > 10:
+        print(f"    ... and {len(report['unmatched']) - 10} more")
+
+elif args.mode == "synthesize":
+    corpus = load_corpus(args.corpus)
+    area = (int(args.area[0]), (args.area[1], args.area[2]), (args.area[3], args.area[4])) \
+        if args.area else None
+    selected = select_lines(corpus, args.store, npc=args.npc, quest=args.quest,
+                            voice=args.voice, line_id=args.line_id,
+                            missing=args.missing, area=area)
+    targets = unique_by_file([l for l in selected if l["generatable"]])
+    if args.limit:
+        targets = targets[:args.limit]
+
+    est = estimate(targets)
+    print(f"selected {len(selected)} lines -> {est['files']} files, "
+          f"{est['characters']:,} characters")
+    print(f"voices needed: {', '.join(est['voices']) or 'none'}")
+
+    if args.dry_run or not targets:
+        # Show what will actually be spoken, after pronunciation rules - that is the
+        # thing worth eyeballing before spending characters.
+        rules = load_pronunciation()
+        for line in targets[:10]:
+            spoken = apply_pronunciation(line["text"], rules)
+            flag = "*" if spoken != line["text"] else " "
+            print(f"  {flag} {line['lineId']:<26} {line['voice']:<14} {spoken[:52]}")
+        if len(targets) > 10:
+            print(f"    ... and {len(targets) - 10} more")
+        if any(apply_pronunciation(l["text"], rules) != l["text"] for l in targets):
+            print("  (* = pronunciation rules changed the spoken text)")
+        raise SystemExit(0)
+
+    voice_map = fetch_voice_map(ELEVENLABS_API_KEY)
+    unavailable = sorted(set(est["voices"]) - set(voice_map))
+    if unavailable:
+        raise SystemExit(
+            f"missing ElevenLabs voices: {', '.join(unavailable)}\n"
+            "Voice clones must be named race-gender (e.g. orc-male); "
+            "cloning requires a paid plan.")
+
+    done = failed = 0
+    for line in tqdm(targets, unit="line", desc="Synthesizing"):
+        try:
+            synthesize_line(line, voice_map[line["voice"]], args.store, force=args.force)
+            done += 1
+        except FileExistsError:
+            pass
+        except Exception as exc:
+            failed += 1
+            print(f"\n  {line['lineId']}: {exc}")
+    print(f"\nsynthesized {done}, failed {failed}")
+
 elif args.mode == "gen_lookup_tables":
+    from tts_cli import utils
+    from tts_cli.sql_queries import query_dataframe_for_all_quests_and_gossip
+    from tts_cli.tts_utils import TTSProcessor
+
     tts_processor = TTSProcessor()
-
-    language_code = args.lang
-    language_number = utils.language_code_to_language_number(language_code)
-    print(f"Selected language: {language_code}")
-
+    language_number = utils.language_code_to_language_number(args.lang)
+    print(f"Selected language: {args.lang}")
     df = query_dataframe_for_all_quests_and_gossip(language_number)
     df = tts_processor.preprocess_dataframe(df)
     tts_processor.generate_lookup_tables(df)
-elif args.mode == "extract_model_data":
-    write_model_data()
+
 else:
-    interactive_mode()
+    parser.print_help()
