@@ -1,7 +1,29 @@
 # Voiceline Explorer — Design
 
 Date: 2026-07-27
-Status: approved (architecture), implementation pending
+Status: **partly superseded** — see "What changed" below.
+
+> ## What changed
+>
+> This spec was written while the project was still shaped as an addon that patched a
+> pre-built sound pack. The pipeline was then restructured so the sound pack and data
+> module are build outputs, which invalidates several of its constraints.
+>
+> | This spec says | Now |
+> |---|---|
+> | `web/data/index.json`, exported per-run | `corpus/corpus.json.gz`, committed |
+> | `hasAudio` lives in the index | belongs to the audio store; the corpus carries no audio state |
+> | "never regenerate lookup tables" | the module is built, so tables are emitted by construction |
+> | "gossip is fix-existing-only" | dissolved with the constraint above; no stance taken on gossip |
+> | `tts_cli/index_export.py`, `tts_cli/config/` | `tts_cli/corpus.py`, `voice/` |
+>
+> What survives intact is the explorer itself: search, audition and triage over line data,
+> and the audio-serving and staging design. Those read the corpus just as happily as they
+> would have read the index. The generation half is largely implemented already, in
+> `tts_cli/voice_config.py`, `tts_cli/synthesize.py` and `tts_cli/select.py`.
+>
+> Kept as-is rather than rewritten, because the reasoning it records — particularly why
+> filename derivation must live in one place — is still what the code depends on.
 
 ## Context
 

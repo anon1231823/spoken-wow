@@ -1,5 +1,19 @@
 # Generation Control Plane Implementation Plan
 
+> **STATUS: partly superseded.** Tasks 1-4 are done, in different files: config lives in
+> `voice/generation.json` and `voice/pronunciation.json` loaded by `tts_cli/voice_config.py`,
+> which also owns pronunciation and seeding (this plan split those across three modules).
+> Synthesis is `tts_cli/synthesize.py`, writing straight into the audio store rather than a
+> staging directory, since the store is the project's own asset rather than a WoW install.
+>
+> Two constraints in "Global Constraints" no longer hold: lookup tables *are* regenerated,
+> because the data module is now a build output, and gossip is not fix-existing-only — no
+> stance is taken on gossip either way.
+>
+> Task 5 (`commit`) is replaced by the `build` stage, which assembles a complete data module
+> from corpus plus audio store. Tasks 6-8 — the web APIs, re-roll UI and settings editor —
+> remain wanted and accurate in shape.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Regenerate individual voicelines from the explorer with tuned settings, auditioning each take before it replaces the shipped audio.

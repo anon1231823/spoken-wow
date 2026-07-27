@@ -1,5 +1,15 @@
 # Voiceline Explorer Implementation Plan
 
+> **STATUS: partly superseded.** Tasks 1-3 are done, differently: line naming landed as
+> `tts_cli/naming.py` (as planned) but the index became a committed corpus,
+> `corpus/corpus.json.gz`, built by `tts_cli/corpus.py` rather than `tts_cli/index_export.py`.
+> `tools/audit_npc.py` has not yet been repointed at it.
+>
+> Tasks 4-9 — the Next.js app, search API, audio route, triage store and reports — are
+> still wanted and still accurate in shape. Substitute "corpus" for "index" throughout, and
+> note the corpus deliberately carries no `hasAudio`/`durationSec`: audio presence is a
+> property of the audio store (`tts_cli/store.py`), so `missing_lines()` answers it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A local web app to search, audition, and triage the ~9,500 generated voicelines without logging into WoW.
