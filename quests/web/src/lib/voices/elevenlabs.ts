@@ -104,6 +104,57 @@ export async function getSubscription(options: ElevenLabsOptions = {}): Promise<
   };
 }
 
+/**
+ * A model the account may generate with.
+ *
+ * Read from the account rather than listed in the code. Hardcoding the list meant the
+ * settings page silently withheld a model ElevenLabs had already made available - the
+ * options should be whatever the plan actually allows, not whatever was true when this was
+ * written.
+ */
+export type Model = {
+  id: string;
+  name: string;
+  description: string;
+  /** Longest single request the model accepts, which bounds a line rather than a batch. */
+  maxCharacters: number | null;
+  languages: number;
+};
+
+export async function listModels(options: ElevenLabsOptions = {}): Promise<Model[]> {
+  const { apiKey, baseUrl, fetchImpl } = config(options);
+
+  const response = await fetchImpl(`${baseUrl}/v1/models`, {
+    headers: { "xi-api-key": apiKey },
+    cache: "no-store",
+  });
+  if (!response.ok) throw await failure(response, "listing ElevenLabs models");
+
+  const body = (await response.json()) as unknown;
+  if (!Array.isArray(body)) return [];
+
+  return body
+    .filter(
+      (model): model is Record<string, unknown> =>
+        Boolean(model) &&
+        typeof model === "object" &&
+        // Speech-to-speech and sound-effect models share this endpoint and cannot voice a
+        // line, so offering them would be offering a guaranteed failure.
+        (model as Record<string, unknown>).can_do_text_to_speech === true &&
+        typeof (model as Record<string, unknown>).model_id === "string",
+    )
+    .map((model) => ({
+      id: model.model_id as string,
+      name: typeof model.name === "string" ? model.name : (model.model_id as string),
+      description: typeof model.description === "string" ? model.description : "",
+      maxCharacters:
+        typeof model.maximum_text_length_per_request === "number"
+          ? model.maximum_text_length_per_request
+          : null,
+      languages: Array.isArray(model.languages) ? model.languages.length : 0,
+    }));
+}
+
 export type Clip = { name: string; data: Buffer };
 
 /**

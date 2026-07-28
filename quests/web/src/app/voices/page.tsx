@@ -7,7 +7,7 @@ import VoiceSlotList from "@/components/VoiceSlotList";
 import { auth } from "@/lib/auth";
 import { readSettings } from "@/lib/generation/settings";
 import { canManageVoices } from "@/lib/permissions";
-import { listVoices } from "@/lib/voices/elevenlabs";
+import { generationStatus } from "@/lib/generation/status";
 import { listSamples, type Sample } from "@/lib/voices/samples";
 import { slots } from "@/lib/voices/slots";
 
@@ -26,15 +26,13 @@ export default async function Page() {
 
   const all = slots();
 
-  // The page has to be useful before the ElevenLabs key exists — that is the state the
-  // project is in until a plan is bought — so a failure here is reported, not thrown.
-  let existing: Map<string, string> | null = null;
-  let error: string | null = null;
-  try {
-    existing = await listVoices();
-  } catch (caught) {
-    error = caught instanceof Error ? caught.message : String(caught);
-  }
+  // One memoised read of the account: which voices exist, which models the plan allows, and
+  // what is left of the character budget. The page has to be useful before the ElevenLabs key
+  // exists — that is the state the project was in until a plan was bought — so a failure here
+  // is reported, not thrown.
+  const account = await generationStatus();
+  const existing = account.error && account.voiceIds.size === 0 ? null : account.voiceIds;
+  const error = account.error;
 
   // Twenty readdir calls, so the roster arrives with its clip counts already filled in
   // rather than each row fetching its own once expanded.
@@ -65,7 +63,7 @@ export default async function Page() {
         </div>
       )}
 
-      <GenerationSettings initial={settings} />
+      <GenerationSettings initial={settings} models={account.models} />
 
       <VoiceSlotList
         slots={all}

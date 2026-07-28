@@ -13,8 +13,10 @@
  */
 import {
   getSubscription,
+  listModels,
   listVoices,
   type ElevenLabsOptions,
+  type Model,
   type Subscription,
 } from "@/lib/voices/elevenlabs";
 
@@ -31,6 +33,13 @@ export type GenerationStatus = {
    * replaces a voice, which closes the window for the path that actually does it.
    */
   voiceIds: Map<string, string>;
+  /**
+   * Models the account may generate with.
+   *
+   * Read rather than hardcoded: a list in the code goes stale the moment ElevenLabs ships a
+   * model, and the settings page then withholds an option the plan already allows.
+   */
+  models: Model[];
   subscription: Subscription | null;
   /** Why the above is empty or null, if it is. */
   error: string | null;
@@ -58,13 +67,15 @@ async function read(options: ElevenLabsOptions): Promise<GenerationStatus> {
   try {
     // Both together: they fail for the same reasons (no key, bad key, ElevenLabs down), so
     // serialising them would only make the failure slower.
-    const [voiceIds, subscription] = await Promise.all([
+    const [voiceIds, subscription, models] = await Promise.all([
       listVoices(options),
       getSubscription(options),
+      listModels(options),
     ]);
     return {
       voices: [...voiceIds.keys()].sort(),
       voiceIds,
+      models,
       subscription,
       error: null,
       fetchedAt,
@@ -73,6 +84,7 @@ async function read(options: ElevenLabsOptions): Promise<GenerationStatus> {
     return {
       voices: [],
       voiceIds: new Map(),
+      models: [],
       subscription: null,
       error: error instanceof Error ? error.message : String(error),
       fetchedAt,

@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
 import {
   SEED_STRATEGIES,
   type GenerationConfig,
@@ -21,17 +22,25 @@ import {
   type VoiceSettings,
 } from "@/lib/generation/config";
 import type { EffectiveSettings } from "@/lib/generation/settings";
+import type { Model } from "@/lib/voices/elevenlabs";
+
+/** What the pipeline has always used, and still the safe default. See MODEL_NOTES. */
+const PIPELINE_DEFAULT = "eleven_multilingual_v2";
 
 /**
- * Models worth offering. Not a whitelist - the server accepts any non-empty string, because
- * ElevenLabs ships models faster than this list can be updated and being unable to try one
- * without a deploy is the thing this page exists to avoid.
+ * What each model means *for this project*, which is not what it means in general.
+ *
+ * Everything here needs one voice per race and gender to sound like the same performer
+ * across hundreds of lines, so expressiveness is a cost rather than a feature. ElevenLabs
+ * describes v3 as its most expressive model and documents seeds as best effort; two takes
+ * of one line with the same seed came back the same length but not byte-identical on every
+ * model tried, so nothing guarantees an NPC's lines will match.
  */
-const MODELS = [
-  { id: "eleven_multilingual_v2", label: "Multilingual v2 — the pipeline's default" },
-  { id: "eleven_turbo_v2_5", label: "Turbo v2.5 — faster, cheaper, less nuanced" },
-  { id: "eleven_flash_v2_5", label: "Flash v2.5 — fastest, lowest fidelity" },
-];
+const MODEL_NOTES: Record<string, string> = {
+  eleven_multilingual_v2: "What the Python pipeline uses. Every existing line was made with it.",
+  eleven_v3:
+    "The most expressive model, which cuts against holding one NPC to a single performance. Worth trying on a line before a batch.",
+};
 
 const SLIDERS: { key: keyof VoiceSettings & string; label: string; hint: string }[] = [
   {
@@ -67,7 +76,14 @@ function same(a: GenerationConfig, b: GenerationConfig): boolean {
  * sound like. Collaborators see the same values read-only in the confirm dialog before a
  * batch, which is the moment the numbers actually matter to them.
  */
-export default function GenerationSettings({ initial }: { initial: EffectiveSettings }) {
+export default function GenerationSettings({
+  initial,
+  models,
+}: {
+  initial: EffectiveSettings;
+  /** Read from the account. Empty when ElevenLabs could not be reached. */
+  models: Model[];
+}) {
   const [saved, setSaved] = useState(initial);
   const [draft, setDraft] = useState<GenerationConfig>(initial.config);
   const [busy, setBusy] = useState(false);
@@ -107,6 +123,12 @@ export default function GenerationSettings({ initial }: { initial: EffectiveSett
     }
   }
 
+  // The account's models, plus the stored one if the account no longer lists it.
+  const options = models.some((model) => model.id === draft.modelId)
+    ? models
+    : [...models, { id: draft.modelId, name: draft.modelId, description: "", maxCharacters: null, languages: 0 }];
+  const chosen = options.find((model) => model.id === draft.modelId);
+
   return (
     <Card className="mb-6 gap-0 py-0">
       <CardHeader className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b py-3">
@@ -129,18 +151,35 @@ export default function GenerationSettings({ initial }: { initial: EffectiveSett
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {/* A model set outside this list stays selectable, so a value the CLI or a
-                  future release chose is never silently rewritten by opening this page. */}
-              {(MODELS.some((model) => model.id === draft.modelId)
-                ? MODELS
-                : [...MODELS, { id: draft.modelId, label: draft.modelId }]
-              ).map((model) => (
+              {/* The stored model always stays selectable, even when the account list is
+                  empty or no longer contains it: opening this page must never silently
+                  rewrite a model the CLI or an earlier release chose. */}
+              {options.map((model) => (
                 <SelectItem key={model.id} value={model.id}>
-                  {model.label}
+                  {model.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {chosen?.description && (
+            <p className="text-muted-foreground text-xs">{chosen.description}</p>
+          )}
+          {MODEL_NOTES[draft.modelId] && (
+            <p
+              className={cn(
+                "text-xs",
+                draft.modelId === PIPELINE_DEFAULT ? "text-muted-foreground" : "text-amber-400",
+              )}
+            >
+              {MODEL_NOTES[draft.modelId]}
+            </p>
+          )}
+          {models.length === 0 && (
+            <p className="text-muted-foreground text-xs">
+              Could not read the model list from ElevenLabs, so only the stored model is
+              offered.
+            </p>
+          )}
         </div>
 
         {SLIDERS.map((slider) => (

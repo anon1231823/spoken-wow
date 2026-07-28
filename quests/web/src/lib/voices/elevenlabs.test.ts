@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { addVoice, deleteVoice, listVoices } from "./elevenlabs";
+import { addVoice, deleteVoice, listModels, listVoices } from "./elevenlabs";
 
 // Declared with the fetch parameters it stands in for, so mock.calls stays typed and the
 // assertions below can read the url and headers without a cast.
@@ -133,5 +133,82 @@ describe("deleteVoice", () => {
   it("surfaces a failure", async () => {
     const fetchImpl = respondWith({ detail: "not_found" }, { status: 404 });
     await expect(deleteVoice("abc123", { apiKey: "k", fetchImpl })).rejects.toThrow(/404/);
+  });
+});
+
+/**
+ * The list is read rather than hardcoded, because a list in the code goes stale the moment
+ * ElevenLabs ships a model - which it had: eleven_v3 was available on the account while the
+ * settings page still offered three models chosen by hand.
+ */
+describe("listModels", () => {
+  const BODY = [
+    {
+      model_id: "eleven_v3",
+      name: "Eleven v3",
+      description: "The most expressive model.",
+      can_do_text_to_speech: true,
+      maximum_text_length_per_request: 5000,
+      languages: new Array(74).fill({ language_id: "en" }),
+    },
+    {
+      model_id: "eleven_multilingual_v2",
+      name: "Eleven Multilingual v2",
+      description: "Our most life-like model.",
+      can_do_text_to_speech: true,
+      maximum_text_length_per_request: 10000,
+      languages: new Array(29).fill({ language_id: "en" }),
+    },
+    {
+      model_id: "eleven_english_sts_v2",
+      name: "Eleven English STS v2",
+      can_do_text_to_speech: false,
+      can_do_voice_conversion: true,
+    },
+  ];
+
+  function client(body: unknown, status = 200) {
+    const fetchImpl = vi.fn(async () =>
+      new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }),
+    ) as unknown as typeof globalThis.fetch;
+    return { fetchImpl, options: { apiKey: "k", baseUrl: "https://stub.invalid", fetchImpl } };
+  }
+
+  it("returns the models the account may generate with", async () => {
+    const { options } = client(BODY);
+    const models = await listModels(options);
+
+    expect(models.map((m) => m.id)).toEqual(["eleven_v3", "eleven_multilingual_v2"]);
+    expect(models[0]).toEqual({
+      id: "eleven_v3",
+      name: "Eleven v3",
+      description: "The most expressive model.",
+      maxCharacters: 5000,
+      languages: 74,
+    });
+  });
+
+  // Speech-to-speech and voice-conversion models come back from the same endpoint and
+  // cannot voice a line, so offering one would be offering a guaranteed failure.
+  it("drops models that cannot do text to speech", async () => {
+    const { options } = client(BODY);
+    expect((await listModels(options)).map((m) => m.id)).not.toContain("eleven_english_sts_v2");
+  });
+
+  it("survives entries missing the optional fields", async () => {
+    const { options } = client([{ model_id: "bare", can_do_text_to_speech: true }]);
+    expect(await listModels(options)).toEqual([
+      { id: "bare", name: "bare", description: "", maxCharacters: null, languages: 0 },
+    ]);
+  });
+
+  it("returns nothing rather than throwing when the body is not a list", async () => {
+    const { options } = client({ models: [] });
+    expect(await listModels(options)).toEqual([]);
+  });
+
+  it("throws with the upstream text when the request fails", async () => {
+    const { options } = client({ detail: "bad key" }, 401);
+    await expect(listModels(options)).rejects.toThrow(/listing ElevenLabs models.*401.*bad key/s);
   });
 });

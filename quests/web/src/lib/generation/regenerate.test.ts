@@ -51,6 +51,11 @@ function stub({ voices = { "human-male": "voice-human-male" }, speech }: StubOpt
     if (url.endsWith("/v1/user/subscription")) {
       return Response.json({ tier: "creator", character_count: 100, character_limit: 131000 });
     }
+    if (url.endsWith("/v1/models")) {
+      return Response.json([
+        { model_id: "eleven_multilingual_v2", name: "Multilingual v2", can_do_text_to_speech: true },
+      ]);
+    }
     if (url.includes("/v1/text-to-speech/")) {
       return speech
         ? speech()
