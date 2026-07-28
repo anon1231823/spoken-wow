@@ -6,20 +6,41 @@
 # Override the target host on the command line or in the environment:
 #   make push DROPLET=deploy@203.0.113.10
 
-# Use the IP, not voiceover.rusty.one: if the name ever sits behind Cloudflare it will
-# resolve to Cloudflare, which does not proxy SSH.
-DROPLET      ?= deploy@REPLACE_WITH_DROPLET_IP
+# Connect as deploy, never root: pm2 daemons are per-user, so `pm2 reload` over an ssh
+# session as root talks to root's empty daemon and silently does nothing, leaving the
+# freshly pushed audio invisible. An IP rather than a hostname keeps this working if the
+# name is ever pointed at a CDN, which would not proxy SSH.
+DROPLET      ?= deploy@188.166.37.175
 REMOTE_ROOT  := /srv/voiceover
 REMOTE_AUDIO := $(REMOTE_ROOT)/shared/audio/
 REMOTE_PM2   := pm2
 
+# macOS ships openrsync as /usr/bin/rsync, which reports itself as "2.6.9 compatible" and
+# rejects --info. Prefer a real rsync 3.x anywhere on PATH.
+RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(command -v rsync); do \
+	[ -x "$$r" ] && "$$r" --version 2>/dev/null | head -1 | grep -q 'version 3' && { echo "$$r"; exit 0; }; \
+	done)
+
+# The key CI authenticates with, so `make ssh-check` tests what CI actually does. Every
+# droplet target uses it too: the deploy user authorises this key only, and a bare `ssh`
+# would offer whatever ~/.ssh/config names instead and be refused.
+DEPLOY_KEY ?= ~/.ssh/id_rusty.one
+SSH        := ssh -i $(DEPLOY_KEY) -o IdentitiesOnly=yes
+
 # No -z: mp3 is already compressed, so it is pure CPU for ~0 gain.
 # --delete keeps the two stores in exact correspondence, which is what makes the "missing
 # audio" badges in the UI trustworthy - see isGap() in web/src/lib/search.ts.
-RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2
+RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)"
 
-# The key CI authenticates with, so `make ssh-check` tests what CI actually does.
-DEPLOY_KEY ?= ~/.ssh/voiceover_deploy
+# Fail with an explanation rather than an rsync usage dump or a silent no-op reload.
+define preflight
+	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. macOS ships openrsync, which lacks --info."; \
+	                        echo "Install one:  brew install rsync"; exit 1; }
+	@case "$(DROPLET)" in root@*) \
+	  echo "DROPLET is $(DROPLET). Use deploy@ instead: pm2 daemons are per-user, so a"; \
+	  echo "reload as root finds no 'voiceover' process and the new audio stays invisible."; \
+	  exit 1;; esac
+endef
 
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status deploy-scripts rollback releases ssh-check
@@ -31,33 +52,37 @@ help: ## Show this help
 # --- audio store ----------------------------------------------------------------------
 
 push-dry: ## Preview what `make push` would change on the droplet
-	@rsync $(RSYNC_OPTS) --dry-run audio/ $(DROPLET):$(REMOTE_AUDIO)
+	$(preflight)
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run audio/ $(DROPLET):$(REMOTE_AUDIO)
 
 pull-dry: ## Preview what `make pull` would change locally
-	@rsync $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) audio/
+	$(preflight)
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) audio/
 
 push: ## Upload audio/ to the droplet, then reload so the store index is re-read
+	$(preflight)
 	@echo "==> dry run (local -> $(DROPLET))"
-	@rsync $(RSYNC_OPTS) --dry-run audio/ $(DROPLET):$(REMOTE_AUDIO) | tail -20
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run audio/ $(DROPLET):$(REMOTE_AUDIO) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	rsync $(RSYNC_OPTS) audio/ $(DROPLET):$(REMOTE_AUDIO)
+	$(RSYNC) $(RSYNC_OPTS) audio/ $(DROPLET):$(REMOTE_AUDIO)
 	@# storeIndex() memoises its readdir on globalThis for the process lifetime, so
 	@# without this reload new audio stays invisible and deleted audio still reads as
 	@# present. See web/src/lib/audio.ts.
-	ssh $(DROPLET) '$(REMOTE_PM2) reload voiceover --update-env'
+	$(SSH) $(DROPLET) '$(REMOTE_PM2) reload voiceover --update-env'
 	@echo "==> pushed and reloaded"
 
 pull: ## Download the droplet's audio store into audio/ (DESTRUCTIVE: --delete)
+	$(preflight)
 	@echo "==> dry run ($(DROPLET) -> local)"
 	@echo "    --delete will REMOVE local files the droplet does not have."
-	@rsync $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) audio/ | tail -20
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) audio/ | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	rsync $(RSYNC_OPTS) $(DROPLET):$(REMOTE_AUDIO) audio/
+	$(RSYNC) $(RSYNC_OPTS) $(DROPLET):$(REMOTE_AUDIO) audio/
 	@echo "==> pulled"
 
 audio-status: ## Compare file count and size on both sides
 	@echo "local:  $$(find audio -name '*.mp3' | wc -l | tr -d ' ') files, $$(du -sh audio | cut -f1)"
-	@ssh $(DROPLET) 'echo "remote: $$(find $(REMOTE_AUDIO) -name "*.mp3" | wc -l | tr -d " ") files, $$(du -sh $(REMOTE_AUDIO) | cut -f1)"'
+	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_AUDIO) -name "*.mp3" | wc -l | tr -d " ") files, $$(du -sh $(REMOTE_AUDIO) | cut -f1)"'
 
 # --- droplet plumbing -----------------------------------------------------------------
 
@@ -77,13 +102,13 @@ ssh-check: ## Test the CI deploy key against the droplet, as CI authenticates
 		     echo "  chmod 600 /home/deploy/.ssh/authorized_keys"; exit 1; }
 
 deploy-scripts: ## Install deploy/bin + ecosystem.config.js on the droplet
-	rsync -a deploy/bin/ $(DROPLET):$(REMOTE_ROOT)/bin/
-	rsync -a deploy/ecosystem.config.js $(DROPLET):$(REMOTE_ROOT)/shared/
-	ssh $(DROPLET) 'chmod +x $(REMOTE_ROOT)/bin/*.sh'
+	$(RSYNC) -a -e "$(SSH)" deploy/bin/ $(DROPLET):$(REMOTE_ROOT)/bin/
+	$(RSYNC) -a -e "$(SSH)" deploy/ecosystem.config.js $(DROPLET):$(REMOTE_ROOT)/shared/
+	$(SSH) $(DROPLET) 'chmod +x $(REMOTE_ROOT)/bin/*.sh'
 	@echo "==> installed"
 
 releases: ## List releases on the droplet, marking the live one
-	@ssh $(DROPLET) '$(REMOTE_ROOT)/bin/rollback.sh --list'
+	@$(SSH) $(DROPLET) '$(REMOTE_ROOT)/bin/rollback.sh --list'
 
 rollback: ## Roll back to the previous release (or RELEASE=<name>)
-	ssh $(DROPLET) '$(REMOTE_ROOT)/bin/rollback.sh $(RELEASE)'
+	$(SSH) $(DROPLET) '$(REMOTE_ROOT)/bin/rollback.sh $(RELEASE)'
