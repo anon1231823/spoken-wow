@@ -2,6 +2,7 @@ __pycache__
 datagrip
 .venv
 .env
+.env*.local
 .vscode/settings.json
 .DS_Store
 

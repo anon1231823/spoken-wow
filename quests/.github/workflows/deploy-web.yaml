@@ -21,6 +21,30 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
 
+    # A throwaway database for the build and the smoke test. The droplet's real one is
+    # bound to localhost and unreachable from here, which is the point: CI proves the
+    # bundle can talk to *a* Postgres with this schema, and never touches production data.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: voiceover
+          POSTGRES_PASSWORD: voiceover
+          POSTGRES_DB: voiceover
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://voiceover:voiceover@127.0.0.1:5432/voiceover
+      # CI-only, and never used to sign a cookie anyone keeps. The droplet's real secret
+      # lives in /srv/voiceover/shared/app.env.
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-in-production
+
     steps:
       - uses: actions/checkout@v5
 
@@ -53,6 +77,11 @@ jobs:
         working-directory: web
         run: pnpm test
 
+      # Applied with the same script the droplet uses, so a migration that only works
+      # under a hand-run psql fails here instead of mid-deploy.
+      - name: Migrate
+        run: deploy/bin/migrate.sh "$PWD/web"
+
       - name: Build
         working-directory: web
         run: pnpm build
@@ -72,8 +101,12 @@ jobs:
           # The corpus ships inside the release so a rollback moves data and code together.
           mkdir -p "$R"/corpus
           cp corpus/corpus.json.gz "$R"/corpus/
+          # Migrations ship with the release too: activate.sh runs migrate.sh against the
+          # release directory, so without this a deploy has nothing to apply.
+          cp -a web/migrations "$R"/migrations
           test -f "$R"/server.js
           test -L "$R"/node_modules/next   # symlink survived the copy
+          test -f "$R"/migrations/0001_auth.sql
           du -sh "$R"
 
       # Boot the exact artifact we are about to ship. Catches a broken bundle here rather
@@ -87,6 +120,10 @@ jobs:
           HOSTNAME: 127.0.0.1
           NODE_ENV: production
           VOICEOVER_AUDIO: /nonexistent
+          # Better Auth rejects any request whose Origin is not this, so the smoke test
+          # below must send exactly this value. Getting it wrong on the droplet is the
+          # failure mode that makes every sign-in return "Invalid origin".
+          BETTER_AUTH_URL: http://127.0.0.1:3999
         run: |
           set -euo pipefail
           VOICEOVER_CORPUS="$PWD/corpus/corpus.json.gz" node server.js &
@@ -97,6 +134,19 @@ jobs:
             sleep 1
           done
           curl -fsS "http://127.0.0.1:3999/api/search?q=thrall" | grep -q '"npcName":"Thrall"'
+
+          # Auth has to survive the standalone bundle too: pg and better-auth are traced
+          # into it, and the schema has to be the one migrate.sh just applied. A registered
+          # user must come back as a member - the default role is what everything else gates
+          # on.
+          signup=$(curl -fsS -X POST "http://127.0.0.1:3999/api/auth/sign-up/email" \
+            -H 'Content-Type: application/json' \
+            -H "Origin: $BETTER_AUTH_URL" \
+            -D headers.txt \
+            -d '{"name":"CI","email":"ci-'"$GITHUB_RUN_ID"'@example.com","password":"ci-smoke-password"}')
+          echo "$signup" | grep -q '"role":"member"'
+          grep -qi '^set-cookie: better-auth.session_token=' headers.txt
+          echo "sign-up works against the shipped bundle"
           # The stylesheet must resolve, or .next/static did not make it into the release.
           css=$(curl -fsS http://127.0.0.1:3999/ | grep -o '_next/static/css/[^"]*' | head -1)
           curl -fsS -o /dev/null "http://127.0.0.1:3999/$css"

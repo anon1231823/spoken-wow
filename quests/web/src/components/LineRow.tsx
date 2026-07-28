@@ -1,5 +1,6 @@
 "use client";
 
+import RegenerateButton from "./RegenerateButton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ResultLine } from "@/lib/search";
@@ -25,50 +26,66 @@ const SOURCE_STYLES: Record<string, string> = {
 type Props = {
   line: ResultLine;
   current: boolean;
+  canRegenerate: boolean;
   onPlay: (line: ResultLine) => void;
 };
 
-export default function LineRow({ line, current, onPlay }: Props) {
+export default function LineRow({ line, current, canRegenerate, onPlay }: Props) {
   const missing = absence(line);
 
+  // The play target and the regenerate control are siblings, not nested: a <button> inside
+  // a <button> is invalid HTML, and the inner click never reaches its own handler.
   return (
-    <button
-      data-line-id={line.lineId}
-      aria-current={current}
-      disabled={!line.hasAudio}
-      onClick={() => onPlay(line)}
-      title={line.hasAudio ? line.audioPath : undefined}
+    <div
       className={cn(
-        "flex w-full items-start gap-2.5 rounded-md border border-transparent p-2 text-left",
-        "focus-visible:ring-ring/50 transition-colors focus-visible:ring-[3px] focus-visible:outline-none",
-        line.hasAudio ? "hover:bg-muted/60 cursor-pointer" : "cursor-default",
+        "flex items-start gap-1 rounded-md border border-transparent pr-1 transition-colors",
+        line.hasAudio && "hover:bg-muted/60",
         current && "bg-muted border-primary/60",
       )}
     >
-      <Badge
-        variant="outline"
-        className={cn("mt-0.5 shrink-0 uppercase", SOURCE_STYLES[line.source])}
-      >
-        {line.source}
-      </Badge>
-      <span
+      <button
+        data-line-id={line.lineId}
+        aria-current={current}
+        disabled={!line.hasAudio}
+        onClick={() => onPlay(line)}
+        title={line.hasAudio ? line.audioPath : undefined}
         className={cn(
-          "min-w-0 flex-1 whitespace-pre-wrap",
-          !current && "line-clamp-2",
+          "flex min-w-0 flex-1 items-start gap-2.5 rounded-md p-2 text-left",
+          "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
+          line.hasAudio ? "cursor-pointer" : "cursor-default",
         )}
       >
-        {line.text}
-      </span>
-      {missing && (
+        <Badge
+          variant="outline"
+          className={cn("mt-0.5 shrink-0 uppercase", SOURCE_STYLES[line.source])}
+        >
+          {line.source}
+        </Badge>
         <span
           className={cn(
-            "mt-1 shrink-0 text-xs",
-            missing.kind === "gap" ? "text-destructive" : "text-muted-foreground",
+            "min-w-0 flex-1 whitespace-pre-wrap",
+            !current && "line-clamp-2",
           )}
         >
-          {missing.label}
+          {line.text}
+        </span>
+        {missing && (
+          <span
+            className={cn(
+              "mt-1 shrink-0 text-xs",
+              missing.kind === "gap" ? "text-destructive" : "text-muted-foreground",
+            )}
+          >
+            {missing.label}
+          </span>
+        )}
+      </button>
+
+      {canRegenerate && (
+        <span className="mt-1.5 shrink-0">
+          <RegenerateButton scope="line" />
         </span>
       )}
-    </button>
+    </div>
   );
 }
