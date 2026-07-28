@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { listVoices } from "./elevenlabs";
+import { addVoice, deleteVoice, listVoices } from "./elevenlabs";
 
 // Declared with the fetch parameters it stands in for, so mock.calls stays typed and the
 // assertions below can read the url and headers without a cast.
@@ -65,5 +65,73 @@ describe("listVoices", () => {
     } finally {
       if (previous !== undefined) process.env.ELEVENLABS_API_KEY = previous;
     }
+  });
+});
+
+describe("addVoice", () => {
+  it("posts the clips as multipart under the race-gender name", async () => {
+    const fetchImpl = respondWith({ voice_id: "new1" });
+    const voiceId = await addVoice(
+      "orc-male",
+      [
+        { name: "a.mp3", data: Buffer.from("one") },
+        { name: "b.ogg", data: Buffer.from("two") },
+      ],
+      { apiKey: "k", baseUrl: "https://stub.test", fetchImpl },
+    );
+
+    expect(voiceId).toBe("new1");
+
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe("https://stub.test/v1/voices/add");
+    expect(init?.method).toBe("POST");
+
+    const form = init?.body as FormData;
+    expect(form.get("name")).toBe("orc-male");
+    // Extracted game audio carries music and ambience, which a clone would reproduce.
+    expect(form.get("remove_background_noise")).toBe("true");
+    expect(form.getAll("files")).toHaveLength(2);
+  });
+
+  // fetch has to set Content-Type itself so the multipart boundary matches the body.
+  it("does not set Content-Type by hand", async () => {
+    const fetchImpl = respondWith({ voice_id: "x" });
+    await addVoice("orc-male", [{ name: "a.mp3", data: Buffer.from("x") }], {
+      apiKey: "k",
+      fetchImpl,
+    });
+
+    const headers = fetchImpl.mock.calls[0][1]?.headers as Record<string, string>;
+    expect(Object.keys(headers).map((k) => k.toLowerCase())).not.toContain("content-type");
+  });
+
+  it("surfaces the API's refusal", async () => {
+    const fetchImpl = respondWith({ detail: "voice_limit_reached" }, { status: 400 });
+    await expect(
+      addVoice("orc-male", [{ name: "a.mp3", data: Buffer.from("x") }], { apiKey: "k", fetchImpl }),
+    ).rejects.toThrow(/orc-male.*400.*voice_limit_reached/);
+  });
+
+  it("refuses a success response with no voice_id rather than recording a bad one", async () => {
+    const fetchImpl = respondWith({});
+    await expect(
+      addVoice("orc-male", [{ name: "a.mp3", data: Buffer.from("x") }], { apiKey: "k", fetchImpl }),
+    ).rejects.toThrow(/no voice_id/);
+  });
+});
+
+describe("deleteVoice", () => {
+  it("deletes by id", async () => {
+    const fetchImpl = respondWith({ status: "ok" });
+    await deleteVoice("abc123", { apiKey: "k", baseUrl: "https://stub.test", fetchImpl });
+
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe("https://stub.test/v1/voices/abc123");
+    expect(init?.method).toBe("DELETE");
+  });
+
+  it("surfaces a failure", async () => {
+    const fetchImpl = respondWith({ detail: "not_found" }, { status: 404 });
+    await expect(deleteVoice("abc123", { apiKey: "k", fetchImpl })).rejects.toThrow(/404/);
   });
 });

@@ -63,3 +63,53 @@ export async function listVoices(options: ElevenLabsOptions = {}): Promise<Map<s
   }
   return found;
 }
+
+export type Clip = { name: string; data: Buffer };
+
+/**
+ * Create an instant voice clone.
+ *
+ * Background noise removal is always on: the clips are extracted game audio, which carries
+ * music beds and ambience, and similarity_boost at synthesis time reproduces whatever is in
+ * the source — including the tavern behind the innkeeper.
+ */
+export async function addVoice(
+  name: string,
+  clips: Clip[],
+  options: ElevenLabsOptions = {},
+): Promise<string> {
+  const { apiKey, baseUrl, fetchImpl } = config(options);
+
+  const form = new FormData();
+  form.append("name", name);
+  form.append("remove_background_noise", "true");
+  for (const clip of clips) {
+    form.append("files", new Blob([new Uint8Array(clip.data)]), clip.name);
+  }
+
+  // No Content-Type header: fetch sets it, with the multipart boundary, which cannot be
+  // written by hand.
+  const response = await fetchImpl(`${baseUrl}/v1/voices/add`, {
+    method: "POST",
+    headers: { "xi-api-key": apiKey },
+    body: form,
+  });
+  if (!response.ok) throw await failure(response, `creating the voice "${name}"`);
+
+  const body = (await response.json()) as { voice_id?: string };
+  if (!body.voice_id) throw new Error(`ElevenLabs created "${name}" but returned no voice_id`);
+  return body.voice_id;
+}
+
+export async function deleteVoice(
+  voiceId: string,
+  options: ElevenLabsOptions = {},
+): Promise<void> {
+  const { apiKey, baseUrl, fetchImpl } = config(options);
+
+  const response = await fetchImpl(`${baseUrl}/v1/voices/${voiceId}`, {
+    method: "DELETE",
+    headers: { "xi-api-key": apiKey },
+  });
+  if (!response.ok) throw await failure(response, `deleting voice ${voiceId}`);
+}

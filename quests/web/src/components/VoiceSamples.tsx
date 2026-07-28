@@ -1,13 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Combine, Loader2, Trash2, Upload } from "lucide-react";
+import { Combine, Loader2, Sparkles, Trash2, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { displayName, type Sample } from "@/lib/voices/samples";
+import { displayName } from "@/lib/voices/names";
+import type { Sample } from "@/lib/voices/samples";
 
 /**
  * The clips behind one voice.
@@ -30,12 +31,16 @@ const MAX_PAUSE = 5;
 type Props = {
   voice: string;
   samples: Sample[];
+  /** Whether a voice of this name already exists in the ElevenLabs account. */
+  exists: boolean;
   onChange: (samples: Sample[]) => void;
+  onCloned: () => void;
 };
 
-export default function VoiceSamples({ voice, samples, onChange }: Props) {
+export default function VoiceSamples({ voice, samples, exists, onChange, onCloned }: Props) {
   const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState<"upload" | "merge" | "delete" | null>(null);
+  const [busy, setBusy] = useState<"upload" | "merge" | "delete" | "clone" | null>(null);
+  const [confirmingReplace, setConfirmingReplace] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [durations, setDurations] = useState<Record<string, number>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -44,7 +49,10 @@ export default function VoiceSamples({ voice, samples, onChange }: Props) {
   // the merge would upload the same audio twice. Untick to keep them.
   const [deleteSources, setDeleteSources] = useState(true);
 
-  async function request(kind: "upload" | "merge" | "delete", send: () => Promise<Response>) {
+  async function request(
+    kind: "upload" | "merge" | "delete" | "clone",
+    send: () => Promise<Response>,
+  ) {
     setBusy(kind);
     setError(null);
     try {
@@ -100,6 +108,18 @@ export default function VoiceSamples({ voice, samples, onChange }: Props) {
     if (!payload) return;
     onChange(payload.samples);
     setSelected(new Set());
+  }
+
+  async function clone() {
+    const payload = await request("clone", () =>
+      fetch(`/api/voices/${voice}/clone`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ replace: exists }),
+      }),
+    );
+    setConfirmingReplace(false);
+    if (payload) onCloned();
   }
 
   function toggle(file: string) {
@@ -261,6 +281,43 @@ export default function VoiceSamples({ voice, samples, onChange }: Props) {
 
         <DurationHint seconds={total} known={complete && samples.length > 0} />
       </div>
+
+      {samples.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 border-t pt-3">
+          <Button
+            size="xs"
+            variant={confirmingReplace ? "destructive" : "default"}
+            disabled={busy !== null}
+            onClick={() => (exists && !confirmingReplace ? setConfirmingReplace(true) : clone())}
+          >
+            {busy === "clone" ? <Loader2 className="animate-spin" /> : <Sparkles />}
+            {confirmingReplace
+              ? "Confirm replace"
+              : exists
+                ? "Replace voice"
+                : "Create voice"}
+          </Button>
+
+          {confirmingReplace ? (
+            <>
+              <span className="text-xs text-amber-400">
+                This deletes the current <code>{voice}</code> in ElevenLabs and creates a new
+                one from these {samples.length}{" "}
+                {samples.length === 1 ? "clip" : "clips"}.
+              </span>
+              <Button variant="ghost" size="xs" onClick={() => setConfirmingReplace(false)}>
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <span className="text-muted-foreground text-xs">
+              {exists
+                ? `Re-clones "${voice}" from the clips above.`
+                : `Creates "${voice}" from the clips above, using one voice slot.`}
+            </span>
+          )}
+        </div>
+      )}
 
       {error && (
         <p role="alert" className="text-destructive mt-2 text-xs">

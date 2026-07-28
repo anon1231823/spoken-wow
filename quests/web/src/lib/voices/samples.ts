@@ -16,7 +16,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { VOICE_SAMPLES_DIR } from "@/lib/paths";
+import { isStoredSampleName } from "./names";
 import { isVoiceSlot } from "./slots";
+
+// Re-exported so server callers have one import for everything about a stored clip; the
+// definitions live in names.ts because the browser needs them and cannot load this module.
+export { displayName, isStoredSampleName } from "./names";
 
 export const ALLOWED_EXTENSIONS = ["mp3", "wav", "m4a", "mp4", "ogg", "flac", "webm"] as const;
 export const MAX_FILE_BYTES = 25 * 1024 * 1024;
@@ -24,17 +29,6 @@ export const MAX_FILES_PER_VOICE = 25;
 export const MAX_TOTAL_BYTES = 50 * 1024 * 1024;
 
 export type Sample = { file: string; bytes: number; uploadedAt: string };
-
-/**
- * Stored names are generated here and never taken from the client, so this only has to
- * recognise our own shape. It is still enforced on read: a name that reaches the filesystem
- * from a URL must not be able to escape the directory.
- */
-const STORED_NAME = /^[0-9a-f]{8}-[A-Za-z0-9._-]{1,64}\.(mp3|wav|m4a|mp4|ogg|flac|webm)$/;
-
-export function isStoredSampleName(name: string): boolean {
-  return STORED_NAME.test(name) && !name.includes("..");
-}
 
 export function voiceDir(voice: string): string {
   if (!isVoiceSlot(voice)) throw new Error(`unknown voice slot ${voice}`);
@@ -50,10 +44,6 @@ export function extensionOf(filename: string): string {
   return path.extname(filename).slice(1).toLowerCase();
 }
 
-/** A stored name without its uniqueness prefix — what a human should be shown. */
-export function displayName(file: string): string {
-  return file.replace(/^[0-9a-f]{8}-/, "");
-}
 
 /** Reject the upload before any of it is written, with a reason worth showing a human. */
 export function rejectUpload(

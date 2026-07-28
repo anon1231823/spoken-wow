@@ -28,8 +28,9 @@ type Props = {
 export default function VoiceSlotList({ slots, existing, initialSamples }: Props) {
   const [open, setOpen] = useState<string | null>(null);
   const [samples, setSamples] = useState(initialSamples);
-
-  const present = existing === null ? null : new Set(existing);
+  // Held as state so a slot flips to "created" without a reload; the server value is the
+  // account, read fresh on every page view.
+  const [present, setPresent] = useState(existing === null ? null : new Set(existing));
 
   return (
     <div className="divide-y overflow-hidden rounded-md border">
@@ -79,7 +80,11 @@ export default function VoiceSlotList({ slots, existing, initialSamples }: Props
               <VoiceSamples
                 voice={slot.name}
                 samples={clips}
+                exists={present?.has(slot.name) ?? false}
                 onChange={(next) => setSamples((current) => ({ ...current, [slot.name]: next }))}
+                onCloned={() =>
+                  setPresent((current) => new Set(current ?? []).add(slot.name))
+                }
               />
             )}
           </div>
