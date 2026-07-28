@@ -11,6 +11,7 @@ import SearchBar from "./SearchBar";
 import { useSession } from "@/lib/auth-client";
 import {
   fetchGenerationStatus,
+  fetchTakeCounts,
   regenerate,
   type GenerationStatusResponse,
 } from "@/lib/generation/client";
@@ -101,6 +102,8 @@ export default function Explorer() {
   // Per-line regeneration state, and per-file version numbers used to bust the audio cache.
   const [lineStates, setLineStates] = useState<Record<string, LineState>>({});
   const [versions, setVersions] = useState<Record<string, number>>({});
+  // How many takes each file has, so a line only offers history when there is history.
+  const [takes, setTakes] = useState<Record<string, number>>({});
   const [batch, setBatch] = useState<Batch | null>(null);
   const [pendingBatch, setPendingBatch] = useState<{
     label: string;
@@ -188,6 +191,35 @@ export default function Explorer() {
     return () => controller.abort();
   }, [showRegenerate]);
 
+  // One request per result set rather than one per row: a broad search renders thousands of
+  // lines, and the answer for most of them is zero.
+  useEffect(() => {
+    if (!showRegenerate || !result) return;
+    const files = [
+      ...new Set(
+        result.npcs.flatMap((npc) => npc.quests.flatMap((quest) => quest.lines)).map((l) => l.audioPath),
+      ),
+    ];
+    if (files.length === 0) return;
+
+    const controller = new AbortController();
+    void fetchTakeCounts(files, controller.signal).then((counts) => {
+      if (counts) setTakes((current) => ({ ...current, ...counts }));
+    });
+    return () => controller.abort();
+  }, [showRegenerate, result]);
+
+  /**
+   * Adopt a restored take.
+   *
+   * The same bookkeeping a fresh generation does - the version bumps the audio URL so the
+   * browser stops replaying what was there a moment ago - except the line is not marked
+   * "regenerated", because it was not.
+   */
+  const handleRestored = useCallback((file: string, version: number) => {
+    setVersions((current) => ({ ...current, [file]: version }));
+  }, []);
+
   /**
    * Why this line's Regenerate control is unavailable, or null.
    *
@@ -216,6 +248,8 @@ export default function Explorer() {
    */
   const applySuccess = useCallback((file: string, version: number, lineId: string) => {
     setVersions((current) => ({ ...current, [file]: version }));
+    // A file with a take has history, so the control appears without waiting for a reload.
+    setTakes((current) => ({ ...current, [file]: Math.max(current[file] ?? 0, version + 1) }));
     setLineStates((current) => ({ ...current, [lineId]: { phase: "done", version } }));
 
     setResult((current) =>
@@ -492,6 +526,8 @@ export default function Explorer() {
           onPlay={play}
           onRegenerate={regenerateLine}
           onRegenerateBatch={requestBatch}
+          takes={takes}
+          onRestored={handleRestored}
         />
       ))}
 

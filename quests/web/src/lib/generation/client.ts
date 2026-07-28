@@ -78,6 +78,31 @@ export async function fetchGenerationStatus(
   }
 }
 
+/**
+ * How many takes each of these files has.
+ *
+ * POST rather than GET because a search can name a few thousand files, and a query string
+ * long enough to carry them would be refused before it arrived.
+ */
+export async function fetchTakeCounts(
+  files: string[],
+  signal?: AbortSignal,
+): Promise<Record<string, number> | null> {
+  try {
+    const response = await fetch("/api/lines/versions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ files }),
+      signal,
+    });
+    if (!response.ok) return null;
+    return ((await response.json()) as { counts: Record<string, number> }).counts;
+  } catch {
+    // The page works without it: no line offers history, and nothing else changes.
+    return null;
+  }
+}
+
 export async function regenerate(
   lineId: string,
   signal?: AbortSignal,

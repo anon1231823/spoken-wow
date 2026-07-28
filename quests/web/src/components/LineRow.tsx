@@ -1,5 +1,6 @@
 "use client";
 
+import LineHistory from "./LineHistory";
 import RegenerateButton from "./RegenerateButton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -30,8 +31,11 @@ type Props = {
   canRegenerate: boolean;
   state?: LineState;
   blocked: string | null;
+  /** How many takes this line's file has. Zero means there is nothing to go back to. */
+  takes: number;
   onPlay: (line: ResultLine) => void;
   onRegenerate: (line: ResultLine) => void;
+  onRestored: (file: string, version: number) => void;
 };
 
 export default function LineRow({
@@ -40,8 +44,10 @@ export default function LineRow({
   canRegenerate,
   state,
   blocked,
+  takes,
   onPlay,
   onRegenerate,
+  onRestored,
 }: Props) {
   const missing = absence(line);
 
@@ -106,7 +112,15 @@ export default function LineRow({
       </button>
 
       {canRegenerate && (
-        <span className="mt-1.5 shrink-0">
+        <span className="mt-1.5 flex shrink-0 items-center">
+          {/* Only shown once there is something to go back to, so an untouched line keeps
+              a single control rather than two. */}
+          {takes > 0 && (
+            <LineHistory
+              file={line.audioPath}
+              onRestored={(version) => onRestored(line.audioPath, version)}
+            />
+          )}
           <RegenerateButton
             scope="line"
             busy={state?.phase === "busy"}

@@ -271,3 +271,43 @@ describe("historyOf", () => {
     expect(await historyOf(file)).toEqual([]);
   });
 });
+
+/**
+ * The database is not the only record of what exists.
+ *
+ * A restored backup, a hand-run delete, or a fresh database pointed at an existing
+ * audio-history all leave takes on disk with no rows describing them. Trusting the table
+ * alone would archive the *current* take as version 0 - overwriting the real original with
+ * a re-roll, permanently. This is how that was actually discovered: a test cleared the rows,
+ * a later regeneration ran, and version 0 stopped being the original.
+ */
+describe("when the rows are gone but the takes are not", () => {
+  it("does not overwrite version 0 with whatever is current", async () => {
+    await writeStoreFile(file, Buffer.from("the irreplaceable original"));
+    await take({ data: Buffer.from("a re-roll") });
+
+    // The rows vanish; the audio does not.
+    await db().query(`delete from "voiceline_version" where "file" = $1`, [file]);
+
+    const result = await take({ data: Buffer.from("another re-roll") });
+
+    expect(result.archivedInherited).toBe(false);
+    expect(fs.readFileSync(versionPath(file, 0), "utf8")).toBe("the irreplaceable original");
+  });
+
+  it("does not reissue a version number that already names a take", async () => {
+    await writeStoreFile(file, Buffer.from("original"));
+    await take({ data: Buffer.from("first") });
+    await take({ data: Buffer.from("second") });
+    expect(await versionsOnDisk(file)).toEqual([0, 1, 2]);
+
+    await db().query(`delete from "voiceline_version" where "file" = $1`, [file]);
+
+    const result = await take({ data: Buffer.from("third") });
+
+    expect(result.version).toBe(3);
+    expect(fs.readFileSync(versionPath(file, 1), "utf8")).toBe("first");
+    expect(fs.readFileSync(versionPath(file, 2), "utf8")).toBe("second");
+    expect(fs.readFileSync(versionPath(file, 3), "utf8")).toBe("third");
+  });
+});

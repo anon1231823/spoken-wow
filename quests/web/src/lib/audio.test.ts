@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { loadCorpus } from "./corpus";
-import { audioRelPath, noteStored, storeIndex, subfolder } from "./audio";
+import { audioRelPath, corpusFiles, noteStored, storeIndex, subfolder } from "./audio";
 
 describe("audio paths", () => {
   it("puts quest lines under quests/", () => {
@@ -124,5 +124,45 @@ describe("storeIndex freshness", () => {
     storeIndex(dir);
     noteStored("quests/99-accept.mp3");
     expect(storeIndex(dir).has("quests/99-accept.mp3")).toBe(true);
+  });
+});
+
+/**
+ * The whitelist the history playback route is built on. A path either names a file some
+ * corpus line owns, or it does not exist - which is what makes `../` uninteresting rather
+ * than something to sanitise away. Same reasoning as isVoiceSlot for voice names.
+ */
+describe("corpusFiles", () => {
+  const files = corpusFiles();
+
+  it("contains every path the explorer would link to", () => {
+    for (const line of loadCorpus().lines.slice(0, 500)) {
+      expect(files.has(audioRelPath(line))).toBe(true);
+    }
+  });
+
+  it("holds one entry per distinct file, not per line", () => {
+    // 14,315 generatable lines collapse to 11,081 files: a gossip file is named
+    // md5(text + race + gender), so NPCs sharing a line share an mp3.
+    expect(files.size).toBeLessThan(loadCorpus().lineCount);
+    expect(files.size).toBeGreaterThan(10000);
+  });
+
+  it("rejects traversal and anything outside the two subfolders", () => {
+    for (const bad of [
+      "../etc/passwd",
+      "quests/../../etc/passwd.mp3",
+      "/etc/passwd",
+      "sounds/5-accept.mp3",
+      "quests/5-accept.wav",
+      "quests/does-not-exist.mp3",
+      "",
+    ]) {
+      expect(files.has(bad)).toBe(false);
+    }
+  });
+
+  it("memoises", () => {
+    expect(corpusFiles()).toBe(files);
   });
 });

@@ -67,8 +67,17 @@ async function archiveInherited(input: {
   lineId: string;
   voice: string;
 }): Promise<boolean> {
-  const existing = await listVersions(input.file);
-  if (existing.length > 0) return false;
+  const [existing, onDisk] = await Promise.all([
+    listVersions(input.file),
+    versionsOnDisk(input.file),
+  ]);
+
+  // The disk is consulted as well as the table, and this is not belt and braces. If the rows
+  // are gone but the takes are not - a restored backup, a hand-run delete, a fresh database
+  // pointed at an existing audio-history - then trusting the table alone would archive the
+  // *current* take as version 0 and overwrite the real original with it. That is the one
+  // outcome this whole module exists to prevent, and it is unrecoverable.
+  if (existing.length > 0 || onDisk.length > 0) return false;
   if (!(await storeFileExists(input.file))) return false;
 
   const bytes = await archiveStoreFile(input.file, INHERITED_VERSION);
@@ -90,7 +99,14 @@ async function archiveInherited(input: {
 export async function commitVersion(input: CommitInput): Promise<CommitResult> {
   const archivedInherited = await archiveInherited(input);
 
-  const version = await nextVersion(input.file);
+  // Past the highest number either side has seen. Taking it from the table alone would let a
+  // lost row hand out a number that already names a file, and archiveStoreFile would write
+  // straight over that take.
+  const [fromRows, onDisk] = await Promise.all([
+    nextVersion(input.file),
+    versionsOnDisk(input.file),
+  ]);
+  const version = Math.max(fromRows, onDisk.length ? Math.max(...onDisk) + 1 : 0);
 
   await writeStoreFile(input.file, input.data);
   noteStored(input.file);

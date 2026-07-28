@@ -9,7 +9,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import type { CorpusLine } from "./corpus";
+import { loadCorpus, type CorpusLine } from "./corpus";
 import { AUDIO_DIR } from "./paths";
 
 export const SUBFOLDERS = ["quests", "gossip"] as const;
@@ -21,6 +21,27 @@ export function subfolder(line: Pick<CorpusLine, "source">): "quests" | "gossip"
 /** Store-relative path, e.g. "quests/5-accept.mp3". Also the /api/audio/ route path. */
 export function audioRelPath(line: Pick<CorpusLine, "source" | "fileName">): string {
   return `${subfolder(line)}/${line.fileName}.mp3`;
+}
+
+/**
+ * Every store path the corpus can address.
+ *
+ * A whitelist, and the reason the history playback route is traversal-proof by construction:
+ * a path either names a file some corpus line owns or it does not exist, and no amount of
+ * `../` produces a member of this set. Same reasoning as isVoiceSlot for voice names.
+ *
+ * Distinct from storeIndex, which is what is *on disk*. An archived take can be served for a
+ * line whose current audio is missing, so membership here cannot depend on the store.
+ */
+const corpusFilesKey = Symbol.for("wow-voiceover.corpus-files");
+type FilesHolder = { [corpusFilesKey]?: Set<string> };
+
+export function corpusFiles(): Set<string> {
+  const holder = globalThis as FilesHolder;
+  if (!holder[corpusFilesKey]) {
+    holder[corpusFilesKey] = new Set(loadCorpus().lines.map(audioRelPath));
+  }
+  return holder[corpusFilesKey]!;
 }
 
 export function readStoreIndex(audioDir: string = AUDIO_DIR): Set<string> {

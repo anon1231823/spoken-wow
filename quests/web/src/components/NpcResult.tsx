@@ -15,6 +15,8 @@ type Props = {
   onPlay: (line: ResultLine) => void;
   onRegenerate: (line: ResultLine) => void;
   onRegenerateBatch: (label: string, lines: ResultLine[]) => void;
+  takes: Record<string, number>;
+  onRestored: (file: string, version: number) => void;
 };
 
 export default function NpcResult({
@@ -26,6 +28,8 @@ export default function NpcResult({
   onPlay,
   onRegenerate,
   onRegenerateBatch,
+  takes,
+  onRestored,
 }: Props) {
   // Every line an NPC speaks uses the same voice, so one missing voice blocks all of them.
   // Taken from a generatable line rather than the first, or a quest whose only unvoiced line
@@ -85,8 +89,10 @@ export default function NpcResult({
                 canRegenerate={canRegenerate}
                 state={lineStates[line.lineId]}
                 blocked={blockedReason(line)}
+                takes={takes[line.audioPath] ?? 0}
                 onPlay={onPlay}
                 onRegenerate={onRegenerate}
+                onRestored={onRestored}
               />
             ))}
           </div>
