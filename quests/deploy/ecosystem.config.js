@@ -77,6 +77,21 @@ module.exports = {
         // they land somewhere no Makefile target backs up.
         VOICEOVER_VOICE_SAMPLES: `${SHARED}/voices`,
 
+        // Previous takes of regenerated lines. Shared for the strongest version of the same
+        // reason: version 0 of each file is audio that predates this project's ability to
+        // reproduce it, and a release directory is deleted five deploys later.
+        //
+        // A sibling of the store, never inside it: readStoreIndex walks audio/{quests,gossip}
+        // and `make push` rsyncs audio/, so takes living under there would be mistaken for
+        // store files by both.
+        VOICEOVER_AUDIO_HISTORY: `${SHARED}/audio-history`,
+
+        // generation.json and pronunciation.json, which ship inside the release alongside the
+        // corpus so a rollback restores the settings the rolled-back code expects. Without
+        // this the app falls back to built-in defaults and, worse, applies no pronunciation
+        // rules at all - "Hm" is then read aloud as the letters H and M.
+        VOICEOVER_VOICE_CONFIG: "/srv/voiceover/current/voice",
+
         // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL and ELEVENLABS_API_KEY.
         ...readSecrets(),
       },

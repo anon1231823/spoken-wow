@@ -14,6 +14,7 @@ DROPLET      ?= deploy@188.166.37.175
 REMOTE_ROOT  := /srv/voiceover
 REMOTE_AUDIO := $(REMOTE_ROOT)/shared/audio/
 REMOTE_VOICES := $(REMOTE_ROOT)/shared/voices/
+REMOTE_HISTORY := $(REMOTE_ROOT)/shared/audio-history/
 REMOTE_PM2   := pm2
 
 # macOS ships openrsync as /usr/bin/rsync, which reports itself as "2.6.9 compatible" and
@@ -45,7 +46,7 @@ endef
 
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
-        deploy-scripts rollback releases ssh-check
+        pull-history push-history history-status deploy-scripts rollback releases ssh-check
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -61,17 +62,43 @@ pull-dry: ## Preview what `make pull` would change locally
 	$(preflight)
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) audio/
 
-push: ## Upload audio/ to the droplet, then reload so the store index is re-read
+# Which local files would overwrite something NEWER on the droplet.
+#
+# Two dry runs and a set difference, no remote script. `-u` skips files the receiver has a
+# newer copy of, so anything in the first listing and not the second is exactly a file the
+# droplet has changed since you last pulled - which the web app now does every time someone
+# regenerates a line. Before that existed the droplet could only ever be stale; now it is
+# usually the newer side, and --delete would take the difference with it.
+#
+# -i is load-bearing: without it rsync prints bare filenames, `grep '^>f'` matches nothing,
+# and the guard passes every time while looking like it ran.
+define freshness
+	@a=$$(mktemp); b=$$(mktemp); \
+	$(RSYNC) $(RSYNC_OPTS) -i --dry-run    audio/ $(DROPLET):$(REMOTE_AUDIO) | grep '^>f' | awk '{print $$2}' | sort > $$a; \
+	$(RSYNC) $(RSYNC_OPTS) -i -u --dry-run audio/ $(DROPLET):$(REMOTE_AUDIO) | grep '^>f' | awk '{print $$2}' | sort > $$b; \
+	newer=$$(comm -23 $$a $$b); rm -f $$a $$b; \
+	if [ -n "$$newer" ]; then \
+	  echo; echo "REFUSING: the droplet has newer audio for these files:"; \
+	  echo "$$newer" | sed 's/^/    /' | head -30; \
+	  echo "$$newer" | wc -l | xargs printf '    (%s files)\n'; \
+	  echo; echo "Those takes were made on the droplet and are not here. Run 'make pull' first,"; \
+	  echo "or 'make push FORCE=1' to overwrite them anyway."; \
+	  [ "$(FORCE)" = 1 ] || exit 1; \
+	  echo "FORCE=1 given, continuing."; \
+	fi
+endef
+
+push: ## Upload audio/ to the droplet (refuses to clobber newer droplet takes)
 	$(preflight)
+	$(freshness)
 	@echo "==> dry run (local -> $(DROPLET))"
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run audio/ $(DROPLET):$(REMOTE_AUDIO) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	$(RSYNC) $(RSYNC_OPTS) audio/ $(DROPLET):$(REMOTE_AUDIO)
-	@# storeIndex() memoises its readdir on globalThis for the process lifetime, so
-	@# without this reload new audio stays invisible and deleted audio still reads as
-	@# present. See web/src/lib/audio.ts.
-	$(SSH) $(DROPLET) '$(REMOTE_PM2) reload voiceover --update-env'
-	@echo "==> pushed and reloaded"
+	@# No pm2 reload: storeIndex() re-reads whenever either subfolder's mtime moves, which
+	@# a push always changes. It had to reload while the memo was permanent - see the
+	@# freshness note in web/src/lib/audio.ts.
+	@echo "==> pushed"
 
 pull: ## Download the droplet's audio store into audio/ (DESTRUCTIVE: --delete)
 	$(preflight)
@@ -108,6 +135,30 @@ push-voices: ## Upload voice clips to the droplet (non-destructive)
 voices-status: ## Compare clip count and size on both sides
 	@echo "local:  $$(find voice/samples -type f 2>/dev/null | wc -l | tr -d ' ') clips, $$(du -sh voice/samples 2>/dev/null | cut -f1 || echo 0)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_VOICES) -type f 2>/dev/null | wc -l | tr -d " ") clips, $$(du -sh $(REMOTE_VOICES) 2>/dev/null | cut -f1)"'
+
+# --- take history --------------------------------------------------------------------
+#
+# Previous takes of regenerated lines. Version 0 of each file is the audio that predated this
+# project's ability to reproduce it, so this is the one directory whose loss is permanent.
+# Small next to the store, and like the voice clips the droplet is usually the newer side -
+# so neither target uses --delete.
+
+pull-history: ## Fetch previous takes from the droplet (non-destructive)
+	$(preflight)
+	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
+		$(DROPLET):$(REMOTE_HISTORY) audio-history/
+	@echo "==> pulled into audio-history/"
+
+push-history: ## Upload previous takes to the droplet (non-destructive)
+	$(preflight)
+	@[ -d audio-history ] || { echo "no audio-history/ to push"; exit 1; }
+	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
+		audio-history/ $(DROPLET):$(REMOTE_HISTORY)
+	@echo "==> pushed"
+
+history-status: ## Compare take count and size on both sides
+	@echo "local:  $$(find audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ') takes, $$(du -sh audio-history 2>/dev/null | cut -f1 || echo 0)"
+	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_HISTORY) -name "*.mp3" 2>/dev/null | wc -l | tr -d " ") takes, $$(du -sh $(REMOTE_HISTORY) 2>/dev/null | cut -f1)"'
 
 audio-status: ## Compare file count and size on both sides
 	@echo "local:  $$(find audio -name '*.mp3' | wc -l | tr -d ' ') files, $$(du -sh audio | cut -f1)"
