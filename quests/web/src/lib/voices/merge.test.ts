@@ -62,16 +62,20 @@ describe("rejectMerge", () => {
  * while remaining wrong.
  */
 describe("mergeSamples", () => {
+  async function sine(seconds: number, frequency = 440) {
+    const clip = path.join(dir, `sine-${frequency}.mp3`);
+    await run("ffmpeg", [
+      "-f", "lavfi", "-t", String(seconds), "-i", `sine=frequency=${frequency}:r=44100`,
+      "-ac", "1", "-c:a", "libmp3lame", "-y", clip,
+    ]);
+    return fs.readFile(clip);
+  }
+
   async function seed(voice: string, count: number, seconds: number) {
     const { storeSample } = await import("./samples");
     const stored = [];
     for (let i = 0; i < count; i++) {
-      const clip = path.join(dir, `src${i}.mp3`);
-      await run("ffmpeg", [
-        "-f", "lavfi", "-t", String(seconds), "-i", `sine=frequency=${300 + i * 100}:r=44100`,
-        "-ac", "1", "-c:a", "libmp3lame", "-y", clip,
-      ]);
-      stored.push(await storeSample(voice, `clip${i}.mp3`, await fs.readFile(clip)));
+      stored.push(await storeSample(voice, `clip${i}.mp3`, await sine(seconds, 300 + i * 100)));
     }
     return stored;
   }
@@ -104,6 +108,17 @@ describe("mergeSamples", () => {
     const seconds = await durationOf(path.join(dir, "orc-male", merged.file));
     expect(seconds).toBeGreaterThan(1.7);
     expect(seconds).toBeLessThan(2.4);
+  });
+
+  it.skipIf(!hasFfmpeg)("names the merge after the first selected clip", async () => {
+    const { mergeSamples } = await import("./merge");
+    const { storeSample, displayName } = await import("./samples");
+    const first = await storeSample("orc-male", "Orc-Male-NPC-Greeting-01.ogg", await sine(1));
+    const second = await storeSample("orc-male", "something-else.ogg", await sine(1));
+
+    const merged = await mergeSamples("orc-male", [first.file, second.file], 0);
+
+    expect(displayName(merged.file)).toBe("merged-Orc-Male-NPC-Greeting-01.mp3");
   });
 
   it.skipIf(!hasFfmpeg)("leaves the sources in place", async () => {

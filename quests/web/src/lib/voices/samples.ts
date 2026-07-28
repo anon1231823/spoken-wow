@@ -50,6 +50,11 @@ export function extensionOf(filename: string): string {
   return path.extname(filename).slice(1).toLowerCase();
 }
 
+/** A stored name without its uniqueness prefix — what a human should be shown. */
+export function displayName(file: string): string {
+  return file.replace(/^[0-9a-f]{8}-/, "");
+}
+
 /** Reject the upload before any of it is written, with a reason worth showing a human. */
 export function rejectUpload(
   incoming: { name: string; size: number }[],

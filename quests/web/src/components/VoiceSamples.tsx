@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { Sample } from "@/lib/voices/samples";
+import { displayName, type Sample } from "@/lib/voices/samples";
 
 /**
  * The clips behind one voice.
@@ -166,7 +166,7 @@ export default function VoiceSamples({ voice, samples, onChange }: Props) {
                   className="h-8 max-w-[16rem] flex-1"
                 />
                 <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
-                  {sample.file.replace(/^[0-9a-f]{8}-/, "")}
+                  {displayName(sample.file)}
                 </span>
                 <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
                   {durations[sample.file] !== undefined && `${formatDuration(durations[sample.file])} · `}

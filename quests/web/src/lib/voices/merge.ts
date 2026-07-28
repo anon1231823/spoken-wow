@@ -16,7 +16,14 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-import { listSamples, samplePath, storedNameFor, voiceDir, type Sample } from "./samples";
+import {
+  displayName,
+  listSamples,
+  samplePath,
+  storedNameFor,
+  voiceDir,
+  type Sample,
+} from "./samples";
 
 const run = promisify(execFile);
 
@@ -101,7 +108,10 @@ export async function mergeSamples(
   const dir = voiceDir(voice);
   await fs.mkdir(dir, { recursive: true });
 
-  const file = storedNameFor(`merged-${inputs.length}-clips.mp3`);
+  // Named after the first clip in the selection, so the merge is recognisable against the
+  // source it came from rather than being one of several interchangeable "merged" files.
+  const first = displayName(files[0]);
+  const file = storedNameFor(`merged-${path.basename(first, path.extname(first))}.mp3`);
   // Built in the OS temp directory, not the voice directory: an ffmpeg failure must not
   // leave anything behind that a listing could pick up, even briefly.
   const scratch = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "voiceover-merge-")), file);
