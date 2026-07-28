@@ -30,6 +30,8 @@ export type RegenerateSuccess = {
   version: number;
   bytes: number;
   characters: number;
+  /** What this cost, exactly, from ElevenLabs. null when it did not say. */
+  credits: number | null;
   seed: number | null;
   voice: string;
   voiceId: string;
@@ -126,6 +128,7 @@ export async function regenerateLine(
       modelId: config.modelId,
       seed,
       characters: spokenText.length,
+      credits: speech.credits,
       settings: config.voiceSettings,
       createdBy,
     });
@@ -137,6 +140,7 @@ export async function regenerateLine(
       version: committed.version,
       bytes: committed.bytes,
       characters: spokenText.length,
+      credits: speech.credits,
       seed,
       voice: line.voice,
       voiceId,

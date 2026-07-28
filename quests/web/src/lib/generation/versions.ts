@@ -23,6 +23,8 @@ export type VoicelineVersion = {
   modelId: string | null;
   seed: number | null;
   characters: number | null;
+  /** What ElevenLabs actually charged, which is not the character count. See billing.ts. */
+  credits: number | null;
   bytes: number;
   settings: VoiceSettings | null;
   createdAt: string;
@@ -42,6 +44,7 @@ export type NewVersion = {
   modelId?: string | null;
   seed?: number | null;
   characters?: number | null;
+  credits?: number | null;
   settings?: VoiceSettings | null;
   createdBy?: string | null;
 };
@@ -50,7 +53,7 @@ export type NewVersion = {
 // in general, though not here), so they are cast in SQL rather than parsed in TypeScript.
 const COLUMNS = `
   v."file", v."version", v."isCurrent", v."origin", v."lineId", v."voice",
-  v."voiceId", v."modelId", v."seed"::bigint::float8 as "seed", v."characters",
+  v."voiceId", v."modelId", v."seed"::bigint::float8 as "seed", v."characters", v."credits",
   v."bytes"::float8 as "bytes", v."settings", v."createdAt", v."createdBy",
   u."name" as "createdByName"`;
 
@@ -106,8 +109,8 @@ export async function recordVersion(version: NewVersion): Promise<void> {
   await db().query(
     `insert into "voiceline_version"
        ("file", "version", "origin", "lineId", "voice", "bytes",
-        "voiceId", "modelId", "seed", "characters", "settings", "createdBy")
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        "voiceId", "modelId", "seed", "characters", "credits", "settings", "createdBy")
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
     [
       version.file,
       version.version,
@@ -119,6 +122,7 @@ export async function recordVersion(version: NewVersion): Promise<void> {
       version.modelId ?? null,
       version.seed ?? null,
       version.characters ?? null,
+      version.credits ?? null,
       version.settings ? JSON.stringify(version.settings) : null,
       version.createdBy ?? null,
     ],

@@ -24,7 +24,33 @@ export type SpeechRequest = {
   seed: number | null;
 };
 
-export type SpeechResult = { ok: true; audio: Buffer } | { ok: false; failure: Failure };
+export type SpeechResult =
+  | {
+      ok: true;
+      audio: Buffer;
+      /**
+       * What the request actually cost, from the `character-cost` response header.
+       *
+       * Not the length of the text. ElevenLabs bills round(characters x rate), and the rate
+       * is a property of the plan rather than the request: measured at 0.55 on this account
+       * for the standard models and half that for flash and turbo, so 310 characters cost
+       * 170. Reading the header is the only way to know without guessing at someone's plan,
+       * and it agreed with the usage-stats delta on every model and length tried.
+       *
+       * null when the header is absent, which is a reason to stop reporting a number rather
+       * than to invent one.
+       */
+      credits: number | null;
+    }
+  | { ok: false; failure: Failure };
+
+/** The exact cost of a request, or null if ElevenLabs did not say. */
+export function creditsFrom(headers: Headers): number | null {
+  const raw = headers.get("character-cost");
+  if (raw === null) return null;
+  const credits = Number(raw);
+  return Number.isFinite(credits) && credits >= 0 ? credits : null;
+}
 
 export function buildPayload(request: SpeechRequest): Record<string, unknown> {
   const payload: Record<string, unknown> = {
@@ -83,12 +109,13 @@ export async function textToSpeech(
     };
   }
 
+  const credits = creditsFrom(response.headers);
   const audio = Buffer.from(await response.arrayBuffer());
   if (audio.byteLength === 0) {
     return { ok: false, failure: failure("upstream", "ElevenLabs returned an empty response") };
   }
 
-  return { ok: true, audio };
+  return { ok: true, audio, credits };
 }
 
 function message(error: unknown): string {

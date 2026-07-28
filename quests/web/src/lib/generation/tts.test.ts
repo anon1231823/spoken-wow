@@ -17,8 +17,11 @@ const REQUEST = {
   seed: 1163733943,
 };
 
-function audioResponse(body = "ID3fake-mp3-bytes"): Response {
-  return new Response(body, { status: 200, headers: { "content-type": "audio/mpeg" } });
+function audioResponse(body = "ID3fake-mp3-bytes", cost = "17"): Response {
+  return new Response(body, {
+    status: 200,
+    headers: { "content-type": "audio/mpeg", "character-cost": cost },
+  });
 }
 
 function stub(response: Response | Promise<Response>) {
@@ -58,7 +61,7 @@ describe("textToSpeech", () => {
     const fetchImpl = stub(audioResponse());
     const result = await textToSpeech(REQUEST, { ...OPTIONS, fetchImpl });
 
-    expect(result).toEqual({ ok: true, audio: Buffer.from("ID3fake-mp3-bytes") });
+    expect(result).toEqual({ ok: true, audio: Buffer.from("ID3fake-mp3-bytes"), credits: 17 });
 
     const [url, init] = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe("https://stub.invalid/v1/text-to-speech/voice-abc");
@@ -145,5 +148,50 @@ describe("textToSpeech", () => {
     if (result.ok) return;
     expect(result.failure.kind).toBe("auth");
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * ElevenLabs does not bill the characters you send. It bills round(characters * rate), and
+ * the rate belongs to the plan: measured at 0.55 on the account this was built against, so
+ * a 310-character line cost 170. The header is the only way to know the real figure without
+ * guessing at someone's plan, and it agreed with the usage-stats delta on every model and
+ * length tried.
+ */
+describe("what a request actually cost", () => {
+  it("reports the cost ElevenLabs charged, not the length of the text", async () => {
+    const fetchImpl = stub(audioResponse("ID3bytes", "55"));
+    const result = await textToSpeech({ ...REQUEST, text: "A".repeat(100) }, { ...OPTIONS, fetchImpl });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.credits).toBe(55);
+  });
+
+  // Reporting a number that was not charged is worse than reporting none: the whole reason
+  // this is read rather than computed is that the rate cannot be derived from the request.
+  it("reports nothing rather than guessing when the header is absent", async () => {
+    const fetchImpl = stub(
+      new Response("ID3bytes", { status: 200, headers: { "content-type": "audio/mpeg" } }),
+    );
+    const result = await textToSpeech(REQUEST, { ...OPTIONS, fetchImpl });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.credits).toBeNull();
+  });
+
+  it("ignores a header that is not a usable number", async () => {
+    for (const cost of ["", "unknown", "-5", "NaN"]) {
+      const fetchImpl = stub(audioResponse("ID3bytes", cost));
+      const result = await textToSpeech(REQUEST, { ...OPTIONS, fetchImpl });
+      expect(result.ok && result.credits).toBeFalsy();
+    }
+  });
+
+  it("reads a zero cost as zero, not as absent", async () => {
+    const fetchImpl = stub(audioResponse("ID3bytes", "0"));
+    const result = await textToSpeech(REQUEST, { ...OPTIONS, fetchImpl });
+    expect(result.ok && result.credits).toBe(0);
   });
 });

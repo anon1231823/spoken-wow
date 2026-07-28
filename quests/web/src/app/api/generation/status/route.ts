@@ -7,6 +7,7 @@
  * not require the page that they cannot reach.
  */
 import { requireRegenerate } from "@/lib/generation/authz";
+import { observedRate } from "@/lib/generation/billing";
 import { readSettings } from "@/lib/generation/settings";
 import { generationStatus } from "@/lib/generation/status";
 
@@ -18,11 +19,16 @@ export async function GET() {
 
   const [status, settings] = await Promise.all([generationStatus(), readSettings()]);
 
+  // Calibrated from what this account has actually been charged for this model, because the
+  // rate is a property of the plan and cannot be read from the API. See billing.ts.
+  const rate = await observedRate(settings.config.modelId);
+
   return Response.json({
     voices: status.voices,
     subscription: status.subscription,
     error: status.error,
     settings: settings.config,
     settingsSource: settings.source,
+    rate,
   });
 }

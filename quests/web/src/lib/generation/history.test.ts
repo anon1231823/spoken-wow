@@ -44,6 +44,7 @@ function take(overrides: Partial<Parameters<typeof commitVersion>[0]> = {}) {
     modelId: "eleven_multilingual_v2",
     seed: 1163733943,
     characters: 42,
+    credits: 23,
     settings: { ...SETTINGS },
     createdBy: null as unknown as string,
     ...overrides,

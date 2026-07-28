@@ -40,6 +40,8 @@ export type CommitInput = {
   modelId: string;
   seed: number | null;
   characters: number;
+  /** From the response header; null when ElevenLabs did not report one. */
+  credits: number | null;
   settings: VoiceSettings;
   createdBy: string;
 };
@@ -105,6 +107,7 @@ export async function commitVersion(input: CommitInput): Promise<CommitResult> {
     modelId: input.modelId,
     seed: input.seed,
     characters: input.characters,
+    credits: input.credits,
     settings: input.settings,
     createdBy: input.createdBy,
   });
