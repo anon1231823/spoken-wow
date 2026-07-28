@@ -105,28 +105,42 @@ jobs:
       - name: Set release name
         run: echo "STAMP=$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
-      - uses: webfactory/ssh-agent@v0.10.0
-        with:
-          ssh-private-key: ${{ secrets.DO_SSH_KEY }}
-
-      - name: Trust the droplet's host key
+      # The key goes to a file rather than into an agent so the workflow controls its exact
+      # bytes: a secret pasted through a browser commonly loses its trailing newline or
+      # picks up CRLF, and ssh then fails with a bare `error in libcrypto` naming neither
+      # the key nor the cause. Both are repaired here; a wrong key cannot be, hence the
+      # explicit check.
+      - name: Set up SSH
+        env:
+          KEY: ${{ secrets.DO_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DO_KNOWN_HOSTS }}
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          echo "${{ secrets.DO_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          printf '%s\n' "$(printf '%s' "$KEY" | tr -d '\r')" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
+
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null 2>&1; then
+            echo "::error::DO_SSH_KEY is not a usable private key. Re-set it from the file so the trailing newline survives: gh secret set DO_SSH_KEY < ~/.ssh/voiceover_deploy - it must be the private key, not the .pub, including its BEGIN/END lines."
+            exit 1
+          fi
+          echo "deploy key fingerprint: $(ssh-keygen -lf ~/.ssh/deploy_key | awk '{print $2}')"
 
       - name: Upload release
         env:
           TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
         run: |
-          rsync -a --delete release/ \
+          rsync -a --delete -e "ssh -i ~/.ssh/deploy_key" release/ \
             "$TARGET:/srv/voiceover/releases/$STAMP/"
 
       - name: Activate
         env:
           TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
         run: |
-          ssh "$TARGET" "/srv/voiceover/bin/activate.sh /srv/voiceover/releases/$STAMP"
+          ssh -i ~/.ssh/deploy_key "$TARGET" \
+            "/srv/voiceover/bin/activate.sh /srv/voiceover/releases/$STAMP"
 
       # A bad deploy should heal itself rather than sit broken until someone notices.
       - name: Smoke check, rolling back on failure
@@ -136,7 +150,7 @@ jobs:
           set -euo pipefail
           ok=""
           for i in $(seq 1 10); do
-            if ssh "$TARGET" \
+            if ssh -i ~/.ssh/deploy_key "$TARGET" \
               "curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:3000/api/search?q=thrall'"
             then ok=1; break; fi
             echo "attempt $i failed, retrying..."
@@ -144,7 +158,7 @@ jobs:
           done
           if [ -z "$ok" ]; then
             echo "::error::smoke check failed, rolling back"
-            ssh "$TARGET" '/srv/voiceover/bin/rollback.sh'
+            ssh -i ~/.ssh/deploy_key "$TARGET" '/srv/voiceover/bin/rollback.sh'
             exit 1
           fi
           echo "smoke check passed"
@@ -152,4 +166,4 @@ jobs:
       - name: Prune old releases
         env:
           TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
-        run: ssh "$TARGET" '/srv/voiceover/bin/prune.sh 5'
+        run: ssh -i ~/.ssh/deploy_key "$TARGET" '/srv/voiceover/bin/prune.sh 5'
