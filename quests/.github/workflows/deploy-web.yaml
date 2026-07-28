@@ -66,21 +66,25 @@ jobs:
         working-directory: web
         run: pnpm install --frozen-lockfile
 
-      # The gate. audio.test.ts asserts every file in the store is addressed by some
-      # corpus line and range.test.ts covers Safari's bytes=0-1 probe; neither should
-      # reach the droplet red.
       - name: Typecheck
         working-directory: web
         run: pnpm typecheck
 
+      # Applied with the same script the droplet uses, so a migration that only works
+      # under a hand-run psql fails here instead of mid-deploy.
+      #
+      # Before the tests, not after: history.test.ts exercises the version table against a
+      # real Postgres, because the ordering it protects - archive the current take before
+      # anything overwrites it - is exactly what a mocked database would stop testing.
+      - name: Migrate
+        run: deploy/bin/migrate.sh "$PWD/web"
+
+      # The gate. audio.test.ts asserts every file in the store is addressed by some
+      # corpus line and range.test.ts covers Safari's bytes=0-1 probe; neither should
+      # reach the droplet red.
       - name: Test
         working-directory: web
         run: pnpm test
-
-      # Applied with the same script the droplet uses, so a migration that only works
-      # under a hand-run psql fails here instead of mid-deploy.
-      - name: Migrate
-        run: deploy/bin/migrate.sh "$PWD/web"
 
       - name: Build
         working-directory: web

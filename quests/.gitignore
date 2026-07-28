@@ -21,6 +21,11 @@ assets/sql/mysql-dump
 # them means a voice can never be remade, so back them up.
 /voice/samples/
 
+# Previous takes of regenerated lines. A sibling of the store rather than a directory inside
+# it, so readStoreIndex and `make push` cannot mistake an old take for a store file. Version 0
+# of each is audio that predates this project's ability to reproduce it - back it up too.
+/audio-history/
+
 # Blizzard's own NPC barks and the script that pulls them. Local reference material for
 # tuning voices, not part of what this project ships.
 /tools/fetch_npc_lines.py

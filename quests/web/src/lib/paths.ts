@@ -20,6 +20,16 @@ export const VOICE_SAMPLES_DIR =
   process.env.VOICEOVER_VOICE_SAMPLES ?? path.join(REPO_ROOT, "voice", "samples");
 
 /**
+ * Previous takes of a regenerated line: <sub>/<fileName>/<version>.mp3.
+ *
+ * A sibling of the store rather than a directory inside it, and deliberately so:
+ * readStoreIndex walks audio/{quests,gossip} and `make push` rsyncs audio/, so anything
+ * living under there would be mistaken for the store's own contents by both.
+ */
+export const AUDIO_HISTORY_DIR =
+  process.env.VOICEOVER_AUDIO_HISTORY ?? path.join(REPO_ROOT, "audio-history");
+
+/**
  * generation.json and pronunciation.json: how a line is voiced.
  *
  * Unlike the clips, these ship *inside* the release alongside the corpus, because they are
