@@ -17,6 +17,15 @@ assets/sql/mysql-dump
 # Anchored: an unanchored "audio/" also swallowed web/src/app/api/audio/.
 /audio/
 
+# Clips uploaded to build voice clones. Like the audio store: not committable, but losing
+# them means a voice can never be remade, so back them up.
+/voice/samples/
+
+# Blizzard's own NPC barks and the script that pulls them. Local reference material for
+# tuning voices, not part of what this project ships.
+/tools/fetch_npc_lines.py
+/voice/npc-lines/
+
 # Built data module
 /dist/
 
@@ -27,6 +36,9 @@ RELEASE
 
 # Planning artifacts from the superpowers skills: useful locally, noise in review
 docs/superpowers/
+
+# Design notes for work not committed to. Local thinking, not project documentation.
+/specs/
 
 # Web explorer
 web/node_modules/

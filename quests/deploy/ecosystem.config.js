@@ -71,7 +71,13 @@ module.exports = {
         VOICEOVER_AUDIO: `${SHARED}/audio`,
         VOICEOVER_CORPUS: "/srv/voiceover/current/corpus/corpus.json.gz",
 
-        // DATABASE_URL, BETTER_AUTH_SECRET and BETTER_AUTH_URL.
+        // Clips uploaded to build voice clones, shared for the same reason the audio is: a
+        // cloned ElevenLabs voice cannot be exported, so these are the only way to remake
+        // one. Without this, paths.ts resolves them relative to the release directory and
+        // they land somewhere no Makefile target backs up.
+        VOICEOVER_VOICE_SAMPLES: `${SHARED}/voices`,
+
+        // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL and ELEVENLABS_API_KEY.
         ...readSecrets(),
       },
     },

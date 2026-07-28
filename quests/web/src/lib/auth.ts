@@ -8,16 +8,12 @@
 import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { admin as adminPlugin } from "better-auth/plugins";
-import { Pool } from "pg";
 
+import { db } from "./db";
 import { ac, roles } from "./permissions";
 
-// `new Pool()` does not open a connection until the first query, so importing this module
-// during `next build` does not need a reachable database.
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
 export const auth = betterAuth({
-  database: pool,
+  database: db(),
   emailAndPassword: { enabled: true },
   // nginx terminates TLS, so the origin Better Auth sees is http://127.0.0.1:3000 unless we
   // tell it the public one. Cookies and redirects are built from this.

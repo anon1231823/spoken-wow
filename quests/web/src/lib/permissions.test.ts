@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canRegenerate, isAdmin, isRole, ROLES, roles } from "./permissions";
+import { canManageVoices, canRegenerate, isAdmin, isRole, ROLES, roles } from "./permissions";
 
 describe("canRegenerate", () => {
   it("admits collaborators and admins", () => {
@@ -28,6 +28,22 @@ describe("isAdmin", () => {
   });
 });
 
+describe("canManageVoices", () => {
+  it("admits only admins", () => {
+    expect(canManageVoices("admin")).toBe(true);
+    expect(canManageVoices("collaborator")).toBe(false);
+    expect(canManageVoices("member")).toBe(false);
+    expect(canManageVoices(null)).toBe(false);
+  });
+
+  // Regenerating a line and creating a voice are deliberately different privileges; a
+  // collaborator having one must not imply the other.
+  it("is stricter than canRegenerate", () => {
+    expect(canRegenerate("collaborator")).toBe(true);
+    expect(canManageVoices("collaborator")).toBe(false);
+  });
+});
+
 describe("isRole", () => {
   it("accepts every declared role and nothing else", () => {
     for (const role of ROLES) expect(isRole(role)).toBe(true);
@@ -43,6 +59,13 @@ describe("access control", () => {
     const permission = { voiceline: ["regenerate"] } as const;
     expect(roles.member.authorize(permission).success).toBe(false);
     expect(roles.collaborator.authorize(permission).success).toBe(true);
+    expect(roles.admin.authorize(permission).success).toBe(true);
+  });
+
+  it("grants voice management to admin alone", () => {
+    const permission = { voice: ["manage"] } as const;
+    expect(roles.member.authorize(permission).success).toBe(false);
+    expect(roles.collaborator.authorize(permission).success).toBe(false);
     expect(roles.admin.authorize(permission).success).toBe(true);
   });
 

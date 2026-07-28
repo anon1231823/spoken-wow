@@ -13,6 +13,7 @@
 DROPLET      ?= deploy@188.166.37.175
 REMOTE_ROOT  := /srv/voiceover
 REMOTE_AUDIO := $(REMOTE_ROOT)/shared/audio/
+REMOTE_VOICES := $(REMOTE_ROOT)/shared/voices/
 REMOTE_PM2   := pm2
 
 # macOS ships openrsync as /usr/bin/rsync, which reports itself as "2.6.9 compatible" and
@@ -43,7 +44,8 @@ define preflight
 endef
 
 .DEFAULT_GOAL := help
-.PHONY: help push pull push-dry pull-dry audio-status deploy-scripts rollback releases ssh-check
+.PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
+        deploy-scripts rollback releases ssh-check
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -79,6 +81,33 @@ pull: ## Download the droplet's audio store into audio/ (DESTRUCTIVE: --delete)
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	$(RSYNC) $(RSYNC_OPTS) $(DROPLET):$(REMOTE_AUDIO) audio/
 	@echo "==> pulled"
+
+# --- voice clips ----------------------------------------------------------------------
+#
+# The clips a voice was cloned from. Small (kilobytes each) but irreplaceable: an ElevenLabs
+# voice cannot be exported, so losing these means a voice can never be remade - the exact
+# failure that left this project with inherited voices it could not reproduce.
+#
+# Uploads happen on the droplet through the web UI, so unlike the audio store the droplet is
+# usually the newer side. Neither target uses --delete for that reason: these are two
+# collections being kept in sync by hand, not a mirror with an authoritative side.
+
+pull-voices: ## Fetch voice clips from the droplet (non-destructive)
+	$(preflight)
+	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
+		$(DROPLET):$(REMOTE_VOICES) voice/samples/
+	@echo "==> pulled into voice/samples/"
+
+push-voices: ## Upload voice clips to the droplet (non-destructive)
+	$(preflight)
+	@[ -d voice/samples ] || { echo "no voice/samples/ to push"; exit 1; }
+	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
+		voice/samples/ $(DROPLET):$(REMOTE_VOICES)
+	@echo "==> pushed"
+
+voices-status: ## Compare clip count and size on both sides
+	@echo "local:  $$(find voice/samples -type f 2>/dev/null | wc -l | tr -d ' ') clips, $$(du -sh voice/samples 2>/dev/null | cut -f1 || echo 0)"
+	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_VOICES) -type f 2>/dev/null | wc -l | tr -d " ") clips, $$(du -sh $(REMOTE_VOICES) 2>/dev/null | cut -f1)"'
 
 audio-status: ## Compare file count and size on both sides
 	@echo "local:  $$(find audio -name '*.mp3' | wc -l | tr -d ' ') files, $$(du -sh audio | cut -f1)"

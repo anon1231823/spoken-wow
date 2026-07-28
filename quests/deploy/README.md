@@ -19,8 +19,9 @@ the system Node for another service, bump that value to match and redeploy.
 /srv/voiceover/
   shared/
     audio/{quests,gossip}/     1.1 GB, moved by `make push`, never touched by a deploy
+    voices/<race-gender>/      clips a voice clone was built from, `make pull-voices`
     ecosystem.config.js        pm2 config, outlives every release
-    app.env                    DB URL + session secret, mode 600. Never in git.
+    app.env                    DB URL, session secret, ElevenLabs key. Mode 600, never in git.
   releases/
     20260727-2143-a1b2c3d/     ~62 MB standalone bundle + its corpus and migrations.
   current -> releases/...      the symlink pm2 follows. Swapping it is the deploy.
@@ -33,8 +34,15 @@ Why this shape:
   when CI is down, GitHub is down, or the network is. `make releases` is the version list.
 - **Audio lives in `shared/`.** 1.1 GB is never copied on deploy and never rolls back with
   a bad release. Deploys stay ~62 MB and quick.
+- **Voice clips live in `shared/` too.** An ElevenLabs voice cannot be exported, so the clips
+  it was cloned from are the only way to remake it. They are uploaded on the droplet through
+  the web UI, which makes the droplet the *newer* side — `make pull-voices` before you rely
+  on the local copy.
 - **CI builds, the droplet only runs.** The droplet has no repo, no pnpm and no build
   toolchain; it receives a Next.js `standalone` bundle with its traced `node_modules`.
+- **One exception to "installs nothing": ffmpeg.** Merging short clips into one take is a
+  server-side operation, so the box needs `ffmpeg` on PATH. Uploading and cloning work
+  without it; only merging fails, and it says so.
 - **The corpus ships inside each release**, so a rollback moves code and data together.
 - **Postgres holds accounts, sessions and roles, and nothing else.** It is not in the read
   path for the corpus or the audio store, so a database outage leaves the explorer working
@@ -42,17 +50,18 @@ Why this shape:
 
 ## Runtime paths
 
-The app reads two things from disk. In production both come from env vars set in
+The app reads three things from disk. In production all come from env vars set in
 `ecosystem.config.js`, because `process.cwd()/..` is a release directory, not the repo:
 
 | Env var | Value | Notes |
 |---|---|---|
 | `VOICEOVER_AUDIO` | `/srv/voiceover/shared/audio` | shared across releases |
 | `VOICEOVER_CORPUS` | `/srv/voiceover/current/corpus/corpus.json.gz` | per release |
+| `VOICEOVER_VOICE_SAMPLES` | `/srv/voiceover/shared/voices` | shared; **must be set**, or clips land beside the releases where nothing backs them up |
 
-Both already existed as overrides in `web/src/lib/paths.ts` — no app code changed for this.
+All three exist as overrides in `web/src/lib/paths.ts` — no app code changed for this.
 
-Three more come from `shared/app.env`, which `ecosystem.config.js` parses and merges into
+Four more come from `shared/app.env`, which `ecosystem.config.js` parses and merges into
 the pm2 environment. They are secrets, and that file is the only place they exist:
 
 | Env var | Value | Notes |
@@ -60,6 +69,7 @@ the pm2 environment. They are secrets, and that file is the only place they exis
 | `DATABASE_URL` | `postgres://voiceover:…@127.0.0.1:5432/voiceover` | localhost only |
 | `BETTER_AUTH_SECRET` | 32 random bytes | signs session cookies; rotating it signs everyone out |
 | `BETTER_AUTH_URL` | `https://voiceover.rusty.one` | **must match the public origin exactly** |
+| `ELEVENLABS_API_KEY` | `sk_…` | reads the voice roster and creates clones; `/voices` reports the failure and still renders without it |
 
 `BETTER_AUTH_URL` is the one worth double-checking. Better Auth validates the `Origin`
 header of every state-changing request against it, so a stale or mismatched value does not
@@ -75,14 +85,15 @@ other services, check `free -m` first — and if it is tight, drop to `instances
 `ecosystem.config.js` (~193 MB, at the cost of a brief blip on each deploy) before sizing
 the droplet up. Disk: 1.1 GB of audio plus five ~62 MB releases, so ~1.5 GB.
 
-**2. Prepare the droplet**, as root. Nothing here installs a runtime — it uses the Node and
-pm2 the box already has. `next@15` needs Node >= 20.
+**2. Prepare the droplet**, as root. This uses the Node and pm2 the box already has —
+`next@15` needs Node >= 20 — and installs one thing: ffmpeg, which merges voice clips.
 
 ```bash
 node -v && pm2 -v && command -v rsync      # prerequisites; install rsync if missing
+apt-get install -y ffmpeg                  # merging clips; upload and cloning work without it
 
 useradd --create-home --shell /bin/bash deploy
-mkdir -p /srv/voiceover/{releases,bin,shared/audio/{quests,gossip}}
+mkdir -p /srv/voiceover/{releases,bin,shared/voices,shared/audio/{quests,gossip}}
 chown -R deploy:deploy /srv/voiceover
 
 # Per-user boot unit: resurrects only what the deploy user has `pm2 save`d, leaving any
@@ -119,6 +130,7 @@ cat > /srv/voiceover/shared/app.env <<EOF
 DATABASE_URL=postgres://voiceover:$PGPW@127.0.0.1:5432/voiceover
 BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 BETTER_AUTH_URL=https://voiceover.rusty.one
+ELEVENLABS_API_KEY=sk_your_key_here
 EOF
 chown deploy:deploy /srv/voiceover/shared/app.env
 chmod 600 /srv/voiceover/shared/app.env
