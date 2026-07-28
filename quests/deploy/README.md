@@ -1,0 +1,205 @@
+# Deploying the voiceline explorer
+
+The explorer runs on a DigitalOcean droplet behind nginx, supervised by pm2, deployed by
+GitHub Actions on every push to `master`.
+
+**This is designed to share a droplet with your existing services.** Setup adds a new nginx
+vhost, a new user, and a directory tree — that is all. It installs no Node, no pm2, no
+firewall rule and no changes to any existing site; it uses what the box already has.
+
+pm2 daemons are per-user, so the `deploy` user gets its own `~/.pm2` and its own daemon:
+sharing the pm2 binary does not put this app in the same process namespace as anything
+else you run under it.
+
+**One coupling to know about:** the app runs under the box's system Node, and CI builds
+against a pinned major (`node-version` in `deploy-web.yaml`, currently 24). If you upgrade
+the system Node for another service, bump that value to match and redeploy.
+
+```
+/srv/voiceover/
+  shared/
+    audio/{quests,gossip}/     1.1 GB, moved by `make push`, never touched by a deploy
+    ecosystem.config.js        pm2 config, outlives every release
+  releases/
+    20260727-2143-a1b2c3d/     ~62 MB standalone bundle + its corpus. Newest 5 kept.
+  current -> releases/...      the symlink pm2 follows. Swapping it is the deploy.
+  bin/{activate,rollback,prune}.sh
+```
+
+Why this shape:
+
+- **Releases are directories, `current` is a symlink.** Rollback is a rename, so it works
+  when CI is down, GitHub is down, or the network is. `make releases` is the version list.
+- **Audio lives in `shared/`.** 1.1 GB is never copied on deploy and never rolls back with
+  a bad release. Deploys stay ~62 MB and quick.
+- **CI builds, the droplet only runs.** The droplet has no repo, no pnpm and no build
+  toolchain; it receives a Next.js `standalone` bundle with its traced `node_modules`.
+- **The corpus ships inside each release**, so a rollback moves code and data together.
+
+## Runtime paths
+
+The app reads two things from disk. In production both come from env vars set in
+`ecosystem.config.js`, because `process.cwd()/..` is a release directory, not the repo:
+
+| Env var | Value | Notes |
+|---|---|---|
+| `VOICEOVER_AUDIO` | `/srv/voiceover/shared/audio` | shared across releases |
+| `VOICEOVER_CORPUS` | `/srv/voiceover/current/corpus/corpus.json.gz` | per release |
+
+Both already existed as overrides in `web/src/lib/paths.ts` — no app code changed for this.
+
+## First-time setup
+
+**1. Check the droplet has room.** The app needs **~400 MB of free RAM**: the memory driver
+is the memoised corpus parse, measured at ~193 MB RSS per pm2 worker after broad searches,
+and the config runs two workers so reloads are zero-downtime. On a droplet already running
+other services, check `free -m` first — and if it is tight, drop to `instances: 1` in
+`ecosystem.config.js` (~193 MB, at the cost of a brief blip on each deploy) before sizing
+the droplet up. Disk: 1.1 GB of audio plus five ~62 MB releases, so ~1.5 GB.
+
+**2. Prepare the droplet**, as root. Nothing here installs a runtime — it uses the Node and
+pm2 the box already has. `next@15` needs Node >= 20.
+
+```bash
+node -v && pm2 -v && command -v rsync      # prerequisites; install rsync if missing
+
+useradd --create-home --shell /bin/bash deploy
+mkdir -p /srv/voiceover/{releases,bin,shared/audio/{quests,gossip}}
+chown -R deploy:deploy /srv/voiceover
+
+# Per-user boot unit: resurrects only what the deploy user has `pm2 save`d, leaving any
+# pm2 setup you already have for another user alone.
+pm2 startup systemd -u deploy --hp /home/deploy
+```
+
+The `deploy` user owns everything under `/srv/voiceover`, so no part of a deploy or an
+audio sync needs sudo.
+
+**3. Install the nginx vhost.** Adds a file next to your existing sites; touches none of
+them.
+
+```bash
+scp deploy/nginx-voiceover.conf root@<ip>:/etc/nginx/sites-available/voiceover
+ssh root@<ip> 'ln -sf /etc/nginx/sites-available/voiceover /etc/nginx/sites-enabled/ \
+  && nginx -t && systemctl reload nginx'
+```
+
+`nginx -t` before the reload is the safety net — a bad config fails the test rather than
+taking your other sites down with it.
+
+**4. Point DNS and get a certificate.** An `A` record for `voiceover.rusty.one` at the
+droplet's IP, then:
+
+```bash
+ssh root@<ip> 'certbot --nginx -d voiceover.rusty.one'
+```
+
+certbot rewrites the vhost in place, adding the `:443` server block and a redirect. Confirm
+80/443 are already open in whatever firewall you run — nothing in this setup touches it.
+
+**5. Set `DROPLET` in the `Makefile`** to `deploy@<ip>`. Use the **IP, not the hostname** —
+if the name ever sits behind Cloudflare it resolves to Cloudflare, which does not proxy SSH.
+
+**6. Install the deploy scripts and the audio store** (the upload is 1.1 GB, so allow time):
+
+```bash
+make deploy-scripts
+make push
+```
+
+**7. Set up GitHub credentials** (below), then trigger the workflow manually the first time.
+
+## GitHub credentials, step by step
+
+Run everything locally. Four secrets total.
+
+**1 — Generate a deploy-only SSH key.** No passphrase; Actions cannot type one.
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/voiceover_deploy -C "gha-voiceover-deploy" -N ""
+```
+
+**2 — Authorize it on the droplet**, for the `deploy` user only:
+
+```bash
+ssh-copy-id -i ~/.ssh/voiceover_deploy.pub deploy@<ip>
+ssh -i ~/.ssh/voiceover_deploy deploy@<ip> 'echo ok'    # must print: ok
+```
+
+**3 — Capture the host key**, so CI verifies the server rather than blindly trusting it:
+
+```bash
+ssh-keyscan -H <ip> > /tmp/known_hosts
+```
+
+**4 — Set the secrets** (from the repo root, with `gh` authenticated):
+
+```bash
+gh secret set DO_SSH_KEY     < ~/.ssh/voiceover_deploy
+gh secret set DO_KNOWN_HOSTS < /tmp/known_hosts
+gh secret set DO_HOST        --body "<ip>"
+gh secret set DO_USER        --body "deploy"
+```
+
+Through the UI instead: **Settings → Secrets and variables → Actions → New repository
+secret**. For `DO_SSH_KEY` paste the **private** key including the
+`-----BEGIN OPENSSH PRIVATE KEY-----` and `-----END …-----` lines *and the trailing
+newline* — a missing trailing newline is the usual cause of `Load key: error in libcrypto`.
+
+**5 — Verify and clean up:**
+
+```bash
+gh secret list        # DO_HOST, DO_KNOWN_HOSTS, DO_SSH_KEY, DO_USER
+rm /tmp/known_hosts
+```
+
+**6 — Create the `production` environment.** The workflow declares
+`environment: production`, so create it under **Settings → Environments** (secrets can live
+there instead of at repo level). This also gives you a deployment history and the option of
+a required-reviewer gate later without touching the workflow.
+
+**7 — First run:** trigger **Actions → Deploy web → Run workflow** by hand, so the first
+deploy is watched rather than incidental.
+
+The private key never leaves your machine except into GitHub's secret store, and authorizes
+exactly one unprivileged user on one host. Revoking it is one line out of
+`/home/deploy/.ssh/authorized_keys`.
+
+## What a deploy does
+
+1. Typecheck, unit tests, build. A red build never reaches the droplet.
+2. Assemble `standalone` + `.next/static` + `corpus.json.gz` into a release directory.
+3. **Boot that exact artifact in CI** and hit `/api/search` and the stylesheet. This catches
+   a broken bundle before it can replace a working release.
+4. `rsync` it to `releases/<utc-stamp>-<sha>/`.
+5. `activate.sh` — atomic symlink swap, then `pm2 startOrReload --update-env`.
+6. Smoke check on the droplet; **on failure it rolls back automatically** and fails the job.
+7. `prune.sh 5`.
+
+## Operating it
+
+```bash
+make releases                      # list, marking the live one
+make rollback                      # one release older
+make rollback RELEASE=20260727-2143-a1b2c3d
+make audio-status                  # store parity between local and droplet
+ssh deploy@<ip> 'pm2 status'
+ssh deploy@<ip> 'pm2 logs voiceover --lines 100'
+```
+
+Rollback walks strictly backwards in time, so running it repeatedly keeps stepping to older
+releases instead of bouncing between the newest two.
+
+## Gotchas worth knowing
+
+- **`make push` reloads pm2, and it has to.** `storeIndex()` memoises its `readdir` on
+  `globalThis` for the process lifetime. Without a reload, pushed audio stays invisible and
+  deleted audio still reads as present.
+- **`cp -a`, never `cp -r`, when assembling a release.** pnpm's `node_modules/next` is a
+  symlink into `.pnpm/`; a dereferencing copy (which is what BSD `cp -r` does) detaches it
+  from its siblings and the bundle dies at boot with
+  `Cannot find module 'styled-jsx/package.json'`.
+- **The droplet is a second copy of the audio, not a backup.** `make push` propagates local
+  deletions within seconds. Keep the real backup wherever it is today.
+- **`pm2 save` runs on every activate**, which is what lets pm2's systemd unit resurrect the
+  app after a reboot. Nothing is saved until the first successful deploy.
