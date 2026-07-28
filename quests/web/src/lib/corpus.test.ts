@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loadCorpus, npcKey } from "./corpus";
+import { buildLineIndex, lineIndex, loadCorpus, npcKey } from "./corpus";
 
 describe("corpus", () => {
   const corpus = loadCorpus();
@@ -29,5 +29,40 @@ describe("corpus", () => {
 
   it("memoises, so repeated loads do not re-parse", () => {
     expect(loadCorpus()).toBe(corpus);
+  });
+});
+
+// One lineId can belong to many lines. A gossip lineId is g:{md5(text + race + gender)}, so
+// every dwarf man with the same greeting shares one id and one mp3 - which is what makes
+// regeneration an operation on a file rather than on an NPC's line.
+describe("lineIndex", () => {
+  const index = lineIndex();
+
+  it("indexes every line in the corpus", () => {
+    const total = [...index.values()].reduce((sum, group) => sum + group.length, 0);
+    expect(total).toBe(loadCorpus().lineCount);
+  });
+
+  it("finds a quest line under its id", () => {
+    expect(index.get("q:5:accept")!.map((l) => l.npcName)).toContain("Jitters");
+  });
+
+  it("groups the NPCs that share a gossip line", () => {
+    const shared = [...index.values()].filter(
+      (group) => group.length > 1 && group[0].source === "gossip",
+    );
+    expect(shared.length).toBeGreaterThan(0);
+
+    // Text, voice and filename are properties of the line; only the speaker varies.
+    for (const group of shared.slice(0, 50)) {
+      expect(new Set(group.map((l) => l.text)).size).toBe(1);
+      expect(new Set(group.map((l) => l.voice)).size).toBe(1);
+      expect(new Set(group.map((l) => l.fileName)).size).toBe(1);
+    }
+  });
+
+  it("memoises", () => {
+    expect(lineIndex()).toBe(index);
+    expect(buildLineIndex(loadCorpus())).not.toBe(index);
   });
 });

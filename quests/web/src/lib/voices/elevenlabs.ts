@@ -64,6 +64,46 @@ export async function listVoices(options: ElevenLabsOptions = {}): Promise<Map<s
   return found;
 }
 
+/**
+ * What the plan allows and how much of it is left.
+ *
+ * The character budget is the reason this exists: Creator is 131,000 characters a month, and
+ * one talkative NPC is a visible fraction of that. Regenerating a whole NPC without seeing
+ * the balance first is how a month's budget disappears in one click.
+ */
+export type Subscription = {
+  tier: string;
+  characterCount: number;
+  characterLimit: number;
+  /** When the character count resets, ISO, or null if the account reports no reset. */
+  resetAt: string | null;
+  voiceSlotsUsed: number;
+  voiceLimit: number;
+};
+
+export async function getSubscription(options: ElevenLabsOptions = {}): Promise<Subscription> {
+  const { apiKey, baseUrl, fetchImpl } = config(options);
+
+  const response = await fetchImpl(`${baseUrl}/v1/user/subscription`, {
+    headers: { "xi-api-key": apiKey },
+    cache: "no-store",
+  });
+  if (!response.ok) throw await failure(response, "reading the ElevenLabs subscription");
+
+  const body = (await response.json()) as Record<string, unknown>;
+  const number = (key: string) => (typeof body[key] === "number" ? (body[key] as number) : 0);
+  const reset = body.next_character_count_reset_unix;
+
+  return {
+    tier: typeof body.tier === "string" ? body.tier : "unknown",
+    characterCount: number("character_count"),
+    characterLimit: number("character_limit"),
+    resetAt: typeof reset === "number" ? new Date(reset * 1000).toISOString() : null,
+    voiceSlotsUsed: number("voice_slots_used"),
+    voiceLimit: number("voice_limit"),
+  };
+}
+
 export type Clip = { name: string; data: Buffer };
 
 /**

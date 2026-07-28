@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
+import GenerationSettings from "@/components/GenerationSettings";
 import VoiceSlotList from "@/components/VoiceSlotList";
 import { auth } from "@/lib/auth";
+import { readSettings } from "@/lib/generation/settings";
 import { canManageVoices } from "@/lib/permissions";
 import { listVoices } from "@/lib/voices/elevenlabs";
 import { listSamples, type Sample } from "@/lib/voices/samples";
@@ -42,6 +44,8 @@ export default async function Page() {
 
   const created = existing ? all.filter((slot) => existing.has(slot.name)).length : 0;
 
+  const settings = await readSettings();
+
   return (
     <main className="mx-auto max-w-4xl px-5 pt-6 pb-36">
       <h1 className="text-xl font-semibold">Voices</h1>
@@ -60,6 +64,8 @@ export default async function Page() {
           Could not read the ElevenLabs account: {error}
         </div>
       )}
+
+      <GenerationSettings initial={settings} />
 
       <VoiceSlotList
         slots={all}

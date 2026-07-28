@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { canManageVoices, canRegenerate, isAdmin, isRole, ROLES, roles } from "./permissions";
+import {
+  canConfigureGeneration,
+  canManageVoices,
+  canRegenerate,
+  isAdmin,
+  isRole,
+  ROLES,
+  roles,
+} from "./permissions";
 
 describe("canRegenerate", () => {
   it("admits collaborators and admins", () => {
@@ -44,6 +52,22 @@ describe("canManageVoices", () => {
   });
 });
 
+describe("canConfigureGeneration", () => {
+  it("admits only admins", () => {
+    expect(canConfigureGeneration("admin")).toBe(true);
+    expect(canConfigureGeneration("collaborator")).toBe(false);
+    expect(canConfigureGeneration("member")).toBe(false);
+    expect(canConfigureGeneration(null)).toBe(false);
+  });
+
+  // The settings are global: changing stability changes every line anyone generates
+  // afterwards, whereas a regeneration is one file and is reversible from its history.
+  it("is stricter than canRegenerate", () => {
+    expect(canRegenerate("collaborator")).toBe(true);
+    expect(canConfigureGeneration("collaborator")).toBe(false);
+  });
+});
+
 describe("isRole", () => {
   it("accepts every declared role and nothing else", () => {
     for (const role of ROLES) expect(isRole(role)).toBe(true);
@@ -59,6 +83,13 @@ describe("access control", () => {
     const permission = { voiceline: ["regenerate"] } as const;
     expect(roles.member.authorize(permission).success).toBe(false);
     expect(roles.collaborator.authorize(permission).success).toBe(true);
+    expect(roles.admin.authorize(permission).success).toBe(true);
+  });
+
+  it("grants generation configuration to admin alone", () => {
+    const permission = { voiceline: ["configure"] } as const;
+    expect(roles.member.authorize(permission).success).toBe(false);
+    expect(roles.collaborator.authorize(permission).success).toBe(false);
     expect(roles.admin.authorize(permission).success).toBe(true);
   });
 

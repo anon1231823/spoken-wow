@@ -11,6 +11,7 @@ import fs from "node:fs/promises";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
+import { invalidateStatus } from "@/lib/generation/status";
 import { denyVoiceRequest } from "@/lib/voices/authz";
 import { recordClone } from "@/lib/voices/clones";
 import { addVoice, deleteVoice, listVoices } from "@/lib/voices/elevenlabs";
@@ -80,6 +81,11 @@ export async function POST(request: Request, context: Context) {
     const lost = current ? " The previous voice was deleted; the clips are intact, so retry." : "";
     return Response.json({ error: message(error) + lost }, { status: 502 });
   }
+
+  // The explorer asks which voices exist through a memo with a minute-long TTL, and the
+  // Regenerate button is disabled while a slot reads as empty. Without this, a voice created
+  // here stays unusable for up to a minute with nothing on screen explaining why.
+  invalidateStatus();
 
   // The voice exists by this point, and this table is explicitly not what decides that -
   // listVoices is. So a provenance write that fails must not report the clone as failed,
