@@ -7,9 +7,20 @@ import NpcResult from "./NpcResult";
 import Player from "./Player";
 import SearchBar from "./SearchBar";
 import { useSession } from "@/lib/auth-client";
+import {
+  fetchGenerationStatus,
+  regenerate,
+  type GenerationStatusResponse,
+} from "@/lib/generation/client";
 import { canRegenerate } from "@/lib/permissions";
 import type { Filter, ResultLine, SearchResult } from "@/lib/search";
 import { type Pending, receive, target, write } from "@/lib/url-echo";
+
+/** What a line's Regenerate button is doing, keyed by lineId. */
+export type LineState =
+  | { phase: "busy" }
+  | { phase: "done"; version: number }
+  | { phase: "error"; message: string };
 
 const DEBOUNCE_MS = 200;
 
@@ -44,6 +55,13 @@ export default function Explorer() {
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [current, setCurrent] = useState<ResultLine | null>(null);
+
+  // Which voices exist and what is left of the character budget. Read once, and only for
+  // someone who could act on it.
+  const [status, setStatus] = useState<GenerationStatusResponse | null>(null);
+  // Per-line regeneration state, and per-file version numbers used to bust the audio cache.
+  const [lineStates, setLineStates] = useState<Record<string, LineState>>({});
+  const [versions, setVersions] = useState<Record<string, number>>({});
 
   const searchInput = useRef<HTMLInputElement>(null);
   const audio = useRef<HTMLAudioElement>(null);
@@ -115,6 +133,83 @@ export default function Explorer() {
 
     return () => controller.abort();
   }, [urlQuery, filter, missingOnly, idle]);
+
+  useEffect(() => {
+    if (!showRegenerate) return;
+    const controller = new AbortController();
+    void fetchGenerationStatus(controller.signal).then(setStatus);
+    return () => controller.abort();
+  }, [showRegenerate]);
+
+  /**
+   * Why this line's Regenerate control is unavailable, or null.
+   *
+   * Only three of the twenty voices exist today, so this is the usual state rather than an
+   * edge case. Nothing is blocked while the status is still loading: guessing wrong towards
+   * "disabled" would hide a control that works.
+   */
+  const blockedReason = useCallback(
+    (line: ResultLine): string | null => {
+      if (!line.generatable) {
+        return `Never voiced: ${line.skipReason}`;
+      }
+      if (status && !status.voices.includes(line.voice)) {
+        return `No ElevenLabs voice named "${line.voice}" yet — create it on /voices`;
+      }
+      return null;
+    },
+    [status],
+  );
+
+  /**
+   * Regenerate one line.
+   *
+   * On success the line is marked as having audio and its file's version is recorded. That
+   * version becomes a query parameter on the audio URL: the path does not change when a file
+   * is replaced, and /api/audio answers with a weak ETag, so without it the browser would
+   * happily replay the take that was just overwritten.
+   */
+  const regenerateLine = useCallback(async (line: ResultLine) => {
+    setLineStates((current) => ({ ...current, [line.lineId]: { phase: "busy" } }));
+
+    const response = await regenerate(line.lineId);
+
+    if (!response.ok) {
+      setLineStates((current) => ({
+        ...current,
+        [line.lineId]: { phase: "error", message: response.message },
+      }));
+      return;
+    }
+
+    setVersions((current) => ({ ...current, [response.file]: response.version }));
+    setLineStates((current) => ({
+      ...current,
+      [line.lineId]: { phase: "done", version: response.version },
+    }));
+
+    // Every line resolving to this file now has audio, not just the one clicked: a gossip
+    // file is shared by every NPC of that race and gender who says the same thing.
+    setResult((current) =>
+      current
+        ? {
+            ...current,
+            npcs: current.npcs.map((npc) => ({
+              ...npc,
+              audioCount: npc.quests
+                .flatMap((quest) => quest.lines)
+                .filter((l) => l.hasAudio || l.audioPath === response.file).length,
+              quests: npc.quests.map((quest) => ({
+                ...quest,
+                lines: quest.lines.map((l) =>
+                  l.audioPath === response.file ? { ...l, hasAudio: true } : l,
+                ),
+              })),
+            })),
+          }
+        : current,
+    );
+  }, []);
 
   const play = useCallback((line: ResultLine) => {
     setCurrent(line);
@@ -214,7 +309,10 @@ export default function Explorer() {
           npc={npc}
           currentLineId={current?.lineId ?? null}
           canRegenerate={showRegenerate}
+          lineStates={lineStates}
+          blockedReason={blockedReason}
           onPlay={play}
+          onRegenerate={regenerateLine}
         />
       ))}
 
@@ -227,7 +325,7 @@ export default function Explorer() {
         and previous line
       </p>
 
-      <Player ref={audio} line={current} />
+      <Player ref={audio} line={current} version={current ? versions[current.audioPath] : undefined} />
     </>
   );
 }

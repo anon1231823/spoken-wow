@@ -3,6 +3,7 @@
 import RegenerateButton from "./RegenerateButton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type { LineState } from "./Explorer";
 import type { ResultLine } from "@/lib/search";
 
 /** Why a line has no audio, or null when it does. */
@@ -27,10 +28,21 @@ type Props = {
   line: ResultLine;
   current: boolean;
   canRegenerate: boolean;
+  state?: LineState;
+  blocked: string | null;
   onPlay: (line: ResultLine) => void;
+  onRegenerate: (line: ResultLine) => void;
 };
 
-export default function LineRow({ line, current, canRegenerate, onPlay }: Props) {
+export default function LineRow({
+  line,
+  current,
+  canRegenerate,
+  state,
+  blocked,
+  onPlay,
+  onRegenerate,
+}: Props) {
   const missing = absence(line);
 
   // The play target and the regenerate control are siblings, not nested: a <button> inside
@@ -69,21 +81,38 @@ export default function LineRow({ line, current, canRegenerate, onPlay }: Props)
         >
           {line.text}
         </span>
-        {missing && (
-          <span
-            className={cn(
-              "mt-1 shrink-0 text-xs",
-              missing.kind === "gap" ? "text-destructive" : "text-muted-foreground",
-            )}
-          >
-            {missing.label}
+        {/* The regeneration outcome replaces the absence marker: once a line has just been
+            made, "no audio" is stale and confusing rather than merely redundant. */}
+        {state?.phase === "error" ? (
+          <span className="text-destructive mt-1 max-w-[18rem] shrink-0 text-right text-xs">
+            {state.message}
           </span>
+        ) : state?.phase === "done" ? (
+          <span className="mt-1 shrink-0 text-xs text-emerald-400">
+            regenerated{state.version > 0 && ` · v${state.version}`}
+          </span>
+        ) : (
+          missing && (
+            <span
+              className={cn(
+                "mt-1 shrink-0 text-xs",
+                missing.kind === "gap" ? "text-destructive" : "text-muted-foreground",
+              )}
+            >
+              {missing.label}
+            </span>
+          )
         )}
       </button>
 
       {canRegenerate && (
         <span className="mt-1.5 shrink-0">
-          <RegenerateButton scope="line" />
+          <RegenerateButton
+            scope="line"
+            busy={state?.phase === "busy"}
+            blocked={blocked}
+            onClick={() => onRegenerate(line)}
+          />
         </span>
       )}
     </div>
