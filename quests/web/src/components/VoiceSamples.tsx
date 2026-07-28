@@ -40,7 +40,9 @@ export default function VoiceSamples({ voice, samples, onChange }: Props) {
   const [durations, setDurations] = useState<Record<string, number>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pause, setPause] = useState(String(DEFAULT_PAUSE));
-  const [deleteSources, setDeleteSources] = useState(false);
+  // On by default: cloning sends every clip in the folder, so leaving the originals beside
+  // the merge would upload the same audio twice. Untick to keep them.
+  const [deleteSources, setDeleteSources] = useState(true);
 
   async function request(kind: "upload" | "merge" | "delete", send: () => Promise<Response>) {
     setBusy(kind);

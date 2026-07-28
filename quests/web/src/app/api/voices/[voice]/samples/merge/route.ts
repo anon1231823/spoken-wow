@@ -4,9 +4,10 @@
  * A static segment, so it takes precedence over [file] and `merge` can never be read as a
  * clip name.
  *
- * The sources are kept by default. Deleting them is offered rather than assumed: the clips
- * a voice was built from are the only way to remake it, and a merge with the wrong pause is
- * not worth making unrecoverable.
+ * Deleting the sources is opt-in here, though the UI ticks it by default: cloning sends
+ * every clip in the folder, so originals left beside a merge would be uploaded twice. The
+ * API keeps them unless asked, so a caller that has not thought about it does not lose the
+ * only copies.
  */
 import { denyVoiceRequest } from "@/lib/voices/authz";
 import { DEFAULT_PAUSE_SECONDS, mergeSamples, rejectMerge } from "@/lib/voices/merge";
