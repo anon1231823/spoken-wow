@@ -89,12 +89,15 @@ export default function VoiceSamples({ voice, samples, onChange }: Props) {
                 controls
                 preload="metadata"
                 src={`/api/voices/${voice}/samples/${sample.file}`}
-                onLoadedMetadata={(event) =>
-                  setDurations((current) => ({
-                    ...current,
-                    [sample.file]: event.currentTarget.duration,
-                  }))
-                }
+                onLoadedMetadata={(event) => {
+                  // Read before the state updater, which runs after the handler returns —
+                  // React nulls currentTarget once dispatch ends. A stream whose length is
+                  // not yet known reports NaN or Infinity, and recording either would make
+                  // the whole total unusable.
+                  const { duration } = event.currentTarget;
+                  if (!Number.isFinite(duration)) return;
+                  setDurations((current) => ({ ...current, [sample.file]: duration }));
+                }}
                 className="h-8 max-w-[18rem] flex-1"
               />
               <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
