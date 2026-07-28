@@ -9,6 +9,7 @@ import SearchBar from "./SearchBar";
 import { useSession } from "@/lib/auth-client";
 import { canRegenerate } from "@/lib/permissions";
 import type { Filter, ResultLine, SearchResult } from "@/lib/search";
+import { type Pending, receive, target, write } from "@/lib/url-echo";
 
 const DEBOUNCE_MS = 200;
 
@@ -47,7 +48,15 @@ export default function Explorer() {
   const searchInput = useRef<HTMLInputElement>(null);
   const audio = useRef<HTMLAudioElement>(null);
 
-  useEffect(() => setQuery(urlQuery), [urlQuery]);
+  // Query values written to the URL and not yet echoed back. See lib/url-echo: the input
+  // runs ahead of the URL, so an echo that arrives mid-word must not be adopted.
+  const pending = useRef<Pending>([]);
+
+  useEffect(() => {
+    const step = receive(pending.current, urlQuery);
+    pending.current = step.pending;
+    if (step.adopt) setQuery(urlQuery);
+  }, [urlQuery]);
 
   const updateUrl = useCallback(
     (next: { q?: string; filter?: Filter; missing?: boolean }) => {
@@ -64,11 +73,22 @@ export default function Explorer() {
     [params, router],
   );
 
+  // Held in a ref so the debounce below restarts on keystrokes only. `updateUrl` changes
+  // identity on every param change, and letting that reset the timer would let a filter
+  // toggle mid-word push the search out by another interval.
+  const updateUrlRef = useRef(updateUrl);
   useEffect(() => {
-    if (query === urlQuery) return;
-    const timer = setTimeout(() => updateUrl({ q: query }), DEBOUNCE_MS);
+    updateUrlRef.current = updateUrl;
+  }, [updateUrl]);
+
+  useEffect(() => {
+    if (query === target(pending.current, urlQuery)) return;
+    const timer = setTimeout(() => {
+      pending.current = write(pending.current, query);
+      updateUrlRef.current({ q: query });
+    }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [query, urlQuery, updateUrl]);
+  }, [query, urlQuery]);
 
   // An empty query with no gap filter would ask for all 2,619 NPCs; show nothing instead.
   const idle = !urlQuery && !missingOnly;
