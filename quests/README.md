@@ -117,6 +117,33 @@ no ElevenLabs key, no game install. Run `import-audio` first, or every line show
 Lines with no audio are marked. `no audio` is a real gap; `progress` and `invalid-chars`
 are lines the generator deliberately never voices.
 
+#### Deploying the explorer
+
+The explorer is hosted on a DigitalOcean droplet. Pushing to `master` builds and ships it
+automatically; the audio store moves separately, by hand, because it is 1.1 GB and belongs
+in neither git nor CI.
+
+```bash
+make push            # local audio/ -> droplet, then reload (dry-run + confirm first)
+make pull            # droplet -> local audio/  (--delete: removes local extras)
+make audio-status    # file count and size on both sides
+make releases        # what is deployed, and what you can roll back to
+make rollback        # back one release; RELEASE=<name> to pick one
+```
+
+**Regenerating audio means running `make push`.** The server memoises its listing of the
+store on first use (`storeIndex()` in `web/src/lib/audio.ts`), so `push` reloads pm2
+afterwards — without that, new audio stays invisible and deleted audio still reads as
+present.
+
+Deploys are versioned as directories under `/srv/voiceover/releases/`, with `current` a
+symlink that pm2 follows, so a rollback is a symlink swap needing neither CI nor network.
+The audio store lives outside every release in `shared/`: it is never copied on deploy and
+survives a rollback untouched.
+
+First-time droplet setup, the nginx vhost, and the GitHub secrets the workflow needs are in
+[`deploy/README.md`](deploy/README.md).
+
 ### Language Client Selection
 Currently there are no voice translations available for languages other than english. However, if you want to use the addon with a non English client, you can still do so by creating the lookup tables in the client's respective language.
 

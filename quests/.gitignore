@@ -13,10 +13,11 @@ assets/sql/mysql-dump
 
 # The audio store: ~1.1 GB of generated mp3s. Not committable, but this is the most
 # expensive artifact the project owns - back it up.
-audio/
+# Anchored: an unanchored "audio/" also swallowed web/src/app/api/audio/.
+/audio/
 
 # Built data module
-dist/
+/dist/
 
 generated
 tools/.lines_cache.pkl
@@ -31,3 +32,6 @@ web/node_modules/
 web/.next/
 web/next-env.d.ts
 web/tsconfig.tsbuildinfo
+
+# deploy
+deploy/bootstrap.sh

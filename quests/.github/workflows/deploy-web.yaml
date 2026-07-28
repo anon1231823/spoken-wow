@@ -1,0 +1,151 @@
+name: Deploy web
+
+on:
+  push:
+    branches: [master]
+    # Addon-only commits should not redeploy the explorer.
+    paths:
+      - "web/**"
+      - "corpus/**"
+      - "deploy/**"
+      - ".github/workflows/deploy-web.yaml"
+  workflow_dispatch:
+
+# Never let two deploys interleave a symlink swap.
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Must match the droplet's Node major. The droplet uses its own system Node
+          # (currently 24), so if you upgrade it there, change it here too and redeploy.
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      # The gate. audio.test.ts asserts every file in the store is addressed by some
+      # corpus line and range.test.ts covers Safari's bytes=0-1 probe; neither should
+      # reach the droplet red.
+      - name: Typecheck
+        working-directory: web
+        run: pnpm typecheck
+
+      - name: Test
+        working-directory: web
+        run: pnpm test
+
+      - name: Build
+        working-directory: web
+        run: pnpm build
+
+      - name: Assemble release
+        run: |
+          set -euo pipefail
+          R=release
+          mkdir -p "$R"
+          # cp -a, never cp -r: pnpm's node_modules/next is a symlink into .pnpm/, and a
+          # dereferencing copy detaches it from its siblings, so the bundle dies at boot
+          # with "Cannot find module 'styled-jsx/package.json'". BSD cp -r dereferences.
+          cp -a web/.next/standalone/. "$R"/
+          # standalone does not include static assets or public/; without this the page
+          # renders unstyled. (This project has no public/.)
+          cp -a web/.next/static "$R"/.next/static
+          # The corpus ships inside the release so a rollback moves data and code together.
+          mkdir -p "$R"/corpus
+          cp corpus/corpus.json.gz "$R"/corpus/
+          test -f "$R"/server.js
+          test -L "$R"/node_modules/next   # symlink survived the copy
+          du -sh "$R"
+
+      # Boot the exact artifact we are about to ship. Catches a broken bundle here rather
+      # than after it has replaced a working release on the droplet. No audio store in CI,
+      # so readStoreIndex() returns empty and every line reads as a gap - that is fine, we
+      # are testing that the server starts and serves, not the contents.
+      - name: Smoke test the bundle
+        working-directory: release
+        env:
+          PORT: 3999
+          HOSTNAME: 127.0.0.1
+          NODE_ENV: production
+          VOICEOVER_AUDIO: /nonexistent
+        run: |
+          set -euo pipefail
+          VOICEOVER_CORPUS="$PWD/corpus/corpus.json.gz" node server.js &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            curl -fsS -o /dev/null "http://127.0.0.1:3999/api/search?q=thrall" && break
+            sleep 1
+          done
+          curl -fsS "http://127.0.0.1:3999/api/search?q=thrall" | grep -q '"npcName":"Thrall"'
+          # The stylesheet must resolve, or .next/static did not make it into the release.
+          css=$(curl -fsS http://127.0.0.1:3999/ | grep -o '_next/static/css/[^"]*' | head -1)
+          curl -fsS -o /dev/null "http://127.0.0.1:3999/$css"
+          echo "bundle boots and serves"
+
+      - name: Set release name
+        run: echo "STAMP=$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DO_SSH_KEY }}
+
+      - name: Trust the droplet's host key
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "${{ secrets.DO_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload release
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: |
+          rsync -a --delete release/ \
+            "$TARGET:/srv/voiceover/releases/$STAMP/"
+
+      - name: Activate
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: |
+          ssh "$TARGET" "/srv/voiceover/bin/activate.sh /srv/voiceover/releases/$STAMP"
+
+      # A bad deploy should heal itself rather than sit broken until someone notices.
+      - name: Smoke check, rolling back on failure
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: |
+          set -euo pipefail
+          ok=""
+          for i in $(seq 1 10); do
+            if ssh "$TARGET" \
+              "curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:3000/api/search?q=thrall'"
+            then ok=1; break; fi
+            echo "attempt $i failed, retrying..."
+            sleep 3
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::smoke check failed, rolling back"
+            ssh "$TARGET" '/srv/voiceover/bin/rollback.sh'
+            exit 1
+          fi
+          echo "smoke check passed"
+
+      - name: Prune old releases
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: ssh "$TARGET" '/srv/voiceover/bin/prune.sh 5'
