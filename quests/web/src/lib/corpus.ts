@@ -69,3 +69,30 @@ export function loadCorpus(): Corpus {
   }
   return holder[cacheKey]!;
 }
+
+/**
+ * lineId -> every corpus line carrying it.
+ *
+ * Not one-to-one. A gossip lineId is `g:{md5(text + race + gender)}`, which says nothing
+ * about who speaks it, so one id can belong to dozens of NPCs sharing a line - and they all
+ * resolve to the same mp3. Anything that acts on a line rather than displaying it needs the
+ * whole group: the text and the voice are identical across it, but the NPC is not.
+ */
+export function buildLineIndex(corpus: Corpus): Map<string, CorpusLine[]> {
+  const index = new Map<string, CorpusLine[]>();
+  for (const line of corpus.lines) {
+    const group = index.get(line.lineId);
+    if (group) group.push(line);
+    else index.set(line.lineId, [line]);
+  }
+  return index;
+}
+
+const indexKey = Symbol.for("wow-voiceover.line-index");
+type IndexHolder = { [indexKey]?: Map<string, CorpusLine[]> };
+
+export function lineIndex(): Map<string, CorpusLine[]> {
+  const holder = globalThis as IndexHolder;
+  if (!holder[indexKey]) holder[indexKey] = buildLineIndex(loadCorpus());
+  return holder[indexKey]!;
+}

@@ -11,7 +11,10 @@ import { adminAc, defaultStatements } from "better-auth/plugins/admin/access";
 
 const statement = {
   ...defaultStatements,
-  voiceline: ["regenerate"],
+  // `configure` is separate from `regenerate` because the settings are global: changing
+  // stability changes every line anyone generates afterwards, whereas a regeneration is one
+  // file and is reversible from its history.
+  voiceline: ["regenerate", "configure"],
   // Separate from `voiceline` because creating a voice is the heavier act: slots are capped
   // by the ElevenLabs plan (30 on Creator) and a clone spends an account resource that a
   // re-rolled line does not.
@@ -26,7 +29,11 @@ export const roles = {
   // Spreading adminAc keeps the admin plugin's own permissions (user: set-role, list, ...).
   // Declaring a custom `admin` role replaces the built-in one, so without this the admin
   // loses access to the very page that hands out roles.
-  admin: ac.newRole({ ...adminAc.statements, voiceline: ["regenerate"], voice: ["manage"] }),
+  admin: ac.newRole({
+    ...adminAc.statements,
+    voiceline: ["regenerate", "configure"],
+    voice: ["manage"],
+  }),
 };
 
 export const ROLES = ["member", "collaborator", "admin"] as const;
@@ -49,5 +56,10 @@ export function isAdmin(role: string | null | undefined): boolean {
 
 /** The one definition of who may create and replace voices. */
 export function canManageVoices(role: string | null | undefined): boolean {
+  return role === "admin";
+}
+
+/** The one definition of who may change the global generation settings. */
+export function canConfigureGeneration(role: string | null | undefined): boolean {
   return role === "admin";
 }

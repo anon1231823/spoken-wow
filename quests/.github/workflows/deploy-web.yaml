@@ -66,21 +66,25 @@ jobs:
         working-directory: web
         run: pnpm install --frozen-lockfile
 
-      # The gate. audio.test.ts asserts every file in the store is addressed by some
-      # corpus line and range.test.ts covers Safari's bytes=0-1 probe; neither should
-      # reach the droplet red.
       - name: Typecheck
         working-directory: web
         run: pnpm typecheck
 
+      # Applied with the same script the droplet uses, so a migration that only works
+      # under a hand-run psql fails here instead of mid-deploy.
+      #
+      # Before the tests, not after: history.test.ts exercises the version table against a
+      # real Postgres, because the ordering it protects - archive the current take before
+      # anything overwrites it - is exactly what a mocked database would stop testing.
+      - name: Migrate
+        run: deploy/bin/migrate.sh "$PWD/web"
+
+      # The gate. audio.test.ts asserts every file in the store is addressed by some
+      # corpus line and range.test.ts covers Safari's bytes=0-1 probe; neither should
+      # reach the droplet red.
       - name: Test
         working-directory: web
         run: pnpm test
-
-      # Applied with the same script the droplet uses, so a migration that only works
-      # under a hand-run psql fails here instead of mid-deploy.
-      - name: Migrate
-        run: deploy/bin/migrate.sh "$PWD/web"
 
       - name: Build
         working-directory: web
@@ -101,13 +105,20 @@ jobs:
           # The corpus ships inside the release so a rollback moves data and code together.
           mkdir -p "$R"/corpus
           cp corpus/corpus.json.gz "$R"/corpus/
+          # Same reasoning for how a line is voiced. These are also what the Python CLI
+          # reads, so shipping them keeps both sides starting from the same defaults - and
+          # without pronunciation.json the app applies no rules and reads "Hm" as letters.
+          mkdir -p "$R"/voice
+          cp voice/generation.json voice/pronunciation.json "$R"/voice/
           # Migrations ship with the release too: activate.sh runs migrate.sh against the
           # release directory, so without this a deploy has nothing to apply.
           cp -a web/migrations "$R"/migrations
           test -f "$R"/server.js
           test -L "$R"/node_modules/next   # symlink survived the copy
           test -f "$R"/migrations/0001_auth.sql
-          test -f "$R"/migrations/0002_voice_clones.sql
+          test -f "$R"/migrations/0005_voiceline_version_credits.sql
+          test -f "$R"/voice/generation.json
+          test -f "$R"/voice/pronunciation.json
           du -sh "$R"
 
       # Boot the exact artifact we are about to ship. Catches a broken bundle here rather

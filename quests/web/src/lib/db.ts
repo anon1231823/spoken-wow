@@ -22,3 +22,18 @@ export function db(): Pool {
   }
   return holder[poolKey]!;
 }
+
+/**
+ * Close the pool and forget it, so the next db() builds a fresh one.
+ *
+ * For tests. Ending the pool without clearing the memo leaves a closed pool on globalThis,
+ * and vitest reuses workers between files - so one test file finishing would break the next
+ * one to run in that worker, as an intermittent "Cannot use a pool after calling end".
+ */
+export async function closeDb(): Promise<void> {
+  const holder = globalThis as PoolHolder;
+  const pool = holder[poolKey];
+  if (!pool) return;
+  delete holder[poolKey];
+  await pool.end();
+}

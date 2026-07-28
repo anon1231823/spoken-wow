@@ -16,7 +16,18 @@ function timecode(seconds: number): string {
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
 }
 
-type Props = { line: ResultLine | null };
+type Props = {
+  line: ResultLine | null;
+  /**
+   * The take currently in the store, when this line has been regenerated in this session.
+   *
+   * Appended to the audio URL as a cache buster. Replacing a line does not change its path -
+   * the addon resolves sounds by filename, so it cannot - and /api/audio answers with a weak
+   * ETag that a cached response need not revalidate, so without this the browser replays the
+   * take that was just overwritten.
+   */
+  version?: number;
+};
 
 /**
  * One shared <audio> element for the whole page, so starting a line stops the previous
@@ -28,6 +39,7 @@ type Props = { line: ResultLine | null };
  */
 export default function Player({
   line,
+  version,
   ref,
 }: Props & { ref?: React.RefObject<HTMLAudioElement | null> }) {
   const audio = useRef<HTMLAudioElement | null>(null);
@@ -172,7 +184,15 @@ export default function Player({
           {muted ? <VolumeX /> : <Volume2 />}
         </Button>
 
-        <audio ref={attach} preload="metadata" src={line ? `/api/audio/${line.audioPath}` : undefined} />
+        <audio
+          ref={attach}
+          preload="metadata"
+          src={
+            line
+              ? `/api/audio/${line.audioPath}${version === undefined ? "" : `?v=${version}`}`
+              : undefined
+          }
+        />
       </div>
     </div>
   );
