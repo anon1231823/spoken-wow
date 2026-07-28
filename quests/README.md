@@ -131,10 +131,31 @@ Registration at `/register` is open and needs no email confirmation. Everyone st
 |---|---|
 | `member` | browse and play, like a signed-out visitor |
 | `collaborator` | the above, plus the **Regenerate** controls on every line, quest and NPC |
-| `admin` | the above, plus `/admin` to change anyone's role |
+| `admin` | the above, plus `/admin` to change anyone's role and `/voices` to manage voices |
 
 The Regenerate buttons are deliberately inert for now — the generator still runs from the
 Python CLI, and wiring the site to it needs a job queue that does not exist yet.
+
+#### Managing voices
+
+`/voices` is admin-only. It lists the 20 `race-gender` voices the corpus needs, busiest
+first, and marks which exist in the ElevenLabs account. Expanding one shows the clips it
+would be cloned from: upload, play back, delete, and **merge** a selection into one take with
+an adjustable pause.
+
+Merging is there because the practical source is wowhead NPC greetings, about a second each.
+ElevenLabs treats combined length as what decides clone quality — one to two minutes is the
+target, past three it grows unstable — and a pile of one-second files gives the model no
+continuity between them. It defaults to deleting the originals, because cloning uploads every
+clip in the folder and keeping both would send the same audio twice.
+
+**Create voice** spends one of the account's custom voice slots (30 on Creator). **Replace**
+is delete-then-add: ElevenLabs has no re-train call, and two voices sharing a name would make
+`fetch_voice_map` ambiguous. The clips stay on disk either way — an ElevenLabs voice cannot
+be exported, so they are the only way to remake one. Losing that is precisely why this project
+inherited voices it could not reproduce, so `make pull-voices` them somewhere safe.
+
+Merging needs `ffmpeg` on the server. Uploading and cloning do not.
 
 There is no way to create the first admin through the UI, by design. Promote yourself once,
 directly against the database, and hand out every later role from `/admin`:

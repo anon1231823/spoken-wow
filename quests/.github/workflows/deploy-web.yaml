@@ -107,6 +107,7 @@ jobs:
           test -f "$R"/server.js
           test -L "$R"/node_modules/next   # symlink survived the copy
           test -f "$R"/migrations/0001_auth.sql
+          test -f "$R"/migrations/0002_voice_clones.sql
           du -sh "$R"
 
       # Boot the exact artifact we are about to ship. Catches a broken bundle here rather
