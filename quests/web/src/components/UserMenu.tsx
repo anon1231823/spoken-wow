@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { signOut, useSession } from "@/lib/auth-client";
-import { isAdmin } from "@/lib/permissions";
+import { canManageVoices, isAdmin } from "@/lib/permissions";
 
 /**
  * The session indicator in the header.
@@ -41,6 +41,11 @@ export default function UserMenu() {
 
   return (
     <nav className="flex items-center gap-2">
+      {canManageVoices(role) && (
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/voices">Voices</Link>
+        </Button>
+      )}
       {isAdmin(role) && (
         <Button asChild variant="ghost" size="sm">
           <Link href="/admin">Users</Link>

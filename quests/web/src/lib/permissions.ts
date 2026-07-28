@@ -2,9 +2,9 @@
  * The role model, shared by the server and the browser so the list of roles is defined once.
  *
  * Three roles: a `member` is anyone who registered, a `collaborator` may regenerate audio,
- * and an `admin` may also manage users. Registration assigns `member`; the first `admin` is
- * promoted with SQL (see deploy/README.md), and every promotion after that goes through
- * /admin.
+ * and an `admin` may also manage users and voices. Registration assigns `member`; the first
+ * `admin` is promoted with SQL (see deploy/README.md), and every promotion after that goes
+ * through /admin.
  */
 import { createAccessControl } from "better-auth/plugins/access";
 import { adminAc, defaultStatements } from "better-auth/plugins/admin/access";
@@ -12,6 +12,10 @@ import { adminAc, defaultStatements } from "better-auth/plugins/admin/access";
 const statement = {
   ...defaultStatements,
   voiceline: ["regenerate"],
+  // Separate from `voiceline` because creating a voice is the heavier act: slots are capped
+  // by the ElevenLabs plan (30 on Creator) and a clone spends an account resource that a
+  // re-rolled line does not.
+  voice: ["manage"],
 } as const;
 
 export const ac = createAccessControl(statement);
@@ -22,7 +26,7 @@ export const roles = {
   // Spreading adminAc keeps the admin plugin's own permissions (user: set-role, list, ...).
   // Declaring a custom `admin` role replaces the built-in one, so without this the admin
   // loses access to the very page that hands out roles.
-  admin: ac.newRole({ ...adminAc.statements, voiceline: ["regenerate"] }),
+  admin: ac.newRole({ ...adminAc.statements, voiceline: ["regenerate"], voice: ["manage"] }),
 };
 
 export const ROLES = ["member", "collaborator", "admin"] as const;
@@ -40,5 +44,10 @@ export function canRegenerate(role: string | null | undefined): boolean {
 
 /** The one definition of who may reach /admin. */
 export function isAdmin(role: string | null | undefined): boolean {
+  return role === "admin";
+}
+
+/** The one definition of who may create and replace voices. */
+export function canManageVoices(role: string | null | undefined): boolean {
   return role === "admin";
 }

@@ -28,6 +28,9 @@ RELEASE
 # Planning artifacts from the superpowers skills: useful locally, noise in review
 docs/superpowers/
 
+# Design notes for work not committed to. Local thinking, not project documentation.
+/specs/
+
 # Web explorer
 web/node_modules/
 web/.next/
