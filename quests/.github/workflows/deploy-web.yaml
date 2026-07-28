@@ -22,11 +22,15 @@ jobs:
     environment: production
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
+        with:
+          # The pnpm version comes from "packageManager" in web/package.json. This repo
+          # has no root package.json, which is where the action looks by default.
+          package_json_file: web/package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           # Must match the droplet's Node major. The droplet uses its own system Node
           # (currently 24), so if you upgrade it there, change it here too and redeploy.
@@ -101,7 +105,7 @@ jobs:
       - name: Set release name
         run: echo "STAMP=$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
-      - uses: webfactory/ssh-agent@v0.9.0
+      - uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.DO_SSH_KEY }}
 
