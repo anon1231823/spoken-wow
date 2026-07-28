@@ -19,7 +19,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), "voice-history-int-"));
 process.env.VOICEOVER_AUDIO = path.join(root, "audio");
 process.env.VOICEOVER_AUDIO_HISTORY = path.join(root, "audio-history");
 
-const { db } = await import("@/lib/db");
+const { closeDb, db } = await import("@/lib/db");
 const { storePath, versionPath, versionsOnDisk, writeStoreFile } = await import("./archive");
 const { commitVersion, historyOf, prune, restoreVersion } = await import("./history");
 const { listVersions } = await import("./versions");
@@ -74,7 +74,7 @@ afterEach(async () => {
 
 afterAll(async () => {
   fs.rmSync(root, { recursive: true, force: true });
-  await db().end();
+  await closeDb();
 });
 
 describe("the first regeneration of inherited audio", () => {

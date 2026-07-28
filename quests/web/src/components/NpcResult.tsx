@@ -14,6 +14,7 @@ type Props = {
   blockedReason: (line: ResultLine) => string | null;
   onPlay: (line: ResultLine) => void;
   onRegenerate: (line: ResultLine) => void;
+  onRegenerateBatch: (label: string, lines: ResultLine[]) => void;
 };
 
 export default function NpcResult({
@@ -24,6 +25,7 @@ export default function NpcResult({
   blockedReason,
   onPlay,
   onRegenerate,
+  onRegenerateBatch,
 }: Props) {
   // Every line an NPC speaks uses the same voice, so one missing voice blocks all of them.
   // Taken from a generatable line rather than the first, or a quest whose only unvoiced line
@@ -41,12 +43,15 @@ export default function NpcResult({
         </span>
         {canRegenerate && (
           <span className="ml-auto">
-            {/* Batch scopes arrive with the progress panel; until then they say so rather
-                than firing a hundred requests with nothing to watch or stop them. */}
             <RegenerateButton
               scope="npc"
-              onClick={() => {}}
-              blocked={npcBlocked ?? "Regenerating a whole NPC is not wired up yet"}
+              onClick={() =>
+                onRegenerateBatch(
+                  `every line for ${npc.npcName}`,
+                  npc.quests.flatMap((quest) => quest.lines),
+                )
+              }
+              blocked={npcBlocked}
             />
           </span>
         )}
@@ -62,8 +67,13 @@ export default function NpcResult({
               {canRegenerate && (
                 <RegenerateButton
                   scope="quest"
-                  onClick={() => {}}
-                  blocked={npcBlocked ?? "Regenerating a whole quest is not wired up yet"}
+                  onClick={() =>
+                    onRegenerateBatch(
+                      `${quest.title} for ${npc.npcName}`,
+                      quest.lines,
+                    )
+                  }
+                  blocked={npcBlocked}
                 />
               )}
             </div>

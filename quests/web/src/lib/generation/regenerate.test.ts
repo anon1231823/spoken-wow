@@ -15,7 +15,7 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), "voice-regen-"));
 process.env.VOICEOVER_AUDIO = path.join(root, "audio");
 process.env.VOICEOVER_AUDIO_HISTORY = path.join(root, "audio-history");
 
-const { db } = await import("@/lib/db");
+const { closeDb, db } = await import("@/lib/db");
 const { storePath, versionPath, versionsOnDisk, writeStoreFile } = await import("./archive");
 const { regenerateLine } = await import("./regenerate");
 const { listVersions } = await import("./versions");
@@ -78,29 +78,64 @@ function fileFor(lineId: string): string {
   return audioRelPath(lineIndex().get(lineId)![0]);
 }
 
-const touched = new Set<string>();
+/**
+ * Rows this test displaced, put back when it finishes.
+ *
+ * This test has to use real corpus lineIds - it is testing that a real line resolves, seeds
+ * and writes correctly - so the files it touches are the real ones, and `pnpm test` runs
+ * against DATABASE_URL, which is usually a developer's own database. It needs a clean slate
+ * to assert on, and it must not be the thing that clears it permanently. So the fixtures'
+ * rows are lifted out before each test and put back after.
+ */
+const FIXTURE_LINES = [SOLO, SHARED, NEVER_VOICED];
+let displaced: Record<string, unknown>[] = [];
 
-beforeEach(() => {
+async function fixtureFiles(): Promise<string[]> {
+  return FIXTURE_LINES.map(fileFor);
+}
+
+beforeEach(async () => {
   fs.mkdirSync(path.join(root, "audio", "quests"), { recursive: true });
   fs.mkdirSync(path.join(root, "audio", "gossip"), { recursive: true });
+
+  const files = await fixtureFiles();
+  const { rows } = await db().query(
+    `delete from "voiceline_version" where "file" = any($1::text[]) returning *`,
+    [files],
+  );
+  displaced = rows;
 });
 
 afterEach(async () => {
-  for (const file of touched) {
-    await db().query(`delete from "voiceline_version" where "file" = $1`, [file]);
+  const files = await fixtureFiles();
+  await db().query(`delete from "voiceline_version" where "file" = any($1::text[])`, [files]);
+
+  for (const row of displaced) {
+    const columns = Object.keys(row).filter((key) => key !== "id");
+    await db().query(
+      `insert into "voiceline_version" (${columns.map((c) => `"${c}"`).join(", ")})
+       values (${columns.map((_, i) => `$${i + 1}`).join(", ")})`,
+      columns.map((column) => {
+        const value = (row as Record<string, unknown>)[column];
+        // jsonb comes back parsed and has to go in as text again.
+        return value !== null && typeof value === "object" && !(value instanceof Date)
+          ? JSON.stringify(value)
+          : value;
+      }),
+    );
   }
-  touched.clear();
+  displaced = [];
+
   fs.rmSync(path.join(root, "audio"), { recursive: true, force: true });
   fs.rmSync(path.join(root, "audio-history"), { recursive: true, force: true });
 });
 
 afterAll(async () => {
   fs.rmSync(root, { recursive: true, force: true });
-  await db().end();
+  await closeDb();
 });
 
 async function regenerate(lineId: string, options: ReturnType<typeof stub>["options"]) {
-  touched.add(fileFor(lineId));
   return regenerateLine(lineId, null as unknown as string, options);
 }
 

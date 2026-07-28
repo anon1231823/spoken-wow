@@ -4,13 +4,13 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 
-import { db } from "@/lib/db";
+import { closeDb, db } from "@/lib/db";
 import { BUSY, LOCK_NAMESPACE, withFileLock } from "./lock";
 
 const FILE = "gossip/lock-test.mp3";
 
 afterAll(async () => {
-  await db().end();
+  await closeDb();
 });
 
 /** Whether anything currently holds this file's lock, asked from outside the pool's view. */

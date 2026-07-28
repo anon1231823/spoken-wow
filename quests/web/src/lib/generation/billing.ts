@@ -14,9 +14,11 @@
  * documented list rate and an upper bound on every plan observed, which is the right
  * direction to be wrong in when the number is there to stop someone spending a month's
  * budget by accident.
+ *
+ * Everything here is pure and free of node imports, because the confirm dialog is a client
+ * component and must show the same figure the server would. Reading the calibration out of
+ * Postgres lives in calibration.ts.
  */
-import { db } from "@/lib/db";
-
 /** Credits per character before any plan discount. Deliberately pessimistic. */
 export const LIST_RATE = 1;
 
@@ -59,39 +61,6 @@ export function roundHalfToEven(value: number): number {
 
 export function estimateCredits(characters: number, rate: number): number {
   return roundHalfToEven(characters * rate);
-}
-
-/**
- * The rate this account has actually been charged for a model, or the list rate.
- *
- * Per model, because the flash and turbo families are billed at half the others and mixing
- * them would produce a rate that is right for neither.
- */
-export async function observedRate(modelId: string): Promise<Rate> {
-  const { rows } = await db().query<{ characters: string | null; credits: string | null; n: string }>(
-    `select sum("characters")::text as characters,
-            sum("credits")::text    as credits,
-            count(*)::text          as n
-       from (
-         select "characters", "credits"
-           from "voiceline_version"
-          where "modelId" = $1 and "credits" is not null and "characters" > 0
-          order by "createdAt" desc
-          limit ${CALIBRATION_SAMPLE}
-       ) recent`,
-    [modelId],
-  );
-
-  const row = rows[0];
-  const characters = Number(row?.characters ?? 0);
-  const credits = Number(row?.credits ?? 0);
-  const samples = Number(row?.n ?? 0);
-
-  // Summed rather than averaged per row: rounding to whole credits makes short lines noisy,
-  // and one 20-character take rounding up would drag a per-row mean well off the true rate.
-  if (!samples || !characters) return { rate: LIST_RATE, samples: 0, modelId };
-
-  return { rate: credits / characters, samples, modelId };
 }
 
 export type Estimate = {

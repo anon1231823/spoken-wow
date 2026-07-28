@@ -22,6 +22,8 @@ export type RegenerateOk = {
   version: number;
   bytes: number;
   characters: number;
+  /** Exactly what ElevenLabs charged, from its response header. null when it did not say. */
+  credits: number | null;
   seed: number | null;
   voice: string;
   spokenText: string;
@@ -54,6 +56,13 @@ export type GenerationStatusResponse = {
     seedStrategy: string;
   };
   settingsSource: "file" | "database";
+  /**
+   * Credits per character, calibrated from what this account has actually been charged.
+   *
+   * `samples: 0` means nothing has been generated with this model yet and the list rate is
+   * standing in - an upper bound, not a measurement.
+   */
+  rate: { rate: number; samples: number; modelId: string | null };
 };
 
 export async function fetchGenerationStatus(

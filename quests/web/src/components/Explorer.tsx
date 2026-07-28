@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import NpcResult from "./NpcResult";
 import Player from "./Player";
+import RegenerateDialog from "./RegenerateDialog";
+import RegenerationPanel from "./RegenerationPanel";
 import SearchBar from "./SearchBar";
 import { useSession } from "@/lib/auth-client";
 import {
@@ -12,6 +14,7 @@ import {
   regenerate,
   type GenerationStatusResponse,
 } from "@/lib/generation/client";
+import { estimate as estimateBatch, LIST_RATE, type Estimate } from "@/lib/generation/billing";
 import { canRegenerate } from "@/lib/permissions";
 import type { Filter, ResultLine, SearchResult } from "@/lib/search";
 import { type Pending, receive, target, write } from "@/lib/url-echo";
@@ -21,6 +24,42 @@ export type LineState =
   | { phase: "busy" }
   | { phase: "done"; version: number }
   | { phase: "error"; message: string };
+
+export type Batch = {
+  label: string;
+  /** Deduplicated by file: each mp3 is generated once however many lines point at it. */
+  jobs: ResultLine[];
+  done: string[];
+  failures: { lineId: string; message: string }[];
+  /** Summed from what ElevenLabs charged, not from the estimate. */
+  credits: number;
+  /** Takes ElevenLabs did not price, counted rather than assumed to be free. */
+  unpriced: number;
+  current: string | null;
+  finished: boolean;
+  stopped: boolean;
+  /** Why the batch gave up early, when it did. */
+  stoppedBecause: string | null;
+};
+
+/** How long to wait before the one retry a rate-limited line gets. */
+const RATE_LIMIT_BACKOFF_MS = 3000;
+
+/**
+ * The lines a batch would actually generate.
+ *
+ * Deduplicated by audio file, because 1,076 files in the corpus are spoken by more than one
+ * NPC and generating a shared file twice would pay for it twice and leave the second take
+ * live. Lines the generator never voices are dropped here rather than failed one by one.
+ */
+export function batchJobs(lines: ResultLine[]): ResultLine[] {
+  const byFile = new Map<string, ResultLine>();
+  for (const line of lines) {
+    if (!line.generatable) continue;
+    if (!byFile.has(line.audioPath)) byFile.set(line.audioPath, line);
+  }
+  return [...byFile.values()];
+}
 
 const DEBOUNCE_MS = 200;
 
@@ -62,6 +101,14 @@ export default function Explorer() {
   // Per-line regeneration state, and per-file version numbers used to bust the audio cache.
   const [lineStates, setLineStates] = useState<Record<string, LineState>>({});
   const [versions, setVersions] = useState<Record<string, number>>({});
+  const [batch, setBatch] = useState<Batch | null>(null);
+  const [pendingBatch, setPendingBatch] = useState<{
+    label: string;
+    jobs: ResultLine[];
+    estimate: Estimate;
+  } | null>(null);
+  // Read inside the loop rather than through state, which the running loop would not see.
+  const stopRequested = useRef(false);
 
   const searchInput = useRef<HTMLInputElement>(null);
   const audio = useRef<HTMLAudioElement>(null);
@@ -162,6 +209,37 @@ export default function Explorer() {
   );
 
   /**
+   * Record a finished take.
+   *
+   * Every line resolving to this file now has audio, not just the one clicked: a gossip
+   * file is shared by every NPC of that race and gender who says the same thing.
+   */
+  const applySuccess = useCallback((file: string, version: number, lineId: string) => {
+    setVersions((current) => ({ ...current, [file]: version }));
+    setLineStates((current) => ({ ...current, [lineId]: { phase: "done", version } }));
+
+    setResult((current) =>
+      current
+        ? {
+            ...current,
+            npcs: current.npcs.map((npc) => ({
+              ...npc,
+              audioCount: npc.quests
+                .flatMap((quest) => quest.lines)
+                .filter((l) => l.hasAudio || l.audioPath === file).length,
+              quests: npc.quests.map((quest) => ({
+                ...quest,
+                lines: quest.lines.map((l) =>
+                  l.audioPath === file ? { ...l, hasAudio: true } : l,
+                ),
+              })),
+            })),
+          }
+        : current,
+    );
+  }, []);
+
+  /**
    * Regenerate one line.
    *
    * On success the line is marked as having audio and its file's version is recorded. That
@@ -182,34 +260,134 @@ export default function Explorer() {
       return;
     }
 
-    setVersions((current) => ({ ...current, [response.file]: response.version }));
-    setLineStates((current) => ({
-      ...current,
-      [line.lineId]: { phase: "done", version: response.version },
-    }));
+    applySuccess(response.file, response.version, line.lineId);
+  }, [applySuccess]);
 
-    // Every line resolving to this file now has audio, not just the one clicked: a gossip
-    // file is shared by every NPC of that race and gender who says the same thing.
-    setResult((current) =>
-      current
-        ? {
-            ...current,
-            npcs: current.npcs.map((npc) => ({
-              ...npc,
-              audioCount: npc.quests
-                .flatMap((quest) => quest.lines)
-                .filter((l) => l.hasAudio || l.audioPath === response.file).length,
-              quests: npc.quests.map((quest) => ({
-                ...quest,
-                lines: quest.lines.map((l) =>
-                  l.audioPath === response.file ? { ...l, hasAudio: true } : l,
-                ),
-              })),
-            })),
-          }
-        : current,
-    );
-  }, []);
+  /**
+   * Ask to regenerate a set of lines.
+   *
+   * A single line goes straight through: one click, cheap, and reversible from its history.
+   * Anything larger stops for confirmation, because a quest or an NPC can be a hundred lines
+   * and this is the only guard between one click and a large share of a month's budget.
+   */
+  const requestBatch = useCallback(
+    (label: string, lines: ResultLine[]) => {
+      const jobs = batchJobs(lines);
+      if (jobs.length === 0) return;
+
+      if (jobs.length === 1) {
+        void regenerateLine(jobs[0]);
+        return;
+      }
+
+      // The same arithmetic the server would do, from the rate it reported. Falls back to
+      // the list rate, which overstates - the right direction for a number meant to give
+      // someone pause.
+      const rate = status?.rate ?? { rate: LIST_RATE, samples: 0, modelId: null };
+      setPendingBatch({
+        label,
+        jobs,
+        estimate: estimateBatch(
+          jobs.map((line) => ({ file: line.audioPath, characters: line.text.length })),
+          rate,
+        ),
+      });
+    },
+    [regenerateLine, status],
+  );
+
+  /**
+   * Run a confirmed batch, one line per request.
+   *
+   * Sequential on purpose. ElevenLabs limits concurrent requests per plan, the store is
+   * being written to, and a person is watching - so finishing lines in order and being
+   * stoppable matters more than finishing sooner.
+   */
+  const runBatch = useCallback(async () => {
+    const request = pendingBatch;
+    if (!request) return;
+
+    setPendingBatch(null);
+    stopRequested.current = false;
+    setBatch({
+      label: request.label,
+      jobs: request.jobs,
+      done: [],
+      failures: [],
+      credits: 0,
+      unpriced: 0,
+      current: null,
+      finished: false,
+      stopped: false,
+      stoppedBecause: null,
+    });
+
+    for (const line of request.jobs) {
+      if (stopRequested.current) {
+        setBatch((b) => (b ? { ...b, stopped: true, finished: true, current: null } : b));
+        return;
+      }
+
+      setBatch((b) => (b ? { ...b, current: `${line.npcName} — ${line.text.slice(0, 80)}` } : b));
+      setLineStates((current) => ({ ...current, [line.lineId]: { phase: "busy" } }));
+
+      let response = await regenerate(line.lineId);
+
+      // One retry, and only for rate limiting: it is the single failure that says nothing
+      // about the request and everything about how fast we asked.
+      if (!response.ok && response.kind === "rate-limit" && !stopRequested.current) {
+        await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_BACKOFF_MS));
+        response = await regenerate(line.lineId);
+      }
+
+      if (response.ok) {
+        applySuccess(response.file, response.version, line.lineId);
+        setBatch((b) =>
+          b
+            ? {
+                ...b,
+                done: [...b.done, line.lineId],
+                credits: b.credits + (response.credits ?? 0),
+                unpriced: b.unpriced + (response.credits === null ? 1 : 0),
+              }
+            : b,
+        );
+        continue;
+      }
+
+      setLineStates((current) => ({
+        ...current,
+        [line.lineId]: { phase: "error", message: response.message },
+      }));
+      setBatch((b) =>
+        b
+          ? {
+              ...b,
+              failures: [...b.failures, { lineId: line.lineId, message: response.message }],
+            }
+          : b,
+      );
+
+      // Out of credits, a bad key or a missing voice will fail every remaining line in the
+      // same way. Grinding through ninety more requests to learn that ninety more times is
+      // exactly what the fatal flag exists to prevent.
+      if (response.fatal) {
+        setBatch((b) =>
+          b
+            ? {
+                ...b,
+                finished: true,
+                current: null,
+                stoppedBecause: `Stopped after ${response.kind}: ${response.message}`,
+              }
+            : b,
+        );
+        return;
+      }
+    }
+
+    setBatch((b) => (b ? { ...b, finished: true, current: null } : b));
+  }, [pendingBatch, applySuccess]);
 
   const play = useCallback((line: ResultLine) => {
     setCurrent(line);
@@ -313,6 +491,7 @@ export default function Explorer() {
           blockedReason={blockedReason}
           onPlay={play}
           onRegenerate={regenerateLine}
+          onRegenerateBatch={requestBatch}
         />
       ))}
 
@@ -324,6 +503,21 @@ export default function Explorer() {
         <Key>/</Key> search · <Key>space</Key> play/pause · <Key>j</Key> <Key>k</Key> next
         and previous line
       </p>
+
+      <RegenerateDialog
+        pending={pendingBatch}
+        status={status}
+        onConfirm={() => void runBatch()}
+        onCancel={() => setPendingBatch(null)}
+      />
+
+      <RegenerationPanel
+        batch={batch}
+        onStop={() => {
+          stopRequested.current = true;
+        }}
+        onDismiss={() => setBatch(null)}
+      />
 
       <Player ref={audio} line={current} version={current ? versions[current.audioPath] : undefined} />
     </>

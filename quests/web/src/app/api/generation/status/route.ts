@@ -7,7 +7,7 @@
  * not require the page that they cannot reach.
  */
 import { requireRegenerate } from "@/lib/generation/authz";
-import { observedRate } from "@/lib/generation/billing";
+import { observedRate } from "@/lib/generation/calibration";
 import { readSettings } from "@/lib/generation/settings";
 import { generationStatus } from "@/lib/generation/status";
 
