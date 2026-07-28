@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 
 import { AUDIO_DIR } from "@/lib/paths";
 import { isSafeAudioPath, parseRange } from "@/lib/range";
+import { streamOf } from "@/lib/stream";
 
 export const dynamic = "force-dynamic";
 
@@ -65,18 +66,4 @@ export async function GET(
   headers["Content-Length"] = String(range.end - range.start + 1);
   headers["Content-Range"] = `bytes ${range.start}-${range.end}/${size}`;
   return new Response(streamOf(file, range.start, range.end), { status: 206, headers });
-}
-
-function streamOf(file: string, start?: number, end?: number): ReadableStream<Uint8Array> {
-  const node = fs.createReadStream(file, { start, end });
-  return new ReadableStream({
-    start(controller) {
-      node.on("data", (chunk) => controller.enqueue(new Uint8Array(chunk as Buffer)));
-      node.on("end", () => controller.close());
-      node.on("error", (error) => controller.error(error));
-    },
-    cancel() {
-      node.destroy();
-    },
-  });
 }

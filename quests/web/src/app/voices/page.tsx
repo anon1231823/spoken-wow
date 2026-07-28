@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
-import VoiceSlotTable from "@/components/VoiceSlotTable";
+import VoiceSlotList from "@/components/VoiceSlotList";
 import { auth } from "@/lib/auth";
 import { canManageVoices } from "@/lib/permissions";
 import { listVoices } from "@/lib/voices/elevenlabs";
+import { listSamples, type Sample } from "@/lib/voices/samples";
 import { slots } from "@/lib/voices/slots";
 
 export const metadata: Metadata = { title: "Voices · VoiceOver Explorer" };
@@ -21,6 +22,8 @@ export default async function Page() {
   // this page exists.
   if (!session || !canManageVoices(session.user.role)) notFound();
 
+  const all = slots();
+
   // The page has to be useful before the ElevenLabs key exists — that is the state the
   // project is in until a plan is bought — so a failure here is reported, not thrown.
   let existing: Map<string, string> | null = null;
@@ -31,7 +34,12 @@ export default async function Page() {
     error = caught instanceof Error ? caught.message : String(caught);
   }
 
-  const all = slots();
+  // Twenty readdir calls, so the roster arrives with its clip counts already filled in
+  // rather than each row fetching its own once expanded.
+  const samples: Record<string, Sample[]> = Object.fromEntries(
+    await Promise.all(all.map(async (slot) => [slot.name, await listSamples(slot.name)] as const)),
+  );
+
   const created = existing ? all.filter((slot) => existing.has(slot.name)).length : 0;
 
   return (
@@ -53,7 +61,11 @@ export default async function Page() {
         </div>
       )}
 
-      <VoiceSlotTable slots={all} existing={existing ? [...existing.keys()] : null} />
+      <VoiceSlotList
+        slots={all}
+        existing={existing ? [...existing.keys()] : null}
+        initialSamples={samples}
+      />
     </main>
   );
 }
