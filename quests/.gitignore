@@ -17,6 +17,10 @@ assets/sql/mysql-dump
 # Anchored: an unanchored "audio/" also swallowed web/src/app/api/audio/.
 /audio/
 
+# Clips uploaded to build voice clones. Like the audio store: not committable, but losing
+# them means a voice can never be remade, so back them up.
+/voice/samples/
+
 # Built data module
 /dist/
 

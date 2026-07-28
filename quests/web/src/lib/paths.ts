@@ -8,3 +8,13 @@ export const CORPUS_PATH =
 
 export const AUDIO_DIR =
   process.env.VOICEOVER_AUDIO ?? path.join(REPO_ROOT, "audio");
+
+/**
+ * Clips uploaded to build a voice clone, one directory per race-gender.
+ *
+ * In production this points at shared/ alongside the audio store, for the same reason: a
+ * voice cannot be remade without the clips it was made from, so they must survive a deploy
+ * and a rollback. Gitignored locally.
+ */
+export const VOICE_SAMPLES_DIR =
+  process.env.VOICEOVER_VOICE_SAMPLES ?? path.join(REPO_ROOT, "voice", "samples");
