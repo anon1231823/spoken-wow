@@ -21,6 +21,11 @@ assets/sql/mysql-dump
 # them means a voice can never be remade, so back them up.
 /voice/samples/
 
+# Blizzard's own NPC barks and the script that pulls them. Local reference material for
+# tuning voices, not part of what this project ships.
+/tools/fetch_npc_lines.py
+/voice/npc-lines/
+
 # Built data module
 /dist/
 
