@@ -10,6 +10,41 @@
  *
  * Copy to the droplet with `make deploy-scripts`.
  */
+const fs = require("node:fs");
+
+const SHARED = "/srv/voiceover/shared";
+
+/**
+ * Read shared/app.env, which holds the database URL and the session secret.
+ *
+ * This file is committed, so those values cannot live in it. app.env sits in shared/ next
+ * to the audio store: mode 600, owned by `deploy`, and never touched by a deploy or a
+ * rollback. See deploy/README.md for how to create it.
+ */
+function readSecrets() {
+  const path = `${SHARED}/app.env`;
+  if (!fs.existsSync(path)) {
+    // pm2 evaluates this file on every reload, so a hard failure here would take the app
+    // down rather than just refusing to start with a bad config.
+    console.error(`ecosystem: ${path} is missing - the app will not reach its database`);
+    return {};
+  }
+
+  return Object.fromEntries(
+    fs
+      .readFileSync(path, "utf8")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"))
+      .map((line) => {
+        const at = line.indexOf("=");
+        // Values are taken verbatim apart from optional wrapping quotes: a password is
+        // entitled to contain '#', '=' or a space.
+        return [line.slice(0, at), line.slice(at + 1).replace(/^["']|["']$/g, "")];
+      }),
+  );
+}
+
 module.exports = {
   apps: [
     {
@@ -33,8 +68,11 @@ module.exports = {
 
         // Audio is shared across releases (1.1 GB, never copied on deploy); the corpus
         // ships inside each release and moves with a rollback.
-        VOICEOVER_AUDIO: "/srv/voiceover/shared/audio",
+        VOICEOVER_AUDIO: `${SHARED}/audio`,
         VOICEOVER_CORPUS: "/srv/voiceover/current/corpus/corpus.json.gz",
+
+        // DATABASE_URL, BETTER_AUTH_SECRET and BETTER_AUTH_URL.
+        ...readSecrets(),
       },
     },
   ],

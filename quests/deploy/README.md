@@ -20,10 +20,11 @@ the system Node for another service, bump that value to match and redeploy.
   shared/
     audio/{quests,gossip}/     1.1 GB, moved by `make push`, never touched by a deploy
     ecosystem.config.js        pm2 config, outlives every release
+    app.env                    DB URL + session secret, mode 600. Never in git.
   releases/
-    20260727-2143-a1b2c3d/     ~62 MB standalone bundle + its corpus. Newest 5 kept.
+    20260727-2143-a1b2c3d/     ~62 MB standalone bundle + its corpus and migrations.
   current -> releases/...      the symlink pm2 follows. Swapping it is the deploy.
-  bin/{activate,rollback,prune}.sh
+  bin/{activate,migrate,rollback,prune}.sh
 ```
 
 Why this shape:
@@ -35,6 +36,9 @@ Why this shape:
 - **CI builds, the droplet only runs.** The droplet has no repo, no pnpm and no build
   toolchain; it receives a Next.js `standalone` bundle with its traced `node_modules`.
 - **The corpus ships inside each release**, so a rollback moves code and data together.
+- **Postgres holds accounts, sessions and roles, and nothing else.** It is not in the read
+  path for the corpus or the audio store, so a database outage leaves the explorer working
+  for signed-out visitors.
 
 ## Runtime paths
 
@@ -47,6 +51,20 @@ The app reads two things from disk. In production both come from env vars set in
 | `VOICEOVER_CORPUS` | `/srv/voiceover/current/corpus/corpus.json.gz` | per release |
 
 Both already existed as overrides in `web/src/lib/paths.ts` — no app code changed for this.
+
+Three more come from `shared/app.env`, which `ecosystem.config.js` parses and merges into
+the pm2 environment. They are secrets, and that file is the only place they exist:
+
+| Env var | Value | Notes |
+|---|---|---|
+| `DATABASE_URL` | `postgres://voiceover:…@127.0.0.1:5432/voiceover` | localhost only |
+| `BETTER_AUTH_SECRET` | 32 random bytes | signs session cookies; rotating it signs everyone out |
+| `BETTER_AUTH_URL` | `https://voiceover.rusty.one` | **must match the public origin exactly** |
+
+`BETTER_AUTH_URL` is the one worth double-checking. Better Auth validates the `Origin`
+header of every state-changing request against it, so a stale or mismatched value does not
+fail loudly at boot — the site loads fine and every sign-in, registration and role change
+returns `403 Invalid origin`.
 
 ## First-time setup
 
@@ -74,6 +92,40 @@ pm2 startup systemd -u deploy --hp /home/deploy
 
 The `deploy` user owns everything under `/srv/voiceover`, so no part of a deploy or an
 audio sync needs sudo.
+
+**2b. Install Postgres and create the app's database**, as root. If the box already runs
+Postgres, skip the install and use the cluster it has — this needs one role and one
+database, nothing global.
+
+```bash
+apt-get install -y postgresql          # skip if the box already has one
+
+# A password no human types, so make it long and paste it into app.env below.
+PGPW=$(openssl rand -base64 24)
+su - postgres -c "psql -v ON_ERROR_STOP=1 \
+  -c \"CREATE ROLE voiceover LOGIN PASSWORD '$PGPW'\" \
+  -c 'CREATE DATABASE voiceover OWNER voiceover'"
+echo "password: $PGPW"
+```
+
+Leave `listen_addresses` at its default of `localhost`. Nothing off the box needs to reach
+this database — not even CI, which builds against a throwaway Postgres of its own.
+
+**2c. Write `shared/app.env`.** This is the only place the secrets exist; the pm2 config in
+git reads them from here.
+
+```bash
+cat > /srv/voiceover/shared/app.env <<EOF
+DATABASE_URL=postgres://voiceover:$PGPW@127.0.0.1:5432/voiceover
+BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+BETTER_AUTH_URL=https://voiceover.rusty.one
+EOF
+chown deploy:deploy /srv/voiceover/shared/app.env
+chmod 600 /srv/voiceover/shared/app.env
+```
+
+`BETTER_AUTH_URL` must be the public origin, exactly — scheme, host, no trailing slash.
+See the runtime-paths table above for what goes wrong when it is not.
 
 **3. Install the nginx vhost.** Adds a file next to your existing sites; touches none of
 them.
@@ -167,14 +219,45 @@ exactly one unprivileged user on one host. Revoking it is one line out of
 
 ## What a deploy does
 
-1. Typecheck, unit tests, build. A red build never reaches the droplet.
-2. Assemble `standalone` + `.next/static` + `corpus.json.gz` into a release directory.
-3. **Boot that exact artifact in CI** and hit `/api/search` and the stylesheet. This catches
-   a broken bundle before it can replace a working release.
+1. Typecheck, unit tests, migrations against a throwaway Postgres, build. A red build never
+   reaches the droplet.
+2. Assemble `standalone` + `.next/static` + `corpus.json.gz` + `migrations/` into a release
+   directory.
+3. **Boot that exact artifact in CI** and hit `/api/search`, the stylesheet, and a real
+   sign-up. This catches a broken bundle before it can replace a working release.
 4. `rsync` it to `releases/<utc-stamp>-<sha>/`.
-5. `activate.sh` — atomic symlink swap, then `pm2 startOrReload --update-env`.
+5. `activate.sh` — `migrate.sh`, then the atomic symlink swap, then
+   `pm2 startOrReload --update-env`.
 6. Smoke check on the droplet; **on failure it rolls back automatically** and fails the job.
 7. `prune.sh 5`.
+
+### About step 5
+
+Migrations run **before** the swap, so a migration that fails aborts the deploy with the
+previous release still live and serving. Each file in `migrations/` is applied once, inside
+a transaction that also records its name in `schema_migrations`; there is no half-applied
+state to clean up.
+
+The asymmetry worth holding in your head: **a rollback moves code, never schema.** Nothing
+un-applies a migration. So migrations have to stay additive — a release must be able to run
+against the schema of the release *after* it, or rolling back one version breaks the site in
+a way `rollback.sh` cannot fix. Adding a nullable column is fine; renaming or dropping one
+needs two deploys.
+
+### Promoting the first admin
+
+There is deliberately no bootstrap path through the UI. Register normally, then, on the
+droplet:
+
+```bash
+ssh deploy@<ip>
+psql "$(grep ^DATABASE_URL /srv/voiceover/shared/app.env | cut -d= -f2-)" \
+  -c "UPDATE \"user\" SET role = 'admin' WHERE email = 'you@example.com'"
+```
+
+`user` is quoted because it is a reserved word — that is Better Auth's default table name.
+Every role after this one is handed out from `/admin`, which will not let an admin demote
+themselves.
 
 ## Operating it
 

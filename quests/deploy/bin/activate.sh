@@ -22,6 +22,11 @@ PM2=${PM2:-$(command -v pm2 || echo /usr/local/bin/pm2)}
 PREVIOUS=$(readlink -f "$ROOT/current" 2>/dev/null || echo "(none)")
 echo "activate: $PREVIOUS -> $TARGET"
 
+# Migrate before the swap, so a migration that fails leaves the previous release serving
+# rather than pointing `current` at code whose schema was never applied. `set -e` makes a
+# non-zero exit here abort the deploy.
+"$ROOT/bin/migrate.sh" "$TARGET"
+
 # Build the new link beside the old one and rename over it: the rename is atomic, so
 # `current` never fails to resolve, and plain `ln -sfn` would instead nest the new link
 # inside the directory the old one points at.

@@ -107,15 +107,41 @@ and gossip audio is a content hash — so an NPC's lines are scattered across ~9
 with no shared key. The web explorer reassembles that view:
 
 ```bash
-cd web && pnpm install && pnpm dev     # http://localhost:3000
+docker compose up -d postgres          # accounts and roles live here
+cd web && pnpm install
+cp .env.example .env.local
+psql "$DATABASE_URL" -f migrations/0001_auth.sql
+pnpm dev                               # http://localhost:3000
 ```
 
-Search by NPC name or id, or quest title or id, and play any line in the browser. It reads
-`corpus/corpus.json.gz` and the `audio/` store directly and writes nothing — no database,
-no ElevenLabs key, no game install. Run `import-audio` first, or every line shows as a gap.
+Search by NPC name or id, or quest title or id, and play any line in the browser. The
+corpus and the audio store are still read straight off disk and never written — Postgres
+holds only accounts, sessions and roles. Run `import-audio` first, or every line shows as
+a gap.
 
 Lines with no audio are marked. `no audio` is a real gap; `progress` and `invalid-chars`
 are lines the generator deliberately never voices.
+
+#### Accounts and roles
+
+Registration at `/register` is open and needs no email confirmation. Everyone starts as a
+**member**, which is the same read-only explorer an anonymous visitor gets.
+
+| Role | Can |
+|---|---|
+| `member` | browse and play, like a signed-out visitor |
+| `collaborator` | the above, plus the **Regenerate** controls on every line, quest and NPC |
+| `admin` | the above, plus `/admin` to change anyone's role |
+
+The Regenerate buttons are deliberately inert for now — the generator still runs from the
+Python CLI, and wiring the site to it needs a job queue that does not exist yet.
+
+There is no way to create the first admin through the UI, by design. Promote yourself once,
+directly against the database, and hand out every later role from `/admin`:
+
+```sql
+UPDATE "user" SET role = 'admin' WHERE email = 'you@example.com';
+```
 
 #### Deploying the explorer
 

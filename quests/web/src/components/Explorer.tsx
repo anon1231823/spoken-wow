@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import NpcResult from "./NpcResult";
 import Player from "./Player";
 import SearchBar from "./SearchBar";
+import { useSession } from "@/lib/auth-client";
+import { canRegenerate } from "@/lib/permissions";
 import type { Filter, ResultLine, SearchResult } from "@/lib/search";
 
 const DEBOUNCE_MS = 200;
@@ -25,6 +27,11 @@ function Key({ children }: { children: React.ReactNode }) {
 export default function Explorer() {
   const router = useRouter();
   const params = useSearchParams();
+  const { data: session } = useSession();
+
+  // Read once here and drilled down, rather than a hook per row: a broad search renders
+  // thousands of LineRows.
+  const showRegenerate = canRegenerate(session?.user.role);
 
   // The URL is the source of truth for a search, so a result is linkable and survives a
   // reload; `query` is the uncommitted keystroke state in front of it.
@@ -134,6 +141,9 @@ export default function Explorer() {
       if (typing) return;
 
       if (event.key === " ") {
+        // Space stays a global play/pause even when a row control has focus. The
+        // preventDefault is what keeps it from also activating that control, so buttons
+        // inside a result row are reached with Enter.
         event.preventDefault();
         const el = audio.current;
         if (el?.src) void (el.paused ? el.play().catch(() => {}) : el.pause());
@@ -183,6 +193,7 @@ export default function Explorer() {
           key={npc.key}
           npc={npc}
           currentLineId={current?.lineId ?? null}
+          canRegenerate={showRegenerate}
           onPlay={play}
         />
       ))}
