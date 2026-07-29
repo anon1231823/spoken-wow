@@ -16,22 +16,32 @@ import { loadCorpus } from "./corpus";
 export type Facets = {
   races: string[];
   genders: string[];
+  flavors: string[];
   voices: string[];
 };
 
 export function buildFacets(): Facets {
   const races = new Set<string>();
   const genders = new Set<string>();
+  const flavors = new Set<string>();
   const voices = new Set<string>();
 
   for (const line of loadCorpus().lines) {
     races.add(line.race);
     genders.add(line.gender);
+    // Null for narrator-male and the odd model from a later expansion, which have no NPC
+    // voice sets to choose between. Nothing to offer, so nothing is added.
+    if (line.flavor) flavors.add(line.flavor);
     voices.add(line.voice);
   }
 
   const sorted = (values: Set<string>) => [...values].sort((a, b) => a.localeCompare(b));
-  return { races: sorted(races), genders: sorted(genders), voices: sorted(voices) };
+  return {
+    races: sorted(races),
+    genders: sorted(genders),
+    flavors: sorted(flavors),
+    voices: sorted(voices),
+  };
 }
 
 const cacheKey = Symbol.for("wow-voiceover.facets");

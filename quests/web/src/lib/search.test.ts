@@ -114,6 +114,10 @@ describe("field filters", () => {
     // tauren-female speaks with three different voices.
     expect(all({ voice: "tauren-female-shaman" })).toHaveLength(145);
     expect(all({ voice: "tauren-female-shaman" }).every((l) => l.race === "tauren")).toBe(true);
+    // A flavor cuts across races - three of them have a shaman voice - so it narrows on its
+    // own axis rather than standing in for a voice.
+    expect(all({ flavor: "shaman" })).toHaveLength(766);
+    expect(all({ flavor: "shaman", race: "tauren" })).toHaveLength(416);
     expect(all({ source: "gossip" }).every((l) => l.source === "gossip")).toBe(true);
     expect(all({ npcType: "item" }).every((l) => l.npcType === "item")).toBe(true);
   });

@@ -109,6 +109,12 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
           onChange={(gender) => onFilters({ gender })}
         />
         <Facet
+          label="flavor"
+          value={filters.flavor}
+          options={facets.flavors}
+          onChange={(flavor) => onFilters({ flavor })}
+        />
+        <Facet
           label="voice"
           value={filters.voice}
           options={facets.voices}
