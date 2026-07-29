@@ -128,10 +128,14 @@ export default function LineRow({
         )}
       </td>
 
-      {/* The voice slot is spelled race-gender, so this column is both at once. */}
+      {/* The voice slot is spelled race-gender-flavor, so this column is all three at once.
+          The flavor is what distinguishes the two or three voices a race-gender has, so it
+          belongs beside them rather than in a column of its own. */}
       <td className="text-muted-foreground px-2 py-2">
         <span className="block truncate">{line.race}</span>
-        <span className="block truncate text-xs">{line.gender}</span>
+        <span className="block truncate text-xs">
+          {line.flavor ? `${line.gender} · ${line.flavor}` : line.gender}
+        </span>
       </td>
 
       <td className="p-0">

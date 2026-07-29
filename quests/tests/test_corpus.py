@@ -9,25 +9,29 @@ ROWS = [
     # ordinary quest line
     {"quest": "5", "source": "accept", "quest_title": "Growling Gut", "name": "Jitters",
      "type": "creature", "id": 288, "race": "human", "gender": "male",
-     "voice_name": "human-male", "player_gender": None, "cleanedText": "Hello there.",
+     "voice_name": "human-male-standard", "flavor": "standard",
+     "player_gender": None, "cleanedText": "Hello there.",
      "text": "Hello there.", "original_text": "Hello there.",
      "templateText_race_gender_hash": "deadbeef"},
     # progress text is never synthesized
     {"quest": "7", "source": "progress", "quest_title": "Growling Gut", "name": "Jitters",
      "type": "creature", "id": 288, "race": "human", "gender": "male",
-     "voice_name": "human-male", "player_gender": None, "cleanedText": "Still waiting.",
+     "voice_name": "human-male-standard", "flavor": "standard",
+     "player_gender": None, "cleanedText": "Still waiting.",
      "text": "Still waiting.", "original_text": "Still waiting.",
      "templateText_race_gender_hash": "deadbeef"},
     # unresolved template token
     {"quest": "9", "source": "accept", "quest_title": "Broken", "name": "Jitters",
      "type": "creature", "id": 288, "race": "human", "gender": "male",
-     "voice_name": "human-male", "player_gender": None, "cleanedText": "Hi $N.",
+     "voice_name": "human-male-standard", "flavor": "standard",
+     "player_gender": None, "cleanedText": "Hi $N.",
      "text": "Hi $N.", "original_text": "Hi $N.",
      "templateText_race_gender_hash": "deadbeef"},
     # gossip line for a different NPC
     {"quest": "", "source": "gossip", "quest_title": "", "name": "Guard",
      "type": "creature", "id": 68, "race": "human", "gender": "male",
-     "voice_name": "human-male", "player_gender": None, "cleanedText": "Move along.",
+     "voice_name": "human-male-standard", "flavor": "standard",
+     "player_gender": None, "cleanedText": "Move along.",
      "text": "Move along.", "original_text": "Move along.",
      "templateText_race_gender_hash": "abc123"},
 ]
@@ -43,7 +47,8 @@ SPAWNS = [
 COLLIDING_ROWS = ROWS + [
     {"quest": "", "source": "gossip", "quest_title": "", "name": "Wanted Poster",
      "type": "gameobject", "id": 68, "race": "narrator", "gender": "male",
-     "voice_name": "narrator-male", "player_gender": None, "cleanedText": "WANTED",
+     "voice_name": "narrator-male", "flavor": None,
+     "player_gender": None, "cleanedText": "WANTED",
      "text": "WANTED", "original_text": "WANTED",
      "templateText_race_gender_hash": "poster1"},
 ]

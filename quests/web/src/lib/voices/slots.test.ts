@@ -5,16 +5,17 @@ import { isVoiceSlot, slots } from "./slots";
 describe("slots", () => {
   it("derives the voices the corpus actually needs", () => {
     const names = slots().map((s) => s.name);
-    expect(names).toContain("orc-male");
+    expect(names).toContain("orc-male-shady");
     expect(names).toContain("narrator-male");
-    // Every name must be the race-gender shape tts_cli/voices.py matches on, or the Python
-    // side will not find the voice we create.
-    for (const name of names) expect(name).toMatch(/^[a-z]+-(male|female)$/);
+    // Every name must be the race-gender[-flavor] shape tts_cli/voices.py matches on, or the
+    // Python side will not find the voice we create. The flavor is optional: narrator-male
+    // is a pseudo-race for gameobjects with no NPC voice sets to choose between.
+    for (const name of names) expect(name).toMatch(/^[a-z]+-(male|female)(-[a-z]+)?$/);
   });
 
-  it("orders by how much of the corpus a voice carries", () => {
-    const counts = slots().map((s) => s.npcCount);
-    expect(counts).toEqual([...counts].sort((a, b) => b - a));
+  it("orders alphabetically", () => {
+    const names = slots().map((s) => s.name);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
   });
 
   it("counts only generatable lines", () => {

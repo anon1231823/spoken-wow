@@ -73,6 +73,7 @@ function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.missingOnly) params.set("missing", "1");
   if (filters.race) params.set("race", filters.race);
   if (filters.gender) params.set("gender", filters.gender);
+  if (filters.flavor) params.set("flavor", filters.flavor);
   if (filters.voice) params.set("voice", filters.voice);
   if (filters.source) params.set("source", filters.source);
   if (filters.npcType) params.set("type", filters.npcType);
@@ -102,6 +103,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       missingOnly: params.get("missing") === "1",
       race: params.get("race") ?? undefined,
       gender: params.get("gender") ?? undefined,
+      flavor: params.get("flavor") ?? undefined,
       voice: params.get("voice") ?? undefined,
       source: (params.get("source") as LineFilters["source"]) ?? undefined,
       npcType: (params.get("type") as LineFilters["npcType"]) ?? undefined,
@@ -176,6 +178,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
         ...("missingOnly" in next ? { missing: next.missingOnly ? "1" : undefined } : {}),
         ...("race" in next ? { race: next.race } : {}),
         ...("gender" in next ? { gender: next.gender } : {}),
+        ...("flavor" in next ? { flavor: next.flavor } : {}),
         ...("voice" in next ? { voice: next.voice } : {}),
         ...("source" in next ? { source: next.source } : {}),
         ...("npcType" in next ? { type: next.npcType } : {}),
@@ -583,7 +586,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
           <colgroup>
             <col className="w-52" />
             <col className="w-48" />
-            <col className="w-24" />
+            <col className="w-32" />
             <col />
             <col className={showRegenerate ? "w-20" : "w-0"} />
           </colgroup>
@@ -591,7 +594,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
             <tr className="text-muted-foreground border-border border-b text-left text-xs">
               <th className="px-2 pb-1 font-medium">NPC / object</th>
               <th className="px-2 pb-1 font-medium">Quest</th>
-              <th className="px-2 pb-1 font-medium">Race / gender</th>
+              <th className="px-2 pb-1 font-medium">Race / gender / flavor</th>
               <th className="px-2 pb-1 font-medium">Line</th>
               <th className="sr-only">Actions</th>
             </tr>

@@ -89,23 +89,23 @@ describe("mergeSamples", () => {
 
   it.skipIf(!hasFfmpeg)("joins clips with the requested pause", async () => {
     const { mergeSamples } = await import("./merge");
-    const clips = await seed("orc-male", 3, 1);
+    const clips = await seed("orc-male-standard", 3, 1);
 
-    const merged = await mergeSamples("orc-male", clips.map((c) => c.file), 1);
+    const merged = await mergeSamples("orc-male-standard", clips.map((c) => c.file), 1);
 
     // 3 clips of 1s plus 2 gaps of 1s. mp3 framing makes this inexact, hence the tolerance.
-    const seconds = await durationOf(path.join(dir, "orc-male", merged.file));
+    const seconds = await durationOf(path.join(dir, "orc-male-standard", merged.file));
     expect(seconds).toBeGreaterThan(4.5);
     expect(seconds).toBeLessThan(5.5);
   });
 
   it.skipIf(!hasFfmpeg)("concatenates with no gap when the pause is zero", async () => {
     const { mergeSamples } = await import("./merge");
-    const clips = await seed("orc-male", 2, 1);
+    const clips = await seed("orc-male-standard", 2, 1);
 
-    const merged = await mergeSamples("orc-male", clips.map((c) => c.file), 0);
+    const merged = await mergeSamples("orc-male-standard", clips.map((c) => c.file), 0);
 
-    const seconds = await durationOf(path.join(dir, "orc-male", merged.file));
+    const seconds = await durationOf(path.join(dir, "orc-male-standard", merged.file));
     expect(seconds).toBeGreaterThan(1.7);
     expect(seconds).toBeLessThan(2.4);
   });
@@ -113,10 +113,10 @@ describe("mergeSamples", () => {
   it.skipIf(!hasFfmpeg)("names the merge after the first selected clip", async () => {
     const { mergeSamples } = await import("./merge");
     const { storeSample, displayName } = await import("./samples");
-    const first = await storeSample("orc-male", "Orc-Male-NPC-Greeting-01.ogg", await sine(1));
-    const second = await storeSample("orc-male", "something-else.ogg", await sine(1));
+    const first = await storeSample("orc-male-standard", "Orc-Male-NPC-Greeting-01.ogg", await sine(1));
+    const second = await storeSample("orc-male-standard", "something-else.ogg", await sine(1));
 
-    const merged = await mergeSamples("orc-male", [first.file, second.file], 0);
+    const merged = await mergeSamples("orc-male-standard", [first.file, second.file], 0);
 
     expect(displayName(merged.file)).toBe("merged-Orc-Male-NPC-Greeting-01.mp3");
   });
@@ -124,27 +124,27 @@ describe("mergeSamples", () => {
   it.skipIf(!hasFfmpeg)("leaves the sources in place", async () => {
     const { mergeSamples } = await import("./merge");
     const { listSamples } = await import("./samples");
-    const clips = await seed("orc-male", 2, 1);
+    const clips = await seed("orc-male-standard", 2, 1);
 
-    await mergeSamples("orc-male", clips.map((c) => c.file), 1);
+    await mergeSamples("orc-male-standard", clips.map((c) => c.file), 1);
 
-    expect(await listSamples("orc-male")).toHaveLength(3);
+    expect(await listSamples("orc-male-standard")).toHaveLength(3);
   });
 
   it.skipIf(!hasFfmpeg)("names a clip that went missing rather than failing opaquely", async () => {
     const { mergeSamples } = await import("./merge");
     const { deleteSample } = await import("./samples");
-    const clips = await seed("orc-male", 2, 1);
-    await deleteSample("orc-male", clips[0].file);
+    const clips = await seed("orc-male-standard", 2, 1);
+    await deleteSample("orc-male-standard", clips[0].file);
 
     await expect(
-      mergeSamples("orc-male", clips.map((c) => c.file), 1),
+      mergeSamples("orc-male-standard", clips.map((c) => c.file), 1),
     ).rejects.toThrow(/ENOENT|no such file/i);
   });
 
   it("refuses a clip name it did not generate, before running anything", async () => {
     const { mergeSamples } = await import("./merge");
-    await expect(mergeSamples("orc-male", ["../../etc/passwd", "x.mp3"], 1)).rejects.toThrow(
+    await expect(mergeSamples("orc-male-standard", ["../../etc/passwd", "x.mp3"], 1)).rejects.toThrow(
       /unsafe sample name/,
     );
   });

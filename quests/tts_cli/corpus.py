@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 
 from tts_cli.naming import filename_for_row, line_id_for_row
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 DEFAULT_CORPUS_PATH = "corpus/corpus.json.gz"
 INVALID_CHARS = "$<>"
 
@@ -63,6 +63,7 @@ def build_corpus(df, spawn_rows) -> dict:
             "npcType": row["type"],
             "race": row["race"],
             "gender": row["gender"],
+            "flavor": row["flavor"],
             "voice": row["voice_name"],
             "playerGender": row["player_gender"],
             "text": row["cleanedText"],

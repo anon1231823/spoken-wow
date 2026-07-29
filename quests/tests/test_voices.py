@@ -22,6 +22,18 @@ def test_keeps_race_gender_voices():
     assert got == {"orc-male": "id-orc-male", "human-female": "id-human-female"}
 
 
+def test_keeps_flavored_voices():
+    """A race-gender has two or three distinct NPC voices; the flavor names which."""
+    got = fetch_voice_map(
+        "k", http_get=lambda *a, **kw: _voices("orc-female-shaman", "nightelf-male-warrior"))
+    assert list(got) == ["orc-female-shaman", "nightelf-male-warrior"]
+
+
+def test_ignores_names_with_too_many_parts():
+    got = fetch_voice_map("k", http_get=lambda *a, **kw: _voices("orc-male-shady-v2", "orc-male"))
+    assert list(got) == ["orc-male"]
+
+
 def test_ignores_stock_library_voices():
     """Stock voices are named things like Rachel and cannot express race-gender."""
     got = fetch_voice_map("k", http_get=lambda *a, **kw: _voices("Rachel", "Adam", "orc-male"))

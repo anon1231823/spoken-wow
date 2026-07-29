@@ -9,7 +9,8 @@ from tqdm import tqdm
 
 VMANGOS_DB_DUMP_URL = "https://api.github.com/repos/vmangos/core/releases/tags/db_latest"
 EXPORTED_FILES = ['assets/sql/exported/CreatureDisplayInfo.sql',
-                  'assets/sql/exported/CreatureDisplayInfoExtra.sql']
+                  'assets/sql/exported/CreatureDisplayInfoExtra.sql',
+                  'assets/sql/exported/NPCSounds.sql']
 # The vmangos release zip extracts to assets/sql/mysql-dump and ships four database
 # dumps. Only the world database (mangos.sql) is used here - characters/logon/logs
 # are unrelated realm data and would land as junk tables in MYSQL_DATABASE.

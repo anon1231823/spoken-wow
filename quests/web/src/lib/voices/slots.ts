@@ -3,8 +3,8 @@
  *
  * The set is derived from the corpus rather than listed here, so a race added to
  * tts_cli/consts.py upstream cannot leave this page quietly missing a voice. The names are
- * the ones tts_cli/voices.py matches on: `race-gender`, and nothing else is usable, because
- * a stock library voice's name cannot express that mapping.
+ * the ones tts_cli/voices.py matches on: `race-gender-flavor`, and nothing else is usable,
+ * because a stock library voice's name cannot express that mapping.
  *
  * Being a closed set derived from data also makes it a whitelist, which is what keeps a
  * slot name safe to use as a path segment. Same reasoning as isSafeAudioPath in range.ts.
@@ -12,7 +12,7 @@
 import { loadCorpus } from "@/lib/corpus";
 
 export type VoiceSlot = {
-  /** e.g. "orc-male" — the ElevenLabs voice name this project resolves by. */
+  /** e.g. "orc-male-shady" — the ElevenLabs voice name this project resolves by. */
   name: string;
   /** Corpus lines this voice would speak. */
   lineCount: number;
@@ -21,7 +21,10 @@ export type VoiceSlot = {
 };
 
 /**
- * Every voice the corpus needs, busiest first.
+ * Every voice the corpus needs, by name.
+ *
+ * Alphabetical rather than busiest-first: at fifty-four voices the list is something you
+ * navigate to find one row, and the flavors of a race-gender then sit together.
  *
  * Only generatable lines count: progress text and lines with unresolved template tokens are
  * never voiced, so a voice needed by nothing else is not needed at all.
@@ -39,7 +42,7 @@ export function voiceSlots(): VoiceSlot[] {
 
   return [...lines]
     .map(([name, lineCount]) => ({ name, lineCount, npcCount: npcs.get(name)!.size }))
-    .sort((a, b) => b.npcCount - a.npcCount || a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 const cacheKey = Symbol.for("wow-voiceover.slots");

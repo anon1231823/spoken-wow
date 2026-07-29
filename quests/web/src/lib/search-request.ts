@@ -20,7 +20,7 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T
 }
 
 export function filtersFromParams(params: URLSearchParams): LineFilters {
-  const { races, genders, voices } = facets();
+  const { races, genders, flavors, voices } = facets();
 
   return {
     q: params.get("q") ?? "",
@@ -28,6 +28,7 @@ export function filtersFromParams(params: URLSearchParams): LineFilters {
     missingOnly: params.get("missing") === "1",
     race: oneOf(params.get("race"), races),
     gender: oneOf(params.get("gender"), genders),
+    flavor: oneOf(params.get("flavor"), flavors),
     voice: oneOf(params.get("voice"), voices),
     source: oneOf(params.get("source"), SOURCES),
     npcType: oneOf(params.get("type"), NPC_TYPES),

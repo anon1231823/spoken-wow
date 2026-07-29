@@ -29,6 +29,7 @@ export type LineFilters = {
   missingOnly?: boolean;
   race?: string;
   gender?: string;
+  flavor?: string;
   voice?: string;
   source?: Source;
   npcType?: NpcType;
@@ -186,7 +187,17 @@ function order(a: CorpusLine, b: CorpusLine): number {
 export function matchingLines(
   corpus: Corpus,
   store: Set<string>,
-  { q = "", filter = "any", missingOnly = false, race, gender, voice, source, npcType }: LineFilters = {},
+  {
+    q = "",
+    filter = "any",
+    missingOnly = false,
+    race,
+    gender,
+    flavor,
+    voice,
+    source,
+    npcType,
+  }: LineFilters = {},
 ): CorpusLine[] {
   const query = q.trim();
 
@@ -195,6 +206,7 @@ export function matchingLines(
   if (missingOnly) lines = lines.filter((line) => isGap(line, store));
   if (race) lines = lines.filter((line) => line.race === race);
   if (gender) lines = lines.filter((line) => line.gender === gender);
+  if (flavor) lines = lines.filter((line) => line.flavor === flavor);
   if (voice) lines = lines.filter((line) => line.voice === voice);
   if (source) lines = lines.filter((line) => line.source === source);
   if (npcType) lines = lines.filter((line) => line.npcType === npcType);
