@@ -1,0 +1,1076 @@
+{
+  "rules": [
+    {
+      "string_to_replace": "Gnomeregan",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈnoʊmɹəɡæn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Azeroth",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈæzəɹɒθ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Kalimdor",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈkælɪmdɔɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Lordaeron",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈlɔɹdəɹɒn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Quel'Thalas",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "kɛlˈθæləs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Eldre'Thalas",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ɛlˈdɹeɪθæləs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Kel'Thuzad",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "kɛlˈθuzæd",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Naxxramas",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "næksˈɹɑməs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Ahn'Qiraj",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ɑnkɪˈɹɑʒ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Qiraji",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "kɪˈɹɑʒi",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "C'Thun",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "kəˈθun",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Silithus",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "sɪˈlɪθəs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "silithid",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "sɪˈlɪθɪd",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Zul'Farrak",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "zulˈfæɹæk",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Zul'Gurub",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "zulɡəˈɹub",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Zandalar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈzændəlɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Atal'ai",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɑtəlaɪ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Atal'Hakkar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ɑtəlˈhækɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Hakkar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈhækɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Hakkari",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "həˈkɑɹi",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Jin'do",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈdʒɪndoʊ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Un'Goro",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ʌnˈɡɔɹoʊ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Teldrassil",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "tɛlˈdɹæsɪl",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Darnassus",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "dɑɹˈnæsəs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Dolanaar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "doʊləˈnɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Auberdine",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɔbəɹdin",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Rut'theran",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɹuθəɹæn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Ban'ethil",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "bænˈɛθɪl",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Tirisfal",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈtɪɹɪsfɑl",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Desolace",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈdɛsəleɪs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Feralas",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "fəˈɹɑləs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Tanaris",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "təˈnæɹɪs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Uldaman",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈʌldəmæn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Dalaran",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈdæləɹæn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Alterac",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɔltəɹæk",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Stromgarde",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈstɹɒmɡɑɹd",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Arathi",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "əˈɹɑθi",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Arathor",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈæɹəθɔɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Andorhal",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈændɔɹhɔl",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Stratholme",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈstɹæθoʊm",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Scholomance",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈskɒləmæns",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Kharanos",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈkæɹənoʊs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Morogh",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈmɔɹoʊ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Modan",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈmoʊdæn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Elwynn",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɛlwɪn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Mulgore",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈmʌlɡɔɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Durotar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈdʊɹoʊtɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Orgrimmar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɔɹɡɹɪmɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Theramore",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈθɛɹəmɔɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Gadgetzan",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɡædʒɪtzæn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Azshara",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "æʒˈʃɑɹə",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Sen'jin",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈsɛndʒɪn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Grom'gol",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɡɹɒmɡoʊl",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Zoram",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈzɔɹæm",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Blackfathom",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "blækˈfæðəm",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Kraul",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "kɹaʊl",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Winterspring",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈwɪntəɹspɹɪŋ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Caer",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "kɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Thelsamar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "θɛlˈsɑmɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Thrall",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "θɹɔl",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Sylvanas",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "sɪlˈvɑnəs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Tyrande",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "tɪˈɹɑndeɪ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Cenarius",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "sɪˈnɛɹiəs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Cenarion",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "sɪˈnɛɹiən",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Elune",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ɪˈlun",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Ragnaros",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɹæɡnəɹɒs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Nefarian",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "nɪˈfɛɹiən",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Arthas",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɑɹθəs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Uther",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈjuθəɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Bolvar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈboʊlvɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Cairne",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "kɛɹn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Magni",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈmæɡni",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Mekkatorque",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈmɛkətɔɹk",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Medivh",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "məˈdɪv",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Ysera",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ɪˈsɛɹə",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Staghelm",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈstæɡhɛlm",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Malfurion",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "mælˈfjʊɹiən",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Arugal",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈæɹuɡəl",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Amnennar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "æmˈnɛnɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Charlga",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈtʃɑɹlɡə",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Razorflank",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɹeɪzəɹflæŋk",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Dathrohan",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈdæθɹoʊhæn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Naralex",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈnæɹəlɛks",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Theradras",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "θəˈɹɑdɹəs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Zaetar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈzeɪtɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Valthalak",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈvælθəlæk",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Silverlaine",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈsɪlvəɹleɪn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Barov",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈbæɹɒv",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Norgannon",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈnɔɹɡənɒn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Agamaggan",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˌæɡəˈmæɡən",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Aku'mai",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɑkumaɪ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Thunderbrew",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈθʌndəɹbɹu",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Runetotem",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɹuntoʊtəm",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Bloodhoof",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈblʌdhʊf",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Trollbane",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈtɹoʊlbeɪn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Lightbringer",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈlaɪtbɹɪŋəɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Sparklematic",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˌspɑɹkəlˈmætɪk",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Sul'thraze",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "sʌlˈθɹeɪz",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Trol'kalar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "tɹoʊlˈkɑlɑɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Mosh'aru",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "mɒʃˈɑɹu",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Gri'lek",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɡɹilɛk",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Jammal'an",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "dʒəˈmɑlæn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Mai'Zoth",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "maɪˈzɒθ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Lar'korwi",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "lɑɹˈkɔɹwi",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Mar'alith",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "mɑɹˈælɪθ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Mor'zul",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "mɔɹˈzul",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Gor'mul",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ɡɔɹˈmul",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Rin'ji",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɹɪndʒi",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Zando'zan",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈzændoʊzæn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Bath'rah",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈbɑθɹɑ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Jen'shan",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈdʒɛnʃæn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "E'ko",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈɛkoʊ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Pele'keiki",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˌpɛleɪˈkeɪki",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Mau'ari",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "maʊˈɑɹi",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Throm'ka",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈθɹɒmkɑ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Hive'Regal",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "haɪvˈɹiɡəl",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Hive'Zora",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "haɪvˈzɔɹə",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Hive'Ashi",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "haɪvˈɑʃi",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "gnoll",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "noʊl",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "murloc",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈmɜɹlɒk",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "kobold",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈkoʊboʊld",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "quilboar",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈkwɪlbɔɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "furbolg",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈfɜɹboʊlɡ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "naga",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈnɑɡə",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "kodo",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈkoʊdoʊ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "tauren",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈtɔɹɛn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "satyr",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈseɪtəɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "centaur",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈsɛntɔɹ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "worgen",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈwɔɹɡɛn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "hippogryph",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈhɪpəɡɹɪf",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "wyvern",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "ˈwaɪvəɹn",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Defias",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "dɪˈfaɪəs",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Scourge",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "skɜɹdʒ",
+      "alphabet": "ipa"
+    },
+    {
+      "string_to_replace": "Forsaken",
+      "case_sensitive": false,
+      "word_boundaries": true,
+      "type": "phoneme",
+      "phoneme": "fɔɹˈseɪkən",
+      "alphabet": "ipa"
+    }
+  ]
+}

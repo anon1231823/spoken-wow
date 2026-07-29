@@ -1,0 +1,578 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import type { EffectiveLexicon } from "@/lib/generation/dictionary";
+import {
+  CATEGORIES,
+  CATEGORY_LABELS,
+  CONFIDENCES,
+  honoursPhonemes,
+  kindOf,
+  LexiconError,
+  validateLexicon,
+  type Category,
+  type Confidence,
+  type LexiconEntry,
+} from "@/lib/generation/lexicon";
+
+type Saved = EffectiveLexicon & { syncError?: string | null };
+
+const CONFIDENCE_LABELS: Record<Confidence, string> = {
+  high: "Confident",
+  check: "Needs checking",
+};
+
+// Starts as a respelling, not IPA. Anyone who can write IPA can switch in one click, and
+// everyone else would otherwise meet an empty box they have no way to fill.
+const BLANK: LexiconEntry = {
+  grapheme: "",
+  alias: "",
+  say: "",
+  confidence: "check",
+  category: "place",
+};
+
+/**
+ * Which input the form should show.
+ *
+ * Read from which key is PRESENT rather than from which is non-empty, so a half-typed
+ * respelling does not flip the form back to IPA between keystrokes.
+ */
+function formKind(entry: LexiconEntry): "ipa" | "alias" {
+  return entry.ipa !== undefined ? "ipa" : "alias";
+}
+
+function key(entry: LexiconEntry): string {
+  return entry.grapheme.toLowerCase();
+}
+
+// `base` so Aku'mai and Aku'Mai sort together rather than by code point, and `numeric` for
+// the day a name ends in a digit. A new entry's grapheme is empty, which collates first -
+// which is where it should be, since it is the one being typed.
+const COLLATOR = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
+
+function same(a: LexiconEntry[], b: LexiconEntry[]): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/**
+ * The pronunciation lexicon, and the one place it can be corrected without a deploy.
+ *
+ * Admin-only, on its own page rather than beside the generation settings: 134 entries is a
+ * list you search, and a name is fixed in response to hearing it rather than while setting
+ * up a batch.
+ *
+ * Rows are read-only until one is opened. A page of 134 simultaneously editable rows is
+ * both slower and harder to review - an accidental keystroke in a field nobody meant to
+ * touch would ship as a mispronunciation, and the diff against the committed file is what
+ * makes that visible.
+ */
+export default function LexiconEditor({
+  initial,
+  modelId,
+}: {
+  initial: EffectiveLexicon;
+  /** The model generation actually uses, which decides whether any of this takes effect. */
+  modelId: string;
+}) {
+  const [saved, setSaved] = useState<Saved>(initial);
+  const [draft, setDraft] = useState<LexiconEntry[]>(initial.entries);
+  // Identified by position, not by grapheme. A grapheme is editable, so keying the open row
+  // on its value would close the form the moment the first character of a name was changed.
+  const [editing, setEditing] = useState<number | null>(null);
+  // The name the open row sorted under when it was opened. Rows are ordered by grapheme, so
+  // without this an open form would move on every keystroke of the name being typed - out
+  // from under the cursor, and past whichever rows the new spelling had overtaken.
+  const [pinned, setPinned] = useState("");
+  const [query, setQuery] = useState("");
+  const [onlyChecks, setOnlyChecks] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const dirty = !same(draft, saved.entries);
+
+  // Keyed on the lower-cased grapheme, because that is the identity the rules themselves
+  // match on: renaming "Aku'mai" to "Aku'Mai" is not a new entry.
+  const committed = useMemo(
+    () => new Map(saved.defaults.map((entry) => [key(entry), entry] as const)),
+    [saved.defaults],
+  );
+
+  function changedFromFile(entry: LexiconEntry): boolean {
+    const original = committed.get(key(entry));
+    return !original || original.ipa !== entry.ipa || original.alias !== entry.alias;
+  }
+
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return draft
+      .map((entry, index) => ({ entry, index }))
+      .filter(({ entry }) => {
+        if (onlyChecks && entry.confidence !== "check") return false;
+        if (!needle) return true;
+        return [entry.grapheme, entry.say, entry.ipa ?? entry.alias ?? "", entry.note ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(needle);
+      })
+      // Alphabetical, and note this sorts the VIEW rather than the draft: `index` is the
+      // position in the draft array and stays with its entry, so editing and removal keep
+      // pointing at the right one. Sorting the draft itself would also rewrite the order of
+      // voice/lexicon.json on every save, turning a one-word fix into a 134-line diff.
+      .sort((a, b) => COLLATOR.compare(sortName(a), sortName(b)));
+
+    function sortName({ entry, index }: { entry: LexiconEntry; index: number }): string {
+      return index === editing ? pinned : entry.grapheme;
+    }
+  }, [draft, query, onlyChecks, editing, pinned]);
+
+  const checks = draft.filter((entry) => entry.confidence === "check").length;
+
+  function patch(target: number, change: Partial<LexiconEntry>) {
+    setDraft((current) =>
+      current.map((entry, index) => (index === target ? { ...entry, ...change } : entry)),
+    );
+  }
+
+  function openRow(index: number, entry: LexiconEntry) {
+    setEditing(index);
+    setPinned(entry.grapheme);
+  }
+
+  function remove(target: number) {
+    setDraft((current) => current.filter((_, index) => index !== target));
+    setEditing(null);
+  }
+
+  function add() {
+    // Prepended and opened, so a new entry is never added below the fold of a filtered list
+    // where it would look as though nothing happened.
+    setDraft((current) => [{ ...BLANK }, ...current]);
+    // Pinned to the empty name, which collates first, so a new entry stays at the top of the
+    // list while it is being typed instead of sliding away as the name takes shape.
+    openRow(0, BLANK);
+    setQuery("");
+    setOnlyChecks(false);
+  }
+
+  async function send(method: "PUT" | "POST" | "DELETE") {
+    // Checked here as well as on the server so a malformed draft is a message next to the
+    // field rather than a round trip: the server's copy is the one that counts, but it is
+    // not the one that can point at the entry.
+    if (method === "PUT") {
+      try {
+        validateLexicon(draft);
+      } catch (caught) {
+        setError(caught instanceof LexiconError ? caught.message : String(caught));
+        return;
+      }
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/generation/lexicon", {
+        method,
+        headers: method === "PUT" ? { "Content-Type": "application/json" } : undefined,
+        body: method === "PUT" ? JSON.stringify(draft) : undefined,
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        setError(body.error ?? `request failed (${response.status})`);
+        return;
+      }
+      const next = body as Saved;
+      setSaved(next);
+      setDraft(next.entries);
+      setEditing(null);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <SyncBanner
+        saved={saved}
+        modelId={modelId}
+        phonemes={draft.filter((entry) => kindOf(entry) === "ipa").length}
+        busy={busy}
+        onRetry={() => void send("POST")}
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Filter by name, sound, or note"
+          className="max-w-xs"
+          aria-label="Filter entries"
+        />
+        <Button
+          size="sm"
+          variant={onlyChecks ? "secondary" : "ghost"}
+          aria-pressed={onlyChecks}
+          onClick={() => setOnlyChecks((value) => !value)}
+        >
+          Needs checking · {checks}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={add}>
+          Add name
+        </Button>
+        <span className="text-muted-foreground ml-auto text-xs tabular-nums">
+          {shown.length === draft.length
+            ? `${draft.length} entries`
+            : `${shown.length} of ${draft.length}`}
+        </span>
+      </div>
+
+      <div className="divide-y rounded-md border">
+        {/* Column names, aligned to the widths the rows below use. Not a <table>, because a
+            row expands into a form in place and a form inside a table cell inherits the
+            column widths it needs to escape. */}
+        <div
+          aria-hidden
+          className="text-muted-foreground bg-muted/40 flex items-baseline gap-3 px-3 py-1.5 text-[10.5px] font-semibold tracking-wider uppercase"
+        >
+          <span className="w-40 shrink-0">Written</span>
+          <span className="w-44 shrink-0">Sound</span>
+          <span className="w-36 shrink-0">Say it</span>
+          <span className="ml-auto">Note</span>
+        </div>
+
+        {shown.length === 0 && (
+          <p className="text-muted-foreground px-4 py-8 text-center text-sm">
+            Nothing matches that filter.
+          </p>
+        )}
+
+        {shown.map(({ entry, index }) =>
+          editing === index ? (
+            <EntryForm
+              key={index}
+              entry={entry}
+              onChange={(change) => patch(index, change)}
+              onClose={() => setEditing(null)}
+              onRemove={() => remove(index)}
+            />
+          ) : (
+            <button
+              key={index}
+              type="button"
+              onClick={() => openRow(index, entry)}
+              className="hover:bg-muted/50 flex w-full items-baseline gap-3 px-3 py-2 text-left"
+            >
+              <span className="w-40 shrink-0 truncate text-sm font-medium">
+                {entry.grapheme || <span className="text-muted-foreground">(new entry)</span>}
+              </span>
+              <span className="text-primary w-44 shrink-0 truncate text-sm">
+                {entry.alias ? `“${entry.alias}”` : `/${entry.ipa}/`}
+              </span>
+              <span className="text-muted-foreground w-36 shrink-0 truncate font-mono text-xs">
+                {entry.say}
+              </span>
+              {entry.confidence === "check" && (
+                <Badge variant="outline" className="shrink-0 text-amber-400">
+                  check
+                </Badge>
+              )}
+              {changedFromFile(entry) && (
+                <Badge variant="secondary" className="shrink-0">
+                  edited
+                </Badge>
+              )}
+              <span className="text-muted-foreground ml-auto truncate text-xs">{entry.note}</span>
+            </button>
+          ),
+        )}
+      </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="border-destructive/40 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-sm"
+        >
+          {error}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button size="sm" disabled={!dirty || busy} onClick={() => void send("PUT")}>
+          {busy ? "Saving…" : "Save and upload"}
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={!dirty || busy}
+          onClick={() => {
+            setDraft(saved.entries);
+            setEditing(null);
+          }}
+        >
+          Discard
+        </Button>
+        {saved.source === "database" && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto"
+            disabled={busy}
+            onClick={() => void send("DELETE")}
+          >
+            Reset to committed lexicon
+          </Button>
+        )}
+      </div>
+
+      <p className="text-muted-foreground text-xs">
+        Saving uploads a new dictionary and every line generated afterwards uses it. Audio
+        already in the store is untouched — its version row records the dictionary it was made
+        with, so a line generated before a fix stays playable and identifiable as stale.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Whether the entries on this page are the ones ElevenLabs is actually applying.
+ *
+ * Its own component because there are three independent ways this page can be showing
+ * pronunciations that no generation will use — never uploaded, upload failed, or a model
+ * that ignores phoneme rules — and each of them needs a different sentence.
+ */
+function SyncBanner({
+  saved,
+  modelId,
+  phonemes,
+  busy,
+  onRetry,
+}: {
+  saved: Saved;
+  modelId: string;
+  /** How many entries are IPA, and so depend on the model honouring phoneme rules. */
+  phonemes: number;
+  busy: boolean;
+  onRetry: () => void;
+}) {
+  // Counted rather than stated as a blanket warning: on a model without phoneme support the
+  // respelled entries still work, so "nothing on this page reaches the audio" would be false
+  // and would send someone hunting for a problem in the wrong place.
+  if (!honoursPhonemes(modelId) && phonemes > 0) {
+    return (
+      <Banner tone="warn">
+        <span>
+          Generation uses <code>{modelId}</code>, which ignores phoneme rules — only{" "}
+          <code>eleven_v3</code> and <code>eleven_flash_v2</code> honour them. {phonemes} entries
+          written in IPA are skipped; the respelled ones still apply. Switch the model on Voices,
+          or respell those entries.
+        </span>
+      </Banner>
+    );
+  }
+
+  if (saved.sync === "never") {
+    return (
+      <Banner tone="warn">
+        <span>
+          Nothing has been uploaded yet, so lines are generated with no dictionary at all.
+          These are the committed entries from <code>voice/lexicon.json</code>; save to put
+          them in force.
+        </span>
+      </Banner>
+    );
+  }
+
+  if (saved.sync === "pending") {
+    return (
+      <Banner tone="error">
+        <span>
+          Saved, but not uploaded{saved.syncError ? `: ${saved.syncError}` : ""}. Generation is
+          still applying the previous dictionary, so the entries below are not what lines
+          currently sound like.
+        </span>
+        <Button size="sm" variant="outline" disabled={busy} onClick={onRetry}>
+          {busy ? "Uploading…" : "Retry upload"}
+        </Button>
+      </Banner>
+    );
+  }
+
+  return (
+    <p className="text-muted-foreground text-xs">
+      In force since {saved.syncedAt ? new Date(saved.syncedAt).toLocaleString() : "—"} · version{" "}
+      <code>{saved.locator?.versionId}</code>
+    </p>
+  );
+}
+
+function Banner({ tone, children }: { tone: "warn" | "error"; children: React.ReactNode }) {
+  return (
+    <div
+      role="alert"
+      className={cn(
+        "flex flex-wrap items-center gap-3 rounded-md border px-3 py-2 text-sm",
+        tone === "warn"
+          ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+          : "border-destructive/40 bg-destructive/10 text-destructive",
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function EntryForm({
+  entry,
+  onChange,
+  onClose,
+  onRemove,
+}: {
+  entry: LexiconEntry;
+  onChange: (change: Partial<LexiconEntry>) => void;
+  onClose: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="bg-muted/30 space-y-3 px-3 py-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Written" hint="Exactly as the corpus spells it. Matching ignores case.">
+          <Input
+            value={entry.grapheme}
+            onChange={(event) => onChange({ grapheme: event.target.value })}
+            placeholder="Gnomeregan"
+          />
+        </Field>
+        <Field
+          label="How it sounds"
+          hint={
+            formKind(entry) === "ipa"
+              ? "Bare phonemes — no slashes or brackets. Only eleven_v3 and eleven_flash_v2 honour these."
+              : "Respell it as it should be said — “nomeregan”, not “NOME-reh-gan”. Works on every model."
+          }
+        >
+          <div className="flex gap-1.5">
+            {formKind(entry) === "ipa" ? (
+              <Input
+                value={entry.ipa ?? ""}
+                onChange={(event) => onChange({ ipa: event.target.value })}
+                placeholder="ˈnoʊmɹəɡæn"
+              />
+            ) : (
+              <Input
+                value={entry.alias ?? ""}
+                onChange={(event) => onChange({ alias: event.target.value })}
+                placeholder="nomeregan"
+              />
+            )}
+            {/* Switching clears the other field rather than keeping it, because an entry
+                holding both is one ElevenLabs would resolve arbitrarily. */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              onClick={() =>
+                onChange(
+                  formKind(entry) === "ipa"
+                    ? { ipa: undefined, alias: "" }
+                    : { alias: undefined, ipa: "" },
+                )
+              }
+            >
+              {formKind(entry) === "ipa" ? "Use spelling" : "Use IPA"}
+            </Button>
+          </div>
+        </Field>
+        <Field label="Say it" hint="For readers of this page. Never sent to ElevenLabs.">
+          <Input
+            value={entry.say}
+            onChange={(event) => onChange({ say: event.target.value })}
+            placeholder="NOME-reh-gan"
+          />
+        </Field>
+        <Field label="Note" hint="Why this entry exists, or what is disputed about it.">
+          <Input
+            value={entry.note ?? ""}
+            onChange={(event) => onChange({ note: event.target.value })}
+            placeholder="silent G"
+          />
+        </Field>
+        <Field label="Confidence" hint="Mark anything you have not heard in game as checking.">
+          <Select
+            value={entry.confidence}
+            onValueChange={(value) => onChange({ confidence: value as Confidence })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CONFIDENCES.map((confidence) => (
+                <SelectItem key={confidence} value={confidence}>
+                  {CONFIDENCE_LABELS[confidence]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Category" hint="Grouping for this page only.">
+          <Select
+            value={entry.category}
+            onValueChange={(value) => onChange({ category: value as Category })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {CATEGORY_LABELS[category]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button size="sm" variant="secondary" onClick={onClose}>
+          Done
+        </Button>
+        <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={onRemove}>
+          Remove
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      {children}
+      <p className="text-muted-foreground text-xs">{hint}</p>
+    </div>
+  );
+}

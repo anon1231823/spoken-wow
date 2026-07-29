@@ -41,7 +41,7 @@ export const AUDIO_HISTORY_DIR =
   process.env.VOICEOVER_AUDIO_HISTORY ?? path.join(REPO_ROOT, "audio-history");
 
 /**
- * generation.json and pronunciation.json: how a line is voiced.
+ * generation.json, pronunciation.json and lexicon.json: how a line is voiced.
  *
  * Unlike the clips, these ship *inside* the release alongside the corpus, because they are
  * versioned data the code is written against - a rollback should restore the settings the

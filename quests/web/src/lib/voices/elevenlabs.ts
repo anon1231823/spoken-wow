@@ -192,6 +192,44 @@ export async function addVoice(
   return body.voice_id;
 }
 
+/** Where a set of rules ended up: the pair a TTS request has to name to use them. */
+export type DictionaryLocator = { dictionaryId: string; versionId: string };
+
+/**
+ * Upload a set of pronunciation rules and get back the locator for them.
+ *
+ * A fresh dictionary every time, rather than adding and removing rules on the existing one.
+ * The alternative is to diff the saved lexicon against the uploaded one and issue add-rules
+ * and remove-rules for the difference, which is more requests, more code, and a new way to
+ * be wrong - a diff that misses a removal leaves a rule in force that nobody can see on the
+ * editor page. Creating one dictionary per save costs an unused dictionary on the account
+ * per edit, which is the cheaper of the two mistakes.
+ *
+ * The rules are phoneme rules, and phoneme rules are honoured by eleven_v3 and
+ * eleven_flash_v2 only. This function does not check the model: the dictionary is worth
+ * uploading regardless, and the model can change afterwards without re-uploading.
+ */
+export async function createPronunciationDictionary(
+  name: string,
+  rules: unknown[],
+  options: ElevenLabsOptions = {},
+): Promise<DictionaryLocator> {
+  const { apiKey, baseUrl, fetchImpl } = config(options);
+
+  const response = await fetchImpl(`${baseUrl}/v1/pronunciation-dictionaries/add-from-rules`, {
+    method: "POST",
+    headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ name, rules }),
+  });
+  if (!response.ok) throw await failure(response, "uploading the pronunciation dictionary");
+
+  const body = (await response.json()) as { id?: string; version_id?: string };
+  if (!body.id || !body.version_id) {
+    throw new Error("ElevenLabs accepted the dictionary but returned no id and version");
+  }
+  return { dictionaryId: body.id, versionId: body.version_id };
+}
+
 export async function deleteVoice(
   voiceId: string,
   options: ElevenLabsOptions = {},

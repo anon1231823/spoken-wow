@@ -12,6 +12,7 @@
 import { audioRelPath } from "@/lib/audio";
 import { lineIndex, type CorpusLine } from "@/lib/corpus";
 
+import { currentLocator } from "./dictionary";
 import { fileDefaults } from "./files";
 import { applyPronunciation } from "./pronunciation";
 import { canonicalNpcId, seedFor } from "./seed";
@@ -37,6 +38,8 @@ export type RegenerateSuccess = {
   voiceId: string;
   /** Text actually spoken, after the pronunciation rules. Shown when it differs. */
   spokenText: string;
+  /** The lexicon version applied, or null when no dictionary was in force. */
+  dictionaryVersion: string | null;
   /** Other NPCs whose lines resolve to this same file, and who therefore also changed. */
   sharedWith: number;
   archivedInherited: boolean;
@@ -103,6 +106,10 @@ export async function regenerateLine(
   const outcome = await withFileLock(file, async (): Promise<RegenerateResult> => {
     const config = await currentConfig();
     const spokenText = applyPronunciation(line.text, fileDefaults().rules);
+    // Read inside the lock and per line, not hoisted: an admin saving the lexicon mid-batch
+    // should affect the lines after the save, and pinning one locator for a whole batch
+    // would record a version that some of those takes were not made with.
+    const dictionary = await currentLocator();
     // Lowest npcId in the group, so a file shared by many NPCs regenerates the same way
     // whichever row the button was pressed on. See canonicalNpcId.
     const seed = seedFor(canonicalNpcId(group), config.seedStrategy);
@@ -114,6 +121,7 @@ export async function regenerateLine(
         modelId: config.modelId,
         voiceSettings: config.voiceSettings,
         seed,
+        dictionary,
       },
       options,
     );
@@ -130,6 +138,8 @@ export async function regenerateLine(
       characters: spokenText.length,
       credits: speech.credits,
       settings: config.voiceSettings,
+      spokenText,
+      dictionaryVersion: dictionary?.versionId ?? null,
       createdBy,
     });
 
@@ -145,6 +155,7 @@ export async function regenerateLine(
       voice: line.voice,
       voiceId,
       spokenText,
+      dictionaryVersion: dictionary?.versionId ?? null,
       sharedWith: new Set(group.map((l) => `${l.npcType}:${l.npcId}`)).size - 1,
       archivedInherited: committed.archivedInherited,
     };

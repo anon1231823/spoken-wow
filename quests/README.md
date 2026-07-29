@@ -131,7 +131,7 @@ Registration at `/register` is open and needs no email confirmation. Everyone st
 |---|---|
 | `member` | browse and play, like a signed-out visitor |
 | `collaborator` | the above, plus **Regenerate** on every line, quest and NPC, and the take history behind each |
-| `admin` | the above, plus `/admin` to change anyone's role, and `/voices` to manage voices and the global generation settings |
+| `admin` | the above, plus `/admin` to change anyone's role, `/voices` to manage voices and the global generation settings, and `/lexicon` to correct how names are pronounced |
 
 #### Regenerating audio
 
@@ -160,6 +160,40 @@ as an upper bound and says so.
 Settings — model, stability, similarity, style, seed strategy — are global and live on
 `/voices`, admin-only. They override `voice/generation.json`, which stays what the Python CLI
 reads, so the two can drift; the page shows which is in force.
+
+#### Pronunciation
+
+`/lexicon` is admin-only, and holds the names a text-to-speech reader gets wrong — Gnomeregan
+with its silent G, Kel'Thuzad, Cairne, and 130 more, each with an IPA pronunciation. Saving
+uploads them to ElevenLabs as a pronunciation dictionary and pins every later request to that
+exact version.
+
+**You do not need IPA.** An entry gives either an IPA pronunciation or a plain respelling —
+`nomeregan` — and the editor switches between the two in one click. The trade is exactness
+against reach: IPA becomes a phoneme rule, which is precise but honoured only by `eleven_v3`
+and `eleven_flash_v2`; a respelling becomes an alias rule, which is only as good as the guess
+at the new spelling but works on every model. Both kinds sit in one dictionary, so the lexicon
+does not have to pick. When the configured model ignores phoneme rules the page says how many
+entries that silently skips, rather than implying the whole page is inert.
+
+Respell it as it should be *said*, not as it should be *read*: `nomeregan`, not
+`NOME-reh-gan`. Capitals can be spoken as an acronym and hyphens as pauses. The stress form
+belongs in the entry's `say` field, which is for people and is never sent.
+
+**The rules are built here, not uploaded as PLS.** `voice/lexicon.pls` exists and
+`tools/build_lexicon.py` generates it, but PLS matching is case-sensitive with no override,
+and the corpus writes the same name several ways — `Aku'mai` and `Aku'Mai`, `tauren` and
+`Tauren`. The web app sends the same entries through the rules API with `case_sensitive:
+false` instead, which is 123 occurrences a PLS upload would decline to fix.
+
+**Saving does not touch audio already in the store.** Each take records the dictionary version
+and a hash of the text it was spoken with, so a line generated before a fix stays playable and
+stays identifiable as out of date. `python tools/build_lexicon.py audit` ranks the whole
+lexicon by how many corpus lines each entry touches.
+
+Like the generation settings, this overrides `voice/lexicon.json` rather than replacing it,
+and the page shows which is in force. The Python CLI sends no dictionary at all — it is the
+one place the two generators no longer produce identical audio.
 
 #### Managing voices
 
