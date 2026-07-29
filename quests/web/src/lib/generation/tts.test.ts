@@ -46,6 +46,26 @@ describe("buildPayload", () => {
   });
 
   /**
+   * A multilingual model infers the language from the text, and a short input gives it
+   * almost nothing to go on - a bare name in a word preview gives it nothing at all, which is
+   * how one comes back with another language's vowels. language_code governs text
+   * normalization too, so it plausibly decides how a phoneme string is read.
+   */
+  it("pins the language on a model that accepts one", () => {
+    expect(buildPayload({ ...REQUEST, modelId: "eleven_v3" }).language_code).toBe("en");
+    expect(buildPayload({ ...REQUEST, modelId: "eleven_flash_v2_5" }).language_code).toBe("en");
+  });
+
+  // Omitting is exactly today's behaviour, so a model absent from the list loses nothing -
+  // whereas sending the field to one that rejects it would fail a request that used to work.
+  it("omits it for a model that does not accept one", () => {
+    expect(buildPayload(REQUEST)).not.toHaveProperty("language_code");
+    expect(buildPayload({ ...REQUEST, modelId: "eleven_multilingual_v2" })).not.toHaveProperty(
+      "language_code",
+    );
+  });
+
+  /**
    * The one place the two generators no longer match. synthesize.py sends no dictionary at
    * all, so a line it produces and a line produced here can differ in pronunciation with
    * otherwise identical settings - which is exactly why the locator is recorded per take.
