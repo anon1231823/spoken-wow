@@ -41,6 +41,18 @@ export const AUDIO_HISTORY_DIR =
   process.env.VOICEOVER_AUDIO_HISTORY ?? path.join(REPO_ROOT, "audio-history");
 
 /**
+ * Rendered pronunciation previews, as `<hash>.mp3`.
+ *
+ * A cache, not a store: every file here can be rebuilt by spending credits again, and
+ * nothing in the addon or the corpus refers to one. It is separate from the audio store for
+ * the reason audio-history is - readStoreIndex walks audio/ and would otherwise count a
+ * preview as a voiceline - and it outlives a deploy because the whole point is not paying
+ * twice to hear the same entry.
+ */
+export const PREVIEW_DIR =
+  process.env.VOICEOVER_PREVIEWS ?? path.join(REPO_ROOT, "audio-previews");
+
+/**
  * generation.json, pronunciation.json and lexicon.json: how a line is voiced.
  *
  * Unlike the clips, these ship *inside* the release alongside the corpus, because they are

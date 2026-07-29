@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,6 +68,72 @@ function same(a: LexiconEntry[], b: LexiconEntry[]): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+type PreviewMeta = {
+  spoken: string;
+  sentence: string;
+  source: { npcName: string; lineId: string } | null;
+  cached: boolean;
+  characters: number;
+  credits: number | null;
+};
+
+/**
+ * Rendering one entry and playing it.
+ *
+ * Owned here rather than by each row so that only one preview can be in flight or audible at
+ * a time. Two overlapping previews would be two pronunciations played over each other, which
+ * is worse than useless for the one thing this is for.
+ */
+function usePreview() {
+  const [busy, setBusy] = useState(false);
+  const [meta, setMeta] = useState<PreviewMeta | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const audio = useRef<HTMLAudioElement | null>(null);
+  const url = useRef<string | null>(null);
+
+  function release() {
+    audio.current?.pause();
+    // Object URLs are not garbage collected while the document lives, so a page left open
+    // through fifty previews would hold fifty mp3s in memory.
+    if (url.current) URL.revokeObjectURL(url.current);
+    url.current = null;
+  }
+
+  useEffect(() => release, []);
+
+  async function play(entry: LexiconEntry) {
+    release();
+    setBusy(true);
+    setError(null);
+    setMeta(null);
+    try {
+      const response = await fetch("/api/generation/lexicon/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(entry),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        setError(body.error ?? `preview failed (${response.status})`);
+        return;
+      }
+
+      const header = response.headers.get("X-Preview");
+      if (header) setMeta(JSON.parse(decodeURIComponent(header)) as PreviewMeta);
+
+      url.current = URL.createObjectURL(await response.blob());
+      audio.current = new Audio(url.current);
+      await audio.current.play();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return { play, busy, meta, error };
+}
+
 /**
  * The pronunciation lexicon, and the one place it can be corrected without a deploy.
  *
@@ -101,6 +167,7 @@ export default function LexiconEditor({
   const [onlyChecks, setOnlyChecks] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const preview = usePreview();
 
   const dirty = !same(draft, saved.entries);
 
@@ -266,6 +333,7 @@ export default function LexiconEditor({
             <EntryForm
               key={index}
               entry={entry}
+              preview={preview}
               onChange={(change) => patch(index, change)}
               onClose={() => setEditing(null)}
               onRemove={() => remove(index)}
@@ -438,15 +506,19 @@ function Banner({ tone, children }: { tone: "warn" | "error"; children: React.Re
 
 function EntryForm({
   entry,
+  preview,
   onChange,
   onClose,
   onRemove,
 }: {
   entry: LexiconEntry;
+  preview: ReturnType<typeof usePreview>;
   onChange: (change: Partial<LexiconEntry>) => void;
   onClose: () => void;
   onRemove: () => void;
 }) {
+  const sound = entry.ipa ?? entry.alias ?? "";
+  const playable = Boolean(entry.grapheme.trim() && sound.trim());
   return (
     <div className="bg-muted/30 space-y-3 px-3 py-3">
       <div className="grid gap-3 sm:grid-cols-2">
@@ -547,14 +619,45 @@ function EntryForm({
         </Field>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Button size="sm" variant="secondary" onClick={onClose}>
           Done
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!playable || preview.busy}
+          onClick={() => void preview.play(entry)}
+        >
+          {preview.busy ? "Rendering…" : "Hear it"}
         </Button>
         <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={onRemove}>
           Remove
         </Button>
       </div>
+
+      {preview.error && (
+        <p role="alert" className="text-destructive text-xs">
+          {preview.error}
+        </p>
+      )}
+
+      {preview.meta && !preview.error && (
+        <p className="text-muted-foreground text-xs">
+          {preview.meta.source ? (
+            <>
+              {preview.meta.source.npcName}: “{preview.meta.sentence}”
+            </>
+          ) : (
+            <>No corpus line is short enough, so this is an invented sentence.</>
+          )}{" "}
+          {preview.meta.cached
+            ? "· from cache, no credits spent"
+            : `· ${preview.meta.characters} characters${
+                preview.meta.credits === null ? "" : `, ${preview.meta.credits} credits`
+              }`}
+        </p>
+      )}
     </div>
   );
 }

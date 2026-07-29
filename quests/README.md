@@ -186,6 +186,20 @@ and the corpus writes the same name several ways — `Aku'mai` and `Aku'Mai`, `t
 `Tauren`. The web app sends the same entries through the rules API with `case_sensitive:
 false` instead, which is 123 occurrences a PLS upload would decline to fix.
 
+**Hear an entry before saving it.** Every entry has a **Hear it** button, which speaks the
+name in a real sentence from the corpus — the shortest line that actually uses it, in that
+NPC's own voice — with the pronunciation substituted in. This works on an unsaved draft
+because ElevenLabs accepts a phoneme tag inline in the text, so nothing has to be uploaded
+first. Renders are cached on disk under `audio-previews/`, keyed on the spoken text, voice,
+model and settings, so re-opening an entry costs nothing.
+
+What a preview proves is the *sound*, not the *rule*: it substitutes the pronunciation
+directly rather than matching it, so it cannot tell you whether `Azshara's` inherits the rule
+for `Azshara`. Only a real generation carrying the dictionary answers that. And because
+phoneme tags share the model support of phoneme rules, an IPA preview is refused outright on
+a model that would ignore it, rather than played back sounding like the default pronunciation
+— which would look exactly like IPA you had written wrong.
+
 **Saving does not touch audio already in the store.** Each take records the dictionary version
 and a hash of the text it was spoken with, so a line generated before a fix stays playable and
 stays identifiable as out of date. `python tools/build_lexicon.py audit` ranks the whole
