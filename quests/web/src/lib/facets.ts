@@ -18,6 +18,15 @@ export type Facets = {
   genders: string[];
   flavors: string[];
   voices: string[];
+  /**
+   * Every race/gender/flavor the corpus actually pairs.
+   *
+   * A flavor belongs to a race-gender - only tauren, troll and orc have a shaman voice, and
+   * only night elves a priestess - so offering all fifty against a chosen race would mostly
+   * offer ways to select nothing. Carried as triples rather than a map keyed by race-gender
+   * so a partial selection (a race with no gender) narrows by the same filter.
+   */
+  flavorScopes: { race: string; gender: string; flavor: string }[];
 };
 
 export function buildFacets(): Facets {
@@ -25,14 +34,17 @@ export function buildFacets(): Facets {
   const genders = new Set<string>();
   const flavors = new Set<string>();
   const voices = new Set<string>();
+  const scopes = new Map<string, { race: string; gender: string; flavor: string }>();
 
   for (const line of loadCorpus().lines) {
     races.add(line.race);
     genders.add(line.gender);
+    voices.add(line.voice);
     // Null for narrator-male and the odd model from a later expansion, which have no NPC
     // voice sets to choose between. Nothing to offer, so nothing is added.
-    if (line.flavor) flavors.add(line.flavor);
-    voices.add(line.voice);
+    if (!line.flavor) continue;
+    flavors.add(line.flavor);
+    scopes.set(line.voice, { race: line.race, gender: line.gender, flavor: line.flavor });
   }
 
   const sorted = (values: Set<string>) => [...values].sort((a, b) => a.localeCompare(b));
@@ -41,6 +53,12 @@ export function buildFacets(): Facets {
     genders: sorted(genders),
     flavors: sorted(flavors),
     voices: sorted(voices),
+    flavorScopes: [...scopes.values()].sort(
+      (a, b) =>
+        a.race.localeCompare(b.race) ||
+        a.gender.localeCompare(b.gender) ||
+        a.flavor.localeCompare(b.flavor),
+    ),
   };
 }
 

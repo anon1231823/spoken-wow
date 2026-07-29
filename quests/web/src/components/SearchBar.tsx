@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useCallback, useMemo } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -68,6 +68,39 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
   { query, filters, facets, onQuery, onFilters },
   ref,
 ) {
+  /** The flavors reachable under a race and gender, or all of them under neither. */
+  const flavorsUnder = useCallback(
+    (race: string | undefined, gender: string | undefined) => {
+      if (!race && !gender) return facets.flavors;
+      const reachable = facets.flavorScopes.filter(
+        (scope) => (!race || scope.race === race) && (!gender || scope.gender === gender),
+      );
+      return [...new Set(reachable.map((scope) => scope.flavor))].sort((a, b) =>
+        a.localeCompare(b),
+      );
+    },
+    [facets.flavors, facets.flavorScopes],
+  );
+
+  const flavorOptions = useMemo(
+    () => flavorsUnder(filters.race, filters.gender),
+    [flavorsUnder, filters.race, filters.gender],
+  );
+
+  /**
+   * The flavor to keep when the race or gender changes under it.
+   *
+   * Dropped when the new pairing has no such voice - picking "tauren" while "priestess" is
+   * selected would otherwise leave a filter matching nothing, with the reason two dropdowns
+   * away from where you clicked.
+   */
+  function keptFlavor(next: { race?: string; gender?: string }) {
+    if (!filters.flavor) return undefined;
+    const race = "race" in next ? next.race : filters.race;
+    const gender = "gender" in next ? next.gender : filters.gender;
+    return flavorsUnder(race, gender).includes(filters.flavor) ? filters.flavor : undefined;
+  }
+
   return (
     <div className="bg-background sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b py-3">
       <Input
@@ -100,18 +133,18 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
           label="race"
           value={filters.race}
           options={facets.races}
-          onChange={(race) => onFilters({ race })}
+          onChange={(race) => onFilters({ race, flavor: keptFlavor({ race }) })}
         />
         <Facet
           label="gender"
           value={filters.gender}
           options={facets.genders}
-          onChange={(gender) => onFilters({ gender })}
+          onChange={(gender) => onFilters({ gender, flavor: keptFlavor({ gender }) })}
         />
         <Facet
           label="flavor"
           value={filters.flavor}
-          options={facets.flavors}
+          options={flavorOptions}
           onChange={(flavor) => onFilters({ flavor })}
         />
         <Facet

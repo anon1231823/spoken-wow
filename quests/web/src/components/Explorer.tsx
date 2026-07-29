@@ -178,6 +178,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
         ...("missingOnly" in next ? { missing: next.missingOnly ? "1" : undefined } : {}),
         ...("race" in next ? { race: next.race } : {}),
         ...("gender" in next ? { gender: next.gender } : {}),
+        ...("flavor" in next ? { flavor: next.flavor } : {}),
         ...("voice" in next ? { voice: next.voice } : {}),
         ...("source" in next ? { source: next.source } : {}),
         ...("npcType" in next ? { type: next.npcType } : {}),
