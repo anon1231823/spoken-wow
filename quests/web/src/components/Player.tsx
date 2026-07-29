@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Download, Pause, Play, Volume2, VolumeX } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -9,6 +9,16 @@ import type { ResultLine } from "@/lib/search";
 
 /** Playback rates worth having for dialog: slow enough to catch a mangled word. */
 const RATES = [0.75, 1, 1.25, 1.5];
+
+/**
+ * What the file should be called once it leaves the store.
+ *
+ * The store path flattened rather than its basename, because the subfolder is part of the
+ * identity: quests/ and gossip/ are separate namespaces, and a downloads folder is not.
+ */
+function downloadName(line: ResultLine): string {
+  return line.audioPath.replace("/", "-");
+}
 
 function timecode(seconds: number): string {
   if (!Number.isFinite(seconds)) return "0:00";
@@ -111,6 +121,12 @@ export default function Player({
 
   const position = scrubbing ?? time;
 
+  // One URL for both the element and the download, so a take regenerated in this session is
+  // the one that gets saved rather than whatever the browser still has cached.
+  const src = line
+    ? `/api/audio/${line.audioPath}${version === undefined ? "" : `?v=${version}`}`
+    : undefined;
+
   return (
     <div className="bg-card/95 fixed inset-x-0 bottom-0 border-t backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-4 px-5 py-3">
@@ -184,15 +200,33 @@ export default function Player({
           {muted ? <VolumeX /> : <Volume2 />}
         </Button>
 
-        <audio
-          ref={attach}
-          preload="metadata"
-          src={
-            line
-              ? `/api/audio/${line.audioPath}${version === undefined ? "" : `?v=${version}`}`
-              : undefined
-          }
-        />
+        {/* An anchor, not a fetch: the file is same-origin, so `download` renames it on the
+            way out and the browser handles the save. With nothing playing there is no href
+            to give, and a disabled anchor is not a thing - hence the plain button. */}
+        {line && src ? (
+          <Button size="icon" variant="ghost" asChild className="shrink-0">
+            <a
+              href={src}
+              download={downloadName(line)}
+              aria-label="Download this line"
+              title={`Download ${downloadName(line)}`}
+            >
+              <Download />
+            </a>
+          </Button>
+        ) : (
+          <Button
+            size="icon"
+            variant="ghost"
+            disabled
+            aria-label="Download this line"
+            className="shrink-0"
+          >
+            <Download />
+          </Button>
+        )}
+
+        <audio ref={attach} preload="metadata" src={src} />
       </div>
     </div>
   );
