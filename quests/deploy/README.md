@@ -60,7 +60,8 @@ The app reads three things from disk. In production all come from env vars set i
 | `VOICEOVER_CORPUS` | `/srv/voiceover/current/corpus/corpus.json.gz` | per release |
 | `VOICEOVER_VOICE_SAMPLES` | `/srv/voiceover/shared/voices` | shared; **must be set**, or clips land beside the releases where nothing backs them up |
 | `VOICEOVER_AUDIO_HISTORY` | `/srv/voiceover/shared/audio-history` | shared; **must be set**. Version 0 of each file is audio nothing can reproduce |
-| `VOICEOVER_VOICE_CONFIG` | `/srv/voiceover/current/voice` | per release; **must be set**, or no pronunciation rules apply and "Hm" is read as the letters H and M |
+| `VOICEOVER_VOICE_CONFIG` | `/srv/voiceover/current/voice` | per release; **must be set**, or no pronunciation rules apply, "Hm" is read as the letters H and M, and the lexicon editor shows no rows |
+| `VOICEOVER_PREVIEWS` | `/srv/voiceover/shared/audio-previews` | shared; **must be set**, or previews land inside `releases/`, where `prune.sh` counts them as a release and eventually deletes them |
 
 All five exist as overrides in `web/src/lib/paths.ts` — no app code changed for this.
 

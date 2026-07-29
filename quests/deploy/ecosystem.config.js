@@ -86,10 +86,18 @@ module.exports = {
         // store files by both.
         VOICEOVER_AUDIO_HISTORY: `${SHARED}/audio-history`,
 
-        // generation.json and pronunciation.json, which ship inside the release alongside the
+        // Rendered pronunciation previews. Shared, and this one is load-bearing in a way the
+        // others are not: unset, paths.ts resolves it to /srv/voiceover/releases/audio-previews
+        // - INSIDE the directory prune.sh iterates, where it is treated as a release, occupies
+        // one of the five keep slots, and is eventually rm -rf'd. Every file in it is a
+        // preview someone paid credits for.
+        VOICEOVER_PREVIEWS: `${SHARED}/audio-previews`,
+
+        // generation.json, pronunciation.json and lexicon.json, which ship inside the release alongside the
         // corpus so a rollback restores the settings the rolled-back code expects. Without
         // this the app falls back to built-in defaults and, worse, applies no pronunciation
-        // rules at all - "Hm" is then read aloud as the letters H and M.
+        // rules at all - "Hm" is read aloud as the letters H and M, and the lexicon editor
+        // renders with no rows at all.
         VOICEOVER_VOICE_CONFIG: "/srv/voiceover/current/voice",
 
         // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL and ELEVENLABS_API_KEY.

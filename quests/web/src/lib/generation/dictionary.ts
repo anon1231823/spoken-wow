@@ -1,15 +1,16 @@
 /**
  * The lexicon in force, and the ElevenLabs dictionary it corresponds to.
  *
- * The sibling of settings.ts, and the same two layers for the same reason: voice/lexicon.json
- * ships in the release and is what tools/build_lexicon.py generates from, the
- * pronunciation_lexicon row - when it exists - is what the web app generates with, and reading
- * reports which of the two is in force so "why does this sound different from what the CLI
- * made" stays answerable.
+ * Unlike settings.ts, there is one layer and not two. The row IS the lexicon. It is seeded
+ * once by migration 0008 and edited from the web UI thereafter, because that is how a
+ * pronunciation actually gets fixed - someone hears a name come out wrong and corrects it.
+ * A file shipping inside the release could only ever be a stale snapshot competing with
+ * that, so there is no file: the seed lives inside migration 0008 and nothing reads a
+ * lexicon off disk.
  *
- * One thing here has no equivalent in settings.ts: a saved lexicon is inert until it has been
- * uploaded. Saving therefore does two things that can fail independently, so the row records
- * both the entries and the locator they produced, and readLexicon reports a save that reached
+ * What has no equivalent in settings.ts either way: a saved lexicon is inert until it has
+ * been uploaded. Saving does two things that can fail independently, so the row records both
+ * the entries and the locator they produced, and readLexicon reports a save that reached
  * Postgres but not ElevenLabs as exactly that rather than as success.
  */
 import { db } from "@/lib/db";
@@ -19,24 +20,29 @@ import {
   type ElevenLabsOptions,
 } from "@/lib/voices/elevenlabs";
 
-import { fileDefaults } from "./files";
 import { toRules, type LexiconEntry } from "./lexicon";
 
 export type LexiconSync = "synced" | "pending" | "never";
 
 export type EffectiveLexicon = {
   entries: LexiconEntry[];
-  /** Whether the row exists, i.e. whether anyone has overridden the committed file. */
-  source: "file" | "database";
-  /** The committed entries, so the editor can offer "reset" and show the delta. */
-  defaults: LexiconEntry[];
+  /**
+   * False when the table has no row at all.
+   *
+   * Only reachable if migration 0008 has not run, and worth reporting rather than rendering
+   * as an empty lexicon: an editor with no rows is exactly what a failed deploy looked like
+   * before, and it should say so instead of inviting someone to retype 134 entries.
+   */
+  seeded: boolean;
   /**
    * Whether the entries above are the ones ElevenLabs is holding.
    *
-   * `never` means nothing has been uploaded and generation applies no dictionary at all.
+   * `never` means no dictionary has ever been uploaded, so generation applies none at all.
+   * That is the state a freshly seeded row is in, and it is not the same as `pending`.
    * `pending` means a save was stored but its upload failed, so generation is still applying
    * the PREVIOUS locator - the editor has to say so, because the page would otherwise show
-   * entries that are not the ones in effect.
+   * entries that are not the ones in effect. Collapsing the two would tell someone their
+   * edit is queued behind an older dictionary when in fact nothing is being applied.
    */
   sync: LexiconSync;
   locator: DictionaryLocator | null;
@@ -67,18 +73,12 @@ async function readRow(): Promise<Row | undefined> {
 }
 
 export async function readLexicon(): Promise<EffectiveLexicon> {
-  const defaults = fileDefaults().lexicon;
   const row = await readRow();
 
   if (!row) {
-    // The committed file is in force as a document, but nothing has been uploaded, so no
-    // dictionary is applied to a request. Saying "file" and "never" together is the honest
-    // description of a fresh install: these are the intended pronunciations, and none of
-    // them are reaching ElevenLabs yet.
     return {
-      entries: defaults,
-      source: "file",
-      defaults,
+      entries: [],
+      seeded: false,
       sync: "never",
       locator: null,
       syncedAt: null,
@@ -94,13 +94,18 @@ export async function readLexicon(): Promise<EffectiveLexicon> {
 
   return {
     entries: row.entries,
-    source: "database",
-    defaults,
-    // syncedAt is stamped in the same statement as the locator, so an upload that predates
-    // the current entries is exactly the case where syncedAt is older than updatedAt.
-    // Compared as instants rather than as values: pg hands timestamptz back as a Date, but
-    // these are declared as strings and cross the wire as ISO, so both forms reach here.
-    sync: !locator || !row.syncedAt || older(row.syncedAt, row.updatedAt) ? "pending" : "synced",
+    seeded: true,
+    // No locator at all is `never`, not `pending`: nothing is in force, so there is no older
+    // dictionary for this save to be queued behind. Beyond that, syncedAt is stamped in the
+    // same statement as the locator, so an upload that predates the current entries is
+    // exactly the case where syncedAt is older than updatedAt. Compared as instants rather
+    // than as values: pg hands timestamptz back as a Date, but these are declared as strings
+    // and cross the wire as ISO, so both forms reach here.
+    sync: !locator
+      ? "never"
+      : !row.syncedAt || older(row.syncedAt, row.updatedAt)
+        ? "pending"
+        : "synced",
     locator,
     syncedAt: row.syncedAt,
     updatedAt: row.updatedAt,
@@ -193,16 +198,4 @@ export async function resync(options: ElevenLabsOptions = {}): Promise<string | 
   const row = await readRow();
   if (!row) return "there is no saved lexicon to upload";
   return sync(row.entries, options);
-}
-
-/**
- * Drop the override, so the committed file is in force again.
- *
- * The locator goes with the row, which means generation stops applying any dictionary at
- * all. That is the correct reading of "reset": the committed file has never been uploaded
- * by anyone, so leaving the last upload attached would apply rules that no longer match
- * what the editor shows.
- */
-export async function resetLexicon(): Promise<void> {
-  await db().query(`delete from "pronunciation_lexicon" where "id"`);
 }
