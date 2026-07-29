@@ -11,9 +11,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 const { closeDb, db } = await import("@/lib/db");
-const { currentLocator, readLexicon, resetLexicon, resync, sync, writeLexicon } = await import(
-  "./dictionary"
-);
+const { currentLocator, readLexicon, resync, sync, writeLexicon } = await import("./dictionary");
 
 const ENTRIES = [
   {
@@ -47,9 +45,26 @@ const OPTIONS = (fetchImpl: typeof globalThis.fetch) => ({
   fetchImpl,
 });
 
+/**
+ * The real lexicon, put back after every case.
+ *
+ * The table holds one row forever and that row IS the lexicon - 134 pronunciations that
+ * migration 0008 seeds once and never re-seeds, because migrations are recorded and do not
+ * run twice. So a test that deleted it would not be leaving a mess for the next case; it
+ * would be destroying the data, permanently, on whatever database DATABASE_URL happens to
+ * point at. This file used to call resetLexicon in afterEach, which did exactly that.
+ *
+ * Snapshotting the whole row rather than just the entries, because the locator and the
+ * timestamps are what the sync states are computed from: restoring the entries alone would
+ * hand the next reader a lexicon that claims to be synced to a dictionary built from
+ * something else.
+ */
+let snapshot: Record<string, unknown> | undefined;
+
 beforeAll(async () => {
   try {
-    await db().query("select 1 from pronunciation_lexicon limit 1");
+    const { rows } = await db().query("select * from pronunciation_lexicon where id");
+    snapshot = rows[0];
   } catch (error) {
     throw new Error(
       "dictionary.test.ts needs a migrated database. Run:\n" +
@@ -59,27 +74,66 @@ beforeAll(async () => {
   }
 });
 
-// The table holds one row forever, so a test that leaves one behind is a test that changes
-// what the next one reads - including in other files, which share this database.
-afterEach(resetLexicon);
+afterEach(async () => {
+  if (!snapshot) {
+    await db().query(`delete from "pronunciation_lexicon" where "id"`);
+    return;
+  }
+  await db().query(
+    `insert into "pronunciation_lexicon"
+       ("id", "entries", "dictionaryId", "versionId", "syncedAt", "updatedAt", "updatedBy")
+     values (true, $1, $2, $3, $4, $5, $6)
+     on conflict ("id") do update set
+       "entries"      = excluded."entries",
+       "dictionaryId" = excluded."dictionaryId",
+       "versionId"    = excluded."versionId",
+       "syncedAt"     = excluded."syncedAt",
+       "updatedAt"    = excluded."updatedAt",
+       "updatedBy"    = excluded."updatedBy"`,
+    [
+      JSON.stringify(snapshot.entries),
+      snapshot.dictionaryId ?? null,
+      snapshot.versionId ?? null,
+      snapshot.syncedAt ?? null,
+      snapshot.updatedAt,
+      snapshot.updatedBy ?? null,
+    ],
+  );
+});
+
 afterAll(closeDb);
 
 describe("readLexicon", () => {
-  it("reports the committed file when nothing has been saved", async () => {
+  /** Migration 0008 puts the lexicon there; nothing in the app writes it on first read. */
+  it("reads the seeded row", async () => {
     const lexicon = await readLexicon();
-    expect(lexicon.source).toBe("file");
-    expect(lexicon.entries).toEqual(lexicon.defaults);
+    expect(lexicon.seeded).toBe(true);
     expect(lexicon.entries.length).toBeGreaterThan(0);
   });
 
   /**
-   * "file" and "never" together, which is the honest description of a fresh install: these
-   * are the intended pronunciations and none of them are reaching ElevenLabs. Reporting it
-   * as synced would claim audio is being generated with rules that have never been uploaded.
+   * Seeded is not uploaded. Reporting it as synced would claim audio is being generated with
+   * rules that have never reached ElevenLabs.
    */
-  it("does not claim the committed file is in force at ElevenLabs", async () => {
+  it("does not claim a seeded lexicon is in force at ElevenLabs", async () => {
+    await db().query(
+      `update "pronunciation_lexicon"
+          set "dictionaryId" = null, "versionId" = null, "syncedAt" = null where "id"`,
+    );
     expect((await readLexicon()).sync).toBe("never");
     expect(await currentLocator()).toBeNull();
+  });
+
+  /**
+   * Only reachable with migrations unrun. Worth reporting rather than rendering as an empty
+   * lexicon: no rows is exactly what a failed deploy looked like, and the page should say so
+   * instead of inviting someone to retype 134 entries.
+   */
+  it("reports an unseeded table rather than an empty lexicon", async () => {
+    await db().query(`delete from "pronunciation_lexicon" where "id"`);
+    const lexicon = await readLexicon();
+    expect(lexicon.seeded).toBe(false);
+    expect(lexicon.entries).toEqual([]);
   });
 });
 
@@ -90,7 +144,7 @@ describe("writeLexicon", () => {
       OPTIONS(fetchImpl));
 
     expect(syncError).toBeNull();
-    expect(lexicon.source).toBe("database");
+    expect(lexicon.seeded).toBe(true);
     expect(lexicon.sync).toBe("synced");
     expect(lexicon.entries).toEqual(ENTRIES);
     expect(lexicon.locator).toEqual({ dictionaryId: "dict-abc", versionId: "ver-1" });
@@ -121,14 +175,20 @@ describe("writeLexicon", () => {
    * rules that no row describes, and generation applying pronunciations nothing can show.
    */
   it("keeps the entries when the upload fails, and says why", async () => {
+    await db().query(
+      `update "pronunciation_lexicon"
+          set "dictionaryId" = null, "versionId" = null, "syncedAt" = null where "id"`,
+    );
     const { fetchImpl } = refuses();
     const { lexicon, syncError } = await writeLexicon(ENTRIES, null as unknown as string,
       OPTIONS(fetchImpl));
 
     expect(syncError).toMatch(/quota exceeded/);
     expect(lexicon.entries).toEqual(ENTRIES);
-    expect(lexicon.source).toBe("database");
-    expect(lexicon.sync).toBe("pending");
+    // `never`, not `pending`: with no locator there is no older dictionary for this save to
+    // be queued behind, and nothing is being applied to a request at all. syncError is what
+    // carries "the upload you just asked for failed"; the state carries what is in force.
+    expect(lexicon.sync).toBe("never");
     expect(lexicon.locator).toBeNull();
   });
 
@@ -159,6 +219,10 @@ describe("concurrent saves", () => {
    * nothing is being spoken with.
    */
   it("refuses to attach a locator to entries it did not upload", async () => {
+    await db().query(
+      `update "pronunciation_lexicon"
+          set "dictionaryId" = null, "versionId" = null, "syncedAt" = null where "id"`,
+    );
     const a = [{ ...ENTRIES[0], ipa: "aaa" }];
     const b = [{ ...ENTRIES[0], ipa: "bbb" }];
 
@@ -171,15 +235,21 @@ describe("concurrent saves", () => {
     expect(error).toMatch(/changed while this upload was in flight/);
     const lexicon = await readLexicon();
     expect(lexicon.entries).toEqual(b);
-    expect(lexicon.sync).toBe("pending");
+    // Neither upload landed a locator, so nothing is in force - see the note above about
+    // never vs pending.
+    expect(lexicon.sync).toBe("never");
     expect(await currentLocator()).toBeNull();
   });
 });
 
 describe("resync", () => {
-  it("uploads what is stored and clears the pending state", async () => {
+  it("uploads what is stored and puts it in force", async () => {
+    await db().query(
+      `update "pronunciation_lexicon"
+          set "dictionaryId" = null, "versionId" = null, "syncedAt" = null where "id"`,
+    );
     await writeLexicon(ENTRIES, null as unknown as string, OPTIONS(refuses().fetchImpl));
-    expect((await readLexicon()).sync).toBe("pending");
+    expect((await readLexicon()).sync).toBe("never");
 
     const error = await resync(OPTIONS(accepts("dict-xyz", "ver-9").fetchImpl));
 
@@ -189,24 +259,10 @@ describe("resync", () => {
     expect(lexicon.locator).toEqual({ dictionaryId: "dict-xyz", versionId: "ver-9" });
   });
 
-  it("refuses when there is nothing saved to upload", async () => {
+  // Only reachable with migrations unrun, since 0008 seeds the row - but resync must still
+  // say so rather than uploading an empty dictionary and reporting success.
+  it("refuses when there is no lexicon at all", async () => {
+    await db().query(`delete from "pronunciation_lexicon" where "id"`);
     expect(await resync(OPTIONS(accepts().fetchImpl))).toMatch(/no saved lexicon/);
-  });
-});
-
-describe("resetLexicon", () => {
-  /**
-   * The locator goes with the row, so generation stops applying any dictionary. That is the
-   * correct reading of "reset": the committed file has never been uploaded by anyone, so
-   * leaving the last upload attached would apply rules nobody can see on the page.
-   */
-  it("drops the override and the dictionary with it", async () => {
-    await writeLexicon(ENTRIES, null as unknown as string, OPTIONS(accepts().fetchImpl));
-    await resetLexicon();
-
-    const lexicon = await readLexicon();
-    expect(lexicon.source).toBe("file");
-    expect(lexicon.sync).toBe("never");
-    expect(await currentLocator()).toBeNull();
   });
 });

@@ -218,9 +218,16 @@ and a hash of the text it was spoken with, so a line generated before a fix stay
 stays identifiable as out of date. `python tools/build_lexicon.py audit` ranks the whole
 lexicon by how many corpus lines each entry touches.
 
-Like the generation settings, this overrides `voice/lexicon.json` rather than replacing it,
-and the page shows which is in force. The Python CLI sends no dictionary at all — it is the
-one place the two generators no longer produce identical audio.
+**The lexicon lives in the database, not in the repo.** Unlike the generation settings, there
+is no file layer: migration `0008` seeds the `pronunciation_lexicon` row once from
+`voice/lexicon.json`, and every change after that is made in the editor. The file stays as
+provenance and as the input to `tools/build_lexicon.py`, which generates the PLS and the rules
+JSON for the CLI path — the web app does not read it at runtime. A file shipping inside each
+release could only be a stale snapshot competing with the live data, and "reset to the
+committed lexicon" would have meant discarding real work.
+
+The Python CLI sends no dictionary at all — it is the one place the two generators no longer
+produce identical audio.
 
 #### Managing voices
 

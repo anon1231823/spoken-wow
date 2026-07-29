@@ -8,10 +8,8 @@ import { VOICE_CONFIG_DIR } from "@/lib/paths";
 import { FALLBACK, fromFileShape, isSeedStrategy } from "./config";
 import {
   generationPath,
-  lexiconPath,
   pronunciationPath,
   readGenerationFile,
-  readLexiconFile,
   readPronunciationFile,
 } from "./files";
 
@@ -122,44 +120,11 @@ describe("readPronunciationFile", () => {
   });
 });
 
-describe("readLexiconFile", () => {
-  it("reads the committed lexicon", () => {
-    const entries = readLexiconFile(VOICE_CONFIG_DIR);
-    expect(entries.length).toBeGreaterThan(0);
-
-    // Gnomeregan is the load-bearing case: the silent G is the single most-mangled word in
-    // the corpus, and a lexicon that has lost it has lost the point of existing.
-    const gnomeregan = entries.find((entry) => entry.grapheme === "Gnomeregan");
-    expect(gnomeregan?.ipa).toBeTruthy();
-  });
-
-  it("treats an absent file as an empty lexicon rather than an error", () => {
-    expect(readLexiconFile(scratch({}))).toEqual([]);
-  });
-
-  it("treats a file with no entries array as an empty lexicon", () => {
-    expect(readLexiconFile(scratch({ "lexicon.json": '{"entries": {}}' }))).toEqual([]);
-    expect(readLexiconFile(scratch({ "lexicon.json": "[]" }))).toEqual([]);
-  });
-
-  // One malformed entry hand-edited into the file should cost that one name, not every name.
-  it("drops an invalid entry and keeps the rest", () => {
-    const dir = scratch({
-      "lexicon.json": JSON.stringify({
-        entries: [
-          { grapheme: "Thrall", ipa: "θɹɔl", say: "thrawl", confidence: "high", category: "character" },
-          { grapheme: "Broken", ipa: "", say: "", confidence: "high", category: "place" },
-        ],
-      }),
-    });
-    expect(readLexiconFile(dir).map((entry) => entry.grapheme)).toEqual(["Thrall"]);
-  });
-});
-
 describe("paths", () => {
+  // Two, not three: the lexicon lives in the database, and voice/lexicon.json is provenance
+  // and generator input rather than something the app reads.
   it("names the files the Python side reads", () => {
     expect(generationPath("/x")).toBe(path.join("/x", "generation.json"));
     expect(pronunciationPath("/x")).toBe(path.join("/x", "pronunciation.json"));
-    expect(lexiconPath("/x")).toBe(path.join("/x", "lexicon.json"));
   });
 });

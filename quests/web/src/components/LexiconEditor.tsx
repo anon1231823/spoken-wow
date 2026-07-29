@@ -3,7 +3,6 @@
 import { RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -229,18 +228,6 @@ function Editor({
 
   const dirty = !same(draft, saved.entries);
 
-  // Keyed on the lower-cased grapheme, because that is the identity the rules themselves
-  // match on: renaming "Aku'mai" to "Aku'Mai" is not a new entry.
-  const committed = useMemo(
-    () => new Map(saved.defaults.map((entry) => [key(entry), entry] as const)),
-    [saved.defaults],
-  );
-
-  function changedFromFile(entry: LexiconEntry): boolean {
-    const original = committed.get(key(entry));
-    return !original || original.ipa !== entry.ipa || original.alias !== entry.alias;
-  }
-
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return draft
@@ -407,7 +394,6 @@ function Editor({
               key={index}
               entry={entry}
               index={index}
-              edited={changedFromFile(entry)}
               cached={cache[entry.grapheme] ?? EMPTY_CACHE}
               preview={preview}
               onOpen={() => openRow(index, entry)}
@@ -443,23 +429,14 @@ function Editor({
         >
           Discard
         </Button>
-        {saved.source === "database" && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="ml-auto"
-            disabled={busy}
-            onClick={() => void send("DELETE")}
-          >
-            Reset to committed lexicon
-          </Button>
-        )}
       </div>
 
       <p className="text-muted-foreground text-xs">
-        Saving uploads a new dictionary and every line generated afterwards uses it. Audio
-        already in the store is untouched — its version row records the dictionary it was made
-        with, so a line generated before a fix stays playable and identifiable as stale.
+        These entries live in the database and are the lexicon — <code>voice/lexicon.json</code>{" "}
+        seeded them once and is not read again. Saving uploads a new dictionary and every line
+        generated afterwards uses it. Audio already in the store is untouched: its version row
+        records the dictionary it was made with, so a line generated before a fix stays playable
+        and identifiable as stale.
       </p>
     </div>
   );
@@ -502,13 +479,24 @@ function SyncBanner({
     );
   }
 
+  if (!saved.seeded) {
+    return (
+      <Banner tone="error">
+        <span>
+          The lexicon table is empty. Migration <code>0008</code> seeds it — if you are seeing
+          this, migrations have not run against this database. Do not retype the entries;
+          run them.
+        </span>
+      </Banner>
+    );
+  }
+
   if (saved.sync === "never") {
     return (
       <Banner tone="warn">
         <span>
-          Nothing has been uploaded yet, so lines are generated with no dictionary at all.
-          These are the committed entries from <code>voice/lexicon.json</code>; save to put
-          them in force.
+          No dictionary has been uploaded yet, so lines are generated without one. Save to put
+          these {saved.entries.length} pronunciations in force.
         </span>
       </Banner>
     );
@@ -564,7 +552,6 @@ function Banner({ tone, children }: { tone: "warn" | "error"; children: React.Re
 function Row({
   entry,
   index,
-  edited,
   cached,
   preview,
   onOpen,
@@ -572,7 +559,6 @@ function Row({
 }: {
   entry: LexiconEntry;
   index: number;
-  edited: boolean;
   cached: CacheState;
   preview: ReturnType<typeof usePreview>;
   onOpen: () => void;
@@ -603,11 +589,6 @@ function Row({
         <span className="text-muted-foreground w-36 shrink-0 truncate font-mono text-xs">
           {entry.say}
         </span>
-        {edited && (
-          <Badge variant="secondary" className="shrink-0">
-            edited
-          </Badge>
-        )}
         <span className="text-muted-foreground truncate text-xs">{entry.note}</span>
       </button>
 

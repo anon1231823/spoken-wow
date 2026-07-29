@@ -12,7 +12,7 @@
  * `pending` state carry the bad news instead, and POST retries just the upload.
  */
 import { requireConfigure, requireRegenerate } from "@/lib/generation/authz";
-import { readLexicon, resetLexicon, resync, writeLexicon } from "@/lib/generation/dictionary";
+import { readLexicon, resync, writeLexicon } from "@/lib/generation/dictionary";
 import { LexiconError, validateLexicon } from "@/lib/generation/lexicon";
 
 export const dynamic = "force-dynamic";
@@ -48,12 +48,4 @@ export async function POST() {
 
   const syncError = await resync();
   return Response.json({ ...(await readLexicon()), syncError });
-}
-
-export async function DELETE() {
-  const { denied } = await requireConfigure();
-  if (denied) return denied;
-
-  await resetLexicon();
-  return Response.json({ ...(await readLexicon()), syncError: null });
 }
