@@ -2,21 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { storeIndex } from "@/lib/audio";
 import { loadCorpus } from "@/lib/corpus";
-import { DEFAULT_LIMIT, search, type Filter } from "@/lib/search";
-
-const FILTERS: Filter[] = ["any", "npc", "quest"];
+import { filtersFromParams } from "@/lib/search-request";
+import { PAGE_SIZE, search } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
 export function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
-  const filter = params.get("filter") as Filter | null;
+  const limit = Number(params.get("limit")) || PAGE_SIZE;
+  // The page number is what the URL carries, so a link stays meaningful if the page size
+  // ever changes; the offset is arithmetic and belongs on this side of it.
+  const page = Math.max(1, Math.floor(Number(params.get("page")) || 1));
 
   const result = search(loadCorpus(), storeIndex(), {
-    q: params.get("q") ?? "",
-    filter: filter && FILTERS.includes(filter) ? filter : "any",
-    missingOnly: params.get("missing") === "1",
-    limit: Number(params.get("limit")) || DEFAULT_LIMIT,
+    ...filtersFromParams(params),
+    offset: (page - 1) * limit,
+    limit,
   });
 
   return NextResponse.json(result);

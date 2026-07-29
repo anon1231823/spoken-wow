@@ -9,17 +9,18 @@
 import fs from "node:fs";
 import zlib from "node:zlib";
 
+import type { NpcType, Source } from "./line-fields";
 import { CORPUS_PATH } from "./paths";
 
 /** Mirrors the line schema built in tts_cli/corpus.py:build_corpus. */
 export type CorpusLine = {
   lineId: string;
-  source: "accept" | "progress" | "complete" | "gossip";
+  source: Source;
   questId: number | null;
   questTitle: string | null;
   npcId: number;
   npcName: string;
-  npcType: "creature" | "gameobject" | "item";
+  npcType: NpcType;
   race: string;
   gender: string;
   voice: string;
