@@ -113,7 +113,7 @@ export default function Player({
 
   return (
     <div className="bg-card/95 fixed inset-x-0 bottom-0 border-t backdrop-blur">
-      <div className="mx-auto flex max-w-4xl items-center gap-4 px-5 py-3">
+      <div className="mx-auto flex max-w-6xl items-center gap-4 px-5 py-3">
         <Button
           size="icon"
           variant="secondary"

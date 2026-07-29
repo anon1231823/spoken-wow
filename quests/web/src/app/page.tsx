@@ -8,7 +8,7 @@ export default function Page() {
   // committed and does not change while the server runs, so a round trip for them would buy
   // nothing but an empty dropdown on first paint.
   return (
-    <main className="mx-auto max-w-4xl px-5 pt-6 pb-36">
+    <main className="mx-auto max-w-6xl px-5 pt-6 pb-36">
       <h1 className="text-xl font-semibold">VoiceOver Explorer</h1>
       <p className="text-muted-foreground mt-1 mb-5 text-sm">
         Browse and play every voiceline, or search by NPC, quest, or what the line says.
