@@ -145,7 +145,10 @@ jobs:
             curl -fsS -o /dev/null "http://127.0.0.1:3999/api/search?q=thrall" && break
             sleep 1
           done
-          curl -fsS "http://127.0.0.1:3999/api/search?q=thrall" | grep -q '"npcName":"Thrall"'
+          # Scoped to the NPC on purpose. Results are one flat page of fifty in alphabetical
+          # order, and an unscoped "thrall" also matches every line that merely mentions him,
+          # which is enough to push Thrall's own lines off page one.
+          curl -fsS "http://127.0.0.1:3999/api/search?q=thrall&filter=npc" | grep -q '"npcName":"Thrall"'
 
           # Auth has to survive the standalone bundle too: pg and better-auth are traced
           # into it, and the schema has to be the one migrate.sh just applied. A registered

@@ -3,21 +3,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import NpcResult from "./NpcResult";
+import LineRow from "./LineRow";
+import Pagination from "./Pagination";
 import Player from "./Player";
 import RegenerateDialog from "./RegenerateDialog";
 import RegenerationPanel from "./RegenerationPanel";
 import SearchBar from "./SearchBar";
+import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
+import type { Facets } from "@/lib/facets";
 import {
+  fetchBatchJobs,
   fetchGenerationStatus,
   fetchTakeCounts,
   regenerate,
+  type BatchJob,
   type GenerationStatusResponse,
 } from "@/lib/generation/client";
 import { estimate as estimateBatch, LIST_RATE, type Estimate } from "@/lib/generation/billing";
 import { canRegenerate } from "@/lib/permissions";
-import type { Filter, ResultLine, SearchResult } from "@/lib/search";
+import type { Filter, LineFilters, ResultLine, SearchResult } from "@/lib/search";
 import { type Pending, receive, target, write } from "@/lib/url-echo";
 
 /** What a line's Regenerate button is doing, keyed by lineId. */
@@ -29,7 +34,7 @@ export type LineState =
 export type Batch = {
   label: string;
   /** Deduplicated by file: each mp3 is generated once however many lines point at it. */
-  jobs: ResultLine[];
+  jobs: BatchJob[];
   done: string[];
   failures: { lineId: string; message: string }[];
   /** Summed from what ElevenLabs charged, not from the estimate. */
@@ -46,22 +51,6 @@ export type Batch = {
 /** How long to wait before the one retry a rate-limited line gets. */
 const RATE_LIMIT_BACKOFF_MS = 3000;
 
-/**
- * The lines a batch would actually generate.
- *
- * Deduplicated by audio file, because 1,076 files in the corpus are spoken by more than one
- * NPC and generating a shared file twice would pay for it twice and leave the second take
- * live. Lines the generator never voices are dropped here rather than failed one by one.
- */
-export function batchJobs(lines: ResultLine[]): ResultLine[] {
-  const byFile = new Map<string, ResultLine>();
-  for (const line of lines) {
-    if (!line.generatable) continue;
-    if (!byFile.has(line.audioPath)) byFile.set(line.audioPath, line);
-  }
-  return [...byFile.values()];
-}
-
 const DEBOUNCE_MS = 200;
 
 function plural(count: number, noun: string): string {
@@ -76,20 +65,49 @@ function Key({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function Explorer() {
+/** Everything that narrows the corpus, as the query string the two search endpoints read. */
+function filterParams(filters: LineFilters): URLSearchParams {
+  const params = new URLSearchParams();
+  if (filters.q) params.set("q", filters.q);
+  if (filters.filter && filters.filter !== "any") params.set("filter", filters.filter);
+  if (filters.missingOnly) params.set("missing", "1");
+  if (filters.race) params.set("race", filters.race);
+  if (filters.gender) params.set("gender", filters.gender);
+  if (filters.voice) params.set("voice", filters.voice);
+  if (filters.source) params.set("source", filters.source);
+  if (filters.npcType) params.set("type", filters.npcType);
+  return params;
+}
+
+export default function Explorer({ facets }: { facets: Facets }) {
   const router = useRouter();
   const params = useSearchParams();
   const { data: session } = useSession();
 
-  // Read once here and drilled down, rather than a hook per row: a broad search renders
-  // thousands of LineRows.
+  // Read once here and drilled down, rather than a hook per row: a page renders fifty
+  // LineRows and the answer is the same for all of them.
   const showRegenerate = canRegenerate(session?.user.role);
 
   // The URL is the source of truth for a search, so a result is linkable and survives a
   // reload; `query` is the uncommitted keystroke state in front of it.
   const urlQuery = params.get("q") ?? "";
-  const filter = (params.get("filter") as Filter) ?? "any";
-  const missingOnly = params.get("missing") === "1";
+  const page = Math.max(1, Number(params.get("page")) || 1);
+
+  // Everything but the free-text query, which the input runs ahead of. Rebuilt from the URL
+  // rather than held in state, so the back button is a working undo for a filter too.
+  const filters = useMemo<LineFilters>(
+    () => ({
+      q: urlQuery,
+      filter: (params.get("filter") as Filter) ?? "any",
+      missingOnly: params.get("missing") === "1",
+      race: params.get("race") ?? undefined,
+      gender: params.get("gender") ?? undefined,
+      voice: params.get("voice") ?? undefined,
+      source: (params.get("source") as LineFilters["source"]) ?? undefined,
+      npcType: (params.get("type") as LineFilters["npcType"]) ?? undefined,
+    }),
+    [params, urlQuery],
+  );
 
   const [query, setQuery] = useState(urlQuery);
   const [result, setResult] = useState<SearchResult | null>(null);
@@ -107,7 +125,7 @@ export default function Explorer() {
   const [batch, setBatch] = useState<Batch | null>(null);
   const [pendingBatch, setPendingBatch] = useState<{
     label: string;
-    jobs: ResultLine[];
+    jobs: BatchJob[];
     estimate: Estimate;
   } | null>(null);
   // Read inside the loop rather than through state, which the running loop would not see.
@@ -126,19 +144,44 @@ export default function Explorer() {
     if (step.adopt) setQuery(urlQuery);
   }, [urlQuery]);
 
+  /**
+   * Write to the URL.
+   *
+   * Anything that changes what matches sends the reader back to page one, because page 9 of
+   * a different result set is not where they were - and often does not exist. Only the pager
+   * itself passes `page`.
+   */
   const updateUrl = useCallback(
-    (next: { q?: string; filter?: Filter; missing?: boolean }) => {
+    (next: { page?: number } & Record<string, string | number | undefined>) => {
       const search = new URLSearchParams(params.toString());
-      const set = (key: string, value: string, fallback: string) =>
-        value === fallback ? search.delete(key) : search.set(key, value);
 
-      if (next.q !== undefined) set("q", next.q, "");
-      if (next.filter !== undefined) set("filter", next.filter, "any");
-      if (next.missing !== undefined) set("missing", next.missing ? "1" : "", "");
+      for (const [key, value] of Object.entries(next)) {
+        if (key === "page") continue;
+        if (value) search.set(key, String(value));
+        else search.delete(key);
+      }
+
+      if (next.page !== undefined && next.page > 1) search.set("page", String(next.page));
+      else search.delete("page");
 
       router.replace(search.toString() ? `/?${search}` : "/", { scroll: false });
     },
     [params, router],
+  );
+
+  const updateFilters = useCallback(
+    (next: Partial<LineFilters>) => {
+      updateUrl({
+        ...("filter" in next ? { filter: next.filter === "any" ? undefined : next.filter } : {}),
+        ...("missingOnly" in next ? { missing: next.missingOnly ? "1" : undefined } : {}),
+        ...("race" in next ? { race: next.race } : {}),
+        ...("gender" in next ? { gender: next.gender } : {}),
+        ...("voice" in next ? { voice: next.voice } : {}),
+        ...("source" in next ? { source: next.source } : {}),
+        ...("npcType" in next ? { type: next.npcType } : {}),
+      });
+    },
+    [updateUrl],
   );
 
   // Held in a ref so the debounce below restarts on keystrokes only. `updateUrl` changes
@@ -158,17 +201,14 @@ export default function Explorer() {
     return () => clearTimeout(timer);
   }, [query, urlQuery]);
 
-  // An empty query with no gap filter would ask for all 2,619 NPCs; show nothing instead.
-  const idle = !urlQuery && !missingOnly;
+  // A stable string, so the search effect below re-runs when the filters change rather than
+  // on every render that rebuilds the object.
+  const filterQuery = useMemo(() => filterParams(filters).toString(), [filters]);
 
   useEffect(() => {
-    if (idle) {
-      setResult(null);
-      return;
-    }
     const controller = new AbortController();
-    const search = new URLSearchParams({ q: urlQuery, filter });
-    if (missingOnly) search.set("missing", "1");
+    const search = new URLSearchParams(filterQuery);
+    if (page > 1) search.set("page", String(page));
 
     setLoading(true);
     fetch(`/api/search?${search}`, { signal: controller.signal })
@@ -182,7 +222,7 @@ export default function Explorer() {
       });
 
     return () => controller.abort();
-  }, [urlQuery, filter, missingOnly, idle]);
+  }, [filterQuery, page]);
 
   useEffect(() => {
     if (!showRegenerate) return;
@@ -191,15 +231,10 @@ export default function Explorer() {
     return () => controller.abort();
   }, [showRegenerate]);
 
-  // One request per result set rather than one per row: a broad search renders thousands of
-  // lines, and the answer for most of them is zero.
+  // One request per page rather than one per row, and only for someone who can act on it.
   useEffect(() => {
     if (!showRegenerate || !result) return;
-    const files = [
-      ...new Set(
-        result.npcs.flatMap((npc) => npc.quests.flatMap((quest) => quest.lines)).map((l) => l.audioPath),
-      ),
-    ];
+    const files = [...new Set(result.lines.map((line) => line.audioPath))];
     if (files.length === 0) return;
 
     const controller = new AbortController();
@@ -256,18 +291,9 @@ export default function Explorer() {
       current
         ? {
             ...current,
-            npcs: current.npcs.map((npc) => ({
-              ...npc,
-              audioCount: npc.quests
-                .flatMap((quest) => quest.lines)
-                .filter((l) => l.hasAudio || l.audioPath === file).length,
-              quests: npc.quests.map((quest) => ({
-                ...quest,
-                lines: quest.lines.map((l) =>
-                  l.audioPath === file ? { ...l, hasAudio: true } : l,
-                ),
-              })),
-            })),
+            lines: current.lines.map((line) =>
+              line.audioPath === file ? { ...line, hasAudio: true } : line,
+            ),
           }
         : current,
     );
@@ -298,37 +324,30 @@ export default function Explorer() {
   }, [applySuccess]);
 
   /**
-   * Ask to regenerate a set of lines.
+   * Ask to regenerate everything the current search matches.
    *
-   * A single line goes straight through: one click, cheap, and reversible from its history.
-   * Anything larger stops for confirmation, because a quest or an NPC can be a hundred lines
-   * and this is the only guard between one click and a large share of a month's budget.
+   * The whole match set, not the page on screen - which is why the jobs are fetched rather
+   * than taken from `result`. It always stops for confirmation: this is the only guard
+   * between one click and a large share of a month's budget, and the set behind it can be
+   * the entire corpus.
    */
-  const requestBatch = useCallback(
-    (label: string, lines: ResultLine[]) => {
-      const jobs = batchJobs(lines);
-      if (jobs.length === 0) return;
+  const requestBatch = useCallback(async () => {
+    const jobs = await fetchBatchJobs(new URLSearchParams(filterQuery));
+    if (!jobs || jobs.length === 0) return;
 
-      if (jobs.length === 1) {
-        void regenerateLine(jobs[0]);
-        return;
-      }
-
-      // The same arithmetic the server would do, from the rate it reported. Falls back to
-      // the list rate, which overstates - the right direction for a number meant to give
-      // someone pause.
-      const rate = status?.rate ?? { rate: LIST_RATE, samples: 0, modelId: null };
-      setPendingBatch({
-        label,
-        jobs,
-        estimate: estimateBatch(
-          jobs.map((line) => ({ file: line.audioPath, characters: line.text.length })),
-          rate,
-        ),
-      });
-    },
-    [regenerateLine, status],
-  );
+    // The same arithmetic the server would do, from the rate it reported. Falls back to
+    // the list rate, which overstates - the right direction for a number meant to give
+    // someone pause.
+    const rate = status?.rate ?? { rate: LIST_RATE, samples: 0, modelId: null };
+    setPendingBatch({
+      label: `every line this search matches`,
+      jobs,
+      estimate: estimateBatch(
+        jobs.map((job) => ({ file: job.audioPath, characters: job.characters })),
+        rate,
+      ),
+    });
+  }, [filterQuery, status]);
 
   /**
    * Run a confirmed batch, one line per request.
@@ -356,31 +375,31 @@ export default function Explorer() {
       stoppedBecause: null,
     });
 
-    for (const line of request.jobs) {
+    for (const job of request.jobs) {
       if (stopRequested.current) {
         setBatch((b) => (b ? { ...b, stopped: true, finished: true, current: null } : b));
         return;
       }
 
-      setBatch((b) => (b ? { ...b, current: `${line.npcName} — ${line.text.slice(0, 80)}` } : b));
-      setLineStates((current) => ({ ...current, [line.lineId]: { phase: "busy" } }));
+      setBatch((b) => (b ? { ...b, current: `${job.npcName} — ${job.preview}` } : b));
+      setLineStates((current) => ({ ...current, [job.lineId]: { phase: "busy" } }));
 
-      let response = await regenerate(line.lineId);
+      let response = await regenerate(job.lineId);
 
       // One retry, and only for rate limiting: it is the single failure that says nothing
       // about the request and everything about how fast we asked.
       if (!response.ok && response.kind === "rate-limit" && !stopRequested.current) {
         await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_BACKOFF_MS));
-        response = await regenerate(line.lineId);
+        response = await regenerate(job.lineId);
       }
 
       if (response.ok) {
-        applySuccess(response.file, response.version, line.lineId);
+        applySuccess(response.file, response.version, job.lineId);
         setBatch((b) =>
           b
             ? {
                 ...b,
-                done: [...b.done, line.lineId],
+                done: [...b.done, job.lineId],
                 credits: b.credits + (response.credits ?? 0),
                 unpriced: b.unpriced + (response.credits === null ? 1 : 0),
               }
@@ -391,13 +410,13 @@ export default function Explorer() {
 
       setLineStates((current) => ({
         ...current,
-        [line.lineId]: { phase: "error", message: response.message },
+        [job.lineId]: { phase: "error", message: response.message },
       }));
       setBatch((b) =>
         b
           ? {
               ...b,
-              failures: [...b.failures, { lineId: line.lineId, message: response.message }],
+              failures: [...b.failures, { lineId: job.lineId, message: response.message }],
             }
           : b,
       );
@@ -429,19 +448,44 @@ export default function Explorer() {
     queueMicrotask(() => void audio.current?.play().catch(() => {}));
   }, []);
 
-  // A flat, in-display-order list of what can actually be played, for j/k.
+  /**
+   * Narrow to one NPC.
+   *
+   * The entity type goes with the id because the two id spaces overlap - creature 68 is a
+   * Stormwind City Guard, gameobject 68 is a Wanted Poster - so the id alone would pull in a
+   * stranger.
+   */
+  const narrowToNpc = useCallback(
+    (line: ResultLine) => {
+      setQuery(String(line.npcId));
+      pending.current = write(pending.current, String(line.npcId));
+      updateUrl({ q: String(line.npcId), filter: "npc", type: line.npcType });
+    },
+    [updateUrl],
+  );
+
+  const narrowToQuest = useCallback(
+    (line: ResultLine) => {
+      if (line.questId === null) return;
+      const q = String(line.questId);
+      setQuery(q);
+      pending.current = write(pending.current, q);
+      updateUrl({ q, filter: "quest", type: undefined });
+    },
+    [updateUrl],
+  );
+
+  // A flat, in-display-order list of what can actually be played, for j/k. This page only:
+  // paging is a deliberate act, not something arrow keys should do behind your back.
   const playable = useMemo(
-    () =>
-      (result?.npcs ?? []).flatMap((npc) =>
-        npc.quests.flatMap((quest) => quest.lines.filter((line) => line.hasAudio)),
-      ),
+    () => (result?.lines ?? []).filter((line) => line.hasAudio),
     [result],
   );
 
   const step = useCallback(
     (delta: number) => {
       if (!playable.length) return;
-      const at = current ? playable.findIndex((l) => l.lineId === current.lineId) : -1;
+      const at = current ? playable.findIndex((l) => l.key === current.key) : -1;
       const next = playable[Math.min(Math.max(at + delta, 0), playable.length - 1)];
       if (next) play(next);
     },
@@ -488,56 +532,79 @@ export default function Explorer() {
   useEffect(() => {
     if (!current) return;
     document
-      .querySelector(`[data-line-id="${CSS.escape(current.lineId)}"]`)
+      .querySelector(`[data-line-key="${CSS.escape(current.key)}"]`)
       ?.scrollIntoView({ block: "nearest" });
   }, [current]);
+
+  const pageCount = result ? Math.max(1, Math.ceil(result.total / result.limit)) : 1;
 
   return (
     <>
       <SearchBar
         ref={searchInput}
         query={query}
-        filter={filter}
-        missingOnly={missingOnly}
+        filters={filters}
+        facets={facets}
         onQuery={setQuery}
-        onFilter={(value) => updateUrl({ filter: value })}
-        onMissingOnly={(value) => updateUrl({ missing: value })}
+        onFilters={updateFilters}
       />
 
-      <div className="text-muted-foreground pt-3 pb-1 text-sm">
-        {idle
-          ? "Type an NPC name or id, or a quest title or id."
-          : loading && !result
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 pb-1">
+        <div className="text-muted-foreground text-sm">
+          {loading && !result
             ? "Searching…"
             : result
-              ? `${plural(result.lineCount, "line")} across ${plural(result.npcCount, "NPC")}` +
-                (result.truncated ? `, showing the first ${result.npcs.length}` : "")
+              ? `${plural(result.total, "line")} across ${plural(result.npcCount, "NPC")}`
               : ""}
+        </div>
+        {showRegenerate && result && result.total > 0 && (
+          <Button
+            size="xs"
+            variant="secondary"
+            className="ml-auto"
+            onClick={() => void requestBatch()}
+          >
+            Regenerate all {result.total.toLocaleString()}
+          </Button>
+        )}
       </div>
 
-      {result?.npcs.map((npc) => (
-        <NpcResult
-          key={npc.key}
-          npc={npc}
-          currentLineId={current?.lineId ?? null}
+      <Pagination
+        page={page}
+        pageCount={pageCount}
+        onPage={(next) => updateUrl({ page: next })}
+      />
+
+      {result?.lines.map((line) => (
+        <LineRow
+          key={line.key}
+          line={line}
+          current={line.key === current?.key}
           canRegenerate={showRegenerate}
-          lineStates={lineStates}
-          blockedReason={blockedReason}
+          state={lineStates[line.lineId]}
+          blocked={blockedReason(line)}
+          takes={takes[line.audioPath] ?? 0}
           onPlay={play}
           onRegenerate={regenerateLine}
-          onRegenerateBatch={requestBatch}
-          takes={takes}
           onRestored={handleRestored}
+          onNarrowToNpc={narrowToNpc}
+          onNarrowToQuest={narrowToQuest}
         />
       ))}
 
-      {result && result.npcs.length === 0 && (
+      {result && result.lines.length === 0 && (
         <div className="text-muted-foreground py-2 text-sm">No matches.</div>
       )}
 
+      <Pagination
+        page={page}
+        pageCount={pageCount}
+        onPage={(next) => updateUrl({ page: next })}
+      />
+
       <p className="text-muted-foreground mt-6 flex flex-wrap items-center gap-1.5 text-xs">
         <Key>/</Key> search · <Key>space</Key> play/pause · <Key>j</Key> <Key>k</Key> next
-        and previous line
+        and previous line on this page
       </p>
 
       <RegenerateDialog

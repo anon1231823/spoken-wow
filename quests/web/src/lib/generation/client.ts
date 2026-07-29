@@ -103,6 +103,35 @@ export async function fetchTakeCounts(
   }
 }
 
+/** One unit of work in a batch. Mirrors BatchLine in lib/search.ts; see the note above. */
+export type BatchJob = {
+  lineId: string;
+  audioPath: string;
+  npcName: string;
+  voice: string;
+  characters: number;
+  preview: string;
+};
+
+/**
+ * Every job a set of filters would regenerate.
+ *
+ * The whole match set, not the page on screen: the confirmation dialog exists to say what
+ * "regenerate all of this" costs, and a figure for the visible fifty would be a lie.
+ */
+export async function fetchBatchJobs(
+  params: URLSearchParams,
+  signal?: AbortSignal,
+): Promise<BatchJob[] | null> {
+  try {
+    const response = await fetch(`/api/search/lines?${params}`, { signal });
+    if (!response.ok) return null;
+    return ((await response.json()) as { jobs: BatchJob[] }).jobs;
+  } catch {
+    return null;
+  }
+}
+
 export async function regenerate(
   lineId: string,
   signal?: AbortSignal,
