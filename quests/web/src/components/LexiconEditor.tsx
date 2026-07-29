@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,18 @@ const MODE_LABELS: Record<PreviewMode, string> = {
 };
 
 const EMPTY_CACHE: CacheState = { word: false, sentence: false };
+
+/**
+ * Where this name is spoken, in the explorer.
+ *
+ * `filter=text` is the explorer's "Line text only", which is the question being asked here:
+ * not which NPC is called Gnomeregan, but which lines say it. The URL is the explorer's own
+ * source of truth for a search, so this is a working deep link rather than a page that
+ * arrives blank and has to be retyped into.
+ */
+function explorerHref(grapheme: string): string {
+  return `/?${new URLSearchParams({ q: grapheme, filter: "text" })}`;
+}
 
 // Starts as a respelling, not IPA. Anyone who can write IPA can switch in one click, and
 // everyone else would otherwise meet an empty box they have no way to fill.
@@ -371,7 +383,7 @@ function Editor({
             <span className="w-36 shrink-0">Say it</span>
             <span className="truncate">Note</span>
           </span>
-          <span className="shrink-0">Hear · re-roll</span>
+          <span className="shrink-0">Find · hear · re-roll</span>
         </div>
 
         {shown.length === 0 && (
@@ -591,6 +603,42 @@ function Row({
       </button>
 
       <div className="flex shrink-0 items-center gap-0.5">
+        {/* A new tab, deliberately. The editor holds an unsaved draft - navigating away in
+            this one would discard every edit made since the last save, which is a steep
+            price for looking something up.
+
+            Split rather than one Button with `disabled`, because `disabled` on a Button
+            rendering `asChild` styles an anchor without disabling it: the link would still
+            be clickable, and would open the explorer searching for nothing. */}
+        {entry.grapheme.trim() ? (
+          <Button
+            asChild
+            size="icon"
+            variant="ghost"
+            className="text-muted-foreground size-6"
+            title={`Find lines that say ${entry.grapheme}`}
+          >
+            <a
+              href={explorerHref(entry.grapheme)}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Find lines that say ${entry.grapheme}`}
+            >
+              <Search className="size-3" aria-hidden />
+            </a>
+          </Button>
+        ) : (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-muted-foreground/30 size-6"
+            disabled
+            title="Name this entry first"
+          >
+            <Search className="size-3" aria-hidden />
+          </Button>
+        )}
+
         {PREVIEW_MODES.map((mode) => {
           // Only the pressed button waits. Disabling the whole table while one render is in
           // flight punishes everyone for a request that concerns one row.
