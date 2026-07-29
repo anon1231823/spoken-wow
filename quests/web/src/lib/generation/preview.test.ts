@@ -7,9 +7,11 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import type { CorpusLine } from "@/lib/corpus";
 import {
   carrier,
+  previewCache,
   previewKey,
   renderPreview,
   sampleSentence,
+  sampleSentences,
   speakable,
   voicePicker,
   MAX_PREVIEW_CHARS,
@@ -106,6 +108,47 @@ describe("sampleSentence", () => {
     expect(text).toContain("Xyzzy");
     // A bare name gets list intonation and a final fall, which is not how it will be said.
     expect(text.split(" ").length).toBeGreaterThan(3);
+  });
+});
+
+describe("sampleSentences", () => {
+  // The batch exists so the page can resolve all 134 at once; it must agree with the single
+  // form, or a button would report a cache state for a sentence the preview never uses.
+  it("agrees with sampleSentence, entry by entry", () => {
+    const lines = [line("Gnomeregan is lost."), line("The Tauren wait.")];
+    const batch = sampleSentences(["Gnomeregan", "tauren"], lines);
+
+    expect(batch.get("Gnomeregan")).toEqual(sampleSentence("Gnomeregan", lines));
+    expect(batch.get("tauren")).toEqual(sampleSentence("tauren", lines));
+  });
+
+  it("returns an entry for every name asked for, matched or not", () => {
+    const batch = sampleSentences(["Gnomeregan", "Xyzzy"], [line("Gnomeregan is lost.")]);
+    expect([...batch.keys()]).toEqual(["Gnomeregan", "Xyzzy"]);
+    expect(batch.get("Xyzzy")?.line).toBeNull();
+  });
+
+  // The lower-cased `includes` before the regex is what makes one pass cheap. It must not
+  // also make it wrong: a substring hit that fails the word boundary is still no match.
+  it("does not let the prefilter smuggle in a substring match", () => {
+    expect(sampleSentences(["Caer"], [line("The Caern is near.")]).get("Caer")?.line).toBeNull();
+  });
+
+  /**
+   * The memo is keyed on the identity of the corpus it was built from. Without that, a name
+   * looked up against one set of lines would keep answering for every later set - a wrong
+   * answer rather than a stale one.
+   */
+  it("does not answer for one corpus from another", () => {
+    expect(sampleSentences(["Gnomeregan"], [line("Gnomeregan is lost.")]).get("Gnomeregan")?.text)
+      .toBe("Gnomeregan is lost.");
+    expect(sampleSentences(["Gnomeregan"], [line("Gnomeregan has fallen.")]).get("Gnomeregan")?.text)
+      .toBe("Gnomeregan has fallen.");
+  });
+
+  it("remembers within one corpus", () => {
+    const lines = [line("Gnomeregan is lost.")];
+    expect(sampleSentences(["Gnomeregan"], lines)).toEqual(sampleSentences(["Gnomeregan"], lines));
   });
 });
 
@@ -321,6 +364,65 @@ describe("renderPreview", () => {
       expect(again.calls).not.toHaveBeenCalled();
       expect(result.ok && result.preview.cached).toBe(true);
       expect(result.ok && result.preview.mode).toBe("word");
+    });
+  });
+
+  describe("re-rolling", () => {
+    it("ignores the cached take and pays again when forced", async () => {
+      const dir = scratch();
+      await renderPreview(IPA, "word", pick, CONFIG, elevenlabs().options, dir);
+
+      const forced = elevenlabs();
+      const result = await renderPreview(IPA, "word", pick, CONFIG, forced.options, dir, true);
+
+      expect(forced.calls).toHaveBeenCalledTimes(1);
+      expect(result.ok && result.preview.cached).toBe(false);
+    });
+
+    // The re-roll replaces the take rather than adding one, or the cache would grow a file
+    // per attempt and the next unforced play would still get the first.
+    it("overwrites the cached take rather than adding another", async () => {
+      const dir = scratch();
+      await renderPreview(IPA, "word", pick, CONFIG, elevenlabs().options, dir);
+      await renderPreview(IPA, "word", pick, CONFIG, elevenlabs().options, dir, true);
+
+      expect(fs.readdirSync(dir)).toHaveLength(1);
+    });
+  });
+
+  describe("previewCache", () => {
+    const config = CONFIG;
+    const voices = new Map([["human-male-standard", "v-human"]]);
+
+    it("reports nothing cached before anything is rendered", () => {
+      expect(previewCache([IPA], voicePicker(voices), config, scratch())).toEqual({
+        Gnomeregan: { word: false, sentence: false },
+      });
+    });
+
+    /**
+     * The state each button reads to decide whether pressing it costs money. It has to agree
+     * with what renderPreview actually writes, per mode - a button claiming a take exists
+     * when it does not is a button that quietly spends credits.
+     */
+    it("sees a rendered take, and only in the mode it was rendered in", async () => {
+      const dir = scratch();
+      await renderPreview(IPA, "word", () => "v-human", config, elevenlabs().options, dir);
+
+      expect(previewCache([IPA], voicePicker(voices), config, dir)).toEqual({
+        Gnomeregan: { word: true, sentence: false },
+      });
+    });
+
+    it("skips an entry with no pronunciation yet", () => {
+      const blank = { ...IPA, grapheme: "", ipa: undefined, alias: undefined };
+      expect(previewCache([blank], voicePicker(voices), config, scratch())).toEqual({});
+    });
+
+    it("reports nothing cached when the account has no voice", () => {
+      expect(previewCache([IPA], voicePicker(new Map()), config, scratch())).toEqual({
+        Gnomeregan: { word: false, sentence: false },
+      });
     });
   });
 

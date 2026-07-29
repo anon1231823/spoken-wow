@@ -195,6 +195,12 @@ in the text, so nothing has to be uploaded first. Both modes are cached on disk 
 `audio-previews/`, keyed on the spoken text, voice, model and settings — so they cache
 separately from each other, and re-hearing either costs nothing.
 
+Each button says up front whether pressing it will spend credits: the refresh icon beside it
+is lit only when a take is already on disk, and clicking it discards that take and pays for a
+fresh one. What a render cost is reported by a toast rather than in the row, so the list never
+shifts under the button you were reaching for; a preview served from cache says nothing and
+simply plays.
+
 **The checkbox on each row is the entry's confidence.** Ticked means the pronunciation has
 been confirmed; unticked means it still needs an ear. It is in the table rather than behind
 the edit form so a pass down the list — hear it, tick it — does not mean opening 134 rows,

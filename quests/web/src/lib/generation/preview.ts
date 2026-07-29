@@ -58,32 +58,112 @@ function sentences(text: string): string[] {
 }
 
 /**
- * The shortest real sentence in the corpus that uses this name, or a carrier if none does.
+ * Case-insensitive and word-bounded, matching how the rule itself will match.
+ *
+ * Escaped, because a grapheme is user input: "C'Thun" contains no metacharacters but the
+ * next name someone adds might.
+ */
+export function bounded(grapheme: string): RegExp {
+  const escaped = grapheme.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\w'])${escaped}(?![\\w])`, "i");
+}
+
+export type Sample = { text: string; line: CorpusLine | null };
+
+/**
+ * The shortest real sentence in the corpus that uses each name, or a carrier if none does.
  *
  * A real line beats an invented one: it is the actual context, the actual register, and
  * hearing the name where it will really appear is the whole question. Shortest, because
  * every character is billed and a longer sentence tells you nothing more about one word.
+ *
+ * Batched over the whole lexicon rather than called per name, because the page needs all of
+ * them at once to know which previews are already cached, and 134 separate passes over
+ * 17,507 lines is 134 times the work of one. The lower-cased `includes` before the regex is
+ * what makes even that one pass cheap: almost every line contains none of these names, and
+ * a substring test rejects it far faster than a lookbehind does.
+ *
+ * Measured at 229ms for the committed lexicon against the real corpus, which is why the
+ * results are memoised - see sampleSentences, which is this with the answers remembered.
  */
-export function sampleSentence(grapheme: string, lines: CorpusLine[]): {
-  text: string;
-  line: CorpusLine | null;
-} {
-  // Case-insensitive and word-bounded, matching how the rule itself will match. Escaped,
-  // because a grapheme is user input and "C'Thun" contains no metacharacters but the next
-  // one added might.
-  const escaped = grapheme.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(`(?<![\\w'])${escaped}(?![\\w])`, "i");
+export function scanSentences(graphemes: string[], lines: CorpusLine[]): Map<string, Sample> {
+  const needles = graphemes.map((grapheme) => ({
+    grapheme,
+    lower: grapheme.toLowerCase(),
+    pattern: bounded(grapheme),
+  }));
 
-  let best: { text: string; line: CorpusLine } | null = null;
+  const best = new Map<string, { text: string; line: CorpusLine }>();
+
   for (const line of lines) {
-    if (!line.generatable || !pattern.test(line.text)) continue;
-    for (const sentence of sentences(line.text)) {
-      if (sentence.length > MAX_PREVIEW_CHARS || !pattern.test(sentence)) continue;
-      if (!best || sentence.length < best.text.length) best = { text: sentence, line };
+    if (!line.generatable) continue;
+    const lower = line.text.toLowerCase();
+
+    let split: string[] | null = null;
+    for (const needle of needles) {
+      if (!lower.includes(needle.lower)) continue;
+      // Split lazily and once: most lines that survive the prefilter match one name, and
+      // splitting a line nothing matched would be the whole saving thrown away.
+      split ??= sentences(line.text);
+
+      for (const sentence of split) {
+        if (sentence.length > MAX_PREVIEW_CHARS || !needle.pattern.test(sentence)) continue;
+        const current = best.get(needle.grapheme);
+        if (!current || sentence.length < current.text.length) {
+          best.set(needle.grapheme, { text: sentence, line });
+        }
+      }
     }
   }
 
-  return best ?? { text: carrier(grapheme), line: null };
+  return new Map(
+    graphemes.map((grapheme) => [
+      grapheme,
+      best.get(grapheme) ?? { text: carrier(grapheme), line: null },
+    ]),
+  );
+}
+
+const samplesKey = Symbol.for("wow-voiceover.preview-samples");
+type Memo = { lines: CorpusLine[]; samples: Map<string, Sample> };
+type SampleHolder = { [samplesKey]?: Memo };
+
+/**
+ * Sample sentences, scanning only for the names not already known.
+ *
+ * Memoised on globalThis for the reason lineIndex is: the corpus ships inside the release
+ * and cannot change under a running server, so an answer is good until the process is
+ * replaced. Every view of the editor would otherwise repeat a 229ms scan for a set of names
+ * that moves by one entry a week.
+ *
+ * Only the misses are scanned for, so adding a name costs a pass with one needle rather than
+ * a pass with 135.
+ *
+ * Tied to the identity of the lines it was built from, and discarded when they differ. In
+ * production that array is loadCorpus()'s own memo and never changes, so the check always
+ * passes; in a test it changes every case, and a sample remembered from a different corpus
+ * would be a wrong answer rather than a stale one.
+ */
+export function sampleSentences(graphemes: string[], lines: CorpusLine[]): Map<string, Sample> {
+  const holder = globalThis as SampleHolder;
+  let memo = holder[samplesKey];
+  if (!memo || memo.lines !== lines) {
+    memo = holder[samplesKey] = { lines, samples: new Map() };
+  }
+
+  const missing = graphemes.filter((grapheme) => !memo!.samples.has(grapheme));
+  if (missing.length > 0) {
+    for (const [grapheme, sample] of scanSentences(missing, lines)) {
+      memo.samples.set(grapheme, sample);
+    }
+  }
+
+  return new Map(graphemes.map((grapheme) => [grapheme, memo!.samples.get(grapheme)!]));
+}
+
+/** One name's sample. See sampleSentences, which is the same thing for a whole lexicon. */
+export function sampleSentence(grapheme: string, lines: CorpusLine[]): Sample {
+  return sampleSentences([grapheme], lines).get(grapheme)!;
 }
 
 /**
@@ -174,6 +254,8 @@ export async function renderPreview(
   config: GenerationConfig,
   options: ElevenLabsOptions = {},
   dir: string = PREVIEW_DIR,
+  /** Re-roll: ignore any cached take and pay for a fresh one. */
+  force = false,
 ): Promise<PreviewResult> {
   // Refused rather than rendered. An inline phoneme tag is honoured by exactly the models a
   // dictionary phoneme rule is, so on any other model this would come back sounding like the
@@ -186,7 +268,7 @@ export async function renderPreview(
 
   // The corpus scan is skipped entirely in word mode. It is a match against 17,507 lines,
   // and in word mode there is nothing to find: the text is the name.
-  const { text: sentence, line } =
+  const { text: sentence, line }: Sample =
     mode === "word"
       ? { text: entry.grapheme, line: null }
       : sampleSentence(entry.grapheme, loadCorpus().lines);
@@ -200,7 +282,7 @@ export async function renderPreview(
   const key = previewKey({ text: spoken, voiceId, config });
   const file = previewPath(key, dir);
 
-  if (fs.existsSync(file)) {
+  if (!force && fs.existsSync(file)) {
     return {
       ok: true,
       preview: {
@@ -250,6 +332,50 @@ export async function renderPreview(
       credits: speech.credits,
     },
   };
+}
+
+export type CacheState = Record<PreviewMode, boolean>;
+
+/**
+ * Which previews already exist on disk, for the whole lexicon at once.
+ *
+ * The page needs this before anything is clicked: a button that cannot say whether it will
+ * cost money is a button nobody wants to press. Keyed by grapheme, matching what the editor
+ * has in hand.
+ *
+ * Silent about entries with no pronunciation yet, and about the model refusing IPA - those
+ * are simply not cached, which is true, and the refusal is the preview's own job to report.
+ */
+export function previewCache(
+  entries: LexiconEntry[],
+  pickVoice: (line: CorpusLine | null) => string | null,
+  config: GenerationConfig,
+  dir: string = PREVIEW_DIR,
+): Record<string, CacheState> {
+  const samples = sampleSentences(
+    entries.map((entry) => entry.grapheme),
+    loadCorpus().lines,
+  );
+
+  const cache: Record<string, CacheState> = {};
+  for (const entry of entries) {
+    if (!entry.grapheme || !(entry.ipa ?? entry.alias)) continue;
+    const sample = samples.get(entry.grapheme)!;
+
+    cache[entry.grapheme] = {
+      word: exists(entry, entry.grapheme, null),
+      sentence: exists(entry, sample.text, sample.line),
+    };
+  }
+  return cache;
+
+  function exists(entry: LexiconEntry, text: string, line: CorpusLine | null): boolean {
+    const voiceId = pickVoice(line);
+    if (!voiceId) return false;
+    return fs.existsSync(
+      previewPath(previewKey({ text: speakable(entry, text), voiceId, config }), dir),
+    );
+  }
 }
 
 /** Reported when the configured model would silently ignore the tag this preview relies on. */

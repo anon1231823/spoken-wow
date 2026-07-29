@@ -27,11 +27,13 @@ export async function POST(request: Request) {
 
   let entry;
   let mode;
+  let force = false;
   try {
-    const body = (await request.json()) as { entry?: unknown; mode?: unknown };
+    const body = (await request.json()) as { entry?: unknown; mode?: unknown; force?: unknown };
     entry = validateEntry(body.entry, 0);
     if (!isPreviewMode(body.mode)) throw new LexiconError("mode must be word or sentence");
     mode = body.mode;
+    force = body.force === true;
   } catch (error) {
     const message = error instanceof LexiconError ? error.message : "invalid entry";
     return Response.json({ error: message }, { status: 400 });
@@ -42,7 +44,15 @@ export async function POST(request: Request) {
     return Response.json({ error: status.error }, { status: 502 });
   }
 
-  const result = await renderPreview(entry, mode, voicePicker(status.voiceIds), config);
+  const result = await renderPreview(
+    entry,
+    mode,
+    voicePicker(status.voiceIds),
+    config,
+    {},
+    undefined,
+    force,
+  );
   if (!result.ok) {
     return Response.json(
       { error: result.failure.message },

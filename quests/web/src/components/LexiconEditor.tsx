@@ -1,5 +1,6 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,8 @@ import {
 import { cn } from "@/lib/utils";
 import type { EffectiveLexicon } from "@/lib/generation/dictionary";
 import { PREVIEW_MODES, type PreviewMode } from "@/lib/generation/preview-modes";
+import type { CacheState } from "@/lib/generation/preview";
+import { Toaster, useToast } from "@/components/ui/toast";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
@@ -34,6 +37,8 @@ const MODE_LABELS: Record<PreviewMode, string> = {
   word: "Word",
   sentence: "In a line",
 };
+
+const EMPTY_CACHE: CacheState = { word: false, sentence: false };
 
 // Starts as a respelling, not IPA. Anyone who can write IPA can switch in one click, and
 // everyone else would otherwise meet an empty box they have no way to fill.
@@ -81,19 +86,20 @@ type PreviewMeta = {
 /**
  * Rendering one entry and playing it.
  *
- * Owned here rather than by each row so that only one preview can be in flight or audible at
- * a time. Two overlapping previews would be two pronunciations played over each other, which
- * is worse than useless for the one thing this is for.
+ * Owned here rather than by each row so that only one preview is ever audible: starting a
+ * second stops the first, because two pronunciations played over each other is worse than
+ * useless for the one thing this is for. Only the pressed button is disabled, though -
+ * waiting on a render is no reason the rest of the table should go dead.
+ *
+ * What it costs is reported by toast rather than in the row. A line of text under the row
+ * would push everything below it down, moving the next button just as someone reaches for
+ * it, and a preview served from cache has nothing to say at all - it just plays.
  */
-function usePreview() {
-  // Which row and mode is in flight, rather than a bare boolean: the buttons live in the
-  // table now, so "rendering" has to point at the one button that was pressed instead of
-  // disabling all 268 of them.
+function usePreview(onCached: (grapheme: string, mode: PreviewMode) => void) {
   const [busy, setBusy] = useState<{ index: number; mode: PreviewMode } | null>(null);
-  const [result, setResult] = useState<{ index: number; meta: PreviewMeta } | null>(null);
-  const [error, setError] = useState<{ index: number; message: string } | null>(null);
   const audio = useRef<HTMLAudioElement | null>(null);
   const url = useRef<string | null>(null);
+  const toast = useToast();
 
   function release() {
     audio.current?.pause();
@@ -105,39 +111,60 @@ function usePreview() {
 
   useEffect(() => release, []);
 
-  async function play(entry: LexiconEntry, mode: PreviewMode, index: number) {
+  async function play(entry: LexiconEntry, mode: PreviewMode, index: number, force = false) {
     release();
     setBusy({ index, mode });
-    setError(null);
-    setResult(null);
     try {
       const response = await fetch("/api/generation/lexicon/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entry, mode }),
+        body: JSON.stringify({ entry, mode, force }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        setError({ index, message: body.error ?? `preview failed (${response.status})` });
+        toast({
+          tone: "error",
+          title: `Could not preview ${entry.grapheme}`,
+          detail: body.error ?? `request failed (${response.status})`,
+        });
         return;
       }
 
       const header = response.headers.get("X-Preview");
-      if (header) {
-        setResult({ index, meta: JSON.parse(decodeURIComponent(header)) as PreviewMeta });
+      const meta = header ? (JSON.parse(decodeURIComponent(header)) as PreviewMeta) : null;
+
+      // Silence on a cache hit is the point: nothing was spent, so there is nothing to say.
+      if (meta && !meta.cached) {
+        toast({
+          tone: "info",
+          title: `${meta.characters} characters${
+            meta.credits === null ? "" : `, ${meta.credits} credits`
+          }`,
+          detail:
+            meta.mode === "word"
+              ? `${entry.grapheme}, on its own`
+              : meta.source
+                ? `${meta.source.npcName}: “${meta.sentence}”`
+                : `No corpus line is short enough, so this is an invented sentence.`,
+        });
       }
+      if (meta) onCached(entry.grapheme, meta.mode);
 
       url.current = URL.createObjectURL(await response.blob());
       audio.current = new Audio(url.current);
       await audio.current.play();
     } catch (caught) {
-      setError({ index, message: caught instanceof Error ? caught.message : String(caught) });
+      toast({
+        tone: "error",
+        title: `Could not preview ${entry.grapheme}`,
+        detail: caught instanceof Error ? caught.message : String(caught),
+      });
     } finally {
       setBusy(null);
     }
   }
 
-  return { play, busy, result, error };
+  return { play, busy };
 }
 
 /**
@@ -152,13 +179,30 @@ function usePreview() {
  * touch would ship as a mispronunciation, and the diff against the committed file is what
  * makes that visible.
  */
-export default function LexiconEditor({
+export default function LexiconEditor(props: {
+  initial: EffectiveLexicon;
+  modelId: string;
+  initialCache: Record<string, CacheState>;
+}) {
+  // A shell, because useToast has to find a provider above the component that calls it and
+  // the editor itself is what raises the toasts.
+  return (
+    <Toaster>
+      <Editor {...props} />
+    </Toaster>
+  );
+}
+
+function Editor({
   initial,
   modelId,
+  initialCache,
 }: {
   initial: EffectiveLexicon;
   /** The model generation actually uses, which decides whether any of this takes effect. */
   modelId: string;
+  /** Which previews already exist, resolved on the server. See previewCache. */
+  initialCache: Record<string, CacheState>;
 }) {
   const [saved, setSaved] = useState<Saved>(initial);
   const [draft, setDraft] = useState<LexiconEntry[]>(initial.entries);
@@ -173,7 +217,15 @@ export default function LexiconEditor({
   const [onlyChecks, setOnlyChecks] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const preview = usePreview();
+  // Seeded from the server and kept up to date as previews are rendered, so a re-roll button
+  // lights up the moment the take it would replace exists.
+  const [cache, setCache] = useState(initialCache);
+  const preview = usePreview((grapheme, mode) =>
+    setCache((current) => ({
+      ...current,
+      [grapheme]: { ...(current[grapheme] ?? EMPTY_CACHE), [mode]: true },
+    })),
+  );
 
   const dirty = !same(draft, saved.entries);
 
@@ -332,7 +384,7 @@ export default function LexiconEditor({
             <span className="w-36 shrink-0">Say it</span>
             <span className="truncate">Note</span>
           </span>
-          <span className="shrink-0">Hear</span>
+          <span className="shrink-0">Hear · re-roll</span>
         </div>
 
         {shown.length === 0 && (
@@ -356,6 +408,7 @@ export default function LexiconEditor({
               entry={entry}
               index={index}
               edited={changedFromFile(entry)}
+              cached={cache[entry.grapheme] ?? EMPTY_CACHE}
               preview={preview}
               onOpen={() => openRow(index, entry)}
               onConfirm={(confirmed) =>
@@ -501,17 +554,18 @@ function Banner({ tone, children }: { tone: "warn" | "error"; children: React.Re
 }
 
 /**
- * One entry at rest: confirm it, hear it, or open it.
+ * One entry at rest: confirm it, hear it, re-roll it, or open it.
  *
  * A row of controls rather than one big button. It used to be a single <button> covering the
- * whole row, which is no longer possible - a checkbox and two preview buttons cannot be
- * nested inside a button, and browsers do not agree on what happens if you try. The clickable
+ * whole row, which is no longer possible - a checkbox and four buttons cannot be nested
+ * inside a button, and browsers do not agree on what happens if you try. The clickable
  * region that opens the editor is now just the text.
  */
 function Row({
   entry,
   index,
   edited,
+  cached,
   preview,
   onOpen,
   onConfirm,
@@ -519,94 +573,94 @@ function Row({
   entry: LexiconEntry;
   index: number;
   edited: boolean;
+  cached: CacheState;
   preview: ReturnType<typeof usePreview>;
   onOpen: () => void;
   onConfirm: (confirmed: boolean) => void;
 }) {
-  const sound = entry.ipa ?? entry.alias ?? "";
-  const playable = Boolean(entry.grapheme.trim() && sound.trim());
-  const meta = preview.result?.index === index ? preview.result.meta : null;
-  const error = preview.error?.index === index ? preview.error.message : null;
+  const playable = Boolean(entry.grapheme.trim() && (entry.ipa ?? entry.alias ?? "").trim());
 
   return (
-    <div>
-      <div className="hover:bg-muted/50 flex items-center gap-3 px-3 py-1.5">
-        <Checkbox
-          checked={entry.confidence === "high"}
-          onCheckedChange={(value) => onConfirm(value === true)}
-          aria-label={`Confirmed pronunciation for ${entry.grapheme || "this entry"}`}
-          className="shrink-0"
-        />
+    <div className="hover:bg-muted/50 flex items-center gap-3 px-3 py-1.5">
+      <Checkbox
+        checked={entry.confidence === "high"}
+        onCheckedChange={(value) => onConfirm(value === true)}
+        aria-label={`Confirmed pronunciation for ${entry.grapheme || "this entry"}`}
+        className="shrink-0"
+      />
 
-        <button
-          type="button"
-          onClick={onOpen}
-          className="flex flex-1 items-baseline gap-3 overflow-hidden text-left"
-        >
-          <span className="w-40 shrink-0 truncate text-sm font-medium">
-            {entry.grapheme || <span className="text-muted-foreground">(new entry)</span>}
-          </span>
-          <span className="text-primary w-44 shrink-0 truncate text-sm">
-            {entry.alias ? `“${entry.alias}”` : `/${entry.ipa}/`}
-          </span>
-          <span className="text-muted-foreground w-36 shrink-0 truncate font-mono text-xs">
-            {entry.say}
-          </span>
-          {edited && (
-            <Badge variant="secondary" className="shrink-0">
-              edited
-            </Badge>
-          )}
-          <span className="text-muted-foreground truncate text-xs">{entry.note}</span>
-        </button>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex flex-1 items-baseline gap-3 overflow-hidden text-left"
+      >
+        <span className="w-40 shrink-0 truncate text-sm font-medium">
+          {entry.grapheme || <span className="text-muted-foreground">(new entry)</span>}
+        </span>
+        <span className="text-primary w-44 shrink-0 truncate text-sm">
+          {entry.alias ? `“${entry.alias}”` : `/${entry.ipa}/`}
+        </span>
+        <span className="text-muted-foreground w-36 shrink-0 truncate font-mono text-xs">
+          {entry.say}
+        </span>
+        {edited && (
+          <Badge variant="secondary" className="shrink-0">
+            edited
+          </Badge>
+        )}
+        <span className="text-muted-foreground truncate text-xs">{entry.note}</span>
+      </button>
 
-        <div className="flex shrink-0 gap-1">
-          {PREVIEW_MODES.map((mode) => (
-            <Button
-              key={mode}
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2 text-xs"
-              disabled={!playable || preview.busy !== null}
-              title={
-                mode === "word"
-                  ? "Hear the name on its own"
-                  : "Hear it in a line from the corpus"
-              }
-              onClick={() => void preview.play(entry, mode, index)}
-            >
-              {preview.busy?.index === index && preview.busy.mode === mode
-                ? "…"
-                : MODE_LABELS[mode]}
-            </Button>
-          ))}
-        </div>
+      <div className="flex shrink-0 items-center gap-0.5">
+        {PREVIEW_MODES.map((mode) => {
+          // Only the pressed button waits. Disabling the whole table while one render is in
+          // flight punishes everyone for a request that concerns one row.
+          const rendering = preview.busy?.index === index && preview.busy.mode === mode;
+          const onDisk = cached[mode];
+
+          return (
+            <span key={mode} className="flex items-center">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-xs"
+                disabled={!playable || rendering}
+                title={
+                  onDisk
+                    ? "Already rendered — plays for free"
+                    : mode === "word"
+                      ? "Hear the name on its own. Costs credits."
+                      : "Hear it in a line from the corpus. Costs credits."
+                }
+                onClick={() => void preview.play(entry, mode, index)}
+              >
+                {rendering ? "…" : MODE_LABELS[mode]}
+              </Button>
+
+              {/* Greyed until there is something to replace: re-rolling a take that does not
+                  exist is just rendering it, which the button to the left already does. */}
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label={`Re-roll the ${mode} preview for ${entry.grapheme}`}
+                title={
+                  onDisk
+                    ? "Discard the cached take and pay for a fresh one"
+                    : "Nothing cached to re-roll yet"
+                }
+                className={cn(
+                  "size-6",
+                  onDisk ? "text-muted-foreground" : "text-muted-foreground/30",
+                )}
+                disabled={!playable || !onDisk || rendering}
+                onClick={() => void preview.play(entry, mode, index, true)}
+              >
+                <RefreshCw className="size-3" aria-hidden />
+              </Button>
+            </span>
+          );
+        })}
       </div>
-
-      {error && (
-        <p role="alert" className="text-destructive px-3 pb-2 pl-10 text-xs">
-          {error}
-        </p>
-      )}
-
-      {meta && !error && (
-        <p className="text-muted-foreground px-3 pb-2 pl-10 text-xs">
-          {meta.mode === "word" ? (
-            <>The name alone</>
-          ) : meta.source ? (
-            <>
-              {meta.source.npcName}: “{meta.sentence}”
-            </>
-          ) : (
-            <>No corpus line is short enough, so this is an invented sentence.</>
-          )}{" "}
-          {meta.cached
-            ? "· from cache, no credits spent"
-            : `· ${meta.characters} characters${
-                meta.credits === null ? "" : `, ${meta.credits} credits`
-              }`}
-        </p>
-      )}
     </div>
   );
 }
