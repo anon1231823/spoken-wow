@@ -50,8 +50,6 @@ export type LexiconEntry = {
    * acronym and hyphens as pauses, which is a worse pronunciation than the one being fixed.
    */
   alias?: string;
-  /** A respelling for humans reading this page. Never sent to ElevenLabs. */
-  say: string;
   confidence: Confidence;
   category: Category;
   note?: string;
@@ -116,7 +114,19 @@ export function toRules(
     // Deduplicated and with the stored grapheme guaranteed present: a scan of the corpus can
     // legitimately return nothing for a name nobody says yet, and dropping the entry then
     // would silently un-fix a pronunciation the moment its last line was edited away.
-    const spellings = [...new Set([entry.grapheme, ...(casings[entry.grapheme] ?? [])])];
+    //
+    // The capitalised form of a lower-case entry is GENERATED rather than observed, and that
+    // asymmetry is deliberate. "satyr" starting a sentence is a property of English, so it
+    // will happen the moment a corpus refresh puts one there - whereas a proper noun appearing
+    // lower-case is a quirk of how somebody typed a particular line, which only the corpus can
+    // know. So predict the one and scan for the other.
+    const spellings = [
+      ...new Set([
+        entry.grapheme,
+        ...(startsLower(entry.grapheme) ? [capitalise(entry.grapheme)] : []),
+        ...(casings[entry.grapheme] ?? []),
+      ]),
+    ];
 
     return spellings.map((spelling) => ({
       string_to_replace: spelling,
@@ -127,6 +137,14 @@ export function toRules(
       alphabet: "ipa",
     }));
   });
+}
+
+function startsLower(word: string): boolean {
+  return word[0] === word[0].toLowerCase() && word[0] !== word[0].toUpperCase();
+}
+
+function capitalise(word: string): string {
+  return word[0].toUpperCase() + word.slice(1);
 }
 
 /** A trimmed value, or "" when the field is absent, blank, or not a string. */
@@ -185,9 +203,9 @@ export function validateEntry(input: unknown, index: number): LexiconEntry {
     throw new LexiconError(`${where}: IPA for "${grapheme}" must not include / or [ ]`);
   }
 
-  // An alias is read aloud as written, so the conventions that make a respelling legible on
-  // this page make it worse as speech: capitals can read as an acronym, and a hyphen as a
-  // pause. "nomeregan" is a pronunciation; "NOME-reh-gan" is a note about one.
+  // An alias is read aloud as written, so the stress-capitals convention makes it worse as
+  // speech: capitals can read as an acronym, and a hyphen as a pause. "nomeregan" is a
+  // pronunciation; "NOME-reh-gan" is a note about one, and belongs in `note` if anywhere.
   if (alias && /[A-Z]{2,}/.test(alias)) {
     throw new LexiconError(
       `${where}: respell "${grapheme}" as it should be said, not in stress capitals`,
@@ -206,7 +224,6 @@ export function validateEntry(input: unknown, index: number): LexiconEntry {
 
   const entry: LexiconEntry = {
     grapheme,
-    say: typeof raw.say === "string" ? raw.say.trim() : "",
     confidence: confidence as Confidence,
     category: category as Category,
   };

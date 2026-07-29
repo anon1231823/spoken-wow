@@ -15,7 +15,6 @@ import {
 const ENTRY = {
   grapheme: "Gnomeregan",
   ipa: "ˈnoʊmɹəɡæn",
-  say: "NOME-reh-gan",
   confidence: "high",
   category: "place",
   note: "silent G",
@@ -38,9 +37,11 @@ describe("validateEntry", () => {
     expect(entry).not.toHaveProperty("note");
   });
 
-  it("defaults a missing respelling to empty, since it is never sent to ElevenLabs", () => {
-    const { say: _say, ...withoutSay } = ENTRY;
-    expect(validateEntry(withoutSay, 0).say).toBe("");
+  // `say` was a human respelling shown beside the IPA, from before entries could be heard.
+  // The preview buttons replaced it and `note` covers anything else worth writing down, so
+  // it is dropped rather than stored - including off entries that still carry one.
+  it("drops a legacy `say` rather than storing it", () => {
+    expect(validateEntry({ ...ENTRY, say: "NOME-reh-gan" }, 0)).not.toHaveProperty("say");
   });
 
   // A rule whose match string contains a space can never fire, because the API bounds a rule
@@ -108,7 +109,6 @@ describe("validateLexicon", () => {
 const RESPELLED = {
   grapheme: "Gnomeregan",
   alias: "nomeregan",
-  say: "NOME-reh-gan",
   confidence: "high" as const,
   category: "place" as const,
 };
@@ -188,6 +188,33 @@ describe("toRules", () => {
     expect(toRules(validateLexicon([ENTRY]), {})).toHaveLength(1);
   });
 
+  /**
+   * A lower-case entry gets its capitalised form whether or not the corpus contains one yet.
+   * "satyr" beginning a sentence is a fact about English, so it will happen the moment a
+   * corpus refresh puts one there - and nothing re-derives the rules until somebody saves.
+   */
+  it("generates the capitalised form of a lower-case entry", () => {
+    const satyr = { ...ENTRY, grapheme: "satyr", ipa: "ˈseɪtəɹ" };
+    expect(toRules(validateLexicon([satyr]), {}).map((r) => r.string_to_replace)).toEqual([
+      "satyr",
+      "Satyr",
+    ]);
+  });
+
+  // The reverse is not predictable: a proper noun written lower-case is a quirk of one line,
+  // which only the corpus can know about. Observed, never generated.
+  it("does not invent a lower-case form of a capitalised entry", () => {
+    expect(toRules(validateLexicon([ENTRY]), {}).map((r) => r.string_to_replace)).toEqual([
+      "Gnomeregan",
+    ]);
+  });
+
+  it("does not duplicate a capitalised form the corpus already reported", () => {
+    const satyr = { ...ENTRY, grapheme: "satyr", ipa: "ˈseɪtəɹ" };
+    const rules = toRules(validateLexicon([satyr]), { satyr: ["satyr", "Satyr"] });
+    expect(rules.map((r) => r.string_to_replace)).toEqual(["satyr", "Satyr"]);
+  });
+
   it("does not emit the same spelling twice", () => {
     const rules = toRules(validateLexicon([ENTRY]), { Gnomeregan: ["Gnomeregan", "Gnomeregan"] });
     expect(rules).toHaveLength(1);
@@ -210,9 +237,8 @@ describe("toRules", () => {
     ]);
   });
 
-  it("does not send the human respelling or the note", () => {
+  it("does not send the note", () => {
     const [rule] = toRules(validateLexicon([ENTRY]));
-    expect(rule).not.toHaveProperty("say");
     expect(rule).not.toHaveProperty("note");
   });
 

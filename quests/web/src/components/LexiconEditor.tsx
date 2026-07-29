@@ -56,7 +56,6 @@ function explorerHref(grapheme: string): string {
 const BLANK: LexiconEntry = {
   grapheme: "",
   alias: "",
-  say: "",
   confidence: "check",
   category: "place",
 };
@@ -247,7 +246,7 @@ function Editor({
       .filter(({ entry }) => {
         if (onlyChecks && entry.confidence !== "check") return false;
         if (!needle) return true;
-        return [entry.grapheme, entry.say, entry.ipa ?? entry.alias ?? "", entry.note ?? ""]
+        return [entry.grapheme, entry.ipa ?? entry.alias ?? "", entry.note ?? ""]
           .join(" ")
           .toLowerCase()
           .includes(needle);
@@ -380,7 +379,6 @@ function Editor({
           <span className="flex flex-1 gap-3 overflow-hidden">
             <span className="w-40 shrink-0">Written</span>
             <span className="w-44 shrink-0">Sound</span>
-            <span className="w-36 shrink-0">Say it</span>
             <span className="truncate">Note</span>
           </span>
           <span className="shrink-0">Find · hear · re-roll</span>
@@ -618,9 +616,6 @@ function Row({
         <span className="text-primary w-44 shrink-0 truncate text-sm">
           {entry.alias ? `“${entry.alias}”` : `/${entry.ipa}/`}
         </span>
-        <span className="text-muted-foreground w-36 shrink-0 truncate font-mono text-xs">
-          {entry.say}
-        </span>
         <span className="text-muted-foreground truncate text-xs">{entry.note}</span>
       </button>
 
@@ -774,13 +769,6 @@ function EntryForm({
               {formKind(entry) === "ipa" ? "Use spelling" : "Use IPA"}
             </Button>
           </div>
-        </Field>
-        <Field label="Say it" hint="For readers of this page. Never sent to ElevenLabs.">
-          <Input
-            value={entry.say}
-            onChange={(event) => onChange({ say: event.target.value })}
-            placeholder="NOME-reh-gan"
-          />
         </Field>
         <Field label="Note" hint="Why this entry exists, or what is disputed about it.">
           <Input

@@ -21,7 +21,6 @@ import type { LexiconEntry } from "./lexicon";
 const IPA: LexiconEntry = {
   grapheme: "Gnomeregan",
   ipa: "ˈnoʊmɹəɡæn",
-  say: "NOME-reh-gan",
   confidence: "high",
   category: "place",
 };
