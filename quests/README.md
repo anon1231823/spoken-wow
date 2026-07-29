@@ -177,16 +177,20 @@ does not have to pick. When the configured model ignores phoneme rules the page 
 entries that silently skips, rather than implying the whole page is inert.
 
 Respell it as it should be *said*, not as it should be *read*: `nomeregan`, not
-`NOME-reh-gan`. Capitals can be spoken as an acronym and hyphens as pauses. The stress form
-belongs in the entry's `say` field, which is for people and is never sent.
+`NOME-reh-gan`. Capitals can be spoken as an acronym and hyphens as pauses; if the
+stress-capitals form is worth recording for a reader, it belongs in the entry's note.
 
 **A phoneme rule cannot be case-insensitive.** ElevenLabs discards one carrying
 `case_sensitive: false` *silently* — a 200, an id, a version, and the rule simply absent from
 the stored dictionary. Alias rules tolerate the same flag, which is what made this so hard to
-see. So phoneme rules go up with `case_sensitive: true`, one per spelling the corpus actually
-contains: 134 entries become 152 rules, because 17 names appear in more than one casing
-(`Qiraji`/`qiraji`, `Aku'mai`/`Aku'Mai`, `Forsaken`/`forsaken`/`FORSAKEN`). Aliases keep
-`case_sensitive: false`, where it works.
+see. So phoneme rules go up with `case_sensitive: true` — **one rule per spelling, derived, not
+typed**. You add `Forsaken` once and the upload carries `Forsaken`, `forsaken` and `FORSAKEN`,
+because those are what the corpus contains. 134 entries become 156 rules. Aliases keep
+`case_sensitive: false`, where it works, and need no expansion.
+
+Spellings come from two places. Whatever the corpus actually uses is scanned for; and a
+lower-case entry additionally gets its capitalised form whether or not one occurs yet, because
+`satyr` beginning a sentence is a fact about English rather than about this corpus.
 
 **Every upload is read back and counted.** Send N rules, download the dictionary, count the
 lexemes. A mismatch is shown on the page rather than trusted away — the absence of this check
