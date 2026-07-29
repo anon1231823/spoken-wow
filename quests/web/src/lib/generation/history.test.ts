@@ -46,6 +46,8 @@ function take(overrides: Partial<Parameters<typeof commitVersion>[0]> = {}) {
     characters: 42,
     credits: 23,
     settings: { ...SETTINGS },
+    spokenText: "Meet me in Gnomeregan.",
+    dictionaryVersion: "version-1",
     createdBy: null as unknown as string,
     ...overrides,
   });

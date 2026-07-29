@@ -26,6 +26,11 @@ assets/sql/mysql-dump
 # of each is audio that predates this project's ability to reproduce it - back it up too.
 /audio-history/
 
+# Rendered pronunciation previews. Unlike the two above this one is safe to lose: every file
+# is rebuildable by spending credits again, and nothing refers to one. Keeping it out of git
+# for the ordinary reason - it is mp3s.
+/audio-previews/
+
 # Blizzard's own NPC barks and the script that pulls them. Local reference material for
 # tuning voices, not part of what this project ships.
 /tools/fetch_npc_lines.py

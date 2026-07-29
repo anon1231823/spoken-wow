@@ -27,6 +27,16 @@ export type VoicelineVersion = {
   credits: number | null;
   bytes: number;
   settings: VoiceSettings | null;
+  /**
+   * sha-256 of the exact text sent, and the dictionary version applied to it.
+   *
+   * Together these are what makes staleness answerable: the hash moves when the regex rules
+   * or the corpus text change, the version moves when the lexicon does, and a phoneme rule
+   * changes only the second. null on every row written before the two columns existed, and
+   * on every inherited take - which means unknown, not unchanged.
+   */
+  spokenHash: string | null;
+  dictionaryVersion: string | null;
   createdAt: string;
   createdBy: string | null;
   /** Resolved for display; null once the account is deleted, as the row survives it. */
@@ -46,6 +56,8 @@ export type NewVersion = {
   characters?: number | null;
   credits?: number | null;
   settings?: VoiceSettings | null;
+  spokenHash?: string | null;
+  dictionaryVersion?: string | null;
   createdBy?: string | null;
 };
 
@@ -54,8 +66,8 @@ export type NewVersion = {
 const COLUMNS = `
   v."file", v."version", v."isCurrent", v."origin", v."lineId", v."voice",
   v."voiceId", v."modelId", v."seed"::bigint::float8 as "seed", v."characters", v."credits",
-  v."bytes"::float8 as "bytes", v."settings", v."createdAt", v."createdBy",
-  u."name" as "createdByName"`;
+  v."bytes"::float8 as "bytes", v."settings", v."spokenHash", v."dictionaryVersion",
+  v."createdAt", v."createdBy", u."name" as "createdByName"`;
 
 export async function listVersions(file: string): Promise<VoicelineVersion[]> {
   const { rows } = await db().query<VoicelineVersion>(
@@ -109,8 +121,9 @@ export async function recordVersion(version: NewVersion): Promise<void> {
   await db().query(
     `insert into "voiceline_version"
        ("file", "version", "origin", "lineId", "voice", "bytes",
-        "voiceId", "modelId", "seed", "characters", "credits", "settings", "createdBy")
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        "voiceId", "modelId", "seed", "characters", "credits", "settings",
+        "spokenHash", "dictionaryVersion", "createdBy")
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
     [
       version.file,
       version.version,
@@ -124,6 +137,8 @@ export async function recordVersion(version: NewVersion): Promise<void> {
       version.characters ?? null,
       version.credits ?? null,
       version.settings ? JSON.stringify(version.settings) : null,
+      version.spokenHash ?? null,
+      version.dictionaryVersion ?? null,
       version.createdBy ?? null,
     ],
   );

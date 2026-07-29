@@ -16,6 +16,8 @@
  * and archives correctly on the next attempt. The reverse order would lose the previous take
  * outright, which is the one outcome worth engineering against.
  */
+import { createHash } from "node:crypto";
+
 import { deleteVersions, listVersions, nextVersion, recordVersion, setCurrentVersion } from "./versions";
 import {
   archiveStoreFile,
@@ -43,6 +45,16 @@ export type CommitInput = {
   /** From the response header; null when ElevenLabs did not report one. */
   credits: number | null;
   settings: VoiceSettings;
+  /**
+   * The text actually sent, and the dictionary version applied to it.
+   *
+   * Passed rather than derived, because only the caller knows both: the text has already
+   * been through applyPronunciation by the time it gets here, and the locator comes from
+   * the lexicon row. Hashed here so there is one definition of what "the same pronunciation"
+   * means, rather than one per call site.
+   */
+  spokenText: string;
+  dictionaryVersion: string | null;
   createdBy: string;
 };
 
@@ -95,6 +107,18 @@ async function archiveInherited(input: {
   return true;
 }
 
+/**
+ * What a take was pronounced with, as a comparable value.
+ *
+ * sha-256 of the spoken text, hex. Not a cryptographic requirement - nothing here is
+ * adversarial - but a stable, short, collision-free-in-practice identity for a string that
+ * can run to a few thousand characters, so staleness is one column comparison rather than a
+ * copy of every line's text in the version table.
+ */
+export function spokenHash(spokenText: string): string {
+  return createHash("sha256").update(spokenText, "utf8").digest("hex");
+}
+
 /** Write a new take into the store and record it. Caller must hold the file's lock. */
 export async function commitVersion(input: CommitInput): Promise<CommitResult> {
   const archivedInherited = await archiveInherited(input);
@@ -125,6 +149,8 @@ export async function commitVersion(input: CommitInput): Promise<CommitResult> {
     characters: input.characters,
     credits: input.credits,
     settings: input.settings,
+    spokenHash: spokenHash(input.spokenText),
+    dictionaryVersion: input.dictionaryVersion,
     createdBy: input.createdBy,
   });
   await setCurrentVersion(input.file, version);

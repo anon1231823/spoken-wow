@@ -10,7 +10,11 @@
  * `fetch` and the base URL are injectable for the reason synthesize.py injects http_post:
  * no test should need an account, and none should ever spend money.
  */
-import { DEFAULT_BASE_URL, type ElevenLabsOptions } from "@/lib/voices/elevenlabs";
+import {
+  DEFAULT_BASE_URL,
+  type DictionaryLocator,
+  type ElevenLabsOptions,
+} from "@/lib/voices/elevenlabs";
 
 import type { VoiceSettings } from "./config";
 import { classifyUpstream, failure, type Failure } from "./errors";
@@ -22,6 +26,15 @@ export type SpeechRequest = {
   modelId: string;
   voiceSettings: VoiceSettings;
   seed: number | null;
+  /**
+   * The pronunciation dictionary to apply, or null for none.
+   *
+   * Null is the state the Python CLI is always in: synthesize.py sends no dictionary, so a
+   * line it produces and a line produced here can differ in pronunciation even with
+   * identical settings. That is the one place the two paths no longer match, and it is why
+   * the locator is recorded against every take.
+   */
+  dictionary?: DictionaryLocator | null;
 };
 
 export type SpeechResult =
@@ -61,6 +74,17 @@ export function buildPayload(request: SpeechRequest): Record<string, unknown> {
   // Omitted rather than sent as null when the strategy is "none": Python omits the key, and
   // a null seed is a value ElevenLabs would have to interpret.
   if (request.seed !== null) payload.seed = request.seed;
+  // Same reasoning for the dictionary, and the version id is not optional: naming the
+  // dictionary without a version would let a later upload change how an already-recorded
+  // take would sound, which is the thing dictionaryVersion exists to pin down.
+  if (request.dictionary) {
+    payload.pronunciation_dictionary_locators = [
+      {
+        pronunciation_dictionary_id: request.dictionary.dictionaryId,
+        version_id: request.dictionary.versionId,
+      },
+    ];
+  }
   return payload;
 }
 

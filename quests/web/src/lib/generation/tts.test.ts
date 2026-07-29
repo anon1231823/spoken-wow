@@ -45,6 +45,30 @@ describe("buildPayload", () => {
     });
   });
 
+  /**
+   * The one place the two generators no longer match. synthesize.py sends no dictionary at
+   * all, so a line it produces and a line produced here can differ in pronunciation with
+   * otherwise identical settings - which is exactly why the locator is recorded per take.
+   */
+  it("sends no dictionary when there is none, matching the Python payload", () => {
+    expect(buildPayload({ ...REQUEST, dictionary: null })).not.toHaveProperty(
+      "pronunciation_dictionary_locators",
+    );
+    expect(buildPayload(REQUEST)).not.toHaveProperty("pronunciation_dictionary_locators");
+  });
+
+  // The version is not optional. Naming the dictionary alone would let a later upload change
+  // how an already-recorded take would sound, which is what dictionaryVersion exists to pin.
+  it("pins the dictionary to a version when one is in force", () => {
+    const payload = buildPayload({
+      ...REQUEST,
+      dictionary: { dictionaryId: "dict-abc", versionId: "ver-1" },
+    });
+    expect(payload.pronunciation_dictionary_locators).toEqual([
+      { pronunciation_dictionary_id: "dict-abc", version_id: "ver-1" },
+    ]);
+  });
+
   // Python omits the key entirely when the strategy is "none"; sending null would be a value
   // ElevenLabs has to interpret rather than a field it never sees.
   it("omits the seed rather than sending null", () => {

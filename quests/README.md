@@ -131,7 +131,7 @@ Registration at `/register` is open and needs no email confirmation. Everyone st
 |---|---|
 | `member` | browse and play, like a signed-out visitor |
 | `collaborator` | the above, plus **Regenerate** on every line, quest and NPC, and the take history behind each |
-| `admin` | the above, plus `/admin` to change anyone's role, and `/voices` to manage voices and the global generation settings |
+| `admin` | the above, plus `/admin` to change anyone's role, `/voices` to manage voices and the global generation settings, and `/lexicon` to correct how names are pronounced |
 
 #### Regenerating audio
 
@@ -160,6 +160,67 @@ as an upper bound and says so.
 Settings — model, stability, similarity, style, seed strategy — are global and live on
 `/voices`, admin-only. They override `voice/generation.json`, which stays what the Python CLI
 reads, so the two can drift; the page shows which is in force.
+
+#### Pronunciation
+
+`/lexicon` is admin-only, and holds the names a text-to-speech reader gets wrong — Gnomeregan
+with its silent G, Kel'Thuzad, Cairne, and 130 more, each with an IPA pronunciation. Saving
+uploads them to ElevenLabs as a pronunciation dictionary and pins every later request to that
+exact version.
+
+**You do not need IPA.** An entry gives either an IPA pronunciation or a plain respelling —
+`nomeregan` — and the editor switches between the two in one click. The trade is exactness
+against reach: IPA becomes a phoneme rule, which is precise but honoured only by `eleven_v3`
+and `eleven_flash_v2`; a respelling becomes an alias rule, which is only as good as the guess
+at the new spelling but works on every model. Both kinds sit in one dictionary, so the lexicon
+does not have to pick. When the configured model ignores phoneme rules the page says how many
+entries that silently skips, rather than implying the whole page is inert.
+
+Respell it as it should be *said*, not as it should be *read*: `nomeregan`, not
+`NOME-reh-gan`. Capitals can be spoken as an acronym and hyphens as pauses. The stress form
+belongs in the entry's `say` field, which is for people and is never sent.
+
+**The rules are built here, not uploaded as PLS.** `voice/lexicon.pls` exists and
+`tools/build_lexicon.py` generates it, but PLS matching is case-sensitive with no override,
+and the corpus writes the same name several ways — `Aku'mai` and `Aku'Mai`, `tauren` and
+`Tauren`. The web app sends the same entries through the rules API with `case_sensitive:
+false` instead, which is 123 occurrences a PLS upload would decline to fix.
+
+**Hear an entry before saving it.** Every row has **Word** and **In a line**. Word speaks the
+name on its own — the phonemes with nothing around them, for settling which vowel is right.
+In a line speaks it inside the shortest real corpus sentence that uses it, in that NPC's own
+voice, because a name in isolation gets list intonation and prosody is half of what you are
+listening for. This works on an unsaved draft because ElevenLabs accepts a phoneme tag inline
+in the text, so nothing has to be uploaded first. Both modes are cached on disk under
+`audio-previews/`, keyed on the spoken text, voice, model and settings — so they cache
+separately from each other, and re-hearing either costs nothing.
+
+Each button says up front whether pressing it will spend credits: the refresh icon beside it
+is lit only when a take is already on disk, and clicking it discards that take and pays for a
+fresh one. What a render cost is reported by a toast rather than in the row, so the list never
+shifts under the button you were reaching for; a preview served from cache says nothing and
+simply plays.
+
+**The checkbox on each row is the entry's confidence.** Ticked means the pronunciation has
+been confirmed; unticked means it still needs an ear. It is in the table rather than behind
+the edit form so a pass down the list — hear it, tick it — does not mean opening 134 rows,
+and **Unconfirmed** filters to what is left.
+
+What a preview proves is the *sound*, not the *rule*: it substitutes the pronunciation
+directly rather than matching it, so it cannot tell you whether `Azshara's` inherits the rule
+for `Azshara`. Only a real generation carrying the dictionary answers that. And because
+phoneme tags share the model support of phoneme rules, an IPA preview is refused outright on
+a model that would ignore it, rather than played back sounding like the default pronunciation
+— which would look exactly like IPA you had written wrong.
+
+**Saving does not touch audio already in the store.** Each take records the dictionary version
+and a hash of the text it was spoken with, so a line generated before a fix stays playable and
+stays identifiable as out of date. `python tools/build_lexicon.py audit` ranks the whole
+lexicon by how many corpus lines each entry touches.
+
+Like the generation settings, this overrides `voice/lexicon.json` rather than replacing it,
+and the page shows which is in force. The Python CLI sends no dictionary at all — it is the
+one place the two generators no longer produce identical audio.
 
 #### Managing voices
 
