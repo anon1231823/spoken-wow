@@ -180,11 +180,18 @@ Respell it as it should be *said*, not as it should be *read*: `nomeregan`, not
 `NOME-reh-gan`. Capitals can be spoken as an acronym and hyphens as pauses. The stress form
 belongs in the entry's `say` field, which is for people and is never sent.
 
-**Rules, not a PLS lexicon file.** PLS matching is case-sensitive with no override, and the
-corpus writes the same name several ways — `Aku'mai` and `Aku'Mai`, `tauren` and `Tauren`,
-`Qiraji` and `qiraji`. That is 123 occurrences a PLS upload would silently decline to fix, so
-the entries go through the `add-from-rules` API with `case_sensitive: false` instead. Saving
-creates a new dictionary and pins every later request to that exact version.
+**A phoneme rule cannot be case-insensitive.** ElevenLabs discards one carrying
+`case_sensitive: false` *silently* — a 200, an id, a version, and the rule simply absent from
+the stored dictionary. Alias rules tolerate the same flag, which is what made this so hard to
+see. So phoneme rules go up with `case_sensitive: true`, one per spelling the corpus actually
+contains: 134 entries become 152 rules, because 17 names appear in more than one casing
+(`Qiraji`/`qiraji`, `Aku'mai`/`Aku'Mai`, `Forsaken`/`forsaken`/`FORSAKEN`). Aliases keep
+`case_sensitive: false`, where it works.
+
+**Every upload is read back and counted.** Send N rules, download the dictionary, count the
+lexemes. A mismatch is shown on the page rather than trusted away — the absence of this check
+is why a lexicon that had never applied a single pronunciation reported itself healthy for
+weeks. Saving creates a new dictionary and pins every later request to that exact version.
 
 **Saving does not touch audio already in the store.** Each take records the dictionary version
 and a hash of the text it was spoken with, so a line generated before a fix stays playable and

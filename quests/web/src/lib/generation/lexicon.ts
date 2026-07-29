@@ -67,34 +67,65 @@ export class LexiconError extends Error {}
 /**
  * A rule as the add-from-rules endpoint wants it.
  *
- * case_sensitive is false throughout, and it is the whole reason this app builds rules
- * rather than a PLS lexicon file: PLS matching is case-sensitive with no override,
- * and the corpus writes the same name several ways - Aku'mai and Aku'Mai, tauren and Tauren,
- * Qiraji and qiraji. That is 123 occurrences a PLS upload silently declines to fix. No
- * grapheme here collides with a word whose casing changes how it should sound.
+ * case_sensitive differs by kind, and not by preference:
  *
- * word_boundaries stays true, or "Caer" would fire inside "Caern".
+ *   phoneme  MUST be true. ElevenLabs discards a phoneme rule carrying case_sensitive:false
+ *            silently - a 200, an id, a version, and the rule simply absent from the stored
+ *            dictionary. Measured, not inferred: the same rule with the flag omitted fires,
+ *            and with it set to false does not. So a name spelled several ways in the corpus
+ *            needs one rule per spelling, which is what `casings` supplies.
+ *   alias    stays false, where the flag works and one rule covers every spelling.
+ *
+ * word_boundaries is true throughout and is innocent of the above - a rule carrying it fires
+ * normally. Without it "Caer" would match inside "Caern".
  */
 type Matching = {
   string_to_replace: string;
-  case_sensitive: false;
   word_boundaries: true;
 };
 
 export type DictionaryRule =
-  | (Matching & { type: "phoneme"; phoneme: string; alphabet: "ipa" })
-  | (Matching & { type: "alias"; alias: string });
+  | (Matching & { case_sensitive: true; type: "phoneme"; phoneme: string; alphabet: "ipa" })
+  | (Matching & { case_sensitive: false; type: "alias"; alias: string });
 
-export function toRules(entries: LexiconEntry[]): DictionaryRule[] {
-  return entries.map((entry) => {
-    const matching: Matching = {
-      string_to_replace: entry.grapheme,
-      case_sensitive: false,
+/**
+ * The rules for a lexicon.
+ *
+ * `casings` maps a grapheme to every spelling of it the corpus actually contains, so a
+ * phoneme entry becomes one rule per spelling. Absent, or missing an entry, means the
+ * grapheme alone - which is right for a name that only ever appears one way, and is what
+ * the browser passes when it has no corpus to consult.
+ */
+export function toRules(
+  entries: LexiconEntry[],
+  casings: Record<string, string[]> = {},
+): DictionaryRule[] {
+  return entries.flatMap((entry): DictionaryRule[] => {
+    if (entry.alias) {
+      return [
+        {
+          string_to_replace: entry.grapheme,
+          case_sensitive: false,
+          word_boundaries: true,
+          type: "alias",
+          alias: entry.alias,
+        },
+      ];
+    }
+
+    // Deduplicated and with the stored grapheme guaranteed present: a scan of the corpus can
+    // legitimately return nothing for a name nobody says yet, and dropping the entry then
+    // would silently un-fix a pronunciation the moment its last line was edited away.
+    const spellings = [...new Set([entry.grapheme, ...(casings[entry.grapheme] ?? [])])];
+
+    return spellings.map((spelling) => ({
+      string_to_replace: spelling,
+      case_sensitive: true,
       word_boundaries: true,
-    };
-    return entry.alias
-      ? { ...matching, type: "alias", alias: entry.alias }
-      : { ...matching, type: "phoneme", phoneme: entry.ipa!, alphabet: "ipa" };
+      type: "phoneme",
+      phoneme: entry.ipa!,
+      alphabet: "ipa",
+    }));
   });
 }
 
