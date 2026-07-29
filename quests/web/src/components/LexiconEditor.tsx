@@ -512,6 +512,27 @@ function SyncBanner({
     );
   }
 
+  // Louder than a footnote, because this is the shape of the bug that made the whole page a
+  // no-op for weeks: a dictionary in force, reporting success, holding a fraction of its rules.
+  if (
+    saved.sync === "synced" &&
+    saved.rulesKept !== null &&
+    saved.rulesSent !== null &&
+    saved.rulesKept < saved.rulesSent
+  ) {
+    return (
+      <Banner tone="error">
+        <span>
+          ElevenLabs kept only {saved.rulesKept} of the {saved.rulesSent} rules uploaded. The
+          dictionary is in force but incomplete, so some names below are not being applied.
+        </span>
+        <Button size="sm" variant="outline" disabled={busy} onClick={onRetry}>
+          {busy ? "Uploading…" : "Upload again"}
+        </Button>
+      </Banner>
+    );
+  }
+
   if (saved.sync === "pending") {
     return (
       <Banner tone="error">
@@ -531,6 +552,7 @@ function SyncBanner({
     <p className="text-muted-foreground text-xs">
       In force since {saved.syncedAt ? new Date(saved.syncedAt).toLocaleString() : "—"} · version{" "}
       <code>{saved.locator?.versionId}</code>
+      {saved.rulesKept !== null && <> · {saved.rulesKept} rules</>}
     </p>
   );
 }

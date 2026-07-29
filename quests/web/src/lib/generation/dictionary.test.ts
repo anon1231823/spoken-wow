@@ -23,11 +23,26 @@ const ENTRIES = [
   },
 ];
 
-/** An ElevenLabs that accepts the upload and hands back a locator. */
-function accepts(id = "dict-abc", version = "ver-1") {
-  const fetchImpl = vi.fn(
-    async () => new Response(JSON.stringify({ id, version_id: version }), { status: 200 }),
-  );
+function pls(lexemes: number): string {
+  return `<lexicon>${"<lexeme><grapheme>x</grapheme></lexeme>".repeat(lexemes)}</lexicon>`;
+}
+
+/**
+ * An ElevenLabs that accepts the upload and hands back a locator.
+ *
+ * Two endpoints now: add-from-rules, then the download that reads the dictionary back.
+ * `kept` is how many rules the stored dictionary reports - null meaning "as many as were
+ * sent", which is the healthy case.
+ */
+function accepts(id = "dict-abc", version = "ver-1", kept: number | null = null) {
+  // Remembered from the upload, because the download is a GET and carries no body to count.
+  let uploaded = 0;
+
+  const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+    if (String(url).includes("/download")) return new Response(pls(kept ?? uploaded));
+    uploaded = JSON.parse(String(init?.body ?? "{}")).rules?.length ?? 0;
+    return new Response(JSON.stringify({ id, version_id: version }), { status: 200 });
+  });
   return { fetchImpl: fetchImpl as unknown as typeof globalThis.fetch, calls: fetchImpl };
 }
 
@@ -81,12 +96,15 @@ afterEach(async () => {
   }
   await db().query(
     `insert into "pronunciation_lexicon"
-       ("id", "entries", "dictionaryId", "versionId", "syncedAt", "updatedAt", "updatedBy")
-     values (true, $1, $2, $3, $4, $5, $6)
+       ("id", "entries", "dictionaryId", "versionId", "rulesSent", "rulesKept",
+        "syncedAt", "updatedAt", "updatedBy")
+     values (true, $1, $2, $3, $4, $5, $6, $7, $8)
      on conflict ("id") do update set
        "entries"      = excluded."entries",
        "dictionaryId" = excluded."dictionaryId",
        "versionId"    = excluded."versionId",
+       "rulesSent"    = excluded."rulesSent",
+       "rulesKept"    = excluded."rulesKept",
        "syncedAt"     = excluded."syncedAt",
        "updatedAt"    = excluded."updatedAt",
        "updatedBy"    = excluded."updatedBy"`,
@@ -94,6 +112,8 @@ afterEach(async () => {
       JSON.stringify(snapshot.entries),
       snapshot.dictionaryId ?? null,
       snapshot.versionId ?? null,
+      snapshot.rulesSent ?? null,
+      snapshot.rulesKept ?? null,
       snapshot.syncedAt ?? null,
       snapshot.updatedAt,
       snapshot.updatedBy ?? null,
@@ -151,7 +171,11 @@ describe("writeLexicon", () => {
     expect(await currentLocator()).toEqual({ dictionaryId: "dict-abc", versionId: "ver-1" });
   });
 
-  it("sends case-insensitive phoneme rules", async () => {
+  /**
+   * case_sensitive TRUE, and this is the regression guard for the whole incident: with false,
+   * ElevenLabs discarded every phoneme rule silently and the app reported success.
+   */
+  it("sends case-sensitive phoneme rules", async () => {
     const { fetchImpl, calls } = accepts();
     await writeLexicon(ENTRIES, null as unknown as string, OPTIONS(fetchImpl));
 
@@ -163,7 +187,7 @@ describe("writeLexicon", () => {
         type: "phoneme",
         phoneme: "ˈnoʊmɹəɡæn",
         alphabet: "ipa",
-        case_sensitive: false,
+        case_sensitive: true,
         word_boundaries: true,
       },
     ]);
@@ -239,6 +263,58 @@ describe("concurrent saves", () => {
     // never vs pending.
     expect(lexicon.sync).toBe("never");
     expect(await currentLocator()).toBeNull();
+  });
+});
+
+describe("rule verification", () => {
+  /**
+   * The check whose absence cost a day. `case_sensitive:false` makes ElevenLabs discard a
+   * phoneme rule silently - 200, an id, a version, and the rule simply gone - so 134 entries
+   * uploaded as 2 and every surface in this app reported success. Counting what came back is
+   * the only thing that would have noticed.
+   */
+  it("records how many rules were sent and how many survived", async () => {
+    const { fetchImpl } = accepts("dict-abc", "ver-1");
+    const { lexicon } = await writeLexicon(ENTRIES, null as unknown as string,
+      OPTIONS(fetchImpl));
+
+    expect(lexicon.rulesSent).toBe(lexicon.rulesKept);
+    expect(lexicon.rulesSent).toBeGreaterThan(0);
+  });
+
+  it("reports a dictionary that silently dropped rules, while keeping it in force", async () => {
+    const { fetchImpl } = accepts("dict-abc", "ver-1", 1);
+    const { lexicon, syncError } = await writeLexicon(
+      [ENTRIES[0], { ...ENTRIES[0], grapheme: "Thrall", ipa: "θɹɔl" }],
+      null as unknown as string,
+      OPTIONS(fetchImpl),
+    );
+
+    expect(syncError).toMatch(/kept only 1 of 2/);
+    // In force, not withheld: one working rule beats none, and the page says what is missing.
+    expect(lexicon.sync).toBe("synced");
+    expect(lexicon.rulesKept).toBe(1);
+    expect(lexicon.rulesSent).toBe(2);
+  });
+
+  /**
+   * A readback failure is not an upload failure. The dictionary may be perfectly good and the
+   * count merely unknown, so refusing to store the locator would throw away a working upload
+   * over a failed GET.
+   */
+  it("still stores the locator when the readback fails", async () => {
+    const fetchImpl = vi.fn(async (url: string) =>
+      String(url).includes("/download")
+        ? new Response("nope", { status: 500 })
+        : new Response(JSON.stringify({ id: "dict-abc", version_id: "ver-1" })),
+    ) as unknown as typeof globalThis.fetch;
+
+    const { lexicon } = await writeLexicon(ENTRIES, null as unknown as string,
+      OPTIONS(fetchImpl));
+
+    expect(lexicon.locator).toEqual({ dictionaryId: "dict-abc", versionId: "ver-1" });
+    expect(lexicon.rulesKept).toBeNull();
+    expect(lexicon.sync).toBe("synced");
   });
 });
 

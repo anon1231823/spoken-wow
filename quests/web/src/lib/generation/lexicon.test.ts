@@ -152,25 +152,54 @@ describe("respelled entries", () => {
 
 describe("toRules", () => {
   /**
-   * case_sensitive: false is the whole reason this app builds rules rather than a PLS
-   * lexicon file. PLS matching is case-sensitive with no override, and the corpus writes the
-   * same name several ways - Aku'mai and Aku'Mai, tauren and Tauren, Qiraji and qiraji.
+   * case_sensitive MUST be true on a phoneme rule. ElevenLabs discards one carrying false
+   * silently - a 200, an id, a version, and the rule simply absent from the stored
+   * dictionary. Measured against the real API: the same rule fires with the flag omitted and
+   * does not with it set to false. This assertion is the regression guard for a bug that
+   * voided all 134 phoneme entries while every surface reported success.
    */
-  it("emits case-insensitive, word-bounded phoneme rules", () => {
+  it("emits case-SENSITIVE, word-bounded phoneme rules", () => {
     expect(toRules(validateLexicon([ENTRY]))).toEqual([
       {
         string_to_replace: "Gnomeregan",
         type: "phoneme",
         phoneme: "ˈnoʊmɹəɡæn",
         alphabet: "ipa",
-        case_sensitive: false,
+        case_sensitive: true,
         word_boundaries: true,
       },
     ]);
   });
 
-  it("emits an alias rule for a respelled entry", () => {
-    expect(toRules(validateLexicon([RESPELLED]))).toEqual([
+  // The cost of the above: a name the corpus writes several ways needs a rule per way.
+  it("emits one phoneme rule per spelling the corpus uses", () => {
+    const rules = toRules(validateLexicon([ENTRY]), { Gnomeregan: ["Gnomeregan", "GNOMEREGAN"] });
+    expect(rules.map((r) => r.string_to_replace)).toEqual(["Gnomeregan", "GNOMEREGAN"]);
+    expect(rules.every((r) => r.case_sensitive === true)).toBe(true);
+    expect(new Set(rules.map((r) => "phoneme" in r && r.phoneme))).toEqual(
+      new Set(["ˈnoʊmɹəɡæn"]),
+    );
+  });
+
+  // A scan can legitimately find nothing - a name no line says yet - and dropping the entry
+  // then would un-fix a pronunciation the moment its last line was edited away.
+  it("always emits the stored grapheme, even when the corpus never uses it", () => {
+    expect(toRules(validateLexicon([ENTRY]), { Gnomeregan: [] })).toHaveLength(1);
+    expect(toRules(validateLexicon([ENTRY]), {})).toHaveLength(1);
+  });
+
+  it("does not emit the same spelling twice", () => {
+    const rules = toRules(validateLexicon([ENTRY]), { Gnomeregan: ["Gnomeregan", "Gnomeregan"] });
+    expect(rules).toHaveLength(1);
+  });
+
+  /**
+   * Aliases keep case_sensitive:false, where it demonstrably works - the flag that kills a
+   * phoneme rule is tolerated here, which is exactly why the bug hid for so long: an alias
+   * test fired and looked like proof the dictionary was fine.
+   */
+  it("emits one case-INSENSITIVE alias rule, with no casing expansion", () => {
+    expect(toRules(validateLexicon([RESPELLED]), { Gnomeregan: ["GNOMEREGAN"] })).toEqual([
       {
         string_to_replace: "Gnomeregan",
         type: "alias",

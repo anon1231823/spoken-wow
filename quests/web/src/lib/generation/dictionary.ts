@@ -15,11 +15,14 @@
  */
 import { db } from "@/lib/db";
 import {
+  countLexemes,
   createPronunciationDictionary,
+  downloadPronunciationDictionary,
   type DictionaryLocator,
   type ElevenLabsOptions,
 } from "@/lib/voices/elevenlabs";
 
+import { graphemeCasings } from "./casings";
 import { toRules, type LexiconEntry } from "./lexicon";
 
 export type LexiconSync = "synced" | "pending" | "never";
@@ -46,6 +49,15 @@ export type EffectiveLexicon = {
    */
   sync: LexiconSync;
   locator: DictionaryLocator | null;
+  /**
+   * Rules sent, and rules the stored dictionary actually holds.
+   *
+   * Equal is the only good answer. They differed silently for weeks - a phoneme rule carrying
+   * case_sensitive:false is discarded without a word - so the page reports the pair rather
+   * than trusting a 200. null on a lexicon uploaded before this was checked.
+   */
+  rulesSent: number | null;
+  rulesKept: number | null;
   syncedAt: string | null;
   updatedAt: string | null;
   updatedBy: string | null;
@@ -55,6 +67,8 @@ type Row = {
   entries: LexiconEntry[];
   dictionaryId: string | null;
   versionId: string | null;
+  rulesSent: number | null;
+  rulesKept: number | null;
   syncedAt: string | null;
   updatedAt: string;
   updatedBy: string | null;
@@ -66,7 +80,8 @@ function older(a: string, b: string): boolean {
 
 async function readRow(): Promise<Row | undefined> {
   const { rows } = await db().query<Row>(
-    `select "entries", "dictionaryId", "versionId", "syncedAt", "updatedAt", "updatedBy"
+    `select "entries", "dictionaryId", "versionId", "rulesSent", "rulesKept",
+            "syncedAt", "updatedAt", "updatedBy"
        from "pronunciation_lexicon" where "id"`,
   );
   return rows[0];
@@ -81,6 +96,8 @@ export async function readLexicon(): Promise<EffectiveLexicon> {
       seeded: false,
       sync: "never",
       locator: null,
+      rulesSent: null,
+      rulesKept: null,
       syncedAt: null,
       updatedAt: null,
       updatedBy: null,
@@ -107,6 +124,8 @@ export async function readLexicon(): Promise<EffectiveLexicon> {
         ? "pending"
         : "synced",
     locator,
+    rulesSent: row.rulesSent,
+    rulesKept: row.rulesKept,
     syncedAt: row.syncedAt,
     updatedAt: row.updatedAt,
     updatedBy: row.updatedBy,
@@ -165,14 +184,30 @@ export async function sync(
   entries: LexiconEntry[],
   options: ElevenLabsOptions = {},
 ): Promise<string | null> {
+  // One rule per spelling the corpus actually uses, because a phoneme rule cannot be
+  // case-insensitive - see toRules.
+  const rules = toRules(
+    entries,
+    graphemeCasings(entries.filter((e) => !e.alias).map((e) => e.grapheme)),
+  );
+
   let locator: DictionaryLocator;
+  let kept: number | null = null;
   try {
     // Dated, because a new dictionary is created per save and the account list would
     // otherwise be a column of identical names with no way to tell which is live.
     const name = `wow-voiceover ${new Date().toISOString().slice(0, 19).replace("T", " ")}`;
-    locator = await createPronunciationDictionary(name, toRules(entries), options);
+    locator = await createPronunciationDictionary(name, rules, options);
+
+    // Read it back rather than trusting the 200. This is the check whose absence let 134
+    // phoneme rules upload as 2 and look like success from every surface this app had.
+    kept = countLexemes(await downloadPronunciationDictionary(locator, options));
   } catch (error) {
-    return error instanceof Error ? error.message : String(error);
+    // A readback failure is not an upload failure: the dictionary may be perfectly good and
+    // the count merely unknown, so the locator is still worth storing. Only a throw from the
+    // upload itself means nothing landed - and that is the one that reaches here with no
+    // locator to store.
+    if (!locator!) return error instanceof Error ? error.message : String(error);
   }
 
   // Conditional on the entries still being the ones that were uploaded. Two admins saving at
@@ -183,12 +218,17 @@ export async function sync(
   // built to avoid. jsonb equality ignores key order, so this compares content, not spelling.
   const { rowCount } = await db().query(
     `update "pronunciation_lexicon"
-        set "dictionaryId" = $1, "versionId" = $2, "syncedAt" = now()
+        set "dictionaryId" = $1, "versionId" = $2, "syncedAt" = now(),
+            "rulesSent" = $4, "rulesKept" = $5
       where "id" and "entries" = $3::jsonb`,
-    [locator.dictionaryId, locator.versionId, JSON.stringify(entries)],
+    [locator.dictionaryId, locator.versionId, JSON.stringify(entries), rules.length, kept],
   );
   if (rowCount === 0) {
     return "the lexicon changed while this upload was in flight; the newer save is the one to retry";
+  }
+
+  if (kept !== null && kept < rules.length) {
+    return `ElevenLabs kept only ${kept} of ${rules.length} rules. The dictionary is in force, but incomplete.`;
   }
   return null;
 }

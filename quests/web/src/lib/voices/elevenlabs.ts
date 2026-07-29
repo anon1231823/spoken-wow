@@ -230,6 +230,32 @@ export async function createPronunciationDictionary(
   return { dictionaryId: body.id, versionId: body.version_id };
 }
 
+/**
+ * Read a dictionary back, as the PLS ElevenLabs stores it.
+ *
+ * The only way to find out what it actually kept. add-from-rules answers 200 with an id and a
+ * version whether it accepted every rule or silently dropped most of them, so counting the
+ * lexemes here is the difference between an upload that worked and one that appeared to.
+ */
+export async function downloadPronunciationDictionary(
+  locator: DictionaryLocator,
+  options: ElevenLabsOptions = {},
+): Promise<string> {
+  const { apiKey, baseUrl, fetchImpl } = config(options);
+
+  const response = await fetchImpl(
+    `${baseUrl}/v1/pronunciation-dictionaries/${locator.dictionaryId}/${locator.versionId}/download`,
+    { headers: { "xi-api-key": apiKey }, cache: "no-store" },
+  );
+  if (!response.ok) throw await failure(response, "reading the pronunciation dictionary back");
+  return response.text();
+}
+
+/** How many rules a stored dictionary holds. One lexeme per rule. */
+export function countLexemes(pls: string): number {
+  return (pls.match(/<lexeme\b/g) ?? []).length;
+}
+
 export async function deleteVoice(
   voiceId: string,
   options: ElevenLabsOptions = {},
