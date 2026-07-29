@@ -65,21 +65,21 @@ describe("samplePath", () => {
 
   it("refuses a name it did not generate", async () => {
     const { samplePath } = await load();
-    expect(() => samplePath("orc-male", "../../etc/passwd")).toThrow(/unsafe sample name/);
+    expect(() => samplePath("orc-male-standard", "../../etc/passwd")).toThrow(/unsafe sample name/);
   });
 });
 
 describe("storeSample and listSamples", () => {
   it("returns no clips for a voice that has none", async () => {
     const { listSamples } = await load();
-    expect(await listSamples("orc-male")).toEqual([]);
+    expect(await listSamples("orc-male-standard")).toEqual([]);
   });
 
   it("writes a clip and lists it back", async () => {
     const { storeSample, listSamples } = await load();
-    const stored = await storeSample("orc-male", "greeting.mp3", Buffer.from("audio-bytes"));
+    const stored = await storeSample("orc-male-standard", "greeting.mp3", Buffer.from("audio-bytes"));
 
-    const listed = await listSamples("orc-male");
+    const listed = await listSamples("orc-male-standard");
     expect(listed).toHaveLength(1);
     expect(listed[0].file).toBe(stored.file);
     expect(listed[0].bytes).toBe(11);
@@ -87,29 +87,29 @@ describe("storeSample and listSamples", () => {
 
   it("keeps voices separate", async () => {
     const { storeSample, listSamples } = await load();
-    await storeSample("orc-male", "a.mp3", Buffer.from("x"));
-    expect(await listSamples("tauren-male")).toEqual([]);
+    await storeSample("orc-male-standard", "a.mp3", Buffer.from("x"));
+    expect(await listSamples("tauren-male-warrior")).toEqual([]);
   });
 
   // A .part left by an interrupted write must never be offered as a clip, or a truncated
   // file would be sent to ElevenLabs as training audio.
   it("ignores partial writes left in the directory", async () => {
     const { storeSample, listSamples } = await load();
-    await storeSample("orc-male", "good.mp3", Buffer.from("x"));
-    await fs.writeFile(path.join(dir, "orc-male", ".deadbeef-half.mp3.part"), "truncated");
+    await storeSample("orc-male-standard", "good.mp3", Buffer.from("x"));
+    await fs.writeFile(path.join(dir, "orc-male-standard", ".deadbeef-half.mp3.part"), "truncated");
 
-    const listed = await listSamples("orc-male");
+    const listed = await listSamples("orc-male-standard");
     expect(listed).toHaveLength(1);
     expect(listed[0].file).not.toContain(".part");
   });
 
   it("deletes a clip", async () => {
     const { storeSample, deleteSample, listSamples } = await load();
-    const stored = await storeSample("orc-male", "a.mp3", Buffer.from("x"));
+    const stored = await storeSample("orc-male-standard", "a.mp3", Buffer.from("x"));
 
-    expect(await deleteSample("orc-male", stored.file)).toBe(true);
-    expect(await listSamples("orc-male")).toEqual([]);
-    expect(await deleteSample("orc-male", stored.file)).toBe(false);
+    expect(await deleteSample("orc-male-standard", stored.file)).toBe(true);
+    expect(await listSamples("orc-male-standard")).toEqual([]);
+    expect(await deleteSample("orc-male-standard", stored.file)).toBe(false);
   });
 });
 

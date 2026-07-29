@@ -37,7 +37,13 @@ type StubOptions = {
 };
 
 /** Stands in for the three ElevenLabs endpoints this path touches. */
-function stub({ voices = { "human-male": "voice-human-male" }, speech }: StubOptions = {}) {
+const DEFAULT_VOICES = {
+  "human-male-standard": "voice-human-male-standard",
+  // The shared line's six NPCs are all officials; the solo one is a standard.
+  "human-male-official": "voice-human-male-official",
+};
+
+function stub({ voices = DEFAULT_VOICES, speech }: StubOptions = {}) {
   const calls: { url: string; body?: unknown }[] = [];
 
   const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
@@ -150,12 +156,12 @@ describe("a line with no audio yet", () => {
     expect(result.file).toBe("quests/5-accept.mp3");
     expect(result.version).toBe(0);
     expect(result.archivedInherited).toBe(false);
-    expect(result.voice).toBe("human-male");
-    expect(result.voiceId).toBe("voice-human-male");
+    expect(result.voice).toBe("human-male-standard");
+    expect(result.voiceId).toBe("voice-human-male-standard");
     expect(fs.readFileSync(storePath(result.file))).toEqual(MP3);
 
     const speech = calls.find((call) => call.url.includes("text-to-speech"))!;
-    expect(speech.url).toBe("https://stub.invalid/v1/text-to-speech/voice-human-male");
+    expect(speech.url).toBe("https://stub.invalid/v1/text-to-speech/voice-human-male-standard");
   });
 
   it("counts the characters it actually spoke", async () => {
@@ -252,7 +258,7 @@ describe("refusals that cost nothing", () => {
     expect(result.failure.kind).toBe("voice-missing");
     expect(result.failure.status).toBe(409);
     expect(result.failure.fatal).toBe(true);
-    expect(result.failure.message).toContain("human-male");
+    expect(result.failure.message).toContain("human-male-standard");
     expect(result.failure.message).toContain("/voices");
     expect(calls.some((call) => call.url.includes("text-to-speech"))).toBe(false);
   });

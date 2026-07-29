@@ -20,6 +20,17 @@ export const VOICE_SAMPLES_DIR =
   process.env.VOICEOVER_VOICE_SAMPLES ?? path.join(REPO_ROOT, "voice", "samples");
 
 /**
+ * Blizzard's own NPC greeting barks, as `<race-gender>/<flavor>/<Title>.ogg`.
+ *
+ * Written by tools/fetch_npc_lines.py and gitignored. This is the ground truth for what a
+ * voice should sound like, and the material every clone is seeded from - which is the only
+ * reason the web app can see it. Local only: unlike the clips, it is not synced to the
+ * droplet, so seeding is something you do from a checkout.
+ */
+export const NPC_LINES_DIR =
+  process.env.VOICEOVER_NPC_LINES ?? path.join(REPO_ROOT, "voice", "npc-lines");
+
+/**
  * Previous takes of a regenerated line: <sub>/<fileName>/<version>.mp3.
  *
  * A sibling of the store rather than a directory inside it, and deliberately so:

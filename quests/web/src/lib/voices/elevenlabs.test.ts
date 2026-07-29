@@ -14,7 +14,7 @@ function respondWith(body: unknown, init: { status?: number } = {}) {
 const ACCOUNT = {
   voices: [
     { name: "Roger - Laid-Back, Casual, Resonant", voice_id: "stock1" },
-    { name: "orc-male", voice_id: "orc1" },
+    { name: "orc-male-standard", voice_id: "orc1" },
     { name: "Bill - Wise, Mature, Balanced", voice_id: "stock2" },
     { name: "narrator-male", voice_id: "narr1" },
   ],
@@ -25,8 +25,8 @@ describe("listVoices", () => {
     const fetchImpl = respondWith(ACCOUNT);
     const found = await listVoices({ apiKey: "k", fetchImpl });
 
-    expect([...found.keys()].sort()).toEqual(["narrator-male", "orc-male"]);
-    expect(found.get("orc-male")).toBe("orc1");
+    expect([...found.keys()].sort()).toEqual(["narrator-male", "orc-male-standard"]);
+    expect(found.get("orc-male-standard")).toBe("orc1");
   });
 
   // A name that looks right but is not a voice the corpus needs must not be adopted: the
@@ -72,7 +72,7 @@ describe("addVoice", () => {
   it("posts the clips as multipart under the race-gender name", async () => {
     const fetchImpl = respondWith({ voice_id: "new1" });
     const voiceId = await addVoice(
-      "orc-male",
+      "orc-male-standard",
       [
         { name: "a.mp3", data: Buffer.from("one") },
         { name: "b.ogg", data: Buffer.from("two") },
@@ -87,7 +87,7 @@ describe("addVoice", () => {
     expect(init?.method).toBe("POST");
 
     const form = init?.body as FormData;
-    expect(form.get("name")).toBe("orc-male");
+    expect(form.get("name")).toBe("orc-male-standard");
     // Extracted game audio carries music and ambience, which a clone would reproduce.
     expect(form.get("remove_background_noise")).toBe("true");
     expect(form.getAll("files")).toHaveLength(2);
@@ -96,7 +96,7 @@ describe("addVoice", () => {
   // fetch has to set Content-Type itself so the multipart boundary matches the body.
   it("does not set Content-Type by hand", async () => {
     const fetchImpl = respondWith({ voice_id: "x" });
-    await addVoice("orc-male", [{ name: "a.mp3", data: Buffer.from("x") }], {
+    await addVoice("orc-male-standard", [{ name: "a.mp3", data: Buffer.from("x") }], {
       apiKey: "k",
       fetchImpl,
     });
@@ -108,14 +108,14 @@ describe("addVoice", () => {
   it("surfaces the API's refusal", async () => {
     const fetchImpl = respondWith({ detail: "voice_limit_reached" }, { status: 400 });
     await expect(
-      addVoice("orc-male", [{ name: "a.mp3", data: Buffer.from("x") }], { apiKey: "k", fetchImpl }),
+      addVoice("orc-male-standard", [{ name: "a.mp3", data: Buffer.from("x") }], { apiKey: "k", fetchImpl }),
     ).rejects.toThrow(/orc-male.*400.*voice_limit_reached/);
   });
 
   it("refuses a success response with no voice_id rather than recording a bad one", async () => {
     const fetchImpl = respondWith({});
     await expect(
-      addVoice("orc-male", [{ name: "a.mp3", data: Buffer.from("x") }], { apiKey: "k", fetchImpl }),
+      addVoice("orc-male-standard", [{ name: "a.mp3", data: Buffer.from("x") }], { apiKey: "k", fetchImpl }),
     ).rejects.toThrow(/no voice_id/);
   });
 });

@@ -206,6 +206,28 @@ item_quest_relations AS (
     FROM item_template it
     WHERE it.start_quest
 ),
+-- Which of its race-gender's several voices each creature speaks with, as the name of its
+-- greeting sound: `DwarfFemaleMaternalNPCGreetings`. See tts_cli/flavors.py.
+--
+-- One row per creature, because creature_template holds a row per content patch and a
+-- creature can change voice between them - Nathaniel Dumah is a warrior in one and an
+-- official in another. The latest patch is the version a 1.12 server serves. Everything
+-- else selected from creature_template happens to be patch-invariant, which is why nothing
+-- needed this before.
+creature_sounds AS (
+    SELECT entry, npc_sound_name FROM (
+        SELECT
+            ct.entry,
+            se.name as npc_sound_name,
+            ROW_NUMBER() OVER (PARTITION BY ct.entry ORDER BY ct.patch DESC) as rank_in_entry
+        FROM creature_template ct
+            JOIN db_CreatureDisplayInfo cdi ON ct.display_id1 = cdi.ID
+            -- LEFT: roughly a tenth of speaking NPCs are hand-made displays with no
+            -- NPCSoundID at all, and they must still produce a row.
+            LEFT JOIN db_NPCSounds ns ON ns.ID = cdi.NPCSoundID
+            LEFT JOIN sound_entries se ON se.id = ns.SoundGreeting
+    ) ranked WHERE rank_in_entry = 1
+),
 collected_gossip_menus (base_menu_id, menu_id, text_id, action_menu_id) AS (
     WITH gossip_menu_and_options AS (
         SELECT gm.entry, gm.text_id, NULL as action_menu_id
@@ -228,10 +250,12 @@ creature_data AS (
         ct.name,
         cgm.text_id,
         cdie.DisplaySexID,
-        cdie.DisplayRaceID
+        cdie.DisplayRaceID,
+        cs.npc_sound_name
     FROM creature_template ct
         JOIN db_CreatureDisplayInfo cdi ON ct.display_id1 = cdi.ID
         JOIN db_CreatureDisplayInfoExtra cdie ON cdi.ExtendedDisplayInfoID = cdie.ID
+        LEFT JOIN creature_sounds cs ON cs.entry = ct.entry
         LEFT JOIN collected_gossip_menus cgm ON cgm.base_menu_id = ct.gossip_menu_id
 ),
 gameobject_data AS (
@@ -275,6 +299,7 @@ SELECT
     0 as broadcast_text_id,
     cdie.DisplayRaceID,
     cdie.DisplaySexID,
+    cs.npc_sound_name,
     ct.name,
     'creature' as type,
     qr.creature_id as id
@@ -284,6 +309,7 @@ JOIN quest_template qt ON qr.quest = qt.entry
 JOIN creature_template ct ON qr.creature_id = ct.entry
 JOIN db_CreatureDisplayInfo cdi ON ct.display_id1 = cdi.ID
 JOIN db_CreatureDisplayInfoExtra cdie ON cdi.ExtendedDisplayInfoID = cdie.ID
+LEFT JOIN creature_sounds cs ON cs.entry = ct.entry
 WHERE
     (
         (qr.source = 'accept' AND qt.Details IS NOT NULL AND qt.Details != '')
@@ -307,6 +333,7 @@ SELECT
     0 as broadcast_text_id,
     -1 as DisplayRaceID,
     0 as DisplaySexID,
+    NULL as npc_sound_name,
     gt.name,
     'gameobject' as type,
     qr.gameobject_id as id
@@ -333,6 +360,7 @@ SELECT
     0 as broadcast_text_id,
     -1 as DisplayRaceID,
     0 as DisplaySexID,
+    NULL as npc_sound_name,
     it.name,
     'item' as type,
     qr.item_id as id
@@ -357,6 +385,7 @@ SELECT
     bt.entry as broadcast_text_id,
     creature_data.DisplayRaceID,
     creature_data.DisplaySexID,
+    creature_data.npc_sound_name,
     creature_data.name,
     'creature' as type,
     creature_data.id
@@ -390,6 +419,7 @@ SELECT
     bt.entry as broadcast_text_id,
     -1 as DisplayRaceID,
     0 as DisplaySexID,
+    NULL as npc_sound_name,
     gameobject_data.name,
     'gameobject' as type,
     gameobject_data.id
@@ -423,6 +453,7 @@ SELECT
     0 as broadcast_text_id,
     creature_data.DisplayRaceID,
     creature_data.DisplaySexID,
+    creature_data.npc_sound_name,
     creature_data.name,
     'creature' as type,
     creature_data.id
@@ -441,6 +472,7 @@ SELECT
     0 as broadcast_text_id,
     -1 AS DisplayRaceID,
     0 AS DisplaySexID,
+    NULL AS npc_sound_name,
     gameobject_data.name,
     'gameobject' as type,
     gameobject_data.id
@@ -459,6 +491,7 @@ SELECT
     text,
     DisplayRaceID,
     DisplaySexID,
+    npc_sound_name,
     name,
     type,
     id,
@@ -484,6 +517,7 @@ SELECT
     END, ''), text) as text,
     DisplayRaceID,
     DisplaySexID,
+    npc_sound_name,
     IFNULL(NULLIF(CASE ALL_DATA.type
         WHEN 'creature'   THEN lc.name_loc{lang}
         WHEN 'gameobject' THEN lg.name_loc{lang}

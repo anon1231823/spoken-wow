@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Combine, Loader2, Sparkles, Trash2, Upload } from "lucide-react";
+import { Combine, Download, Loader2, Sparkles, Trash2, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,6 +28,8 @@ const TARGET_MAX_SECONDS = 180;
 const DEFAULT_PAUSE = 1;
 const MAX_PAUSE = 5;
 
+type Action = "upload" | "import" | "merge" | "delete" | "clone";
+
 type Props = {
   voice: string;
   samples: Sample[];
@@ -39,7 +41,7 @@ type Props = {
 
 export default function VoiceSamples({ voice, samples, exists, onChange, onCloned }: Props) {
   const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState<"upload" | "merge" | "delete" | "clone" | null>(null);
+  const [busy, setBusy] = useState<Action | null>(null);
   const [confirmingReplace, setConfirmingReplace] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [durations, setDurations] = useState<Record<string, number>>({});
@@ -49,10 +51,7 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
   // the merge would upload the same audio twice. Untick to keep them.
   const [deleteSources, setDeleteSources] = useState(true);
 
-  async function request(
-    kind: "upload" | "merge" | "delete" | "clone",
-    send: () => Promise<Response>,
-  ) {
+  async function request(kind: Action, send: () => Promise<Response>) {
     setBusy(kind);
     setError(null);
     try {
@@ -78,6 +77,17 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
     if (payload) onChange(payload.samples);
     // Clearing the input is what lets the same file be re-picked after a failure.
     if (input.current) input.current.value = "";
+  }
+
+  async function importGameClips() {
+    const payload = await request("import", () =>
+      fetch(`/api/voices/${voice}/samples/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ replace: samples.length > 0 }),
+      }),
+    );
+    if (payload) onChange(payload.samples);
   }
 
   async function remove(file: string) {
@@ -138,14 +148,22 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
   const complete = measured.length === samples.length;
   const allSelected = samples.length > 0 && selected.size === samples.length;
   const pauseSeconds = Number(pause);
-  const pauseValid = Number.isFinite(pauseSeconds) && pauseSeconds >= 0 && pauseSeconds <= MAX_PAUSE;
+  const pauseValid =
+    Number.isFinite(pauseSeconds) && pauseSeconds >= 0 && pauseSeconds <= MAX_PAUSE;
+  // Only a flavored voice has game clips to seed from: narrator-male is a pseudo-race for
+  // gameobjects and bloodelf-female a later expansion's model, and the game recorded NPC
+  // voice sets for neither. Read off the name rather than fetched, since that is exactly how
+  // the server locates the directory.
+  const hasGameClips = voice.split("-").length === 3;
 
   return (
     <div className="bg-muted/30 border-t px-4 py-3">
       {samples.length === 0 ? (
         <p className="text-muted-foreground mb-3 text-sm">
-          No clips yet. Short greeting clips are fine — upload several and merge them into one
-          take.
+          No clips yet.{" "}
+          {hasGameClips
+            ? "Import the game's own barks for this voice, or upload your own — short greeting clips are fine, and several merge into one take."
+            : "Short greeting clips are fine — upload several and merge them into one take."}
         </p>
       ) : (
         <>
@@ -181,7 +199,10 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
                     // the whole total unusable.
                     const { duration } = event.currentTarget;
                     if (!Number.isFinite(duration)) return;
-                    setDurations((current) => ({ ...current, [sample.file]: duration }));
+                    setDurations((current) => ({
+                      ...current,
+                      [sample.file]: duration,
+                    }));
                   }}
                   className="h-8 max-w-[16rem] flex-1"
                 />
@@ -189,7 +210,8 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
                   {displayName(sample.file)}
                 </span>
                 <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                  {durations[sample.file] !== undefined && `${formatDuration(durations[sample.file])} · `}
+                  {durations[sample.file] !== undefined &&
+                    `${formatDuration(durations[sample.file])} · `}
                   {(sample.bytes / 1024 / 1024).toFixed(1)} MiB
                 </span>
                 <Button
@@ -226,6 +248,19 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
           {busy === "upload" ? <Loader2 className="animate-spin" /> : <Upload />}
           Add clips
         </Button>
+
+        {hasGameClips && (
+          <Button
+            variant="outline"
+            size="xs"
+            disabled={busy !== null}
+            title={`Replace these clips with the game's own ${voice} barks, merged into one take`}
+            onClick={importGameClips}
+          >
+            {busy === "import" ? <Loader2 className="animate-spin" /> : <Download />}
+            {samples.length > 0 ? "Re-import game clips" : "Import game clips"}
+          </Button>
+        )}
 
         {samples.length > 1 && (
           <>
@@ -273,8 +308,7 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
 
         {samples.length > 0 && (
           <span className="text-muted-foreground text-xs tabular-nums">
-            {samples.length} {samples.length === 1 ? "clip" : "clips"} ·{" "}
-            {complete ? "" : "≥ "}
+            {samples.length} {samples.length === 1 ? "clip" : "clips"} · {complete ? "" : "≥ "}
             {formatDuration(total)}
           </span>
         )}
@@ -291,19 +325,14 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
             onClick={() => (exists && !confirmingReplace ? setConfirmingReplace(true) : clone())}
           >
             {busy === "clone" ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            {confirmingReplace
-              ? "Confirm replace"
-              : exists
-                ? "Replace voice"
-                : "Create voice"}
+            {confirmingReplace ? "Confirm replace" : exists ? "Replace voice" : "Create voice"}
           </Button>
 
           {confirmingReplace ? (
             <>
               <span className="text-xs text-amber-400">
-                This deletes the current <code>{voice}</code> in ElevenLabs and creates a new
-                one from these {samples.length}{" "}
-                {samples.length === 1 ? "clip" : "clips"}.
+                This deletes the current <code>{voice}</code> in ElevenLabs and creates a new one
+                from these {samples.length} {samples.length === 1 ? "clip" : "clips"}.
               </span>
               <Button variant="ghost" size="xs" onClick={() => setConfirmingReplace(false)}>
                 Cancel

@@ -23,6 +23,8 @@ export type CorpusLine = {
   npcType: NpcType;
   race: string;
   gender: string;
+  /** Which of the race-gender's NPC voice sets, e.g. "shaman". Null where the game has none. */
+  flavor: string | null;
   voice: string;
   playerGender: "m" | "f" | null;
   text: string;

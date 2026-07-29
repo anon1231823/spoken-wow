@@ -6,7 +6,7 @@ describe("corpus", () => {
   const corpus = loadCorpus();
 
   it("loads the committed corpus", () => {
-    expect(corpus.schemaVersion).toBe(1);
+    expect(corpus.schemaVersion).toBe(2);
     expect(corpus.lines).toHaveLength(corpus.lineCount);
     expect(corpus.lineCount).toBeGreaterThan(17000);
   });
@@ -17,7 +17,7 @@ describe("corpus", () => {
     expect(line!.npcName).toBe("Jitters");
     expect(line!.questTitle).toBe("Jitters' Growling Gut");
     expect(line!.fileName).toBe("5-accept");
-    expect(line!.voice).toBe("human-male");
+    expect(line!.voice).toBe("human-male-standard");
   });
 
   it("namespaces npc keys by type", () => {
