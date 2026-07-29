@@ -1,8 +1,9 @@
 "use client";
 
+import { MessageSquareIcon } from "lucide-react";
+
 import LineHistory from "./LineHistory";
 import RegenerateButton from "./RegenerateButton";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { LineState } from "./Explorer";
 import type { ResultLine } from "@/lib/search";
@@ -18,12 +19,40 @@ function absence(line: ResultLine): { kind: "gap" | "skip"; label: string } | nu
   return { kind: "gap", label: "no audio" };
 }
 
-const SOURCE_STYLES: Record<string, string> = {
-  accept: "text-emerald-400",
-  complete: "text-sky-400",
-  gossip: "text-violet-400",
-  progress: "text-muted-foreground",
+/**
+ * The game's own quest markers, because the reader already knows them: yellow "!" over an
+ * NPC means a quest to take, yellow "?" one to hand in. Progress keeps the family with a
+ * minus - nothing to do here yet - and gossip, which the game marks with no overhead icon
+ * at all, gets a grey speech bubble instead of a fourth punctuation mark nobody would read.
+ */
+const QUEST_MARKS: Record<string, { glyph: string; label: string }> = {
+  accept: { glyph: "!", label: "quest offered" },
+  complete: { glyph: "?", label: "quest turn-in" },
+  progress: { glyph: "−", label: "quest in progress" },
 };
+
+function SourceMark({ source }: { source: string }) {
+  if (source === "gossip") {
+    return (
+      <span title="gossip" aria-label="gossip" className="mt-1 flex w-3.5 shrink-0 justify-center">
+        <MessageSquareIcon className="size-3.5 text-zinc-400" />
+      </span>
+    );
+  }
+
+  const mark = QUEST_MARKS[source];
+  if (!mark) return null;
+
+  return (
+    <span
+      title={mark.label}
+      aria-label={source}
+      className="mt-px w-3.5 shrink-0 text-center text-sm leading-5 font-bold text-amber-400"
+    >
+      {mark.glyph}
+    </span>
+  );
+}
 
 type Props = {
   line: ResultLine;
@@ -56,19 +85,56 @@ export default function LineRow({
 }: Props) {
   const missing = absence(line);
 
-  // The play target, the narrowing links and the regenerate control are all siblings, never
-  // nested: a <button> inside a <button> is invalid HTML, and the inner click never reaches
-  // its own handler. That is why the metadata line sits outside the play button rather than
-  // under the text inside it.
+  // Only the text cell plays. The narrowing links and the regenerate control are siblings of
+  // that button, never nested inside it: a <button> inside a <button> is invalid HTML, and
+  // the inner click never reaches its own handler.
   return (
-    <div
+    <tr
       className={cn(
-        "flex items-start gap-1 rounded-md border border-transparent pr-1 transition-colors",
+        "border-border/60 border-b align-top transition-colors",
         line.hasAudio && "hover:bg-muted/60",
-        current && "bg-muted border-primary/60",
+        current && "bg-muted",
       )}
     >
-      <div className="min-w-0 flex-1">
+      <td className="px-2 py-2">
+        <button
+          className="hover:text-foreground block max-w-full truncate text-left underline-offset-2 hover:underline"
+          title={`Show only ${line.npcName}`}
+          onClick={() => onNarrowToNpc(line)}
+        >
+          {line.npcName}
+        </button>
+        <span className="text-muted-foreground block truncate text-xs">
+          {line.npcType} {line.npcId}
+        </span>
+      </td>
+
+      <td className="px-2 py-2">
+        {line.questId === null ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          <>
+            <button
+              className="hover:text-foreground block max-w-full truncate text-left underline-offset-2 hover:underline"
+              title={`Show only quest ${line.questId}`}
+              onClick={() => onNarrowToQuest(line)}
+            >
+              {line.questTitle ?? `quest ${line.questId}`}
+            </button>
+            <span className="text-muted-foreground block truncate text-xs">
+              quest {line.questId}
+            </span>
+          </>
+        )}
+      </td>
+
+      {/* The voice slot is spelled race-gender, so this column is both at once. */}
+      <td className="text-muted-foreground px-2 py-2">
+        <span className="block truncate">{line.race}</span>
+        <span className="block truncate text-xs">{line.gender}</span>
+      </td>
+
+      <td className="p-0">
         <button
           data-line-key={line.key}
           aria-current={current}
@@ -76,40 +142,30 @@ export default function LineRow({
           onClick={() => onPlay(line)}
           title={line.hasAudio ? line.audioPath : undefined}
           className={cn(
-            "flex w-full min-w-0 items-start gap-2.5 rounded-md px-2 pt-2 text-left",
-            "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
+            "flex w-full min-w-0 items-start gap-2 px-2 py-2 text-left",
+            "focus-visible:ring-ring/50 rounded-sm focus-visible:ring-[3px] focus-visible:outline-none",
             line.hasAudio ? "cursor-pointer" : "cursor-default",
           )}
         >
-          <Badge
-            variant="outline"
-            className={cn("mt-0.5 shrink-0 uppercase", SOURCE_STYLES[line.source])}
-          >
-            {line.source}
-          </Badge>
-          <span
-            className={cn(
-              "min-w-0 flex-1 whitespace-pre-wrap",
-              !current && "line-clamp-2",
-            )}
-          >
+          <SourceMark source={line.source} />
+          <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !current && "line-clamp-2")}>
             {line.text}
           </span>
           {/* The regeneration outcome replaces the absence marker: once a line has just been
               made, "no audio" is stale and confusing rather than merely redundant. */}
           {state?.phase === "error" ? (
-            <span className="text-destructive mt-1 max-w-[18rem] shrink-0 text-right text-xs">
+            <span className="text-destructive mt-0.5 max-w-[12rem] shrink-0 text-right text-xs">
               {state.message}
             </span>
           ) : state?.phase === "done" ? (
-            <span className="mt-1 shrink-0 text-xs text-emerald-400">
+            <span className="mt-0.5 shrink-0 text-xs text-emerald-400">
               regenerated{state.version > 0 && ` · v${state.version}`}
             </span>
           ) : (
             missing && (
               <span
                 className={cn(
-                  "mt-1 shrink-0 text-xs",
+                  "mt-0.5 shrink-0 text-xs",
                   missing.kind === "gap" ? "text-destructive" : "text-muted-foreground",
                 )}
               >
@@ -118,56 +174,27 @@ export default function LineRow({
             )
           )}
         </button>
+      </td>
 
-        {/* Who says it and when. In a flat list this is the only thing tying a line to its
-            NPC, and both halves narrow the search - which is how a whole NPC or a whole
-            quest is still reached in one click. */}
-        <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 px-2 pb-1.5 text-xs">
-          <button
-            className="hover:text-foreground truncate underline-offset-2 hover:underline"
-            title={`Show only ${line.npcName}`}
-            onClick={() => onNarrowToNpc(line)}
-          >
-            {line.npcName}
-          </button>
-          <span aria-hidden>·</span>
-          <span>
-            {line.npcType} {line.npcId}
-          </span>
-          <span aria-hidden>·</span>
-          {line.questId === null ? (
-            <span>Gossip</span>
-          ) : (
-            <button
-              className="hover:text-foreground truncate underline-offset-2 hover:underline"
-              title={`Show only quest ${line.questId}`}
-              onClick={() => onNarrowToQuest(line)}
-            >
-              {line.questTitle ?? `quest ${line.questId}`}
-            </button>
-          )}
-          <span aria-hidden>·</span>
-          <span>{line.voice}</span>
-        </div>
-      </div>
-
-      {canRegenerate && (
-        <span className="mt-1.5 flex shrink-0 items-center">
-          {/* Only shown once there is something to go back to, so an untouched line keeps
-              a single control rather than two. */}
-          {takes > 0 && (
-            <LineHistory
-              file={line.audioPath}
-              onRestored={(version) => onRestored(line.audioPath, version)}
+      <td className="py-1.5 pr-1 pl-0">
+        {canRegenerate && (
+          <span className="flex items-center justify-end">
+            {/* Only shown once there is something to go back to, so an untouched line keeps
+                a single control rather than two. */}
+            {takes > 0 && (
+              <LineHistory
+                file={line.audioPath}
+                onRestored={(version) => onRestored(line.audioPath, version)}
+              />
+            )}
+            <RegenerateButton
+              busy={state?.phase === "busy"}
+              blocked={blocked}
+              onClick={() => onRegenerate(line)}
             />
-          )}
-          <RegenerateButton
-            busy={state?.phase === "busy"}
-            blocked={blocked}
-            onClick={() => onRegenerate(line)}
-          />
-        </span>
-      )}
-    </div>
+          </span>
+        )}
+      </td>
+    </tr>
   );
 }

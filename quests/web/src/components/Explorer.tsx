@@ -575,22 +575,47 @@ export default function Explorer({ facets }: { facets: Facets }) {
         onPage={(next) => updateUrl({ page: next })}
       />
 
-      {result?.lines.map((line) => (
-        <LineRow
-          key={line.key}
-          line={line}
-          current={line.key === current?.key}
-          canRegenerate={showRegenerate}
-          state={lineStates[line.lineId]}
-          blocked={blockedReason(line)}
-          takes={takes[line.audioPath] ?? 0}
-          onPlay={play}
-          onRegenerate={regenerateLine}
-          onRestored={handleRestored}
-          onNarrowToNpc={narrowToNpc}
-          onNarrowToQuest={narrowToQuest}
-        />
-      ))}
+      {/* Fixed layout, because the point of the columns is that they line up down the page:
+          left to auto sizing, one long quest title would widen its column for every row. The
+          text column takes whatever the named columns leave. */}
+      {result && result.lines.length > 0 && (
+        <table className="w-full table-fixed border-collapse text-sm">
+          <colgroup>
+            <col className="w-52" />
+            <col className="w-48" />
+            <col className="w-24" />
+            <col />
+            <col className={showRegenerate ? "w-20" : "w-0"} />
+          </colgroup>
+          <thead>
+            <tr className="text-muted-foreground border-border border-b text-left text-xs">
+              <th className="px-2 pb-1 font-medium">NPC / object</th>
+              <th className="px-2 pb-1 font-medium">Quest</th>
+              <th className="px-2 pb-1 font-medium">Race / gender</th>
+              <th className="px-2 pb-1 font-medium">Line</th>
+              <th className="sr-only">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.lines.map((line) => (
+              <LineRow
+                key={line.key}
+                line={line}
+                current={line.key === current?.key}
+                canRegenerate={showRegenerate}
+                state={lineStates[line.lineId]}
+                blocked={blockedReason(line)}
+                takes={takes[line.audioPath] ?? 0}
+                onPlay={play}
+                onRegenerate={regenerateLine}
+                onRestored={handleRestored}
+                onNarrowToNpc={narrowToNpc}
+                onNarrowToQuest={narrowToQuest}
+              />
+            ))}
+          </tbody>
+        </table>
+      )}
 
       {result && result.lines.length === 0 && (
         <div className="text-muted-foreground py-2 text-sm">No matches.</div>

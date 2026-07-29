@@ -37,7 +37,7 @@ export default function RegenerationPanel({
 
   return (
     <div className="bg-card/95 fixed inset-x-0 bottom-[92px] z-40 border-t backdrop-blur">
-      <div className="mx-auto max-w-4xl px-5 py-2.5">
+      <div className="mx-auto max-w-6xl px-5 py-2.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           {running && <Loader2 className="size-4 shrink-0 animate-spin" />}
 

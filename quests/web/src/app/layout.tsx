@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={cn("dark font-sans", geist.variable)}>
       <body>
         <header className="border-b">
-          <div className="mx-auto flex h-12 max-w-4xl items-center justify-between gap-3 px-5">
+          <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-3 px-5">
             <Link href="/" className="text-sm font-medium">
               VoiceOver Explorer
             </Link>
