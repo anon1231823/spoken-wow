@@ -192,6 +192,13 @@ Spellings come from two places. Whatever the corpus actually uses is scanned for
 lower-case entry additionally gets its capitalised form whether or not one occurs yet, because
 `satyr` beginning a sentence is a fact about English rather than about this corpus.
 
+**Every request pins the language to English.** ElevenLabs infers language from the text
+otherwise, and a short input gives it almost nothing to go on — a bare name in a word preview
+gives it nothing at all, which is how one comes back with the wrong language's vowels.
+`language_code` also governs text normalization, so it plausibly decides how a phoneme string
+is read. Sent only to models documented as accepting it; omitting is what every request did
+before, so a model absent from that list loses nothing.
+
 **Every upload is read back and counted.** Send N rules, download the dictionary, count the
 lexemes. A mismatch is shown on the page rather than trusted away — the absence of this check
 is why a lexicon that had never applied a single pronunciation reported itself healthy for
