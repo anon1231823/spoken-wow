@@ -212,7 +212,7 @@ describe("renderPreview", () => {
 
   it("renders an entry and returns what it cost", async () => {
     const { options } = elevenlabs();
-    const result = await renderPreview(IPA, pick, CONFIG, options, scratch());
+    const result = await renderPreview(IPA, "sentence", pick, CONFIG, options, scratch());
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -226,11 +226,11 @@ describe("renderPreview", () => {
   it("serves the second identical preview off disk without a request", async () => {
     const dir = scratch();
     const first = elevenlabs();
-    await renderPreview(IPA, pick, CONFIG, first.options, dir);
+    await renderPreview(IPA, "sentence", pick, CONFIG, first.options, dir);
     expect(first.calls).toHaveBeenCalledTimes(1);
 
     const second = elevenlabs();
-    const result = await renderPreview(IPA, pick, CONFIG, second.options, dir);
+    const result = await renderPreview(IPA, "sentence", pick, CONFIG, second.options, dir);
 
     expect(second.calls).not.toHaveBeenCalled();
     expect(result.ok && result.preview.cached).toBe(true);
@@ -242,17 +242,17 @@ describe("renderPreview", () => {
 
   it("renders again when the pronunciation changes", async () => {
     const dir = scratch();
-    await renderPreview(IPA, pick, CONFIG, elevenlabs().options, dir);
+    await renderPreview(IPA, "sentence", pick, CONFIG, elevenlabs().options, dir);
 
     const edited = elevenlabs();
-    await renderPreview({ ...IPA, ipa: "ɡnoʊmˈɹɛɡən" }, pick, CONFIG, edited.options, dir);
+    await renderPreview({ ...IPA, ipa: "ɡnoʊmˈɹɛɡən" }, "sentence", pick, CONFIG, edited.options, dir);
 
     expect(edited.calls).toHaveBeenCalledTimes(1);
   });
 
   it("refuses when the account has no voice at all", async () => {
     const { calls, options } = elevenlabs();
-    const result = await renderPreview(IPA, () => null, CONFIG, options, scratch());
+    const result = await renderPreview(IPA, "sentence", () => null, CONFIG, options, scratch());
 
     expect(result.ok).toBe(false);
     expect(calls).not.toHaveBeenCalled();
@@ -265,7 +265,7 @@ describe("renderPreview", () => {
   it("caches nothing when the request fails", async () => {
     const dir = scratch();
     const fetchImpl = vi.fn(async () => new Response('{"detail":"nope"}', { status: 429 }));
-    const result = await renderPreview(IPA, pick, CONFIG, {
+    const result = await renderPreview(IPA, "sentence", pick, CONFIG, {
       apiKey: "k",
       baseUrl: "https://stub.invalid",
       fetchImpl: fetchImpl as unknown as typeof globalThis.fetch,
@@ -273,6 +273,55 @@ describe("renderPreview", () => {
 
     expect(result.ok).toBe(false);
     expect(fs.existsSync(dir) ? fs.readdirSync(dir) : []).toEqual([]);
+  });
+
+  describe("word mode", () => {
+    it("speaks the name alone, with the pronunciation still substituted", async () => {
+      const { calls, options } = elevenlabs();
+      const result = await renderPreview(IPA, "word", pick, CONFIG, options, scratch());
+
+      expect(result.ok && result.preview.sentence).toBe("Gnomeregan");
+      expect(result.ok && result.preview.spoken).toBe(
+        '<phoneme alphabet="ipa" ph="ˈnoʊmɹəɡæn">Gnomeregan</phoneme>',
+      );
+      expect(result.ok && result.preview.source).toBeNull();
+      expect(calls).toHaveBeenCalledTimes(1);
+    });
+
+    it("substitutes a respelling outright", async () => {
+      const { options } = elevenlabs();
+      const result = await renderPreview(ALIAS, "word", pick, CONFIG, options, scratch());
+      expect(result.ok && result.preview.spoken).toBe("nomeregan");
+    });
+
+    /**
+     * The two modes are different text, so previewKey separates them without needing to know
+     * a mode exists - but only if it really is different text. Hearing the word must not
+     * serve back the sentence someone rendered a moment earlier.
+     */
+    it("caches separately from sentence mode", async () => {
+      const dir = scratch();
+      const first = elevenlabs();
+      await renderPreview(IPA, "sentence", pick, CONFIG, first.options, dir);
+
+      const second = elevenlabs();
+      await renderPreview(IPA, "word", pick, CONFIG, second.options, dir);
+
+      expect(second.calls).toHaveBeenCalledTimes(1);
+      expect(fs.readdirSync(dir)).toHaveLength(2);
+    });
+
+    it("still caches within its own mode", async () => {
+      const dir = scratch();
+      await renderPreview(IPA, "word", pick, CONFIG, elevenlabs().options, dir);
+
+      const again = elevenlabs();
+      const result = await renderPreview(IPA, "word", pick, CONFIG, again.options, dir);
+
+      expect(again.calls).not.toHaveBeenCalled();
+      expect(result.ok && result.preview.cached).toBe(true);
+      expect(result.ok && result.preview.mode).toBe("word");
+    });
   });
 
   /**
@@ -283,7 +332,7 @@ describe("renderPreview", () => {
   it("refuses an IPA preview on a model that ignores phoneme tags", async () => {
     const { calls, options } = elevenlabs();
     const config = { ...CONFIG, modelId: "eleven_multilingual_v2" };
-    const result = await renderPreview(IPA, pick, config, options, scratch());
+    const result = await renderPreview(IPA, "sentence", pick, config, options, scratch());
 
     expect(result.ok).toBe(false);
     expect(!result.ok && result.failure.message).toMatch(/ignores phoneme rules/);
@@ -294,7 +343,7 @@ describe("renderPreview", () => {
   it("still previews a respelling on such a model", async () => {
     const { calls, options } = elevenlabs();
     const config = { ...CONFIG, modelId: "eleven_multilingual_v2" };
-    const result = await renderPreview(ALIAS, pick, config, options, scratch());
+    const result = await renderPreview(ALIAS, "sentence", pick, config, options, scratch());
 
     expect(result.ok).toBe(true);
     expect(calls).toHaveBeenCalledTimes(1);
@@ -304,7 +353,7 @@ describe("renderPreview", () => {
   // NPC happened to say the sample sentence.
   it("sends no seed", async () => {
     const { calls, options } = elevenlabs();
-    await renderPreview(IPA, pick, CONFIG, options, scratch());
+    await renderPreview(IPA, "sentence", pick, CONFIG, options, scratch());
 
     const [, init] = calls.mock.calls[0] as unknown as [string, RequestInit];
     expect(JSON.parse(String(init.body))).not.toHaveProperty("seed");

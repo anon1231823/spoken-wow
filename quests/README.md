@@ -186,12 +186,19 @@ and the corpus writes the same name several ways — `Aku'mai` and `Aku'Mai`, `t
 `Tauren`. The web app sends the same entries through the rules API with `case_sensitive:
 false` instead, which is 123 occurrences a PLS upload would decline to fix.
 
-**Hear an entry before saving it.** Every entry has a **Hear it** button, which speaks the
-name in a real sentence from the corpus — the shortest line that actually uses it, in that
-NPC's own voice — with the pronunciation substituted in. This works on an unsaved draft
-because ElevenLabs accepts a phoneme tag inline in the text, so nothing has to be uploaded
-first. Renders are cached on disk under `audio-previews/`, keyed on the spoken text, voice,
-model and settings, so re-opening an entry costs nothing.
+**Hear an entry before saving it.** Every row has **Word** and **In a line**. Word speaks the
+name on its own — the phonemes with nothing around them, for settling which vowel is right.
+In a line speaks it inside the shortest real corpus sentence that uses it, in that NPC's own
+voice, because a name in isolation gets list intonation and prosody is half of what you are
+listening for. This works on an unsaved draft because ElevenLabs accepts a phoneme tag inline
+in the text, so nothing has to be uploaded first. Both modes are cached on disk under
+`audio-previews/`, keyed on the spoken text, voice, model and settings — so they cache
+separately from each other, and re-hearing either costs nothing.
+
+**The checkbox on each row is the entry's confidence.** Ticked means the pronunciation has
+been confirmed; unticked means it still needs an ear. It is in the table rather than behind
+the edit form so a pass down the list — hear it, tick it — does not mean opening 134 rows,
+and **Unconfirmed** filters to what is left.
 
 What a preview proves is the *sound*, not the *rule*: it substitutes the pronunciation
 directly rather than matching it, so it cannot tell you whether `Azshara's` inherits the rule

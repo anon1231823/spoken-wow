@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,24 +16,23 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { EffectiveLexicon } from "@/lib/generation/dictionary";
+import { PREVIEW_MODES, type PreviewMode } from "@/lib/generation/preview-modes";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
-  CONFIDENCES,
   honoursPhonemes,
   kindOf,
   LexiconError,
   validateLexicon,
   type Category,
-  type Confidence,
   type LexiconEntry,
 } from "@/lib/generation/lexicon";
 
 type Saved = EffectiveLexicon & { syncError?: string | null };
 
-const CONFIDENCE_LABELS: Record<Confidence, string> = {
-  high: "Confident",
-  check: "Needs checking",
+const MODE_LABELS: Record<PreviewMode, string> = {
+  word: "Word",
+  sentence: "In a line",
 };
 
 // Starts as a respelling, not IPA. Anyone who can write IPA can switch in one click, and
@@ -69,6 +69,7 @@ function same(a: LexiconEntry[], b: LexiconEntry[]): boolean {
 }
 
 type PreviewMeta = {
+  mode: PreviewMode;
   spoken: string;
   sentence: string;
   source: { npcName: string; lineId: string } | null;
@@ -85,9 +86,12 @@ type PreviewMeta = {
  * is worse than useless for the one thing this is for.
  */
 function usePreview() {
-  const [busy, setBusy] = useState(false);
-  const [meta, setMeta] = useState<PreviewMeta | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  // Which row and mode is in flight, rather than a bare boolean: the buttons live in the
+  // table now, so "rendering" has to point at the one button that was pressed instead of
+  // disabling all 268 of them.
+  const [busy, setBusy] = useState<{ index: number; mode: PreviewMode } | null>(null);
+  const [result, setResult] = useState<{ index: number; meta: PreviewMeta } | null>(null);
+  const [error, setError] = useState<{ index: number; message: string } | null>(null);
   const audio = useRef<HTMLAudioElement | null>(null);
   const url = useRef<string | null>(null);
 
@@ -101,37 +105,39 @@ function usePreview() {
 
   useEffect(() => release, []);
 
-  async function play(entry: LexiconEntry) {
+  async function play(entry: LexiconEntry, mode: PreviewMode, index: number) {
     release();
-    setBusy(true);
+    setBusy({ index, mode });
     setError(null);
-    setMeta(null);
+    setResult(null);
     try {
       const response = await fetch("/api/generation/lexicon/preview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(entry),
+        body: JSON.stringify({ entry, mode }),
       });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
-        setError(body.error ?? `preview failed (${response.status})`);
+        setError({ index, message: body.error ?? `preview failed (${response.status})` });
         return;
       }
 
       const header = response.headers.get("X-Preview");
-      if (header) setMeta(JSON.parse(decodeURIComponent(header)) as PreviewMeta);
+      if (header) {
+        setResult({ index, meta: JSON.parse(decodeURIComponent(header)) as PreviewMeta });
+      }
 
       url.current = URL.createObjectURL(await response.blob());
       audio.current = new Audio(url.current);
       await audio.current.play();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught));
+      setError({ index, message: caught instanceof Error ? caught.message : String(caught) });
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   }
 
-  return { play, busy, meta, error };
+  return { play, busy, result, error };
 }
 
 /**
@@ -296,7 +302,7 @@ export default function LexiconEditor({
           aria-pressed={onlyChecks}
           onClick={() => setOnlyChecks((value) => !value)}
         >
-          Needs checking · {checks}
+          Unconfirmed · {checks}
         </Button>
         <Button size="sm" variant="ghost" onClick={add}>
           Add name
@@ -314,12 +320,19 @@ export default function LexiconEditor({
             column widths it needs to escape. */}
         <div
           aria-hidden
-          className="text-muted-foreground bg-muted/40 flex items-baseline gap-3 px-3 py-1.5 text-[10.5px] font-semibold tracking-wider uppercase"
+          className="text-muted-foreground bg-muted/40 flex items-center gap-3 px-3 py-1.5 text-[10.5px] font-semibold tracking-wider uppercase"
         >
-          <span className="w-40 shrink-0">Written</span>
-          <span className="w-44 shrink-0">Sound</span>
-          <span className="w-36 shrink-0">Say it</span>
-          <span className="ml-auto">Note</span>
+          {/* Matches the checkbox's own width, so the columns below line up under their names. */}
+          <span className="w-4 shrink-0" title="Confirmed">
+            OK
+          </span>
+          <span className="flex flex-1 gap-3 overflow-hidden">
+            <span className="w-40 shrink-0">Written</span>
+            <span className="w-44 shrink-0">Sound</span>
+            <span className="w-36 shrink-0">Say it</span>
+            <span className="truncate">Note</span>
+          </span>
+          <span className="shrink-0">Hear</span>
         </div>
 
         {shown.length === 0 && (
@@ -333,39 +346,22 @@ export default function LexiconEditor({
             <EntryForm
               key={index}
               entry={entry}
-              preview={preview}
               onChange={(change) => patch(index, change)}
               onClose={() => setEditing(null)}
               onRemove={() => remove(index)}
             />
           ) : (
-            <button
+            <Row
               key={index}
-              type="button"
-              onClick={() => openRow(index, entry)}
-              className="hover:bg-muted/50 flex w-full items-baseline gap-3 px-3 py-2 text-left"
-            >
-              <span className="w-40 shrink-0 truncate text-sm font-medium">
-                {entry.grapheme || <span className="text-muted-foreground">(new entry)</span>}
-              </span>
-              <span className="text-primary w-44 shrink-0 truncate text-sm">
-                {entry.alias ? `“${entry.alias}”` : `/${entry.ipa}/`}
-              </span>
-              <span className="text-muted-foreground w-36 shrink-0 truncate font-mono text-xs">
-                {entry.say}
-              </span>
-              {entry.confidence === "check" && (
-                <Badge variant="outline" className="shrink-0 text-amber-400">
-                  check
-                </Badge>
-              )}
-              {changedFromFile(entry) && (
-                <Badge variant="secondary" className="shrink-0">
-                  edited
-                </Badge>
-              )}
-              <span className="text-muted-foreground ml-auto truncate text-xs">{entry.note}</span>
-            </button>
+              entry={entry}
+              index={index}
+              edited={changedFromFile(entry)}
+              preview={preview}
+              onOpen={() => openRow(index, entry)}
+              onConfirm={(confirmed) =>
+                patch(index, { confidence: confirmed ? "high" : "check" })
+              }
+            />
           ),
         )}
       </div>
@@ -504,21 +500,128 @@ function Banner({ tone, children }: { tone: "warn" | "error"; children: React.Re
   );
 }
 
+/**
+ * One entry at rest: confirm it, hear it, or open it.
+ *
+ * A row of controls rather than one big button. It used to be a single <button> covering the
+ * whole row, which is no longer possible - a checkbox and two preview buttons cannot be
+ * nested inside a button, and browsers do not agree on what happens if you try. The clickable
+ * region that opens the editor is now just the text.
+ */
+function Row({
+  entry,
+  index,
+  edited,
+  preview,
+  onOpen,
+  onConfirm,
+}: {
+  entry: LexiconEntry;
+  index: number;
+  edited: boolean;
+  preview: ReturnType<typeof usePreview>;
+  onOpen: () => void;
+  onConfirm: (confirmed: boolean) => void;
+}) {
+  const sound = entry.ipa ?? entry.alias ?? "";
+  const playable = Boolean(entry.grapheme.trim() && sound.trim());
+  const meta = preview.result?.index === index ? preview.result.meta : null;
+  const error = preview.error?.index === index ? preview.error.message : null;
+
+  return (
+    <div>
+      <div className="hover:bg-muted/50 flex items-center gap-3 px-3 py-1.5">
+        <Checkbox
+          checked={entry.confidence === "high"}
+          onCheckedChange={(value) => onConfirm(value === true)}
+          aria-label={`Confirmed pronunciation for ${entry.grapheme || "this entry"}`}
+          className="shrink-0"
+        />
+
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex flex-1 items-baseline gap-3 overflow-hidden text-left"
+        >
+          <span className="w-40 shrink-0 truncate text-sm font-medium">
+            {entry.grapheme || <span className="text-muted-foreground">(new entry)</span>}
+          </span>
+          <span className="text-primary w-44 shrink-0 truncate text-sm">
+            {entry.alias ? `“${entry.alias}”` : `/${entry.ipa}/`}
+          </span>
+          <span className="text-muted-foreground w-36 shrink-0 truncate font-mono text-xs">
+            {entry.say}
+          </span>
+          {edited && (
+            <Badge variant="secondary" className="shrink-0">
+              edited
+            </Badge>
+          )}
+          <span className="text-muted-foreground truncate text-xs">{entry.note}</span>
+        </button>
+
+        <div className="flex shrink-0 gap-1">
+          {PREVIEW_MODES.map((mode) => (
+            <Button
+              key={mode}
+              size="sm"
+              variant="ghost"
+              className="h-7 px-2 text-xs"
+              disabled={!playable || preview.busy !== null}
+              title={
+                mode === "word"
+                  ? "Hear the name on its own"
+                  : "Hear it in a line from the corpus"
+              }
+              onClick={() => void preview.play(entry, mode, index)}
+            >
+              {preview.busy?.index === index && preview.busy.mode === mode
+                ? "…"
+                : MODE_LABELS[mode]}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {error && (
+        <p role="alert" className="text-destructive px-3 pb-2 pl-10 text-xs">
+          {error}
+        </p>
+      )}
+
+      {meta && !error && (
+        <p className="text-muted-foreground px-3 pb-2 pl-10 text-xs">
+          {meta.mode === "word" ? (
+            <>The name alone</>
+          ) : meta.source ? (
+            <>
+              {meta.source.npcName}: “{meta.sentence}”
+            </>
+          ) : (
+            <>No corpus line is short enough, so this is an invented sentence.</>
+          )}{" "}
+          {meta.cached
+            ? "· from cache, no credits spent"
+            : `· ${meta.characters} characters${
+                meta.credits === null ? "" : `, ${meta.credits} credits`
+              }`}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function EntryForm({
   entry,
-  preview,
   onChange,
   onClose,
   onRemove,
 }: {
   entry: LexiconEntry;
-  preview: ReturnType<typeof usePreview>;
   onChange: (change: Partial<LexiconEntry>) => void;
   onClose: () => void;
   onRemove: () => void;
 }) {
-  const sound = entry.ipa ?? entry.alias ?? "";
-  const playable = Boolean(entry.grapheme.trim() && sound.trim());
   return (
     <div className="bg-muted/30 space-y-3 px-3 py-3">
       <div className="grid gap-3 sm:grid-cols-2">
@@ -583,23 +686,6 @@ function EntryForm({
             placeholder="silent G"
           />
         </Field>
-        <Field label="Confidence" hint="Mark anything you have not heard in game as checking.">
-          <Select
-            value={entry.confidence}
-            onValueChange={(value) => onChange({ confidence: value as Confidence })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CONFIDENCES.map((confidence) => (
-                <SelectItem key={confidence} value={confidence}>
-                  {CONFIDENCE_LABELS[confidence]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
         <Field label="Category" hint="Grouping for this page only.">
           <Select
             value={entry.category}
@@ -623,41 +709,10 @@ function EntryForm({
         <Button size="sm" variant="secondary" onClick={onClose}>
           Done
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={!playable || preview.busy}
-          onClick={() => void preview.play(entry)}
-        >
-          {preview.busy ? "Rendering…" : "Hear it"}
-        </Button>
         <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={onRemove}>
           Remove
         </Button>
       </div>
-
-      {preview.error && (
-        <p role="alert" className="text-destructive text-xs">
-          {preview.error}
-        </p>
-      )}
-
-      {preview.meta && !preview.error && (
-        <p className="text-muted-foreground text-xs">
-          {preview.meta.source ? (
-            <>
-              {preview.meta.source.npcName}: “{preview.meta.sentence}”
-            </>
-          ) : (
-            <>No corpus line is short enough, so this is an invented sentence.</>
-          )}{" "}
-          {preview.meta.cached
-            ? "· from cache, no credits spent"
-            : `· ${preview.meta.characters} characters${
-                preview.meta.credits === null ? "" : `, ${preview.meta.credits} credits`
-              }`}
-        </p>
-      )}
     </div>
   );
 }

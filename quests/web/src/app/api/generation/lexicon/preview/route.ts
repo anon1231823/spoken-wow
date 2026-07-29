@@ -9,12 +9,13 @@
  * anywhere, so there is nothing to name in a URL - and a miss is not a safe request, since
  * it costs money.
  *
- * The body is one entry, validated the way a saved one is. A preview of an entry the lexicon
- * would refuse to store is a preview of something that can never ship.
+ * The body is one entry plus a mode, and the entry is validated the way a saved one is. A
+ * preview of an entry the lexicon would refuse to store is a preview of something that can
+ * never ship.
  */
 import { requireConfigure } from "@/lib/generation/authz";
 import { LexiconError, validateEntry } from "@/lib/generation/lexicon";
-import { renderPreview, voicePicker } from "@/lib/generation/preview";
+import { isPreviewMode, renderPreview, voicePicker } from "@/lib/generation/preview";
 import { currentConfig } from "@/lib/generation/settings";
 import { generationStatus } from "@/lib/generation/status";
 
@@ -25,8 +26,12 @@ export async function POST(request: Request) {
   if (denied) return denied;
 
   let entry;
+  let mode;
   try {
-    entry = validateEntry(await request.json(), 0);
+    const body = (await request.json()) as { entry?: unknown; mode?: unknown };
+    entry = validateEntry(body.entry, 0);
+    if (!isPreviewMode(body.mode)) throw new LexiconError("mode must be word or sentence");
+    mode = body.mode;
   } catch (error) {
     const message = error instanceof LexiconError ? error.message : "invalid entry";
     return Response.json({ error: message }, { status: 400 });
@@ -37,7 +42,7 @@ export async function POST(request: Request) {
     return Response.json({ error: status.error }, { status: 502 });
   }
 
-  const result = await renderPreview(entry, voicePicker(status.voiceIds), config);
+  const result = await renderPreview(entry, mode, voicePicker(status.voiceIds), config);
   if (!result.ok) {
     return Response.json(
       { error: result.failure.message },

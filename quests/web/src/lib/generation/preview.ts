@@ -25,6 +25,9 @@ import type { ElevenLabsOptions } from "@/lib/voices/elevenlabs";
 
 import type { GenerationConfig } from "./config";
 import { honoursPhonemes, kindOf, type LexiconEntry } from "./lexicon";
+import type { PreviewMode } from "./preview-modes";
+
+export { PREVIEW_MODES, isPreviewMode, type PreviewMode } from "./preview-modes";
 import { failure, type Failure } from "./errors";
 import { textToSpeech } from "./tts";
 
@@ -133,9 +136,10 @@ export function previewPath(key: string, dir: string = PREVIEW_DIR): string {
 
 export type Preview = {
   audio: Buffer;
+  mode: PreviewMode;
   /** What was sent, tag and all, so the page can show why it sounds the way it does. */
   spoken: string;
-  /** The sentence before the pronunciation was substituted in. */
+  /** What was read, before the pronunciation was substituted in. The name alone in word mode. */
   sentence: string;
   /** The NPC the sentence came from, or null when it is the invented carrier. */
   source: { npcName: string; lineId: string } | null;
@@ -157,6 +161,7 @@ export type PreviewResult = { ok: true; preview: Preview } | { ok: false; failur
  */
 export async function renderPreview(
   entry: LexiconEntry,
+  mode: PreviewMode,
   /**
    * Which voice to speak with, given the line the sample came from.
    *
@@ -179,7 +184,13 @@ export async function renderPreview(
     return { ok: false, failure: MODEL_IGNORES_PHONEMES(config.modelId) };
   }
 
-  const { text: sentence, line } = sampleSentence(entry.grapheme, loadCorpus().lines);
+  // The corpus scan is skipped entirely in word mode. It is a match against 17,507 lines,
+  // and in word mode there is nothing to find: the text is the name.
+  const { text: sentence, line } =
+    mode === "word"
+      ? { text: entry.grapheme, line: null }
+      : sampleSentence(entry.grapheme, loadCorpus().lines);
+
   const spoken = speakable(entry, sentence);
   const source = line ? { npcName: line.npcName, lineId: line.lineId } : null;
 
@@ -194,6 +205,7 @@ export async function renderPreview(
       ok: true,
       preview: {
         audio: fs.readFileSync(file),
+        mode,
         spoken,
         sentence,
         source,
@@ -229,6 +241,7 @@ export async function renderPreview(
     ok: true,
     preview: {
       audio: speech.audio,
+      mode,
       spoken,
       sentence,
       source,
