@@ -7,6 +7,10 @@ on:
     paths:
       - "web/**"
       - "corpus/**"
+      # How a line is voiced ships inside the release, so a change to one of these has to
+      # produce a new one. The lexicon is the reason this is not merely tidy: it is meant to
+      # be edited, and an edit that never reached a release would look like a lost commit.
+      - "voice/*.json"
       - "deploy/**"
       - ".github/workflows/deploy-web.yaml"
   workflow_dispatch:
@@ -108,8 +112,13 @@ jobs:
           # Same reasoning for how a line is voiced. These are also what the Python CLI
           # reads, so shipping them keeps both sides starting from the same defaults - and
           # without pronunciation.json the app applies no rules and reads "Hm" as letters.
+          #
+          # lexicon.json is the one whose absence is silent: readLexiconFile treats a missing
+          # file as an empty lexicon, so the editor renders with no rows and nothing says why.
+          # A glob rather than a list, so the next file added here ships without anyone having
+          # to remember this line - which is exactly how the lexicon came to be missing.
           mkdir -p "$R"/voice
-          cp voice/generation.json voice/pronunciation.json "$R"/voice/
+          cp voice/*.json "$R"/voice/
           # Migrations ship with the release too: activate.sh runs migrate.sh against the
           # release directory, so without this a deploy has nothing to apply.
           cp -a web/migrations "$R"/migrations
@@ -119,6 +128,13 @@ jobs:
           test -f "$R"/migrations/0005_voiceline_version_credits.sql
           test -f "$R"/voice/generation.json
           test -f "$R"/voice/pronunciation.json
+          test -f "$R"/voice/lexicon.json
+          # Present is not enough: an empty lexicon is what a missing one looks like to the
+          # page, so assert it actually carries entries.
+          node -e 'const { entries } = require(process.argv[1]);
+                   if (!entries?.length) { console.error("lexicon.json has no entries"); process.exit(1); }
+                   console.log("lexicon.json: " + entries.length + " entries");' "$PWD/$R/voice/lexicon.json"
+
           du -sh "$R"
 
       # Boot the exact artifact we are about to ship. Catches a broken bundle here rather
