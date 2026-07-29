@@ -67,8 +67,8 @@ export class LexiconError extends Error {}
 /**
  * A rule as the add-from-rules endpoint wants it.
  *
- * case_sensitive is false throughout, and it is the whole reason this app builds the rules
- * rather than uploading voice/lexicon.pls: PLS matching is case-sensitive with no override,
+ * case_sensitive is false throughout, and it is the whole reason this app builds rules
+ * rather than a PLS lexicon file: PLS matching is case-sensitive with no override,
  * and the corpus writes the same name several ways - Aku'mai and Aku'Mai, tauren and Tauren,
  * Qiraji and qiraji. That is 123 occurrences a PLS upload silently declines to fix. No
  * grapheme here collides with a word whose casing changes how it should sound.

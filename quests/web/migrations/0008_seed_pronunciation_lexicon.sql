@@ -10,14 +10,14 @@
 -- competing with the live data, and "reset to the committed lexicon" meant discarding real
 -- work to return to whatever the file happened to say at deploy time.
 --
--- voice/lexicon.json stays in the repo, but as provenance and as the input to
--- tools/build_lexicon.py, which generates the PLS and the rules JSON for the CLI path. The
--- web app no longer reads it at runtime, and no longer cares whether it shipped.
+-- This file is therefore the only copy of the starting lexicon in the repo. There is no
+-- voice/lexicon.json any more: a second copy on disk would be a stale snapshot competing
+-- with the live row, which is the arrangement this migration exists to end.
 --
--- The entries below are therefore a SNAPSHOT taken when this migration was written, not a
--- mirror of the file. Do not regenerate it when the file changes: migrations are recorded
--- once and never re-run, so a later edit here would apply to nobody. Later changes to the
--- lexicon are made in the editor.
+-- Do not edit the entries below to change a pronunciation. Migrations are recorded once and
+-- never re-run, so an edit here would apply to nobody - not to this database, and not to a
+-- fresh one, which would seed from it and then be edited like any other. Changes are made in
+-- the editor at /lexicon.
 --
 -- ON CONFLICT DO NOTHING because the row may already exist - anyone who pressed "Save and
 -- upload" before this migration has a lexicon of their own, possibly already uploaded, and

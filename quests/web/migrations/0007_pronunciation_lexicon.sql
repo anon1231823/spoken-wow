@@ -1,5 +1,10 @@
 -- The pronunciation lexicon the web app generates with, and the dictionary it became.
 --
+-- SUPERSEDED IN PART BY 0008. The two-layer arrangement described below - a committed file as
+-- the default, this row as the override - did not survive contact with the fact that a
+-- lexicon is edited from the web UI. 0008 seeds this row and the file is gone; the table
+-- itself is unchanged. Read 0008's header for why.
+--
 -- The same two-layer arrangement as generation_setting, for the same reason: voice/lexicon.json
 -- ships in the release and is what a fresh install starts from, and this row - when it exists -
 -- is what the web app uses. Absent means the committed file is in force, which is a state the

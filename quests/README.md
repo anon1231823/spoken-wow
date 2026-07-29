@@ -180,51 +180,22 @@ Respell it as it should be *said*, not as it should be *read*: `nomeregan`, not
 `NOME-reh-gan`. Capitals can be spoken as an acronym and hyphens as pauses. The stress form
 belongs in the entry's `say` field, which is for people and is never sent.
 
-**The rules are built here, not uploaded as PLS.** `voice/lexicon.pls` exists and
-`tools/build_lexicon.py` generates it, but PLS matching is case-sensitive with no override,
-and the corpus writes the same name several ways — `Aku'mai` and `Aku'Mai`, `tauren` and
-`Tauren`. The web app sends the same entries through the rules API with `case_sensitive:
-false` instead, which is 123 occurrences a PLS upload would decline to fix.
-
-**Hear an entry before saving it.** Every row has **Word** and **In a line**. Word speaks the
-name on its own — the phonemes with nothing around them, for settling which vowel is right.
-In a line speaks it inside the shortest real corpus sentence that uses it, in that NPC's own
-voice, because a name in isolation gets list intonation and prosody is half of what you are
-listening for. This works on an unsaved draft because ElevenLabs accepts a phoneme tag inline
-in the text, so nothing has to be uploaded first. Both modes are cached on disk under
-`audio-previews/`, keyed on the spoken text, voice, model and settings — so they cache
-separately from each other, and re-hearing either costs nothing.
-
-Each button says up front whether pressing it will spend credits: the refresh icon beside it
-is lit only when a take is already on disk, and clicking it discards that take and pays for a
-fresh one. What a render cost is reported by a toast rather than in the row, so the list never
-shifts under the button you were reaching for; a preview served from cache says nothing and
-simply plays.
-
-**The checkbox on each row is the entry's confidence.** Ticked means the pronunciation has
-been confirmed; unticked means it still needs an ear. It is in the table rather than behind
-the edit form so a pass down the list — hear it, tick it — does not mean opening 134 rows,
-and **Unconfirmed** filters to what is left.
-
-What a preview proves is the *sound*, not the *rule*: it substitutes the pronunciation
-directly rather than matching it, so it cannot tell you whether `Azshara's` inherits the rule
-for `Azshara`. Only a real generation carrying the dictionary answers that. And because
-phoneme tags share the model support of phoneme rules, an IPA preview is refused outright on
-a model that would ignore it, rather than played back sounding like the default pronunciation
-— which would look exactly like IPA you had written wrong.
+**Rules, not a PLS lexicon file.** PLS matching is case-sensitive with no override, and the
+corpus writes the same name several ways — `Aku'mai` and `Aku'Mai`, `tauren` and `Tauren`,
+`Qiraji` and `qiraji`. That is 123 occurrences a PLS upload would silently decline to fix, so
+the entries go through the `add-from-rules` API with `case_sensitive: false` instead. Saving
+creates a new dictionary and pins every later request to that exact version.
 
 **Saving does not touch audio already in the store.** Each take records the dictionary version
 and a hash of the text it was spoken with, so a line generated before a fix stays playable and
-stays identifiable as out of date. `python tools/build_lexicon.py audit` ranks the whole
-lexicon by how many corpus lines each entry touches.
+stays identifiable as out of date.
 
-**The lexicon lives in the database, not in the repo.** Unlike the generation settings, there
-is no file layer: migration `0008` seeds the `pronunciation_lexicon` row once from
-`voice/lexicon.json`, and every change after that is made in the editor. The file stays as
-provenance and as the input to `tools/build_lexicon.py`, which generates the PLS and the rules
-JSON for the CLI path — the web app does not read it at runtime. A file shipping inside each
-release could only be a stale snapshot competing with the live data, and "reset to the
-committed lexicon" would have meant discarding real work.
+**The lexicon lives in the database, not in the repo.** Unlike the generation settings there
+is no file layer at all: migration `0008` carries the 134 starting entries and seeds the
+`pronunciation_lexicon` row once, and every change after that is made in the editor. A copy on
+disk could only be a stale snapshot competing with the live data — and "reset to the committed
+lexicon" would have meant discarding real work to return to whatever that copy said at deploy
+time.
 
 The Python CLI sends no dictionary at all — it is the one place the two generators no longer
 produce identical audio.

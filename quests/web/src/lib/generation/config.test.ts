@@ -121,8 +121,7 @@ describe("readPronunciationFile", () => {
 });
 
 describe("paths", () => {
-  // Two, not three: the lexicon lives in the database, and voice/lexicon.json is provenance
-  // and generator input rather than something the app reads.
+  // Two, not three: the lexicon lives in the database and is never read off disk.
   it("names the files the Python side reads", () => {
     expect(generationPath("/x")).toBe(path.join("/x", "generation.json"));
     expect(pronunciationPath("/x")).toBe(path.join("/x", "pronunciation.json"));

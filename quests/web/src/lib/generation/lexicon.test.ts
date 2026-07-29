@@ -152,9 +152,9 @@ describe("respelled entries", () => {
 
 describe("toRules", () => {
   /**
-   * case_sensitive: false is the whole reason this app builds rules rather than uploading
-   * voice/lexicon.pls. PLS matching is case-sensitive with no override, and the corpus writes
-   * the same name several ways - Aku'mai and Aku'Mai, tauren and Tauren, Qiraji and qiraji.
+   * case_sensitive: false is the whole reason this app builds rules rather than a PLS
+   * lexicon file. PLS matching is case-sensitive with no override, and the corpus writes the
+   * same name several ways - Aku'mai and Aku'Mai, tauren and Tauren, Qiraji and qiraji.
    */
   it("emits case-insensitive, word-bounded phoneme rules", () => {
     expect(toRules(validateLexicon([ENTRY]))).toEqual([

@@ -6,10 +6,9 @@
  * a running server without a deploy - which replaces the process - and are therefore read
  * once and memoised.
  *
- * voice/lexicon.json is deliberately absent from this list. The lexicon lives in the
- * pronunciation_lexicon row, seeded once by migration 0008 and edited from the web UI after
- * that; the file is provenance and the input to tools/build_lexicon.py. Reading it here
- * would put a stale snapshot back in competition with the live data.
+ * There is deliberately no lexicon here. It lives in the pronunciation_lexicon row, seeded
+ * once by migration 0008 and edited from the web UI after that. A file on disk could only be
+ * a stale snapshot competing with the live data, which is why there is not one.
  */
 import fs from "node:fs";
 import path from "node:path";

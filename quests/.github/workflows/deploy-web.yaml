@@ -114,10 +114,9 @@ jobs:
           # without pronunciation.json the app applies no rules and reads "Hm" as letters.
           #
           # A glob rather than a list, so the next file added here ships without anyone having
-          # to remember this line - which is how lexicon.json came to be missing before the
-          # lexicon moved into the database. It ships too, harmlessly: the app no longer reads
-          # it, but a release that carries the snapshot its seed migration was cut from is
-          # easier to reason about than one that does not.
+          # to remember this line - which is how lexicon.json came to be missing back when the
+          # lexicon was still a file. It is not one any more: it lives in the database, seeded
+          # by migration 0008, so there is nothing lexicon-shaped left to forget.
           mkdir -p "$R"/voice
           cp voice/*.json "$R"/voice/
           # Migrations ship with the release too: activate.sh runs migrate.sh against the

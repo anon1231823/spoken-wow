@@ -5,8 +5,8 @@
  * once by migration 0008 and edited from the web UI thereafter, because that is how a
  * pronunciation actually gets fixed - someone hears a name come out wrong and corrects it.
  * A file shipping inside the release could only ever be a stale snapshot competing with
- * that, which is why voice/lexicon.json is now provenance and generator input rather than
- * something this module reads.
+ * that, so there is no file: the seed lives inside migration 0008 and nothing reads a
+ * lexicon off disk.
  *
  * What has no equivalent in settings.ts either way: a saved lexicon is inert until it has
  * been uploaded. Saving does two things that can fail independently, so the row records both

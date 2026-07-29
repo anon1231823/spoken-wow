@@ -242,8 +242,8 @@ function Editor({
       })
       // Alphabetical, and note this sorts the VIEW rather than the draft: `index` is the
       // position in the draft array and stays with its entry, so editing and removal keep
-      // pointing at the right one. Sorting the draft itself would also rewrite the order of
-      // voice/lexicon.json on every save, turning a one-word fix into a 134-line diff.
+      // pointing at the right one. Sorting the draft itself would also rewrite the stored
+      // order on every save, turning a one-word fix into a 134-entry diff.
       .sort((a, b) => COLLATOR.compare(sortName(a), sortName(b)));
 
     function sortName({ entry, index }: { entry: LexiconEntry; index: number }): string {
@@ -432,11 +432,9 @@ function Editor({
       </div>
 
       <p className="text-muted-foreground text-xs">
-        These entries live in the database and are the lexicon — <code>voice/lexicon.json</code>{" "}
-        seeded them once and is not read again. Saving uploads a new dictionary and every line
-        generated afterwards uses it. Audio already in the store is untouched: its version row
-        records the dictionary it was made with, so a line generated before a fix stays playable
-        and identifiable as stale.
+        Saving uploads a new dictionary and every line generated afterwards uses it. Audio
+        already in the store is untouched: its version row records the dictionary it was made
+        with, so a line generated before a fix stays playable and identifiable as stale.
       </p>
     </div>
   );
