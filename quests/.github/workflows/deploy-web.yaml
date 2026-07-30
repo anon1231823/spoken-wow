@@ -15,6 +15,11 @@ on:
       - ".github/workflows/deploy-web.yaml"
   workflow_dispatch:
 
+# A deploy that only ever runs by hand is a deploy nobody runs, so the dispatch trigger
+# above is a fallback rather than the path: pushes to the paths listed above are what is
+# expected to ship. Note that GitHub only registers this file after a push that modifies
+# it, so a freshly cloned or recreated repo needs one such push before dispatch works.
+
 # Never let two deploys interleave a symlink swap.
 concurrency:
   group: deploy-web
