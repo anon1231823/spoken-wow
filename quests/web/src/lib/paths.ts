@@ -6,6 +6,17 @@ const REPO_ROOT = path.resolve(process.cwd(), "..");
 export const CORPUS_PATH =
   process.env.VOICEOVER_CORPUS ?? path.join(REPO_ROOT, "corpus", "corpus.json.gz");
 
+/**
+ * The hiccup scan's findings, written by tools/scan_corpus_hiccups.py.
+ *
+ * Beside the corpus and shipped with it, because it is derived from exactly that corpus: a
+ * release whose corpus and findings came from different scans would mark the wrong lines.
+ * Read only by the issue loader, never on the search path - the findings that matter at
+ * request time live in Postgres, where a verdict can be recorded against them.
+ */
+export const HICCUPS_PATH =
+  process.env.VOICEOVER_HICCUPS ?? path.join(REPO_ROOT, "corpus", "hiccups.json.gz");
+
 export const AUDIO_DIR =
   process.env.VOICEOVER_AUDIO ?? path.join(REPO_ROOT, "audio");
 

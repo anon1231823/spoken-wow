@@ -71,6 +71,11 @@ module.exports = {
         VOICEOVER_AUDIO: `${SHARED}/audio`,
         VOICEOVER_CORPUS: "/srv/voiceover/current/corpus/corpus.json.gz",
 
+        // The hiccup scan's findings, beside the corpus and pinned to it: a release whose
+        // corpus and findings came from different scans would mark the wrong lines. Read
+        // only when someone presses "Reload scan", never on the search path.
+        VOICEOVER_HICCUPS: "/srv/voiceover/current/corpus/hiccups.json.gz",
+
         // Clips uploaded to build voice clones, shared for the same reason the audio is: a
         // cloned ElevenLabs voice cannot be exported, so these are the only way to remake
         // one. Without this, paths.ts resolves them relative to the release directory and
