@@ -33,6 +33,16 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts"],
     env: localEnv(),
+    /**
+     * One test file at a time.
+     *
+     * The queue tests claim from a real, shared table, and claiming is by definition
+     * global - there is no per-run prefix that `claimNext` could respect. Files running in
+     * parallel would take each other's jobs and fail perhaps one run in three, which is the
+     * worst kind of test failure to own. The suite is small enough that the wall-clock cost
+     * is seconds.
+     */
+    fileParallelism: false,
   },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
