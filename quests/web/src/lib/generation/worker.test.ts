@@ -8,11 +8,12 @@
  * Needs DATABASE_URL and migrations applied:
  *   docker compose up -d postgres && deploy/bin/migrate.sh "$PWD/web"
  */
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { closeDb, db } from "@/lib/db";
 import type { BatchLine } from "@/lib/search";
 
+import * as queue from "./queue";
 import { createBatch, enqueue } from "./queue";
 import type { RegenerateResult } from "./regenerate";
 import { backoffFor, startWorker } from "./worker";
@@ -79,6 +80,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   if (batches.length) {
     await db().query(`delete from "regeneration_batch" where "id" = any($1::uuid[])`, [batches]);
     batches.length = 0;
@@ -224,5 +226,95 @@ describe("startWorker", () => {
       [batch],
     );
     expect(rows[0].attempts).toBe(3);
+  });
+});
+
+describe("stop()", () => {
+  it("hands a claim already in flight back to the queue rather than starting it", async () => {
+    const batch = await seed(1);
+
+    // Holds the real claimNext round trip in flight so the test can land stop() in the
+    // exact window the fix closes: after a claim has started, before it has resolved.
+    let resolveClaimStarted!: () => void;
+    const claimStarted = new Promise<void>((resolve) => {
+      resolveClaimStarted = resolve;
+    });
+    let releaseClaim!: () => void;
+    const realClaimNext = queue.claimNext;
+    vi.spyOn(queue, "claimNext").mockImplementation(async (leaseMs) => {
+      resolveClaimStarted();
+      await new Promise<void>((resolve) => {
+        releaseClaim = resolve;
+      });
+      return realClaimNext(leaseMs);
+    });
+
+    let regenerateCalls = 0;
+    const worker = startWorker(() => true, {
+      budget: async () => 1,
+      regenerate: async () => {
+        regenerateCalls += 1;
+        return OK;
+      },
+    });
+
+    await claimStarted;
+    // running is still empty here - the claim has not resolved - so stop() has nothing
+    // to await yet and returns almost immediately. Releasing the claim afterwards is
+    // what lets it resolve with a job while `stopped` is already true.
+    const stopped = worker.stop();
+    releaseClaim();
+    await stopped;
+
+    // The row lands back in "pending" (via retryJob) only once the claim, now stopped,
+    // has been handed back; poll rather than assume it beat this assertion.
+    await until(async () => (await statesOf(batch)).pending === 1);
+
+    expect(worker.inFlight()).toBe(0);
+    expect(regenerateCalls).toBe(0);
+  });
+
+  it("awaits a job whose regenerate call is genuinely in flight before resolving", async () => {
+    const batch = await seed(1);
+
+    let resolveStarted!: () => void;
+    const regenerateStarted = new Promise<void>((resolve) => {
+      resolveStarted = resolve;
+    });
+    let releaseRegenerate!: () => void;
+
+    const worker = startWorker(() => true, {
+      budget: async () => 1,
+      regenerate: async () => {
+        resolveStarted();
+        await new Promise<void>((resolve) => {
+          releaseRegenerate = resolve;
+        });
+        return OK;
+      },
+    });
+
+    await regenerateStarted;
+    expect(worker.inFlight()).toBe(1);
+
+    const stopPromise = worker.stop();
+    let settled = false;
+    void stopPromise.then(() => {
+      settled = true;
+    });
+
+    // The regenerate call is still deliberately blocked, so stop() must still be
+    // waiting on it - dropping it here is exactly what would bill ElevenLabs for audio
+    // nobody gets. A couple of microtask ticks is enough to prove it has not resolved
+    // early without depending on wall-clock timing.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    releaseRegenerate();
+    await stopPromise;
+
+    expect(worker.inFlight()).toBe(0);
+    expect(await statesOf(batch)).toEqual({ done: 1 });
   });
 });

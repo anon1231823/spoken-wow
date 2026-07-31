@@ -135,6 +135,16 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
         const job = await claimNext(options.leaseMs);
         if (!job) return;
 
+        if (stopped) {
+          // A stop landed while this claim's round trip was in flight. claimNext already
+          // marked the row "running" and spent one of its attempts; handing it back with
+          // retryJob rather than starting it is what keeps a rolling deploy's SIGTERM from
+          // stranding the row for its whole five-minute lease. Losing an attempt to a
+          // deploy that never actually tried the job is the fair side of that trade.
+          await retryJob(job.id, 0);
+          return;
+        }
+
         const work = run(job).finally(() => {
           running.delete(work);
           // Settling frees a slot, so look for the next job immediately rather than waiting
@@ -164,10 +174,16 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
     async stop() {
       stopped = true;
       if (timer) clearTimeout(timer);
-      // Awaited rather than abandoned: these requests are already at ElevenLabs and will be
-      // billed, so dropping them would pay for audio nobody gets. This is what makes
-      // kill_timeout in ecosystem.config.js load-bearing.
-      await Promise.allSettled([...running]);
+      // Looped rather than a single snapshot: a claim already in flight when stop() was
+      // called can still land in `running` after the first snapshot is taken (the check
+      // above closes that for new claims, but this is what makes "stopped" mean quiescent
+      // rather than merely likely). Awaited rather than abandoned either way: these
+      // requests are already at ElevenLabs and will be billed, so dropping them would pay
+      // for audio nobody gets. This is what makes kill_timeout in ecosystem.config.js
+      // load-bearing.
+      while (running.size > 0) {
+        await Promise.allSettled([...running]);
+      }
     },
   };
 }
