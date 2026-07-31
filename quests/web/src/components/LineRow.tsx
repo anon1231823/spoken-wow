@@ -1,19 +1,27 @@
 "use client";
 
-import { MessageSquareIcon } from "lucide-react";
+import { MessageSquareIcon, PencilIcon } from "lucide-react";
 
+import IssueChip from "./IssueChip";
 import LineHistory from "./LineHistory";
 import RegenerateButton from "./RegenerateButton";
+import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import type { LineState } from "./Explorer";
 import type { ResultLine } from "@/lib/search";
 
-/** Why a line has no audio, or null when it does. */
+/**
+ * Why a line has no audio, or null when it does.
+ *
+ * Reads `voiceable` rather than the corpus's `generatable`, because an override can rescue a
+ * line the extractor gave up on: once the stage direction is gone, its absence is a gap like
+ * any other rather than an expected skip.
+ */
 function absence(line: ResultLine): { kind: "gap" | "skip"; label: string } | null {
   if (line.hasAudio) return null;
-  // An ungeneratable line is an expected absence, not a gap: progress text is never
-  // voiced, and text with unresolved $ / <> tokens would be read aloud verbatim.
-  if (!line.generatable) {
+  // An unvoiceable line is an expected absence, not a gap: progress text is never voiced,
+  // and text with unresolved $ / <> tokens would be read aloud verbatim.
+  if (!line.voiceable) {
     return { kind: "skip", label: line.skipReason ?? "not voiced" };
   }
   return { kind: "gap", label: "no audio" };
@@ -62,7 +70,10 @@ type Props = {
   blocked: string | null;
   /** How many takes this line's file has. Zero means there is nothing to go back to. */
   takes: number;
+  /** The live audio was made from text that has since changed. */
+  stale: boolean;
   onPlay: (line: ResultLine) => void;
+  onEditText: (line: ResultLine) => void;
   onRegenerate: (line: ResultLine) => void;
   onRestored: (file: string, version: number) => void;
   /** Narrow the search to this line's NPC, or to its quest. */
@@ -77,7 +88,9 @@ export default function LineRow({
   state,
   blocked,
   takes,
+  stale,
   onPlay,
+  onEditText,
   onRegenerate,
   onRestored,
   onNarrowToNpc,
@@ -138,6 +151,10 @@ export default function LineRow({
         </span>
       </td>
 
+      <td className="px-2 py-2">
+        {line.issue ? <IssueChip issue={line.issue} /> : <span className="text-muted-foreground">—</span>}
+      </td>
+
       <td className="p-0">
         <button
           data-line-key={line.key}
@@ -152,8 +169,10 @@ export default function LineRow({
           )}
         >
           <SourceMark source={line.source} />
+          {/* The override, when there is one: this cell shows what the line says out loud,
+              and after a rewrite that is no longer what the corpus holds. */}
           <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !current && "line-clamp-2")}>
-            {line.text}
+            {line.override ?? line.text}
           </span>
           {/* The regeneration outcome replaces the absence marker: once a line has just been
               made, "no audio" is stale and confusing rather than merely redundant. */}
@@ -166,16 +185,29 @@ export default function LineRow({
               regenerated{state.version > 0 && ` · v${state.version}`}
             </span>
           ) : (
-            missing && (
-              <span
-                className={cn(
-                  "mt-0.5 shrink-0 text-xs",
-                  missing.kind === "gap" ? "text-destructive" : "text-muted-foreground",
-                )}
-              >
-                {missing.label}
-              </span>
-            )
+            <span className="mt-0.5 flex shrink-0 gap-2 text-xs">
+              {/* Stale before missing: "no audio" and "the audio is old" cannot both be
+                  true, and a rewrite is the more actionable of the two. */}
+              {stale && (
+                <span className="text-amber-300" title="This audio was made from text that has since changed">
+                  text changed
+                </span>
+              )}
+              {line.override && !stale && (
+                <span className="text-muted-foreground" title="This line's spoken text was rewritten">
+                  rewritten
+                </span>
+              )}
+              {missing && (
+                <span
+                  className={cn(
+                    missing.kind === "gap" ? "text-destructive" : "text-muted-foreground",
+                  )}
+                >
+                  {missing.label}
+                </span>
+              )}
+            </span>
           )}
         </button>
       </td>
@@ -183,6 +215,15 @@ export default function LineRow({
       <td className="py-1.5 pr-1 pl-0">
         {canRegenerate && (
           <span className="flex items-center justify-end">
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Edit what this line says out loud"
+              aria-label={`Edit the spoken text of ${line.npcName}'s line`}
+              onClick={() => onEditText(line)}
+            >
+              <PencilIcon className={cn("size-3.5", line.override && "text-amber-300")} />
+            </Button>
             {/* Only shown once there is something to go back to, so an untouched line keeps
                 a single control rather than two. */}
             {takes > 0 && (

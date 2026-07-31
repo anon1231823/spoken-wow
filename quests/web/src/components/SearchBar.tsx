@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Facets } from "@/lib/facets";
+import { ISSUE_GROUPS, ISSUE_GROUP_LABELS } from "@/lib/issues/issues";
 import { NPC_TYPES, SOURCES } from "@/lib/line-fields";
 import type { Filter, LineFilters } from "@/lib/search";
 
@@ -165,6 +166,53 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
           options={NPC_TYPES}
           onChange={(npcType) => onFilters({ npcType: npcType as LineFilters["npcType"] })}
         />
+
+        {/* Severity as one dropdown rather than a checkbox plus a level, because "has an
+            issue" and "has a bad one" are the same question asked at different strengths. */}
+        <Select
+          value={filters.issues === undefined ? ANY : String(filters.issues)}
+          onValueChange={(value) =>
+            onFilters({
+              issues:
+                value === ANY ? undefined : value === "any" ? "any" : (Number(value) as 1 | 2 | 3),
+            })
+          }
+        >
+          <SelectTrigger className="w-40" aria-label="Issues">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ANY}>issues: any</SelectItem>
+            <SelectItem value="1">will break</SelectItem>
+            <SelectItem value="2">likely wrong or worse</SelectItem>
+            <SelectItem value="3">has any issue</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.issueCategory ?? ANY}
+          onValueChange={(value) =>
+            onFilters({ issueCategory: value === ANY ? undefined : value })
+          }
+        >
+          <SelectTrigger className="w-40" aria-label="Issue kind">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ANY}>kind: any</SelectItem>
+            {/* A deep link from the review queue can carry an exact category, which is not in
+                this list. Showing it as itself beats showing "kind: any" over a filter that
+                is quietly in force. */}
+            {filters.issueCategory && !ISSUE_GROUPS.includes(filters.issueCategory) && (
+              <SelectItem value={filters.issueCategory}>{filters.issueCategory}</SelectItem>
+            )}
+            {ISSUE_GROUPS.map((group) => (
+              <SelectItem key={group} value={group}>
+                {ISSUE_GROUP_LABELS[group]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-2 whitespace-nowrap">
           <Checkbox
             id="missing-only"
@@ -173,6 +221,16 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
           />
           <Label htmlFor="missing-only" className="text-muted-foreground text-sm">
             missing audio only
+          </Label>
+        </div>
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Checkbox
+            id="overridden-only"
+            checked={filters.overridden ?? false}
+            onCheckedChange={(value) => onFilters({ overridden: value === true })}
+          />
+          <Label htmlFor="overridden-only" className="text-muted-foreground text-sm">
+            rewritten only
           </Label>
         </div>
       </div>

@@ -66,6 +66,25 @@ export function categoryLabel(category: string): string {
 }
 
 /**
+ * The groups the filter bar offers, in the order they are worth looking at.
+ *
+ * Written out rather than derived from CATEGORY_LABELS, because a dropdown's order is an
+ * editorial decision and alphabetical would put `abbrev` above `name`.
+ */
+export const ISSUE_GROUPS = ["name", "bug", "roleplay", "abbrev", "number", "sfx", "dialect", "punct"];
+
+export const ISSUE_GROUP_LABELS: Record<string, string> = {
+  name: "names",
+  bug: "text bugs",
+  roleplay: "role-play",
+  abbrev: "abbreviations",
+  number: "numbers",
+  sfx: "sound effects",
+  dialect: "dialect",
+  punct: "punctuation",
+};
+
+/**
  * The half of a category before the first hyphen: name, roleplay, abbrev, number, punct,
  * sfx, dialect, bug. Derived rather than tabulated so a new category joins a group for free.
  */
