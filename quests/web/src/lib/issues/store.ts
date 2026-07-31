@@ -177,6 +177,8 @@ function toIssue(row: IssueRow): Issue {
 }
 
 export type IssueQuery = {
+  /** One row, for answering a write with a fresh read of what it wrote. */
+  id?: number;
   category?: string;
   group?: string;
   severity?: number;
@@ -201,6 +203,7 @@ export async function issueList(query: IssueQuery = {}): Promise<Issue[]> {
         and ($4::text is null or i."verdict" = $4)
         and ($5::text is null or i."item" ilike '%' || $5 || '%' or i."note" ilike '%' || $5 || '%')
         and ($6::boolean or i."scanAt" = newest.at)
+        and ($8::bigint is null or i."id" = $8)
       order by i."severity", i."occurrences" desc, i."category", i."item"
       limit $7`,
     [
@@ -211,6 +214,7 @@ export async function issueList(query: IssueQuery = {}): Promise<Issue[]> {
       query.q?.trim() || null,
       query.includeUndetected ?? false,
       query.limit ?? 500,
+      query.id ?? null,
     ],
   );
   return rows.map(toIssue);
