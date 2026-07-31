@@ -8,9 +8,16 @@
  * The order of the refusals matters. Each one avoids spending money on a request that was
  * always going to fail, and the cheapest checks come first - a line that is never voiced, or
  * a voice that does not exist, costs nothing to detect and would otherwise cost a request.
+ *
+ * What gets spoken is the override if there is one and the corpus text otherwise, and that
+ * choice is made before the refusals rather than after: whether a line can be voiced at all is
+ * a property of the text that will be sent. The corpus's `generatable` flag cannot answer it,
+ * having been computed in Python from text that nobody could edit yet.
  */
 import { audioRelPath } from "@/lib/audio";
 import { lineIndex, type CorpusLine } from "@/lib/corpus";
+import { readOverrides } from "@/lib/issues/overrides";
+import { INVALID_CHARS, isVoiceable } from "@/lib/text-gate";
 
 import { currentLocator } from "./dictionary";
 import { fileDefaults } from "./files";
@@ -69,11 +76,24 @@ export async function regenerateLine(
   }
 
   const line = group[0];
-  if (!line.generatable) {
+  const file = audioRelPath(line);
+
+  // Read per line rather than hoisted over a batch, for the reason the dictionary locator is
+  // read inside the lock below: someone rewriting a line mid-batch should affect the lines
+  // after the save. Read *before* the gate because an override is what decides whether this
+  // line is voiceable at all - the corpus's own flag was computed from text nobody could edit.
+  const overrides = await readOverrides();
+  const source = overrides.get(file)?.text ?? line.text;
+
+  if (!isVoiceable(line, source)) {
+    const why =
+      line.skipReason === "progress"
+        ? "progress text is deliberately skipped"
+        : `its text still holds one of ${INVALID_CHARS} - rewrite it to voice it`;
     return {
       ok: false,
       failure: {
-        ...failure("bad-request", `${lineId} is never voiced (${line.skipReason})`),
+        ...failure("bad-request", `${lineId} is never voiced: ${why}`),
         status: 409,
         // Not a transient condition, but not a reason to abandon a batch either: the other
         // lines are fine. The client filters these out before starting, so reaching here
@@ -101,11 +121,9 @@ export async function regenerateLine(
     };
   }
 
-  const file = audioRelPath(line);
-
   const outcome = await withFileLock(file, async (): Promise<RegenerateResult> => {
     const config = await currentConfig();
-    const spokenText = applyPronunciation(line.text, fileDefaults().rules);
+    const spokenText = applyPronunciation(source, fileDefaults().rules);
     // Read inside the lock and per line, not hoisted: an admin saving the lexicon mid-batch
     // should affect the lines after the save, and pinning one locator for a whole batch
     // would record a version that some of those takes were not made with.

@@ -10,12 +10,21 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { storeIndex } from "@/lib/audio";
 import { loadCorpus } from "@/lib/corpus";
+import { searchContext } from "@/lib/issues/context";
 import { filtersFromParams } from "@/lib/search-request";
 import { batchJobs, matchingLines } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
-export function GET(request: NextRequest) {
-  const lines = matchingLines(loadCorpus(), storeIndex(), filtersFromParams(request.nextUrl.searchParams));
-  return NextResponse.json({ jobs: batchJobs(lines) });
+export async function GET(request: NextRequest) {
+  const context = await searchContext();
+  const lines = matchingLines(
+    loadCorpus(),
+    storeIndex(),
+    filtersFromParams(request.nextUrl.searchParams),
+    context,
+  );
+  // The same overrides the estimate is built from, so the quote prices the text that will
+  // actually be sent rather than the text the corpus happens to hold.
+  return NextResponse.json({ jobs: batchJobs(lines, context.overrides) });
 }
