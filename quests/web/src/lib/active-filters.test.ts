@@ -42,3 +42,20 @@ describe("counting what is in force", () => {
     expect(activeFilterCount({ issues: 1 })).toBe(1);
   });
 });
+
+describe("counting the generated-on bounds", () => {
+  it("counts each end of the range", () => {
+    expect(activeFilterCount({ generatedAfter: "2026-07-01" })).toBe(1);
+    expect(activeFilterCount({ generatedBefore: "2026-07-01" })).toBe(1);
+  });
+
+  it("counts both ends when a range is bounded twice", () => {
+    expect(
+      activeFilterCount({ generatedAfter: "2026-07-01", generatedBefore: "2026-07-31" }),
+    ).toBe(2);
+  });
+
+  it("adds them to whatever else is in force", () => {
+    expect(activeFilterCount({ race: "human", generatedAfter: "2026-07-01" })).toBe(2);
+  });
+});
