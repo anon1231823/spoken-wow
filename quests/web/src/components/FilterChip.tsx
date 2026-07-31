@@ -7,6 +7,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -67,9 +68,15 @@ export default function FilterChip({
               : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
         >
-          {/* Rendered here rather than through SelectValue, which can only ever say what the
-              chosen item says - and idle the chip must show the field name instead. */}
-          <span className="line-clamp-1">{active ? `${label}: ${shown}` : label}</span>
+          {/* Through SelectValue rather than a plain span, even though the text is our own.
+              Radix registers this node as the alignment anchor, and its item-aligned
+              positioning - what SelectContent defaults to here - is guarded on that node
+              existing: without it the dropdown mounts unpositioned and nothing appears.
+              Passing children also suppresses the portal that would otherwise replace this
+              text with the raw option label. */}
+          <SelectValue className="line-clamp-1">
+            {active ? `${label}: ${shown}` : label}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={ANY}>{label}: any</SelectItem>
