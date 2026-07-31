@@ -3,12 +3,14 @@
 import { forwardRef, useCallback, useMemo } from "react";
 
 import FilterChip, { type ChipOption } from "@/components/FilterChip";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Facets } from "@/lib/facets";
 import { ISSUE_GROUPS, ISSUE_GROUP_LABELS } from "@/lib/issues/issues";
 import { NPC_TYPES, SOURCES } from "@/lib/line-fields";
+import { activeFilterCount } from "@/lib/active-filters";
 import type { Filter, LineFilters } from "@/lib/search";
 
 type Props = {
@@ -17,6 +19,7 @@ type Props = {
   facets: Facets;
   onQuery: (value: string) => void;
   onFilters: (next: Partial<LineFilters>) => void;
+  onClearAll: () => void;
 };
 
 /** Corpus values, which label themselves. */
@@ -38,9 +41,11 @@ const ISSUE_OPTIONS: ChipOption[] = [
 ];
 
 const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
-  { query, filters, facets, onQuery, onFilters },
+  { query, filters, facets, onQuery, onFilters, onClearAll },
   ref,
 ) {
+  const active = activeFilterCount({ ...filters, q: query });
+
   /** The flavors reachable under a race and gender, or all of them under neither. */
   const flavorsUnder = useCallback(
     (race: string | undefined, gender: string | undefined) => {
@@ -171,6 +176,14 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
             rewritten only
           </Label>
         </div>
+
+        {/* Only when there is something to clear: a button that does nothing on most visits
+            is one more thing to read past every time. */}
+        {active > 0 && (
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={onClearAll}>
+            Clear {active === 1 ? "filter" : `all ${active} filters`}
+          </Button>
+        )}
       </div>
     </div>
   );
