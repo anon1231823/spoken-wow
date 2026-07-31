@@ -44,6 +44,32 @@ export function corpusFiles(): Set<string> {
   return holder[corpusFilesKey]!;
 }
 
+/**
+ * A line for each store path, the reverse of audioRelPath.
+ *
+ * One line, not the group: everything that shares a file shares its text and its voice, which
+ * is the whole reason they share the file. So the first is as good as any for "what would be
+ * spoken for this mp3", which is what staleness needs to know.
+ *
+ * Beside corpusFiles because they are the same walk over the same lines, and memoised for the
+ * same reason: 17,507 entries built once rather than per request.
+ */
+const fileIndexKey = Symbol.for("wow-voiceover.file-index");
+type FileIndexHolder = { [fileIndexKey]?: Map<string, CorpusLine> };
+
+export function fileIndex(): Map<string, CorpusLine> {
+  const holder = globalThis as FileIndexHolder;
+  if (!holder[fileIndexKey]) {
+    const index = new Map<string, CorpusLine>();
+    for (const line of loadCorpus().lines) {
+      const file = audioRelPath(line);
+      if (!index.has(file)) index.set(file, line);
+    }
+    holder[fileIndexKey] = index;
+  }
+  return holder[fileIndexKey]!;
+}
+
 export function readStoreIndex(audioDir: string = AUDIO_DIR): Set<string> {
   const found = new Set<string>();
   for (const sub of SUBFOLDERS) {

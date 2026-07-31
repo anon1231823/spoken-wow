@@ -112,8 +112,11 @@ jobs:
           # renders unstyled. (This project has no public/.)
           cp -a web/.next/static "$R"/.next/static
           # The corpus ships inside the release so a rollback moves data and code together.
+          # hiccups.json.gz rides along because it is derived from exactly this corpus, and
+          # a glob for the reason the voice/ line below gives: the next file beside it
+          # should not depend on anyone remembering this line.
           mkdir -p "$R"/corpus
-          cp corpus/corpus.json.gz "$R"/corpus/
+          cp corpus/*.json.gz "$R"/corpus/
           # Same reasoning for how a line is voiced. These are also what the Python CLI
           # reads, so shipping them keeps both sides starting from the same defaults - and
           # without pronunciation.json the app applies no rules and reads "Hm" as letters.

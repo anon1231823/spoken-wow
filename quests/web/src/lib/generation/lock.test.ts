@@ -47,8 +47,11 @@ describe("withFileLock", () => {
   });
 
   it("does not block a different file", async () => {
+    // A name of this test's own, not a real corpus file: regenerate.test.ts takes the lock on
+    // quests/5-accept.mp3, test files run in parallel against one database, and "a different
+    // file is free" is not a claim to make about a file another test is holding.
     const result = await withFileLock(FILE, () =>
-      withFileLock("quests/5-accept.mp3", async () => "other file"),
+      withFileLock("gossip/lock-test-other.mp3", async () => "other file"),
     );
     expect(result).toBe("other file");
   });

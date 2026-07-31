@@ -15,6 +15,9 @@ import type { Corpus, CorpusLine } from "./corpus";
 import { npcKey } from "./corpus";
 import { audioRelPath } from "./audio";
 import type { NpcType, Source } from "./line-fields";
+import { categoryGroup, type LineIssues, type Severity } from "./issues/issues";
+import type { LineOverride } from "./issues/override";
+import { isVoiceable } from "./text-gate";
 
 /** Which field the free-text query is matched against. */
 export type Filter = "any" | "npc" | "quest" | "text";
@@ -33,7 +36,44 @@ export type LineFilters = {
   voice?: string;
   source?: Source;
   npcType?: NpcType;
+  /**
+   * "any" for a line with any open finding, or a severity meaning "this bad or worse".
+   *
+   * Worse-or-equal rather than exact, because the severity carried by a line is the worst of
+   * however many findings touch it: asking for the ones that will break and being shown only
+   * lines with nothing else wrong would be a strange thing to offer.
+   */
+  issues?: "any" | Severity;
+  /** A category, or the group before its first hyphen. The dropdown offers groups. */
+  issueCategory?: string;
+  /**
+   * The lines of one finding, by its id.
+   *
+   * Exact where a text search cannot be: the bare `--` finding and `Hearthglen--you'll` are
+   * two findings whose text both contains `--`, and six dialect findings share one category.
+   * The finding already knows which lines it is about, so this asks it rather than guessing.
+   */
+  finding?: number;
+  /** Lines whose spoken text has been rewritten by hand. */
+  overridden?: boolean;
 };
+
+/**
+ * What the corpus alone cannot say about a line: what is wrong with it, and what someone has
+ * decided it should say instead.
+ *
+ * Passed in rather than read here, because both come from Postgres and this module is a pure
+ * function of the corpus - which is what lets search.test.ts hold two corpora and no database.
+ * Defaulted to empty so a caller that has neither still gets a search.
+ */
+export type SearchContext = {
+  issues: Map<string, LineIssues>;
+  overrides: Map<string, LineOverride>;
+  /** The lines of the finding `filters.finding` names, or null when it names none. */
+  findingLines?: Set<string> | null;
+};
+
+export const NO_CONTEXT: SearchContext = { issues: new Map(), overrides: new Map() };
 
 export type SearchOptions = LineFilters & {
   offset?: number;
@@ -45,6 +85,16 @@ export type ResultLine = CorpusLine & {
   key: string;
   hasAudio: boolean;
   audioPath: string;
+  /** Open findings on this line, worst severity first. Null when there are none. */
+  issue: LineIssues | null;
+  /** The rewritten spoken text, or null. `text` stays what the corpus says. */
+  override: string | null;
+  /**
+   * Whether this line would be voiced *now*, which `generatable` cannot answer: that flag was
+   * computed in Python from text nobody could edit yet, so an override that strips a stage
+   * direction makes a line voiceable without moving it.
+   */
+  voiceable: boolean;
 };
 
 export type SearchResult = {
@@ -85,19 +135,25 @@ export type BatchLine = {
  * NPC and generating a shared file twice would pay for it twice and leave the second take
  * live. Lines the generator never voices are dropped here rather than failed one by one.
  */
-export function batchJobs(lines: CorpusLine[]): BatchLine[] {
+export function batchJobs(
+  lines: CorpusLine[],
+  overrides: Map<string, LineOverride> = NO_CONTEXT.overrides,
+): BatchLine[] {
   const byFile = new Map<string, BatchLine>();
   for (const line of lines) {
-    if (!line.generatable) continue;
     const audioPath = audioRelPath(line);
+    // The effective text, so the estimate prices what will actually be sent and a rescued
+    // line is not quietly dropped from the batch that was quoted for it.
+    const text = overrides.get(audioPath)?.text ?? line.text;
+    if (!isVoiceable(line, text)) continue;
     if (byFile.has(audioPath)) continue;
     byFile.set(audioPath, {
       lineId: line.lineId,
       audioPath,
       npcName: line.npcName,
       voice: line.voice,
-      characters: line.text.length,
-      preview: line.text.slice(0, 80),
+      characters: text.length,
+      preview: text.slice(0, 80),
     });
   }
   return [...byFile.values()];
@@ -156,8 +212,27 @@ function matches(line: CorpusLine, q: string, filter: Filter): boolean {
  * Same definition as missing_lines (tts_cli/store.py) - lines the generator never voices
  * (progress text, unresolved template tokens) are expected absences, not gaps.
  */
-export function isGap(line: CorpusLine, store: Set<string>): boolean {
-  return line.generatable && !store.has(audioRelPath(line));
+export function isGap(
+  line: CorpusLine,
+  store: Set<string>,
+  overrides: Map<string, LineOverride> = NO_CONTEXT.overrides,
+): boolean {
+  const audioPath = audioRelPath(line);
+  const text = overrides.get(audioPath)?.text ?? line.text;
+  return isVoiceable(line, text) && !store.has(audioPath);
+}
+
+/** Whether a line carries a finding the filter is asking for. */
+function issueMatch(found: LineIssues | undefined, want: NonNullable<LineFilters["issues"]>): boolean {
+  if (!found) return false;
+  return want === "any" || found.severity <= want;
+}
+
+function categoryMatch(found: LineIssues | undefined, want: string): boolean {
+  if (!found) return false;
+  // A group ("name") or a category ("name-apostrophe"), so the review queue can link to one
+  // finding's kind and the dropdown can offer the eight groups.
+  return found.categories.some((c) => c === want || categoryGroup(c) === want);
 }
 
 /**
@@ -197,19 +272,32 @@ export function matchingLines(
     voice,
     source,
     npcType,
+    issues,
+    issueCategory,
+    finding,
+    overridden,
   }: LineFilters = {},
+  { issues: found, overrides, findingLines }: SearchContext = NO_CONTEXT,
 ): CorpusLine[] {
   const query = q.trim();
 
   let lines = corpus.lines;
   if (query) lines = lines.filter((line) => matches(line, query, filter));
-  if (missingOnly) lines = lines.filter((line) => isGap(line, store));
+  if (missingOnly) lines = lines.filter((line) => isGap(line, store, overrides));
   if (race) lines = lines.filter((line) => line.race === race);
   if (gender) lines = lines.filter((line) => line.gender === gender);
   if (flavor) lines = lines.filter((line) => line.flavor === flavor);
   if (voice) lines = lines.filter((line) => line.voice === voice);
   if (source) lines = lines.filter((line) => line.source === source);
   if (npcType) lines = lines.filter((line) => line.npcType === npcType);
+  if (issues) lines = lines.filter((line) => issueMatch(found.get(line.lineId), issues));
+  if (issueCategory) {
+    lines = lines.filter((line) => categoryMatch(found.get(line.lineId), issueCategory));
+  }
+  // An unknown id matches nothing rather than everything: "show me this finding's lines" has
+  // no honest answer for a finding that is not there, and the whole corpus is the wrong one.
+  if (finding) lines = lines.filter((line) => findingLines?.has(line.lineId) ?? false);
+  if (overridden) lines = lines.filter((line) => overrides.has(audioRelPath(line)));
 
   return [...lines].sort(order);
 }
@@ -218,14 +306,24 @@ export function search(
   corpus: Corpus,
   store: Set<string>,
   { offset = 0, limit = PAGE_SIZE, ...filters }: SearchOptions = {},
+  context: SearchContext = NO_CONTEXT,
 ): SearchResult {
-  const all = matchingLines(corpus, store, filters);
+  const all = matchingLines(corpus, store, filters, context);
   const keys = rowKeys(corpus);
 
   const start = Math.max(0, Math.floor(offset));
   const lines = all.slice(start, start + limit).map((line) => {
     const audioPath = audioRelPath(line);
-    return { ...line, key: keys.get(line)!, hasAudio: store.has(audioPath), audioPath };
+    const override = context.overrides.get(audioPath)?.text ?? null;
+    return {
+      ...line,
+      key: keys.get(line)!,
+      hasAudio: store.has(audioPath),
+      audioPath,
+      issue: context.issues.get(line.lineId) ?? null,
+      override,
+      voiceable: isVoiceable(line, override ?? line.text),
+    };
   });
 
   return {

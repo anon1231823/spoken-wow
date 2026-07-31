@@ -10,13 +10,22 @@
  * useful than a 400.
  */
 import { facets } from "./facets";
+import type { Severity } from "./issues/issues";
 import { NPC_TYPES, SOURCES } from "./line-fields";
 import type { Filter, LineFilters } from "./search";
 
 const FILTERS: Filter[] = ["any", "npc", "quest", "text"];
+const ISSUE_LEVELS = ["any", "1", "2", "3"] as const;
 
 function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T | undefined {
   return value && (allowed as readonly string[]).includes(value) ? (value as T) : undefined;
+}
+
+/** "any", or a severity meaning "this bad or worse". */
+function issueLevel(value: string | null): LineFilters["issues"] {
+  const level = oneOf(value, ISSUE_LEVELS);
+  if (!level) return undefined;
+  return level === "any" ? "any" : (Number(level) as Severity);
 }
 
 export function filtersFromParams(params: URLSearchParams): LineFilters {
@@ -32,5 +41,12 @@ export function filtersFromParams(params: URLSearchParams): LineFilters {
     voice: oneOf(params.get("voice"), voices),
     source: oneOf(params.get("source"), SOURCES),
     npcType: oneOf(params.get("type"), NPC_TYPES),
+    issues: issueLevel(params.get("issues")),
+    // The one filter with no closed set to check against: a category comes from the scan,
+    // which grows them, and the review queue links here with whichever it has. An unknown
+    // one matches nothing, which is the honest answer to "show me lines with this finding".
+    issueCategory: params.get("issue") || undefined,
+    finding: Number(params.get("finding")) || undefined,
+    overridden: params.get("overridden") === "1",
   };
 }

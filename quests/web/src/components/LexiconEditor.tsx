@@ -1,6 +1,7 @@
 "use client";
 
 import { RefreshCw, Search } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -280,16 +281,44 @@ function Editor({
     setEditing(null);
   }
 
-  function add() {
+  function add(grapheme = "") {
+    const entry = { ...BLANK, grapheme };
     // Prepended and opened, so a new entry is never added below the fold of a filtered list
     // where it would look as though nothing happened.
-    setDraft((current) => [{ ...BLANK }, ...current]);
-    // Pinned to the empty name, which collates first, so a new entry stays at the top of the
-    // list while it is being typed instead of sliding away as the name takes shape.
-    openRow(0, BLANK);
+    setDraft((current) => [entry, ...current]);
+    // Pinned to the name it was opened with, so a new entry stays where it started while it
+    // is being typed instead of sliding away as the name takes shape.
+    openRow(0, entry);
     setQuery("");
     setOnlyChecks(false);
   }
+
+  /**
+   * Arrive with a name already in the box.
+   *
+   * /issues links here with ?grapheme=Kel'Theril, so "this name is mispronounced" and "here
+   * is how to say it" are one click apart rather than a name to retype. Only ever on the
+   * first render for a given name: re-running it would reopen a row someone had closed, and
+   * re-adding one they had deliberately removed.
+   */
+  const requested = useSearchParams().get("grapheme");
+  const seeded = useRef<string | null>(null);
+  useEffect(() => {
+    if (!requested || seeded.current === requested) return;
+    seeded.current = requested;
+
+    // An entry may already exist for it - the finding was loaded before the lexicon grew, or
+    // someone followed the link twice. Open that rather than adding a duplicate the validator
+    // would reject on save.
+    const existing = draft.findIndex(
+      (entry) => entry.grapheme.toLowerCase() === requested.toLowerCase(),
+    );
+    if (existing >= 0) openRow(existing, draft[existing]);
+    else add(requested);
+    // draft is deliberately not a dependency: this runs once per requested name, and reacting
+    // to every edit of the draft is exactly what the guard above exists to prevent.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requested]);
 
   async function send(method: "PUT" | "POST" | "DELETE") {
     // Checked here as well as on the server so a malformed draft is a message next to the
@@ -354,7 +383,7 @@ function Editor({
         >
           Unconfirmed · {checks}
         </Button>
-        <Button size="sm" variant="ghost" onClick={add}>
+        <Button size="sm" variant="ghost" onClick={() => add()}>
           Add name
         </Button>
         <span className="text-muted-foreground ml-auto text-xs tabular-nums">

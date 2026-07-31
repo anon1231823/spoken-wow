@@ -1,8 +1,20 @@
-"""Scan the corpus for text a TTS engine is likely to mangle, as a reviewable table.
+"""Scan the corpus for text a TTS engine is likely to mangle.
 
-Writes docs/corpus-hiccups.csv, one row per finding, sorted by priority then frequency.
+Two outputs, same findings:
+
+  docs/corpus-hiccups.csv    one row per finding, for reading offline. Gitignored.
+  corpus/hiccups.json.gz     the same findings with every line each one occurs on, which
+                             is what the web app loads into Postgres. Committed, and it
+                             ships inside a release beside the corpus.
+
 Name rows are token-level; line-level findings (role-play, abbreviations, source bugs)
 carry the offending fragment in `item`. docs/corpus-hiccups.md explains the columns.
+
+Nothing here is filtered by the lexicon. A name that has a pronunciation entry is still a
+detection - it is just a resolved one - and only the live lexicon row knows which those
+are. So findings carry `grapheme` and the web app decides coverage when it loads them;
+the CSV's `in_lexicon` column reports what the *seeded* lexicon covered, which is a
+reading aid and nothing more.
 
 Only generatable lines are scanned - progress text and lines holding $ < > are already
 excluded upstream by tts_cli.corpus, so flagging them would be noise.
@@ -11,13 +23,20 @@ Needs `wordfreq` and macOS's /usr/share/dict. Run from the repo root:
 
     python3 tools/scan_corpus_hiccups.py
 """
-import csv, gzip, json, re
+import argparse, csv, gzip, json, re
+from datetime import datetime, timezone
 from pathlib import Path
 from collections import Counter, defaultdict
 from wordfreq import zipf_frequency
 
 ROOT = Path(__file__).resolve().parent.parent
-DEST = ROOT / "docs" / "corpus-hiccups.csv"
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--csv", type=Path, default=ROOT / "docs" / "corpus-hiccups.csv")
+parser.add_argument("--json", type=Path, default=ROOT / "corpus" / "hiccups.json.gz")
+args = parser.parse_args()
+
+SCHEMA_VERSION = 1
 
 corpus = json.load(gzip.open(ROOT / "corpus" / "corpus.json.gz"))
 lines = [l for l in corpus["lines"] if l["generatable"]]
@@ -56,7 +75,7 @@ def compound(w):
     return None
 
 
-count, where, cased = Counter(), defaultdict(list), defaultdict(set)
+count, where, cased = Counter(), defaultdict(set), defaultdict(set)
 for ln in lines:
     for tok in TOKEN.findall(ln["text"]):
         base = tok.lower().rstrip("'").removesuffix("'s")
@@ -64,8 +83,7 @@ for ln in lines:
             continue
         count[base] += 1
         cased[base].add(tok)
-        if len(where[base]) < 3:
-            where[base].append(ln["lineId"])
+        where[base].add(ln["lineId"])
 
 npc_words = {t.lower().rstrip("'").removesuffix("'s")
              for ln in corpus["lines"] for t in TOKEN.findall(ln["npcName"] or "")}
@@ -87,18 +105,21 @@ def drift_targets(w):
 rows = []
 
 
-def add(category, item, n, priority, note, lineid="", variants=""):
+def add(category, item, n, priority, note, line_ids=(), variants="", grapheme=""):
+    ids = sorted(set(line_ids))
     rows.append({
         "category": category, "item": item, "occurrences": n, "priority": priority,
-        "variants_in_source": variants, "example_line": lineid,
-        "example_npc": by_id[lineid]["npcName"] if lineid else "",
-        "in_lexicon": "", "note": note, "verdict": "", "ipa": "",
+        "variants_in_source": variants, "example_line": ids[0] if ids else "",
+        "example_npc": by_id[ids[0]]["npcName"] if ids else "",
+        "in_lexicon": "seed" if grapheme and grapheme in covered else "",
+        "note": note, "verdict": "", "ipa": "",
+        # Not a CSV column: every line the finding occurs on, which is what the web app
+        # needs to mark a row and what the CSV has no room for.
+        "line_ids": ids, "grapheme": grapheme,
     })
 
 
 for base, n in count.most_common():
-    if base in covered:
-        continue
     variants = "/".join(sorted(cased[base]))
     # A proper noun one edit from a common word is the risky case: the model does not
     # guess, it "corrects". Inflections of the same stem (cauldrons/cauldron) are not.
@@ -107,16 +128,16 @@ for base, n in count.most_common():
     tag = " (also an NPC name)" if base in npc_words else ""
     if "'" in base:
         add("name-apostrophe", variants.split("/")[0], n, 1,
-            f"apostrophe name, no lexicon entry{tag}", where[base][0], variants)
+            f"apostrophe name{tag}", where[base], variants, base)
     elif (c := compound(base)):
         add("name-compound", variants.split("/")[0], n, 3,
-            f"compound of English words ({c}){tag}", where[base][0], variants)
+            f"compound of English words ({c}){tag}", where[base], variants, base)
     elif drift:
         add("name-drifts-to-english", variants.split("/")[0], n, 1,
-            f"one edit from {', '.join(drift[:3])}{tag}", where[base][0], variants)
+            f"one edit from {', '.join(drift[:3])}{tag}", where[base], variants, base)
     else:
         add("name-invented", variants.split("/")[0], n, 2 if n >= 5 else 3,
-            f"not English, no lexicon entry{tag}", where[base][0], variants)
+            f"not English{tag}", where[base], variants, base)
 
 # ------------------------------------------------------------- line-level findings
 LINE_PATTERNS = [
@@ -148,7 +169,7 @@ for cat, pat, prio, note in LINE_PATTERNS:
         for m in re.finditer(pat, ln["text"]):
             hits[m.group(0)].append(ln["lineId"])
     for frag, ids in sorted(hits.items(), key=lambda kv: -len(kv[1])):
-        add(cat, frag[:120], len(ids), prio, f"{note} ({len(set(ids))} lines)", ids[0])
+        add(cat, frag[:120], len(ids), prio, f"{note} ({len(set(ids))} lines)", ids)
 
 TYPOS = [
     ("Exellent", "Excellent", 1), ("Ferelas", "Feralas", 1), ("Erelas", "Feralas", 1),
@@ -160,23 +181,46 @@ for wrong, right, prio in TYPOS:
     ids = [l["lineId"] for l in lines if re.search(rf"\b{re.escape(wrong)}\b", l["text"])]
     if ids:
         add("bug-source-typo", wrong, len(ids), prio,
-            f"misspelling of {right} in Blizzard's text, voiced verbatim", ids[0])
+            f"misspelling of {right} in Blizzard's text, voiced verbatim", ids)
 
 for lid, note in [("q:1155:accept", 'line text is literally "x"'),
                   ("q:3646:accept", "line text is a single newline"),
                   ("q:257:complete", "$Nama name gag becomes 'adventurerama'"),
                   ("q:258:accept", "$Nath name gag becomes 'adventurerath'"),
                   ("q:258:progress", "$Nah name gag becomes 'adventurerah' (already skipped: progress)")]:
-    add("bug-degenerate-line", lid, 1, 1, note, lid)
+    add("bug-degenerate-line", lid, 1, 1, note, [lid])
 
 rows.sort(key=lambda r: (r["priority"], -r["occurrences"], r["category"]))
 
-with open(DEST, "w", newline="") as f:
-    w = csv.DictWriter(f, fieldnames=["priority", "category", "item", "occurrences",
-                                      "variants_in_source", "example_line", "example_npc",
-                                      "note", "in_lexicon", "verdict", "ipa"])
+CSV_COLUMNS = ["priority", "category", "item", "occurrences", "variants_in_source",
+               "example_line", "example_npc", "note", "in_lexicon", "verdict", "ipa"]
+
+with open(args.csv, "w", newline="") as f:
+    w = csv.DictWriter(f, fieldnames=CSV_COLUMNS, extrasaction="ignore")
     w.writeheader()
     w.writerows(rows)
 
-print(f"{len(rows)} rows -> {DEST}")
+# mtime=0 so re-running without a corpus change produces a byte-identical file. gzip
+# stamps the source mtime by default, which would make every scan look like a change.
+with gzip.GzipFile(args.json, "wb", mtime=0) as f:
+    f.write(json.dumps({
+        "schemaVersion": SCHEMA_VERSION,
+        "generatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "corpusGeneratedAt": corpus["generatedAt"],
+        "findings": [{
+            "category": r["category"],
+            "item": r["item"],
+            "severity": r["priority"],
+            "note": r["note"],
+            "occurrences": r["occurrences"],
+            "variants": r["variants_in_source"] or None,
+            "grapheme": r["grapheme"] or None,
+            "lineIds": r["line_ids"],
+        } for r in rows],
+    }, separators=(",", ":")).encode())
+
+pairs = sum(len(r["line_ids"]) for r in rows)
+print(f"{len(rows)} findings over {pairs} finding-line pairs")
+print(f"  -> {args.csv}")
+print(f"  -> {args.json}")
 print(Counter(r["category"] for r in rows).most_common())

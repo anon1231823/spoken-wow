@@ -21,6 +21,7 @@ const { regenerateLine } = await import("./regenerate");
 const { listVersions } = await import("./versions");
 const { audioRelPath } = await import("@/lib/audio");
 const { lineIndex } = await import("@/lib/corpus");
+const { clearOverride, writeOverride } = await import("@/lib/issues/overrides");
 
 /** A quest line one NPC speaks. Jitters, human-male, in Deadwind Pass. */
 const SOLO = "q:5:accept";
@@ -28,6 +29,8 @@ const SOLO = "q:5:accept";
 const SHARED = "q:109:accept";
 /** Progress text, which the generator never voices. */
 const NEVER_VOICED = "q:6:progress";
+/** A whole line of stage direction, so the corpus gave up on it: "<Sirra begins translating…>". */
+const STAGE_DIRECTION = "q:251:complete";
 
 const MP3 = Buffer.from("ID3generated-audio");
 
@@ -93,7 +96,7 @@ function fileFor(lineId: string): string {
  * to assert on, and it must not be the thing that clears it permanently. So the fixtures'
  * rows are lifted out before each test and put back after.
  */
-const FIXTURE_LINES = [SOLO, SHARED, NEVER_VOICED];
+const FIXTURE_LINES = [SOLO, SHARED, NEVER_VOICED, STAGE_DIRECTION];
 let displaced: Record<string, unknown>[] = [];
 
 async function fixtureFiles(): Promise<string[]> {
@@ -297,5 +300,73 @@ describe("when ElevenLabs refuses", () => {
     expect(fs.readFileSync(storePath(file), "utf8")).toBe("the take that was already there");
     expect(await versionsOnDisk(file)).toEqual([]);
     expect(await listVersions(file)).toEqual([]);
+  });
+});
+
+/**
+ * Overrides live in Postgres, so these write real rows and take them out again - the same
+ * arrangement the fixture lines use, and for the same reason.
+ */
+describe("a line whose spoken text has been rewritten", () => {
+  afterEach(async () => {
+    await clearOverride(fileFor(SOLO));
+    await clearOverride(fileFor(STAGE_DIRECTION));
+    await clearOverride(fileFor(NEVER_VOICED));
+  });
+
+  it("speaks the rewrite rather than what the corpus says", async () => {
+    const { options, calls } = stub();
+    await writeOverride(fileFor(SOLO), SOLO, "Say this instead.", null);
+
+    const result = await regenerate(SOLO, options);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const sent = calls.find((c) => c.url.includes("text-to-speech"))!.body as { text: string };
+    expect(sent.text).toBe("Say this instead.");
+    expect(result.spokenText).toBe("Say this instead.");
+    // Billed for what was sent, so the version row is not describing a different take.
+    expect(result.characters).toBe("Say this instead.".length);
+  });
+
+  it("voices a line the corpus had given up on, once the stage direction is gone", async () => {
+    const { options } = stub();
+
+    // Untouched, it is nothing but "<Sirra begins translating the note...>".
+    const before = await regenerateLine(STAGE_DIRECTION, "user", options);
+    expect(before.ok).toBe(false);
+    if (before.ok) return;
+    expect(before.failure.message).toContain("rewrite it");
+
+    await writeOverride(fileFor(STAGE_DIRECTION), STAGE_DIRECTION, "Sirra begins translating.", null);
+    const after = await regenerate(STAGE_DIRECTION, options);
+
+    expect(after.ok).toBe(true);
+    if (!after.ok) return;
+    expect(after.spokenText).toBe("Sirra begins translating.");
+  });
+
+  it("still refuses progress text, which no rewrite can make voiceable", async () => {
+    const { options, calls } = stub();
+    await writeOverride(fileFor(NEVER_VOICED), NEVER_VOICED, "perfectly ordinary text", null);
+
+    const result = await regenerateLine(NEVER_VOICED, "user", options);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.failure.message).toContain("progress");
+    expect(calls).toHaveLength(0);
+  });
+
+  it("refuses a rewrite that puts the offending characters back", async () => {
+    const { options, calls } = stub();
+    await writeOverride(fileFor(SOLO), SOLO, "Meet me in $B Ironforge", null);
+
+    const result = await regenerateLine(SOLO, "user", options);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.failure.status).toBe(409);
+    expect(calls).toHaveLength(0);
   });
 });

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import LineRow from "./LineRow";
 import Pagination from "./Pagination";
 import Player from "./Player";
+import OverrideDialog from "./OverrideDialog";
 import RegenerateDialog from "./RegenerateDialog";
 import RegenerationPanel from "./RegenerationPanel";
 import SearchBar from "./SearchBar";
@@ -22,6 +23,7 @@ import {
 } from "@/lib/generation/client";
 import { estimate as estimateBatch, LIST_RATE, type Estimate } from "@/lib/generation/billing";
 import { canRegenerate } from "@/lib/permissions";
+import { isVoiceable } from "@/lib/text-gate";
 import type { Filter, LineFilters, ResultLine, SearchResult } from "@/lib/search";
 import { type Pending, receive, target, write } from "@/lib/url-echo";
 
@@ -65,6 +67,19 @@ function Key({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * The `issues` param, which is "any" or a severity.
+ *
+ * The client twin of issueLevel in lib/search-request.ts. Two of them for the reason
+ * filterParams and filtersFromParams are two: the browser writes this string and the server
+ * reads it, and neither can import the other.
+ */
+function issueLevelFromParam(value: string | null): LineFilters["issues"] {
+  if (value === "any") return "any";
+  const level = Number(value);
+  return level === 1 || level === 2 || level === 3 ? (level as 1 | 2 | 3) : undefined;
+}
+
 /** Everything that narrows the corpus, as the query string the two search endpoints read. */
 function filterParams(filters: LineFilters): URLSearchParams {
   const params = new URLSearchParams();
@@ -77,6 +92,10 @@ function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.voice) params.set("voice", filters.voice);
   if (filters.source) params.set("source", filters.source);
   if (filters.npcType) params.set("type", filters.npcType);
+  if (filters.issues) params.set("issues", String(filters.issues));
+  if (filters.issueCategory) params.set("issue", filters.issueCategory);
+  if (filters.finding) params.set("finding", String(filters.finding));
+  if (filters.overridden) params.set("overridden", "1");
   return params;
 }
 
@@ -107,6 +126,10 @@ export default function Explorer({ facets }: { facets: Facets }) {
       voice: params.get("voice") ?? undefined,
       source: (params.get("source") as LineFilters["source"]) ?? undefined,
       npcType: (params.get("type") as LineFilters["npcType"]) ?? undefined,
+      issues: issueLevelFromParam(params.get("issues")),
+      issueCategory: params.get("issue") ?? undefined,
+      finding: Number(params.get("finding")) || undefined,
+      overridden: params.get("overridden") === "1",
     }),
     [params, urlQuery],
   );
@@ -124,6 +147,10 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const [versions, setVersions] = useState<Record<string, number>>({});
   // How many takes each file has, so a line only offers history when there is history.
   const [takes, setTakes] = useState<Record<string, number>>({});
+  // Files whose live audio was made from text that has since changed.
+  const [stale, setStale] = useState<Set<string>>(new Set());
+  // The line whose spoken text is being rewritten, or null.
+  const [editing, setEditing] = useState<ResultLine | null>(null);
   const [batch, setBatch] = useState<Batch | null>(null);
   const [pendingBatch, setPendingBatch] = useState<{
     label: string;
@@ -182,6 +209,10 @@ export default function Explorer({ facets }: { facets: Facets }) {
         ...("voice" in next ? { voice: next.voice } : {}),
         ...("source" in next ? { source: next.source } : {}),
         ...("npcType" in next ? { type: next.npcType } : {}),
+        ...("issues" in next ? { issues: next.issues } : {}),
+        ...("issueCategory" in next ? { issue: next.issueCategory } : {}),
+        ...("finding" in next ? { finding: next.finding } : {}),
+        ...("overridden" in next ? { overridden: next.overridden ? "1" : undefined } : {}),
       });
     },
     [updateUrl],
@@ -241,11 +272,46 @@ export default function Explorer({ facets }: { facets: Facets }) {
     if (files.length === 0) return;
 
     const controller = new AbortController();
-    void fetchTakeCounts(files, controller.signal).then((counts) => {
-      if (counts) setTakes((current) => ({ ...current, ...counts }));
+    void fetchTakeCounts(files, controller.signal).then((info) => {
+      if (!info) return;
+      setTakes((current) => ({ ...current, ...info.counts }));
+      // Replaced rather than merged: a file that has just been regenerated must leave the
+      // set, and merging could only ever add to it.
+      setStale(new Set(info.stale));
     });
     return () => controller.abort();
   }, [showRegenerate, result]);
+
+  /**
+   * Adopt a rewritten line.
+   *
+   * Patched into the result in place rather than refetched: the search that produced this page
+   * is unchanged, and a refetch would rebuild fifty rows to move one string. Every row sharing
+   * the file is patched, because an override is keyed on the file and they all now say it.
+   *
+   * The file becomes stale here rather than waiting for the next take-count fetch, because the
+   * claim is already true: whatever audio exists was made from the old text.
+   */
+  const handleOverrideSaved = useCallback((file: string, text: string | null) => {
+    setEditing(null);
+    setResult((current) =>
+      current
+        ? {
+            ...current,
+            lines: current.lines.map((line) =>
+              line.audioPath === file
+                ? { ...line, override: text, voiceable: isVoiceable(line, text ?? line.text) }
+                : line,
+            ),
+          }
+        : current,
+    );
+    setStale((current) => {
+      const next = new Set(current);
+      next.add(file);
+      return next;
+    });
+  }, []);
 
   /**
    * Adopt a restored take.
@@ -552,6 +618,21 @@ export default function Explorer({ facets }: { facets: Facets }) {
         onFilters={updateFilters}
       />
 
+      {/* A finding filter has no dropdown to sit in - it arrives by link from /issues - so
+          without this the list would be narrowed with nothing on the page saying so. */}
+      {filters.finding && (
+        <div className="text-muted-foreground mt-3 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs">
+          <span>Showing the lines of one finding.</span>
+          <Button
+            size="xs"
+            variant="ghost"
+            onClick={() => updateFilters({ finding: undefined })}
+          >
+            Show everything
+          </Button>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 pb-1">
         <div className="text-muted-foreground text-sm">
           {loading && !result
@@ -587,6 +668,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
             <col className="w-52" />
             <col className="w-48" />
             <col className="w-32" />
+            <col className="w-28" />
             <col />
             <col className={showRegenerate ? "w-20" : "w-0"} />
           </colgroup>
@@ -595,6 +677,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
               <th className="px-2 pb-1 font-medium">NPC / object</th>
               <th className="px-2 pb-1 font-medium">Quest</th>
               <th className="px-2 pb-1 font-medium">Race / gender / flavor</th>
+              <th className="px-2 pb-1 font-medium">Issue</th>
               <th className="px-2 pb-1 font-medium">Line</th>
               <th className="sr-only">Actions</th>
             </tr>
@@ -609,7 +692,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 state={lineStates[line.lineId]}
                 blocked={blockedReason(line)}
                 takes={takes[line.audioPath] ?? 0}
+                stale={stale.has(line.audioPath)}
                 onPlay={play}
+                onEditText={setEditing}
                 onRegenerate={regenerateLine}
                 onRestored={handleRestored}
                 onNarrowToNpc={narrowToNpc}
@@ -634,6 +719,12 @@ export default function Explorer({ facets }: { facets: Facets }) {
         <Key>/</Key> search · <Key>space</Key> play/pause · <Key>j</Key> <Key>k</Key> next
         and previous line on this page
       </p>
+
+      <OverrideDialog
+        line={editing}
+        onSaved={handleOverrideSaved}
+        onCancel={() => setEditing(null)}
+      />
 
       <RegenerateDialog
         pending={pendingBatch}

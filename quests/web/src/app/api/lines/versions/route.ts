@@ -9,6 +9,7 @@
 import { corpusFiles } from "@/lib/audio";
 import { requireRegenerate } from "@/lib/generation/authz";
 import { historyOf } from "@/lib/generation/history";
+import { staleFiles } from "@/lib/issues/staleness";
 import { versionCounts } from "@/lib/generation/versions";
 
 export const dynamic = "force-dynamic";
@@ -41,5 +42,8 @@ export async function POST(request: Request) {
     (file): file is string => typeof file === "string" && known.has(file),
   );
 
-  return Response.json({ counts: Object.fromEntries(await versionCounts(files)) });
+  // Both in one round trip, because the page asks the same question about the same files:
+  // how many takes are there, and is the live one still made of the current text.
+  const [counts, stale] = await Promise.all([versionCounts(files), staleFiles(files)]);
+  return Response.json({ counts: Object.fromEntries(counts), stale: [...stale] });
 }
