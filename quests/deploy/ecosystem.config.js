@@ -61,6 +61,13 @@ module.exports = {
       // measured at ~200 MB RSS. This is a safety net for a leak, not an expected limit.
       max_memory_restart: "600M",
 
+      // The queue leader finishes its in-flight ElevenLabs calls before releasing the
+      // advisory lock, so a reload hands over rather than overlapping (see
+      // web/src/instrumentation.ts). pm2's default of 1600 ms is shorter than a single
+      // generation, so without this every reload SIGKILLs mid-take and the handover
+      // degrades to waiting out a five-minute lease.
+      kill_timeout: 30_000,
+
       env: {
         NODE_ENV: "production",
         PORT: 3000,
