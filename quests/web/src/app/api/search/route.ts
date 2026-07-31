@@ -15,11 +15,12 @@ export async function GET(request: NextRequest) {
   // ever changes; the offset is arithmetic and belongs on this side of it.
   const page = Math.max(1, Math.floor(Number(params.get("page")) || 1));
 
+  const filters = filtersFromParams(params);
   const result = search(
     loadCorpus(),
     storeIndex(),
-    { ...filtersFromParams(params), offset: (page - 1) * limit, limit },
-    await searchContext(),
+    { ...filters, offset: (page - 1) * limit, limit },
+    await searchContext(filters.finding),
   );
 
   return NextResponse.json(result);

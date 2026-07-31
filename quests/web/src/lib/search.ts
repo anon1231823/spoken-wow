@@ -46,6 +46,14 @@ export type LineFilters = {
   issues?: "any" | Severity;
   /** A category, or the group before its first hyphen. The dropdown offers groups. */
   issueCategory?: string;
+  /**
+   * The lines of one finding, by its id.
+   *
+   * Exact where a text search cannot be: the bare `--` finding and `Hearthglen--you'll` are
+   * two findings whose text both contains `--`, and six dialect findings share one category.
+   * The finding already knows which lines it is about, so this asks it rather than guessing.
+   */
+  finding?: number;
   /** Lines whose spoken text has been rewritten by hand. */
   overridden?: boolean;
 };
@@ -61,6 +69,8 @@ export type LineFilters = {
 export type SearchContext = {
   issues: Map<string, LineIssues>;
   overrides: Map<string, LineOverride>;
+  /** The lines of the finding `filters.finding` names, or null when it names none. */
+  findingLines?: Set<string> | null;
 };
 
 export const NO_CONTEXT: SearchContext = { issues: new Map(), overrides: new Map() };
@@ -264,9 +274,10 @@ export function matchingLines(
     npcType,
     issues,
     issueCategory,
+    finding,
     overridden,
   }: LineFilters = {},
-  { issues: found, overrides }: SearchContext = NO_CONTEXT,
+  { issues: found, overrides, findingLines }: SearchContext = NO_CONTEXT,
 ): CorpusLine[] {
   const query = q.trim();
 
@@ -283,6 +294,9 @@ export function matchingLines(
   if (issueCategory) {
     lines = lines.filter((line) => categoryMatch(found.get(line.lineId), issueCategory));
   }
+  // An unknown id matches nothing rather than everything: "show me this finding's lines" has
+  // no honest answer for a finding that is not there, and the whole corpus is the wrong one.
+  if (finding) lines = lines.filter((line) => findingLines?.has(line.lineId) ?? false);
   if (overridden) lines = lines.filter((line) => overrides.has(audioRelPath(line)));
 
   return [...lines].sort(order);

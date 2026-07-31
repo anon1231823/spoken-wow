@@ -94,6 +94,7 @@ function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.npcType) params.set("type", filters.npcType);
   if (filters.issues) params.set("issues", String(filters.issues));
   if (filters.issueCategory) params.set("issue", filters.issueCategory);
+  if (filters.finding) params.set("finding", String(filters.finding));
   if (filters.overridden) params.set("overridden", "1");
   return params;
 }
@@ -127,6 +128,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       npcType: (params.get("type") as LineFilters["npcType"]) ?? undefined,
       issues: issueLevelFromParam(params.get("issues")),
       issueCategory: params.get("issue") ?? undefined,
+      finding: Number(params.get("finding")) || undefined,
       overridden: params.get("overridden") === "1",
     }),
     [params, urlQuery],
@@ -209,6 +211,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
         ...("npcType" in next ? { type: next.npcType } : {}),
         ...("issues" in next ? { issues: next.issues } : {}),
         ...("issueCategory" in next ? { issue: next.issueCategory } : {}),
+        ...("finding" in next ? { finding: next.finding } : {}),
         ...("overridden" in next ? { overridden: next.overridden ? "1" : undefined } : {}),
       });
     },
@@ -614,6 +617,21 @@ export default function Explorer({ facets }: { facets: Facets }) {
         onQuery={setQuery}
         onFilters={updateFilters}
       />
+
+      {/* A finding filter has no dropdown to sit in - it arrives by link from /issues - so
+          without this the list would be narrowed with nothing on the page saying so. */}
+      {filters.finding && (
+        <div className="text-muted-foreground mt-3 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs">
+          <span>Showing the lines of one finding.</span>
+          <Button
+            size="xs"
+            variant="ghost"
+            onClick={() => updateFilters({ finding: undefined })}
+          >
+            Show everything
+          </Button>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 pb-1">
         <div className="text-muted-foreground text-sm">

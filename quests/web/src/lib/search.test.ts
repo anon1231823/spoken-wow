@@ -334,3 +334,42 @@ describe("overrides", () => {
     expect(batchJobs([line], context.overrides)[0].characters).toBe(5);
   });
 });
+
+describe("one finding's lines", () => {
+  /** What /issues links with: the finding's own line set, resolved server-side. */
+  const from = (lineIds: string[]) => ({
+    issues: new Map(),
+    overrides: new Map(),
+    findingLines: new Set(lineIds),
+  });
+
+  it("shows exactly the lines the finding names", () => {
+    const context = from(["q:123:complete", "q:123:accept"]);
+    const lines = matchingLines(corpus, store, { finding: 42 }, context);
+    expect(lines.map((l) => l.lineId).sort()).toEqual(["q:123:accept", "q:123:complete"]);
+  });
+
+  it("keeps every row of a line several NPCs share", () => {
+    // A gossip lineId is a hash of the text, so one id can name a dozen speakers. The
+    // finding counts the line once; the explorer has to list all of them.
+    const shared = corpus.lines.find(
+      (l) => l.source === "gossip" && corpus.lines.filter((o) => o.lineId === l.lineId).length > 1,
+    )!;
+    const rows = matchingLines(corpus, store, { finding: 42 }, from([shared.lineId]));
+    expect(rows.length).toBeGreaterThan(1);
+    expect(new Set(rows.map((l) => l.lineId))).toEqual(new Set([shared.lineId]));
+  });
+
+  it("matches nothing for a finding that is not there, rather than everything", () => {
+    // The failure that would matter: a dropped filter reads as "the whole corpus is this
+    // finding", and someone presses Regenerate all.
+    expect(matchingLines(corpus, store, { finding: 99_999 }, from([]))).toHaveLength(0);
+    expect(matchingLines(corpus, store, { finding: 99_999 })).toHaveLength(0);
+  });
+
+  it("still narrows further when combined with another filter", () => {
+    const context = from(["q:123:complete", "q:123:accept"]);
+    const lines = matchingLines(corpus, store, { finding: 42, source: "accept" }, context);
+    expect(lines.map((l) => l.lineId)).toEqual(["q:123:accept"]);
+  });
+});

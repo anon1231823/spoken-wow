@@ -40,13 +40,15 @@ const TONES: Record<Severity, string> = {
  * Where this finding is, in the explorer.
  *
  * The explorer's URL is its own source of truth for a search, so this is a working deep link
- * rather than a page that arrives blank - the same trick LexiconEditor's explorerHref plays,
- * except this one filters by the finding's category rather than by its text. Category, not
- * text: `--` as a query would match half the corpus, and the finding already knows which lines
- * it is about.
+ * rather than a page that arrives blank - the same trick LexiconEditor's explorerHref plays.
+ *
+ * By id, not by searching for the word. A text search cannot express what this link means: the
+ * bare `--` finding and `Hearthglen--you'll` are two findings whose text both contains `--`,
+ * `yer` as a substring also finds "player", and a bug-degenerate-line has nothing quotable in
+ * it at all - its line's entire text is the letter x. The finding knows its own lines.
  */
 function explorerHref(issue: Issue): string {
-  return `/?${new URLSearchParams({ issue: issue.category, issues: String(issue.severity) })}`;
+  return `/?${new URLSearchParams({ finding: String(issue.id) })}`;
 }
 
 /** The lexicon editor, with this name already filled in. */
@@ -289,7 +291,13 @@ function Row({
         {issue.variants && issue.variants !== issue.item && ` · spelled ${issue.variants}`}
       </span>
 
-      <span className="text-muted-foreground w-28 shrink-0 text-right text-xs tabular-nums">
+      {/* Distinct lines, which the explorer will often show more rows than: a gossip line is
+          one line said by however many NPCs of that race and gender, and the explorer lists a
+          row per speaker. Both numbers are right; only their agreeing would be surprising. */}
+      <span
+        className="text-muted-foreground w-28 shrink-0 text-right text-xs tabular-nums"
+        title="Distinct lines. The explorer lists one row per NPC who says them, so it can show more."
+      >
         {issue.lineCount.toLocaleString()} {issue.lineCount === 1 ? "line" : "lines"}
       </span>
 

@@ -225,6 +225,20 @@ export async function issueList(query: IssueQuery = {}): Promise<Issue[]> {
 }
 
 /**
+ * The lines one finding is about.
+ *
+ * Not memoised, unlike issuesByLine: this is asked only when someone has followed a link from
+ * the review queue, and it is one indexed lookup rather than an aggregate over the table.
+ */
+export async function findingLines(id: number): Promise<Set<string>> {
+  const { rows } = await db().query<{ lineId: string }>(
+    `select "lineId" from "line_issue_line" where "issueId" = $1`,
+    [id],
+  );
+  return new Set(rows.map((r) => r.lineId));
+}
+
+/**
  * A cheap stand-in for "have the issues changed", the database analogue of the store's
  * directory mtime: the newest timestamp anything in the table carries. A load moves scanAt, a
  * verdict moves verdictAt, and nothing else in this table can change without moving one.

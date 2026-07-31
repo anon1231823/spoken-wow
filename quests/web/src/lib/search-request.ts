@@ -46,6 +46,7 @@ export function filtersFromParams(params: URLSearchParams): LineFilters {
     // which grows them, and the review queue links here with whichever it has. An unknown
     // one matches nothing, which is the honest answer to "show me lines with this finding".
     issueCategory: params.get("issue") || undefined,
+    finding: Number(params.get("finding")) || undefined,
     overridden: params.get("overridden") === "1",
   };
 }

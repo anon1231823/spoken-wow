@@ -17,13 +17,9 @@ import { batchJobs, matchingLines } from "@/lib/search";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const context = await searchContext();
-  const lines = matchingLines(
-    loadCorpus(),
-    storeIndex(),
-    filtersFromParams(request.nextUrl.searchParams),
-    context,
-  );
+  const filters = filtersFromParams(request.nextUrl.searchParams);
+  const context = await searchContext(filters.finding);
+  const lines = matchingLines(loadCorpus(), storeIndex(), filters, context);
   // The same overrides the estimate is built from, so the quote prices the text that will
   // actually be sent rather than the text the corpus happens to hold.
   return NextResponse.json({ jobs: batchJobs(lines, context.overrides) });

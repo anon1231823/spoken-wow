@@ -14,12 +14,20 @@
 import type { SearchContext } from "../search";
 import { NO_CONTEXT } from "../search";
 import { readOverrides } from "./overrides";
-import { issuesByLine } from "./store";
+import { findingLines, issuesByLine } from "./store";
 
-export async function searchContext(): Promise<SearchContext> {
+/**
+ * @param finding the finding whose lines were asked for, when one was. Fetched here so the
+ *   route stays one call, and only when asked: it is a lookup nobody pays for by default.
+ */
+export async function searchContext(finding?: number): Promise<SearchContext> {
   try {
-    const [issues, overrides] = await Promise.all([issuesByLine(), readOverrides()]);
-    return { issues, overrides };
+    const [issues, overrides, lines] = await Promise.all([
+      issuesByLine(),
+      readOverrides(),
+      finding ? findingLines(finding) : null,
+    ]);
+    return { issues, overrides, findingLines: lines };
   } catch (error) {
     console.warn("[issues] search context unavailable, serving unmarked results:", error);
     return NO_CONTEXT;
