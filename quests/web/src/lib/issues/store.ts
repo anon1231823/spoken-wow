@@ -56,13 +56,17 @@ export type LoadReport = {
  * answered, and writing them so the UI can hide them again would only mean explaining, in two
  * places, why 144 rows nobody can act on are there.
  */
-export async function loadFindings(findings: Finding[]): Promise<LoadReport> {
-  const lexicon = await readLexicon();
-  const graphemes = new Set(lexicon.entries.map((e) => e.grapheme.toLowerCase()));
+export async function loadFindings(
+  findings: Finding[],
+  // Read from the live lexicon when not given, which is what the route wants. A caller can
+  // pass its own so a test of what gets written is not also a test of whatever the shared
+  // single-row lexicon happened to hold when it ran.
+  graphemes?: Set<string>,
+): Promise<LoadReport> {
+  const covered =
+    graphemes ?? new Set((await readLexicon()).entries.map((e) => e.grapheme.toLowerCase()));
 
-  const wanted = findings.filter(
-    (f) => !(f.grapheme && coveredByLexicon(f.grapheme, graphemes)),
-  );
+  const wanted = findings.filter((f) => !(f.grapheme && coveredByLexicon(f.grapheme, covered)));
 
   const scanAt = new Date().toISOString();
   const client = await db().connect();
