@@ -23,6 +23,15 @@ import type { Finding } from "./store";
 
 type Artifact = { schemaVersion: number; generatedAt: string; findings: Finding[] };
 
+/**
+ * The category prefix this file writes under, and deletes by.
+ *
+ * Deliberately not `test-`, which store.test.ts claims and clears wholesale: two files
+ * running in parallel, each deleting the other's rows, is the same collision as writing over
+ * the real ones - just harder to see.
+ */
+const NAMESPACE = "artifact-check-";
+
 const artifact: Artifact = JSON.parse(
   zlib.gunzipSync(fs.readFileSync(HICCUPS_PATH)).toString(),
 );
@@ -64,6 +73,27 @@ describe("the committed findings file", () => {
     expect([...missing].slice(0, 5)).toEqual([]);
   });
 
+  it("names lines that actually say the thing it found", () => {
+    // What /issues' "Lines" link rests on: it carries the item as the explorer's search term
+    // beside the exact id filter, so the box says what is being shown. A finding whose item
+    // appeared on none of its lines would open a page filtered to nothing.
+    const rows = lineIndex();
+    const empty: string[] = [];
+
+    for (const finding of artifact.findings) {
+      // A degenerate line's item is a lineId - its text is the letter x, or one newline -
+      // which is why the link omits the search term for that category alone.
+      if (finding.category === "bug-degenerate-line") continue;
+      const item = finding.item.toLowerCase();
+
+      for (const lineId of finding.lineIds) {
+        const said = rows.get(lineId)?.some((line) => line.text.toLowerCase().includes(item));
+        if (!said) empty.push(`${finding.category} "${finding.item}" on ${lineId}`);
+      }
+    }
+    expect(empty.slice(0, 5)).toEqual([]);
+  });
+
   it("carries a grapheme for every name finding and none for the rest", () => {
     for (const finding of artifact.findings) {
       const isName = finding.category.startsWith("name-");
@@ -71,10 +101,14 @@ describe("the committed findings file", () => {
     }
   });
 
-  it("loads, into its own scan generation, and is taken out again", async () => {
-    // Against the real table, so this competes with nothing: it writes the release's own
-    // findings, reads back one it knows, and removes exactly what it added.
-    const sample = artifact.findings.filter((f) => f.category === "bug-degenerate-line");
+  it("loads through the real path, under a category of its own", async () => {
+    // Renamed before loading, and this is the whole point of the exercise. `pnpm test` runs
+    // against DATABASE_URL, which is a developer's own database with the real findings and
+    // real verdicts in it. Loading these under their own names would upsert over those rows,
+    // and cleaning up afterwards would delete them - taking the verdicts with them.
+    const sample = artifact.findings
+      .filter((f) => f.category === "bug-degenerate-line")
+      .map((f) => ({ ...f, category: `${NAMESPACE}${f.category}` }));
     expect(sample.length).toBeGreaterThan(0);
 
     const report = await loadFindings(sample, new Set());
@@ -85,12 +119,13 @@ describe("the committed findings file", () => {
       const { rows } = await db().query<{ lineId: string }>(
         `select l."lineId" from "line_issue_line" l
            join "line_issue" i on i."id" = l."issueId"
-          where i."category" = 'bug-degenerate-line'`,
+          where i."category" like $1`,
+        [`${NAMESPACE}%`],
       );
       // q:1155:accept is the line whose entire text is the letter x.
       expect(rows.map((r) => r.lineId)).toContain("q:1155:accept");
     } finally {
-      await db().query(`delete from "line_issue" where "category" = 'bug-degenerate-line'`);
+      await db().query(`delete from "line_issue" where "category" like $1`, [`${NAMESPACE}%`]);
     }
   });
 });

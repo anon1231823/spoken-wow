@@ -42,13 +42,29 @@ const TONES: Record<Severity, string> = {
  * The explorer's URL is its own source of truth for a search, so this is a working deep link
  * rather than a page that arrives blank - the same trick LexiconEditor's explorerHref plays.
  *
- * By id, not by searching for the word. A text search cannot express what this link means: the
- * bare `--` finding and `Hearthglen--you'll` are two findings whose text both contains `--`,
- * `yer` as a substring also finds "player", and a bug-degenerate-line has nothing quotable in
- * it at all - its line's entire text is the letter x. The finding knows its own lines.
+ * Both the id and the word, and they are doing different jobs. The id is the filter, because a
+ * text search cannot express what this link means: the bare `--` finding and
+ * `Hearthglen--you'll` are two findings whose text both contains `--`, and `yer` as a
+ * substring also finds "player". The word is what the explorer's search box then shows, so the
+ * page can say what it is showing rather than presenting a narrowed list with an empty box - and
+ * it stays editable, so narrowing further from there works the way it does anywhere else.
+ *
+ * Every line a finding names contains its item, so the word is nearly always a no-op on
+ * arrival. Nearly: a few quest lineIds name two rows whose text differs, and there the word
+ * drops the row that does not say it - which is the right row to drop. artifact.test.ts pins
+ * the half of that which matters, that no line is left showing nothing at all.
+ *
+ * The one exception is a bug-degenerate-line, whose item is a lineId - there is nothing
+ * quotable about a line whose entire text is the letter x - and searching for it would empty
+ * the page.
  */
 function explorerHref(issue: Issue): string {
-  return `/?${new URLSearchParams({ finding: String(issue.id) })}`;
+  const params = new URLSearchParams({ finding: String(issue.id) });
+  if (issue.category !== "bug-degenerate-line") {
+    params.set("q", issue.item);
+    params.set("filter", "text");
+  }
+  return `/?${params}`;
 }
 
 /** The lexicon editor, with this name already filled in. */
