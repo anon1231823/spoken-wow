@@ -1,0 +1,182 @@
+"""Scan the corpus for text a TTS engine is likely to mangle, as a reviewable table.
+
+Writes docs/corpus-hiccups.csv, one row per finding, sorted by priority then frequency.
+Name rows are token-level; line-level findings (role-play, abbreviations, source bugs)
+carry the offending fragment in `item`. docs/corpus-hiccups.md explains the columns.
+
+Only generatable lines are scanned - progress text and lines holding $ < > are already
+excluded upstream by tts_cli.corpus, so flagging them would be noise.
+
+Needs `wordfreq` and macOS's /usr/share/dict. Run from the repo root:
+
+    python3 tools/scan_corpus_hiccups.py
+"""
+import csv, gzip, json, re
+from pathlib import Path
+from collections import Counter, defaultdict
+from wordfreq import zipf_frequency
+
+ROOT = Path(__file__).resolve().parent.parent
+DEST = ROOT / "docs" / "corpus-hiccups.csv"
+
+corpus = json.load(gzip.open(ROOT / "corpus" / "corpus.json.gz"))
+lines = [l for l in corpus["lines"] if l["generatable"]]
+by_id = {l["lineId"]: l for l in corpus["lines"]}
+
+sql = open(ROOT / "web" / "migrations" / "0008_seed_pronunciation_lexicon.sql").read()
+lex = set(g.lower() for g in re.findall(r'"grapheme": "(.*?)"', sql))
+
+web2 = set(w.strip().lower() for w in open("/usr/share/dict/web2"))
+web2 |= set(w.strip().lower() for w in open("/usr/share/dict/web2a"))
+
+TOKEN = re.compile(r"[A-Za-z][A-Za-z'\-]*[A-Za-z]|[A-Za-z]")
+PART = {"s", "t", "re", "ve", "ll", "d", "m", "n", "em"}
+SUFFIX = (("s", ""), ("es", ""), ("ed", ""), ("ing", ""), ("s", "e"), ("ed", "e"),
+          ("ing", "e"), ("ies", "y"), ("ly", ""), ("er", ""), ("ers", ""))
+
+
+def real_word(w):
+    if zipf_frequency(w, "en") >= 2.6 or w in web2:
+        return True
+    return any(w.endswith(s) and (w[: -len(s)] + a) in web2 for s, a in SUFFIX)
+
+
+def english(w):
+    if real_word(w):
+        return True
+    parts = [p for p in re.split(r"['\-]", w) if p]
+    return len(parts) > 1 and all(p in PART or real_word(p) for p in parts)
+
+
+def compound(w):
+    lo = w.rstrip("'").removesuffix("'s")
+    for i in range(3, len(lo) - 2):
+        if zipf_frequency(lo[:i], "en") >= 3.3 and zipf_frequency(lo[i:], "en") >= 3.3:
+            return f"{lo[:i]}+{lo[i:]}"
+    return None
+
+
+count, where, cased = Counter(), defaultdict(list), defaultdict(set)
+for ln in lines:
+    for tok in TOKEN.findall(ln["text"]):
+        base = tok.lower().rstrip("'").removesuffix("'s")
+        if english(base):
+            continue
+        count[base] += 1
+        cased[base].add(tok)
+        if len(where[base]) < 3:
+            where[base].append(ln["lineId"])
+
+npc_words = {t.lower().rstrip("'").removesuffix("'s")
+             for ln in corpus["lines"] for t in TOKEN.findall(ln["npcName"] or "")}
+covered = {b for b in count if b in lex or b.rstrip("s") in lex
+           or any(len(g) > 5 and (b.startswith(g) or g.startswith(b)) for g in lex)}
+
+ALPHABET = "abcdefghijklmnopqrstuvwxyz"
+
+
+def drift_targets(w):
+    """Common English words one edit away — what a model will "correct" the name into."""
+    edits = {w[:i] + w[i + 1:] for i in range(len(w))}
+    edits |= {w[:i] + c + w[i + 1:] for i in range(len(w)) for c in ALPHABET}
+    edits |= {w[:i] + c + w[i:] for i in range(len(w) + 1) for c in ALPHABET}
+    return sorted(e for e in edits - {w}
+                  if zipf_frequency(e, "en") >= 3.1
+                  and not (w.startswith(e) or e.startswith(w)))
+
+rows = []
+
+
+def add(category, item, n, priority, note, lineid="", variants=""):
+    rows.append({
+        "category": category, "item": item, "occurrences": n, "priority": priority,
+        "variants_in_source": variants, "example_line": lineid,
+        "example_npc": by_id[lineid]["npcName"] if lineid else "",
+        "in_lexicon": "", "note": note, "verdict": "", "ipa": "",
+    })
+
+
+for base, n in count.most_common():
+    if base in covered:
+        continue
+    variants = "/".join(sorted(cased[base]))
+    # A proper noun one edit from a common word is the risky case: the model does not
+    # guess, it "corrects". Inflections of the same stem (cauldrons/cauldron) are not.
+    proper = all(v[:1].isupper() for v in cased[base])
+    drift = drift_targets(base) if proper and len(base) > 4 else []
+    tag = " (also an NPC name)" if base in npc_words else ""
+    if "'" in base:
+        add("name-apostrophe", variants.split("/")[0], n, 1,
+            f"apostrophe name, no lexicon entry{tag}", where[base][0], variants)
+    elif (c := compound(base)):
+        add("name-compound", variants.split("/")[0], n, 3,
+            f"compound of English words ({c}){tag}", where[base][0], variants)
+    elif drift:
+        add("name-drifts-to-english", variants.split("/")[0], n, 1,
+            f"one edit from {', '.join(drift[:3])}{tag}", where[base][0], variants)
+    else:
+        add("name-invented", variants.split("/")[0], n, 2 if n >= 5 else 3,
+            f"not English, no lexicon entry{tag}", where[base][0], variants)
+
+# ------------------------------------------------------------- line-level findings
+LINE_PATTERNS = [
+    ("roleplay-asterisk", r"\*[^*\n]{1,80}\*", 1, "stage direction / sound effect read aloud"),
+    ("roleplay-parenthetical", r"\([^)\n]{1,120}\)", 2, "parenthetical aside"),
+    ("abbrev-initial", r"\b(?:[A-Z]\.){2,}|\b[A-Z]\.\s?(?=[A-Z])", 2, "initials"),
+    ("abbrev-title", r"\b(?:Mr|Mrs|Ms|Dr|St|Lt|Sgt|Capt|Gen|Col|Prof|Jr|Sr|Inc|Co|Ltd|No)\.", 2,
+     "abbreviation with a period"),
+    ("abbrev-code", r"\b[A-Z]{2,}[-:/][A-Z0-9]+", 1, "alphanumeric designation"),
+    ("abbrev-roman", r"\b(?:I{2,}|IV|VI{0,3}|IX|XI{0,2})\b(?<!\bI\b)", 3, "roman numeral"),
+    ("number-binary", r"[01]{8}(?:\s[01]{8})+", 1, "raw binary read digit by digit"),
+    ("number-time", r"\d\s?[AP]M\b", 2, "time of day"),
+    ("number-bare", r"\b\d[\d,]*\b", 3, "numeral"),
+    ("punct-double-hyphen", r"\S*--\S*", 2, "-- used as an em dash"),
+    ("punct-ellipsis", r"\.{4,}", 3, "four or more dots"),
+    ("punct-repeat", r"[?!]{2,}", 3, "repeated terminal punctuation"),
+    ("punct-symbol", r"[&/%#~^_{}\\|]+", 2, "symbol spoken or dropped"),
+    ("sfx-elongation", r"\b[A-Za-z]*([a-zA-Z])\1\1+[A-Za-z]*\b", 2, "elongated vowel / onomatopoeia"),
+    ("sfx-stutter", r"\b([A-Za-z])-\1[a-z]+", 2, "stutter"),
+    ("dialect-contraction", r"\bye'(?:ll|re|ve|d)\b|\byerself\b|\byer\b", 1,
+     "dialect form a model normalises to we'll / herself"),
+    ("bug-glued-substitution", r"\b(?:adventurer|Adventurer)(?!s\b|'|\b)[A-Za-z]+", 1,
+     "$N substituted with no following space"),
+]
+
+for cat, pat, prio, note in LINE_PATTERNS:
+    hits = defaultdict(list)
+    for ln in lines:
+        for m in re.finditer(pat, ln["text"]):
+            hits[m.group(0)].append(ln["lineId"])
+    for frag, ids in sorted(hits.items(), key=lambda kv: -len(kv[1])):
+        add(cat, frag[:120], len(ids), prio, f"{note} ({len(set(ids))} lines)", ids[0])
+
+TYPOS = [
+    ("Exellent", "Excellent", 1), ("Ferelas", "Feralas", 1), ("Erelas", "Feralas", 1),
+    ("Cenarian", "Cenarion", 2), ("Smokeywood", "Smokywood", 2), ("Ungoro", "Un'Goro", 2),
+    ("Lakshire", "Lakeshire", 2), ("Proudmore", "Proudmoore", 2),
+    ("Bag'thera", "Bhag'thera", 2), ("Thal'danis", "Thel'danis", 2),
+]
+for wrong, right, prio in TYPOS:
+    ids = [l["lineId"] for l in lines if re.search(rf"\b{re.escape(wrong)}\b", l["text"])]
+    if ids:
+        add("bug-source-typo", wrong, len(ids), prio,
+            f"misspelling of {right} in Blizzard's text, voiced verbatim", ids[0])
+
+for lid, note in [("q:1155:accept", 'line text is literally "x"'),
+                  ("q:3646:accept", "line text is a single newline"),
+                  ("q:257:complete", "$Nama name gag becomes 'adventurerama'"),
+                  ("q:258:accept", "$Nath name gag becomes 'adventurerath'"),
+                  ("q:258:progress", "$Nah name gag becomes 'adventurerah' (already skipped: progress)")]:
+    add("bug-degenerate-line", lid, 1, 1, note, lid)
+
+rows.sort(key=lambda r: (r["priority"], -r["occurrences"], r["category"]))
+
+with open(DEST, "w", newline="") as f:
+    w = csv.DictWriter(f, fieldnames=["priority", "category", "item", "occurrences",
+                                      "variants_in_source", "example_line", "example_npc",
+                                      "note", "in_lexicon", "verdict", "ipa"])
+    w.writeheader()
+    w.writerows(rows)
+
+print(f"{len(rows)} rows -> {DEST}")
+print(Counter(r["category"] for r in rows).most_common())

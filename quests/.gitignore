@@ -47,6 +47,11 @@ RELEASE
 # Planning artifacts from the superpowers skills: useful locally, noise in review
 docs/superpowers/
 
+# The hiccup scan's output. One command rebuilds it from a corpus that is committed, and it
+# exists to be filled in while reviewing - a committed copy would conflict with every
+# reviewer's own.
+docs/corpus-hiccups.csv
+
 # Design notes for work not committed to. Local thinking, not project documentation.
 /specs/
 

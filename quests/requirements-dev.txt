@@ -1,2 +1,4 @@
 -r requirements-extract.txt
 pytest==8.3.4
+# tools/scan_corpus_hiccups.py, to tell invented names from rare English ones
+wordfreq==3.1.1
