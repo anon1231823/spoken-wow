@@ -58,7 +58,7 @@ const WINDOW = "24 hours";
 /** Batches older than this are deleted outright, jobs cascading with them. */
 const RETENTION = "30 days";
 
-export async function createBatch(label: string, createdBy: string): Promise<string> {
+export async function createBatch(label: string, createdBy: string | null): Promise<string> {
   const { rows } = await db().query<{ id: string }>(
     `insert into "regeneration_batch" ("label", "createdBy") values ($1, $2) returning "id"`,
     [label, createdBy],

@@ -40,7 +40,12 @@ create table "regeneration_job" (
   "npcName"    text        not null,
   "preview"    text        not null,
   "characters" integer     not null,
-  "state"      text        not null default 'pending',
+  -- Constrained, not just conventional: the claim index, the finished index and the credit
+  -- guard below are all partial indexes predicated on "state in (...)" matching these exact
+  -- strings, so a stray or misspelled state would fall outside every one of them - including
+  -- the credit guard, which is the one that stops a file being paid for twice.
+  "state"      text        not null default 'pending'
+                 check ("state" in ('pending', 'running', 'done', 'failed', 'cancelled')),
   "attempts"   integer     not null default 0,
   -- When this job may next be claimed. Moved into the future to back off a rate limit.
   "notBefore"  timestamptz not null default now(),

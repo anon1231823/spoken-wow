@@ -41,7 +41,7 @@ function line(n: number): BatchLine {
 }
 
 async function newBatch(): Promise<string> {
-  const id = await createBatch("test batch", null as unknown as string);
+  const id = await createBatch("test batch", null);
   batches.push(id);
   return id;
 }
