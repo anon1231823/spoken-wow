@@ -2,6 +2,7 @@
 
 import { forwardRef, useCallback, useMemo } from "react";
 
+import DateChip from "@/components/DateChip";
 import FilterChip, { type ChipOption } from "@/components/FilterChip";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -156,6 +157,20 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
           }))}
           onChange={(issueCategory) => onFilters({ issueCategory })}
         />
+        {/* Read as one range: "generated after X" and "generated before Y". A file the app
+            has never written has no date, and counts as generated long ago - so it sits in
+            every "before" and no "after". */}
+        <DateChip
+          label="generated after"
+          value={filters.generatedAfter}
+          onChange={(generatedAfter) => onFilters({ generatedAfter })}
+        />
+        <DateChip
+          label="generated before"
+          value={filters.generatedBefore}
+          onChange={(generatedBefore) => onFilters({ generatedBefore })}
+        />
+
         <div className="flex items-center gap-2 whitespace-nowrap">
           <Checkbox
             id="missing-only"

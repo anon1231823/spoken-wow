@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { storeIndex } from "@/lib/audio";
 import { loadCorpus } from "@/lib/corpus";
 import { searchContext } from "@/lib/issues/context";
-import { filtersFromParams } from "@/lib/search-request";
+import { filtersFromParams, needsDates } from "@/lib/search-request";
 import { PAGE_SIZE, search } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     loadCorpus(),
     storeIndex(),
     { ...filters, offset: (page - 1) * limit, limit },
-    await searchContext(filters.finding),
+    await searchContext(filters.finding, needsDates(filters)),
   );
 
   return NextResponse.json(result);

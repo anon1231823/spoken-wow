@@ -373,3 +373,71 @@ describe("one finding's lines", () => {
     expect(lines.map((l) => l.lineId)).toEqual(["q:123:accept"]);
   });
 });
+
+describe("filtering by when the live take was generated", () => {
+  const fileOf = (line: { source: string; fileName: string }) =>
+    `${line.source === "gossip" ? "gossip" : "quests"}/${line.fileName}.mp3`;
+
+  // Three real corpus lines with dates, and everything else with none.
+  const dated = corpus.lines.slice(0, 3);
+  const at = (day: string) => new Date(`${day}T12:00:00`).getTime();
+  const context = {
+    issues: new Map(),
+    overrides: new Map(),
+    generatedAt: new Map([
+      [fileOf(dated[0]), at("2026-07-10")],
+      [fileOf(dated[1]), at("2026-07-20")],
+      [fileOf(dated[2]), at("2026-07-30")],
+    ]),
+  };
+
+  const withDates = (filters: Parameters<typeof matchingLines>[2]) =>
+    matchingLines(corpus, store, filters, context);
+
+  it("keeps only records at or after an 'after' bound", () => {
+    const files = new Set(withDates({ generatedAfter: "2026-07-20" }).map(fileOf));
+    expect(files.has(fileOf(dated[1]))).toBe(true);
+    expect(files.has(fileOf(dated[2]))).toBe(true);
+    expect(files.has(fileOf(dated[0]))).toBe(false);
+  });
+
+  it("excludes everything with no record from an 'after', however large the corpus", () => {
+    // The whole point of the rule: undated audio is old, not recent.
+    const lines = withDates({ generatedAfter: "2026-07-01" });
+    expect(new Set(lines.map(fileOf))).toEqual(
+      new Set(dated.map(fileOf)),
+    );
+  });
+
+  it("includes everything with no record in a 'before'", () => {
+    const lines = withDates({ generatedBefore: "2026-07-15" });
+    const files = new Set(lines.map(fileOf));
+    expect(files.has(fileOf(dated[0]))).toBe(true);
+    expect(files.has(fileOf(dated[2]))).toBe(false);
+    // Undated lines vastly outnumber the three dated ones and all survive.
+    expect(lines.length).toBeGreaterThan(1000);
+  });
+
+  it("includes the whole of the day a bound names", () => {
+    // Picking the 30th off a calendar means the 30th, not midnight at its start.
+    expect(
+      withDates({ generatedBefore: "2026-07-30" }).map(fileOf).includes(fileOf(dated[2])),
+    ).toBe(true);
+    expect(
+      withDates({ generatedAfter: "2026-07-30" }).map(fileOf).includes(fileOf(dated[2])),
+    ).toBe(true);
+  });
+
+  it("narrows from both ends at once", () => {
+    const files = new Set(
+      withDates({ generatedAfter: "2026-07-15", generatedBefore: "2026-07-25" }).map(fileOf),
+    );
+    expect(files).toEqual(new Set([fileOf(dated[1])]));
+  });
+
+  it("ignores a bound that is not a date, rather than matching nothing", () => {
+    expect(withDates({ generatedAfter: "not-a-date" }).length).toBe(
+      matchingLines(corpus, store, {}, context).length,
+    );
+  });
+});
