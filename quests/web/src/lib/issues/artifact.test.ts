@@ -11,17 +11,14 @@
  *   docker compose up -d postgres && deploy/bin/migrate.sh "$PWD/web"
  */
 import fs from "node:fs";
-import zlib from "node:zlib";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const { closeDb, db } = await import("@/lib/db");
 const { lineIndex } = await import("@/lib/corpus");
 const { HICCUPS_PATH } = await import("@/lib/paths");
+const { parseArtifact } = await import("./artifact");
 const { loadFindings } = await import("./store");
-import type { Finding } from "./store";
-
-type Artifact = { schemaVersion: number; generatedAt: string; findings: Finding[] };
 
 /**
  * The category prefix this file writes under, and deletes by.
@@ -32,9 +29,8 @@ type Artifact = { schemaVersion: number; generatedAt: string; findings: Finding[
  */
 const NAMESPACE = "artifact-check-";
 
-const artifact: Artifact = JSON.parse(
-  zlib.gunzipSync(fs.readFileSync(HICCUPS_PATH)).toString(),
-);
+// Through the parser the route uses, so this also pins that the shipped file passes it.
+const artifact = parseArtifact(fs.readFileSync(HICCUPS_PATH));
 
 beforeAll(async () => {
   try {
@@ -54,8 +50,8 @@ afterAll(async () => {
 
 describe("the committed findings file", () => {
   it("is the schema the loader reads", () => {
-    // Bumped together with SCHEMA_VERSION in api/issues/reload. A mismatch here is a scan and
-    // a release that went out of order, which is exactly what that route refuses at runtime.
+    // Bumped together with SCHEMA_VERSION in lib/issues/artifact. A mismatch is a scan and a
+    // release that went out of order, which is exactly what parseArtifact refuses.
     expect(artifact.schemaVersion).toBe(1);
     expect(artifact.findings.length).toBeGreaterThan(3000);
   });

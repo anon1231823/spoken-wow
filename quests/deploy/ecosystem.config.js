@@ -69,12 +69,11 @@ module.exports = {
         // Audio is shared across releases (1.1 GB, never copied on deploy); the corpus
         // ships inside each release and moves with a rollback.
         VOICEOVER_AUDIO: `${SHARED}/audio`,
+        // The hiccup scan's findings sit beside this file and paths.ts derives their location
+        // from it, deliberately: an env var of their own would live here, and this file only
+        // reaches the process through `make deploy-scripts` - so a deploy that shipped the
+        // findings would still not be able to find them.
         VOICEOVER_CORPUS: "/srv/voiceover/current/corpus/corpus.json.gz",
-
-        // The hiccup scan's findings, beside the corpus and pinned to it: a release whose
-        // corpus and findings came from different scans would mark the wrong lines. Read
-        // only when someone presses "Reload scan", never on the search path.
-        VOICEOVER_HICCUPS: "/srv/voiceover/current/corpus/hiccups.json.gz",
 
         // Clips uploaded to build voice clones, shared for the same reason the audio is: a
         // cloned ElevenLabs voice cannot be exported, so these are the only way to remake

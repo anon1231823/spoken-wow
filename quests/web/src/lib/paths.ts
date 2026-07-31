@@ -9,13 +9,22 @@ export const CORPUS_PATH =
 /**
  * The hiccup scan's findings, written by tools/scan_corpus_hiccups.py.
  *
- * Beside the corpus and shipped with it, because it is derived from exactly that corpus: a
- * release whose corpus and findings came from different scans would mark the wrong lines.
+ * Beside the corpus, because it is derived from exactly that corpus: a release whose corpus
+ * and findings came from different scans would mark the wrong lines.
+ *
+ * Derived from CORPUS_PATH rather than given an env var of its own, which it had until this
+ * cost an afternoon. VOICEOVER_CORPUS is set on the droplet and points into the release;
+ * VOICEOVER_HICCUPS was new, so it lived in shared/ecosystem.config.js and only reached the
+ * process after someone remembered `make deploy-scripts`. Until then this resolved against
+ * REPO_ROOT - which is cwd/.. - and the standalone server's cwd is the release directory, so
+ * it looked for /srv/voiceover/releases/corpus/hiccups.json.gz: a directory that holds
+ * releases and has never held a corpus. Two paths that must agree should be one path.
+ *
  * Read only by the issue loader, never on the search path - the findings that matter at
  * request time live in Postgres, where a verdict can be recorded against them.
  */
 export const HICCUPS_PATH =
-  process.env.VOICEOVER_HICCUPS ?? path.join(REPO_ROOT, "corpus", "hiccups.json.gz");
+  process.env.VOICEOVER_HICCUPS ?? path.join(path.dirname(CORPUS_PATH), "hiccups.json.gz");
 
 export const AUDIO_DIR =
   process.env.VOICEOVER_AUDIO ?? path.join(REPO_ROOT, "audio");

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ExternalLink, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ExternalLink, RefreshCw, Upload } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -93,6 +93,7 @@ function Review({ initial, lexiconSize }: Props) {
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const picker = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
   const load = useCallback(async () => {
@@ -145,11 +146,17 @@ function Review({ initial, lexiconSize }: Props) {
     }
   }
 
-  async function reload() {
+  /**
+   * @param file a hiccups.json.gz to read instead of the one in the release. Absent is the
+   *   ordinary path: the release ships a scan, and that is the one to load.
+   */
+  async function reload(file?: File) {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch("/api/issues/reload", { method: "POST" });
+      const body_ = file ? new FormData() : undefined;
+      body_?.append("file", file!);
+      const response = await fetch("/api/issues/reload", { method: "POST", body: body_ });
       const body = (await response.json().catch(() => ({}))) as {
         error?: string;
         loaded?: number;
@@ -239,6 +246,33 @@ function Review({ initial, lexiconSize }: Props) {
         <Button size="sm" variant="ghost" disabled={busy} onClick={() => void reload()}>
           <RefreshCw className={cn("size-3.5", busy && "animate-spin")} />
           Reload scan
+        </Button>
+
+        {/* The way in when the release's copy is older than the scan you have just run. The
+            input is hidden and driven by the button beside it, because a bare file input is
+            the one control no amount of CSS makes look like the rest of the page. */}
+        <input
+          ref={picker}
+          type="file"
+          accept=".gz,.json,application/gzip,application/json"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            // Cleared so choosing the same file twice fires again - after a failed upload,
+            // the second attempt is usually the same file.
+            event.target.value = "";
+            if (file) void reload(file);
+          }}
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={busy}
+          onClick={() => picker.current?.click()}
+          title="Load a hiccups.json.gz from this machine instead of the one in the release"
+        >
+          <Upload className="size-3.5" />
+          Upload a scan
         </Button>
 
         <span className="text-muted-foreground ml-auto text-xs tabular-nums">
