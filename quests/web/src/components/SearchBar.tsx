@@ -2,28 +2,17 @@
 
 import { forwardRef, useCallback, useMemo } from "react";
 
+import DateChip from "@/components/DateChip";
+import FilterChip, { type ChipOption } from "@/components/FilterChip";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import type { Facets } from "@/lib/facets";
 import { ISSUE_GROUPS, ISSUE_GROUP_LABELS } from "@/lib/issues/issues";
 import { NPC_TYPES, SOURCES } from "@/lib/line-fields";
+import { activeFilterCount } from "@/lib/active-filters";
 import type { Filter, LineFilters } from "@/lib/search";
-
-/**
- * The value a dropdown carries when it is not filtering.
- *
- * Radix rejects an item with an empty value - it reserves that for "nothing selected" - so
- * "not filtering" needs a name of its own, mapped back to undefined on the way out.
- */
-const ANY = "any";
 
 type Props = {
   query: string;
@@ -31,44 +20,33 @@ type Props = {
   facets: Facets;
   onQuery: (value: string) => void;
   onFilters: (next: Partial<LineFilters>) => void;
+  onClearAll: () => void;
 };
 
-/** One dropdown over a closed set of corpus values, with an "any" escape at the top. */
-function Facet({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string | undefined;
-  options: readonly string[];
-  onChange: (value: string | undefined) => void;
-}) {
-  return (
-    <Select
-      value={value ?? ANY}
-      onValueChange={(next) => onChange(next === ANY ? undefined : next)}
-    >
-      <SelectTrigger className="w-36" aria-label={label}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={ANY}>{label}: any</SelectItem>
-        {options.map((option) => (
-          <SelectItem key={option} value={option}>
-            {option}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
+/** Corpus values, which label themselves. */
+function plainOptions(values: readonly string[]): ChipOption[] {
+  return values.map((value) => ({ value, label: value }));
 }
 
+/** Where the free-text query is matched. "any" is the idle state, so it is not an option. */
+const SCOPE_OPTIONS: ChipOption[] = [
+  { value: "npc", label: "NPC only" },
+  { value: "quest", label: "Quest only" },
+  { value: "text", label: "Line text only" },
+];
+
+const ISSUE_OPTIONS: ChipOption[] = [
+  { value: "1", label: "will break" },
+  { value: "2", label: "likely wrong or worse" },
+  { value: "3", label: "has any issue" },
+];
+
 const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
-  { query, filters, facets, onQuery, onFilters },
+  { query, filters, facets, onQuery, onFilters, onClearAll },
   ref,
 ) {
+  const active = activeFilterCount({ ...filters, q: query });
+
   /** The flavors reachable under a race and gender, or all of them under neither. */
   const flavorsUnder = useCallback(
     (race: string | undefined, gender: string | undefined) => {
@@ -114,105 +92,85 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
         className="min-w-0 flex-1 basis-64"
         onChange={(e) => onQuery(e.target.value)}
       />
-      <Select
-        value={filters.filter ?? "any"}
-        onValueChange={(value) => onFilters({ filter: value as Filter })}
-      >
-        <SelectTrigger className="w-40" aria-label="Search in">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="any">Everything</SelectItem>
-          <SelectItem value="npc">NPC only</SelectItem>
-          <SelectItem value="quest">Quest only</SelectItem>
-          <SelectItem value="text">Line text only</SelectItem>
-        </SelectContent>
-      </Select>
+      <FilterChip
+        label="search in"
+        value={filters.filter === "any" ? undefined : filters.filter}
+        options={SCOPE_OPTIONS}
+        onChange={(value) => onFilters({ filter: (value ?? "any") as Filter })}
+      />
 
       <div className="flex w-full flex-wrap items-center gap-2">
-        <Facet
+        <FilterChip
           label="race"
           value={filters.race}
-          options={facets.races}
+          options={plainOptions(facets.races)}
           onChange={(race) => onFilters({ race, flavor: keptFlavor({ race }) })}
         />
-        <Facet
+        <FilterChip
           label="gender"
           value={filters.gender}
-          options={facets.genders}
+          options={plainOptions(facets.genders)}
           onChange={(gender) => onFilters({ gender, flavor: keptFlavor({ gender }) })}
         />
-        <Facet
+        <FilterChip
           label="flavor"
           value={filters.flavor}
-          options={flavorOptions}
+          options={plainOptions(flavorOptions)}
           onChange={(flavor) => onFilters({ flavor })}
         />
-        <Facet
+        <FilterChip
           label="voice"
           value={filters.voice}
-          options={facets.voices}
+          options={plainOptions(facets.voices)}
           onChange={(voice) => onFilters({ voice })}
         />
-        <Facet
+        <FilterChip
           label="source"
           value={filters.source}
-          options={SOURCES}
+          options={plainOptions(SOURCES)}
           onChange={(source) => onFilters({ source: source as LineFilters["source"] })}
         />
-        <Facet
+        <FilterChip
           label="type"
           value={filters.npcType}
-          options={NPC_TYPES}
+          options={plainOptions(NPC_TYPES)}
           onChange={(npcType) => onFilters({ npcType: npcType as LineFilters["npcType"] })}
         />
 
         {/* Severity as one dropdown rather than a checkbox plus a level, because "has an
             issue" and "has a bad one" are the same question asked at different strengths. */}
-        <Select
-          value={filters.issues === undefined ? ANY : String(filters.issues)}
-          onValueChange={(value) =>
-            onFilters({
-              issues:
-                value === ANY ? undefined : value === "any" ? "any" : (Number(value) as 1 | 2 | 3),
-            })
+        <FilterChip
+          label="issues"
+          value={filters.issues === undefined ? undefined : String(filters.issues)}
+          options={ISSUE_OPTIONS}
+          onChange={(value) =>
+            onFilters({ issues: value === undefined ? undefined : (Number(value) as 1 | 2 | 3) })
           }
-        >
-          <SelectTrigger className="w-40" aria-label="Issues">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ANY}>issues: any</SelectItem>
-            <SelectItem value="1">will break</SelectItem>
-            <SelectItem value="2">likely wrong or worse</SelectItem>
-            <SelectItem value="3">has any issue</SelectItem>
-          </SelectContent>
-        </Select>
+        />
 
-        <Select
-          value={filters.issueCategory ?? ANY}
-          onValueChange={(value) =>
-            onFilters({ issueCategory: value === ANY ? undefined : value })
-          }
-        >
-          <SelectTrigger className="w-40" aria-label="Issue kind">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ANY}>kind: any</SelectItem>
-            {/* A deep link from the review queue can carry an exact category, which is not in
-                this list. Showing it as itself beats showing "kind: any" over a filter that
-                is quietly in force. */}
-            {filters.issueCategory && !ISSUE_GROUPS.includes(filters.issueCategory) && (
-              <SelectItem value={filters.issueCategory}>{filters.issueCategory}</SelectItem>
-            )}
-            {ISSUE_GROUPS.map((group) => (
-              <SelectItem key={group} value={group}>
-                {ISSUE_GROUP_LABELS[group]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FilterChip
+          label="kind"
+          value={filters.issueCategory}
+          options={ISSUE_GROUPS.map((group) => ({
+            value: group,
+            label: ISSUE_GROUP_LABELS[group],
+          }))}
+          onChange={(issueCategory) => onFilters({ issueCategory })}
+        />
+        {/* Read as one range: "generated after X" and "generated before Y". A file the app
+            has never written has no date, and counts as generated long ago - so it sits in
+            every "before" and no "after". */}
+        <DateChip
+          label="generated after"
+          value={filters.generatedAfter}
+          onChange={(generatedAfter) => onFilters({ generatedAfter })}
+        />
+        <DateChip
+          label="generated before"
+          value={filters.generatedBefore}
+          onChange={(generatedBefore) => onFilters({ generatedBefore })}
+        />
+
         <div className="flex items-center gap-2 whitespace-nowrap">
           <Checkbox
             id="missing-only"
@@ -233,6 +191,14 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
             rewritten only
           </Label>
         </div>
+
+        {/* Only when there is something to clear: a button that does nothing on most visits
+            is one more thing to read past every time. */}
+        {active > 0 && (
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={onClearAll}>
+            Clear {active === 1 ? "filter" : `all ${active} filters`}
+          </Button>
+        )}
       </div>
     </div>
   );

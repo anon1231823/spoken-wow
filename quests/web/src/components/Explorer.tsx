@@ -96,6 +96,8 @@ function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.issueCategory) params.set("issue", filters.issueCategory);
   if (filters.finding) params.set("finding", String(filters.finding));
   if (filters.overridden) params.set("overridden", "1");
+  if (filters.generatedBefore) params.set("before", filters.generatedBefore);
+  if (filters.generatedAfter) params.set("after", filters.generatedAfter);
   return params;
 }
 
@@ -130,6 +132,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
       issueCategory: params.get("issue") ?? undefined,
       finding: Number(params.get("finding")) || undefined,
       overridden: params.get("overridden") === "1",
+      generatedBefore: params.get("before") ?? undefined,
+      generatedAfter: params.get("after") ?? undefined,
     }),
     [params, urlQuery],
   );
@@ -213,10 +217,29 @@ export default function Explorer({ facets }: { facets: Facets }) {
         ...("issueCategory" in next ? { issue: next.issueCategory } : {}),
         ...("finding" in next ? { finding: next.finding } : {}),
         ...("overridden" in next ? { overridden: next.overridden ? "1" : undefined } : {}),
+        ...("generatedBefore" in next ? { before: next.generatedBefore } : {}),
+        ...("generatedAfter" in next ? { after: next.generatedAfter } : {}),
       });
     },
     [updateUrl],
   );
+
+  /**
+   * Drop every filter, the query with them.
+   *
+   * Navigates to the bare path rather than deleting keys one by one: every parameter this
+   * page reads either narrows the corpus or is the page number, and page 9 of the unfiltered
+   * corpus is not where anyone wants to land. A key added later is then cleared by default,
+   * which is the safer way for this to be wrong.
+   *
+   * The query is reset through `pending` as well, so the echo machinery does not treat the
+   * cleared input as a stale value and put the old query back. See lib/url-echo.
+   */
+  const clearAll = useCallback(() => {
+    setQuery("");
+    pending.current = write(pending.current, "");
+    router.replace("/", { scroll: false });
+  }, [router]);
 
   // Held in a ref so the debounce below restarts on keystrokes only. `updateUrl` changes
   // identity on every param change, and letting that reset the timer would let a filter
@@ -616,6 +639,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
         facets={facets}
         onQuery={setQuery}
         onFilters={updateFilters}
+        onClearAll={clearAll}
       />
 
       {/* A finding filter has no dropdown to sit in - it arrives by link from /issues - so
