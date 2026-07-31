@@ -89,6 +89,10 @@ export function startLeader(
   let leading = false;
   let stopped = false;
   let timer: NodeJS.Timeout | null = null;
+  // Bumped by stop(). A tick that resumes from an await after stop() has landed checks this
+  // against the value it captured at the start and, on a mismatch, bails without writing to
+  // `leading` or scheduling another timer - the world it was computing an answer for is gone.
+  let generation = 0;
 
   async function standDown(): Promise<void> {
     leading = false;
@@ -101,12 +105,18 @@ export function startLeader(
 
   async function tick(): Promise<void> {
     if (stopped) return;
+    const gen = generation;
     try {
       if (leading) {
-        if (!(await stillHeld(client!, key))) await standDown();
+        const stillOk = await stillHeld(client!, key);
+        if (gen !== generation) return;
+        if (!stillOk) await standDown();
       } else {
         if (!client) client = await db().connect();
-        leading = await tryAcquire(client, key);
+        if (gen !== generation) return;
+        const acquired = await tryAcquire(client, key);
+        if (gen !== generation) return;
+        leading = acquired;
         // Holding an idle connection out of the pool to lose the race every five seconds is
         // a waste of one of ten slots, so a loser gives its client back.
         if (!leading) await standDown();
@@ -114,19 +124,28 @@ export function startLeader(
     } catch {
       // A broken connection is not a reason to crash the app: stand down, and the next tick
       // starts contending again with a fresh client.
-      await standDown().catch(() => {});
+      if (gen === generation) await standDown().catch(() => {});
     } finally {
-      if (!stopped) timer = setTimeout(() => void tick(), leading ? heartbeatMs : retryMs);
+      if (!stopped && gen === generation) {
+        timer = setTimeout(() => {
+          inFlight = tick();
+        }, leading ? heartbeatMs : retryMs);
+      }
     }
   }
 
-  void tick();
+  // stop() awaits this so "stopped" means quiescent, not merely flagged: a tick already
+  // in flight when stop() is called can otherwise resume afterwards and overwrite whatever
+  // standDown() just set, which is the whole bug this variable exists to close off.
+  let inFlight: Promise<void> = tick();
 
   return {
     held: () => leading,
     async stop() {
       stopped = true;
+      generation++;
       if (timer) clearTimeout(timer);
+      await inFlight;
       await standDown();
     },
   };
