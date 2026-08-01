@@ -301,9 +301,10 @@ On by default: **the game's own discovery is the trigger** — the moment it pri
 "Discovered Durotar", that zone's lore plays. `/zl autoplay` toggles it, and `/zl`
 reports whether the feature can work at all on this client.
 
-Subzone discoveries are ignored unless the second option is ticked. The client
-announces far more of them than zone ones, and the subzone text is usually the less
-interesting of the two.
+Subzones are included, and are most of what fires — a walk across Elwynn sets off
+several. They queue rather than interrupt, so the effect is a steady trickle of
+lore rather than a pile-up; the second option turns them off if it ever feels
+constant.
 
 #### Why discovery, and not "first visit"
 
@@ -344,7 +345,10 @@ discoveries ever stop being recognised.
 
 #### Queue
 
-Discoveries queue rather than interrupt, capped at 3 and dropping the oldest.
+Discoveries queue rather than interrupt, capped at 3 and dropping the oldest. The
+cap matters more with subzones on: crossing a cluster of small areas can announce
+several within a minute, and narration that has fallen minutes behind is describing
+somewhere already left.
 Combat and cinematics hold the queue rather than dropping it: the retry ticker
 plays them once the pull or the intro movie ends. A starting-zone cinematic is the
 one moment a character is guaranteed to be discovering things, so it is the

@@ -235,8 +235,9 @@ function ZoneLore:SetupOptions()
 
 	y = y + ROW_GAP
 	MakeCheckbox(panel, "autoplaySubzones", "Also narrate subzones you discover",
-		"There are far more subzone discoveries than zone ones -- a walk across "
-			.. "Elwynn sets off several -- so this is off by default.",
+		"Most discoveries are subzones -- a walk across Elwynn sets off several. "
+			.. "They queue rather than interrupt, so untick this only if the "
+			.. "narration feels constant.",
 		INDENT + INDENT, y, nil)
 
 	y = y + ROW_GAP

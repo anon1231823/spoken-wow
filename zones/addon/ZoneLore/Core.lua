@@ -34,9 +34,7 @@ local defaults = {
 	voiceChannel = "Dialog",
 	showPlaybackBar = true,
 	autoplay = true,
-	-- Off by default: the client announces far more subzone discoveries than zone
-	-- ones, and a subzone's lore is usually the less interesting of the two.
-	autoplaySubzones = false,
+	autoplaySubzones = true,
 	-- `playbackBarPos` is deliberately absent: nil means "below the minimap", which
 	-- is an anchor rather than a coordinate and so cannot be expressed here.
 	debug = false,
