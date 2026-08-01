@@ -34,16 +34,29 @@ local ticker = nil
 
 local patterns = nil
 
-local function BuildPattern(globalString)
+-- How many of the two message forms this client actually defines. Reported by /zl,
+-- so "the feature cannot work here" is distinguishable from "nothing has been
+-- discovered yet" without another character.
+local formCount = 0
+
+-- Two patterns per message form. The anchored one is exact; the loose one matches
+-- the same text sitting inside a longer line, which is what happens if the client
+-- ever prefixes or colours the message. Anchoring alone would reject that
+-- silently, and every test of this feature costs a fresh character to run.
+local function BuildPatterns(globalString)
 	if type(globalString) ~= "string" or globalString == "" then
-		return nil
+		return nil, nil
 	end
 	-- Escape the Lua pattern magic characters first, so the literal parts of the
 	-- message match themselves, then reopen the format specifiers as captures.
-	local pattern = globalString:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
-	pattern = pattern:gsub("%%%%d", "%%d+")
-	pattern = pattern:gsub("%%%%s", "(.+)")
-	return "^" .. pattern .. "$"
+	local escaped = globalString:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
+	escaped = escaped:gsub("%%%%d", "%%d+")
+
+	-- Greedy inside anchors, since the whole line is the message. Non-greedy when
+	-- loose, so a trailing sentence is not swallowed into the area name.
+	local anchored = "^" .. escaped:gsub("%%%%s", "(.+)") .. "$"
+	local loose = escaped:gsub("%%%%s", "(.-)")
+	return anchored, loose
 end
 
 local function DiscoveryPatterns()
@@ -51,13 +64,26 @@ local function DiscoveryPatterns()
 		return patterns
 	end
 	patterns = {}
-	-- The XP form first: it is the more specific of the two, and at max level (or
-	-- in a rested-XP-less state) the client falls back to the plain form.
+
+	-- Every anchored form before any loose one: an exact match on the plain message
+	-- is better evidence than a loose match on the experience one.
+	local anchoredSet, looseSet = {}, {}
+	-- The XP form first within each set: it is the more specific of the two, and at
+	-- max level the client falls back to the plain form.
 	for _, name in ipairs({ "ERR_ZONE_EXPLORED_XP", "ERR_ZONE_EXPLORED" }) do
-		local pattern = BuildPattern(_G[name])
-		if pattern then
-			table.insert(patterns, pattern)
+		local anchored, loose = BuildPatterns(_G[name])
+		if anchored then
+			table.insert(anchoredSet, anchored)
+			table.insert(looseSet, loose)
 		end
+	end
+	formCount = #anchoredSet
+
+	for _, pattern in ipairs(anchoredSet) do
+		table.insert(patterns, pattern)
+	end
+	for _, pattern in ipairs(looseSet) do
+		table.insert(patterns, pattern)
 	end
 	return patterns
 end
@@ -269,7 +295,8 @@ end
 -- Reports whether the client defined the strings this feature is built on, so a
 -- silent failure can be told apart from "nothing has been discovered yet".
 function ZoneLore:DescribeAutoplay()
-	local found = #DiscoveryPatterns()
+	DiscoveryPatterns()
+	local found = formCount
 	if found == 0 then
 		self:Print("|cffff5555autoplay cannot work|r: this client defines neither "
 			.. "ERR_ZONE_EXPLORED nor ERR_ZONE_EXPLORED_XP")
