@@ -38,6 +38,7 @@ addon/ZoneLore/          the addon itself (this is what WoW loads)
   UI/HoverPreview.lua    lore tooltip while hovering the map
   UI/LoreWindow.lua      standalone browsable lore window
   UI/MinimapButton.lua   LibDBIcon minimap button
+  UI/PlaybackBar.lua     floating controls, shown only while narrating
   UI/Options.lua         settings panel
   Libs/                  LibStub, CallbackHandler-1.0, LibDataBroker-1.1,
                          LibDBIcon-1.0 (copied from AI_VoiceOver_Continued)
@@ -293,6 +294,27 @@ Its duration is hardcoded in `Audio.lua` as `PLACEHOLDER_DURATION`, because the
 client cannot report how long a sound file is. Swap the file and that number has
 to change with it.
 
+### Floating playback controls
+
+While a clip is playing, a small **Pause / Stop** widget appears below the minimap
+and disappears again when the clip ends. Drag it to move it; `/zl bar` puts it back
+under the minimap; the options panel turns it off.
+
+It exists because the Play buttons are attached to a description, so they are only
+reachable while that description is on screen — and narration deliberately outlives
+both panels. Without this widget, closing the map would leave a clip running with
+no way to stop it short of `/zl stop`.
+
+**Pause restarts from the beginning.** The client can start and stop a sound file
+and nothing in between: there is no seek, and no way to ask how far into a clip
+playback has reached. `AI_VoiceOver`'s pause button has the same limitation and the
+same implementation — `SoundQueue:PauseQueue` calls `Utils:StopSound`, and
+`ResumeQueue` calls `PlaySound` from the top. The tooltip says so, rather than
+letting the player find out forty seconds in.
+
+It is anchored to `Minimap` rather than parented to it, so a rescaled minimap
+neither drags the controls along nor changes their size.
+
 ### One clip at a time, stopped only on purpose
 
 Starting a clip stops whatever was playing. Nothing else does: closing the map,
@@ -332,8 +354,8 @@ Leatrix_Plus, Leatrix_Sounds, Syndicator and Baganator all use it.
 used.
 
 Exposed: map panel on/off, panel side, panel width, font size, hover preview
-on/off, minimap button on/off, narration on/off, the narration sound channel, and
-the debug area-name reporting. Everything applies immediately -- no reload -- via
+on/off, minimap button on/off, narration on/off, the playback controls on/off, the
+narration sound channel, and the debug area-name reporting. Everything applies immediately -- no reload -- via
 `ZoneLore:ApplyPanelOptions()`.
 
 Widget templates were chosen from what addons already running on this client use
@@ -386,6 +408,7 @@ here:     node tools/seed-from-dump.mjs           # report differences
 /zl play                    narrate the lore for where you are standing
 /zl stop                    stop the narration
 /zl voice                   turn narration on or off
+/zl bar                     move the playback controls back below the minimap
 /zl minimap                 show or hide the minimap button
 /zl debug                   report area names on map click
 /zl dump                    enumerate the map tree (dev)

@@ -32,6 +32,9 @@ local defaults = {
 	-- Dialog so narration rides the player's dialog volume slider rather than
 	-- competing with it. See Audio.lua for the channels PlaySoundFile accepts.
 	voiceChannel = "Dialog",
+	showPlaybackBar = true,
+	-- `playbackBarPos` is deliberately absent: nil means "below the minimap", which
+	-- is an anchor rather than a coordinate and so cannot be expressed here.
 	debug = false,
 	-- `hide` and `minimapPos` are intentionally absent: LibDBIcon owns those keys
 	-- inside ZoneLoreDB and writes them itself. See UI/MinimapButton.lua.
@@ -310,6 +313,9 @@ local function SetupHooks()
 	if ZoneLore.SetupMinimapButton then
 		ZoneLore:SetupMinimapButton()
 	end
+	if ZoneLore.SetupPlaybackBar then
+		ZoneLore:SetupPlaybackBar()
+	end
 	if ZoneLore.SetupOptions then
 		ZoneLore:SetupOptions()
 	end
@@ -512,6 +518,7 @@ local function CmdHelp()
 	ZoneLore:Print("  /zl play       -- read the current lore aloud")
 	ZoneLore:Print("  /zl stop       -- stop the narration")
 	ZoneLore:Print("  /zl voice      -- toggle narration on or off")
+	ZoneLore:Print("  /zl bar        -- move the playback controls back below the minimap")
 	ZoneLore:Print("  /zl minimap    -- show or hide the minimap button")
 	ZoneLore:Print("  /zl debug      -- report area names on map click")
 	ZoneLore:Print("  /zl verify     -- check data against this client")
@@ -564,6 +571,11 @@ SlashCmdList["ZONELORE"] = function(msg)
 		end
 		ZoneLore:NotifyAudioChanged()
 		ZoneLore:Print("narration %s", enabled and "enabled" or "disabled")
+	elseif cmd == "bar" then
+		if ZoneLore.ResetPlaybackBarPosition then
+			ZoneLore:ResetPlaybackBarPosition()
+			ZoneLore:Print("playback controls moved back below the minimap")
+		end
 	elseif cmd == "debug" then
 		local enabled = not ZoneLore:Get("debug")
 		ZoneLore:Set("debug", enabled)

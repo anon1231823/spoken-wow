@@ -34,6 +34,16 @@ local DEFAULT_CHANNEL = "Dialog"
 -- What is playing right now, or nil: { handle, mapID, areaKey, token }.
 local current = nil
 
+-- What was paused, or nil: { mapID, areaKey }.
+--
+-- The client can start and stop a sound file and nothing in between -- there is no
+-- seek, and no way to ask how far into a clip playback has reached. So "pause" is
+-- stop, and "resume" replays from the beginning. AI_VoiceOver's pause button works
+-- exactly this way (SoundQueue:PauseQueue calls Utils:StopSound, ResumeQueue calls
+-- PlaySound) for the same reason. The tooltip says so rather than letting the
+-- player discover it.
+local paused = nil
+
 -- Bumped on every play and stop. A timer that fires with a stale token belongs to
 -- a clip that has already been superseded, and must not stop the current one.
 local token = 0
@@ -128,16 +138,77 @@ function ZoneLore:IsPlayingLore(mapID, areaKey)
 	return current.mapID == mapID and current.areaKey == areaKey
 end
 
-function ZoneLore:StopLore()
-	if not current then
-		return
+function ZoneLore:IsPaused()
+	return paused ~= nil
+end
+
+-- What the floating controls are controlling: mapID, areaKey, isPaused. Nil when
+-- nothing is playing or paused, which is also what hides the controls.
+function ZoneLore:GetNowPlaying()
+	if current then
+		return current.mapID, current.areaKey, false
 	end
-	if current.handle then
+	if paused then
+		return paused.mapID, paused.areaKey, true
+	end
+	return nil, nil, false
+end
+
+-- A readable name for an entry, for the controls to label what is playing.
+function ZoneLore:GetAudioLabel(mapID, areaKey)
+	if not mapID then
+		return ""
+	end
+	if areaKey then
+		local zoneTable = self.Subzones[mapID]
+		local entry = zoneTable and zoneTable[areaKey]
+		return (entry and entry.name) or areaKey
+	end
+	return self:GetMapName(mapID) or tostring(mapID)
+end
+
+local function ClearPlayback()
+	if current and current.handle then
 		StopSound(current.handle)
 	end
 	current = nil
 	token = token + 1
+end
+
+function ZoneLore:StopLore()
+	if not current and not paused then
+		return
+	end
+	ClearPlayback()
+	paused = nil
 	ZoneLore:NotifyAudioChanged()
+end
+
+-- Stops the sound and remembers the entry. Resuming replays it from the start;
+-- see the note on `paused` above for why nothing better is possible.
+function ZoneLore:PauseLore()
+	if not current then
+		return false
+	end
+	paused = { mapID = current.mapID, areaKey = current.areaKey }
+	ClearPlayback()
+	ZoneLore:NotifyAudioChanged()
+	return true
+end
+
+function ZoneLore:ResumeLore()
+	if not paused then
+		return false
+	end
+	-- PlayLore clears `paused` via StopLore, so read it into the call first.
+	return self:PlayLore(paused.mapID, paused.areaKey)
+end
+
+function ZoneLore:TogglePauseLore()
+	if paused then
+		return self:ResumeLore()
+	end
+	return self:PauseLore()
 end
 
 -- A disabled sound channel makes PlaySoundFile return false with no other clue,

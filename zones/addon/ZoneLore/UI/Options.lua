@@ -222,6 +222,17 @@ function ZoneLore:SetupOptions()
 			ZoneLore:NotifyAudioChanged()
 		end)
 
+	y = y + ROW_GAP
+	MakeCheckbox(panel, "showPlaybackBar", "Show playback controls while narrating",
+		"A small movable Pause/Stop widget below the minimap, so narration can be "
+			.. "stopped without reopening the map. It appears only while a clip is "
+			.. "playing. Drag it to move it; /zl bar puts it back.",
+		INDENT, y, function()
+			if ZoneLore.RefreshPlaybackBar then
+				ZoneLore:RefreshPlaybackBar()
+			end
+		end)
+
 	y = y + ROW_GAP - 6
 	-- A cycle button rather than a dropdown. UIDropDownMenuTemplate works on 11509
 	-- but none of its Initialize plumbing can be checked without launching the
