@@ -14,6 +14,12 @@ local AUDIO_ADDON = "ZoneLoreAudio"
 local SOUND_ROOT = "Interface\\AddOns\\" .. AUDIO_ADDON .. "\\Sounds\\"
 local PLACEHOLDER = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Sounds\\placeholder.mp3"
 
+-- Measured from the file. Hardcoded because the client cannot report a sound's
+-- length, and without a duration the "clip finished" path -- the button resetting
+-- itself, the floating controls disappearing -- cannot be exercised at all until
+-- real audio exists. Update this if the placeholder is ever swapped.
+local PLACEHOLDER_DURATION = 40.124
+
 -- PlaySoundFile only accepts these. An unknown name makes the call fail outright,
 -- so a saved variable carrying a stale channel falls back rather than going silent.
 local CHANNELS = {
@@ -72,8 +78,7 @@ end
 -- ZoneLore:NormaliseAreaKey), or nil for the zone itself.
 --
 -- Duration comes from the generated lookup because there is no way to ask the
--- client how long a sound file is; without one the button cannot reset itself.
--- The placeholder therefore has no duration and stays in Stop state until clicked.
+-- client how long a sound file is; without one the button could never reset itself.
 function ZoneLore:GetAudioClip(mapID, areaKey)
 	if not mapID then
 		return nil, nil
@@ -93,7 +98,7 @@ function ZoneLore:GetAudioClip(mapID, areaKey)
 		end
 	end
 
-	return PLACEHOLDER, nil
+	return PLACEHOLDER, PLACEHOLDER_DURATION
 end
 
 function ZoneLore:HasAudio(mapID, areaKey)
@@ -176,7 +181,7 @@ function ZoneLore:PlayLore(mapID, areaKey)
 	current = { handle = handle, mapID = mapID, areaKey = areaKey, token = token }
 
 	-- Reset the button when the clip runs out. The client fires no event for this,
-	-- so the generated duration is the only signal; a clip of unknown length stays
+	-- so a recorded duration is the only signal; a clip of unknown length would stay
 	-- in Stop state until the player clicks it or something else interrupts.
 	if duration and duration > 0 then
 		local mine = token

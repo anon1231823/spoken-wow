@@ -284,8 +284,14 @@ falls back to `Sounds/placeholder.mp3` when there is no entry — so the button
 works before any voiceover exists, and a missing soundpack sounds wrong rather
 than erroring. `/zl play` says which of the two it played.
 
-**Drop your own `addon/ZoneLore/Sounds/placeholder.mp3` in before testing**; the
-repo does not ship one.
+The placeholder is a 40-second quest line borrowed from `../wow-voiceover`'s audio
+store. It is deliberately one of the longest lines there: a short clip finishes
+before there is time to click anything, and the controls that appear during
+playback would be untestable.
+
+Its duration is hardcoded in `Audio.lua` as `PLACEHOLDER_DURATION`, because the
+client cannot report how long a sound file is. Swap the file and that number has
+to change with it.
 
 ### One clip at a time, stopped only on purpose
 
@@ -298,13 +304,12 @@ practice — the intended use is to start a zone's lore, close the map and walk,
 which that rule would cut off immediately. The button always reflects the entry in
 front of it, so stopping is one click, or `/zl stop`.
 
-### Why the button resets itself from generated data
+### Why the button resets itself from recorded data
 
 The client fires no event when a sound finishes, so the only way the button knows
-to flip back to *Play* is a duration recorded at generation time and shipped in the
-lookup table. The placeholder has no recorded duration and therefore stays showing
-*Stop* until clicked — expected, and the reason durations are part of the generated
-data rather than an afterthought.
+to flip back to *Play* is a duration recorded when the audio was made and shipped
+alongside it. That is why durations are part of the generated lookup table rather
+than an afterthought.
 
 `PlaySoundFile` returns false both for a missing file and for a muted sound
 channel. Audio.lua checks `Sound_EnableAllSound` and `Sound_Enable<Channel>` first
