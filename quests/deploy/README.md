@@ -289,6 +289,42 @@ ssh deploy@<ip> 'pm2 logs voiceover --lines 100'
 Rollback walks strictly backwards in time, so running it repeatedly keeps stepping to older
 releases instead of bouncing between the newest two.
 
+## The regeneration queue
+
+### Why the queue starts lazily
+
+The queue is started by `ensureQueueRunning()` from `web/src/lib/generation/boot.ts`, called
+by the `/api/regenerate/queue` routes, rather than from a Next `instrumentation.ts` hook.
+
+`instrumentation.ts` is the natural home and was the original design. It does not work here:
+Next compiles that file for the edge runtime as well as node, whether or not the app has any
+edge code, and the `NEXT_RUNTIME` guard stops the code running there but not being bundled.
+Webpack then has to resolve the whole server graph — `pg`'s optional native binding, `fs`,
+`path`, `stream`, and our own `history.ts` reaching `node:crypto` — for a runtime that never
+executes it, and `next dev` answers 500. No `next.config.ts` setting fixes it; the problem is
+that the compile happens at all. `next build` is unaffected, because it only produces an edge
+compile when the app really contains edge code.
+
+**The cost:** a batch interrupted by a deploy does not resume on boot. It resumes when
+something calls a queue route — in practice when an admin opens the explorer, since the page
+polls the queue every fifteen seconds for anyone who can regenerate. On a quiet evening an
+interrupted batch waits.
+
+**Two ways back to boot-time resume, if that cost stops being acceptable:**
+
+1. **Run `next dev --turbopack`** and restore `instrumentation.ts`. Turbopack compiles it
+   without complaint, with no config changes, and the shipped artifact still comes from
+   `next build` under webpack. Verified working. The cost is that dev and production then use
+   different bundlers, so a server module leaking into the client bundle could pass `pnpm dev`
+   and fail `pnpm build` — run the build before trusting a change.
+2. **Give the queue its own pm2 process.** Sidesteps Next's bundler entirely. The cost is a
+   second build pipeline (CI ships a Next `standalone` bundle with no second entrypoint, and
+   the droplet has no toolchain), another ~200 MB for a second corpus heap, five
+   `VOICEOVER_*` paths to keep in sync, and a cache-coherence bug that does not exist today:
+   `generationStatus` memoises the voice map per process and `/voices` busts it in-process, so
+   a separate worker would keep failing lines with "no voice named X" for up to a minute after
+   one is created.
+
 ## Gotchas worth knowing
 
 - **`make push` refuses to overwrite newer droplet audio.** Regeneration happens on the
