@@ -9,8 +9,11 @@
  * test may need an ElevenLabs account, and none may ever spend credits. Everything else here
  * runs against the real queue, because the exclusions that keep it honest are in the schema.
  */
-import { budgetFor, afterRateLimit } from "./concurrency";
+import { POOL_MAX } from "@/lib/db";
+
+import { budgetFor, afterRateLimit, clampToPool } from "./concurrency";
 import {
+  batchStopped,
   cancelPending,
   claimNext,
   failJob,
@@ -42,10 +45,17 @@ export function backoffFor(attempts: number, random: () => number = Math.random)
   return Math.floor(random() * BACKOFF_BASE_MS * 2 ** (attempts - 1));
 }
 
-/** The budget the account currently allows, from the tier and the model in force. */
+/**
+ * The budget the account currently allows, from the tier and the model in force.
+ *
+ * Clamped to what the pool can serve: an ElevenLabs plan the account is upgraded to next year
+ * must not be able to raise this past the number of connections available to spend it, which
+ * is a deadlock rather than a slow batch.
+ */
 export async function currentBudget(): Promise<number> {
   const [status, settings] = await Promise.all([generationStatus(), readSettings()]);
-  return budgetFor(status.subscription?.tier ?? null, settings.config.modelId);
+  const plan = budgetFor(status.subscription?.tier ?? null, settings.config.modelId);
+  return clampToPool(plan, POOL_MAX);
 }
 
 export type WorkerOptions = {
@@ -92,28 +102,44 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
       }),
     );
 
-    if (result.ok) {
-      await finishJob(job.id, { version: result.version, credits: result.credits });
-      return;
-    }
-
-    const { kind, message, fatal } = result.failure;
-
-    if (kind === "rate-limit") {
-      rateLimitedAt = Date.now();
-      if (job.attempts < MAX_ATTEMPTS) {
-        await retryJob(job.id, backoff(job.attempts));
+    // Recording the outcome is wrapped because a database blip here is expensive in a way a
+    // failed generation is not: the money has already been spent, and a row left `running`
+    // has its lease reclaimed five minutes later and the same file generated and paid for a
+    // second time. Nothing can be done about it from here beyond saying so loudly enough that
+    // the log explains the duplicate charge.
+    try {
+      if (result.ok) {
+        await finishJob(job.id, { version: result.version, credits: result.credits });
         return;
       }
-    }
 
-    await failJob(job.id, { kind, message });
+      const { kind, message, fatal } = result.failure;
 
-    // Out of credits, a bad key or a missing voice fails every remaining line in the same
-    // way. Grinding through the rest of the batch to learn that once per line is exactly
-    // what the fatal flag exists to prevent - the reasoning is written out in errors.ts.
-    if (fatal) {
-      await cancelPending(`Stopped after ${kind}: ${message}`, job.batchId);
+      if (kind === "rate-limit") {
+        rateLimitedAt = Date.now();
+        // A retry puts the row back to `pending`, where it would be claimed and paid for
+        // after an admin pressed Stop - and where it would flip the queue back to active, so
+        // the panel returns to "Regenerating" having just said "Stopped". Stop means stop.
+        if (job.attempts < MAX_ATTEMPTS && !(await batchStopped(job.batchId))) {
+          await retryJob(job.id, backoff(job.attempts));
+          return;
+        }
+      }
+
+      await failJob(job.id, { kind, message });
+
+      // Out of credits, a bad key or a missing voice fails every remaining line in the same
+      // way. Grinding through the rest of the batch to learn that once per line is exactly
+      // what the fatal flag exists to prevent - the reasoning is written out in errors.ts.
+      if (fatal) {
+        await cancelPending(`Stopped after ${kind}: ${message}`, job.batchId);
+      }
+    } catch (error) {
+      console.error(
+        `regeneration queue: job ${job.id} (${job.file}) settled but its outcome could not be` +
+          ` recorded; it will be reclaimed after its lease and generated again`,
+        error,
+      );
     }
   }
 

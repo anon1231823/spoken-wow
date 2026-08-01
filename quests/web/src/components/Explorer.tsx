@@ -141,6 +141,12 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const [editing, setEditing] = useState<ResultLine | null>(null);
   const [pendingBatch, setPendingBatch] = useState<{
     label: string;
+    /**
+     * The filters the estimate was quoted for, carried rather than re-read at confirm time.
+     * The dialog can sit open while someone keeps typing, and enqueuing whatever the search
+     * box says at the moment of the click would spend money on a set nobody was shown.
+     */
+    filters: string;
     jobs: BatchJob[];
     estimate: Estimate;
   } | null>(null);
@@ -464,7 +470,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
    * the entire corpus.
    */
   const requestBatch = useCallback(async () => {
-    const jobs = await fetchBatchJobs(new URLSearchParams(filterQuery));
+    const quoted = filterQuery;
+    const jobs = await fetchBatchJobs(new URLSearchParams(quoted));
     if (!jobs || jobs.length === 0) return;
 
     // The same arithmetic the server would do, from the rate it reported. Falls back to
@@ -473,6 +480,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
     const rate = status?.rate ?? { rate: LIST_RATE, samples: 0, modelId: null };
     setPendingBatch({
       label: `every line this search matches`,
+      filters: quoted,
       jobs,
       estimate: estimateBatch(
         jobs.map((job) => ({ file: job.audioPath, characters: job.characters })),
@@ -486,7 +494,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
    *
    * The filters go, not the job list: the server re-derives the set with the same query the
    * estimate was built from, so what is queued is what was quoted, and a forty-thousand-line
-   * batch is a small request.
+   * batch is a small request. They come from `pendingBatch` rather than from the live search,
+   * which may have moved on while the dialog was open.
    */
   const startBatch = useCallback(async () => {
     if (!pendingBatch) return;
@@ -494,7 +503,10 @@ export default function Explorer({ facets }: { facets: Facets }) {
     setDismissed(false);
     setQueueNote(null);
 
-    const result = await queueBatch(new URLSearchParams(filterQuery), pendingBatch.label);
+    const result = await queueBatch(
+      new URLSearchParams(pendingBatch.filters),
+      pendingBatch.label,
+    );
     if (!result) {
       // No reason offered because none was given: the route refused for a cause this
       // response does not carry, and inventing one would be a guess dressed as an answer.
@@ -512,7 +524,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       cursor.current = snapshot.cursor;
       setQueue(snapshot);
     }
-  }, [pendingBatch, filterQuery]);
+  }, [pendingBatch]);
 
   const play = useCallback((line: ResultLine) => {
     setCurrent(line);

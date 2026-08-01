@@ -59,6 +59,31 @@ export function budgetFor(tier: string | null, modelId: string): number {
   return Math.max(1, tierLimit(tier, familyOf(modelId)) - 1);
 }
 
+/**
+ * Connections held for something other than a job in flight.
+ *
+ * The leader keeps one checked out for as long as it leads, better-auth resolves a session
+ * out of the same pool on every request, and the single-line Regenerate button costs two of
+ * its own. Eight leaves those with room while a batch runs.
+ */
+export const POOL_RESERVE = 8;
+
+/**
+ * The plan's budget, capped at what the connection pool can actually serve.
+ *
+ * Each job in flight holds two clients at once: the per-file advisory lock in lock.ts for the
+ * length of the ElevenLabs call, and a second one inside it for the transaction that marks
+ * the new version current. A budget above `(max - reserve) / 2` therefore fills the pool with
+ * jobs that are all waiting on connections none of them will release - a deadlock the process
+ * does not recover from, since better-auth shares the pool and HTTP stops being served too.
+ *
+ * Derived from the pool's configured maximum rather than written down as a number, so raising
+ * one without the other cannot quietly reintroduce that.
+ */
+export function clampToPool(budget: number, poolMax: number): number {
+  return Math.max(1, Math.min(budget, Math.floor((poolMax - POOL_RESERVE) / 2)));
+}
+
 export const COOL_DOWN_MS = 60_000;
 
 /**

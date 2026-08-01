@@ -227,6 +227,41 @@ describe("startWorker", () => {
     );
     expect(rows[0].attempts).toBe(3);
   });
+
+  it("fails a rate-limited job rather than requeueing it once its batch is stopped", async () => {
+    const batch = await seed(1);
+    await db().query(
+      `update "regeneration_batch" set "stoppedAt" = now(), "stoppedBecause" = 'Stopped'
+        where "id" = $1`,
+      [batch],
+    );
+
+    const worker = startWorker(() => true, {
+      budget: async () => 1,
+      backoffMs: () => 0,
+      regenerate: async () => ({
+        ok: false,
+        failure: {
+          kind: "rate-limit",
+          message: "too_many_concurrent_requests",
+          status: 429,
+          fatal: false,
+        },
+      }),
+    });
+
+    await until(async () => (await statesOf(batch)).failed === 1);
+    await worker.stop();
+
+    // One attempt, not three: a retry would put the row back to `pending`, where it would be
+    // claimed and paid for after someone pressed Stop - and where it would flip the queue
+    // back to active, so the panel would return to "Regenerating" having just said "Stopped".
+    const { rows } = await db().query<{ attempts: number }>(
+      `select "attempts" from "regeneration_job" where "batchId" = $1`,
+      [batch],
+    );
+    expect(rows[0].attempts).toBe(1);
+  });
 });
 
 describe("stop()", () => {

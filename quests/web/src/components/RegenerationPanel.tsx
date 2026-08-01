@@ -61,6 +61,10 @@ export default function RegenerationPanel({
   const attempted = done + failed;
   const percent = total ? Math.round((attempted / total) * 100) : 0;
   const active = snapshot.active;
+  // The counts above are the whole queue's, deliberately, but "Stopped" and the reason under
+  // it describe one batch. Read globally they would hang the last stop's obituary on the next
+  // batch to run cleanly, for as long as the stopped one stayed in the window.
+  const stopped = !active && (snapshot.latestBatch?.cancelled ?? 0) > 0;
 
   return (
     <div className="bg-card/95 fixed inset-x-0 bottom-[92px] z-40 border-t backdrop-blur">
@@ -69,7 +73,7 @@ export default function RegenerationPanel({
           {active && <Loader2 className="size-4 shrink-0 animate-spin" />}
 
           <span className="font-medium">
-            {active ? "Regenerating" : cancelled > 0 ? "Stopped" : "Finished"}
+            {active ? "Regenerating" : stopped ? "Stopped" : "Finished"}
           </span>
 
           <span className="text-muted-foreground font-mono text-xs">
@@ -113,9 +117,9 @@ export default function RegenerationPanel({
           </div>
         )}
 
-        {snapshot.stoppedBecause && (
+        {stopped && snapshot.latestBatch?.stoppedBecause && (
           <div role="alert" className="text-destructive mt-1.5 text-xs">
-            {snapshot.stoppedBecause}
+            {snapshot.latestBatch.stoppedBecause}
           </div>
         )}
 

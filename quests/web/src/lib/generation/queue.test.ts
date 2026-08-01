@@ -184,6 +184,43 @@ describe("snapshot", () => {
     });
   });
 
+  it("sees a job old enough to have fallen out of the window, because claimNext still can", async () => {
+    const batch = await newBatch();
+    await enqueue(batch, [line(1)]);
+    // The queue starts lazily, so a batch interrupted by a deploy really can sit for days.
+    // A snapshot that aged it out would render no panel at all - and therefore no Stop -
+    // over a queue that is about to spend money.
+    await db().query(
+      `update "regeneration_job" set "queuedAt" = now() - interval '3 days' where "batchId" = $1`,
+      [batch],
+    );
+
+    const seen = await snapshot(null);
+    expect(seen.active).toBe(true);
+    expect(seen.counts.pending).toBeGreaterThanOrEqual(1);
+    expect(await claimNext()).not.toBeNull();
+  });
+
+  it("does not hang a stopped batch's reason on the next batch to run cleanly", async () => {
+    const stoppedBatch = await newBatch();
+    await enqueue(stoppedBatch, [line(1)]);
+    await cancelPending("Stopped by an admin", stoppedBatch);
+    expect((await snapshot(null)).latestBatch).toMatchObject({
+      cancelled: 1,
+      stoppedBecause: "Stopped by an admin",
+    });
+
+    const cleanBatch = await newBatch();
+    await enqueue(cleanBatch, [line(2)]);
+    const job = await claimNext();
+    await finishJob(job!.id, { version: 1, credits: 55 });
+
+    expect((await snapshot(null)).latestBatch).toEqual({
+      cancelled: 0,
+      stoppedBecause: null,
+    });
+  });
+
   it("carries a failure's message rather than just a count", async () => {
     const batch = await newBatch();
     await enqueue(batch, [line(1)]);

@@ -62,16 +62,27 @@ module.exports = {
       max_memory_restart: "600M",
 
       // The queue leader finishes its in-flight ElevenLabs calls before releasing the
-      // advisory lock, so a reload hands over rather than overlapping (see
-      // web/src/lib/generation/boot.ts). pm2's default of 1600 ms is shorter than a single
-      // generation, so without this every reload SIGKILLs mid-take and the handover
-      // degrades to waiting out a five-minute lease.
+      // advisory lock (see web/src/lib/generation/boot.ts), and NEXT_MANUAL_SIG_HANDLE below
+      // is what lets it. pm2's default of 1600 ms is shorter than a single generation, so
+      // without this every reload SIGKILLs mid-take and the handover degrades to waiting out
+      // a five-minute lease.
       kill_timeout: 30_000,
 
       env: {
         NODE_ENV: "production",
         PORT: 3000,
         HOSTNAME: "127.0.0.1", // nginx is the only thing that should reach the app
+
+        // Next installs its own SIGINT/SIGTERM handler that ends in process.exit(0). With
+        // ours in boot.ts installed alongside it nothing coordinated the two, so whichever
+        // finished first exited the process: a reload during a batch could exit while
+        // generations were still in flight, which ElevenLabs bills for while nothing commits
+        // and the next leader regenerates the same files and pays again. This tells Next to
+        // stand aside so boot.ts alone owns shutdown. The cost is that Next no longer closes
+        // the HTTP server first, so requests in flight at the moment of exit are cut rather
+        // than drained - the cheaper of the two losses, since nginx fronts the app and a cut
+        // request can be retried, while a half-billed generation cannot be un-bought.
+        NEXT_MANUAL_SIG_HANDLE: "1",
 
         // Audio is shared across releases (1.1 GB, never copied on deploy); the corpus
         // ships inside each release and moves with a rollback.

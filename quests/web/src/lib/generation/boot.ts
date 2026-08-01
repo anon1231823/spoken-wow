@@ -54,9 +54,18 @@ export function ensureQueueRunning(): void {
    * ElevenLabs and will be billed - and the lock is released only afterwards, so during a
    * `pm2 reload` the incoming worker waits rather than draining alongside this one.
    *
-   * This is why deploy/ecosystem.config.js sets kill_timeout: 30000. pm2's default is
-   * 1600 ms, which is shorter than a single ElevenLabs call, so without it every reload
-   * SIGKILLs mid-generation and the handover degrades to lease reclaim.
+   * Two settings in deploy/ecosystem.config.js are what make that true rather than merely
+   * intended, and it is not true without them:
+   *
+   * `NEXT_MANUAL_SIG_HANDLE: "1"`, because Next installs its own SIGTERM handler that ends
+   * in process.exit(0). Nothing coordinates two handlers, so whichever finished first would
+   * exit the process out from under this one, mid-generation. The variable tells Next not to
+   * install its, at the cost that nothing closes the HTTP server first: requests in flight
+   * when this exits are cut rather than drained.
+   *
+   * `kill_timeout: 30000`, because pm2's default is 1600 ms - shorter than a single
+   * ElevenLabs call, so without it every reload SIGKILLs mid-generation and the handover
+   * degrades to lease reclaim.
    */
   let shuttingDown = false;
   for (const signal of ["SIGINT", "SIGTERM"] as const) {

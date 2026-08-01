@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 
+import { POOL_MAX } from "@/lib/db";
+
 import {
   afterRateLimit,
   budgetFor,
+  clampToPool,
   COOL_DOWN_MS,
   familyOf,
+  POOL_RESERVE,
   tierLimit,
 } from "./concurrency";
 
@@ -64,6 +68,30 @@ describe("budgetFor", () => {
   it("never drops below one, so a batch always makes progress", () => {
     expect(budgetFor("free", "eleven_multilingual_v2")).toBe(1);
     expect(budgetFor(null, "eleven_multilingual_v2")).toBe(1);
+  });
+});
+
+describe("clampToPool", () => {
+  it("reduces a large tier's budget to what the pool can serve", () => {
+    // scale on a flash model is 29, which would want 58 connections. Two per job in flight,
+    // less the reserve, is the most the pool can hand out without deadlocking on itself.
+    expect(clampToPool(29, 30)).toBe(11);
+    expect(clampToPool(29, 30)).toBeLessThan(budgetFor("scale", "eleven_flash_v2_5"));
+  });
+
+  it("leaves a budget the pool can already serve alone", () => {
+    expect(clampToPool(3, 30)).toBe(3);
+  });
+
+  it("never drops below one, however small the pool", () => {
+    expect(clampToPool(9, POOL_RESERVE)).toBe(1);
+  });
+
+  it("keeps the configured pool able to serve the budget it allows", () => {
+    // The pairing that matters in production: whatever POOL_MAX and POOL_RESERVE are, the
+    // clamped budget must still fit in the pool alongside the reserve.
+    const largest = clampToPool(Number.MAX_SAFE_INTEGER, POOL_MAX);
+    expect(largest * 2 + POOL_RESERVE).toBeLessThanOrEqual(POOL_MAX);
   });
 });
 

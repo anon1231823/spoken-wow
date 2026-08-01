@@ -36,8 +36,14 @@ export type QueueSnapshot = {
   unpriced: number;
   running: { lineId: string; npcName: string; preview: string }[];
   failures: { lineId: string; message: string }[];
-  /** Why a batch gave up early, when one did. */
-  stoppedBecause: string | null;
+  /**
+   * The newest batch's own stop, or null when there is no batch at all.
+   *
+   * Scoped to that one batch while the counts above stay global, because "Stopped" and the
+   * reason under it are claims about a particular batch: read from the whole window they
+   * would put yesterday's stop reason on today's clean run.
+   */
+  latestBatch: { cancelled: number; stoppedBecause: string | null } | null;
   /** Jobs that reached `done` after the cursor, for the page to adopt. */
   finished: { id: string; lineId: string; file: string; version: number }[];
   /** Pass back as `since` on the next poll. */
@@ -47,16 +53,24 @@ export type QueueSnapshot = {
 export const DEFAULT_LEASE_MS = 5 * 60_000;
 
 /**
- * How long a batch stays in the snapshot after it drains.
+ * How long a *finished* batch stays in the snapshot after it drains.
  *
  * The panel has to keep saying "Finished" after the last job lands, so the window cannot be
  * "has unfinished work". A day is long enough that nobody loses a result they were watching
  * and short enough that the query stays small.
+ *
+ * It applies only to terminal rows. Pending and running jobs are counted however old they
+ * are, because claimNext has no window: it will claim and pay for a job queued a week ago,
+ * and a snapshot that could not see it would render no panel at all - no progress, no credit
+ * total and, worst of all, no Stop button for a queue that is spending money.
  */
 const WINDOW = "24 hours";
 
 /** Batches older than this are deleted outright, jobs cascading with them. */
 const RETENTION = "30 days";
+
+/** How many finished jobs one poll carries. Enough that a tab which slept catches up fast. */
+const FINISHED_PAGE = 500;
 
 export async function createBatch(label: string, createdBy: string | null): Promise<string> {
   const { rows } = await db().query<{ id: string }>(
@@ -206,15 +220,32 @@ export async function cancelPending(because: string, batchId?: string): Promise<
 }
 
 /**
+ * Whether this batch has been stopped.
+ *
+ * Asked by the worker before it hands a failed job back to the queue: a job put back to
+ * `pending` after Stop ran would be claimed and paid for later, which is not what the person
+ * who pressed it asked for.
+ */
+export async function batchStopped(batchId: string): Promise<boolean> {
+  const { rows } = await db().query<{ stopped: boolean }>(
+    `select "stoppedAt" is not null as stopped from "regeneration_batch" where "id" = $1`,
+    [batchId],
+  );
+  return rows[0]?.stopped === true;
+}
+
+/**
  * The whole queue as the panel needs it.
  *
  * Scoped to the last day rather than to one batch: there is one ElevenLabs account and one
  * budget, so a batch someone else started is spending the same money and belongs on screen.
  */
 export async function snapshot(since: string | null): Promise<QueueSnapshot> {
-  const window = `"queuedAt" > now() - interval '${WINDOW}'`;
+  // Live work first, then whatever finished recently: the two halves of what the panel is
+  // for. Never just the age, for the reason WINDOW records.
+  const window = `("state" in ('pending', 'running') or "queuedAt" > now() - interval '${WINDOW}')`;
 
-  const [counts, totals, running, failures, stopped, finished, cursor] = await Promise.all([
+  const [counts, totals, running, failures, latest, finished, cursor] = await Promise.all([
     db().query<{ state: JobState; n: string }>(
       `select "state", count(*)::text as n from "regeneration_job"
         where ${window} group by "state"`,
@@ -232,15 +263,16 @@ export async function snapshot(since: string | null): Promise<QueueSnapshot> {
       `select "lineId", "error" as message from "regeneration_job"
         where "state" = 'failed' and ${window} order by "id" desc limit 20`,
     ),
-    db().query<{ stoppedBecause: string }>(
-      `select "stoppedBecause" from "regeneration_batch"
-        where "stoppedBecause" is not null and "createdAt" > now() - interval '${WINDOW}'
-        order by "stoppedAt" desc limit 1`,
+    db().query<{ stoppedBecause: string | null; cancelled: string }>(
+      `select b."stoppedBecause",
+              (select count(*)::text from "regeneration_job" j
+                where j."batchId" = b."id" and j."state" = 'cancelled') as cancelled
+         from "regeneration_batch" b order by b."createdAt" desc limit 1`,
     ),
     db().query<{ id: string; lineId: string; file: string; version: number }>(
       `select "id"::text, "lineId", "file", "version" from "regeneration_job"
         where "state" = 'done' and "version" is not null and "id" > coalesce($1::bigint, 0)
-        order by "id" limit 500`,
+        order by "id" limit ${FINISHED_PAGE}`,
       [since],
     ),
     db().query<{ max: string | null }>(
@@ -265,10 +297,21 @@ export async function snapshot(since: string | null): Promise<QueueSnapshot> {
     unpriced: Number(totals.rows[0].unpriced),
     running: running.rows,
     failures: failures.rows,
-    stoppedBecause: stopped.rows[0]?.stoppedBecause ?? null,
+    latestBatch: latest.rows[0]
+      ? {
+          cancelled: Number(latest.rows[0].cancelled),
+          stoppedBecause: latest.rows[0].stoppedBecause,
+        }
+      : null,
     finished: finished.rows,
-    // The high-water mark of *all* terminal jobs, not just the page returned, so a cursor
-    // never sticks behind a job that failed rather than finished.
-    cursor: cursor.rows[0]?.max ?? since ?? "0",
+    // Normally the high-water mark of *all* terminal jobs, not just the page returned, so a
+    // cursor never sticks behind a job that failed rather than finished. But a full page
+    // means there are more done jobs than fit, and taking the global maximum then would skip
+    // every one after it - lines the page would never learn had been regenerated. A full page
+    // therefore ends at its own last row, and the next poll picks up from there.
+    cursor:
+      finished.rows.length === FINISHED_PAGE
+        ? finished.rows[finished.rows.length - 1].id
+        : (cursor.rows[0]?.max ?? since ?? "0"),
   };
 }

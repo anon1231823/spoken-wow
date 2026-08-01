@@ -186,7 +186,7 @@ export type QueueSnapshot = {
   unpriced: number;
   running: { lineId: string; npcName: string; preview: string }[];
   failures: { lineId: string; message: string }[];
-  stoppedBecause: string | null;
+  latestBatch: { cancelled: number; stoppedBecause: string | null } | null;
   finished: { id: string; lineId: string; file: string; version: number }[];
   cursor: string;
 };
