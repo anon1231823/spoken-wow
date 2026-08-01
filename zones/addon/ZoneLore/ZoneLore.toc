@@ -4,6 +4,7 @@
 ## Version: 0.2.0
 ## Author: rusty
 ## SavedVariables: ZoneLoreDB
+## SavedVariablesPerCharacter: ZoneLoreCharDB
 ## LoadSavedVariablesFirst: true
 ## IconTexture: Interface\ICONS\INV_Misc_Book_09
 ## X-License: Addon code MIT. Zone lore text from warcraft.wiki.gg, CC BY-SA 4.0.

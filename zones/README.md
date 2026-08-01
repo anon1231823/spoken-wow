@@ -328,6 +328,28 @@ The consequence is that a character who has already explored the world will neve
 autoplay anything — the discoveries have all happened. `/zl discover [area]`
 simulates one, which is the only way to test this without rolling an alt.
 
+#### The spawn area, which is never announced
+
+Where a character starts is the one discovery the client never reports: it is
+either already explored the moment the character is created, or announced while the
+intro cinematic is up, before any addon has registered an event. Either way a new
+orc stands in Valley of Trials in silence — which is the first thing this feature
+should ever have to say.
+
+So the spawn area is seeded two seconds after entering the world, guarded by one
+per-character boolean (`ZoneLoreCharDB.greeted`). This is a greeting rather than a
+rule: it fires once per character and is the only place left that infers a first
+visit instead of being told about one. The cinematic needs no special handling —
+the greeting queues immediately and the queue holds it until the intro ends.
+
+The flag is set *after* the enabled check, so turning autoplay on later still
+greets rather than having silently spent its turn. `/zl forget` clears it.
+
+Because the greeting and a real discovery message can name the same area, and an
+area on a zone border can be announced twice, the queue rejects a duplicate of
+anything already queued or playing. Narrating something twice in a row is worse
+than missing it.
+
 #### Reading the client's own strings
 
 The messages are matched with patterns built at runtime from `ERR_ZONE_EXPLORED_XP`
@@ -368,6 +390,9 @@ been played. This is the single easiest way to mistake the feature for broken.
 That runs the same path a real discovery takes, short of the message parsing. To
 exercise the parsing itself, turn on `/zl debug` and walk into genuinely unexplored
 ground; every message on the four watched events is printed with its event name.
+
+`/zl forget` clears the greeting flag, so the spawn-area greeting can be heard
+again on the next login without rolling another character.
 
 #### Queue
 
@@ -500,6 +525,7 @@ here:     node tools/seed-from-dump.mjs           # report differences
 /zl voice                   turn narration on or off
 /zl autoplay                toggle narrating areas as you discover them
 /zl discover [area]         pretend to discover an area (dev)
+/zl forget                  replay the login greeting on next login (dev)
 /zl bar                     move the playback controls back below the minimap
 /zl minimap                 show or hide the minimap button
 /zl debug                   report area names on map click

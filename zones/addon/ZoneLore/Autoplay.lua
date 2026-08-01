@@ -168,13 +168,90 @@ function ZoneLore:ClearAutoplayQueue()
 	StopTicker()
 end
 
+local function IsQueued(mapID, areaKey)
+	for i = 1, #pending do
+		if pending[i].mapID == mapID and pending[i].areaKey == areaKey then
+			return true
+		end
+	end
+	return false
+end
+
 local function Enqueue(mapID, areaKey)
+	-- The login greeting below and a real discovery message can name the same
+	-- area, and an area on a zone border can be announced twice. Narrating it
+	-- twice in a row is worse than missing it.
+	if IsQueued(mapID, areaKey) or ZoneLore:IsPlayingLore(mapID, areaKey) then
+		return
+	end
+
 	table.insert(pending, { mapID = mapID, areaKey = areaKey })
 	while #pending > QUEUE_LIMIT do
 		table.remove(pending, 1)
 	end
 	StartTicker()
 	Drain()
+end
+
+--------------------------------------------------------------------------------
+-- The one discovery the client never announces
+--------------------------------------------------------------------------------
+--
+-- Where a character spawns is either already explored when it is created, or is
+-- announced while the intro cinematic is up and before this addon has registered
+-- anything. Either way a new orc stands in Valley of Trials in silence -- and that
+-- is the first thing this feature should ever have to say.
+--
+-- So the spawn area is seeded once, guarded by a single per-character boolean.
+-- This is a greeting, not a rule: it must not fire on every login, and it is the
+-- only place left that guesses at a first visit rather than being told about one.
+
+local LOGIN_SEED_DELAY = 2
+
+local function CharDB()
+	if type(ZoneLoreCharDB) ~= "table" then
+		ZoneLoreCharDB = {}
+	end
+	return ZoneLoreCharDB
+end
+
+local function SeedLoginArea()
+	local db = CharDB()
+	if db.greeted then
+		return
+	end
+	if not ZoneLore:Get("autoplay") or not ZoneLore:IsVoiceEnabled() then
+		-- Deliberately before the flag is set, so turning autoplay on later still
+		-- greets on the next login rather than having silently used up its turn.
+		return
+	end
+
+	local _, mapID = ZoneLore:GetLoreWithFallback(ZoneLore:GetPlayerMapID())
+	if not mapID then
+		return
+	end
+
+	db.greeted = true
+
+	-- The subzone is the more specific answer, the same preference /zl play and the
+	-- lore window both apply.
+	local subZone = GetSubZoneText()
+	if subZone and subZone ~= "" and ZoneLore:Get("autoplaySubzones") then
+		local entry, key = ZoneLore:GetSubzoneLore(mapID, subZone)
+		if entry and key then
+			Enqueue(mapID, key)
+			return
+		end
+	end
+
+	if ZoneLore:GetLore(mapID) then
+		Enqueue(mapID, nil)
+	end
+end
+
+-- Lets the greeting be tested without rolling another character.
+function ZoneLore:ForgetGreeting()
+	CharDB().greeted = nil
 end
 
 --------------------------------------------------------------------------------
@@ -290,6 +367,11 @@ function ZoneLore:SetupAutoplay()
 
 	self:OnAudioChanged(Drain)
 	self.autoplayFrame = frame
+
+	-- Delayed because GetSubZoneText is not reliably populated the instant the
+	-- world finishes loading. The cinematic needs no handling of its own: the
+	-- greeting queues immediately and CanPlayNow holds it until the intro ends.
+	C_Timer.After(LOGIN_SEED_DELAY, SeedLoginArea)
 end
 
 -- Reports whether the client defined the strings this feature is built on, so a

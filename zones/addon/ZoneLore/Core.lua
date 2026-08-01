@@ -529,6 +529,7 @@ local function CmdHelp()
 	ZoneLore:Print("  /zl voice      -- toggle narration on or off")
 	ZoneLore:Print("  /zl autoplay   -- toggle narrating areas as you discover them")
 	ZoneLore:Print("  /zl discover   -- pretend to discover an area (dev)")
+	ZoneLore:Print("  /zl forget     -- replay the login greeting on next login (dev)")
 	ZoneLore:Print("  /zl bar        -- move the playback controls back below the minimap")
 	ZoneLore:Print("  /zl minimap    -- show or hide the minimap button")
 	ZoneLore:Print("  /zl debug      -- report area names on map click")
@@ -589,6 +590,11 @@ SlashCmdList["ZONELORE"] = function(msg)
 			ZoneLore:StopLore()
 		end
 		ZoneLore:Print("autoplay %s", enabled and "enabled" or "disabled")
+	elseif cmd == "forget" then
+		if ZoneLore.ForgetGreeting then
+			ZoneLore:ForgetGreeting()
+			ZoneLore:Print("greeting reset -- log out and back in to hear it again")
+		end
 	elseif cmd == "discover" then
 		-- Simulates a discovery, because the real one happens once per character
 		-- ever and is otherwise untestable without rolling a fresh alt.
