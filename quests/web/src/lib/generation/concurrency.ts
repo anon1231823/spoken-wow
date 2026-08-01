@@ -62,11 +62,14 @@ export function budgetFor(tier: string | null, modelId: string): number {
 /**
  * Connections held for something other than a job in flight.
  *
- * The leader keeps one checked out for as long as it leads, better-auth resolves a session
- * out of the same pool on every request, and the single-line Regenerate button costs two of
- * its own. Eight leaves those with room while a batch runs.
+ * The leader keeps one checked out for as long as it leads (1), a poll of `snapshot()` opens
+ * two queries at once (2), better-auth resolves a session out of the same pool on every
+ * request (1), and the single-line Regenerate button holds its own file lock and version
+ * transaction simultaneously, the same two connections a queued job holds (2). 1 + 2 + 1 + 2
+ * is six: room for all four to happen at once while a batch is running at the clamped budget,
+ * which is the point of the reserve.
  */
-export const POOL_RESERVE = 8;
+export const POOL_RESERVE = 6;
 
 /**
  * The plan's budget, capped at what the connection pool can actually serve.

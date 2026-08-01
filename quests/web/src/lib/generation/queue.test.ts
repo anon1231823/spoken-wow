@@ -9,7 +9,7 @@
  * Needs DATABASE_URL and migrations applied:
  *   docker compose up -d postgres && deploy/bin/migrate.sh "$PWD/web"
  */
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { closeDb, db } from "@/lib/db";
 import type { BatchLine } from "@/lib/search";
@@ -219,6 +219,35 @@ describe("snapshot", () => {
       cancelled: 0,
       stoppedBecause: null,
     });
+  });
+
+  it("answers one poll with two pooled queries, not seven", async () => {
+    // The exact count that matters: a batch in flight already holds two connections per job,
+    // so the number a poll opens on top of that is the tightest budget in the system. This
+    // spies on the real pool rather than mocking it - every query below still runs against
+    // Postgres, only the call count is observed.
+    const batch = await newBatch();
+    await enqueue(batch, [line(1)]);
+
+    const pool = db();
+    const original = pool.query.bind(pool);
+    let calls = 0;
+    const spy = vi
+      .spyOn(pool, "query")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockImplementation((...args: any[]) => {
+        calls++;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (original as any)(...args);
+      });
+
+    try {
+      await snapshot(null);
+    } finally {
+      spy.mockRestore();
+    }
+
+    expect(calls).toBe(2);
   });
 
   it("carries a failure's message rather than just a count", async () => {

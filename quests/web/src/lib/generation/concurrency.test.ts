@@ -75,7 +75,7 @@ describe("clampToPool", () => {
   it("reduces a large tier's budget to what the pool can serve", () => {
     // scale on a flash model is 29, which would want 58 connections. Two per job in flight,
     // less the reserve, is the most the pool can hand out without deadlocking on itself.
-    expect(clampToPool(29, 30)).toBe(11);
+    expect(clampToPool(29, 30)).toBe(12);
     expect(clampToPool(29, 30)).toBeLessThan(budgetFor("scale", "eleven_flash_v2_5"));
   });
 

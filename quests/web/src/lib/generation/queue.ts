@@ -234,34 +234,77 @@ export async function batchStopped(batchId: string): Promise<boolean> {
   return rows[0]?.stopped === true;
 }
 
+type JobAggregateRow = {
+  pending: string;
+  runningCount: string;
+  done: string;
+  failed: string;
+  cancelled: string;
+  credits: string;
+  unpriced: string;
+  running: { lineId: string; npcName: string; preview: string }[];
+  failures: { lineId: string; message: string }[];
+  finished: { id: string; lineId: string; file: string; version: number }[];
+  cursor: string | null;
+};
+
 /**
  * The whole queue as the panel needs it.
  *
  * Scoped to the last day rather than to one batch: there is one ElevenLabs account and one
  * budget, so a batch someone else started is spending the same money and belongs on screen.
+ *
+ * One query against `regeneration_job` plus one against `regeneration_batch`, not seven: every
+ * poll opens this many pooled connections, and with a leader and up to a dozen jobs already
+ * holding their own, a poll that took one each was the tightest budget in the system. The job
+ * query folds five aggregates and three ordered sub-lists into CTEs, with `json_agg` carrying
+ * each list out as one column instead of one query per list - Postgres already builds those
+ * lists in memory to answer the count, so asking it to hand them back costs nothing extra.
  */
 export async function snapshot(since: string | null): Promise<QueueSnapshot> {
   // Live work first, then whatever finished recently: the two halves of what the panel is
   // for. Never just the age, for the reason WINDOW records.
   const window = `("state" in ('pending', 'running') or "queuedAt" > now() - interval '${WINDOW}')`;
 
-  const [counts, totals, running, failures, latest, finished, cursor] = await Promise.all([
-    db().query<{ state: JobState; n: string }>(
-      `select "state", count(*)::text as n from "regeneration_job"
-        where ${window} group by "state"`,
-    ),
-    db().query<{ credits: string; unpriced: string }>(
-      `select coalesce(sum("credits"), 0)::text as credits,
-              count(*) filter (where "state" = 'done' and "credits" is null)::text as unpriced
-         from "regeneration_job" where ${window}`,
-    ),
-    db().query<{ lineId: string; npcName: string; preview: string }>(
-      `select "lineId", "npcName", "preview" from "regeneration_job"
-        where "state" = 'running' order by "id" limit 20`,
-    ),
-    db().query<{ lineId: string; message: string }>(
-      `select "lineId", "error" as message from "regeneration_job"
-        where "state" = 'failed' and ${window} order by "id" desc limit 20`,
+  const [job, latest] = await Promise.all([
+    db().query<JobAggregateRow>(
+      `with job_counts as (
+         select
+           count(*) filter (where "state" = 'pending')::text as pending,
+           count(*) filter (where "state" = 'running')::text as "runningCount",
+           count(*) filter (where "state" = 'done')::text as done,
+           count(*) filter (where "state" = 'failed')::text as failed,
+           count(*) filter (where "state" = 'cancelled')::text as cancelled,
+           coalesce(sum("credits"), 0)::text as credits,
+           count(*) filter (where "state" = 'done' and "credits" is null)::text as unpriced
+         from "regeneration_job"
+         where ${window}
+       ),
+       running_jobs as (
+         select "lineId", "npcName", "preview" from "regeneration_job"
+          where "state" = 'running' order by "id" limit 20
+       ),
+       recent_failures as (
+         select "lineId", "error" as message from "regeneration_job"
+          where "state" = 'failed' and ${window} order by "id" desc limit 20
+       ),
+       finished_page as (
+         select "id"::text as "id", "lineId", "file", "version" from "regeneration_job"
+          where "state" = 'done' and "version" is not null and "id" > coalesce($1::bigint, 0)
+          order by "id" limit ${FINISHED_PAGE}
+       ),
+       terminal as (
+         select max("id")::text as max from "regeneration_job"
+          where "state" in ('done', 'failed')
+       )
+       select
+         jc.*,
+         coalesce((select json_agg(r) from running_jobs r), '[]') as running,
+         coalesce((select json_agg(f) from recent_failures f), '[]') as failures,
+         coalesce((select json_agg(p) from finished_page p), '[]') as finished,
+         (select max from terminal) as cursor
+       from job_counts jc`,
+      [since],
     ),
     db().query<{ stoppedBecause: string | null; cancelled: string }>(
       `select b."stoppedBecause",
@@ -269,49 +312,37 @@ export async function snapshot(since: string | null): Promise<QueueSnapshot> {
                 where j."batchId" = b."id" and j."state" = 'cancelled') as cancelled
          from "regeneration_batch" b order by b."createdAt" desc limit 1`,
     ),
-    db().query<{ id: string; lineId: string; file: string; version: number }>(
-      `select "id"::text, "lineId", "file", "version" from "regeneration_job"
-        where "state" = 'done' and "version" is not null and "id" > coalesce($1::bigint, 0)
-        order by "id" limit ${FINISHED_PAGE}`,
-      [since],
-    ),
-    db().query<{ max: string | null }>(
-      `select max("id")::text as max from "regeneration_job"
-        where "state" in ('done', 'failed')`,
-    ),
   ]);
 
-  const byState = Object.fromEntries(counts.rows.map((row) => [row.state, Number(row.n)]));
-  const zero: Record<JobState, number> = {
-    pending: 0,
-    running: 0,
-    done: 0,
-    failed: 0,
-    cancelled: 0,
-  };
+  const row = job.rows[0];
+  const finished = row.finished;
 
   return {
-    active: (byState.pending ?? 0) + (byState.running ?? 0) > 0,
-    counts: { ...zero, ...byState },
-    credits: Number(totals.rows[0].credits),
-    unpriced: Number(totals.rows[0].unpriced),
-    running: running.rows,
-    failures: failures.rows,
+    active: Number(row.pending) + Number(row.runningCount) > 0,
+    counts: {
+      pending: Number(row.pending),
+      running: Number(row.runningCount),
+      done: Number(row.done),
+      failed: Number(row.failed),
+      cancelled: Number(row.cancelled),
+    },
+    credits: Number(row.credits),
+    unpriced: Number(row.unpriced),
+    running: row.running,
+    failures: row.failures,
     latestBatch: latest.rows[0]
       ? {
           cancelled: Number(latest.rows[0].cancelled),
           stoppedBecause: latest.rows[0].stoppedBecause,
         }
       : null,
-    finished: finished.rows,
+    finished,
     // Normally the high-water mark of *all* terminal jobs, not just the page returned, so a
     // cursor never sticks behind a job that failed rather than finished. But a full page
     // means there are more done jobs than fit, and taking the global maximum then would skip
     // every one after it - lines the page would never learn had been regenerated. A full page
     // therefore ends at its own last row, and the next poll picks up from there.
     cursor:
-      finished.rows.length === FINISHED_PAGE
-        ? finished.rows[finished.rows.length - 1].id
-        : (cursor.rows[0]?.max ?? since ?? "0"),
+      finished.length === FINISHED_PAGE ? finished[finished.length - 1].id : (row.cursor ?? since ?? "0"),
   };
 }
