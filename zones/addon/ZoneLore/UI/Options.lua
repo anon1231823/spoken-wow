@@ -223,6 +223,17 @@ function ZoneLore:SetupOptions()
 		end)
 
 	y = y + ROW_GAP
+	MakeCheckbox(panel, "autoplay", "Narrate new areas as you explore them",
+		"Plays a zone or subzone's lore the first time this character enters it. "
+			.. "New areas queue behind whatever is already playing rather than "
+			.. "interrupting it. /zl forget clears the list.",
+		INDENT, y, function()
+			if not ZoneLore:Get("autoplay") then
+				ZoneLore:StopLore()
+			end
+		end)
+
+	y = y + ROW_GAP
 	MakeCheckbox(panel, "showPlaybackBar", "Show playback controls while narrating",
 		"A small movable Pause/Stop widget below the minimap, so narration can be "
 			.. "stopped without reopening the map. It appears only while a clip is "

@@ -33,6 +33,7 @@ local defaults = {
 	-- competing with it. See Audio.lua for the channels PlaySoundFile accepts.
 	voiceChannel = "Dialog",
 	showPlaybackBar = true,
+	autoplay = true,
 	-- `playbackBarPos` is deliberately absent: nil means "below the minimap", which
 	-- is an anchor rather than a coordinate and so cannot be expressed here.
 	debug = false,
@@ -316,6 +317,9 @@ local function SetupHooks()
 	if ZoneLore.SetupPlaybackBar then
 		ZoneLore:SetupPlaybackBar()
 	end
+	if ZoneLore.SetupAutoplay then
+		ZoneLore:SetupAutoplay()
+	end
 	if ZoneLore.SetupOptions then
 		ZoneLore:SetupOptions()
 	end
@@ -459,6 +463,14 @@ local function CmdStatus()
 		)
 	end
 
+	if ZoneLore.CountHeardAreas then
+		local heardZones, heardSubzones = ZoneLore:CountHeardAreas()
+		ZoneLore:Print(
+			"autoplay %s -- this character has heard %d zones and %d subzones",
+			ZoneLore:Get("autoplay") and "on" or "off", heardZones, heardSubzones
+		)
+	end
+
 	if ZoneLore:Get("debug") then
 		ZoneLore:Print("|cff66bbffdebug mode is on|r")
 	end
@@ -518,6 +530,8 @@ local function CmdHelp()
 	ZoneLore:Print("  /zl play       -- read the current lore aloud")
 	ZoneLore:Print("  /zl stop       -- stop the narration")
 	ZoneLore:Print("  /zl voice      -- toggle narration on or off")
+	ZoneLore:Print("  /zl autoplay   -- toggle narrating new areas on arrival")
+	ZoneLore:Print("  /zl forget     -- clear which areas this character has heard")
 	ZoneLore:Print("  /zl bar        -- move the playback controls back below the minimap")
 	ZoneLore:Print("  /zl minimap    -- show or hide the minimap button")
 	ZoneLore:Print("  /zl debug      -- report area names on map click")
@@ -571,6 +585,19 @@ SlashCmdList["ZONELORE"] = function(msg)
 		end
 		ZoneLore:NotifyAudioChanged()
 		ZoneLore:Print("narration %s", enabled and "enabled" or "disabled")
+	elseif cmd == "autoplay" then
+		local enabled = not ZoneLore:Get("autoplay")
+		ZoneLore:Set("autoplay", enabled)
+		if not enabled then
+			ZoneLore:StopLore()
+		end
+		ZoneLore:Print("autoplay %s", enabled and "enabled" or "disabled")
+	elseif cmd == "forget" then
+		if ZoneLore.ForgetHeardAreas then
+			ZoneLore:StopLore()
+			ZoneLore:ForgetHeardAreas()
+			ZoneLore:Print("forgot every area this character has heard -- they will narrate again")
+		end
 	elseif cmd == "bar" then
 		if ZoneLore.ResetPlaybackBarPosition then
 			ZoneLore:ResetPlaybackBarPosition()

@@ -175,7 +175,14 @@ local function ClearPlayback()
 	token = token + 1
 end
 
+-- The player asking for silence, as opposed to playback being reset on the way to
+-- starting something else. The distinction matters once autoplay has a queue: Stop
+-- has to mean stop, not skip to the next queued area.
 function ZoneLore:StopLore()
+	if self.ClearAutoplayQueue then
+		self:ClearAutoplayQueue()
+	end
+
 	if not current and not paused then
 		return
 	end
@@ -224,14 +231,21 @@ local function IsChannelAudible(channel)
 end
 
 function ZoneLore:PlayLore(mapID, areaKey)
-	self:StopLore()
+	-- Not StopLore: starting a clip supersedes the previous one, but must not
+	-- discard the autoplay queue the way an explicit Stop does.
+	ClearPlayback()
+	paused = nil
 
 	if not self:IsVoiceEnabled() then
+		ZoneLore:NotifyAudioChanged()
 		return false
 	end
 
+	-- Every failure below still has to notify: playback was cleared above, so the
+	-- buttons and the floating controls would otherwise keep showing the old clip.
 	local path, duration = self:GetAudioClip(mapID, areaKey)
 	if not path then
+		ZoneLore:NotifyAudioChanged()
 		return false
 	end
 
@@ -239,12 +253,14 @@ function ZoneLore:PlayLore(mapID, areaKey)
 	local audible, why = IsChannelAudible(channel)
 	if not audible then
 		self:Print("|cffffcc00cannot play lore: %s|r", why)
+		ZoneLore:NotifyAudioChanged()
 		return false
 	end
 
 	local willPlay, handle = PlaySoundFile(path, channel)
 	if not willPlay then
 		self:Print("|cffffcc00no audio for this entry|r (missing %s)", path)
+		ZoneLore:NotifyAudioChanged()
 		return false
 	end
 
