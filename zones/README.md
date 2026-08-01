@@ -532,6 +532,28 @@ cost real money and a re-roll is not always an improvement. Files are written to
 temp name and renamed, and the manifest is written after every line, so an
 interrupted run keeps everything already paid for.
 
+### How long a full run takes
+
+Requests run in parallel, and the budget comes from **the account's plan** rather
+than a constant, because ElevenLabs limits concurrency per plan and per model
+family and publishes the numbers: 2 on free, 3 starter, 5 creator, 10 pro, 15
+scale and business, with flash models doubled. The tier is read once from
+`GET /v1/user/subscription`; `--concurrency n` overrides it.
+
+An unrecognised or unreadable tier falls back to **2**, not to the highest —
+finding out the plan is unknown must not be the moment this code is at its most
+aggressive.
+
+A 429 means the published number is wrong for right now — another process on the
+same key, or a limit that moved. The budget halves and stays halved for a minute
+rather than retrying into a wall, then restores itself. The limiter resizes while
+requests are in flight, so this costs no restart.
+
+The manifest is written by every worker after every line, so writes are serialised
+and go through a temp file and a rename. Two concurrent writers on one path
+interleave into invalid JSON, and this is the one file here that cannot be
+regenerated — it is the record of everything already paid for.
+
 ### Square brackets are the one hard rule
 
 Eleven v3 reads bracketed text as an **audio tag** — a performance direction — so

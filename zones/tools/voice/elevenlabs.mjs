@@ -154,6 +154,26 @@ export async function resolveDictionary(config, key) {
   console.log(`pinned pronunciation dictionary ${config.dictionaryId} at version ${version}`);
 }
 
+//------------------------------------------------------------------------------
+// Account
+//------------------------------------------------------------------------------
+
+// The plan tier, which is what sets the concurrency limit. Null rather than a
+// throw if it cannot be read: an unknown tier falls back to the smallest budget,
+// so a failure here costs speed rather than the run.
+export async function fetchTier(key) {
+  try {
+    const response = await fetch("https://api.elevenlabs.io/v1/user/subscription", {
+      headers: { "xi-api-key": key },
+    });
+    if (!response.ok) return null;
+    const body = await response.json();
+    return body.tier ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // What ElevenLabs actually charged, or null if it did not say. The rate belongs
 // to the plan rather than the request, so this is the only way to know a real
 // cost without guessing at someone's subscription.
@@ -166,7 +186,10 @@ export function creditsFrom(headers) {
 
 const RETRYABLE = new Set([429, 500, 502, 503, 504]);
 
-export async function synthesize(spokenText, config, key, { attempts = 4 } = {}) {
+// `onRateLimit` lets the caller shrink its concurrency the moment a 429 appears,
+// rather than each worker independently backing off and then all charging back in
+// together.
+export async function synthesize(spokenText, config, key, { attempts = 4, onRateLimit } = {}) {
   const url = `${TTS_URL}/${config.voiceId}?output_format=${encodeURIComponent(config.outputFormat)}`;
   const body = JSON.stringify(buildPayload(spokenText, config));
 
@@ -205,6 +228,7 @@ export async function synthesize(spokenText, config, key, { attempts = 4 } = {})
     const text = (await response.text()).slice(0, 300);
     lastError = new Error(`ElevenLabs returned ${response.status}: ${text}`);
     if (!RETRYABLE.has(response.status)) throw lastError;
+    if (response.status === 429 && onRateLimit) onRateLimit();
     await backoff(attempt);
   }
 

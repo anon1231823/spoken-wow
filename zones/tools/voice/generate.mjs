@@ -21,16 +21,16 @@ import { assignFiles, lineId, textHash } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
 import {
   apiKey,
+  fetchTier,
   loadConfig,
   resolveDictionary,
   resolveVoiceId,
   synthesize,
 } from "./elevenlabs.mjs";
 import { loadManifest, saveManifest, SAMPLES_DIR, SOUNDS_DIR } from "./store.mjs";
+import { afterRateLimit, budgetFor, COOL_DOWN_MS, Limiter } from "./concurrency.mjs";
 
 const execFileAsync = promisify(execFile);
-
-const CONCURRENCY = 3;
 
 //------------------------------------------------------------------------------
 // Arguments
@@ -49,6 +49,7 @@ function parseArgs(argv) {
     generate: false,
     force: false,
     sample: false,
+    concurrency: null,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -71,6 +72,7 @@ function parseArgs(argv) {
       case "--generate": args.generate = true; break;
       case "--force": args.force = true; break;
       case "--sample": args.sample = true; break;
+      case "--concurrency": args.concurrency = Number(next()); break;
       case "--help": case "-h": usage(); process.exit(0);
       default: throw new Error(`unknown argument ${arg} (try --help)`);
     }
@@ -97,6 +99,7 @@ Actions:
   --force              regenerate entries that already have audio
   --sample             two representative lines into audio-samples/, for
                        checking the voice before committing to a bulk run
+  --concurrency <n>    override the per-plan request budget
 `);
 }
 
@@ -229,10 +232,35 @@ async function generate(selected, args) {
   const manifest = await loadManifest();
   let done = 0, skipped = 0, failed = 0, characters = 0, credits = 0, creditsKnown = true;
 
-  const queue = [...selected];
-  const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
-    while (queue.length) {
-      const entry = queue.shift();
+  // The plan's published limit, unless overridden. Asking the account beats a
+  // constant: the same script on a Creator key and a Scale key wants 5 and 15.
+  const tier = args.concurrency ? null : await fetchTier(key);
+  const budget = args.concurrency ?? budgetFor(tier, config.modelId);
+  const limiter = new Limiter(budget);
+
+  console.log(
+    args.concurrency
+      ? `concurrency ${budget} (from --concurrency)`
+      : `concurrency ${budget} (${tier ?? "unknown"} plan, ${config.modelId})`,
+  );
+
+  // A 429 means the published number is wrong right now -- another process on the
+  // same key, or a limit that moved. Halve and stay halved for a minute rather
+  // than retrying into a wall.
+  let rateLimitedAt = null;
+  const onRateLimit = () => {
+    const first = rateLimitedAt === null || Date.now() - rateLimitedAt > COOL_DOWN_MS;
+    rateLimitedAt = Date.now();
+    const reduced = afterRateLimit(budget, rateLimitedAt, Date.now());
+    limiter.setLimit(reduced);
+    if (first) console.log(`  rate limited -- dropping to ${reduced} for ${COOL_DOWN_MS / 1000}s`);
+    setTimeout(() => {
+      if (Date.now() - rateLimitedAt >= COOL_DOWN_MS) limiter.setLimit(budget);
+    }, COOL_DOWN_MS + 100).unref();
+  };
+
+  const tasks = selected.map((entry) =>
+    limiter.run(async () => {
       const path = join(SOUNDS_DIR, `${entry.file}.mp3`);
 
       // Audio already generated cost real money, and a re-roll is not always an
@@ -240,11 +268,11 @@ async function generate(selected, args) {
       // reason.
       if (existsSync(path) && !args.force) {
         skipped++;
-        continue;
+        return;
       }
 
       try {
-        const { audio, credits: cost } = await synthesize(entry.spoken, config, key);
+        const { audio, credits: cost } = await synthesize(entry.spoken, config, key, { onRateLimit });
         await writeAudio(path, audio);
 
         manifest[entry.id] = {
@@ -281,10 +309,10 @@ async function generate(selected, args) {
         failed++;
         console.error(`  FAIL ${entry.id}: ${err.message}`);
       }
-    }
-  });
+    }),
+  );
 
-  await Promise.all(workers);
+  await Promise.all(tasks);
 
   console.log(`\ngenerated ${done}, skipped ${skipped} (already present), failed ${failed}`);
   console.log(
