@@ -168,6 +168,11 @@ function ZoneLore:ClearAutoplayQueue()
 	StopTicker()
 end
 
+-- Drives the Next button: the controls need to know whether anything is waiting.
+function ZoneLore:AutoplayQueueLength()
+	return #pending
+end
+
 local function IsQueued(mapID, areaKey)
 	for i = 1, #pending do
 		if pending[i].mapID == mapID and pending[i].areaKey == areaKey then
@@ -191,6 +196,11 @@ local function Enqueue(mapID, areaKey)
 	end
 	StartTicker()
 	Drain()
+
+	-- Queueing behind a clip that is already playing changes what the controls
+	-- should say (Stop becomes Next) without changing what is playing, so the
+	-- notification Drain would have sent never happens on its own.
+	ZoneLore:NotifyAudioChanged()
 end
 
 --------------------------------------------------------------------------------

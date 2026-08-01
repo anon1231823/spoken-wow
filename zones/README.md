@@ -244,7 +244,11 @@ the cursor is over a pin and Blizzard's tooltip should be the only one showing.
 A minimap button (LibDBIcon) is the entry point that does not need the world map
 open. Its tooltip shows lore for wherever the player is standing -- the subzone if
 there is one, otherwise the zone. **Left-click** opens the lore window,
-**right-click** toggles the world map panel. `/zl minimap` hides or shows it.
+**right-click** opens the settings panel. `/zl minimap` hides or shows it.
+
+Right-click was originally a world-map-panel toggle, which is also an options
+checkbox and a slash command — three ways to reach one setting, and none of them
+the one people reach for on a minimap button.
 
 The lore window is movable, closes on Escape, and browses everything: the left
 column lists all zones, and clicking one expands its subzones beneath it.
@@ -413,6 +417,13 @@ discovered on the way here".
 While a clip is playing, a small **Pause / Stop** widget appears below the minimap
 and disappears again when the clip ends. Drag it to move it; `/zl bar` puts it back
 under the minimap; the options panel turns it off.
+
+**Stop reads "Next" whenever autoplay has something queued**, and skips to it — with
+subzone discoveries on, ending the whole backlog is rarely what is wanted mid-walk.
+Stopping outright is then a **right-click**, which the tooltip says, along with how
+many entries are waiting. Without that, turning Stop into Next would have removed
+the only way to stop, since the queue is non-empty most of the time while
+exploring.
 
 It exists because the Play buttons are attached to a description, so they are only
 reachable while that description is on screen — and narration deliberately outlives

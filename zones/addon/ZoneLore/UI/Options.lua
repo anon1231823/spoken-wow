@@ -201,7 +201,7 @@ function ZoneLore:SetupOptions()
 
 	y = y + ROW_GAP
 	MakeCheckbox(panel, "showMinimapButton", "Show the minimap button",
-		"Left-click opens the lore window, right-click toggles the map panel.",
+		"Left-click opens the lore window, right-click opens these settings.",
 		INDENT, y, function()
 			-- The checkbox has already written the option, so sync rather than
 			-- toggle; ApplyMinimapButton also keeps `hide` in step for LibDBIcon.

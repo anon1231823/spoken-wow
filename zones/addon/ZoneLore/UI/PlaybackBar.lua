@@ -61,6 +61,15 @@ end
 -- State
 --------------------------------------------------------------------------------
 
+-- Autoplay.lua may not be loaded (nothing else here depends on it), so treat a
+-- missing queue as an empty one rather than assuming.
+local function QueueLength()
+	if not ZoneLore.AutoplayQueueLength then
+		return 0
+	end
+	return ZoneLore:AutoplayQueueLength()
+end
+
 local function Refresh()
 	if not bar then
 		return
@@ -75,6 +84,11 @@ local function Refresh()
 
 	label:SetText(ZoneLore:GetAudioLabel(mapID, areaKey))
 	pauseButton:SetText(isPaused and "Play" or "Pause")
+
+	-- With a queue waiting, the useful action is moving on to it rather than
+	-- ending everything. Stop is still there on right-click; see the tooltip.
+	stopButton:SetText(QueueLength() > 0 and "Next" or "Stop")
+
 	bar:Show()
 end
 
@@ -137,13 +151,26 @@ local function BuildBar()
 	stopButton:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
 	stopButton:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", -(PADDING - 2), PADDING - 2)
 	stopButton:SetText("Stop")
-	stopButton:SetScript("OnClick", function()
-		ZoneLore:StopLore()
+	-- Right-click has to be asked for explicitly; a button registered for
+	-- LeftButton only never sees it.
+	stopButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	stopButton:SetScript("OnClick", function(_, button)
+		if button == "RightButton" or QueueLength() == 0 then
+			ZoneLore:StopLore()
+		else
+			ZoneLore:SkipLore()
+		end
 	end)
 	stopButton:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-		GameTooltip:SetText("Stop")
-		GameTooltip:AddLine("Drag these controls to move them. /zl bar resets their position.", 1, 1, 1, true)
+		if QueueLength() > 0 then
+			GameTooltip:SetText("Next")
+			GameTooltip:AddLine(("%d more waiting."):format(QueueLength()), 1, 0.82, 0)
+			GameTooltip:AddLine("Right-click to stop and discard the rest.", 1, 1, 1, true)
+		else
+			GameTooltip:SetText("Stop")
+		end
+		GameTooltip:AddLine("Drag these controls to move them. /zl bar resets their position.", 0.7, 0.7, 0.7, true)
 		GameTooltip:Show()
 	end)
 	stopButton:SetScript("OnLeave", GameTooltip_Hide)

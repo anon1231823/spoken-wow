@@ -191,6 +191,19 @@ function ZoneLore:StopLore()
 	ZoneLore:NotifyAudioChanged()
 end
 
+-- Ends the current clip while leaving the queue alone, so whatever is waiting
+-- starts. Distinct from StopLore, which is the player asking for silence.
+function ZoneLore:SkipLore()
+	if not current and not paused then
+		return false
+	end
+	ClearPlayback()
+	paused = nil
+	-- Autoplay drains on this notification, so the next entry starts itself.
+	ZoneLore:NotifyAudioChanged()
+	return true
+end
+
 -- Stops the sound and remembers the entry. Resuming replays it from the start;
 -- see the note on `paused` above for why nothing better is possible.
 function ZoneLore:PauseLore()
