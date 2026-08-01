@@ -12,9 +12,11 @@
 embeds.xml
 
 Core.lua
+Audio.lua
 Data/Zones.lua
 Data/Subzones.lua
 UI/TextView.lua
+UI/AudioButton.lua
 UI/MapPanel.lua
 UI/SubzoneClick.lua
 UI/HoverPreview.lua

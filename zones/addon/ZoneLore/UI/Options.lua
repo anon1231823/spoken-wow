@@ -211,6 +211,53 @@ function ZoneLore:SetupOptions()
 		end)
 
 	y = y + ROW_GAP - 28
+	MakeHeading(panel, "Narration", INDENT, y, "GameFontNormal")
+
+	y = y + ROW_GAP
+	MakeCheckbox(panel, "voiceEnabled", "Show the Play button on lore descriptions",
+		"Reads the lore aloud. Needs the ZoneLoreAudio companion addon; without it "
+			.. "the button plays a placeholder.",
+		INDENT, y, function()
+			ZoneLore:StopLore()
+			ZoneLore:NotifyAudioChanged()
+		end)
+
+	y = y + ROW_GAP - 6
+	-- A cycle button rather than a dropdown. UIDropDownMenuTemplate works on 11509
+	-- but none of its Initialize plumbing can be checked without launching the
+	-- game, and five values do not justify the risk -- the same trade the
+	-- hand-rolled scrollbar in UI/TextView.lua makes.
+	local CHANNEL_ORDER = { "Dialog", "Master", "SFX", "Ambience", "Music" }
+	local channelButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	channelButton:SetPoint("TOPLEFT", INDENT + 4, y)
+	channelButton:SetSize(220, 22)
+
+	local function SyncChannel()
+		channelButton:SetText("Sound channel: " .. ZoneLore:GetVoiceChannel())
+	end
+
+	channelButton:SetScript("OnClick", function()
+		local currentChannel = ZoneLore:GetVoiceChannel()
+		local index = 1
+		for i = 1, #CHANNEL_ORDER do
+			if CHANNEL_ORDER[i] == currentChannel then
+				index = i
+				break
+			end
+		end
+		ZoneLore:Set("voiceChannel", CHANNEL_ORDER[(index % #CHANNEL_ORDER) + 1])
+		-- The handle belongs to the old channel, so a running clip cannot be moved.
+		ZoneLore:StopLore()
+		SyncChannel()
+	end)
+	channelButton:SetScript("OnShow", SyncChannel)
+	SyncChannel()
+
+	y = y + ROW_GAP - 4
+	MakeNote(panel, "Dialog follows the Dialog volume slider in the game's sound options.",
+		INDENT + 4, y)
+
+	y = y + ROW_GAP - 20
 	MakeHeading(panel, "Troubleshooting", INDENT, y, "GameFontNormal")
 
 	y = y + ROW_GAP

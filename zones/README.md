@@ -17,6 +17,8 @@ retail or the Anniversary/TBC client.
 | M3 hover preview on the map | done, tested in game |
 | M4 minimap button + standalone lore window | done, **untested in-game** |
 | M5 options panel and polish | done, **untested in-game** |
+| M6 narration playback (placeholder audio) | done, **untested in-game** |
+| M7 voiceline generation tool | not started |
 
 ## Layout
 
@@ -25,9 +27,12 @@ addon/ZoneLore/          the addon itself (this is what WoW loads)
   ZoneLore.toc
   embeds.xml             loads the bundled libraries
   Core.lua               namespace, saved variables, events, zone/subzone lookup
+  Audio.lua              narration playback state
   Data/Zones.lua         GENERATED -- do not edit by hand
   Data/Subzones.lua      GENERATED -- do not edit by hand
+  Sounds/placeholder.mp3 stand-in played when there is no real voiceover
   UI/TextView.lua        shared scrolling wrapped-text widget
+  UI/AudioButton.lua     the Play/Stop button shown on a description
   UI/MapPanel.lua        the world map side panel
   UI/SubzoneClick.lua    resolves a map click to a subzone
   UI/HoverPreview.lua    lore tooltip while hovering the map
@@ -267,6 +272,52 @@ library. `minimapPos` is seeded once in `UI/MinimapButton.lua` so the button doe
 not start at angle 0 underneath other addons' buttons. ZoneLore's own
 `showMinimapButton` option is authoritative and is mirrored onto `hide`.
 
+## Narration
+
+Every lore description carries a **Play** button — top-right of the world map
+panel and of the lore window. `/zl play` narrates wherever the player is standing,
+preferring the subzone over the zone when the subzone has lore of its own.
+
+Audio ships in a **separate `ZoneLoreAudio` addon**, which is optional. ZoneLore
+looks up a clip in the global `ZoneLoreAudioData` table that addon defines, and
+falls back to `Sounds/placeholder.mp3` when there is no entry — so the button
+works before any voiceover exists, and a missing soundpack sounds wrong rather
+than erroring. `/zl play` says which of the two it played.
+
+**Drop your own `addon/ZoneLore/Sounds/placeholder.mp3` in before testing**; the
+repo does not ship one.
+
+### One clip at a time, stopped only on purpose
+
+Starting a clip stops whatever was playing. Nothing else does: closing the map,
+navigating it, walking into another zone and hiding the lore window all leave the
+narration running.
+
+Stopping when the entry scrolls out of view reads well as a rule and is wrong in
+practice — the intended use is to start a zone's lore, close the map and walk,
+which that rule would cut off immediately. The button always reflects the entry in
+front of it, so stopping is one click, or `/zl stop`.
+
+### Why the button resets itself from generated data
+
+The client fires no event when a sound finishes, so the only way the button knows
+to flip back to *Play* is a duration recorded at generation time and shipped in the
+lookup table. The placeholder has no recorded duration and therefore stays showing
+*Stop* until clicked — expected, and the reason durations are part of the generated
+data rather than an afterthought.
+
+`PlaySoundFile` returns false both for a missing file and for a muted sound
+channel. Audio.lua checks `Sound_EnableAllSound` and `Sound_Enable<Channel>` first
+so the two are reported differently, which is the same distinction
+`AI_VoiceOver`'s `Utils:IsSoundEnabled` exists to make.
+
+The sound channel is configurable and defaults to **Dialog**, so narration follows
+the Dialog volume slider instead of competing with it. The options panel cycles
+through the five channels with a button rather than a dropdown: `UIDropDownMenu`
+works on 11509, but none of its `Initialize` plumbing can be checked without
+launching the game, and five values do not justify that. Same trade as the
+hand-rolled scrollbar below.
+
 ## Options
 
 `/zl options`, or Game Menu -> Options -> AddOns -> ZoneLore. Registered with
@@ -276,8 +327,9 @@ Leatrix_Plus, Leatrix_Sounds, Syndicator and Baganator all use it.
 used.
 
 Exposed: map panel on/off, panel side, panel width, font size, hover preview
-on/off, minimap button on/off, and the debug area-name reporting. Everything
-applies immediately -- no reload -- via `ZoneLore:ApplyPanelOptions()`.
+on/off, minimap button on/off, narration on/off, the narration sound channel, and
+the debug area-name reporting. Everything applies immediately -- no reload -- via
+`ZoneLore:ApplyPanelOptions()`.
 
 Widget templates were chosen from what addons already running on this client use
 rather than from memory: `UICheckButtonTemplate` (`Syndicator/Options`) and
@@ -326,6 +378,9 @@ here:     node tools/seed-from-dump.mjs           # report differences
 /zl options                 open the settings panel
 /zl window                  open the browsable lore window
 /zl hover                   toggle the hover preview tooltip
+/zl play                    narrate the lore for where you are standing
+/zl stop                    stop the narration
+/zl voice                   turn narration on or off
 /zl minimap                 show or hide the minimap button
 /zl debug                   report area names on map click
 /zl dump                    enumerate the map tree (dev)

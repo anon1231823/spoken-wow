@@ -28,6 +28,10 @@ local defaults = {
 	fontSize = 12,
 	showHoverPreview = true,
 	showMinimapButton = true,
+	voiceEnabled = true,
+	-- Dialog so narration rides the player's dialog volume slider rather than
+	-- competing with it. See Audio.lua for the channels PlaySoundFile accepts.
+	voiceChannel = "Dialog",
 	debug = false,
 	-- `hide` and `minimapPos` are intentionally absent: LibDBIcon owns those keys
 	-- inside ZoneLoreDB and writes them itself. See UI/MinimapButton.lua.
@@ -454,6 +458,50 @@ local function CmdStatus()
 	end
 end
 
+-- What /zl play narrates: the subzone the player is standing in if it has lore,
+-- otherwise the zone. The same "more specific answer wins" preference the lore
+-- window applies when it opens.
+local function CurrentAudioTarget()
+	local _, resolved = ZoneLore:GetLoreWithFallback(ZoneLore:GetPlayerMapID())
+	if not resolved then
+		return nil, nil
+	end
+
+	local subZone = GetSubZoneText()
+	if subZone and subZone ~= "" then
+		local entry, key = ZoneLore:GetSubzoneLore(resolved, subZone)
+		if entry then
+			return resolved, key
+		end
+	end
+
+	return resolved, nil
+end
+
+local function CmdPlay()
+	local mapID, key = CurrentAudioTarget()
+	if not mapID then
+		ZoneLore:Print("|cffffcc00no lore for where you are standing|r")
+		return
+	end
+
+	if not ZoneLore:IsVoiceEnabled() then
+		ZoneLore:Print("|cffffcc00narration is turned off|r -- /zl voice to turn it on")
+		return
+	end
+
+	if not ZoneLore:PlayLore(mapID, key) then
+		return
+	end
+
+	local what = key or ZoneLore:GetMapName(mapID) or tostring(mapID)
+	if ZoneLore:HasRealAudio(mapID, key) then
+		ZoneLore:Print("playing lore for %s", what)
+	else
+		ZoneLore:Print("playing |cffffcc00placeholder|r audio for %s -- no voiceover recorded yet", what)
+	end
+end
+
 local function CmdHelp()
 	ZoneLore:Print("commands:")
 	ZoneLore:Print("  /zl            -- status for the current zone and subzone")
@@ -461,6 +509,9 @@ local function CmdHelp()
 	ZoneLore:Print("  /zl window     -- open the browsable lore window")
 	ZoneLore:Print("  /zl panel      -- toggle the world map panel")
 	ZoneLore:Print("  /zl hover      -- toggle the hover preview tooltip")
+	ZoneLore:Print("  /zl play       -- read the current lore aloud")
+	ZoneLore:Print("  /zl stop       -- stop the narration")
+	ZoneLore:Print("  /zl voice      -- toggle narration on or off")
 	ZoneLore:Print("  /zl minimap    -- show or hide the minimap button")
 	ZoneLore:Print("  /zl debug      -- report area names on map click")
 	ZoneLore:Print("  /zl verify     -- check data against this client")
@@ -500,6 +551,19 @@ SlashCmdList["ZONELORE"] = function(msg)
 			ZoneLore.HideHoverPreview()
 		end
 		ZoneLore:Print("hover preview %s", enabled and "enabled" or "disabled")
+	elseif cmd == "play" then
+		CmdPlay()
+	elseif cmd == "stop" then
+		ZoneLore:StopLore()
+		ZoneLore:Print("narration stopped")
+	elseif cmd == "voice" then
+		local enabled = not ZoneLore:Get("voiceEnabled")
+		ZoneLore:Set("voiceEnabled", enabled)
+		if not enabled then
+			ZoneLore:StopLore()
+		end
+		ZoneLore:NotifyAudioChanged()
+		ZoneLore:Print("narration %s", enabled and "enabled" or "disabled")
 	elseif cmd == "debug" then
 		local enabled = not ZoneLore:Get("debug")
 		ZoneLore:Set("debug", enabled)
