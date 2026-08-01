@@ -3,8 +3,14 @@
   "voiceId": null,
 
   "modelId": "eleven_v3",
+  "languageCode": "en",
 
   "outputFormat": "mp3_44100_128",
+
+  "dictionaryId": "Elx0hcDze8EXW2rImeLT",
+  "dictionaryVersionId": null,
+
+  "creditRate": 0.55,
 
   "voiceSettings": {
     "stability": 0.5,
@@ -14,7 +20,11 @@
 
   "_notes": {
     "voiceId": "Resolved from voiceName via GET /v1/voices on first use and cached here, so every later run is one fewer request and is pinned to the voice that was actually used.",
-    "outputFormat": "ElevenLabs bills characters, not bytes -- output format does not change the price. So this generates at the highest the plan allows and scripts/package.sh transcodes down if the download is too large. Generating small to save money would save nothing and make a later quality bump a second purchase.",
+    "languageCode": "The corpus is English, so every request says so. Without it a multilingual model infers the language from the text, and a short entry gives it almost nothing to go on. Sent only for models that accept it.",
+    "outputFormat": "ElevenLabs bills characters, not bytes -- output format does not change the price. So this generates at the highest the plan allows and scripts/package-audio.sh transcodes down if the download is too large. Generating small to save money would save nothing and make a later quality bump a second purchase.",
+    "dictionaryId": "An ElevenLabs pronunciation dictionary to apply. Give the id alone and the generator resolves the latest version once and pins it below. Phoneme rules are honoured by eleven_v3 and eleven_flash_v2 only, which is one more reason this project is on v3.",
+    "dictionaryVersionId": "Pinned deliberately. Naming a dictionary without a version would let a later upload change how already-generated lines would sound, which is exactly what the manifest exists to make knowable. Clear both fields to re-resolve.",
+    "creditRate": "Credits per character on this plan. ElevenLabs bills round(characters x rate) and the rate belongs to the plan, not the request -- measured at 0.55 on this account for standard models. Used only to estimate a dry run; the character-cost response header is authoritative and is what the manifest records.",
     "stability": "v3 exposes this as Creative (0.0) / Natural (0.5) / Robust (1.0). Natural, because Creative hallucinates across an unattended run of 1353 clips and Robust gives up the expressiveness v3 was chosen for."
   }
 }

@@ -487,7 +487,8 @@ hand-rolled scrollbar below.
 ## Generating voicelines
 
 Audio is synthesized with ElevenLabs (`narrator-male`, model `eleven_v3`) and
-written into the `ZoneLoreAudio` addon. **1353 lines, 672,550 characters.**
+written into the `ZoneLoreAudio` addon. **1353 lines, 672,550 characters — about
+370,000 credits** on this plan (see "Characters are not credits" below).
 
 ```sh
 cp .env.example .env    # then put your ELEVENLABS_API_KEY in it
@@ -543,6 +544,46 @@ The **spoken** text is what gets hashed into the manifest, so editing
 `tools/voice/pronunciation.json` correctly marks the lines it affects as `--stale`.
 That file ships empty on purpose: every rule in it is a claim that the model
 mispronounces a word, and that claim can only be made after listening.
+
+### Pronunciation: prefer the uploaded dictionary
+
+There are two ways to fix a mispronunciation, and they are not equivalent.
+
+`tools/voice/pronunciation.json` rewrites the text before it is sent — spelling
+"Kalimdor" as "Kalimdore" and hoping. An **ElevenLabs pronunciation dictionary**
+carries real IPA phoneme rules and is applied by the model, which is strictly
+better where it works. Phoneme rules are honoured by `eleven_v3` and
+`eleven_flash_v2` only; this project is on v3, so they apply.
+
+`config.json` names one:
+
+```json
+"dictionaryId": "Elx0hcDze8EXW2rImeLT",
+"dictionaryVersionId": null
+```
+
+Give the **id alone**. The API wants an id *and* a version, so the generator
+resolves the latest version once and writes it back into `dictionaryVersionId`.
+The version is pinned rather than left floating on purpose: naming a dictionary
+without one would let a later upload change how already-generated lines would
+sound, which is exactly what the manifest exists to make knowable. Clear both
+fields to re-resolve after editing the dictionary — and note that re-resolving
+does *not* mark existing lines stale, because the text did not change. Use
+`--force` over the lines you want re-cut.
+
+Every generated line records the dictionary id and version it was made with, so a
+pronunciation change can be told apart from a text change after the fact.
+
+### Characters are not credits
+
+ElevenLabs bills `round(characters × rate)`, and **the rate belongs to the plan,
+not the request** — measured at **0.55** on this account for standard models. So
+the corpus is 672,550 characters but roughly **370,000 credits**.
+
+The dry run estimates from `creditRate` in `config.json` and says it is an
+estimate. The real number is the `character-cost` response header, which is
+recorded per line in the manifest and totalled at the end of a run — the only way
+to know a cost without guessing at a subscription.
 
 ### What is committed, and what is not
 

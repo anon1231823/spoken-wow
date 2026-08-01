@@ -19,7 +19,13 @@ import { promisify } from "node:util";
 import { readLines } from "../lib/loredata.mjs";
 import { assignFiles, lineId, textHash } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
-import { apiKey, loadConfig, resolveVoiceId, synthesize } from "./elevenlabs.mjs";
+import {
+  apiKey,
+  loadConfig,
+  resolveDictionary,
+  resolveVoiceId,
+  synthesize,
+} from "./elevenlabs.mjs";
 import { loadManifest, saveManifest, SAMPLES_DIR, SOUNDS_DIR } from "./store.mjs";
 
 const execFileAsync = promisify(execFile);
@@ -159,13 +165,25 @@ export function select(catalogue, args, manifest) {
 // Reporting
 //------------------------------------------------------------------------------
 
-function summarise(selected, manifest, label) {
+function summarise(selected, manifest, label, config) {
   const chars = selected.reduce((n, e) => n + e.spoken.length, 0);
   const missing = selected.filter((e) => !manifest[e.id]).length;
   const stale = selected.filter((e) => manifest[e.id] && manifest[e.id].textHash !== e.hash).length;
 
+  // Characters are what the text is; credits are what the plan charges for it.
+  // ElevenLabs bills round(characters x rate) with the rate belonging to the
+  // plan, so this is an estimate and says so -- the character-cost header on each
+  // response is the real number, and is what the manifest records.
+  const rate = config?.creditRate;
+  const credits = rate ? Math.round(chars * rate) : null;
+
   console.log(`${label}: ${selected.length} lines`);
-  console.log(`  characters : ${chars.toLocaleString()}  (= credits; 1 per character on v3)`);
+  console.log(`  characters : ${chars.toLocaleString()}`);
+  console.log(
+    credits === null
+      ? "  credits    : unknown (set creditRate in tools/voice/config.json)"
+      : `  credits    : ~${credits.toLocaleString()} estimated at ${rate}/character on this plan`,
+  );
   console.log(`  audio      : ~${Math.round(chars / 15 / 60)} minutes at ~15 chars/second`);
   console.log(`  state      : ${missing} missing, ${stale} stale, ${selected.length - missing - stale} already current`);
 }
@@ -206,9 +224,10 @@ async function generate(selected, args) {
   const config = await loadConfig();
   const key = await apiKey();
   await resolveVoiceId(config, key);
+  await resolveDictionary(config, key);
 
   const manifest = await loadManifest();
-  let done = 0, skipped = 0, failed = 0, characters = 0;
+  let done = 0, skipped = 0, failed = 0, characters = 0, credits = 0, creditsKnown = true;
 
   const queue = [...selected];
   const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
@@ -225,18 +244,24 @@ async function generate(selected, args) {
       }
 
       try {
-        const audio = await synthesize(entry.spoken, config, key);
+        const { audio, credits: cost } = await synthesize(entry.spoken, config, key);
         await writeAudio(path, audio);
 
         manifest[entry.id] = {
           file: entry.file,
           textHash: entry.hash,
           chars: entry.spoken.length,
+          // What ElevenLabs actually charged, not what the text length implies.
+          credits: cost,
           durationSec: await durationOf(path),
           bytes: (await stat(path)).size,
           voiceId: config.voiceId,
           modelId: config.modelId,
           outputFormat: config.outputFormat,
+          // Recorded so a line's pronunciation can be explained later, and so a
+          // dictionary change can be told apart from a text change.
+          dictionaryId: config.dictionaryId ?? null,
+          dictionaryVersionId: config.dictionaryVersionId ?? null,
           generatedAt: new Date().toISOString(),
         };
         // Written after every line, so an interrupted run keeps everything
@@ -245,7 +270,13 @@ async function generate(selected, args) {
 
         done++;
         characters += entry.spoken.length;
-        console.log(`  ok  ${entry.id}  ${entry.spoken.length} chars  -> ${entry.file}.mp3`);
+        if (cost === null) creditsKnown = false;
+        else credits += cost;
+
+        console.log(
+          `  ok  ${entry.id}  ${entry.spoken.length} chars` +
+            `${cost === null ? "" : `, ${cost} credits`}  -> ${entry.file}.mp3`,
+        );
       } catch (err) {
         failed++;
         console.error(`  FAIL ${entry.id}: ${err.message}`);
@@ -256,7 +287,12 @@ async function generate(selected, args) {
   await Promise.all(workers);
 
   console.log(`\ngenerated ${done}, skipped ${skipped} (already present), failed ${failed}`);
-  console.log(`spent ~${characters.toLocaleString()} characters`);
+  console.log(
+    `${characters.toLocaleString()} characters` +
+      (creditsKnown
+        ? `, ${credits.toLocaleString()} credits (billed, from the character-cost header)`
+        : ", credits unknown (ElevenLabs sent no character-cost header)"),
+  );
   if (done > 0) console.log("\nnext:  node tools/voice/build-lookup.mjs");
   if (failed > 0) process.exitCode = 1;
 }
@@ -268,6 +304,7 @@ async function sample(catalogue) {
   const config = await loadConfig();
   const key = await apiKey();
   await resolveVoiceId(config, key);
+  await resolveDictionary(config, key);
 
   const long = catalogue
     .filter((e) => e.kind === "zone")
@@ -281,9 +318,9 @@ async function sample(catalogue) {
   for (const entry of [long, short].filter(Boolean)) {
     const path = join(SAMPLES_DIR, `${entry.id.replace(/[:\s]/g, "_")}.mp3`);
     console.log(`sampling ${entry.id} (${entry.spoken.length} chars) -> ${path}`);
-    const audio = await synthesize(entry.spoken, config, key);
+    const { audio, credits } = await synthesize(entry.spoken, config, key);
     await writeAudio(path, audio);
-    console.log(`  ${await durationOf(path)}s`);
+    console.log(`  ${await durationOf(path)}s${credits === null ? "" : `, ${credits} credits`}`);
   }
 
   console.log(`\nListen, then set voiceSettings.stability in tools/voice/config.json`);
@@ -297,6 +334,8 @@ async function sample(catalogue) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const catalogue = await buildCatalogue();
+  // Loaded even for a dry run, which needs the credit rate to estimate a cost.
+  const config = await loadConfig();
 
   // Enforced here rather than left to the model: a bracket that reaches v3 is
   // performed rather than spoken, which is silent corruption of a paid clip.
@@ -331,7 +370,7 @@ async function main() {
   }
 
   if (!args.generate) {
-    summarise(selected, manifest, "would generate");
+    summarise(selected, manifest, "would generate", config);
     console.log("\nfirst few:");
     for (const entry of selected.slice(0, 3)) {
       console.log(`\n  ${entry.id}  (${entry.spoken.length} chars) -> ${entry.file}.mp3`);
@@ -341,7 +380,7 @@ async function main() {
     return;
   }
 
-  summarise(selected, manifest, "generating");
+  summarise(selected, manifest, "generating", config);
   console.log("");
   await generate(selected, args);
 }

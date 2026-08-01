@@ -89,12 +89,79 @@ export async function resolveVoiceId(config, key) {
 // Synthesis
 //------------------------------------------------------------------------------
 
+// Models that accept language_code. A list rather than a guess, and it errs
+// toward omitting: leaving the field off is the older behaviour and loses
+// nothing, while sending it to a model that rejects it fails the whole request.
+const LANGUAGE_MODELS = new Set(["eleven_v3", "eleven_flash_v2_5", "eleven_turbo_v2_5"]);
+
 export function buildPayload(spokenText, config) {
-  return {
+  const payload = {
     text: spokenText,
     model_id: config.modelId,
     voice_settings: config.voiceSettings,
   };
+
+  if (config.languageCode && LANGUAGE_MODELS.has(config.modelId)) {
+    payload.language_code = config.languageCode;
+  }
+
+  // Both halves or neither. The version is not optional: naming a dictionary
+  // without one lets a later upload change how already-generated lines would
+  // sound, which is the thing the manifest exists to make knowable after the fact.
+  if (config.dictionaryId && config.dictionaryVersionId) {
+    payload.pronunciation_dictionary_locators = [
+      {
+        pronunciation_dictionary_id: config.dictionaryId,
+        version_id: config.dictionaryVersionId,
+      },
+    ];
+  }
+
+  return payload;
+}
+
+//------------------------------------------------------------------------------
+// Pronunciation dictionary
+//------------------------------------------------------------------------------
+
+// Turns a bare dictionary id into an id + version pair and caches it, so the id
+// is all that ever has to be typed while requests stay pinned to one version.
+export async function resolveDictionary(config, key) {
+  if (!config.dictionaryId || config.dictionaryVersionId) return;
+
+  const response = await fetch(
+    `https://api.elevenlabs.io/v1/pronunciation-dictionaries/${config.dictionaryId}`,
+    { headers: { "xi-api-key": key } },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `could not read pronunciation dictionary ${config.dictionaryId} ` +
+        `(${response.status}): ${(await response.text()).slice(0, 200)}`,
+    );
+  }
+
+  const body = await response.json();
+  const version = body.latest_version_id ?? body.version_id;
+  if (!version) {
+    throw new Error(
+      `pronunciation dictionary ${config.dictionaryId} returned no version id; ` +
+        `fields were: ${Object.keys(body).join(", ")}`,
+    );
+  }
+
+  config.dictionaryVersionId = version;
+  await saveConfig(config);
+  console.log(`pinned pronunciation dictionary ${config.dictionaryId} at version ${version}`);
+}
+
+// What ElevenLabs actually charged, or null if it did not say. The rate belongs
+// to the plan rather than the request, so this is the only way to know a real
+// cost without guessing at someone's subscription.
+export function creditsFrom(headers) {
+  const raw = headers.get("character-cost");
+  if (raw === null) return null;
+  const credits = Number(raw);
+  return Number.isFinite(credits) && credits >= 0 ? credits : null;
 }
 
 const RETRYABLE = new Set([429, 500, 502, 503, 504]);
@@ -128,7 +195,11 @@ export async function synthesize(spokenText, config, key, { attempts = 4 } = {})
           `response was not audio (content-type ${type}): ${(await response.text()).slice(0, 200)}`,
         );
       }
-      return Buffer.from(await response.arrayBuffer());
+
+      const credits = creditsFrom(response.headers);
+      const audio = Buffer.from(await response.arrayBuffer());
+      if (audio.byteLength === 0) throw new Error("ElevenLabs returned an empty response");
+      return { audio, credits };
     }
 
     const text = (await response.text()).slice(0, 300);
