@@ -1,18 +1,18 @@
 # VoiceOver for World of Warcraft
 
-## v2: https://allvoice.ai
-Contribute voices on [allvoice.ai](https://allvoice.ai) so I can give each NPC a unique AI voicemodel to power their dialog. The top rated voice for each NPC will be used. 
-
-
+### [voiceline explorer: voiceover.rusty.one](https://voiceover.rusty.one)
 ### [voiceover discord](https://discord.gg/VdhUmA8ZCt)
-### [allvoice code](https://github.com/allvoice/allvoice-website)
 
 ## Overview
 
 A pipeline for producing AI voiceovers for WoW Classic dialog. The sound pack and the addon
 data module are build outputs of this project.
 
-Three stages, and only the first needs a database:
+Every line the project knows about is browsable, playable and — for signed-in collaborators —
+re-voiceable at [voiceover.rusty.one](https://voiceover.rusty.one), which is the `web/`
+directory of this repo running against the same corpus and audio store the CLI produces.
+
+Five stages, and only the first needs a database:
 
 | Stage | Input | Output | Who runs it |
 | --- | --- | --- | --- |
@@ -29,8 +29,9 @@ database, no dump, and no Docker.
 
 ## Requirements
 
-- Python 3.10+
-- Docker — **only** to refresh the corpus (see "Refreshing the corpus")
+- Python 3.10+ — the pipeline
+- Node 24 and pnpm — **only** to run the web explorer locally
+- Docker — the vmangos MySQL when refreshing the corpus, and the explorer's Postgres
 
 ## Installation
 
@@ -57,7 +58,7 @@ column it didn't previously capture.
 
 ```bash
 pip install -r requirements-extract.txt   # adds pandas, numpy, PyMySQL
-docker compose up -d
+docker compose up -d mysql                # the vmangos world DB
 python cli-main.py init-db                # download and import the vmangos dump
 python cli-main.py extract                # writes corpus/corpus.json.gz
 ```
@@ -65,7 +66,30 @@ python cli-main.py extract                # writes corpus/corpus.json.gz
 Commit the resulting corpus; the diff is reviewable.
 
 ## Voice Setup
-The generation scripts assume you have voices created in Elevenlabs named in the format `race-gender`. For the exact races the script checks your elevenlabs account for, refer to `tts_cli\consts.py`. Gender will always either be `male` or `female`. ex: `orc-male`. You will need to create your own voice clones. A good place to get samples is @ https://www.wowhead.com/sounds/npc-greetings/name:orc 
+
+Generation resolves a voice by *name*, so your ElevenLabs account must hold voices named
+`race-gender-flavor` — `orc-male-shady`, `nightelf-female-priestess`, `dwarf-male-grim`.
+Stock library voices are ignored: their names cannot express that mapping.
+
+**The flavor is which of a race and gender's several voices an NPC actually speaks with.**
+Every playable race-gender has two or three distinct NPC voice sets recorded by different
+actors — nightelf-male is standard, warrior and official; orc-female is standard, shaman and
+warrior. The game chooses per NPC through its display info, and `tts_cli/flavors.py` recovers
+that choice from the SoundEntries names, falling back to the race-gender's commonest set when
+the game data does not answer. The corpus carries the result, so the current corpus needs 54
+voices rather than one per race-gender. `narrator-male` is the exception and has no flavor:
+it is a pseudo-race for gameobjects and items.
+
+The whole set is listed on `/voices`, which is also the easiest way to build it — see
+"Managing voices". The clips to build them from are Blizzard's own NPC greeting barks:
+
+```bash
+python tools/fetch_npc_lines.py          # into voice/npc-lines/<race-gender>/<flavor>/
+```
+
+That directory is gitignored and local-only. It is Blizzard's audio, and it is input to a
+pipeline rather than something to redistribute.
+
 ## Usage
 
 ```bash
@@ -104,20 +128,26 @@ filesystem, so building the two together is what stops a line going silent.
 
 Nothing in a filename identifies an NPC — quest audio is `{questID}-{accept|complete}.mp3`
 and gossip audio is a content hash — so an NPC's lines are scattered across ~9,500 files
-with no shared key. The web explorer reassembles that view:
+with no shared key. The web explorer reassembles that view. It is deployed at
+[voiceover.rusty.one](https://voiceover.rusty.one); to run it locally:
 
 ```bash
-docker compose up -d postgres          # accounts and roles live here
-cd web && pnpm install
-cp .env.example .env.local
-psql "$DATABASE_URL" -f migrations/0001_auth.sql
-pnpm dev                               # http://localhost:3000
+docker compose up -d postgres          # the app's own database
+cd web && pnpm install && cp .env.example .env.local && cd ..
+export DATABASE_URL=postgres://voiceover:voiceover@127.0.0.1:5432/voiceover
+deploy/bin/migrate.sh "$PWD/web"       # every migration, in order
+cd web && pnpm dev                     # http://localhost:3000
 ```
 
-Search by NPC name or id, or quest title or id, and play any line in the browser. The
-corpus and the audio store are still read straight off disk and never written — Postgres
-holds only accounts, sessions and roles. Run `import-audio` first, or every line shows as
-a gap.
+Apply migrations with that script rather than by hand: it is what the droplet and CI run, so
+a migration that only works under an improvised `psql` fails here instead of mid-deploy. It
+reads `DATABASE_URL` from the environment, which `.env.local` does not export.
+
+Search by NPC name or id, or quest title or id, and play any line in the browser. The corpus
+and the audio store are read straight off disk; the corpus is never written. Postgres holds
+what the corpus cannot: accounts and roles, the take history behind each regeneration, the
+pronunciation lexicon, hand-written line overrides, the scan's findings and the regeneration
+queue. Run `import-audio` first, or every line shows as a gap.
 
 Lines with no audio are marked. `no audio` is a real gap; `progress` and `invalid-chars`
 are lines the generator deliberately never voices.
@@ -130,15 +160,37 @@ Registration at `/register` is open and needs no email confirmation. Everyone st
 | Role | Can |
 |---|---|
 | `member` | browse and play, like a signed-out visitor |
-| `collaborator` | the above, plus **Regenerate** on every line, quest and NPC, and the take history behind each |
-| `admin` | the above, plus `/admin` to change anyone's role, `/voices` to manage voices and the global generation settings, and `/lexicon` to correct how names are pronounced |
+| `collaborator` | the above, plus **Regenerate** on every line, quest and NPC, the take history behind each, and rewriting what a line says out loud |
+| `admin` | the above, plus `/admin` to change anyone's role, `/voices` to manage voices and the global generation settings, `/lexicon` to correct how names are pronounced, and `/issues` to work through what the corpus scan found |
 
 #### Regenerating audio
 
-A line, a quest or a whole NPC can be re-voiced from the explorer. The browser drives a
-batch one line at a time, so there is no queue and no worker: the loop, its progress and its
-stop button live on the page, and closing the tab ends the batch with the finished lines
-already written.
+A line, a quest or a whole NPC can be re-voiced from the explorer. A single line is
+regenerated directly — one click, one answer. Anything larger goes through a queue.
+
+**A batch is rows in Postgres, not a loop in a tab.** Starting one posts the *filters* rather
+than a job list, and the server re-derives the same line set the search ran, so a
+forty-thousand-line batch is a small request. Closing the tab, reloading, losing the network
+or deploying mid-batch changes nothing: the jobs are still there, and whichever process holds
+the queue's Postgres advisory lock keeps draining them. That leader is one of the pm2 workers,
+elected rather than configured, and a `pm2 reload` is a handover — the outgoing leader
+finishes what is in flight before it lets go.
+
+**It runs several at a time.** Concurrency comes from what the ElevenLabs plan allows for the
+model in force, minus one slot held back so the single-line button and the `/lexicon` previews
+are never starved by a running batch. A rate limit halves the budget for a minute rather than
+retrying into a wall; a rate-limited job backs off with jitter and is retried three times
+before it fails. A *fatal* error — quota, a bad key, a missing voice — fails the job and
+cancels the rest of the batch in the same statement, because those fail every remaining line
+identically.
+
+**The panel is global.** It shows counts by state, the real summed credits, the failures and
+whatever another admin started, since the budget being spent is the same account's. **Stop**
+cancels everything pending and lets the in-flight requests finish: those characters are billed
+already, so throwing away the audio would pay for nothing.
+
+**Nothing is generated twice.** A partial unique index on the file rejects a job for an mp3
+already pending or running, and the panel reports how many it skipped rather than hiding them.
 
 **Regeneration replaces a file, not a line.** 1,076 files are spoken by more than one NPC —
 a gossip file is named `md5(text + race + gender)` — so every NPC sharing a line hears the
@@ -164,7 +216,7 @@ reads, so the two can drift; the page shows which is in force.
 #### Pronunciation
 
 `/lexicon` is admin-only, and holds the names a text-to-speech reader gets wrong — Gnomeregan
-with its silent G, Kel'Thuzad, Cairne, and 130 more, each with an IPA pronunciation. Saving
+with its silent G, Kel'Thuzad, Cairne, and the 131 others it starts with. Saving
 uploads them to ElevenLabs as a pronunciation dictionary and pins every later request to that
 exact version.
 
@@ -218,20 +270,61 @@ time.
 The Python CLI sends no dictionary at all — it is the one place the two generators no longer
 produce identical audio.
 
+#### What the corpus scan found
+
+`tools/scan_corpus_hiccups.py` reads the corpus and writes `corpus/hiccups.json.gz`: every
+token or fragment likely to trip a reader up — invented names no pronunciation rule covers,
+stage directions in asterisks, Blizzard's own typos, raw binary, alphanumeric codes. The
+artifact is committed and ships inside a release; `/issues` → **Reload scan** loads it into
+Postgres, and it is never read on the search path. `docs/corpus-hiccups.md` documents the
+method and the categories.
+
+**A finding is a detection, not a defect.** `Ashenvale` occurring 199 times is a fact about
+the corpus; whether it is a problem depends on the lexicon and on someone having listened. So
+the scan does not consult the lexicon — coverage is decided when the findings are loaded, and
+a reload replaces every detection while leaving every verdict (`open`, `fixed`,
+`dismissed`) alone.
+
+**Some lines cannot be fixed by pronunciation.** `q:1155:accept` is the single letter `x`;
+`q:257:complete` says "adventurerama", because Blizzard wrote `$Nama` and the token
+substitutes to a fixed word. For those a collaborator rewrites what the line *says*, and the
+explorer marks it **rewritten**. An override changes the spoken text only: the filename and
+every addon lookup key derive from the original text, so a rewrite can never rename a file or
+make the addon miss it. It also reopens the `invalid-chars` gate — stripping a `$` or a `<>`
+makes an otherwise unvoiceable line voiceable — while `progress` lines stay skipped, because
+that is policy rather than a text defect.
+
+**Audio made before a fix says so.** Every take records a hash of the exact string sent to
+ElevenLabs, so a line whose text has since changed — by a rewrite, a pronunciation rule or a
+corpus refresh — is marked **text changed** and stays playable until someone regenerates it.
+Takes from before that hash existed are reported as fresh rather than guessed at.
+
+Like the lexicon, overrides live only in the database, and the Python CLI does not see them.
+
 #### Managing voices
 
-`/voices` is admin-only. It lists the 20 `race-gender` voices the corpus needs, busiest
-first, and marks which exist in the ElevenLabs account. Expanding one shows the clips it
-would be cloned from: upload, play back, delete, and **merge** a selection into one take with
-an adjustable pause.
+`/voices` is admin-only. It lists the 54 `race-gender-flavor` voices the corpus needs —
+alphabetically, so a race-gender's flavors sit together — with the lines and NPCs each one
+carries, and marks which exist in the ElevenLabs account. The list is derived from the corpus
+rather than written down, so a race added upstream cannot leave the page quietly missing a
+voice.
 
-Merging is there because the practical source is wowhead NPC greetings, about a second each.
+Expanding one shows the clips it would be cloned from: upload, play back, delete, and
+**merge** a selection into one take with an adjustable pause. A slot finds its own source
+material in `voice/npc-lines/<race-gender>/<flavor>/`, which is the shape of its name — no
+mapping table to keep in sync when a flavor is added. Two slots have nothing to seed from and
+that is expected: `narrator-male` is not a race, and `bloodelf-female` is one Sylvanas line
+from a later expansion's model.
+
+Merging is there because the practical source is one-second greeting barks.
 ElevenLabs treats combined length as what decides clone quality — one to two minutes is the
 target, past three it grows unstable — and a pile of one-second files gives the model no
 continuity between them. It defaults to deleting the originals, because cloning uploads every
 clip in the folder and keeping both would send the same audio twice.
 
-**Create voice** spends one of the account's custom voice slots (30 on Creator). **Replace**
+**Create voice** spends one of the account's custom voice slots (30 on Creator, fewer than
+the 54 the corpus asks for, so a Creator account cannot hold the full roster at once).
+**Replace**
 is delete-then-add: ElevenLabs has no re-train call, and two voices sharing a name would make
 `fetch_voice_map` ambiguous. The clips stay on disk either way — an ElevenLabs voice cannot
 be exported, so they are the only way to remake one. Losing that is precisely why this project
@@ -248,9 +341,11 @@ UPDATE "user" SET role = 'admin' WHERE email = 'you@example.com';
 
 #### Deploying the explorer
 
-The explorer is hosted on a DigitalOcean droplet. Pushing to `master` builds and ships it
-automatically; the audio store moves separately, by hand, because it is 1.1 GB and belongs
-in neither git nor CI.
+The explorer runs at [voiceover.rusty.one](https://voiceover.rusty.one), on a DigitalOcean
+droplet behind nginx. Pushing to `master` builds and ships it automatically — the workflow
+typechecks, applies the migrations with the droplet's own script, runs the tests against a
+throwaway Postgres, and only then builds and swaps the release. The audio store moves
+separately, by hand, because it is 1.1 GB and belongs in neither git nor CI.
 
 ```bash
 make push            # local audio/ -> droplet, then reload (dry-run + confirm first)
@@ -275,7 +370,13 @@ make history-status
 Deploys are versioned as directories under `/srv/voiceover/releases/`, with `current` a
 symlink that pm2 follows, so a rollback is a symlink swap needing neither CI nor network.
 The audio store lives outside every release in `shared/`: it is never copied on deploy and
-survives a rollback untouched.
+survives a rollback untouched. Migrations run before the swap and are forward-only — a
+rollback restores code, never schema, so every release must run against the schema of the
+release after it.
+
+A running batch survives a deploy. The new leader picks up whatever it finds in the queue,
+and the outgoing one is given 30 seconds to finish its in-flight generations before pm2 kills
+it, which is what `kill_timeout` in `deploy/ecosystem.config.js` is for.
 
 First-time droplet setup, the nginx vhost, and the GitHub secrets the workflow needs are in
 [`deploy/README.md`](deploy/README.md).
@@ -288,6 +389,9 @@ To create the lookup tables, you can use the following command, with `LANGUAGE_C
 python cli-main.py gen_lookup_tables --lang=LANGUAGE_CODE
 ```
 The default selection, when no language code is provided, is English. Please be aware that the quality of text completion for translations in languages other than English can vary significantly.
+
+Unlike `build`, this reads the world database directly, so it needs the Docker MySQL and the
+extraction dependencies — the committed corpus is English only.
 
 The following language codes are supported:
 | Language Code | Language |
@@ -304,16 +408,43 @@ The following language codes are supported:
 | ruRU          | Russian |
 
 ## Output
-The generated TTS audio files will be saved in the sounds folder, with separate subfolders for quests and gossip. Lookup tables and sound length tables will also be generated for use in the addon. 
+
+`synthesize` writes into the audio store at `audio/{quests,gossip}/`, which is gitignored and
+is the project's most expensive asset — it moves between machines with `make push` / `make
+pull` and never through git or CI. `build` copies from there into
+`dist/AI_VoiceOverData_Vanilla/generated/sounds/`, alongside every lookup table and the
+`sound_length_table.lua` computed from exactly those mp3s.
 
 ## Addon Install
-Copy over the `generated` folder to the VoiceOverData_Vanilla folder, then the VoiceOver and VoiceOverData_Vanilla folder to `World of Warcraft/_classic_era_/Interface/AddOns`. Alternatively, you can syslink instead of copying for faster development.
-Example syslink:
+
+```bash
+python cli-main.py install --force        # dist/<module> -> the AddOns folder
+```
+
+`install` targets `_classic_era_` by default (`--addons` for another path) and moves any
+existing install aside to `<module>.replaced` rather than deleting it. The addon itself —
+`AI_VoiceOver/` — is a separate folder in the same AddOns directory; symlink both for faster
+development:
+
 ```bash
 export WOW_DIR=PATH_OF_YOUR_WOW_DIR
-ln -s ./VoiceOver "$WOW_DIR/_classic_era_/Interface/AddOns"
-ln -s ./VoiceOver_Vanilla "$WOW_DIR/_classic_era_/Interface/AddOns"
+ln -s "$PWD/AI_VoiceOver" "$WOW_DIR/_classic_era_/Interface/AddOns/AI_VoiceOver"
+ln -s "$PWD/dist/AI_VoiceOverData_Vanilla" "$WOW_DIR/_classic_era_/Interface/AddOns/AI_VoiceOverData_Vanilla"
 ```
+## Tests
+
+```bash
+pip install -r requirements-dev.txt && pytest       # the pipeline
+cd web && pnpm typecheck && pnpm test               # the explorer
+```
+
+The web suite runs against a **real Postgres**, because the invariants it protects — archive
+the current take before anything overwrites it, never hand the same file to two jobs — live in
+schema constraints rather than in code. It reads `DATABASE_URL` from the environment or from
+`web/.env.local`, and runs one file at a time, since claiming from a shared queue is global by
+definition. `audio.test.ts` is the one that stops a naming change going unnoticed: it asserts
+every file in the store is addressed by some corpus line.
+
 ## Contributing
 If you want to contribute to this project, please feel free to open an issue or submit a pull request.
 

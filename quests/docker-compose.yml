@@ -12,8 +12,9 @@ services:
     ports:
       - "3306:3306"
 
-  # The website's own database: accounts, sessions and roles. Nothing else lives here - the
-  # corpus and the audio store are still read off disk.
+  # The website's own database: accounts and roles, take history, the pronunciation lexicon,
+  # line overrides, the scan's findings and the regeneration queue. The corpus and the audio
+  # store are still read off disk, and the corpus is never written.
   postgres:
     image: postgres:16
     container_name: voiceover-postgres
