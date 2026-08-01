@@ -49,7 +49,7 @@ export default function RegenerationPanel({
     // an answer at all - the alternative is a button that appears to do nothing.
     if (!note) return null;
     return (
-      <div className="bg-card/95 fixed inset-x-0 bottom-[92px] z-40 border-t backdrop-blur">
+      <div className="bg-card/95 border-t backdrop-blur">
         <div className="text-muted-foreground mx-auto max-w-6xl px-5 py-2.5 text-sm">{note}</div>
       </div>
     );
@@ -67,7 +67,7 @@ export default function RegenerationPanel({
   const stopped = !active && (snapshot.latestBatch?.cancelled ?? 0) > 0;
 
   return (
-    <div className="bg-card/95 fixed inset-x-0 bottom-[92px] z-40 border-t backdrop-blur">
+    <div className="bg-card/95 border-t backdrop-blur">
       <div className="mx-auto max-w-6xl px-5 py-2.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           {active && <Loader2 className="size-4 shrink-0 animate-spin" />}
