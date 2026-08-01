@@ -217,13 +217,31 @@ end
 -- Setup
 --------------------------------------------------------------------------------
 
--- Which event carries the message depends on whether the discovery awarded
--- experience, so listen to both rather than betting on one. A message that is not
--- a discovery simply does not match the patterns.
+-- Four events, because the message's route is not something to bet on. Its text
+-- lives in a global named ERR_*, and ERR_ strings normally arrive on
+-- UI_INFO_MESSAGE / UI_ERROR_MESSAGE; but exploration also awards experience,
+-- which is CHAT_MSG_COMBAT_XP_GAIN territory, and plain system text is
+-- CHAT_MSG_SYSTEM. Registering all four costs nothing -- anything that is not a
+-- discovery fails the patterns -- and betting on one costs a play session.
 local DISCOVERY_EVENTS = {
 	"CHAT_MSG_SYSTEM",
 	"CHAT_MSG_COMBAT_XP_GAIN",
+	"UI_INFO_MESSAGE",
+	"UI_ERROR_MESSAGE",
 }
+
+-- The payload is not in the same position across those events: CHAT_MSG_* put the
+-- text first, while UI_*_MESSAGE put a numeric messageType first and the text
+-- second. Rather than encode that per event, take whichever argument is a string.
+local function TextFrom(...)
+	for i = 1, select("#", ...) do
+		local value = select(i, ...)
+		if type(value) == "string" then
+			return value
+		end
+	end
+	return nil
+end
 
 function ZoneLore:SetupAutoplay()
 	local frame = CreateFrame("Frame")
@@ -231,14 +249,16 @@ function ZoneLore:SetupAutoplay()
 		frame:RegisterEvent(event)
 	end
 
-	frame:SetScript("OnEvent", function(_, event, message)
+	frame:SetScript("OnEvent", function(_, event, ...)
+		local message = TextFrom(...)
 		local area = AreaFromMessage(message)
 		if area then
 			ZoneLore:OnAreaDiscovered(area)
-		elseif ZoneLore:Get("debug") and event == "CHAT_MSG_SYSTEM" then
-			-- Printed under debug only. If discovery messages ever stop matching,
-			-- this is what shows the text that should have.
-			ZoneLore:Print("|cff888888system: %s|r", tostring(message))
+		elseif message and ZoneLore:Get("debug") then
+			-- Under debug only, and for every watched event rather than one of
+			-- them. If a discovery ever stops being recognised, this is the line
+			-- that shows which event carried it and what it actually said.
+			ZoneLore:Print("|cff888888%s: %s|r", event, message)
 		end
 	end)
 

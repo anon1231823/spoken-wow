@@ -334,14 +334,40 @@ The messages are matched with patterns built at runtime from `ERR_ZONE_EXPLORED_
 ("Discovered %s: %d experience gained.") and `ERR_ZONE_EXPLORED` ("Discovered
 %s."), read from the running client. Deriving the patterns from the globals rather
 than hardcoding English makes this work in every locale for free, and makes a
-Blizzard rewording a non-event. Both `CHAT_MSG_SYSTEM` and
-`CHAT_MSG_COMBAT_XP_GAIN` are watched, since which one carries the message depends
-on whether the discovery awarded experience.
+Blizzard rewording a non-event.
+
+Four events are watched — `CHAT_MSG_SYSTEM`, `CHAT_MSG_COMBAT_XP_GAIN`,
+`UI_INFO_MESSAGE` and `UI_ERROR_MESSAGE` — because the message's route is not worth
+betting on. The text lives in a global named `ERR_*`, and `ERR_` strings normally
+arrive on `UI_INFO_MESSAGE`; but exploration also awards experience, which is
+`CHAT_MSG_COMBAT_XP_GAIN` territory. Registering all four costs nothing, since
+anything that is not a discovery fails the patterns, while betting on one costs a
+play session to find out.
+
+Their payloads are not shaped alike: `CHAT_MSG_*` put the text first, `UI_*_MESSAGE`
+put a numeric message type first and the text second. Rather than encode that per
+event, the handler takes whichever argument is a string.
 
 `/zl` reports how many of the two message forms the client defined; zero means the
 feature cannot fire and says so, rather than being silently dead. With `/zl debug`
-on, every unmatched system message is printed — which is what to look at if
-discoveries ever stop being recognised.
+on, every message arriving on any of the four events is printed with the event that
+carried it — which is what to look at if discoveries are not being recognised.
+
+### Testing autoplay
+
+**A discovery happens once per character, ever.** Re-entering an area that has
+already been explored produces no message and therefore no narration — so walking
+back into The Den proves nothing, and neither does any character that has already
+been played. This is the single easiest way to mistake the feature for broken.
+
+```
+/zl discover              pretend to discover the subzone you are standing in
+/zl discover The Den      pretend to discover a named area
+```
+
+That runs the same path a real discovery takes, short of the message parsing. To
+exercise the parsing itself, turn on `/zl debug` and walk into genuinely unexplored
+ground; every message on the four watched events is printed with its event name.
 
 #### Queue
 
