@@ -18,7 +18,7 @@ retail or the Anniversary/TBC client.
 | M4 minimap button + standalone lore window | done, **untested in-game** |
 | M5 options panel and polish | done, **untested in-game** |
 | M6 narration playback + autoplay on discovery | done, tested in-game |
-| M7 voiceline generation tool | done, **no audio generated yet** |
+| M7 voiceline generation tool | done; Durotar generated (44 lines) |
 
 ## Layout
 
@@ -488,7 +488,8 @@ hand-rolled scrollbar below.
 
 Audio is synthesized with ElevenLabs (`narrator-male`, model `eleven_v3`) and
 written into the `ZoneLoreAudio` addon. **1353 lines, 672,550 characters — about
-370,000 credits** on this plan (see "Characters are not credits" below).
+408,000 credits and 14.4 hours of audio** on this plan (see "Characters are not
+credits" below).
 
 ```sh
 cp .env.example .env    # then put your ELEVENLABS_API_KEY in it
@@ -502,6 +503,22 @@ node tools/voice/generate.mjs --all                     # what the whole corpus 
 node tools/voice/generate.mjs --zone Durotar            # one zone and its subzones
 node tools/voice/generate.mjs --all --zones-only        # the 49 zone lines
 node tools/voice/generate.mjs --missing --stale         # what needs work
+```
+
+A selection of 60 or fewer — a zone and its subzones — lists every line, largest
+first, with its cost, whether it is new, stale or current, and a `short` marker on
+anything under 250 characters, where v3 is least reliable. `--list` forces the
+full listing for a larger selection.
+
+```
+44 lines, largest first:
+
+  1188ch ~ 721cr  current Southfury River        1411/southfury-river
+  ...
+    83ch ~  50cr  current Spitescale Cavern      1411/spitescale-cavern short
+
+  11 under 250 characters (marked "short"): v3 is least reliable there, so listen
+  to those first.
 ```
 
 Selectors combine, and a `--zone` takes an id or a name (`--zone 1411`,
@@ -599,13 +616,19 @@ pronunciation change can be told apart from a text change after the fact.
 ### Characters are not credits
 
 ElevenLabs bills `round(characters × rate)`, and **the rate belongs to the plan,
-not the request** — measured at **0.55** on this account for standard models. So
-the corpus is 672,550 characters but roughly **370,000 credits**.
+not the request**. On this account with `eleven_v3` it is **0.607**, measured over
+the first 44 generated lines — so the corpus is 672,550 characters but roughly
+**408,000 credits**.
 
-The dry run estimates from `creditRate` in `config.json` and says it is an
-estimate. The real number is the `character-cost` response header, which is
-recorded per line in the manifest and totalled at the end of a run — the only way
-to know a cost without guessing at a subscription.
+That number is measured rather than assumed, because assuming it was wrong twice:
+0.55 carried over from the sibling project understated the bill by 10%, and 15
+characters/second understated the runtime by the same (it is 12.9). Every
+generated line records what it actually cost and how long it came out, so the dry
+run derives both from the manifest and says how many lines it measured over. The
+`config.json` values are only the answer for an empty manifest.
+
+The `character-cost` response header is always authoritative, and is what the
+manifest stores.
 
 ### What is committed, and what is not
 

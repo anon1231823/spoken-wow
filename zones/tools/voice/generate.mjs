@@ -50,6 +50,7 @@ function parseArgs(argv) {
     force: false,
     sample: false,
     concurrency: null,
+    list: false,
   };
 
   for (let i = 0; i < argv.length; i++) {
@@ -73,6 +74,7 @@ function parseArgs(argv) {
       case "--force": args.force = true; break;
       case "--sample": args.sample = true; break;
       case "--concurrency": args.concurrency = Number(next()); break;
+      case "--list": args.list = true; break;
       case "--help": case "-h": usage(); process.exit(0);
       default: throw new Error(`unknown argument ${arg} (try --help)`);
     }
@@ -100,7 +102,9 @@ Actions:
   --sample             two representative lines into audio-samples/, for
                        checking the voice before committing to a bulk run
   --concurrency <n>    override the per-plan request budget
-`);
+  --list               list every selected line, however many (a selection of
+                       %d or fewer lists itself)
+`.replace("%d", String(AUTO_LIST_LIMIT)));
 }
 
 //------------------------------------------------------------------------------
@@ -168,26 +172,99 @@ export function select(catalogue, args, manifest) {
 // Reporting
 //------------------------------------------------------------------------------
 
+// A zone and its subzones is the natural unit of work here and fits on a screen,
+// so a selection that size lists itself. --all does not, unless --list says so.
+const AUTO_LIST_LIMIT = 60;
+
+// Below this, Eleven v3 is documented as unreliable, and 305 of the 1353 entries
+// are shorter -- so the ones to listen to first are worth marking.
+const SHORT_LINE = 250;
+
+function listSelection(selected, manifest, config, args) {
+  if (!args.list && selected.length > AUTO_LIST_LIMIT) {
+    console.log(`(${selected.length} lines; --list to see them all)\n`);
+    return;
+  }
+
+  // Largest first: those are what the run costs, and what is worth checking.
+  const rows = [...selected].sort((a, b) => b.spoken.length - a.spoken.length);
+  const { creditRate: rate } = measureRates(manifest, config);
+  const width = String(rows[0].spoken.length).length;
+
+  console.log(`${rows.length} lines, largest first:\n`);
+  for (const entry of rows) {
+    const record = manifest[entry.id];
+    const state = !record ? "new" : record.textHash !== entry.hash ? "stale" : "current";
+    const credits = rate ? `~${String(Math.round(entry.spoken.length * rate)).padStart(width)}cr` : "";
+    const short = entry.spoken.length < SHORT_LINE ? " short" : "";
+
+    console.log(
+      `  ${String(entry.spoken.length).padStart(width)}ch ${credits}  ` +
+        `${state.padEnd(7)} ${(entry.name || entry.key || entry.zoneName).padEnd(34)} ${entry.file}${short}`,
+    );
+  }
+
+  const shortCount = rows.filter((e) => e.spoken.length < SHORT_LINE).length;
+  if (shortCount) {
+    console.log(`\n  ${shortCount} under ${SHORT_LINE} characters (marked "short"): `
+      + "v3 is least reliable there, so listen to those first.");
+  }
+  console.log("");
+}
+
+// Credits per character and characters per second, measured from what has
+// already been generated rather than assumed.
+//
+// Both were constants first, and both were wrong: 0.55 and 15 against a measured
+// 0.61 and 12.9, which is a 10% understatement of the bill and of the runtime.
+// Every generated line records what it actually cost and how long it came out, so
+// the estimate should come from that and improve as the corpus fills. The config
+// values remain the answer for a manifest with nothing in it yet.
+export function measureRates(manifest, config) {
+  let chars = 0, credits = 0, seconds = 0, counted = 0;
+
+  for (const record of Object.values(manifest)) {
+    if (typeof record.credits !== "number" || typeof record.chars !== "number") continue;
+    chars += record.chars;
+    credits += record.credits;
+    if (typeof record.durationSec === "number") seconds += record.durationSec;
+    counted++;
+  }
+
+  if (counted === 0 || chars === 0) {
+    return {
+      creditRate: config?.creditRate ?? null,
+      charsPerSecond: 15,
+      measuredFrom: 0,
+    };
+  }
+
+  return {
+    creditRate: credits / chars,
+    charsPerSecond: seconds > 0 ? chars / seconds : 15,
+    measuredFrom: counted,
+  };
+}
+
 function summarise(selected, manifest, label, config) {
   const chars = selected.reduce((n, e) => n + e.spoken.length, 0);
   const missing = selected.filter((e) => !manifest[e.id]).length;
   const stale = selected.filter((e) => manifest[e.id] && manifest[e.id].textHash !== e.hash).length;
 
-  // Characters are what the text is; credits are what the plan charges for it.
-  // ElevenLabs bills round(characters x rate) with the rate belonging to the
-  // plan, so this is an estimate and says so -- the character-cost header on each
-  // response is the real number, and is what the manifest records.
-  const rate = config?.creditRate;
-  const credits = rate ? Math.round(chars * rate) : null;
+  const { creditRate, charsPerSecond, measuredFrom } = measureRates(manifest, config);
+  const credits = creditRate ? Math.round(chars * creditRate) : null;
+  const source = measuredFrom
+    ? `measured over ${measuredFrom} generated line${measuredFrom === 1 ? "" : "s"}`
+    : "estimated from config.json";
 
   console.log(`${label}: ${selected.length} lines`);
   console.log(`  characters : ${chars.toLocaleString()}`);
   console.log(
     credits === null
       ? "  credits    : unknown (set creditRate in tools/voice/config.json)"
-      : `  credits    : ~${credits.toLocaleString()} estimated at ${rate}/character on this plan`,
+      : `  credits    : ~${credits.toLocaleString()} at ${creditRate.toFixed(3)}/char, ${source}`,
   );
-  console.log(`  audio      : ~${Math.round(chars / 15 / 60)} minutes at ~15 chars/second`);
+  console.log(`  audio      : ~${Math.round(chars / charsPerSecond / 60)} minutes at ${charsPerSecond.toFixed(1)} chars/second`);
   console.log(`  state      : ${missing} missing, ${stale} stale, ${selected.length - missing - stale} already current`);
 }
 
@@ -398,12 +475,8 @@ async function main() {
   }
 
   if (!args.generate) {
+    listSelection(selected, manifest, config, args);
     summarise(selected, manifest, "would generate", config);
-    console.log("\nfirst few:");
-    for (const entry of selected.slice(0, 3)) {
-      console.log(`\n  ${entry.id}  (${entry.spoken.length} chars) -> ${entry.file}.mp3`);
-      console.log(`  ${entry.spoken.slice(0, 220)}${entry.spoken.length > 220 ? "..." : ""}`);
-    }
     console.log("\nThis was a dry run. Add --generate to spend credits.");
     return;
   }
