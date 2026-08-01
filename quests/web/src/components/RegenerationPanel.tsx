@@ -22,25 +22,45 @@ function n(value: number): string {
  * The cost shown is the real one, summed from what ElevenLabs charged each line, not the
  * estimate the dialog offered - so an estimate that was wrong is visible rather than quietly
  * preserved.
+ *
+ * `note` answers the click rather than the batch: it says what the enqueue request itself
+ * reported (refused outright, or queued fewer files than quoted because another admin had
+ * already claimed some) - information the server snapshot has no field for, since it is
+ * about one request rather than the queue's ongoing state.
  */
 export default function RegenerationPanel({
   queue,
+  note,
   onStop,
   onDismiss,
 }: {
   queue: QueueSnapshot | null;
+  note: string | null;
   onStop: () => void;
   onDismiss: () => void;
 }) {
-  if (!queue) return null;
+  const counts = queue?.counts;
+  const total = counts
+    ? counts.pending + counts.running + counts.done + counts.failed + counts.cancelled
+    : 0;
 
-  const { pending, running, done, failed, cancelled } = queue.counts;
-  const total = pending + running + done + failed + cancelled;
-  if (total === 0) return null;
+  if (total === 0) {
+    // Without a batch to show, this is the only way a refused or partly-skipped click gets
+    // an answer at all - the alternative is a button that appears to do nothing.
+    if (!note) return null;
+    return (
+      <div className="bg-card/95 fixed inset-x-0 bottom-[92px] z-40 border-t backdrop-blur">
+        <div className="text-muted-foreground mx-auto max-w-6xl px-5 py-2.5 text-sm">{note}</div>
+      </div>
+    );
+  }
 
+  // `queue` cannot be null here: total > 0 only when counts came from a real snapshot.
+  const snapshot = queue!;
+  const { pending, running, done, failed, cancelled } = counts!;
   const attempted = done + failed;
   const percent = total ? Math.round((attempted / total) * 100) : 0;
-  const active = queue.active;
+  const active = snapshot.active;
 
   return (
     <div className="bg-card/95 fixed inset-x-0 bottom-[92px] z-40 border-t backdrop-blur">
@@ -63,8 +83,8 @@ export default function RegenerationPanel({
           <span className="text-muted-foreground ml-auto font-mono text-xs">
             {/* Unpriced takes are counted separately rather than folded in as zero, which
                 would understate the total and look like a bargain. */}
-            {n(queue.credits)} credits
-            {queue.unpriced > 0 && ` · ${n(queue.unpriced)} unpriced`}
+            {n(snapshot.credits)} credits
+            {snapshot.unpriced > 0 && ` · ${n(snapshot.unpriced)} unpriced`}
           </span>
 
           {active ? (
@@ -85,23 +105,25 @@ export default function RegenerationPanel({
           />
         </div>
 
-        {queue.running.length > 0 && active && (
+        {note && <div className="text-muted-foreground mt-1.5 text-xs">{note}</div>}
+
+        {snapshot.running.length > 0 && active && (
           <div className="text-muted-foreground mt-1.5 truncate text-xs">
-            {queue.running.map((job) => `${job.npcName} — ${job.preview}`).join(" · ")}
+            {snapshot.running.map((job) => `${job.npcName} — ${job.preview}`).join(" · ")}
           </div>
         )}
 
-        {queue.stoppedBecause && (
+        {snapshot.stoppedBecause && (
           <div role="alert" className="text-destructive mt-1.5 text-xs">
-            {queue.stoppedBecause}
+            {snapshot.stoppedBecause}
           </div>
         )}
 
         {/* Failures are listed rather than counted: "3 failed" tells you nothing you can act
             on, and the upstream text usually tells you exactly what to fix. */}
-        {queue.failures.length > 0 && !active && (
+        {snapshot.failures.length > 0 && !active && (
           <ul className="text-muted-foreground mt-1.5 max-h-24 space-y-0.5 overflow-y-auto text-xs">
-            {queue.failures.map((job) => (
+            {snapshot.failures.map((job) => (
               <li key={job.lineId} className="truncate">
                 <span className="font-mono">{job.lineId}</span> — {job.message}
               </li>

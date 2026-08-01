@@ -147,6 +147,10 @@ export default function Explorer({ facets }: { facets: Facets }) {
   // The queue, as the server sees it. Null until the first poll answers.
   const [queue, setQueue] = useState<QueueSnapshot | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  // What the enqueue request itself answered, as opposed to what the queue is doing: a
+  // `null` result or a nonzero `skipped` count is information about the click, not about the
+  // batch, and the snapshot the poll returns has no room for it.
+  const [queueNote, setQueueNote] = useState<string | null>(null);
   // The high-water mark of jobs already adopted, so a poll only carries what is new and a
   // tab that slept catches up in one request instead of missing the window.
   const cursor = useRef<string | null>(null);
@@ -393,6 +397,11 @@ export default function Explorer({ facets }: { facets: Facets }) {
 
     let timer: NodeJS.Timeout;
     let cancelled = false;
+    // The last snapshot's activity, kept outside state so a dropped poll has something to
+    // fall back on: a null response means the network hiccuped, not that the batch finished,
+    // and scheduling the next attempt at the idle pace would leave the panel stale for up to
+    // fifteen seconds of a batch someone is actively watching.
+    let active = false;
     const controller = new AbortController();
 
     async function poll() {
@@ -400,6 +409,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       if (cancelled) return;
 
       if (snapshot) {
+        active = snapshot.active;
         cursor.current = snapshot.cursor;
         setQueue(snapshot);
         // Every line that landed since the last poll, adopted the same way a click's result
@@ -410,7 +420,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
         if (snapshot.active) setDismissed(false);
       }
 
-      timer = setTimeout(poll, snapshot?.active ? 2_000 : 15_000);
+      timer = setTimeout(poll, active ? 2_000 : 15_000);
     }
 
     void poll();
@@ -482,8 +492,21 @@ export default function Explorer({ facets }: { facets: Facets }) {
     if (!pendingBatch) return;
     setPendingBatch(null);
     setDismissed(false);
-    await queueBatch(new URLSearchParams(filterQuery), pendingBatch.label);
-    // Do not wait for the two-second tick to show that the button did something.
+    setQueueNote(null);
+
+    const result = await queueBatch(new URLSearchParams(filterQuery), pendingBatch.label);
+    if (!result) {
+      // No reason offered because none was given: the route refused for a cause this
+      // response does not carry, and inventing one would be a guess dressed as an answer.
+      setQueueNote("Could not queue the batch.");
+    } else if (result.skipped > 0) {
+      setQueueNote(`${result.skipped.toLocaleString()} already queued`);
+    }
+
+    // Do not wait for the two-second tick to show that the button did something. This races
+    // the poll effect's own fetch harmlessly: applySuccess is idempotent and the cursor only
+    // advances, so whichever answer lands first, adopting it twice or out of order changes
+    // nothing.
     const snapshot = await fetchQueue(cursor.current);
     if (snapshot) {
       cursor.current = snapshot.cursor;
@@ -716,8 +739,12 @@ export default function Explorer({ facets }: { facets: Facets }) {
 
       <RegenerationPanel
         queue={dismissed ? null : queue}
+        note={dismissed ? null : queueNote}
         onStop={() => void stopQueue()}
-        onDismiss={() => setDismissed(true)}
+        onDismiss={() => {
+          setDismissed(true);
+          setQueueNote(null);
+        }}
       />
 
       <Player ref={audio} line={current} version={current ? versions[current.audioPath] : undefined} />
