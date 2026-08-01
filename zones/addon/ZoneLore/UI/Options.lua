@@ -223,15 +223,21 @@ function ZoneLore:SetupOptions()
 		end)
 
 	y = y + ROW_GAP
-	MakeCheckbox(panel, "autoplay", "Narrate new areas as you explore them",
-		"Plays a zone or subzone's lore the first time this character enters it. "
-			.. "New areas queue behind whatever is already playing rather than "
-			.. "interrupting it. /zl forget clears the list.",
+	MakeCheckbox(panel, "autoplay", "Narrate a zone when you discover it",
+		"Triggered by the game's own discovery -- the moment it prints "
+			.. "\"Discovered Durotar\". Fires once per character, because that is "
+			.. "when the game fires it.",
 		INDENT, y, function()
 			if not ZoneLore:Get("autoplay") then
 				ZoneLore:StopLore()
 			end
 		end)
+
+	y = y + ROW_GAP
+	MakeCheckbox(panel, "autoplaySubzones", "Also narrate subzones you discover",
+		"There are far more subzone discoveries than zone ones -- a walk across "
+			.. "Elwynn sets off several -- so this is off by default.",
+		INDENT + INDENT, y, nil)
 
 	y = y + ROW_GAP
 	MakeCheckbox(panel, "showPlaybackBar", "Show playback controls while narrating",

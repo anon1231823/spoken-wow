@@ -34,6 +34,9 @@ local defaults = {
 	voiceChannel = "Dialog",
 	showPlaybackBar = true,
 	autoplay = true,
+	-- Off by default: the client announces far more subzone discoveries than zone
+	-- ones, and a subzone's lore is usually the less interesting of the two.
+	autoplaySubzones = false,
 	-- `playbackBarPos` is deliberately absent: nil means "below the minimap", which
 	-- is an anchor rather than a coordinate and so cannot be expressed here.
 	debug = false,
@@ -463,12 +466,8 @@ local function CmdStatus()
 		)
 	end
 
-	if ZoneLore.CountHeardAreas then
-		local heardZones, heardSubzones = ZoneLore:CountHeardAreas()
-		ZoneLore:Print(
-			"autoplay %s -- this character has heard %d zones and %d subzones",
-			ZoneLore:Get("autoplay") and "on" or "off", heardZones, heardSubzones
-		)
+	if ZoneLore.DescribeAutoplay then
+		ZoneLore:DescribeAutoplay()
 	end
 
 	if ZoneLore:Get("debug") then
@@ -530,8 +529,8 @@ local function CmdHelp()
 	ZoneLore:Print("  /zl play       -- read the current lore aloud")
 	ZoneLore:Print("  /zl stop       -- stop the narration")
 	ZoneLore:Print("  /zl voice      -- toggle narration on or off")
-	ZoneLore:Print("  /zl autoplay   -- toggle narrating new areas on arrival")
-	ZoneLore:Print("  /zl forget     -- clear which areas this character has heard")
+	ZoneLore:Print("  /zl autoplay   -- toggle narrating areas as you discover them")
+	ZoneLore:Print("  /zl discover   -- pretend to discover an area (dev)")
 	ZoneLore:Print("  /zl bar        -- move the playback controls back below the minimap")
 	ZoneLore:Print("  /zl minimap    -- show or hide the minimap button")
 	ZoneLore:Print("  /zl debug      -- report area names on map click")
@@ -592,12 +591,18 @@ SlashCmdList["ZONELORE"] = function(msg)
 			ZoneLore:StopLore()
 		end
 		ZoneLore:Print("autoplay %s", enabled and "enabled" or "disabled")
-	elseif cmd == "forget" then
-		if ZoneLore.ForgetHeardAreas then
-			ZoneLore:StopLore()
-			ZoneLore:ForgetHeardAreas()
-			ZoneLore:Print("forgot every area this character has heard -- they will narrate again")
+	elseif cmd == "discover" then
+		-- Simulates a discovery, because the real one happens once per character
+		-- ever and is otherwise untestable without rolling a fresh alt.
+		local areaName = (msg or ""):match("^%s*%S+%s+(.-)%s*$")
+		if not areaName or areaName == "" then
+			areaName = GetSubZoneText()
+			if not areaName or areaName == "" then
+				areaName = GetZoneText()
+			end
 		end
+		ZoneLore:Print('simulating discovery of "%s"', tostring(areaName))
+		ZoneLore:OnAreaDiscovered(areaName)
 	elseif cmd == "bar" then
 		if ZoneLore.ResetPlaybackBarPosition then
 			ZoneLore:ResetPlaybackBarPosition()

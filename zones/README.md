@@ -28,7 +28,7 @@ addon/ZoneLore/          the addon itself (this is what WoW loads)
   embeds.xml             loads the bundled libraries
   Core.lua               namespace, saved variables, events, zone/subzone lookup
   Audio.lua              narration playback state
-  Autoplay.lua           narrate an area the first time this character enters it
+  Autoplay.lua           narrate an area when the game announces its discovery
   Data/Zones.lua         GENERATED -- do not edit by hand
   Data/Subzones.lua      GENERATED -- do not edit by hand
   Sounds/placeholder.mp3 stand-in played when there is no real voiceover
@@ -295,39 +295,63 @@ Its duration is hardcoded in `Audio.lua` as `PLACEHOLDER_DURATION`, because the
 client cannot report how long a sound file is. Swap the file and that number has
 to change with it.
 
-### Autoplay on first visit
+### Autoplay on discovery
 
-On by default: entering a zone or subzone this character has never been to narrates
-its lore. `/zl autoplay` toggles it, `/zl` reports how many areas the character has
-heard, and `/zl forget` clears the list so everything narrates again — which is the
-only practical way to test the feature twice.
+On by default: **the game's own discovery is the trigger** — the moment it prints
+"Discovered Durotar", that zone's lore plays. `/zl autoplay` toggles it, and `/zl`
+reports whether the feature can work at all on this client.
 
-**Memory is per character** (`## SavedVariablesPerCharacter: ZoneLoreCharDB`), not
-per account. Exploring somewhere for the first time is a property of the character;
-account-wide memory would give a fresh alt silence in its own starting zone.
+Subzone discoveries are ignored unless the second option is ticked. The client
+announces far more of them than zone ones, and the subzone text is usually the less
+interesting of the two.
 
-Firing on subzones as well as zones means up to 1353 triggers over a character's
-life, and riding through Elwynn crosses a dozen subzones in a minute. Three rules
-keep that from becoming noise:
+#### Why discovery, and not "first visit"
 
-- **A new area never interrupts.** It queues behind whatever is playing.
-- **The queue is capped at 3**, dropping the oldest. Narration that has fallen two
-  minutes behind is describing somewhere the player has already left. Deep enough
-  that walking never loses an entry, shallow enough that flying does.
-- **An area is marked heard when it is queued, not when it plays.** Marking on play
-  would re-queue everywhere the cap dropped — exactly the backlog the cap prevents.
+A first attempt tracked first visits per character and got all three of its cases
+wrong, for one reason: **standing in a subzone already resolves to its parent
+zone.** A new orc in Valley of Trials has `GetBestMapForUnit` answering "Durotar"
+from the first second, so:
 
-Combat pauses the queue rather than skipping it, since a clip starting mid-pull
-competes with everything the player actually needs to hear. Logging in is
-suppressed for six seconds and marks nothing, so a zone logged into still narrates
-the next time it is walked into properly.
+- No zone-change event ever fires when they walk out into open Durotar. Nothing to
+  hook.
+- Anything that treats "the player's zone resolves to Durotar" as arrival consumes
+  Durotar's first visit inside the starting cave, minutes before the player sees
+  the zone. It then narrates Durotar while they are standing in The Den, and stays
+  silent at the actual moment of discovery.
 
-`GetSubZoneText` lags the zone-change event, so the check is delayed by 750ms;
-sampling immediately returns the area just left.
+The client already tracks exploration exactly, remembers it per character across
+sessions, and announces it at precisely the right instant. There is no reason to
+reimplement that, and no way to reimplement it correctly.
+
+The consequence is that a character who has already explored the world will never
+autoplay anything — the discoveries have all happened. `/zl discover [area]`
+simulates one, which is the only way to test this without rolling an alt.
+
+#### Reading the client's own strings
+
+The messages are matched with patterns built at runtime from `ERR_ZONE_EXPLORED_XP`
+("Discovered %s: %d experience gained.") and `ERR_ZONE_EXPLORED` ("Discovered
+%s."), read from the running client. Deriving the patterns from the globals rather
+than hardcoding English makes this work in every locale for free, and makes a
+Blizzard rewording a non-event. Both `CHAT_MSG_SYSTEM` and
+`CHAT_MSG_COMBAT_XP_GAIN` are watched, since which one carries the message depends
+on whether the discovery awarded experience.
+
+`/zl` reports how many of the two message forms the client defined; zero means the
+feature cannot fire and says so, rather than being silently dead. With `/zl debug`
+on, every unmatched system message is printed — which is what to look at if
+discoveries ever stop being recognised.
+
+#### Queue
+
+Discoveries queue rather than interrupt, capped at 3 and dropping the oldest.
+Combat and cinematics hold the queue rather than dropping it: the retry ticker
+plays them once the pull or the intro movie ends. A starting-zone cinematic is the
+one moment a character is guaranteed to be discovering things, so it is the
+likeliest collision there is.
 
 **Stop clears the queue.** Stop has to mean silence, not "skip to the next place I
-wandered through". The dropped areas stay marked heard: they were offered and
-declined.
+discovered on the way here".
 
 ### Floating playback controls
 
@@ -389,8 +413,9 @@ Leatrix_Plus, Leatrix_Sounds, Syndicator and Baganator all use it.
 used.
 
 Exposed: map panel on/off, panel side, panel width, font size, hover preview
-on/off, minimap button on/off, narration on/off, autoplay on/off, the playback
-controls on/off, the narration sound channel, and the debug area-name reporting. Everything applies immediately -- no reload -- via
+on/off, minimap button on/off, narration on/off, autoplay on/off, autoplay for
+subzones on/off, the playback controls on/off, the narration sound channel, and the
+debug area-name reporting. Everything applies immediately -- no reload -- via
 `ZoneLore:ApplyPanelOptions()`.
 
 Widget templates were chosen from what addons already running on this client use
@@ -443,8 +468,8 @@ here:     node tools/seed-from-dump.mjs           # report differences
 /zl play                    narrate the lore for where you are standing
 /zl stop                    stop the narration
 /zl voice                   turn narration on or off
-/zl autoplay                toggle narrating new areas on arrival
-/zl forget                  clear which areas this character has heard
+/zl autoplay                toggle narrating areas as you discover them
+/zl discover [area]         pretend to discover an area (dev)
 /zl bar                     move the playback controls back below the minimap
 /zl minimap                 show or hide the minimap button
 /zl debug                   report area names on map click
