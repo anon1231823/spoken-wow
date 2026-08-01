@@ -3,63 +3,95 @@
 import { Loader2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import type { Batch } from "./Explorer";
+import type { QueueSnapshot } from "@/lib/generation/client";
 
 function n(value: number): string {
   return value.toLocaleString();
 }
 
 /**
- * What a batch is doing, while it does it.
+ * What the queue is doing, while it does it.
  *
  * Sits above the player rather than replacing it, because a batch takes minutes and the
  * point of watching is to play the lines as they land.
  *
+ * It shows the whole queue, not this tab's work: there is one ElevenLabs account and one
+ * budget, so a batch another admin started is spending the same money and Stop had better
+ * reach it.
+ *
  * The cost shown is the real one, summed from what ElevenLabs charged each line, not the
- * estimate the dialog offered - so an estimate that was wrong is visible rather than
- * quietly preserved.
+ * estimate the dialog offered - so an estimate that was wrong is visible rather than quietly
+ * preserved.
+ *
+ * `note` answers the click rather than the batch: it says what the enqueue request itself
+ * reported (refused outright, or queued fewer files than quoted because another admin had
+ * already claimed some) - information the server snapshot has no field for, since it is
+ * about one request rather than the queue's ongoing state.
  */
 export default function RegenerationPanel({
-  batch,
+  queue,
+  note,
   onStop,
   onDismiss,
 }: {
-  batch: Batch | null;
+  queue: QueueSnapshot | null;
+  note: string | null;
   onStop: () => void;
   onDismiss: () => void;
 }) {
-  if (!batch) return null;
+  const counts = queue?.counts;
+  const total = counts
+    ? counts.pending + counts.running + counts.done + counts.failed + counts.cancelled
+    : 0;
 
-  const attempted = batch.done.length + batch.failures.length;
-  const total = batch.jobs.length;
+  if (total === 0) {
+    // Without a batch to show, this is the only way a refused or partly-skipped click gets
+    // an answer at all - the alternative is a button that appears to do nothing.
+    if (!note) return null;
+    return (
+      <div className="bg-card/95 fixed inset-x-0 bottom-[92px] z-40 border-t backdrop-blur">
+        <div className="text-muted-foreground mx-auto max-w-6xl px-5 py-2.5 text-sm">{note}</div>
+      </div>
+    );
+  }
+
+  // `queue` cannot be null here: total > 0 only when counts came from a real snapshot.
+  const snapshot = queue!;
+  const { pending, running, done, failed, cancelled } = counts!;
+  const attempted = done + failed;
   const percent = total ? Math.round((attempted / total) * 100) : 0;
-  const running = !batch.finished;
+  const active = snapshot.active;
+  // The counts above are the whole queue's, deliberately, but "Stopped" and the reason under
+  // it describe one batch. Read globally they would hang the last stop's obituary on the next
+  // batch to run cleanly, for as long as the stopped one stayed in the window.
+  const stopped = !active && (snapshot.latestBatch?.cancelled ?? 0) > 0;
 
   return (
     <div className="bg-card/95 fixed inset-x-0 bottom-[92px] z-40 border-t backdrop-blur">
       <div className="mx-auto max-w-6xl px-5 py-2.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-          {running && <Loader2 className="size-4 shrink-0 animate-spin" />}
+          {active && <Loader2 className="size-4 shrink-0 animate-spin" />}
 
           <span className="font-medium">
-            {running ? "Regenerating" : batch.stopped ? "Stopped" : "Finished"} {batch.label}
+            {active ? "Regenerating" : stopped ? "Stopped" : "Finished"}
           </span>
 
           <span className="text-muted-foreground font-mono text-xs">
             {n(attempted)}/{n(total)}
-            {batch.failures.length > 0 && (
-              <span className="text-destructive"> · {n(batch.failures.length)} failed</span>
-            )}
+            {/* The number in flight is the visible proof this is no longer sequential. */}
+            {running > 0 && <span> · {n(running)} at once</span>}
+            {failed > 0 && <span className="text-destructive"> · {n(failed)} failed</span>}
+            {cancelled > 0 && <span> · {n(cancelled)} cancelled</span>}
           </span>
 
           <span className="text-muted-foreground ml-auto font-mono text-xs">
             {/* Unpriced takes are counted separately rather than folded in as zero, which
                 would understate the total and look like a bargain. */}
-            {n(batch.credits)} credits
-            {batch.unpriced > 0 && ` · ${n(batch.unpriced)} unpriced`}
+            {n(snapshot.credits)} credits
+            {snapshot.unpriced > 0 && ` · ${n(snapshot.unpriced)} unpriced`}
           </span>
 
-          {running ? (
+          {active ? (
             <Button size="xs" variant="secondary" onClick={onStop}>
               Stop
             </Button>
@@ -77,28 +109,29 @@ export default function RegenerationPanel({
           />
         </div>
 
-        {batch.current && running && (
-          <div className="text-muted-foreground mt-1.5 truncate text-xs">{batch.current}</div>
-        )}
+        {note && <div className="text-muted-foreground mt-1.5 text-xs">{note}</div>}
 
-        {batch.stoppedBecause && (
-          <div role="alert" className="text-destructive mt-1.5 text-xs">
-            {batch.stoppedBecause}
+        {snapshot.running.length > 0 && active && (
+          <div className="text-muted-foreground mt-1.5 truncate text-xs">
+            {snapshot.running.map((job) => `${job.npcName} — ${job.preview}`).join(" · ")}
           </div>
         )}
 
-        {/* Failures are listed rather than counted: "3 failed" tells you nothing you can
-            act on, and the upstream text usually tells you exactly what to fix. */}
-        {batch.failures.length > 0 && !running && (
+        {stopped && snapshot.latestBatch?.stoppedBecause && (
+          <div role="alert" className="text-destructive mt-1.5 text-xs">
+            {snapshot.latestBatch.stoppedBecause}
+          </div>
+        )}
+
+        {/* Failures are listed rather than counted: "3 failed" tells you nothing you can act
+            on, and the upstream text usually tells you exactly what to fix. */}
+        {snapshot.failures.length > 0 && !active && (
           <ul className="text-muted-foreground mt-1.5 max-h-24 space-y-0.5 overflow-y-auto text-xs">
-            {batch.failures.slice(0, 20).map((failed) => (
-              <li key={failed.lineId} className="truncate">
-                <span className="font-mono">{failed.lineId}</span> — {failed.message}
+            {snapshot.failures.map((job) => (
+              <li key={job.lineId} className="truncate">
+                <span className="font-mono">{job.lineId}</span> — {job.message}
               </li>
             ))}
-            {batch.failures.length > 20 && (
-              <li>…and {n(batch.failures.length - 20)} more</li>
-            )}
           </ul>
         )}
       </div>

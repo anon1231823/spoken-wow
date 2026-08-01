@@ -1,11 +1,13 @@
 /**
- * Regenerate one line.
+ * Regenerate one line, synchronously.
  *
- * One line per request, because the browser drives a batch: the loop, its progress and its
- * stop button live on the page, and the server stays stateless. That choice is what keeps
- * this endpoint free of a queue, a worker and everything needed to recover them after a
- * crash - at the cost that closing the tab ends a batch, leaving the lines already written
- * on disk and the rest untouched.
+ * One click, one request, one answer. Mass regeneration goes through the queue in
+ * /api/regenerate/queue instead; this endpoint stays direct because a single line is cheap,
+ * is reversible through history, and deserves its result immediately rather than after a
+ * round trip and a poll.
+ *
+ * The concurrency budget in lib/generation/concurrency.ts reserves a slot for exactly this,
+ * so a click still lands while a batch is running.
  *
  * The lineId travels in the body rather than the path. It contains colons (`q:5:accept`,
  * `g:{hash}:m`), and round-tripping those through a dynamic segment is encoding risk for no

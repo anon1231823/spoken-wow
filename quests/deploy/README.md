@@ -289,6 +289,82 @@ ssh deploy@<ip> 'pm2 logs voiceover --lines 100'
 Rollback walks strictly backwards in time, so running it repeatedly keeps stepping to older
 releases instead of bouncing between the newest two.
 
+## The regeneration queue
+
+Mass regeneration is a queue in Postgres (`regeneration_batch`, `regeneration_job`), drained
+inside the app processes rather than by a separate service. A session-scoped advisory lock picks one
+process to lead, and only that one claims jobs. A process joins leader contention the first time
+one of the `/api/regenerate/queue` routes is called on it — not on boot, but lazily.
+
+**Two things worth knowing:**
+
+- **`kill_timeout` is load-bearing.** The leader finishes its in-flight ElevenLabs calls
+  before releasing the lock, so a `pm2 reload` hands the queue over rather than running two
+  drains at once. Lowering it back towards pm2's 1600 ms default reintroduces SIGKILL
+  mid-take, and a killed leader's jobs then wait out a five-minute lease.
+- **Anything with the database URL is a potential contender.** A one-off `next start` pointed
+  at production Postgres becomes one as soon as anything calls a queue route on it — which for
+  a `next start` someone is poking at is likely to be the explorer page's own poll. The
+  advisory lock is what makes this safe — one leader, whichever it is — but nothing confines
+  the queue to the droplet except custody of the database URL.
+
+To see what it is doing without the UI:
+
+```sql
+select "state", count(*) from "regeneration_job" group by "state";
+select * from "regeneration_batch" order by "createdAt" desc limit 5;
+```
+
+To stop it, use `POST /api/regenerate/queue/stop`, which the Stop button calls: it cancels
+pending jobs, leaves in-flight ones to finish and be billed, and stamps the batch so the
+panel can explain why it stopped.
+
+If the app is not answering, break glass with:
+
+```sql
+update "regeneration_job" set "state" = 'cancelled', "finishedAt" = now()
+ where "state" = 'pending';
+```
+
+This cancels pending jobs but does not stamp the batch with a reason, so the UI will show a
+stopped queue with no explanation — and running jobs are unaffected, because their characters
+are already billed at ElevenLabs. The full behaviour of `cancelPending()` in
+`web/src/lib/generation/queue.ts` is the authority; keep it in sync with changes there.
+
+### Why the queue starts lazily
+
+The queue is started by `ensureQueueRunning()` from `web/src/lib/generation/boot.ts`, called
+by the `/api/regenerate/queue` routes, rather than from a Next `instrumentation.ts` hook.
+
+`instrumentation.ts` is the natural home and was the original design. It does not work here:
+Next compiles that file for the edge runtime as well as node, whether or not the app has any
+edge code, and the `NEXT_RUNTIME` guard stops the code running there but not being bundled.
+Webpack then has to resolve the whole server graph — `pg`'s optional native binding, `fs`,
+`path`, `stream`, and our own `history.ts` reaching `node:crypto` — for a runtime that never
+executes it, and `next dev` answers 500. No `next.config.ts` setting fixes it; the problem is
+that the compile happens at all. `next build` is unaffected, because it only produces an edge
+compile when the app really contains edge code.
+
+**The cost:** a batch interrupted by a deploy does not resume on boot. It resumes when
+something calls a queue route — in practice when an admin opens the explorer, since the page
+polls the queue every fifteen seconds for anyone who can regenerate. On a quiet evening an
+interrupted batch waits.
+
+**Two ways back to boot-time resume, if that cost stops being acceptable:**
+
+1. **Run `next dev --turbopack`** and restore `instrumentation.ts`. Turbopack compiles it
+   without complaint, with no config changes, and the shipped artifact still comes from
+   `next build` under webpack. Verified working. The cost is that dev and production then use
+   different bundlers, so a server module leaking into the client bundle could pass `pnpm dev`
+   and fail `pnpm build` — run the build before trusting a change.
+2. **Give the queue its own pm2 process.** Sidesteps Next's bundler entirely. The cost is a
+   second build pipeline (CI ships a Next `standalone` bundle with no second entrypoint, and
+   the droplet has no toolchain), another ~200 MB for a second corpus heap, five
+   `VOICEOVER_*` paths to keep in sync, and a cache-coherence bug that does not exist today:
+   `generationStatus` memoises the voice map per process and `/voices` busts it in-process, so
+   a separate worker would keep failing lines with "no voice named X" for up to a minute after
+   one is created.
+
 ## Gotchas worth knowing
 
 - **`make push` refuses to overwrite newer droplet audio.** Regeneration happens on the
