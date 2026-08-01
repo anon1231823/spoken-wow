@@ -302,9 +302,11 @@ one of the `/api/regenerate/queue` routes is called on it — not on boot, but l
   before releasing the lock, so a `pm2 reload` hands the queue over rather than running two
   drains at once. Lowering it back towards pm2's 1600 ms default reintroduces SIGKILL
   mid-take, and a killed leader's jobs then wait out a five-minute lease.
-- **Anything with the database URL contends.** A one-off `next start` pointed at production
-  Postgres will try to take leadership and drain the queue. The lock makes that safe — one
-  leader, whichever it is — but the queue is not confined to the droplet by anything else.
+- **Anything with the database URL is a potential contender.** A one-off `next start` pointed
+  at production Postgres becomes one as soon as anything calls a queue route on it — which for
+  a `next start` someone is poking at is likely to be the explorer page's own poll. The
+  advisory lock is what makes this safe — one leader, whichever it is — but nothing confines
+  the queue to the droplet except custody of the database URL.
 
 To see what it is doing without the UI:
 
@@ -313,11 +315,21 @@ select "state", count(*) from "regeneration_job" group by "state";
 select * from "regeneration_batch" order by "createdAt" desc limit 5;
 ```
 
-To stop it by hand:
+To stop it, use `POST /api/regenerate/queue/stop`, which the Stop button calls: it cancels
+pending jobs, leaves in-flight ones to finish and be billed, and stamps the batch so the
+panel can explain why it stopped.
+
+If the app is not answering, break glass with:
 
 ```sql
-update "regeneration_job" set "state" = 'cancelled' where "state" = 'pending';
+update "regeneration_job" set "state" = 'cancelled', "finishedAt" = now()
+ where "state" = 'pending';
 ```
+
+This cancels pending jobs but does not stamp the batch with a reason, so the UI will show a
+stopped queue with no explanation — and running jobs are unaffected, because their characters
+are already billed at ElevenLabs. The full behaviour of `cancelPending()` in
+`web/src/lib/generation/queue.ts` is the authority; keep it in sync with changes there.
 
 ### Why the queue starts lazily
 
