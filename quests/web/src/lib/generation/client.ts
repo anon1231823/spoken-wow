@@ -172,3 +172,62 @@ export async function regenerate(
 function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
+
+/**
+ * The queue as the panel needs it. Mirrors QueueSnapshot in lib/generation/queue.ts.
+ *
+ * Re-declared rather than imported for the reason this file's header gives: that module
+ * imports `pg`, and pulling it into the client graph fails only the production build.
+ */
+export type QueueSnapshot = {
+  active: boolean;
+  counts: Record<"pending" | "running" | "done" | "failed" | "cancelled", number>;
+  credits: number;
+  unpriced: number;
+  running: { lineId: string; npcName: string; preview: string }[];
+  failures: { lineId: string; message: string }[];
+  stoppedBecause: string | null;
+  finished: { id: string; lineId: string; file: string; version: number }[];
+  cursor: string;
+};
+
+export async function queueBatch(
+  filters: URLSearchParams,
+  label: string,
+): Promise<{ batchId: string; queued: number; skipped: number } | null> {
+  try {
+    const response = await fetch("/api/regenerate/queue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filters: filters.toString(), label }),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as { batchId: string; queued: number; skipped: number };
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchQueue(
+  since: string | null,
+  signal?: AbortSignal,
+): Promise<QueueSnapshot | null> {
+  try {
+    const params = since ? `?since=${encodeURIComponent(since)}` : "";
+    const response = await fetch(`/api/regenerate/queue${params}`, { signal });
+    if (!response.ok) return null;
+    return (await response.json()) as QueueSnapshot;
+  } catch {
+    // A dropped poll is not an error worth showing: the next one is two seconds away and
+    // the cursor has not moved, so nothing is missed.
+    return null;
+  }
+}
+
+export async function stopQueue(): Promise<void> {
+  await fetch("/api/regenerate/queue/stop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  }).catch(() => {});
+}

@@ -16,10 +16,14 @@ import type { Facets } from "@/lib/facets";
 import {
   fetchBatchJobs,
   fetchGenerationStatus,
+  fetchQueue,
   fetchTakeCounts,
+  queueBatch,
   regenerate,
+  stopQueue,
   type BatchJob,
   type GenerationStatusResponse,
+  type QueueSnapshot,
 } from "@/lib/generation/client";
 import { estimate as estimateBatch, LIST_RATE, type Estimate } from "@/lib/generation/billing";
 import { canRegenerate } from "@/lib/permissions";
@@ -32,26 +36,6 @@ export type LineState =
   | { phase: "busy" }
   | { phase: "done"; version: number }
   | { phase: "error"; message: string };
-
-export type Batch = {
-  label: string;
-  /** Deduplicated by file: each mp3 is generated once however many lines point at it. */
-  jobs: BatchJob[];
-  done: string[];
-  failures: { lineId: string; message: string }[];
-  /** Summed from what ElevenLabs charged, not from the estimate. */
-  credits: number;
-  /** Takes ElevenLabs did not price, counted rather than assumed to be free. */
-  unpriced: number;
-  current: string | null;
-  finished: boolean;
-  stopped: boolean;
-  /** Why the batch gave up early, when it did. */
-  stoppedBecause: string | null;
-};
-
-/** How long to wait before the one retry a rate-limited line gets. */
-const RATE_LIMIT_BACKOFF_MS = 3000;
 
 const DEBOUNCE_MS = 200;
 
@@ -155,14 +139,17 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const [stale, setStale] = useState<Set<string>>(new Set());
   // The line whose spoken text is being rewritten, or null.
   const [editing, setEditing] = useState<ResultLine | null>(null);
-  const [batch, setBatch] = useState<Batch | null>(null);
   const [pendingBatch, setPendingBatch] = useState<{
     label: string;
     jobs: BatchJob[];
     estimate: Estimate;
   } | null>(null);
-  // Read inside the loop rather than through state, which the running loop would not see.
-  const stopRequested = useRef(false);
+  // The queue, as the server sees it. Null until the first poll answers.
+  const [queue, setQueue] = useState<QueueSnapshot | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  // The high-water mark of jobs already adopted, so a poll only carries what is new and a
+  // tab that slept catches up in one request instead of missing the window.
+  const cursor = useRef<string | null>(null);
 
   const searchInput = useRef<HTMLInputElement>(null);
   const audio = useRef<HTMLAudioElement>(null);
@@ -392,6 +379,49 @@ export default function Explorer({ facets }: { facets: Facets }) {
   }, []);
 
   /**
+   * Watch the queue.
+   *
+   * Polling rather than a stream: pm2 runs two workers and only one of them is draining, so
+   * a socket held by the other would have to read Postgres anyway - and a poll survives a
+   * sleeping tab, a dropped connection and nginx without any of them being special cases.
+   *
+   * Two seconds while there is work and fifteen while there is not, so an idle page is not
+   * asking a database forty times a minute for the same empty answer.
+   */
+  useEffect(() => {
+    if (!showRegenerate) return;
+
+    let timer: NodeJS.Timeout;
+    let cancelled = false;
+    const controller = new AbortController();
+
+    async function poll() {
+      const snapshot = await fetchQueue(cursor.current, controller.signal);
+      if (cancelled) return;
+
+      if (snapshot) {
+        cursor.current = snapshot.cursor;
+        setQueue(snapshot);
+        // Every line that landed since the last poll, adopted the same way a click's result
+        // is - which is what makes another admin's work show up on this page.
+        for (const job of snapshot.finished) {
+          applySuccess(job.file, job.version, job.lineId);
+        }
+        if (snapshot.active) setDismissed(false);
+      }
+
+      timer = setTimeout(poll, snapshot?.active ? 2_000 : 15_000);
+    }
+
+    void poll();
+    return () => {
+      cancelled = true;
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [showRegenerate, applySuccess]);
+
+  /**
    * Regenerate one line.
    *
    * On success the line is marked as having audio and its file's version is recorded. That
@@ -442,97 +472,24 @@ export default function Explorer({ facets }: { facets: Facets }) {
   }, [filterQuery, status]);
 
   /**
-   * Run a confirmed batch, one line per request.
+   * Hand the confirmed batch to the server.
    *
-   * Sequential on purpose. ElevenLabs limits concurrent requests per plan, the store is
-   * being written to, and a person is watching - so finishing lines in order and being
-   * stoppable matters more than finishing sooner.
+   * The filters go, not the job list: the server re-derives the set with the same query the
+   * estimate was built from, so what is queued is what was quoted, and a forty-thousand-line
+   * batch is a small request.
    */
-  const runBatch = useCallback(async () => {
-    const request = pendingBatch;
-    if (!request) return;
-
+  const startBatch = useCallback(async () => {
+    if (!pendingBatch) return;
     setPendingBatch(null);
-    stopRequested.current = false;
-    setBatch({
-      label: request.label,
-      jobs: request.jobs,
-      done: [],
-      failures: [],
-      credits: 0,
-      unpriced: 0,
-      current: null,
-      finished: false,
-      stopped: false,
-      stoppedBecause: null,
-    });
-
-    for (const job of request.jobs) {
-      if (stopRequested.current) {
-        setBatch((b) => (b ? { ...b, stopped: true, finished: true, current: null } : b));
-        return;
-      }
-
-      setBatch((b) => (b ? { ...b, current: `${job.npcName} — ${job.preview}` } : b));
-      setLineStates((current) => ({ ...current, [job.lineId]: { phase: "busy" } }));
-
-      let response = await regenerate(job.lineId);
-
-      // One retry, and only for rate limiting: it is the single failure that says nothing
-      // about the request and everything about how fast we asked.
-      if (!response.ok && response.kind === "rate-limit" && !stopRequested.current) {
-        await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_BACKOFF_MS));
-        response = await regenerate(job.lineId);
-      }
-
-      if (response.ok) {
-        applySuccess(response.file, response.version, job.lineId);
-        setBatch((b) =>
-          b
-            ? {
-                ...b,
-                done: [...b.done, job.lineId],
-                credits: b.credits + (response.credits ?? 0),
-                unpriced: b.unpriced + (response.credits === null ? 1 : 0),
-              }
-            : b,
-        );
-        continue;
-      }
-
-      setLineStates((current) => ({
-        ...current,
-        [job.lineId]: { phase: "error", message: response.message },
-      }));
-      setBatch((b) =>
-        b
-          ? {
-              ...b,
-              failures: [...b.failures, { lineId: job.lineId, message: response.message }],
-            }
-          : b,
-      );
-
-      // Out of credits, a bad key or a missing voice will fail every remaining line in the
-      // same way. Grinding through ninety more requests to learn that ninety more times is
-      // exactly what the fatal flag exists to prevent.
-      if (response.fatal) {
-        setBatch((b) =>
-          b
-            ? {
-                ...b,
-                finished: true,
-                current: null,
-                stoppedBecause: `Stopped after ${response.kind}: ${response.message}`,
-              }
-            : b,
-        );
-        return;
-      }
+    setDismissed(false);
+    await queueBatch(new URLSearchParams(filterQuery), pendingBatch.label);
+    // Do not wait for the two-second tick to show that the button did something.
+    const snapshot = await fetchQueue(cursor.current);
+    if (snapshot) {
+      cursor.current = snapshot.cursor;
+      setQueue(snapshot);
     }
-
-    setBatch((b) => (b ? { ...b, finished: true, current: null } : b));
-  }, [pendingBatch, applySuccess]);
+  }, [pendingBatch, filterQuery]);
 
   const play = useCallback((line: ResultLine) => {
     setCurrent(line);
@@ -753,16 +710,14 @@ export default function Explorer({ facets }: { facets: Facets }) {
       <RegenerateDialog
         pending={pendingBatch}
         status={status}
-        onConfirm={() => void runBatch()}
+        onConfirm={() => void startBatch()}
         onCancel={() => setPendingBatch(null)}
       />
 
       <RegenerationPanel
-        batch={batch}
-        onStop={() => {
-          stopRequested.current = true;
-        }}
-        onDismiss={() => setBatch(null)}
+        queue={dismissed ? null : queue}
+        onStop={() => void stopQueue()}
+        onDismiss={() => setDismissed(true)}
       />
 
       <Player ref={audio} line={current} version={current ? versions[current.audioPath] : undefined} />
