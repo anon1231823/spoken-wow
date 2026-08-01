@@ -70,6 +70,16 @@ export async function GET(request: NextRequest) {
   // seconds for anyone who can regenerate, so an admin with the page open is the wake-up.
   ensureQueueRunning();
 
-  const since = request.nextUrl.searchParams.get("since");
-  return NextResponse.json(await snapshot(since));
+  const rawSince = request.nextUrl.searchParams.get("since");
+  // snapshot() hands its cursor straight to `coalesce($1::bigint, 0)`, so anything that is
+  // not digits belongs to the route, not the store: Postgres would otherwise throw and turn
+  // a bad query param into an opaque 500 instead of a 400.
+  if (rawSince !== null && !/^\d+$/.test(rawSince)) {
+    return NextResponse.json(
+      { error: "since must be a cursor from a previous snapshot", kind: "bad-request" },
+      { status: 400 },
+    );
+  }
+
+  return NextResponse.json(await snapshot(rawSince));
 }
