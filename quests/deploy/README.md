@@ -291,6 +291,34 @@ releases instead of bouncing between the newest two.
 
 ## The regeneration queue
 
+Mass regeneration is a queue in Postgres (`regeneration_batch`, `regeneration_job`), drained
+inside the app processes rather than by a separate service. A session-scoped advisory lock picks one
+process to lead, and only that one claims jobs. A process joins leader contention the first time
+one of the `/api/regenerate/queue` routes is called on it — not on boot, but lazily.
+
+**Two things worth knowing:**
+
+- **`kill_timeout` is load-bearing.** The leader finishes its in-flight ElevenLabs calls
+  before releasing the lock, so a `pm2 reload` hands the queue over rather than running two
+  drains at once. Lowering it back towards pm2's 1600 ms default reintroduces SIGKILL
+  mid-take, and a killed leader's jobs then wait out a five-minute lease.
+- **Anything with the database URL contends.** A one-off `next start` pointed at production
+  Postgres will try to take leadership and drain the queue. The lock makes that safe — one
+  leader, whichever it is — but the queue is not confined to the droplet by anything else.
+
+To see what it is doing without the UI:
+
+```sql
+select "state", count(*) from "regeneration_job" group by "state";
+select * from "regeneration_batch" order by "createdAt" desc limit 5;
+```
+
+To stop it by hand:
+
+```sql
+update "regeneration_job" set "state" = 'cancelled' where "state" = 'pending';
+```
+
 ### Why the queue starts lazily
 
 The queue is started by `ensureQueueRunning()` from `web/src/lib/generation/boot.ts`, called
