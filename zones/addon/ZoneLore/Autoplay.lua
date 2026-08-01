@@ -1,0 +1,400 @@
+-- ZoneLore -- narrate an area when the player discovers it.
+--
+-- The trigger is the game's own discovery, the moment it prints "Discovered
+-- Durotar". Nothing else comes close:
+--
+--   * Zone-change events do not fire for it. A new orc stands in Valley of Trials,
+--     which is a subzone of Durotar, so GetBestMapForUnit already answers "Durotar"
+--     from the first second. Walking out into open Durotar changes no map ID.
+--   * Tracking first visits ourselves means deciding when a visit starts, and any
+--     answer to that is a guess. The client already knows, exactly, and remembers
+--     per character across sessions for free.
+--
+-- So there is no per-character bookkeeping here. The game fires a discovery once
+-- and never again, which is precisely the semantics this feature wanted.
+
+local ADDON_NAME, ZoneLore = ...
+
+-- Two discoveries can land together when a subzone sits on a zone border. Deep
+-- enough to hold those, shallow enough that nothing narrates far behind the player.
+local QUEUE_LIMIT = 3
+
+local pending = {}
+local ticker = nil
+
+--------------------------------------------------------------------------------
+-- Reading the client's own discovery messages
+--------------------------------------------------------------------------------
+--
+-- ERR_ZONE_EXPLORED_XP is "Discovered %s: %d experience gained." and
+-- ERR_ZONE_EXPLORED is "Discovered %s." -- but only in English. Building the
+-- patterns from the globals the running client defines makes this work in every
+-- locale without shipping a translation table, and makes a Blizzard rewording a
+-- non-event.
+
+local patterns = nil
+
+-- How many of the two message forms this client actually defines. Reported by /zl,
+-- so "the feature cannot work here" is distinguishable from "nothing has been
+-- discovered yet" without another character.
+local formCount = 0
+
+-- Two patterns per message form. The anchored one is exact; the loose one matches
+-- the same text sitting inside a longer line, which is what happens if the client
+-- ever prefixes or colours the message. Anchoring alone would reject that
+-- silently, and every test of this feature costs a fresh character to run.
+local function BuildPatterns(globalString)
+	if type(globalString) ~= "string" or globalString == "" then
+		return nil, nil
+	end
+	-- Escape the Lua pattern magic characters first, so the literal parts of the
+	-- message match themselves, then reopen the format specifiers as captures.
+	local escaped = globalString:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
+	escaped = escaped:gsub("%%%%d", "%%d+")
+
+	-- Greedy inside anchors, since the whole line is the message. Non-greedy when
+	-- loose, so a trailing sentence is not swallowed into the area name.
+	local anchored = "^" .. escaped:gsub("%%%%s", "(.+)") .. "$"
+	local loose = escaped:gsub("%%%%s", "(.-)")
+	return anchored, loose
+end
+
+local function DiscoveryPatterns()
+	if patterns then
+		return patterns
+	end
+	patterns = {}
+
+	-- Every anchored form before any loose one: an exact match on the plain message
+	-- is better evidence than a loose match on the experience one.
+	local anchoredSet, looseSet = {}, {}
+	-- The XP form first within each set: it is the more specific of the two, and at
+	-- max level the client falls back to the plain form.
+	for _, name in ipairs({ "ERR_ZONE_EXPLORED_XP", "ERR_ZONE_EXPLORED" }) do
+		local anchored, loose = BuildPatterns(_G[name])
+		if anchored then
+			table.insert(anchoredSet, anchored)
+			table.insert(looseSet, loose)
+		end
+	end
+	formCount = #anchoredSet
+
+	for _, pattern in ipairs(anchoredSet) do
+		table.insert(patterns, pattern)
+	end
+	for _, pattern in ipairs(looseSet) do
+		table.insert(patterns, pattern)
+	end
+	return patterns
+end
+
+local function AreaFromMessage(message)
+	if type(message) ~= "string" then
+		return nil
+	end
+	for _, pattern in ipairs(DiscoveryPatterns()) do
+		local area = message:match(pattern)
+		if area then
+			return area
+		end
+	end
+	return nil
+end
+
+--------------------------------------------------------------------------------
+-- Queue
+--------------------------------------------------------------------------------
+
+local function StopTicker()
+	if ticker then
+		ticker:Cancel()
+		ticker = nil
+	end
+end
+
+-- Combat is worth waiting out rather than skipping: a clip starting mid-pull
+-- competes with everything the player actually needs to hear.
+local function CanPlayNow()
+	if #pending == 0 then
+		return false
+	end
+	if not ZoneLore:Get("autoplay") or not ZoneLore:IsVoiceEnabled() then
+		return false
+	end
+	if ZoneLore:IsPlayingLore() or ZoneLore:IsPaused() then
+		return false
+	end
+	if UnitAffectingCombat("player") then
+		return false
+	end
+	-- A starting-zone cinematic is the one moment a new character is guaranteed to
+	-- be discovering things, so narrating over it is the likeliest collision there
+	-- is. The queue holds rather than drops: the ticker retries once it ends.
+	if (CinematicFrame and CinematicFrame:IsShown())
+		or (MovieFrame and MovieFrame:IsShown()) then
+		return false
+	end
+	return true
+end
+
+local function Drain()
+	if not CanPlayNow() then
+		if #pending == 0 then
+			StopTicker()
+		end
+		return
+	end
+
+	local entry = table.remove(pending, 1)
+	if #pending == 0 then
+		StopTicker()
+	end
+	ZoneLore:PlayLore(entry.mapID, entry.areaKey)
+end
+
+-- The audio callback covers a clip ending; the ticker covers what has no event of
+-- its own, which is leaving combat.
+local function StartTicker()
+	if ticker then
+		return
+	end
+	ticker = C_Timer.NewTicker(1, Drain)
+end
+
+-- Called by ZoneLore:StopLore. Stop means silence, not "skip to the next thing I
+-- discovered on the way here".
+function ZoneLore:ClearAutoplayQueue()
+	wipe(pending)
+	StopTicker()
+end
+
+-- Drives the Next button: the controls need to know whether anything is waiting.
+function ZoneLore:AutoplayQueueLength()
+	return #pending
+end
+
+local function IsQueued(mapID, areaKey)
+	for i = 1, #pending do
+		if pending[i].mapID == mapID and pending[i].areaKey == areaKey then
+			return true
+		end
+	end
+	return false
+end
+
+local function Enqueue(mapID, areaKey)
+	-- The login greeting below and a real discovery message can name the same
+	-- area, and an area on a zone border can be announced twice. Narrating it
+	-- twice in a row is worse than missing it.
+	if IsQueued(mapID, areaKey) or ZoneLore:IsPlayingLore(mapID, areaKey) then
+		return
+	end
+
+	table.insert(pending, { mapID = mapID, areaKey = areaKey })
+	while #pending > QUEUE_LIMIT do
+		table.remove(pending, 1)
+	end
+	StartTicker()
+	Drain()
+
+	-- Queueing behind a clip that is already playing changes what the controls
+	-- should say (Stop becomes Next) without changing what is playing, so the
+	-- notification Drain would have sent never happens on its own.
+	ZoneLore:NotifyAudioChanged()
+end
+
+--------------------------------------------------------------------------------
+-- The one discovery the client never announces
+--------------------------------------------------------------------------------
+--
+-- Where a character spawns is either already explored when it is created, or is
+-- announced while the intro cinematic is up and before this addon has registered
+-- anything. Either way a new orc stands in Valley of Trials in silence -- and that
+-- is the first thing this feature should ever have to say.
+--
+-- So the spawn area is seeded once, guarded by a single per-character boolean.
+-- This is a greeting, not a rule: it must not fire on every login, and it is the
+-- only place left that guesses at a first visit rather than being told about one.
+
+local LOGIN_SEED_DELAY = 2
+
+local function CharDB()
+	if type(ZoneLoreCharDB) ~= "table" then
+		ZoneLoreCharDB = {}
+	end
+	return ZoneLoreCharDB
+end
+
+local function SeedLoginArea()
+	local db = CharDB()
+	if db.greeted then
+		return
+	end
+	if not ZoneLore:Get("autoplay") or not ZoneLore:IsVoiceEnabled() then
+		-- Deliberately before the flag is set, so turning autoplay on later still
+		-- greets on the next login rather than having silently used up its turn.
+		return
+	end
+
+	local _, mapID = ZoneLore:GetLoreWithFallback(ZoneLore:GetPlayerMapID())
+	if not mapID then
+		return
+	end
+
+	db.greeted = true
+
+	-- The subzone is the more specific answer, the same preference /zl play and the
+	-- lore window both apply.
+	local subZone = GetSubZoneText()
+	if subZone and subZone ~= "" and ZoneLore:Get("autoplaySubzones") then
+		local entry, key = ZoneLore:GetSubzoneLore(mapID, subZone)
+		if entry and key then
+			Enqueue(mapID, key)
+			return
+		end
+	end
+
+	if ZoneLore:GetLore(mapID) then
+		Enqueue(mapID, nil)
+	end
+end
+
+-- Lets the greeting be tested without rolling another character.
+function ZoneLore:ForgetGreeting()
+	CharDB().greeted = nil
+end
+
+--------------------------------------------------------------------------------
+-- Discovery handling
+--------------------------------------------------------------------------------
+
+-- Discovering the area that shares the zone's name -- stepping out of Valley of
+-- Trials into open Durotar -- is what "discovered a zone" means. Everything else
+-- the client announces is a subzone.
+local function IsZoneDiscovery(areaName, mapID)
+	local zoneName = ZoneLore:GetMapName(mapID)
+	if not zoneName then
+		return false
+	end
+	return ZoneLore:NormaliseAreaKey(areaName) == ZoneLore:NormaliseAreaKey(zoneName)
+end
+
+function ZoneLore:OnAreaDiscovered(areaName)
+	if not areaName or areaName == "" then
+		return
+	end
+
+	local debugOn = self:Get("debug")
+
+	if not self:Get("autoplay") or not self:IsVoiceEnabled() then
+		if debugOn then
+			self:Print('discovered "%s" -- autoplay off, ignoring', areaName)
+		end
+		return
+	end
+
+	local _, mapID = self:GetLoreWithFallback(self:GetPlayerMapID())
+	if not mapID then
+		return
+	end
+
+	if IsZoneDiscovery(areaName, mapID) then
+		if self:GetLore(mapID) then
+			if debugOn then
+				self:Print('discovered zone "%s" -- queued', areaName)
+			end
+			Enqueue(mapID, nil)
+		end
+		return
+	end
+
+	if not self:Get("autoplaySubzones") then
+		if debugOn then
+			self:Print('discovered subzone "%s" -- subzone autoplay is off', areaName)
+		end
+		return
+	end
+
+	local entry, key = self:GetSubzoneLore(mapID, areaName)
+	if entry and key then
+		if debugOn then
+			self:Print('discovered subzone "%s" -> key "%s" -- queued', areaName, key)
+		end
+		Enqueue(mapID, key)
+	elseif debugOn then
+		self:Print('discovered subzone "%s" -> key "%s" -- no lore', areaName, tostring(key))
+	end
+end
+
+--------------------------------------------------------------------------------
+-- Setup
+--------------------------------------------------------------------------------
+
+-- Four events, because the message's route is not something to bet on. Its text
+-- lives in a global named ERR_*, and ERR_ strings normally arrive on
+-- UI_INFO_MESSAGE / UI_ERROR_MESSAGE; but exploration also awards experience,
+-- which is CHAT_MSG_COMBAT_XP_GAIN territory, and plain system text is
+-- CHAT_MSG_SYSTEM. Registering all four costs nothing -- anything that is not a
+-- discovery fails the patterns -- and betting on one costs a play session.
+local DISCOVERY_EVENTS = {
+	"CHAT_MSG_SYSTEM",
+	"CHAT_MSG_COMBAT_XP_GAIN",
+	"UI_INFO_MESSAGE",
+	"UI_ERROR_MESSAGE",
+}
+
+-- The payload is not in the same position across those events: CHAT_MSG_* put the
+-- text first, while UI_*_MESSAGE put a numeric messageType first and the text
+-- second. Rather than encode that per event, take whichever argument is a string.
+local function TextFrom(...)
+	for i = 1, select("#", ...) do
+		local value = select(i, ...)
+		if type(value) == "string" then
+			return value
+		end
+	end
+	return nil
+end
+
+function ZoneLore:SetupAutoplay()
+	local frame = CreateFrame("Frame")
+	for _, event in ipairs(DISCOVERY_EVENTS) do
+		frame:RegisterEvent(event)
+	end
+
+	frame:SetScript("OnEvent", function(_, event, ...)
+		local message = TextFrom(...)
+		local area = AreaFromMessage(message)
+		if area then
+			ZoneLore:OnAreaDiscovered(area)
+		elseif message and ZoneLore:Get("debug") then
+			-- Under debug only, and for every watched event rather than one of
+			-- them. If a discovery ever stops being recognised, this is the line
+			-- that shows which event carried it and what it actually said.
+			ZoneLore:Print("|cff888888%s: %s|r", event, message)
+		end
+	end)
+
+	self:OnAudioChanged(Drain)
+	self.autoplayFrame = frame
+
+	-- Delayed because GetSubZoneText is not reliably populated the instant the
+	-- world finishes loading. The cinematic needs no handling of its own: the
+	-- greeting queues immediately and CanPlayNow holds it until the intro ends.
+	C_Timer.After(LOGIN_SEED_DELAY, SeedLoginArea)
+end
+
+-- Reports whether the client defined the strings this feature is built on, so a
+-- silent failure can be told apart from "nothing has been discovered yet".
+function ZoneLore:DescribeAutoplay()
+	DiscoveryPatterns()
+	local found = formCount
+	if found == 0 then
+		self:Print("|cffff5555autoplay cannot work|r: this client defines neither "
+			.. "ERR_ZONE_EXPLORED nor ERR_ZONE_EXPLORED_XP")
+		return
+	end
+	self:Print("autoplay %s, matching %d discovery message form(s); subzones %s",
+		self:Get("autoplay") and "on" or "off", found,
+		self:Get("autoplaySubzones") and "included" or "excluded")
+end

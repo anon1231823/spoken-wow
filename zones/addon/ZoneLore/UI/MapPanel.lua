@@ -8,7 +8,11 @@ local ADDON_NAME, ZoneLore = ...
 local PADDING = 16
 local INFO_LINE_HEIGHT = 16
 
-local panel, header, infoLine, body, footer
+-- Horizontal room kept clear on the header row for the play button, which sits in
+-- the top-right corner. Wider than the button so a long zone name never crowds it.
+local AUDIO_RESERVE = 66
+
+local panel, header, infoLine, body, footer, audioButton
 
 --------------------------------------------------------------------------------
 -- Construction
@@ -32,9 +36,12 @@ local function BuildPanel()
 
 	header = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 	header:SetPoint("TOPLEFT", panel, "TOPLEFT", PADDING, -PADDING)
-	header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -PADDING, -PADDING)
+	header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -(PADDING + AUDIO_RESERVE), -PADDING)
 	header:SetJustifyH("LEFT")
 	header:SetWordWrap(true)
+
+	audioButton = ZoneLore:CreateAudioButton(panel)
+	audioButton:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -PADDING, -(PADDING - 2))
 
 	-- One fixed-height slot under the header, used either as a caption or as the
 	-- "back to zone" link. Keeping it always present means the scroll frame below
@@ -155,6 +162,8 @@ local function Refresh(mapID)
 		header:SetText(selected.areaName or selected.entry.name or "")
 		SetBackLink(zoneName)
 		SetBody(selected.entry.full or selected.entry.short or "")
+		-- Audio is keyed by the canonical form, not the name the client reported.
+		audioButton:SetTarget(mapID, ZoneLore:NormaliseAreaKey(selected.areaName))
 		return
 	end
 
@@ -175,9 +184,13 @@ local function Refresh(mapID)
 			end
 		end
 		SetBody(entry.full or entry.short or "")
+		-- foundOn, not mapID: a dungeon showing its parent zone's text should read
+		-- that same parent zone's narration.
+		audioButton:SetTarget(foundOn, nil)
 	else
 		SetCaption("")
 		SetBody("|cff888888No lore recorded for " .. zoneName .. " yet.|r")
+		audioButton:SetTarget(nil, nil)
 	end
 end
 

@@ -13,11 +13,7 @@ local dataObject, icon
 
 local function OnClick(_, button)
 	if button == "RightButton" then
-		ZoneLore:Set("showMapPanel", not ZoneLore:Get("showMapPanel"))
-		ZoneLore:Print("world map panel %s", ZoneLore:Get("showMapPanel") and "enabled" or "disabled")
-		if ZoneLore.RefreshPanel then
-			ZoneLore:RefreshPanel()
-		end
+		ZoneLore:OpenOptions()
 	else
 		ZoneLore:ToggleLoreWindow()
 	end
@@ -53,7 +49,7 @@ local function OnTooltipShow(tooltip)
 
 	tooltip:AddLine(" ")
 	tooltip:AddLine("|cff66bbffLeft-click|r open the lore window", 0.7, 0.7, 0.7)
-	tooltip:AddLine("|cff66bbffRight-click|r toggle the world map panel", 0.7, 0.7, 0.7)
+	tooltip:AddLine("|cff66bbffRight-click|r open settings", 0.7, 0.7, 0.7)
 end
 
 function ZoneLore:SetupMinimapButton()

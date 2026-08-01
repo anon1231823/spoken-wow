@@ -201,7 +201,7 @@ function ZoneLore:SetupOptions()
 
 	y = y + ROW_GAP
 	MakeCheckbox(panel, "showMinimapButton", "Show the minimap button",
-		"Left-click opens the lore window, right-click toggles the map panel.",
+		"Left-click opens the lore window, right-click opens these settings.",
 		INDENT, y, function()
 			-- The checkbox has already written the option, so sync rather than
 			-- toggle; ApplyMinimapButton also keeps `hide` in step for LibDBIcon.
@@ -211,6 +211,82 @@ function ZoneLore:SetupOptions()
 		end)
 
 	y = y + ROW_GAP - 28
+	MakeHeading(panel, "Narration", INDENT, y, "GameFontNormal")
+
+	y = y + ROW_GAP
+	MakeCheckbox(panel, "voiceEnabled", "Show the Play button on lore descriptions",
+		"Reads the lore aloud. Needs the ZoneLoreAudio companion addon; without it "
+			.. "the button plays a placeholder.",
+		INDENT, y, function()
+			ZoneLore:StopLore()
+			ZoneLore:NotifyAudioChanged()
+		end)
+
+	y = y + ROW_GAP
+	MakeCheckbox(panel, "autoplay", "Narrate a zone when you discover it",
+		"Triggered by the game's own discovery -- the moment it prints "
+			.. "\"Discovered Durotar\". Fires once per character, because that is "
+			.. "when the game fires it.",
+		INDENT, y, function()
+			if not ZoneLore:Get("autoplay") then
+				ZoneLore:StopLore()
+			end
+		end)
+
+	y = y + ROW_GAP
+	MakeCheckbox(panel, "autoplaySubzones", "Also narrate subzones you discover",
+		"Most discoveries are subzones -- a walk across Elwynn sets off several. "
+			.. "They queue rather than interrupt, so untick this only if the "
+			.. "narration feels constant.",
+		INDENT + INDENT, y, nil)
+
+	y = y + ROW_GAP
+	MakeCheckbox(panel, "showPlaybackBar", "Show playback controls while narrating",
+		"A small movable Pause/Stop widget below the minimap, so narration can be "
+			.. "stopped without reopening the map. It appears only while a clip is "
+			.. "playing. Drag it to move it; /zl bar puts it back.",
+		INDENT, y, function()
+			if ZoneLore.RefreshPlaybackBar then
+				ZoneLore:RefreshPlaybackBar()
+			end
+		end)
+
+	y = y + ROW_GAP - 6
+	-- A cycle button rather than a dropdown. UIDropDownMenuTemplate works on 11509
+	-- but none of its Initialize plumbing can be checked without launching the
+	-- game, and five values do not justify the risk -- the same trade the
+	-- hand-rolled scrollbar in UI/TextView.lua makes.
+	local CHANNEL_ORDER = { "Dialog", "Master", "SFX", "Ambience", "Music" }
+	local channelButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	channelButton:SetPoint("TOPLEFT", INDENT + 4, y)
+	channelButton:SetSize(220, 22)
+
+	local function SyncChannel()
+		channelButton:SetText("Sound channel: " .. ZoneLore:GetVoiceChannel())
+	end
+
+	channelButton:SetScript("OnClick", function()
+		local currentChannel = ZoneLore:GetVoiceChannel()
+		local index = 1
+		for i = 1, #CHANNEL_ORDER do
+			if CHANNEL_ORDER[i] == currentChannel then
+				index = i
+				break
+			end
+		end
+		ZoneLore:Set("voiceChannel", CHANNEL_ORDER[(index % #CHANNEL_ORDER) + 1])
+		-- The handle belongs to the old channel, so a running clip cannot be moved.
+		ZoneLore:StopLore()
+		SyncChannel()
+	end)
+	channelButton:SetScript("OnShow", SyncChannel)
+	SyncChannel()
+
+	y = y + ROW_GAP - 4
+	MakeNote(panel, "Dialog follows the Dialog volume slider in the game's sound options.",
+		INDENT + 4, y)
+
+	y = y + ROW_GAP - 20
 	MakeHeading(panel, "Troubleshooting", INDENT, y, "GameFontNormal")
 
 	y = y + ROW_GAP

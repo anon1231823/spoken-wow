@@ -17,6 +17,8 @@ retail or the Anniversary/TBC client.
 | M3 hover preview on the map | done, tested in game |
 | M4 minimap button + standalone lore window | done, **untested in-game** |
 | M5 options panel and polish | done, **untested in-game** |
+| M6 narration playback (placeholder audio) | done, **untested in-game** |
+| M7 voiceline generation tool | not started |
 
 ## Layout
 
@@ -25,14 +27,19 @@ addon/ZoneLore/          the addon itself (this is what WoW loads)
   ZoneLore.toc
   embeds.xml             loads the bundled libraries
   Core.lua               namespace, saved variables, events, zone/subzone lookup
+  Audio.lua              narration playback state
+  Autoplay.lua           narrate an area when the game announces its discovery
   Data/Zones.lua         GENERATED -- do not edit by hand
   Data/Subzones.lua      GENERATED -- do not edit by hand
+  Sounds/placeholder.mp3 stand-in played when there is no real voiceover
   UI/TextView.lua        shared scrolling wrapped-text widget
+  UI/AudioButton.lua     the Play/Stop button shown on a description
   UI/MapPanel.lua        the world map side panel
   UI/SubzoneClick.lua    resolves a map click to a subzone
   UI/HoverPreview.lua    lore tooltip while hovering the map
   UI/LoreWindow.lua      standalone browsable lore window
   UI/MinimapButton.lua   LibDBIcon minimap button
+  UI/PlaybackBar.lua     floating controls, shown only while narrating
   UI/Options.lua         settings panel
   Libs/                  LibStub, CallbackHandler-1.0, LibDataBroker-1.1,
                          LibDBIcon-1.0 (copied from AI_VoiceOver_Continued)
@@ -237,7 +244,11 @@ the cursor is over a pin and Blizzard's tooltip should be the only one showing.
 A minimap button (LibDBIcon) is the entry point that does not need the world map
 open. Its tooltip shows lore for wherever the player is standing -- the subzone if
 there is one, otherwise the zone. **Left-click** opens the lore window,
-**right-click** toggles the world map panel. `/zl minimap` hides or shows it.
+**right-click** opens the settings panel. `/zl minimap` hides or shows it.
+
+Right-click was originally a world-map-panel toggle, which is also an options
+checkbox and a slash command — three ways to reach one setting, and none of them
+the one people reach for on a minimap button.
 
 The lore window is movable, closes on Escape, and browses everything: the left
 column lists all zones, and clicking one expands its subzones beneath it.
@@ -267,6 +278,198 @@ library. `minimapPos` is seeded once in `UI/MinimapButton.lua` so the button doe
 not start at angle 0 underneath other addons' buttons. ZoneLore's own
 `showMinimapButton` option is authoritative and is mirrored onto `hide`.
 
+## Narration
+
+Every lore description carries a **Play** button — top-right of the world map
+panel and of the lore window. `/zl play` narrates wherever the player is standing,
+preferring the subzone over the zone when the subzone has lore of its own.
+
+Audio ships in a **separate `ZoneLoreAudio` addon**, which is optional. ZoneLore
+looks up a clip in the global `ZoneLoreAudioData` table that addon defines, and
+falls back to `Sounds/placeholder.mp3` when there is no entry — so the button
+works before any voiceover exists, and a missing soundpack sounds wrong rather
+than erroring. `/zl play` says which of the two it played.
+
+The placeholder is a 40-second quest line borrowed from `../wow-voiceover`'s audio
+store. It is deliberately one of the longest lines there: a short clip finishes
+before there is time to click anything, and the controls that appear during
+playback would be untestable.
+
+Its duration is hardcoded in `Audio.lua` as `PLACEHOLDER_DURATION`, because the
+client cannot report how long a sound file is. Swap the file and that number has
+to change with it.
+
+### Autoplay on discovery
+
+On by default: **the game's own discovery is the trigger** — the moment it prints
+"Discovered Durotar", that zone's lore plays. `/zl autoplay` toggles it, and `/zl`
+reports whether the feature can work at all on this client.
+
+Subzones are included, and are most of what fires — a walk across Elwynn sets off
+several. They queue rather than interrupt, so the effect is a steady trickle of
+lore rather than a pile-up; the second option turns them off if it ever feels
+constant.
+
+#### Why discovery, and not "first visit"
+
+A first attempt tracked first visits per character and got all three of its cases
+wrong, for one reason: **standing in a subzone already resolves to its parent
+zone.** A new orc in Valley of Trials has `GetBestMapForUnit` answering "Durotar"
+from the first second, so:
+
+- No zone-change event ever fires when they walk out into open Durotar. Nothing to
+  hook.
+- Anything that treats "the player's zone resolves to Durotar" as arrival consumes
+  Durotar's first visit inside the starting cave, minutes before the player sees
+  the zone. It then narrates Durotar while they are standing in The Den, and stays
+  silent at the actual moment of discovery.
+
+The client already tracks exploration exactly, remembers it per character across
+sessions, and announces it at precisely the right instant. There is no reason to
+reimplement that, and no way to reimplement it correctly.
+
+The consequence is that a character who has already explored the world will never
+autoplay anything — the discoveries have all happened. `/zl discover [area]`
+simulates one, which is the only way to test this without rolling an alt.
+
+#### The spawn area, which is never announced
+
+Where a character starts is the one discovery the client never reports: it is
+either already explored the moment the character is created, or announced while the
+intro cinematic is up, before any addon has registered an event. Either way a new
+orc stands in Valley of Trials in silence — which is the first thing this feature
+should ever have to say.
+
+So the spawn area is seeded two seconds after entering the world, guarded by one
+per-character boolean (`ZoneLoreCharDB.greeted`). This is a greeting rather than a
+rule: it fires once per character and is the only place left that infers a first
+visit instead of being told about one. The cinematic needs no special handling —
+the greeting queues immediately and the queue holds it until the intro ends.
+
+The flag is set *after* the enabled check, so turning autoplay on later still
+greets rather than having silently spent its turn. `/zl forget` clears it.
+
+Because the greeting and a real discovery message can name the same area, and an
+area on a zone border can be announced twice, the queue rejects a duplicate of
+anything already queued or playing. Narrating something twice in a row is worse
+than missing it.
+
+#### Reading the client's own strings
+
+The messages are matched with patterns built at runtime from `ERR_ZONE_EXPLORED_XP`
+("Discovered %s: %d experience gained.") and `ERR_ZONE_EXPLORED` ("Discovered
+%s."), read from the running client. Deriving the patterns from the globals rather
+than hardcoding English makes this work in every locale for free, and makes a
+Blizzard rewording a non-event.
+
+Four events are watched — `CHAT_MSG_SYSTEM`, `CHAT_MSG_COMBAT_XP_GAIN`,
+`UI_INFO_MESSAGE` and `UI_ERROR_MESSAGE` — because the message's route is not worth
+betting on. The text lives in a global named `ERR_*`, and `ERR_` strings normally
+arrive on `UI_INFO_MESSAGE`; but exploration also awards experience, which is
+`CHAT_MSG_COMBAT_XP_GAIN` territory. Registering all four costs nothing, since
+anything that is not a discovery fails the patterns, while betting on one costs a
+play session to find out.
+
+Their payloads are not shaped alike: `CHAT_MSG_*` put the text first, `UI_*_MESSAGE`
+put a numeric message type first and the text second. Rather than encode that per
+event, the handler takes whichever argument is a string.
+
+`/zl` reports how many of the two message forms the client defined; zero means the
+feature cannot fire and says so, rather than being silently dead. With `/zl debug`
+on, every message arriving on any of the four events is printed with the event that
+carried it — which is what to look at if discoveries are not being recognised.
+
+### Testing autoplay
+
+**A discovery happens once per character, ever.** Re-entering an area that has
+already been explored produces no message and therefore no narration — so walking
+back into The Den proves nothing, and neither does any character that has already
+been played. This is the single easiest way to mistake the feature for broken.
+
+```
+/zl discover              pretend to discover the subzone you are standing in
+/zl discover The Den      pretend to discover a named area
+```
+
+That runs the same path a real discovery takes, short of the message parsing. To
+exercise the parsing itself, turn on `/zl debug` and walk into genuinely unexplored
+ground; every message on the four watched events is printed with its event name.
+
+`/zl forget` clears the greeting flag, so the spawn-area greeting can be heard
+again on the next login without rolling another character.
+
+#### Queue
+
+Discoveries queue rather than interrupt, capped at 3 and dropping the oldest. The
+cap matters more with subzones on: crossing a cluster of small areas can announce
+several within a minute, and narration that has fallen minutes behind is describing
+somewhere already left.
+Combat and cinematics hold the queue rather than dropping it: the retry ticker
+plays them once the pull or the intro movie ends. A starting-zone cinematic is the
+one moment a character is guaranteed to be discovering things, so it is the
+likeliest collision there is.
+
+**Stop clears the queue.** Stop has to mean silence, not "skip to the next place I
+discovered on the way here".
+
+### Floating playback controls
+
+While a clip is playing, a small **Pause / Stop** widget appears below the minimap
+and disappears again when the clip ends. Drag it to move it; `/zl bar` puts it back
+under the minimap; the options panel turns it off.
+
+**Stop reads "Next" whenever autoplay has something queued**, and skips to it — with
+subzone discoveries on, ending the whole backlog is rarely what is wanted mid-walk.
+Stopping outright is then a **right-click**, which the tooltip says, along with how
+many entries are waiting. Without that, turning Stop into Next would have removed
+the only way to stop, since the queue is non-empty most of the time while
+exploring.
+
+It exists because the Play buttons are attached to a description, so they are only
+reachable while that description is on screen — and narration deliberately outlives
+both panels. Without this widget, closing the map would leave a clip running with
+no way to stop it short of `/zl stop`.
+
+**Pause restarts from the beginning.** The client can start and stop a sound file
+and nothing in between: there is no seek, and no way to ask how far into a clip
+playback has reached. `AI_VoiceOver`'s pause button has the same limitation and the
+same implementation — `SoundQueue:PauseQueue` calls `Utils:StopSound`, and
+`ResumeQueue` calls `PlaySound` from the top. The tooltip says so, rather than
+letting the player find out forty seconds in.
+
+It is anchored to `Minimap` rather than parented to it, so a rescaled minimap
+neither drags the controls along nor changes their size.
+
+### One clip at a time, stopped only on purpose
+
+Starting a clip stops whatever was playing. Nothing else does: closing the map,
+navigating it, walking into another zone and hiding the lore window all leave the
+narration running.
+
+Stopping when the entry scrolls out of view reads well as a rule and is wrong in
+practice — the intended use is to start a zone's lore, close the map and walk,
+which that rule would cut off immediately. The button always reflects the entry in
+front of it, so stopping is one click, or `/zl stop`.
+
+### Why the button resets itself from recorded data
+
+The client fires no event when a sound finishes, so the only way the button knows
+to flip back to *Play* is a duration recorded when the audio was made and shipped
+alongside it. That is why durations are part of the generated lookup table rather
+than an afterthought.
+
+`PlaySoundFile` returns false both for a missing file and for a muted sound
+channel. Audio.lua checks `Sound_EnableAllSound` and `Sound_Enable<Channel>` first
+so the two are reported differently, which is the same distinction
+`AI_VoiceOver`'s `Utils:IsSoundEnabled` exists to make.
+
+The sound channel is configurable and defaults to **Dialog**, so narration follows
+the Dialog volume slider instead of competing with it. The options panel cycles
+through the five channels with a button rather than a dropdown: `UIDropDownMenu`
+works on 11509, but none of its `Initialize` plumbing can be checked without
+launching the game, and five values do not justify that. Same trade as the
+hand-rolled scrollbar below.
+
 ## Options
 
 `/zl options`, or Game Menu -> Options -> AddOns -> ZoneLore. Registered with
@@ -276,8 +479,10 @@ Leatrix_Plus, Leatrix_Sounds, Syndicator and Baganator all use it.
 used.
 
 Exposed: map panel on/off, panel side, panel width, font size, hover preview
-on/off, minimap button on/off, and the debug area-name reporting. Everything
-applies immediately -- no reload -- via `ZoneLore:ApplyPanelOptions()`.
+on/off, minimap button on/off, narration on/off, autoplay on/off, autoplay for
+subzones on/off, the playback controls on/off, the narration sound channel, and the
+debug area-name reporting. Everything applies immediately -- no reload -- via
+`ZoneLore:ApplyPanelOptions()`.
 
 Widget templates were chosen from what addons already running on this client use
 rather than from memory: `UICheckButtonTemplate` (`Syndicator/Options`) and
@@ -326,6 +531,13 @@ here:     node tools/seed-from-dump.mjs           # report differences
 /zl options                 open the settings panel
 /zl window                  open the browsable lore window
 /zl hover                   toggle the hover preview tooltip
+/zl play                    narrate the lore for where you are standing
+/zl stop                    stop the narration
+/zl voice                   turn narration on or off
+/zl autoplay                toggle narrating areas as you discover them
+/zl discover [area]         pretend to discover an area (dev)
+/zl forget                  replay the login greeting on next login (dev)
+/zl bar                     move the playback controls back below the minimap
 /zl minimap                 show or hide the minimap button
 /zl debug                   report area names on map click
 /zl dump                    enumerate the map tree (dev)

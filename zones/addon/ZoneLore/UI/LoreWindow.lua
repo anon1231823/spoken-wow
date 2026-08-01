@@ -18,7 +18,7 @@ local ROW_HEIGHT = 16
 local PADDING = 14
 local SCROLL_STEP = ROW_HEIGHT * 3
 
-local window, listScroll, listChild, header, subheader, body, footer
+local window, listScroll, listChild, header, subheader, body, footer, audioButton
 local rows = {}
 local expandedZone = nil
 local selection = nil -- { mapID = , key = nil|string }
@@ -97,6 +97,7 @@ local function ShowEntry()
 		header:SetText("ZoneLore")
 		subheader:SetText("")
 		body:SetText("|cff888888Pick a zone on the left. Zones with subzones show a count; click one to expand it.|r")
+		audioButton:SetTarget(nil, nil)
 		return
 	end
 
@@ -108,6 +109,9 @@ local function ShowEntry()
 			header:SetText(entry.name or key)
 			subheader:SetText("in " .. (ZoneLore:GetMapName(mapID) or ""))
 			body:SetText(entry.full or entry.short or "")
+			-- Rows are already keyed by the canonical form, so this needs no
+			-- normalising -- unlike the map panel, which starts from a client name.
+			audioButton:SetTarget(mapID, key)
 			return
 		end
 	end
@@ -117,6 +121,7 @@ local function ShowEntry()
 	local subKeys = SubzoneKeys(mapID)
 	subheader:SetText(subKeys and (#subKeys .. " subzones") or "")
 	body:SetText(entry and (entry.full or entry.short) or "|cff888888No lore recorded.|r")
+	audioButton:SetTarget(entry and mapID or nil, nil)
 end
 
 --------------------------------------------------------------------------------
@@ -297,6 +302,12 @@ local function BuildWindow()
 	close:SetScript("OnClick", function()
 		window:Hide()
 	end)
+
+	-- On the title row beside the close button rather than on the header row.
+	-- UIPanelCloseButton is 32x32 and reaches down to -40, which is exactly where
+	-- the header row starts, so anything anchored top-right there overlaps it.
+	audioButton = ZoneLore:CreateAudioButton(window)
+	audioButton:SetPoint("TOPRIGHT", close, "TOPLEFT", -2, -5)
 
 	-- Left: the zone/subzone list.
 	listScroll = CreateFrame("ScrollFrame", nil, window)
