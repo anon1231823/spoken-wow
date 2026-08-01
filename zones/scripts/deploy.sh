@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Makes addon/ZoneLore visible to the WoW Classic Era client.
+# Makes addon/ZoneLore and addon/ZoneLoreAudio visible to the WoW Classic Era client.
 #
 #   ./scripts/deploy.sh          # symlink (edits are live, just /reload in-game)
 #   ./scripts/deploy.sh --copy   # rsync a real copy instead
@@ -9,22 +9,20 @@
 # Symlinking is preferred: no re-run needed after each edit. If the client's
 # AddOns list does not show ZoneLore, fall back to --copy and re-run per change.
 #
+# Both addons are handled together. ZoneLoreAudio is optional to the player but
+# not to development: symlinking it means a generation run lands in the client
+# without a redeploy, exactly as an edit to a .lua does.
+#
 # SavedVariables live under WTF/, not in the addon folder, so neither mode can
 # destroy saved settings.
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC="$REPO/addon/ZoneLore"
 ADDONS="/Applications/World of Warcraft/_classic_era_/Interface/AddOns"
-DEST="$ADDONS/ZoneLore"
+NAMES=(ZoneLore ZoneLoreAudio)
 
 mode="${1:-}"
-
-if [[ ! -d "$SRC" ]]; then
-  echo "error: $SRC does not exist" >&2
-  exit 1
-fi
 
 if [[ ! -d "$ADDONS" ]]; then
   echo "error: Classic Era AddOns directory not found at:" >&2
@@ -35,48 +33,75 @@ fi
 
 case "$mode" in
   --status)
-    if [[ -L "$DEST" ]]; then
-      echo "symlinked -> $(readlink "$DEST")"
-    elif [[ -d "$DEST" ]]; then
-      echo "installed as a real directory (copy mode)"
-      echo "files: $(find "$DEST" -type f | wc -l | tr -d ' ')"
-    else
-      echo "not installed"
+    for name in "${NAMES[@]}"; do
+      dest="$ADDONS/$name"
+      if [[ -L "$dest" ]]; then
+        printf '%-14s symlinked -> %s\n' "$name" "$(readlink "$dest")"
+      elif [[ -d "$dest" ]]; then
+        printf '%-14s copy, %s files\n' "$name" "$(find "$dest" -type f | wc -l | tr -d ' ')"
+      else
+        printf '%-14s not installed\n' "$name"
+      fi
+    done
+
+    # The count is the quickest answer to "why is it still playing the
+    # placeholder", which is otherwise indistinguishable from a broken lookup.
+    sounds="$REPO/addon/ZoneLoreAudio/Sounds"
+    if [[ -d "$sounds" ]]; then
+      count="$(find "$sounds" -name '*.mp3' | wc -l | tr -d ' ')"
+      echo "voicelines      $count mp3 in $sounds"
     fi
     exit 0
     ;;
   --remove)
-    if [[ -L "$DEST" ]]; then
-      rm "$DEST"
-      echo "removed symlink $DEST"
-    elif [[ -d "$DEST" ]]; then
-      rm -rf "$DEST"
-      echo "removed directory $DEST"
-    else
-      echo "nothing to remove"
-    fi
+    for name in "${NAMES[@]}"; do
+      dest="$ADDONS/$name"
+      if [[ -L "$dest" ]]; then
+        rm "$dest"
+        echo "removed symlink $dest"
+      elif [[ -d "$dest" ]]; then
+        rm -rf "$dest"
+        echo "removed directory $dest"
+      else
+        echo "$name: nothing to remove"
+      fi
+    done
     exit 0
     ;;
 esac
 
-# Refuse to clobber a real directory that this script did not create, in case
-# an unrelated ZoneLore addon was installed from elsewhere.
-if [[ -d "$DEST" && ! -L "$DEST" && "$mode" != "--copy" ]]; then
-  echo "error: $DEST exists as a real directory." >&2
-  echo "       Re-run with --copy to overwrite it, or --remove first." >&2
-  exit 1
-fi
+for name in "${NAMES[@]}"; do
+  src="$REPO/addon/$name"
+  dest="$ADDONS/$name"
+
+  if [[ ! -d "$src" ]]; then
+    echo "error: $src does not exist" >&2
+    exit 1
+  fi
+
+  # Refuse to clobber a real directory that this script did not create, in case
+  # an unrelated copy was installed from elsewhere.
+  if [[ -d "$dest" && ! -L "$dest" && "$mode" != "--copy" ]]; then
+    echo "error: $dest exists as a real directory." >&2
+    echo "       Re-run with --copy to overwrite it, or --remove first." >&2
+    exit 1
+  fi
+
+  if [[ "$mode" == "--copy" ]]; then
+    [[ -L "$dest" ]] && rm "$dest"
+    mkdir -p "$dest"
+    rsync -a --delete "$src/" "$dest/"
+    echo "copied $src -> $dest"
+  else
+    [[ -L "$dest" ]] && rm "$dest"
+    ln -s "$src" "$dest"
+    echo "symlinked $dest -> $src"
+  fi
+done
 
 if [[ "$mode" == "--copy" ]]; then
-  [[ -L "$DEST" ]] && rm "$DEST"
-  mkdir -p "$DEST"
-  rsync -a --delete "$SRC/" "$DEST/"
-  echo "copied $SRC -> $DEST"
   echo "re-run this script after every edit."
 else
-  [[ -L "$DEST" ]] && rm "$DEST"
-  ln -s "$SRC" "$DEST"
-  echo "symlinked $DEST -> $SRC"
   echo "edits are live; just /reload in-game."
 fi
 
