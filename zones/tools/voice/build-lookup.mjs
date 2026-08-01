@@ -19,6 +19,15 @@ function luaString(text) {
   return `"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
+// The manifest stores a POSIX path because that is what the files on disk are.
+// WoW addresses its own files with backslashes, and Audio.lua already builds the
+// prefix that way, so emitting "1411/zone" here would produce
+// "Interface\AddOns\ZoneLoreAudio\Sounds\1411/zone.mp3" -- a mixed-separator path
+// that is not worth finding out about in-game, where it plays silence.
+function luaPath(file) {
+  return luaString(file.replace(/\//g, "\\"));
+}
+
 async function main() {
   const manifest = await loadManifest();
 
@@ -66,7 +75,7 @@ async function main() {
 
   for (const mapID of [...zones.keys()].sort((a, b) => a - b)) {
     const row = zones.get(mapID);
-    lines.push(`\t\t[${mapID}] = { file = ${luaString(row.file)}, len = ${row.len} },`);
+    lines.push(`\t\t[${mapID}] = { file = ${luaPath(row.file)}, len = ${row.len} },`);
   }
 
   lines.push("\t},", "\tsubzones = {");
@@ -76,7 +85,7 @@ async function main() {
     const table = subzones.get(mapID);
     for (const key of [...table.keys()].sort()) {
       const row = table.get(key);
-      lines.push(`\t\t\t[${luaString(key)}] = { file = ${luaString(row.file)}, len = ${row.len} },`);
+      lines.push(`\t\t\t[${luaString(key)}] = { file = ${luaPath(row.file)}, len = ${row.len} },`);
     }
     lines.push("\t\t},");
   }

@@ -74,7 +74,11 @@ async function main() {
   //-- lookup table vs disk --------------------------------------------------
   if (existsSync(LOOKUP_PATH)) {
     const lookup = await readFile(LOOKUP_PATH, "utf8");
-    const referenced = [...lookup.matchAll(/file = "([^"]+)"/g)].map((m) => m[1]);
+    // The table stores WoW-style backslash paths (escaped in Lua source); the
+    // files on disk are POSIX. Compare in one form.
+    const referenced = [...lookup.matchAll(/file = "([^"]+)"/g)].map((m) =>
+      m[1].replace(/\\\\/g, "/").replace(/\\/g, "/"),
+    );
     for (const file of referenced) {
       if (!onDisk.has(file)) problem(`lookup table points at ${file}.mp3, which is not on disk (plays silence)`);
     }
