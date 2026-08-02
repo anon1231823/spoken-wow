@@ -4,6 +4,11 @@
 # - and this one does: ../wow-voiceover is already there, with its own user, its own pm2
 # daemon, its own postgres database and 3000 already taken.
 #
+#   make bootstrap
+#
+# which is the copy and the run together. Doing it by hand is two commands, and the ssh
+# half on its own says only "No such file or directory":
+#
 #   scp deploy/bootstrap.sh root@rusty.one:/tmp/ && ssh root@rusty.one 'bash /tmp/bootstrap.sh'
 #
 # This installs almost nothing. It uses the Node, pm2 and Postgres already on the box, and

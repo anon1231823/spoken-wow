@@ -84,9 +84,12 @@ entries of Lua, not voiceover's 15 MB of JSON — so one pm2 worker at a few hun
 installs one thing: ffmpeg, for `ffprobe`.
 
 ```bash
-scp deploy/bootstrap.sh root@rusty.one:/tmp/
-ssh root@rusty.one 'bash /tmp/bootstrap.sh'
+make bootstrap
 ```
+
+That copies `bootstrap.sh` to the droplet and runs it as root, in one step — the two
+halves are worth keeping together, because the ssh half on its own reports nothing more
+than `No such file or directory`.
 
 It creates the `deploy` user if missing (voiceover already made it), the `/srv/zonelore`
 tree, and a `zonelore` role and database on the existing cluster. It prints the generated

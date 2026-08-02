@@ -5,7 +5,7 @@
 .PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy \
         status remove clean voice voice-zones lookup sample db-up db-down migrate import export \
         web push push-dry pull pull-dry audio-status ssh-check pull-manifest pull-lexicon \
-        db-push db-pull deploy-scripts releases rollback logs
+        db-push db-pull bootstrap deploy-scripts releases rollback logs
 
 # The \# escapes are required: an unescaped # starts a make comment, even
 # inside a $(shell ...) call.
@@ -101,7 +101,8 @@ web: ## Run the voiceline explorer at localhost:3000
 # push to master. Everything here is the half CI does not do: the audio store, the
 # database contents, and installing the scripts CI calls. See deploy/README.md.
 #
-#   make deploy-scripts    once, and after editing deploy/bin/*
+#   make bootstrap         once, as root: user, /srv tree, database
+#   make deploy-scripts    after that, and after editing deploy/bin/*
 #   make push              ~700MB of mp3s, the first time and after a local bulk run
 #   make db-push           seed the droplet's database from the local one
 #   make releases          what is deployed
@@ -132,7 +133,7 @@ define preflight
 endef
 
 ssh-check: ## Confirm the droplet is reachable and set up
-	@$(SSH) $(DROPLET) 'echo "ok: $$(hostname)"; ls -d $(REMOTE_ROOT)/bin $(REMOTE_ROOT)/shared 2>/dev/null || echo "missing tree - run deploy/bootstrap.sh"'
+	@$(SSH) $(DROPLET) 'echo "ok: $$(hostname)"; ls -d $(REMOTE_ROOT)/bin $(REMOTE_ROOT)/shared 2>/dev/null || echo "missing tree - run: make bootstrap"'
 
 push-dry: ## Preview what `make push` would send to the droplet
 	$(preflight)
@@ -241,6 +242,19 @@ db-pull: ## Copy the droplet's voiceline_take + line_flag into the local databas
 #-------------------------------------------------------------------------------
 # Deploying
 #-------------------------------------------------------------------------------
+
+# One target rather than a documented scp-then-ssh pair, because the two halves get
+# separated: run on its own, the ssh half reports only "No such file or directory" and
+# names neither what is missing nor why.
+#
+# ROOT_SSH, not SSH: bootstrap creates the deploy user and the /srv tree, so it cannot
+# run as the user it is about to create.
+ROOT_SSH ?= ssh root@$(word 2,$(subst @, ,$(DROPLET)))
+
+bootstrap: ## One-time droplet setup, as root (idempotent)
+	@echo "==> copying deploy/bootstrap.sh to $(DROPLET) as root"
+	@$(RSYNC) -a -e "ssh" deploy/bootstrap.sh root@$(word 2,$(subst @, ,$(DROPLET))):/tmp/zonelore-bootstrap.sh
+	@$(ROOT_SSH) 'bash /tmp/zonelore-bootstrap.sh; rm -f /tmp/zonelore-bootstrap.sh'
 
 deploy-scripts: ## Install deploy/bin + ecosystem.config.js on the droplet
 	@$(RSYNC) -a -e "$(SSH)" deploy/bin/ $(DROPLET):$(REMOTE_ROOT)/bin/
