@@ -34,6 +34,39 @@ make validate-audio # manifest, files on disk and lookup table agree
 Those are the verification. Do not add extra self-review passes on top, and do
 not re-check work you have already checked — it costs tokens and finds nothing.
 
+## Versions and the changelog
+
+A change that reaches players bumps the `## Version:` of every addon it affects
+and writes that version's section of `CHANGELOG.md`, in the same PR as the change.
+Not as a follow-up, and not left to whoever releases.
+
+**Bump only what the PR actually changes.** `addon/ZoneLore/ZoneLore.toc` and
+`addon/ZoneLoreAudio/ZoneLoreAudio.toc` carry their own versions and
+`scripts/release.sh` reads each independently, so they are free to diverge. The
+one rule binding them is compatibility: ZoneLore reads any pack sharing its
+**major** version, and says so in chat rather than going silent when handed one
+it cannot. So a change to the addon alone bumps the addon alone. Re-cutting a
+790 MB sound pack because a Lua file moved is not thoroughness, it is a
+four-hour upload.
+
+**There is no "Unreleased" heading.** `changelog_for()` in `scripts/release.sh`
+finds the `## <version>` section matching the .toc and *exits* if there is not
+one — the release notes on CurseForge and the notes in the repository are the
+same text by construction, which is the point. A heading the tooling cannot find
+is a release that fails at the upload step, long after the PR that caused it.
+Write the real version heading, dated.
+
+Pre-1.0, most things are a patch bump. Reserve the minor for a change to what the
+addon *is* — a new surface, a new kind of content, something that changes the
+answer to "what does this do". Adding a control to screens that already exist is
+a patch bump, however much work it was; the number is for players judging whether
+to update, not a record of effort. If a change is invisible to them — tooling,
+the explorer, CI, this file — it bumps nothing and writes nothing.
+
+What goes in a section is what someone who has the old version would want to
+know: the capability, and what it replaces. The existing entries are the model.
+Anything requiring a matching pack version says so.
+
 ## Code comments
 
 - Explain the *why*, never the *what*. The code already says what it does; a

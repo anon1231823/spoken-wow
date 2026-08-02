@@ -1,7 +1,7 @@
 ## Interface: 11509
 ## Title: ZoneLore
 ## Notes: Shows additional lore about zones on the world map and minimap.|n|cffffcc00Beta:|r the narration is a proof-of-concept voice, being redesigned.
-## Version: 0.2.0
+## Version: 0.2.1
 ## Author: rusty
 ## SavedVariables: ZoneLoreDB
 ## SavedVariablesPerCharacter: ZoneLoreCharDB
