@@ -5,7 +5,7 @@
 // so "[Deviate Fish]" would be acted rather than spoken. The lore carries 163
 // bracketed spans, so this is load-bearing, and validate.mjs asserts it.
 
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,6 +32,37 @@ export async function loadPronunciation() {
   // stray "_comment" rule would otherwise be a substitution like any other.
   return Object.fromEntries(
     Object.entries(raw).filter(([key]) => !key.startsWith("_")),
+  );
+}
+
+// Writes the rules back, preserving the "_" commentary keys loadPronunciation drops.
+//
+// The file stays the source of truth rather than moving into Postgres, because
+// toSpokenText builds the spoken text from it and textHash hashes that -- so the
+// staleness calculation the addon build depends on would otherwise need a database.
+// It is authored config, and git is a better home for it than a table: a rule change
+// lands as a reviewable diff, and every rule is a claim that the model mispronounces
+// a word.
+export async function savePronunciation(rules) {
+  let existing = {};
+  try {
+    existing = JSON.parse(await readFile(PRONUNCIATION_PATH, "utf8"));
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+  }
+
+  const comments = Object.fromEntries(
+    Object.entries(existing).filter(([key]) => key.startsWith("_")),
+  );
+  const ordered = Object.fromEntries(
+    Object.entries(rules)
+      .filter(([key]) => !key.startsWith("_"))
+      .sort(([a], [b]) => a.localeCompare(b)),
+  );
+
+  await writeFile(
+    PRONUNCIATION_PATH,
+    JSON.stringify({ ...comments, ...ordered }, null, 2) + "\n",
   );
 }
 

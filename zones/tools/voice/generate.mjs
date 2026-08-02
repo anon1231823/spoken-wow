@@ -9,12 +9,10 @@
 // Dry run is the default because the direction that cannot be undone is spending
 // money, not printing. --generate without a selector refuses to run.
 
-import { mkdir, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { execFile } from "node:child_process";
-import { join, dirname } from "node:path";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
 
 import { readLines } from "../lib/loredata.mjs";
 import { assignFiles, lineId, textHash } from "./naming.mjs";
@@ -27,10 +25,19 @@ import {
   resolveVoiceId,
   synthesize,
 } from "./elevenlabs.mjs";
-import { loadManifest, saveManifest, SAMPLES_DIR, SOUNDS_DIR } from "./store.mjs";
+// writeAudio lives in store.mjs rather than here because it archives the take it
+// replaces, and the only correct moment for that is between "the replacement exists"
+// and "it lands on the old take's path" -- which is inside the write, not around it.
+import {
+  close as closeStore,
+  durationOf,
+  loadManifest,
+  saveManifest,
+  writeAudio,
+  SAMPLES_DIR,
+  SOUNDS_DIR,
+} from "./store.mjs";
 import { afterRateLimit, budgetFor, COOL_DOWN_MS, Limiter } from "./concurrency.mjs";
-
-const execFileAsync = promisify(execFile);
 
 //------------------------------------------------------------------------------
 // Arguments
@@ -272,30 +279,6 @@ function summarise(selected, manifest, label, config) {
 // Audio
 //------------------------------------------------------------------------------
 
-// ffprobe rather than parsing frame headers: the duration is what stops the
-// addon's Play button resetting at the wrong moment, and a CBR assumption in a
-// hand-rolled parser would be wrong silently.
-async function durationOf(path) {
-  const { stdout } = await execFileAsync("ffprobe", [
-    "-v", "error",
-    "-show_entries", "format=duration",
-    "-of", "default=noprint_wrappers=1:nokey=1",
-    path,
-  ]);
-  const seconds = Number(stdout.trim());
-  if (!Number.isFinite(seconds)) throw new Error(`ffprobe gave no duration for ${path}`);
-  return Math.round(seconds * 1000) / 1000;
-}
-
-async function writeAudio(path, buffer) {
-  await mkdir(dirname(path), { recursive: true });
-  // Write beside the target and rename, so an interrupted run cannot leave a
-  // truncated mp3 that later looks like a finished one.
-  const temp = `${path}.part`;
-  await writeFile(temp, buffer);
-  await rename(temp, path);
-}
-
 //------------------------------------------------------------------------------
 // Generation
 //------------------------------------------------------------------------------
@@ -338,19 +321,18 @@ async function generate(selected, args) {
 
   const tasks = selected.map((entry) =>
     limiter.run(async () => {
-      const path = join(SOUNDS_DIR, `${entry.file}.mp3`);
-
       // Audio already generated cost real money, and a re-roll is not always an
       // improvement. ../wow-voiceover/tts_cli/synthesize.py refuses for the same
       // reason.
-      if (existsSync(path) && !args.force) {
+      if (existsSync(join(SOUNDS_DIR, `${entry.file}.mp3`)) && !args.force) {
         skipped++;
         return;
       }
 
       try {
         const { audio, credits: cost } = await synthesize(entry.spoken, config, key, { onRateLimit });
-        await writeAudio(path, audio);
+        // Archives whatever this replaces, which is what makes --force reversible.
+        const path = await writeAudio(entry.file, audio);
 
         manifest[entry.id] = {
           file: entry.file,
@@ -421,10 +403,12 @@ async function sample(catalogue) {
   await mkdir(SAMPLES_DIR, { recursive: true });
 
   for (const entry of [long, short].filter(Boolean)) {
+    // Samples go straight to disk, not through writeAudio: they live outside the
+    // store, are never recorded as takes, and archiving one would be meaningless.
     const path = join(SAMPLES_DIR, `${entry.id.replace(/[:\s]/g, "_")}.mp3`);
     console.log(`sampling ${entry.id} (${entry.spoken.length} chars) -> ${path}`);
     const { audio, credits } = await synthesize(entry.spoken, config, key);
-    await writeAudio(path, audio);
+    await writeFile(path, audio);
     console.log(`  ${await durationOf(path)}s${credits === null ? "" : `, ${credits} credits`}`);
   }
 
@@ -490,8 +474,12 @@ async function main() {
 // validate.mjs and by tests, and a module that runs a CLI on import would run it
 // for them too.
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  main().catch((err) => {
-    console.error(`error: ${err.message}`);
-    process.exit(1);
-  });
+  main()
+    .catch((err) => {
+      console.error(`error: ${err.message}`);
+      process.exitCode = 1;
+    })
+    // An open connection pool keeps the process alive after main() returns, which
+    // looks exactly like a hang. Harmless with DATABASE_URL unset.
+    .finally(() => closeStore());
 }

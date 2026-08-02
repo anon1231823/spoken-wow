@@ -1,0 +1,31 @@
+# The voiceline explorer's database: every take of every line, and the flags a
+# person put on them while listening.
+#
+# The lore itself is not here. addon/ZoneLore/Data/*.lua stays the authority and is
+# read through tools/lib/loredata.mjs, exactly as ../wow-voiceover reads its corpus
+# off disk and never writes it.
+#
+# Port 5433, not 5432: ../wow-voiceover's own postgres already holds 5432 on this
+# machine, and connecting to the wrong database silently is the worst outcome
+# available here -- both schemas have a table of voicelines with a "file" column.
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: zonelore-postgres
+    environment:
+      POSTGRES_USER: zonelore
+      POSTGRES_PASSWORD: zonelore
+      POSTGRES_DB: zonelore
+    volumes:
+      - zonelore-pg:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zonelore -d zonelore"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  zonelore-pg:

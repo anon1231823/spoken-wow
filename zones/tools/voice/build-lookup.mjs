@@ -9,9 +9,10 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { ROOT } from "../lib/loredata.mjs";
-import { loadManifest, SOUNDS_DIR } from "./store.mjs";
+import { close as closeStore, loadManifest, SOUNDS_DIR } from "./store.mjs";
 
 const OUT_PATH = join(ROOT, "addon/ZoneLoreAudio/Data/Sounds.lua");
 
@@ -28,7 +29,14 @@ function luaPath(file) {
   return luaString(file.replace(/\//g, "\\"));
 }
 
-async function main() {
+/**
+ * Regenerates addon/ZoneLoreAudio/Data/Sounds.lua from the current takes.
+ *
+ * Exported so the web app can call it straight after a regeneration -- the addon
+ * resolves every clip through this table, so a new take that is not in it is
+ * unreachable and the old duration would reset the Play button at the wrong moment.
+ */
+export async function buildLookup() {
   const manifest = await loadManifest();
 
   const zones = new Map();      // mapID -> row
@@ -96,15 +104,28 @@ async function main() {
   await writeFile(OUT_PATH, lines.join("\n"));
 
   const subzoneCount = [...subzones.values()].reduce((n, t) => n + t.size, 0);
+  return { zones: zones.size, subzones: subzoneCount, zonesWithSubzones: subzones.size, missingFiles };
+}
+
+async function main() {
+  const result = await buildLookup();
   console.log(`wrote ${OUT_PATH}`);
-  console.log(`  ${zones.size} zones, ${subzoneCount} subzones across ${subzones.size} zones`);
-  if (missingFiles) {
-    console.log(`  ${missingFiles} manifest entries skipped: no file on disk`);
+  console.log(
+    `  ${result.zones} zones, ${result.subzones} subzones across ${result.zonesWithSubzones} zones`,
+  );
+  if (result.missingFiles) {
+    console.log(`  ${result.missingFiles} manifest entries skipped: no file on disk`);
     process.exitCode = 1;
   }
 }
 
-main().catch((err) => {
-  console.error(`error: ${err.message}`);
-  process.exit(1);
-});
+// Only when run as a script: buildLookup is imported by the web app, and a module
+// that runs a CLI on import would run it there too.
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main()
+    .catch((err) => {
+      console.error(`error: ${err.message}`);
+      process.exitCode = 1;
+    })
+    .finally(() => closeStore());
+}

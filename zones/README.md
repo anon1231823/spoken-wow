@@ -18,7 +18,9 @@ retail or the Anniversary/TBC client.
 | M4 minimap button + standalone lore window | done, **untested in-game** |
 | M5 options panel and polish | done, **untested in-game** |
 | M6 narration playback + autoplay on discovery | done, tested in-game |
-| M7 voiceline generation tool | done; Durotar generated (44 lines) |
+| M7 voiceline generation tool | done; all 1353 lines generated |
+| M8 Postgres behind the voiceline store | done |
+| M9-M12 voiceline explorer (`web/`) | done; not yet used for a full listening pass |
 
 ## Layout
 
@@ -91,7 +93,8 @@ node tools/scrape.mjs --only 1411 --verbose   # tune one zone, show filtering
 node tools/validate.mjs            # check the generated Lua
 ```
 
-The scraper needs Node 18+ and has no dependencies. It caches every raw API
+The scraper needs Node 18+ and has no dependencies (`tools/voice/` does: `pg`, for
+the explorer's database — see "The voiceline explorer"). It caches every raw API
 response under `tools/cache/` (gitignored) so iterating on text cleanup never
 re-hits the wiki, and throttles to one request per 500ms with an identifying
 User-Agent.
@@ -655,6 +658,91 @@ BITRATE=64 ./scripts/package-audio.sh   # transcode on the way in (~360MB)
 
 Generating at a low bitrate to save money would save nothing, and would make a
 later quality bump a second purchase rather than a re-run.
+
+## The voiceline explorer
+
+The generator can tell you a clip exists and what it cost. It cannot tell you it
+sounds *wrong*, and until `web/` there was nowhere to record that you noticed. With
+1353 lines and no record of what has been heard, a listening pass cannot be resumed —
+which in practice means it never gets started.
+
+```sh
+cp .env.example .env      # DATABASE_URL is already filled in; add your API key
+make db-up                # Postgres on 5433, then migrations
+make import               # seed from tools/voice/manifest.json (idempotent)
+make web                  # http://localhost:3000
+```
+
+Browse and filter all 1353 lines, play them, flag what is wrong, fix it, regenerate.
+Keys: `/` search, `space` play/pause, `j`/`k` next/previous, `f` bad, `g` ok, `u`
+undo, `n` note. The pass it exists for is `?state=current&flag=unreviewed` — hold `j`
+and listen, tapping `f` on anything wrong. `?flag=bad` afterwards is the worklist.
+
+Filters live in the URL, so the back button undoes a filter change and a link carries
+the exact view.
+
+### Port 5433, not 5432
+
+`../wow-voiceover`'s Postgres already holds 5432 on this machine, and both schemas
+have a table of voicelines with a `file` column. Connecting to the wrong one silently
+is the worst outcome available here.
+
+### The database is authoritative; the manifest is an export
+
+`voiceline_take` holds every take of every line, not just the live one, so a re-roll
+that comes out worse can be undone — the superseded mp3s go to `audio-history/`
+(gitignored, a *sibling* of `Sounds/` because `validate-audio.mjs` walks `Sounds/`).
+
+`tools/voice/manifest.json` is still committed and is still what `build-lookup.mjs`
+turns into the addon's lookup table. It stopped being hand-maintained and became an
+export: `make lookup` runs `export-manifest.mjs` before `build-lookup.mjs`. **The
+addon build never learns the database exists** — with `DATABASE_URL` unset every tool
+falls back to the file and a clone with no Postgres can still generate audio and ship
+the addon.
+
+The seam is `tools/voice/store.mjs`, which already owned `loadManifest`/`saveManifest`
+and is the only way the other tools reach that state. Putting Postgres behind those
+two functions is what keeps the CLI and the web app writing the same rows.
+`../wow-voiceover/web/migrations/0012` records the alternative: *"the Python CLI reads
+the corpus and will not see these rows… The web app is the generation path. This is
+recorded rather than solved."*
+
+The check that proves it: `make import && make export` must leave `manifest.json`
+byte-identical, and `validate-audio.mjs` must still pass.
+
+### Regenerating costs money, so it says so first
+
+One line goes straight through — it is one click, it is cheap, and the archive makes
+it reversible. Anything larger quotes first, priced from `measureRates()`, the same
+0.607 credits/character measured over real billing that the CLI's dry run uses.
+
+The web app imports `tools/voice/elevenlabs.mjs` directly rather than spawning the
+CLI, so the typed failure kinds and the `character-cost` header reach the take row
+instead of being parsed back out of stdout. This needs `outputFileTracingRoot` in
+`web/next.config.ts` pointed at the repo root, without which Next traces dependencies
+from `web/` alone and leaves `tools/` out of the build.
+
+Batches run in-process with progress in memory — no queue tables. Those exist in
+`../wow-voiceover` because two pm2 workers share one billing account; here there is
+one process. The work is server-side so closing the tab does not strand it. A server
+restart does, and that is a real limitation rather than one worth engineering around.
+
+### Moving the audio between machines
+
+1353 mp3s, ~795MB, gitignored and never in CI.
+
+```sh
+make audio-status
+make pull-dry REMOTE=user@host:/srv/zonelore
+make pull     REMOTE=user@host:/srv/zonelore
+```
+
+No `-z`: mp3 is already compressed, so it is pure CPU for nothing. The rsync-3.x
+preflight is load-bearing — macOS ships openrsync as `/usr/bin/rsync`, which reports
+itself as "2.6.9 compatible" and rejects `--info`.
+
+`audio-history/` grows without bound: re-cutting the whole corpus adds another ~795MB.
+There is no prune command yet.
 
 ## Options
 
