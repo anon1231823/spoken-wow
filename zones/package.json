@@ -1,0 +1,12 @@
+{
+  "name": "wow-lore-tools",
+  "private": true,
+  "type": "module",
+  "description": "Dependencies for tools/. The scrapers and the addon build stay dependency-free; only the voiceline store needs a Postgres client.",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
+  }
+}

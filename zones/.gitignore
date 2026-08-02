@@ -13,5 +13,15 @@ addon/ZoneLoreAudio/Sounds/
 # Voice samples for checking the model before a bulk run.
 audio-samples/
 
-# ELEVENLABS_API_KEY
+# Superseded takes, kept so a bad re-roll is reversible. A sibling of Sounds/ and
+# not a subdirectory: validate-audio.mjs walks Sounds/ and would count these as
+# orphans. Grows without bound -- re-cutting the whole corpus adds ~700MB.
+audio-history/
+
+# ELEVENLABS_API_KEY and DATABASE_URL
 .env
+
+node_modules/
+web/.next/
+web/next-env.d.ts
+web/tsconfig.tsbuildinfo
