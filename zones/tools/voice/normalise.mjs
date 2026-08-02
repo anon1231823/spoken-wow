@@ -10,7 +10,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const PRONUNCIATION_PATH = join(HERE, "pronunciation.json");
+
+// Overridable for the reason ROOT is, plus one of its own: /lexicon writes this file,
+// and on the droplet it therefore has to live in shared/ rather than inside a release,
+// or every rule someone added would vanish with the next deploy. See deploy/README.md.
+export const PRONUNCIATION_PATH =
+  process.env.ZONELORE_PRONUNCIATION || join(HERE, "pronunciation.json");
 
 // IPA blocks such as "Kalimdor [ˈkælɪmdɔɹ]" are a pronunciation guide for
 // readers, not something to read out. Detected by the phonetic characters

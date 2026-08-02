@@ -16,6 +16,12 @@ const config: NextConfig = {
   // exactly the divergence store.mjs exists to prevent.
   outputFileTracingRoot: repoRoot,
 
+  // The droplet has no repo, no pnpm and no build toolchain: CI ships it a self-contained
+  // bundle with its traced node_modules. Combined with the tracing root above, the bundle
+  // is laid out from the repo root -- server.js lands in .next/standalone/web/, not at the
+  // top -- because tools/voice/*.mjs has to keep resolving by its real relative path.
+  output: "standalone",
+
   // tools/ is plain ESM with no build step and no types. Next compiles what it
   // traces; these are already valid ESM, so they only need to not be treated as
   // browser-bundled code.

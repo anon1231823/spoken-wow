@@ -21,6 +21,7 @@ retail or the Anniversary/TBC client.
 | M7 voiceline generation tool | done; all 1353 lines generated |
 | M8 Postgres behind the voiceline store | done |
 | M9-M12 voiceline explorer (`web/`) | done; not yet used for a full listening pass |
+| M13 deploy the explorer (`deploy/`) | done; droplet not yet bootstrapped |
 
 ## Layout
 
@@ -727,15 +728,53 @@ Batches run in-process with progress in memory — no queue tables. Those exist 
 one process. The work is server-side so closing the tab does not strand it. A server
 restart does, and that is a real limitation rather than one worth engineering around.
 
+### Deployed at lore.rusty.one
+
+Pushing to `master` deploys the explorer to a DigitalOcean droplet — the same one
+`../wow-voiceover` runs on, beside it rather than tangled with it: its own `/srv` tree,
+its own database, its own pm2 app, and **port 3001**, because voiceover holds 3000.
+CI builds and tests, ships a Next.js `standalone` bundle, and swaps a symlink;
+`deploy/README.md` is the full account, including first-time droplet setup.
+
+**The site has no authentication.** Anyone who finds the hostname can spend ElevenLabs
+credits through Regenerate. `deploy/nginx-lore.conf` carries a commented-out basic-auth
+block ready to uncomment; leaving `ELEVENLABS_API_KEY` out of the droplet's `app.env`
+closes off the expensive half on its own.
+
+The one thing worth knowing here rather than there: **`tools/` paths are overridable by
+environment variable, and on the droplet all five are overridden.** Every path under
+`tools/` derives from `ROOT` in `tools/lib/loredata.mjs`, which is the module's own
+location — and cannot be, once webpack has compiled it, because webpack replaces
+`import.meta.url` at *build* time. A bundle built in CI otherwise looks for the lore
+corpus under a GitHub runner's checkout path. So a deployed process is told instead:
+
+| | |
+|---|---|
+| `ZONELORE_ROOT` | the release directory — corpus and voice config move with a rollback |
+| `ZONELORE_SOUNDS` | shared, so ~700MB is not copied per deploy or deleted by a prune |
+| `ZONELORE_AUDIO_HISTORY` | shared; this one's loss is permanent |
+| `ZONELORE_MANIFEST` | shared; write-only, since the database is authoritative |
+| `ZONELORE_PRONUNCIATION` | shared, because `/lexicon` writes it |
+
+Unset — every local run, CLI or `next dev` — each falls back to exactly the path it
+always had. Nothing about working locally changes.
+
 ### Moving the audio between machines
 
-1353 mp3s, ~795MB, gitignored and never in CI.
+1353 mp3s, ~795MB, gitignored and never in CI. `DROPLET` defaults to
+`deploy@rusty.one`; override it for anywhere else.
 
 ```sh
-make audio-status
-make pull-dry REMOTE=user@host:/srv/zonelore
-make pull     REMOTE=user@host:/srv/zonelore
+make audio-status     # local and droplet, side by side
+make pull-dry         # what `make pull` would change
+make pull             # the audio the droplet regenerated
+make db-pull          # the takes and flags behind it
+make lookup           # rebuild Sounds.lua from the manifest
 ```
+
+Both `push` and `pull` use `--delete` and both show a dry run and ask first: the
+droplet is a second copy, not a backup, and since regeneration happens through the web
+UI it is usually the *newer* side.
 
 No `-z`: mp3 is already compressed, so it is pure CPU for nothing. The rsync-3.x
 preflight is load-bearing — macOS ships openrsync as `/usr/bin/rsync`, which reports

@@ -11,7 +11,20 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+// The repo root. Everything under tools/ derives its paths from this one constant.
+//
+// The override is what makes the explorer deployable. Next bundles these modules with
+// webpack, which replaces `import.meta.url` with the *build machine's* path -- so a
+// bundle built in CI carries a literal
+// "file:///home/runner/work/wow-lore/wow-lore/tools/lib/loredata.mjs" and every path
+// below it resolves to a directory that does not exist on the droplet. Deriving the
+// root from the module's own location is right for a script and impossible for a
+// bundle, so a deployed process says where the root is instead.
+//
+// Unset -- which is every local run, CLI or `next dev` -- this behaves exactly as it
+// did before. See deploy/README.md for the full set.
+export const ROOT =
+  process.env.ZONELORE_ROOT || join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const ZONES_LUA = join(ROOT, "addon/ZoneLore/Data/Zones.lua");
 export const SUBZONES_LUA = join(ROOT, "addon/ZoneLore/Data/Subzones.lua");
 

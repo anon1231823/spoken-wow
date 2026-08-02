@@ -28,14 +28,24 @@ import * as db from "./db.mjs";
 
 const execFileAsync = promisify(execFile);
 
-export const MANIFEST_PATH = join(ROOT, "tools/voice/manifest.json");
-export const SOUNDS_DIR = join(ROOT, "addon/ZoneLoreAudio/Sounds");
+// Each of these can be overridden by an environment variable, and on the droplet each
+// one is: ZONELORE_ROOT points at the current release, and these three point *outside*
+// it. What they have in common is that the app writes them, so leaving them inside a
+// release would mean prune.sh deleting them five deploys later. See deploy/README.md.
+// Unset, which is every local run, they are exactly the repo paths they always were.
+export const MANIFEST_PATH =
+  process.env.ZONELORE_MANIFEST || join(ROOT, "tools/voice/manifest.json");
+export const SOUNDS_DIR = process.env.ZONELORE_SOUNDS || join(ROOT, "addon/ZoneLoreAudio/Sounds");
 export const SAMPLES_DIR = join(ROOT, "audio-samples");
 
 // A sibling of Sounds/, never a subdirectory: validate-audio.mjs walks Sounds/ and
 // would report every archived take as an mp3 with no manifest entry. The same
 // reasoning is written down at ../wow-voiceover/web/src/lib/paths.ts:53.
-export const HISTORY_DIR = join(ROOT, "audio-history");
+//
+// This is the one directory whose loss is permanent: version 1 of each file is the
+// take the corpus was originally cut with, and restoring it is the undo for a re-roll
+// that came out worse.
+export const HISTORY_DIR = process.env.ZONELORE_AUDIO_HISTORY || join(ROOT, "audio-history");
 
 // The fields that make up a manifest record, in the order the JSON file writes them,
 // so an exported manifest diffs cleanly against the hand-written one it replaces.
