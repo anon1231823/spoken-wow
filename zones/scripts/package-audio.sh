@@ -77,8 +77,8 @@ node "$REPO/tools/voice/validate-audio.mjs"
 # player read before downloading is the file they end up with.
 node "$REPO/tools/descriptions.mjs" --write >/dev/null
 tier_readme() { case "$1" in
-  standard) echo "$REPO/dist/descriptions/zonelore-audio-64.md";;
-  high)     echo "$REPO/dist/descriptions/zonelore-audio.md";;
+  standard) echo "$REPO/dist/descriptions/zoneloreaudio64.md";;
+  high)     echo "$REPO/dist/descriptions/zoneloreaudio.md";;
 esac; }
 
 # Transcoding needs ffmpeg, but only for the tiers that are not a straight copy.
