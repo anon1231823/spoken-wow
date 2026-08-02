@@ -1,0 +1,268 @@
+name: Deploy web
+
+on:
+  push:
+    branches: [master]
+    # Addon-only commits should not redeploy the explorer. The paths below are exactly
+    # what ends up inside a release.
+    paths:
+      - "web/**"
+      # The lore corpus ships in the release, so a scrape that changes it has to produce a
+      # new one - otherwise the explorer keeps serving yesterday's text while the addon
+      # ships today's.
+      - "addon/ZoneLore/Data/**"
+      # The app imports these directly rather than shelling out to the CLI, so they are
+      # part of the bundle.
+      - "tools/**"
+      - "deploy/**"
+      - ".github/workflows/deploy-web.yaml"
+  workflow_dispatch:
+
+# A deploy that only ever runs by hand is a deploy nobody runs, so the dispatch trigger
+# above is a fallback rather than the path. Note that GitHub only registers this file
+# after a push that modifies it, so a freshly cloned or recreated repo needs one such push
+# before dispatch works.
+
+# Never let two deploys interleave a symlink swap.
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    # A throwaway database for the build and the smoke test. The droplet's real one is
+    # bound to localhost and unreachable from here, which is the point: CI proves the
+    # bundle can talk to *a* Postgres with this schema, and never touches production data.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: zonelore
+          POSTGRES_PASSWORD: zonelore
+          POSTGRES_DB: zonelore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # 5432 here, 5433 locally: the local port avoids ../wow-voiceover's docker postgres,
+      # and nothing else is on 5432 in a CI service container.
+      DATABASE_URL: postgres://zonelore:zonelore@127.0.0.1:5432/zonelore
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v6
+        with:
+          # The repo root has a package.json, but it is the tooling's (one dependency, pg)
+          # and carries no "packageManager" field. The web app's is the one that does.
+          package_json_file: web/package.json
+
+      - uses: actions/setup-node@v5
+        with:
+          # Must match the droplet's Node major. The droplet uses its own system Node, so
+          # if you upgrade it there, change it here too and redeploy.
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: web
+        run: pnpm typecheck
+
+      # The addon's own checks. They cost seconds and they cover the data files that ship
+      # inside the release: validate.mjs is what asserts no square bracket survives into
+      # spoken text, which is the one normalisation rule that is not cosmetic.
+      - name: Validate the corpus
+        run: node tools/validate.mjs
+
+      # Applied with the same script the droplet uses, so a migration that only works under
+      # a hand-run psql fails here instead of mid-deploy.
+      - name: Migrate
+        run: |
+          mkdir -p /tmp/release-check
+          cp -a web/migrations /tmp/release-check/migrations
+          deploy/bin/migrate.sh /tmp/release-check
+
+      - name: Build
+        working-directory: web
+        run: pnpm build
+
+      - name: Assemble release
+        run: |
+          set -euo pipefail
+          R=release
+          mkdir -p "$R"
+
+          # cp -a, never cp -r: pnpm's node_modules/next is a symlink into .pnpm/, and a
+          # dereferencing copy detaches it from its siblings, so the bundle dies at boot
+          # with "Cannot find module 'styled-jsx/package.json'". BSD cp -r dereferences.
+          #
+          # next.config.ts sets outputFileTracingRoot to the repo root so the app can
+          # import tools/voice/*.mjs, which also means standalone lays the bundle out from
+          # the repo root: server.js lands at web/server.js, not at the top.
+          cp -a web/.next/standalone/. "$R"/
+          # standalone does not include static assets; without this the page renders
+          # unstyled. (This project has no public/.)
+          cp -a web/.next/static "$R"/web/.next/static
+
+          # Everything below is read with readFile at a path computed at runtime, which
+          # Next cannot trace, so none of it is in the bundle and all of it has to be
+          # copied. ZONELORE_ROOT points the app at this release directory to find it.
+          #
+          # The corpus ships inside the release so a rollback moves data and code together.
+          mkdir -p "$R"/addon/ZoneLore/Data
+          cp addon/ZoneLore/Data/Zones.lua addon/ZoneLore/Data/Subzones.lua "$R"/addon/ZoneLore/Data/
+
+          # config.json is the voice, model and output format; without it a regeneration
+          # cannot be attempted at all. pronunciation.json is a seed - activate.sh copies
+          # it into shared/ on the first deploy only, because /lexicon writes it and a
+          # deploy must not overwrite rules added through the UI. manifest.json rides along
+          # as the record of what has been paid for, for anyone reading a release directory.
+          mkdir -p "$R"/tools/voice
+          cp tools/voice/config.json tools/voice/pronunciation.json tools/voice/manifest.json \
+             "$R"/tools/voice/
+
+          # Migrations ship with the release too: activate.sh runs migrate.sh against the
+          # release directory, so without this a deploy has nothing to apply.
+          cp -a web/migrations "$R"/migrations
+
+          test -f "$R"/web/server.js
+          test -L "$R"/web/node_modules/next          # symlink survived the copy
+          test -d "$R"/web/.next/static
+          test -f "$R"/addon/ZoneLore/Data/Zones.lua
+          test -f "$R"/addon/ZoneLore/Data/Subzones.lua
+          test -f "$R"/tools/voice/config.json
+          test -f "$R"/migrations/0001_voiceline_take.sql
+          test -f "$R"/migrations/0002_line_flag.sql
+          du -sh "$R"
+
+      # Boot the exact artifact we are about to ship, with the same five path overrides pm2
+      # will set. This is the step that would have caught the whole class of failure those
+      # overrides exist for: webpack bakes `import.meta.url` in at build time, so an
+      # un-overridden bundle looks for the corpus under CI's own checkout path and finds
+      # nothing. No audio store in CI, so every line reads as a gap - that is fine, we are
+      # testing that the server starts, finds its data and serves.
+      - name: Smoke test the bundle
+        working-directory: release
+        env:
+          PORT: 3999
+          HOSTNAME: 127.0.0.1
+          NODE_ENV: production
+        run: |
+          set -euo pipefail
+          export ZONELORE_ROOT="$PWD"
+          export ZONELORE_SOUNDS="$PWD/no-audio-in-ci"
+          export ZONELORE_AUDIO_HISTORY="$PWD/no-history-in-ci"
+          export ZONELORE_MANIFEST="$PWD/tools/voice/manifest.json"
+          export ZONELORE_PRONUNCIATION="$PWD/tools/voice/pronunciation.json"
+
+          node web/server.js &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+
+          for i in $(seq 1 20); do
+            curl -fsS -o /dev/null "http://127.0.0.1:3999/api/search" && break
+            sleep 1
+          done
+
+          # The corpus reached the bundle. 1353 is the whole catalogue; a release that
+          # shipped without Zones.lua would answer 0 rather than fail, which is exactly the
+          # kind of quiet emptiness worth asserting against.
+          total=$(curl -fsS "http://127.0.0.1:3999/api/search" \
+            | python3 -c 'import sys,json; print(json.load(sys.stdin)["total"])')
+          [ "$total" -gt 1000 ] || { echo "::error::catalogue is $total lines - did the corpus ship?"; exit 1; }
+          echo "catalogue: $total lines"
+
+          # Filtering works, and the zone facet is derived from the corpus rather than
+          # hardcoded, so this also proves the Lua parsed into real zone names.
+          durotar=$(curl -fsS "http://127.0.0.1:3999/api/search?q=Durotar&field=zone" \
+            | python3 -c 'import sys,json; print(json.load(sys.stdin)["total"])')
+          [ "$durotar" -gt 0 ] || { echo "::error::zone filter matched nothing"; exit 1; }
+          echo "Durotar: $durotar lines"
+
+          # The lexicon reads pronunciation.json off disk and re-derives staleness across
+          # the whole catalogue. If ZONELORE_PRONUNCIATION were wrong this 500s.
+          curl -fsS "http://127.0.0.1:3999/api/lexicon" | grep -q '"totalLines"'
+
+          # The stylesheet must resolve, or .next/static did not make it into the release.
+          css=$(curl -fsS http://127.0.0.1:3999/ | grep -o '_next/static/css/[^"]*' | head -1)
+          curl -fsS -o /dev/null "http://127.0.0.1:3999/$css"
+          echo "bundle boots and serves"
+
+      - name: Set release name
+        run: echo "STAMP=$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      # The key goes to a file rather than into an agent so the workflow controls its exact
+      # bytes: a secret pasted through a browser commonly loses its trailing newline or
+      # picks up CRLF, and ssh then fails with a bare `error in libcrypto` naming neither
+      # the key nor the cause. Both are repaired here; a wrong key cannot be, hence the
+      # explicit check.
+      - name: Set up SSH
+        env:
+          KEY: ${{ secrets.DO_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DO_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$(printf '%s' "$KEY" | tr -d '\r')" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null 2>&1; then
+            echo "::error::DO_SSH_KEY is not a usable private key. Re-set it from the file so the trailing newline survives: gh secret set DO_SSH_KEY < ~/.ssh/zonelore_deploy - it must be the private key, not the .pub, including its BEGIN/END lines."
+            exit 1
+          fi
+          echo "deploy key fingerprint: $(ssh-keygen -lf ~/.ssh/deploy_key | awk '{print $2}')"
+
+      - name: Upload release
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: |
+          rsync -a --delete -e "ssh -i ~/.ssh/deploy_key" release/ \
+            "$TARGET:/srv/zonelore/releases/$STAMP/"
+
+      - name: Activate
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: |
+          ssh -i ~/.ssh/deploy_key "$TARGET" \
+            "/srv/zonelore/bin/activate.sh /srv/zonelore/releases/$STAMP"
+
+      # A bad deploy should heal itself rather than sit broken until someone notices.
+      - name: Smoke check, rolling back on failure
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: |
+          set -euo pipefail
+          ok=""
+          for i in $(seq 1 10); do
+            if ssh -i ~/.ssh/deploy_key "$TARGET" \
+              "curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:3001/api/search?state=current'"
+            then ok=1; break; fi
+            echo "attempt $i failed, retrying..."
+            sleep 3
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::smoke check failed, rolling back"
+            ssh -i ~/.ssh/deploy_key "$TARGET" '/srv/zonelore/bin/rollback.sh'
+            exit 1
+          fi
+          echo "smoke check passed"
+
+      - name: Prune old releases
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: ssh -i ~/.ssh/deploy_key "$TARGET" '/srv/zonelore/bin/prune.sh 5'
