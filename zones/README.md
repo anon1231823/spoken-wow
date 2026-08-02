@@ -1114,11 +1114,9 @@ the sound packs is generated from that text and carries the same license. Any
 distribution must keep that attribution and license the lore data and audio under
 CC BY-SA. Text in `tools/seed/overrides.json` is original and not covered by that.
 
-Because the split does not match any single entry in CurseForge's license
-dropdown, all three projects declare a **custom** license reproducing it:
-
-> ZoneLore addon code is MIT.
->
-> Zone and subzone lore text is derived from warcraft.wiki.gg and is licensed
-> CC BY-SA 4.0. Narration audio is generated from that text and carries the same
-> license. Attribution: warcraft.wiki.gg contributors.
+All three CurseForge projects declare **MIT** in the license dropdown, which is
+the code half of that and the closest single entry the field offers. The wiki's
+attribution and share-alike terms are carried in the description body instead —
+every project page ends on a Credits section naming warcraft.wiki.gg and CC BY-SA
+4.0, which is why those sections are not optional trimming when a page gets
+rewritten.

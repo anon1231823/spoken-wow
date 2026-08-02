@@ -6,7 +6,7 @@ summary: Zone lore on the world map. Open the map and read the story of the zone
 categories:
   - Miscellaneous
   - Roleplay
-license: custom
+license: MIT
 addonReadme: addon/ZoneLore/README.md
 ---
 
@@ -35,10 +35,10 @@ Two packs, same 1353 voicelines, differing only in bitrate:
 
 | Pack | Bitrate | Download |
 |---|---|---|
-| **ZoneLore Audio** | 64 kbps mono | ~400 MB |
-| **ZoneLore Audio HQ** | 128 kbps | ~790 MB |
+| **ZoneLore Audio** | 128 kbps | ~790 MB |
+| **ZoneLore Audio 64** | 64 kbps mono | ~400 MB |
 
-Install either. With both installed ZoneLore plays the higher-quality one; `/zl audio` lists what you have and switches between them.
+Install ZoneLore Audio unless the download is a problem, in which case ZoneLore Audio 64 is half the size and close to transparent for speech. With both installed ZoneLore plays the higher-quality one; `/zl audio` lists what you have and switches between them.
 
 ### The voice is in beta
 

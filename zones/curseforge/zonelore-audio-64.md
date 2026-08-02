@@ -7,10 +7,10 @@ categories:
   - Audio & Video
   - Miscellaneous
   - Roleplay
-license: custom
+license: MIT
 ---
 
-Narrated zone lore for **ZoneLore**, at 64kbps kbps quality. This addon is data only — it does nothing on its own.
+Narrated zone lore for **ZoneLore**, at 64 kbps mono. This addon is data only — it does nothing on its own.
 
 ## Beta: this is not the finished voice
 
@@ -29,9 +29,9 @@ Two packs, identical content at different bitrates:
 | Pack | Bitrate | Download |
 |---|---|---|
 | **ZoneLore Audio** | 128 kbps | ~790 MB |
-| **ZoneLore Audio 64kbps** (this one) | 64 kbps mono | ~400 MB |
+| **ZoneLore Audio 64** (this one) | 64 kbps mono | ~400 MB |
 
-This is the larger pack. If ~790 MB is more than you want to spend, ZoneLore Audio has the same lines at 64 kbps mono for half the size — close to transparent for speech.
+This is the smaller pack. 64 kbps mono is close to transparent for speech, so it costs less than the gap between the numbers suggests — take it if the ~790 MB of ZoneLore Audio is more than you want to spend. A higher bitrate makes the current voice clearer, not better.
 
 Both can be installed at once — ZoneLore plays the higher-quality one, and `/zl audio` switches between them.
 
@@ -48,3 +48,7 @@ Built for **Classic Era 1.15.9**. The pack and ZoneLore work together as long as
 ## Support
 
 Every one of these 1000+ lines was paid for per character, and the re-record means paying for all of them again. If the narration is worth something to you, [buy me a coffee](https://buymeacoffee.com/rustykey) — it's what funds the next batch.
+
+## Credits
+
+The narration is generated from lore text derived from [warcraft.wiki.gg](https://warcraft.wiki.gg) and licensed CC BY-SA 4.0. Attribution: warcraft.wiki.gg contributors.
