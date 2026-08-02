@@ -19,7 +19,9 @@ Autoplay.lua
 Data/Zones.lua
 Data/Subzones.lua
 UI/TextView.lua
+UI/CopyLink.lua
 UI/AudioButton.lua
+UI/ReportButton.lua
 UI/MapPanel.lua
 UI/SubzoneClick.lua
 UI/HoverPreview.lua

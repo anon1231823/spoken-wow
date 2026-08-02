@@ -12,7 +12,12 @@ local INFO_LINE_HEIGHT = 16
 -- the top-right corner. Wider than the button so a long zone name never crowds it.
 local AUDIO_RESERVE = 66
 
-local panel, header, infoLine, body, footer, audioButton
+-- The same idea on the footer row, for the report button. The credit line is short
+-- and the button is a rare click, so they share a row rather than costing the body
+-- another one.
+local REPORT_RESERVE = 64
+
+local panel, header, infoLine, body, footer, audioButton, reportButton
 
 --------------------------------------------------------------------------------
 -- Construction
@@ -67,15 +72,20 @@ local function BuildPanel()
 		end
 	end)
 
+	reportButton = ZoneLore:CreateReportButton(panel)
+	reportButton:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -PADDING, PADDING - 6)
+
 	footer = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
 	footer:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", PADDING, PADDING - 4)
-	footer:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -PADDING, PADDING - 4)
+	footer:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -(PADDING + REPORT_RESERVE), PADDING - 4)
 	footer:SetJustifyH("LEFT")
 	footer:SetText("Lore: warcraft.wiki.gg (CC BY-SA 4.0)")
 
 	body = ZoneLore:CreateTextView(panel)
 	body.frame:SetPoint("TOPLEFT", infoLine, "BOTTOMLEFT", 0, -6)
-	body.frame:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT", 0, 6)
+	-- Cleared against the button rather than the credit line: the button is the
+	-- taller of the two, so it is the one that decides where the text has to stop.
+	body.frame:SetPoint("BOTTOMRIGHT", reportButton, "TOPRIGHT", 0, 6)
 
 	ZoneLore.panel = panel
 end
@@ -162,8 +172,11 @@ local function Refresh(mapID)
 		header:SetText(selected.areaName or selected.entry.name or "")
 		SetBackLink(zoneName)
 		SetBody(selected.entry.full or selected.entry.short or "")
-		-- Audio is keyed by the canonical form, not the name the client reported.
-		audioButton:SetTarget(mapID, ZoneLore:NormaliseAreaKey(selected.areaName))
+		-- Audio and the report link are both keyed by the canonical form, not the
+		-- name the client reported.
+		local key = ZoneLore:NormaliseAreaKey(selected.areaName)
+		audioButton:SetTarget(mapID, key)
+		reportButton:SetTarget(mapID, key)
 		return
 	end
 
@@ -185,12 +198,15 @@ local function Refresh(mapID)
 		end
 		SetBody(entry.full or entry.short or "")
 		-- foundOn, not mapID: a dungeon showing its parent zone's text should read
-		-- that same parent zone's narration.
+		-- that same parent zone's narration, and a report on it belongs to the line
+		-- that text actually came from.
 		audioButton:SetTarget(foundOn, nil)
+		reportButton:SetTarget(foundOn, nil)
 	else
 		SetCaption("")
 		SetBody("|cff888888No lore recorded for " .. zoneName .. " yet.|r")
 		audioButton:SetTarget(nil, nil)
+		reportButton:SetTarget(nil, nil)
 	end
 end
 

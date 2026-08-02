@@ -351,6 +351,27 @@ function ZoneLore:SetupOptions()
 			.. "whether lore was found. Use this to spot a subzone needing an alias.",
 		INDENT, y, nil)
 
+	-- Its own section rather than part of Troubleshooting, and not only because the
+	-- checkbox above already uses the word "report": the per-line Report buttons
+	-- cover a bad line, and this covers everything that belongs to no line at all --
+	-- the addon erroring, the voice being wrong throughout, the site itself.
+	y = y + ROW_GAP - 8
+	MakeHeading(panel, "Feedback", INDENT, y, "GameFontNormal")
+
+	y = y + ROW_GAP
+	local feedbackButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	feedbackButton:SetPoint("TOPLEFT", INDENT + 4, y)
+	feedbackButton:SetSize(220, 22)
+	feedbackButton:SetText("Report a problem")
+	feedbackButton:SetScript("OnClick", function()
+		ZoneLore:ShowCopyLink(ZoneLore.SITE_URL,
+			"Copy this address and open it in your browser to send feedback about ZoneLore.")
+	end)
+
+	MakeNote(panel, "There is a Report button on each lore entry for problems with that "
+		.. "entry. This one is for everything else. The game cannot open a link, so both "
+		.. "give you an address to copy.", INDENT + 4, y - 26)
+
 	category = Settings.RegisterCanvasLayoutCategory(panel, "ZoneLore")
 	Settings.RegisterAddOnCategory(category)
 

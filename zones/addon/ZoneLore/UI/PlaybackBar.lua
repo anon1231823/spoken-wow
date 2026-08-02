@@ -11,13 +11,15 @@
 
 local ADDON_NAME, ZoneLore = ...
 
-local BAR_WIDTH = 158
+-- Three buttons at 54 plus the padding is 178; the bar was 158 with two at 62.
+-- Widening by 20 costs less than shrinking the labels until "Report" clips.
+local BAR_WIDTH = 178
 local BAR_HEIGHT = 52
-local BUTTON_WIDTH = 62
+local BUTTON_WIDTH = 54
 local BUTTON_HEIGHT = 20
 local PADDING = 8
 
-local bar, label, pauseButton, stopButton
+local bar, label, pauseButton, stopButton, reportButton
 
 --------------------------------------------------------------------------------
 -- Position
@@ -84,6 +86,7 @@ local function Refresh()
 
 	label:SetText(ZoneLore:GetAudioLabel(mapID, areaKey))
 	pauseButton:SetText(isPaused and "Play" or "Pause")
+	reportButton:SetTarget(mapID, areaKey)
 
 	-- With a queue waiting, the useful action is moving on to it rather than
 	-- ending everything. Stop is still there on right-click; see the tooltip.
@@ -147,9 +150,11 @@ local function BuildBar()
 	end)
 	pauseButton:SetScript("OnLeave", GameTooltip_Hide)
 
+	-- Centred rather than at the right edge, so the two transport controls stay
+	-- adjacent and in their old order once Report joins the row.
 	stopButton = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
 	stopButton:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
-	stopButton:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", -(PADDING - 2), PADDING - 2)
+	stopButton:SetPoint("BOTTOM", bar, "BOTTOM", 0, PADDING - 2)
 	stopButton:SetText("Stop")
 	-- Right-click has to be asked for explicitly; a button registered for
 	-- LeftButton only never sees it.
@@ -174,6 +179,13 @@ local function BuildBar()
 		GameTooltip:Show()
 	end)
 	stopButton:SetScript("OnLeave", GameTooltip_Hide)
+
+	-- The reason a report control belongs here and not only on the panels: the
+	-- complaint people actually have is about the line they are hearing right now,
+	-- and narration outlives both panels.
+	reportButton = ZoneLore:CreateReportButton(bar)
+	reportButton:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
+	reportButton:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", -(PADDING - 2), PADDING - 2)
 
 	ZoneLore.playbackBar = bar
 end

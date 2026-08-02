@@ -3,6 +3,16 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## Unreleased
+
+- A **Report** button on the map panel, the lore window and the playback controls.
+  The client cannot open a browser or send anything anywhere, so it offers an
+  address to copy: `lore.rusty.one/r/{zone}/{area}`, a page carrying that line's
+  text, its narration and a form. Reporting a bad reading no longer means finding
+  the line again among 1353 of them.
+- Options gains a **Report a problem** link, for the things that belong to no
+  particular line.
+
 ## 0.2.0 — 2026-08-02
 
 First public release.

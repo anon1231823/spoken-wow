@@ -6,7 +6,7 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 
 ## Beta
 
-**The lore text** is built by reading warcraft.wiki.gg and trimming each article down automatically. Mostly that produces something good, but some entries run long, some are thinner than the place deserves, and a few are cut at an awkward point. The filter that strips post-vanilla content is careful but not perfect. Hand-written replacements are gradually going in for the worst of them.
+**The lore text** is built by reading warcraft.wiki.gg and trimming each article down automatically. Mostly that produces something good, but some entries run long, some are thinner than the place deserves, and a few are cut at an awkward point. The filter that strips post-vanilla content is careful but not perfect. Hand-written replacements are gradually going in for the worst of them. If you hit one, the **Report** button on the entry is the fastest way to say so — it is what decides which ones get rewritten first.
 
 ## What it does
 
@@ -16,6 +16,7 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 - **Lore window** — browse zones without opening the map, from the minimap button or `/zl window`.
 - **Narration** — a play button beside the lore, with floating pause/skip/stop controls.
 - **Autoplay** — walking into an area you've never discovered narrates it once, tracked per character.
+- **Report a problem** — a Report button on every entry and on the playback controls. The game can't open a browser, so it hands you a short link to that exact line; the page at the other end has the text, the audio and a form.
 
 ## Narration needs a sound pack
 
@@ -34,7 +35,7 @@ Install ZoneLore Audio unless the download is a problem, in which case ZoneLore 
 
 What's in the packs today is a **proof of concept**. All 1353 lines are recorded, but the voice is being redesigned — better delivery, consistent pronunciation, one pass over the whole script — which means generating every line again. That costs money per line and time to check, so it lands in batches rather than all at once.
 
-If a line reads badly, report it on [lore.rusty.one](https://lore.rusty.one); the re-record follows what comes in. If you'd like it to go faster, [supporting the project](https://buymeacoffee.com/rustykey) pays for the generation directly.
+If a line reads badly, press **Report** while you are hearing it — the playback controls carry the button, so you don't have to go and find the entry again. The re-record follows what comes in. If you'd like it to go faster, [supporting the project](https://buymeacoffee.com/rustykey) pays for the generation directly.
 
 ## Commands
 

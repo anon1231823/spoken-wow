@@ -64,6 +64,7 @@ export const EMPTY_CONTEXT: SearchContext = {
 // every other constant here.
 const globalForCatalogue = globalThis as unknown as {
   zoneloreCatalogue?: Promise<CatalogueEntry[]>;
+  zoneloreByPath?: Promise<Map<string, CatalogueEntry>>;
 };
 
 export function catalogue(): Promise<CatalogueEntry[]> {
@@ -84,6 +85,34 @@ export function catalogue(): Promise<CatalogueEntry[]> {
  */
 export function invalidateCatalogue(): void {
   globalForCatalogue.zoneloreCatalogue = undefined;
+  globalForCatalogue.zoneloreByPath = undefined;
+}
+
+/**
+ * A line, addressed by the path its audio file uses: '1411/razor-hill', '1411/zone'.
+ *
+ * This is what /r/{mapID}/{slug} resolves through. The addon builds that URL from the
+ * two things it has -- the uiMapID and the canonical area key -- by reimplementing
+ * naming.mjs's slugFor in Lua, so the mapping only has to hold in this direction:
+ * given a path, which line owns it. Nothing here needs to know how it was spelled.
+ *
+ * Memoised like catalogue() and addressableFiles(), and for the same reason.
+ */
+function linesByPath(): Promise<Map<string, CatalogueEntry>> {
+  if (!globalForCatalogue.zoneloreByPath) {
+    globalForCatalogue.zoneloreByPath = catalogue().then(
+      (entries) => new Map(entries.map((entry) => [entry.file, entry])),
+    );
+  }
+  return globalForCatalogue.zoneloreByPath;
+}
+
+export async function lineByPath(
+  mapID: number,
+  slug: string,
+): Promise<CatalogueEntry | undefined> {
+  if (!Number.isInteger(mapID)) return undefined;
+  return (await linesByPath()).get(`${mapID}/${slug}`);
 }
 
 export async function loadContext(): Promise<SearchContext> {
