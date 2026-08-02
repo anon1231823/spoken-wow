@@ -109,9 +109,22 @@ web: ## Run the voiceline explorer at localhost:3000
 #   make rollback          undo a bad deploy
 #-------------------------------------------------------------------------------
 
+# Connect as deploy, never root: pm2 daemons are per-user, so a reload over an ssh
+# session as root talks to root's empty daemon and silently does nothing. The hostname
+# resolves to the droplet today; override with the IP if it is ever pointed at a CDN,
+# which would not proxy SSH:  make push DROPLET=deploy@188.166.37.175
 DROPLET     ?= deploy@rusty.one
 REMOTE_ROOT ?= /srv/zonelore
-SSH         ?= ssh
+
+# The same key ../wow-voiceover uses for the same droplet, and the same reason for
+# -o IdentitiesOnly=yes: ~/.ssh/config here has a `Host *` block naming IdentityFile,
+# which REPLACES the default identity list rather than adding to it. A bare `ssh` then
+# offers only those keys, the deploy user authorises this one, and the failure is a flat
+# "Permission denied (publickey)" that names neither the key it tried nor the one it
+# wanted. This is also the key CI authenticates with, so `make ssh-check` tests what a
+# deploy actually does.
+DEPLOY_KEY ?= ~/.ssh/id_rusty.one
+SSH        ?= ssh -i $(DEPLOY_KEY) -o IdentitiesOnly=yes
 
 # macOS ships openrsync as /usr/bin/rsync, which reports itself as "2.6.9 compatible"
 # and rejects --info. Prefer a real rsync 3.x anywhere on PATH.
@@ -122,17 +135,27 @@ RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(comman
 # No -z: mp3 is already compressed, so it is pure CPU for ~0 gain.
 # --delete keeps the two stores in exact correspondence, which is what makes the
 # "missing" counts in the explorer trustworthy.
-RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2
+# -e is not optional: without it rsync spawns a plain ssh that cannot authenticate.
+RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)"
 
 REMOTE_SOUNDS  := $(DROPLET):$(REMOTE_ROOT)/shared/Sounds/
 REMOTE_HISTORY := $(DROPLET):$(REMOTE_ROOT)/shared/audio-history/
 
+# Fail with an explanation rather than an rsync usage dump or a bare publickey refusal.
 define preflight
 	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. macOS ships openrsync, which lacks --info."; \
 	                        echo "Install one:  brew install rsync"; exit 1; }
+	@[ -f $(DEPLOY_KEY) ] || { echo "No deploy key at $(DEPLOY_KEY)."; \
+	                           echo "It is the key the droplet's deploy user authorises."; \
+	                           echo "Point at another with:  make $@ DEPLOY_KEY=~/.ssh/other"; exit 1; }
+	@case "$(DROPLET)" in root@*) \
+	  echo "DROPLET is $(DROPLET). Use deploy@ instead: pm2 daemons are per-user, so a"; \
+	  echo "reload as root finds no 'zonelore' process and the new release stays unserved."; \
+	  exit 1;; esac
 endef
 
 ssh-check: ## Confirm the droplet is reachable and set up
+	$(preflight)
 	@$(SSH) $(DROPLET) 'echo "ok: $$(hostname)"; ls -d $(REMOTE_ROOT)/bin $(REMOTE_ROOT)/shared 2>/dev/null || echo "missing tree - run: make bootstrap"'
 
 push-dry: ## Preview what `make push` would send to the droplet
@@ -249,12 +272,18 @@ db-pull: ## Copy the droplet's voiceline_take + line_flag into the local databas
 #
 # ROOT_SSH, not SSH: bootstrap creates the deploy user and the /srv tree, so it cannot
 # run as the user it is about to create.
-ROOT_SSH ?= ssh root@$(word 2,$(subst @, ,$(DROPLET)))
+DROPLET_HOST := $(word 2,$(subst @, ,$(DROPLET)))
+
+# Plain ssh, not $(SSH): root is reached with whatever key ~/.ssh/config already offers
+# for this host -- that is how you administer the box -- whereas DEPLOY_KEY is specific
+# to the unprivileged deploy user, which this target is about to create. Override if
+# root wants a particular key:  make bootstrap ROOT_SSH_OPTS='-i ~/.ssh/other'
+ROOT_SSH_OPTS ?=
 
 bootstrap: ## One-time droplet setup, as root (idempotent)
-	@echo "==> copying deploy/bootstrap.sh to $(DROPLET) as root"
-	@$(RSYNC) -a -e "ssh" deploy/bootstrap.sh root@$(word 2,$(subst @, ,$(DROPLET))):/tmp/zonelore-bootstrap.sh
-	@$(ROOT_SSH) 'bash /tmp/zonelore-bootstrap.sh; rm -f /tmp/zonelore-bootstrap.sh'
+	@echo "==> copying deploy/bootstrap.sh to root@$(DROPLET_HOST)"
+	@$(RSYNC) -a -e "ssh $(ROOT_SSH_OPTS)" deploy/bootstrap.sh root@$(DROPLET_HOST):/tmp/zonelore-bootstrap.sh
+	@ssh $(ROOT_SSH_OPTS) root@$(DROPLET_HOST) 'bash /tmp/zonelore-bootstrap.sh; rm -f /tmp/zonelore-bootstrap.sh'
 
 deploy-scripts: ## Install deploy/bin + ecosystem.config.js on the droplet
 	@$(RSYNC) -a -e "$(SSH)" deploy/bin/ $(DROPLET):$(REMOTE_ROOT)/bin/

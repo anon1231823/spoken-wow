@@ -92,8 +92,13 @@ if su - postgres -c "psql -tAc \"select 1 from pg_roles where rolname='$DB_USER'
   echo "    role $DB_USER already exists, leaving its password alone"
   PGPW=""
 else
-  # A password no human types, so make it long.
-  PGPW=$(openssl rand -base64 24)
+  # A password no human types, so make it long -- and hex rather than base64, because
+  # this goes straight into a postgres:// URL. base64's alphabet includes '/' and '+':
+  # a '/' ends the URL's authority section, so psql reads the tail of the password as
+  # the host and the head as the port, and fails with
+  #   invalid integer value "..." for connection option "port"
+  # which names neither the password nor the URL. 48 hex chars is 192 bits.
+  PGPW=$(openssl rand -hex 24)
   su - postgres -c "psql -v ON_ERROR_STOP=1 -c \"CREATE ROLE $DB_USER LOGIN PASSWORD '$PGPW'\""
   echo "    created role $DB_USER"
 fi
