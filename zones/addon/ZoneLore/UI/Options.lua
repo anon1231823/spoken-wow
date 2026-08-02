@@ -213,7 +213,23 @@ function ZoneLore:SetupOptions()
 	y = y + ROW_GAP - 28
 	MakeHeading(panel, "Narration", INDENT, y, "GameFontNormal")
 
-	y = y + ROW_GAP
+	y = y + ROW_GAP + 8
+	-- The disclaimer, at the top of the section it applies to rather than under the
+	-- sound pack button at the bottom of it: a player who reads the heading and the
+	-- line beneath it has then been told that the voice everything below configures
+	-- is temporary. The packs cannot say this themselves -- they load no code -- so
+	-- this panel says it for them. Two lines and no more; the long version is what
+	-- /zl audio prints, and the wording of both lives in Audio.lua.
+	MakeNote(
+		panel,
+		"Beta: the voiceover is a proof of concept. The voice is being redesigned and "
+			.. "re-generated, which costs money per line and time -- so it lands in "
+			.. "batches. /zl audio has the detail.",
+		INDENT,
+		y
+	)
+
+	y = y + ROW_GAP - 6
 	MakeCheckbox(panel, "voiceEnabled", "Show the Play button on lore descriptions",
 		"Reads the lore aloud. Needs the ZoneLoreAudio companion addon; without it "
 			.. "the button plays a placeholder.",

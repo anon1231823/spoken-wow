@@ -177,6 +177,56 @@ function ZoneLore:GetAudioPackLabel(pack)
 end
 
 --------------------------------------------------------------------------------
+-- The beta disclaimer
+--------------------------------------------------------------------------------
+--
+-- What is in the sound packs is a first pass, kept here rather than in the packs
+-- themselves because a pack is data only -- it registers a table and loads no
+-- code, so it has no way to say anything to the player. ZoneLore is what draws
+-- the Play button and what names the packs in its options, so ZoneLore is what
+-- has to carry the caveat that goes with them.
+--
+-- The same claim is made on every other surface that offers the narration -- the
+-- options panel, both `## Notes:` lines, both project READMEs, and the badge on
+-- lore.rusty.one. Nothing checks that they agree, so they are meant to be edited
+-- together; the repository README lists them under "The beta disclaimer, and the
+-- files that carry it".
+
+ZoneLore.AUDIO_BETA_LINES = {
+	"the voiceover is a |cffffcc00proof of concept|r -- all 1353 lines are recorded, but not in the voice this will ship with",
+	"it is being redesigned: better delivery, consistent pronunciation, one pass over the whole script",
+	"that means generating every line again, which costs money per line and time to listen back to -- so it lands in batches, as it can be paid for",
+}
+
+-- Printed by /zl audio, and once per version by the announcement below.
+function ZoneLore:PrintAudioBeta()
+	self:Print("|cffffcc00beta|r:")
+	for i = 1, #self.AUDIO_BETA_LINES do
+		self:Print("  " .. self.AUDIO_BETA_LINES[i])
+	end
+end
+
+-- Said once per installed version, the first time narration actually plays.
+--
+-- Not on login: a disclaimer about the voice is noise to somebody who has not
+-- heard it yet, and the login window is already where every addon shouts. Not
+-- every session either -- that is nagging, and the player can re-read it with
+-- /zl audio or in the options panel. Stamped with the version rather than a
+-- boolean so that a build shipping a re-recorded voice says so once, to exactly
+-- the people who were told the old one was temporary.
+local function AnnounceBetaOnce()
+	if type(ZoneLoreDB) ~= "table" then
+		return
+	end
+	if ZoneLore:Get("betaNoticeVersion") == ZoneLore.version then
+		return
+	end
+	ZoneLore:Set("betaNoticeVersion", ZoneLore.version)
+	ZoneLore:PrintAudioBeta()
+	ZoneLore:Print("  /zl audio to see this again")
+end
+
+--------------------------------------------------------------------------------
 -- Lookup
 --------------------------------------------------------------------------------
 
@@ -387,6 +437,10 @@ function ZoneLore:PlayLore(mapID, areaKey)
 
 	token = token + 1
 	current = { handle = handle, mapID = mapID, areaKey = areaKey, token = token }
+
+	-- After the clip is running, not before: the player is now hearing the voice
+	-- the notice is about, and a failed play should not use up its one showing.
+	AnnounceBetaOnce()
 
 	-- Reset the button when the clip runs out. The client fires no event for this,
 	-- so a recorded duration is the only signal; a clip of unknown length would stay

@@ -338,6 +338,33 @@ Its duration is hardcoded in `Audio.lua` as `PLACEHOLDER_DURATION`, because the
 client cannot report how long a sound file is. Swap the file and that number has
 to change with it.
 
+### The beta disclaimer, and the files that carry it
+
+The shipped voice is a first pass, and every surface that offers it says so. The
+wording is duplicated rather than shared, because Lua and TypeScript cannot import
+from each other and a `.toc` cannot import from anything — so these are edited
+together, and all of them become wrong on the same day, the day the redesigned
+voice ships:
+
+| File | Where it shows |
+|---|---|
+| `addon/ZoneLore/Audio.lua` (`AUDIO_BETA_LINES`) | `/zl audio`, and once per version on first playback |
+| `addon/ZoneLore/UI/Options.lua` | the top of the Narration section, above everything it qualifies |
+| `addon/ZoneLore/ZoneLore.toc` and `addon/ZoneLoreAudio/ZoneLoreAudio.toc` (`## Notes:`) | the in-game addon list, and the CurseForge blurb |
+| `addon/ZoneLore/README.md`, `addon/ZoneLoreAudio/README.md` | the two CurseForge project descriptions |
+| `web/src/lib/beta.ts` | the **beta** badge beside the logo on lore.rusty.one |
+
+The packs cannot announce this themselves: a pack registers a table and loads no
+code, so ZoneLore — which draws the Play button and names the packs in its
+options — is what has to say it for them. The once-per-version notice is stamped
+into `ZoneLoreDB.betaNoticeVersion` rather than being a boolean, so a build that
+ships the new voice gets to say so once, to exactly the players who were told the
+old one was temporary.
+
+Both halves end on the same ask, for the same reason `SUPPORT_REASON` exists: the
+sentence explaining that the re-record is waiting on money is unfinished without
+somewhere to send the reader who wants to do something about it.
+
 ### Autoplay on discovery
 
 On by default: **the game's own discovery is the trigger** — the moment it prints

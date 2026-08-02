@@ -1,6 +1,6 @@
 ## Interface: 11509
 ## Title: ZoneLore Audio
-## Notes: Narrated zone lore for ZoneLore. Install alongside ZoneLore.
+## Notes: Narrated zone lore for ZoneLore. Install alongside ZoneLore.|n|cffffcc00Beta:|r a proof-of-concept voice, being redesigned and re-generated. /zl audio for the detail.
 ## Version: 0.2.0
 ## Author: rusty
 ## IconTexture: Interface\ICONS\INV_Misc_Book_09

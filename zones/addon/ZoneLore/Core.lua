@@ -536,6 +536,8 @@ local function CmdAudioPack(arg)
 	if #packs == 0 then
 		ZoneLore:Print("|cffffcc00no sound pack installed|r")
 		ZoneLore:Print("  install ZoneLoreAudio (standard) or ZoneLoreAudioHQ (high) alongside ZoneLore")
+		-- Worth knowing before a ~400MB download, not after it.
+		ZoneLore:PrintAudioBeta()
 		return
 	end
 
@@ -566,6 +568,12 @@ local function CmdAudioPack(arg)
 	if #packs > 1 then
 		ZoneLore:Print("  /zl audio <name> to switch")
 	end
+
+	-- Last, and unconditional. This is the command a player runs when they are
+	-- thinking about the narration -- which pack, which quality -- so it is the one
+	-- place in chat where "the voice is being replaced" is an answer to what they
+	-- were already asking rather than an interruption. See Audio.lua.
+	ZoneLore:PrintAudioBeta()
 end
 
 local function CmdHelp()
