@@ -123,19 +123,23 @@ export function FeedbackDialog({ target, onClose }: Props) {
               purpose, which is why the ask lives here and not on every page. It sits
               below the confirmation and does not replace the Done button: a thank-you
               that turns out to be a donation prompt teaches people not to send the next
-              report. */}
-          <p className="mt-4 rounded border border-border bg-bg p-3 text-sm text-muted">
-            {SUPPORT_REASON} If ZoneLore is worth something to you,{" "}
+              report.
+
+              Button first, reason second, and no panel around either. The ask is one
+              action, so it is one control -- burying it in a sentence makes the reader
+              hunt for the clickable words -- and the explanation is for the people who
+              want to know why before they press it, which is a thing you read second. */}
+          <div className="mt-4">
             <a
               href={SUPPORT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-accent underline hover:opacity-90"
+              className="inline-block rounded bg-accent px-3 py-1 font-medium text-bg hover:opacity-90"
             >
-              consider supporting the project
+              Support the project
             </a>
-            .
-          </p>
+            <p className="mt-2 text-sm text-muted">{SUPPORT_REASON}</p>
+          </div>
           <div className="mt-4 flex justify-end">
             <button
               type="button"
