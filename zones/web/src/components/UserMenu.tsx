@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { signOut, useSession } from "@/lib/auth-client";
-import { canConfigure, isAdmin } from "@/lib/permissions";
+import { canConfigure, canTriageFeedback, isAdmin } from "@/lib/permissions";
 
 /**
  * The session indicator in the header, and the only place the nav links to the two pages
@@ -39,6 +39,14 @@ export function UserMenu() {
 
   return (
     <nav className="ml-auto flex items-center gap-3 text-muted">
+      {/* Named "Reports" rather than "Feedback", because the header already has a
+          Feedback button next to this one and they do opposite things: that one files a
+          report, this one reads them. */}
+      {canTriageFeedback(role) && (
+        <Link href="/feedback" className="hover:text-fg">
+          Reports
+        </Link>
+      )}
       {canConfigure(role) && (
         <Link href="/lexicon" className="hover:text-fg">
           Pronunciation

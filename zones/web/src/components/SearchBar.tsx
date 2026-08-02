@@ -15,6 +15,13 @@ import {
 type Props = {
   zones: ZoneFacet[];
   filters: LineFilters;
+  /**
+   * Editor and up. Gates the "reported" control only, not the filter behind it: a
+   * hand-typed ?fb=open still works for anyone, which is fine because the open counts
+   * travel with the search results anyway. Drawing the control for a guest would be
+   * offering a worklist to somebody with no work to do.
+   */
+  canReview: boolean;
   query: string;
   inputRef: React.RefObject<HTMLInputElement | null>;
   onQueryChange: (value: string) => void;
@@ -25,6 +32,7 @@ type Props = {
 export function SearchBar({
   zones,
   filters,
+  canReview,
   query,
   inputRef,
   onQueryChange,
@@ -125,6 +133,20 @@ export function SearchBar({
           />
           short
         </label>
+
+        {canReview && (
+          <label
+            className="flex items-center gap-1.5 text-muted"
+            title="Lines carrying at least one unresolved visitor report"
+          >
+            <input
+              type="checkbox"
+              checked={filters.feedback === "open"}
+              onChange={(event) => onChange({ feedback: event.target.checked ? "open" : undefined })}
+            />
+            reported
+          </label>
+        )}
 
         {active > 0 && (
           <button

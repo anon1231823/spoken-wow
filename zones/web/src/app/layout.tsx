@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { FeedbackLauncher } from "@/components/FeedbackLauncher";
 import { UserMenu } from "@/components/UserMenu";
 
 import "./globals.css";
@@ -20,6 +21,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="font-semibold">
               ZoneLore
             </Link>
+            {/* Outside UserMenu because it needs no role and no session -- see the
+                component for why that matters. */}
+            <FeedbackLauncher />
             {/* Pronunciation moved into UserMenu, which is where the links that need a
                 role live. It is not a page a visitor can do anything with. */}
             <UserMenu />

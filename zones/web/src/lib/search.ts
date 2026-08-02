@@ -32,6 +32,9 @@ export type ResultLine = {
   state: State;
   take: Take | null;
   flag: LineFlag | null;
+  /** How many visitor reports on this line are still open. The count is public; the
+   *  bodies are not -- see SearchContext.feedback. */
+  feedbackOpen: number;
 };
 
 export type SearchResult = {
@@ -66,6 +69,7 @@ export function decorate(entry: CatalogueEntry, context: SearchContext): ResultL
     state: stateOf(entry, take),
     take: take ?? null,
     flag: context.flags.get(entry.id) ?? null,
+    feedbackOpen: context.feedback.get(entry.id) ?? 0,
   };
 }
 
@@ -112,6 +116,10 @@ export function matching(lines: ResultLine[], filters: LineFilters = {}): Result
         ? out.filter((l) => l.flag === null)
         : out.filter((l) => l.flag?.status === filters.flag);
   }
+
+  // The triage worklist, and the counterpart of `flag: 'bad'`: what somebody else has
+  // complained about, as opposed to what an editor has already judged.
+  if (filters.feedback === "open") out = out.filter((l) => l.feedbackOpen > 0);
 
   if (filters.modelId) out = out.filter((l) => l.take?.modelId === filters.modelId);
 

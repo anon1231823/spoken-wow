@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireReview } from "@/lib/authz";
-import { catalogue } from "@/lib/catalogue";
+import { isKnownLine } from "@/lib/catalogue";
 import { query } from "@/lib/db";
 
 // What a person decided about a line after listening to it.
@@ -18,11 +18,6 @@ type Body = {
   status?: unknown;
   note?: unknown;
 };
-
-async function isKnownLine(lineId: string): Promise<boolean> {
-  const entries = await catalogue();
-  return entries.some((entry) => entry.id === lineId);
-}
 
 export async function POST(request: Request) {
   const { denied } = await requireReview();
