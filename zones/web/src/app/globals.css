@@ -13,7 +13,14 @@
   --color-muted: oklch(0.66 0.012 260);
   --color-faint: oklch(0.48 0.012 260);
 
-  --color-accent: oklch(0.72 0.14 250);
+  /* White, not a hue. The four state colours below carry meaning -- good, warn, bad --
+     and a blue that meant nothing in particular was competing with them for the eye.
+     Accent here means "this is the thing to press", and on a near-black page the
+     brightest thing available says that without spending a colour on it.
+
+     Above --color-fg (0.93) on purpose: a filled accent button and a paragraph of body
+     text must not be the same value, or the button stops reading as a surface. */
+  --color-accent: oklch(1 0 0);
   --color-good: oklch(0.75 0.16 155);
   --color-warn: oklch(0.80 0.15 85);
   --color-bad: oklch(0.68 0.19 22);

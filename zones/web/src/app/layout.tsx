@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { FeedbackLauncher } from "@/components/FeedbackLauncher";
 import { UserMenu } from "@/components/UserMenu";
+import { SUPPORT_URL } from "@/lib/support";
 
 import "./globals.css";
 
@@ -26,12 +27,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <FeedbackLauncher />
             {/* A plain <a>, not <Link>: next/link exists to prefetch in-app routes and
                 there is nothing here to prefetch. rel="noopener" because target="_blank"
-                otherwise hands the opened page a window.opener handle on this one. */}
+                otherwise hands the opened page a window.opener handle on this one.
+
+                The only filled control in the header, deliberately -- everything else up
+                here is a muted text link, so the one thing that is an ask reads as a
+                button. text-bg rather than a literal black: it is the page's own
+                near-black, which is what "black text" means in this palette. */}
             <a
-              href="https://buymeacoffee.com/rustykey"
+              href={SUPPORT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted hover:text-fg"
+              className="rounded bg-accent px-2 py-0.5 text-sm font-medium text-bg hover:opacity-90"
             >
               Support
             </a>

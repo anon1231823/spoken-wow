@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { BODY_MAX, CATEGORIES, CATEGORY_LABEL, type Category } from "@/lib/feedback";
 import type { ResultLine } from "@/lib/search";
+import { SUPPORT_REASON, SUPPORT_URL } from "@/lib/support";
 
 /**
  * The one form anyone can submit, signed in or not.
@@ -110,13 +111,30 @@ export function FeedbackDialog({ target, onClose }: Props) {
     >
       {sent ? (
         <div>
-          <h2 className="font-medium">Thank you.</h2>
+          <h2 className="font-medium">Thank you!</h2>
           <p className="mt-2 text-muted">
             {target === "general"
               ? "Your feedback is with the editors."
               : `Your report on ${target.name} is with the editors.`}{" "}
             There is no reply address on this, so you will not hear back unless you left
             one.
+          </p>
+          {/* The one moment somebody has demonstrably given us their attention on
+              purpose, which is why the ask lives here and not on every page. It sits
+              below the confirmation and does not replace the Done button: a thank-you
+              that turns out to be a donation prompt teaches people not to send the next
+              report. */}
+          <p className="mt-4 rounded border border-border bg-bg p-3 text-sm text-muted">
+            {SUPPORT_REASON} If ZoneLore is worth something to you,{" "}
+            <a
+              href={SUPPORT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent underline hover:opacity-90"
+            >
+              consider supporting the project
+            </a>
+            .
           </p>
           <div className="mt-4 flex justify-end">
             <button
