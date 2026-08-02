@@ -1067,10 +1067,36 @@ as the beta disclaimer in the descriptions: marking the files `beta` would stop
 most addon managers offering them to players on the default channel, which is the
 audience this is for. `RELEASE_TYPE=beta` overrides it.
 
-**What the script deliberately does not do** is create projects, edit
-descriptions, or set relations. Those are one-time settings that live in the web
-UI, and a script that rewrote them on every release would be a script that could
-quietly undo an edit made there.
+### Descriptions live in `curseforge/`, and are pasted by hand
+
+CurseForge has **no API for project descriptions, summaries or categories** —
+`upload-file` is the only write endpoint it offers, and metadata editing is an
+open feature request rather than a thing. A project page is updated by pasting
+into a web form, so the only question is where the pasted text comes from.
+
+It comes from `curseforge/<slug>.md`. The frontmatter is everything the form asks
+for besides the body — project id, summary, categories, tags, license — and the
+body is the description. `tools/descriptions.mjs` generates two things from it:
+
+```sh
+make descriptions          # addon READMEs + dist/descriptions/ to paste from
+make descriptions-check     # part of `make check`
+```
+
+The addon README that ships inside each zip is generated from the same body, so
+the page a player reads before installing and the file they get afterwards cannot
+say different things. Those READMEs are generated files and carry the usual
+warning at the top; `make check` fails if one has been edited by hand.
+
+Nothing here can read the site back, so `curseforge/published.json` records a hash
+of each description at the moment it was pasted. `make descriptions-published`
+says "what is in the repository is now what is on the site" — run it *after*
+pasting, since nothing can verify the claim. `scripts/release.sh` prints anything
+that has drifted, at the one moment you already have the project pages open.
+
+**What the script deliberately does not do** is create projects or set relations.
+Those are one-time settings, and a script that rewrote them on every release would
+be one that could quietly undo an edit made in the UI.
 
 **Relations to set on each project once, by hand:** ZoneLore lists both packs as
 optional dependencies; each pack lists ZoneLore as a required dependency; ZoneLore

@@ -192,5 +192,22 @@ for target in "${targets[@]}"; do
   echo "  https://www.curseforge.com/wow/addons/$zip_name/files/$file_id"
 done
 
+#-- descriptions --------------------------------------------------------------
+# There is no API for these. Uploading a file cannot update the page around it,
+# so the most this can do is notice that the text in the repository has moved on
+# from what was last pasted, and say so at the moment somebody is already looking
+# at the project pages.
+echo
+stale="$(node "$REPO/tools/descriptions.mjs" --drift)"
+if [[ -n "$stale" ]]; then
+  echo "descriptions that differ from what was last pasted into the site:"
+  echo "$stale" | while IFS=$'\t' read -r slug why; do
+    echo "  $slug -- $why  ($DIST/descriptions/$slug.md)"
+  done
+  echo "  paste them, then: make descriptions-published"
+else
+  echo "descriptions match what was last pasted."
+fi
+
 echo
 echo "done. Uploads sit in moderation before they appear publicly."

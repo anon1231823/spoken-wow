@@ -1,4 +1,18 @@
-<!-- GENERATED from curseforge/zonelore-audio.md by tools/descriptions.mjs. Do not edit by hand. -->
+---
+project: 1636532
+slug: zonelore-audio
+name: ZoneLore Audio
+summary: Narrated zone lore for ZoneLore — 1353 voicelines covering every Classic Era zone and subzone, at 128 kbps. ~790 MB. Requires ZoneLore.
+categories:
+  - Miscellaneous
+tags:
+  - lore
+  - voiceover
+  - immersion
+  - classic era
+license: custom
+addonReadme: addon/ZoneLoreAudio/README.md
+---
 
 # ZoneLore Audio
 

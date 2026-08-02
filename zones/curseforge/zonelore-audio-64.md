@@ -1,13 +1,27 @@
-<!-- GENERATED from curseforge/zonelore-audio.md by tools/descriptions.mjs. Do not edit by hand. -->
+---
+project: 1636548
+slug: zonelore-audio-64
+name: ZoneLore Audio 64
+summary: Narrated zone lore for ZoneLore, at 64 kbps mono — the same 1353 voicelines as ZoneLore Audio for half the download. ~400 MB. Requires ZoneLore.
+categories:
+  - Miscellaneous
+tags:
+  - lore
+  - voiceover
+  - immersion
+  - classic era
+license: custom
+---
 
-# ZoneLore Audio
+# ZoneLore Audio 64
 
 Narrated zone lore for
-[ZoneLore](https://www.curseforge.com/wow/addons/zonelore). This addon is data
-only — it does nothing on its own.
+[ZoneLore](https://www.curseforge.com/wow/addons/zonelore), at 64 kbps mono. This
+addon is data only — it does nothing on its own.
 
 1353 voicelines covering all 49 Classic Era zones and 1304 subzones, generated
-from the same warcraft.wiki.gg text ZoneLore displays.
+from the same warcraft.wiki.gg text ZoneLore displays. Identical content to
+**ZoneLore Audio**, at half the download.
 
 ## Beta: this is not the finished voice
 
@@ -38,12 +52,13 @@ Two packs, identical content at different bitrates:
 
 | Pack | Bitrate | Download |
 |---|---|---|
-| **ZoneLore Audio** (this one) | 128 kbps | ~790 MB |
-| **ZoneLore Audio 64** | 64 kbps mono | ~400 MB |
+| **ZoneLore Audio 64** (this one) | 64 kbps mono | ~400 MB |
+| **ZoneLore Audio** | 128 kbps | ~790 MB |
 
-Take this one unless the download is a problem. 64 kbps mono is close to
-transparent for speech and half the size, so the smaller pack costs less than the
-gap between the numbers suggests.
+This is the smaller one. 64 kbps mono is close to transparent for speech, so it
+costs less than the gap between the numbers suggests — take it if the 790 MB
+download is more than you want to spend. A higher bitrate makes the current voice
+clearer, not better.
 
 Both can be installed at once — ZoneLore plays the higher-quality one, and
 `/zl audio` switches between them.

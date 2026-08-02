@@ -73,6 +73,14 @@ fi
 echo "checking the lookup table against the files..."
 node "$REPO/tools/voice/validate-audio.mjs"
 
+# Each tier ships the README for its own CurseForge page, so the description a
+# player read before downloading is the file they end up with.
+node "$REPO/tools/descriptions.mjs" --write >/dev/null
+tier_readme() { case "$1" in
+  standard) echo "$REPO/dist/descriptions/zonelore-audio-64.md";;
+  high)     echo "$REPO/dist/descriptions/zonelore-audio.md";;
+esac; }
+
 # Transcoding needs ffmpeg, but only for the tiers that are not a straight copy.
 for tier in "${tiers[@]}"; do
   if [[ "$(tier_bitrate "$tier")" != "128" ]]; then
@@ -106,6 +114,7 @@ for tier in "${tiers[@]}"; do
   if [[ "$folder" != "ZoneLoreAudio" ]]; then
     mv "$staging/$folder/ZoneLoreAudio.toc" "$staging/$folder/$folder.toc"
   fi
+  cp "$(tier_readme "$tier")" "$staging/$folder/README.md"
 
   # The .toc is the only place the tier is recorded. Data/Sounds.lua reads these
   # back through GetAddOnMetadata, which is what lets one generated file serve

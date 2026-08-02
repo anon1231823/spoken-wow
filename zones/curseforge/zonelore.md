@@ -1,4 +1,18 @@
-<!-- GENERATED from curseforge/zonelore.md by tools/descriptions.mjs. Do not edit by hand. -->
+---
+project: 1636521
+slug: zonelore
+name: ZoneLore
+summary: Zone lore on the world map. Open the map and read the story of the zone you're looking at, or click any subzone for its own. 49 zones, 1304 subzones, optionally narrated.
+categories:
+  - Map & Minimap
+tags:
+  - lore
+  - world map
+  - immersion
+  - classic era
+license: custom
+addonReadme: addon/ZoneLore/README.md
+---
 
 # ZoneLore
 

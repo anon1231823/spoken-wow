@@ -6,7 +6,7 @@
         status remove clean voice voice-zones lookup sample db-up db-down migrate import export \
         web push push-dry pull pull-dry audio-status ssh-check pull-manifest pull-lexicon \
         db-push db-pull bootstrap deploy-scripts releases rollback logs \
-        release release-dry
+        release release-dry descriptions descriptions-check descriptions-published
 
 # The \# escapes are required: an unescaped # starts a make comment, even
 # inside a $(shell ...) call.
@@ -22,7 +22,16 @@ help: ## Show this help
 package: check ## Build dist/ZoneLore-<version>.zip for upload
 	@./scripts/package.sh
 
-check: validate lint ## Run every pre-package check
+check: validate lint descriptions-check ## Run every pre-package check
+
+descriptions: ## Regenerate the addon READMEs and dist/descriptions/ from curseforge/
+	@node tools/descriptions.mjs --write
+
+descriptions-check: ## Confirm the addon READMEs match curseforge/
+	@node tools/descriptions.mjs
+
+descriptions-published: ## Record the current descriptions as pasted into the site
+	@node tools/descriptions.mjs --published
 
 validate: ## Sanity-check the generated Lua data files
 	@node tools/validate.mjs
