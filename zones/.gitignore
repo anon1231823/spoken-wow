@@ -6,3 +6,12 @@ tools/cache/
 
 # Packaged addon zips. Rebuild with `make package`.
 dist/
+
+# Generated voicelines. Rebuild with `node tools/voice/generate.mjs`.
+addon/ZoneLoreAudio/Sounds/
+
+# Voice samples for checking the model before a bulk run.
+audio-samples/
+
+# ELEVENLABS_API_KEY
+.env

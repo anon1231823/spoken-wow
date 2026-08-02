@@ -17,8 +17,8 @@ retail or the Anniversary/TBC client.
 | M3 hover preview on the map | done, tested in game |
 | M4 minimap button + standalone lore window | done, **untested in-game** |
 | M5 options panel and polish | done, **untested in-game** |
-| M6 narration playback (placeholder audio) | done, **untested in-game** |
-| M7 voiceline generation tool | not started |
+| M6 narration playback + autoplay on discovery | done, tested in-game |
+| M7 voiceline generation tool | done; Durotar generated (44 lines) |
 
 ## Layout
 
@@ -43,8 +43,20 @@ addon/ZoneLore/          the addon itself (this is what WoW loads)
   UI/Options.lua         settings panel
   Libs/                  LibStub, CallbackHandler-1.0, LibDataBroker-1.1,
                          LibDBIcon-1.0 (copied from AI_VoiceOver_Continued)
+addon/ZoneLoreAudio/     the optional voiceover companion addon
+  ZoneLoreAudio.toc
+  Data/Sounds.lua        GENERATED -- the clip lookup table
+  Sounds/                GENERATED, gitignored -- the mp3s themselves
 tools/
   lib/wiki.mjs           shared fetching, era filter, Lua emission
+  lib/loredata.mjs       reads the generated Lua data back into JS
+  voice/generate.mjs     select and synthesize voicelines (ElevenLabs)
+  voice/build-lookup.mjs manifest -> ZoneLoreAudio/Data/Sounds.lua
+  voice/validate-audio.mjs  manifest, files and lookup table agree
+  voice/naming.mjs       line ids and file paths, derived in one place
+  voice/normalise.mjs    display text -> spoken text
+  voice/config.json      voice, model, output format
+  voice/manifest.json    what has been generated, when, from what text
   scrape.mjs             warcraft.wiki.gg -> Data/Zones.lua
   scrape-subzones.mjs    warcraft.wiki.gg -> Data/Subzones.lua
   validate.mjs           checks the generated Lua without a Lua interpreter
@@ -53,7 +65,9 @@ tools/
   seed/zones.json        uiMapID -> wiki page title
   seed/subzones.json     which parent zones to scrape subzones for
   seed/overrides.json    hand-written lore that beats the scraped text
-scripts/deploy.sh        install into the Classic Era AddOns folder
+scripts/deploy.sh        install both addons into the Classic Era AddOns folder
+scripts/package.sh       build the ZoneLore zip
+scripts/package-audio.sh build the ZoneLoreAudio zip, optionally transcoded
 ```
 
 ## Installing for development
@@ -469,6 +483,178 @@ through the five channels with a button rather than a dropdown: `UIDropDownMenu`
 works on 11509, but none of its `Initialize` plumbing can be checked without
 launching the game, and five values do not justify that. Same trade as the
 hand-rolled scrollbar below.
+
+## Generating voicelines
+
+Audio is synthesized with ElevenLabs (`narrator-male`, model `eleven_v3`) and
+written into the `ZoneLoreAudio` addon. **1353 lines, 672,550 characters — about
+408,000 credits and 14.4 hours of audio** on this plan (see "Characters are not
+credits" below).
+
+```sh
+cp .env.example .env    # then put your ELEVENLABS_API_KEY in it
+```
+
+Everything below is a **dry run** until `--generate` is added, because the
+direction that cannot be undone is spending money, not printing.
+
+```sh
+node tools/voice/generate.mjs --all                     # what the whole corpus costs
+node tools/voice/generate.mjs --zone Durotar            # one zone and its subzones
+node tools/voice/generate.mjs --all --zones-only        # the 49 zone lines
+node tools/voice/generate.mjs --missing --stale         # what needs work
+```
+
+A selection of 60 or fewer — a zone and its subzones — lists every line, largest
+first, with its cost, whether it is new, stale or current, and a `short` marker on
+anything under 250 characters, where v3 is least reliable. `--list` forces the
+full listing for a larger selection.
+
+```
+44 lines, largest first:
+
+  1188ch ~ 721cr  current Southfury River        1411/southfury-river
+  ...
+    83ch ~  50cr  current Spitescale Cavern      1411/spitescale-cavern short
+
+  11 under 250 characters (marked "short"): v3 is least reliable there, so listen
+  to those first.
+```
+
+Selectors combine, and a `--zone` takes an id or a name (`--zone 1411`,
+`--zone "The Barrens"`) and pulls in that zone's subzones. `--missing` is anything
+with no audio, `--stale` anything whose **spoken** text has changed since it was
+made, `--older-than <date>` anything generated before then, `--limit n` caps it.
+
+### The order to actually run it in
+
+```sh
+node tools/voice/generate.mjs --sample                  # 2 lines, then listen
+node tools/voice/generate.mjs --zone Durotar --generate # 44 lines, then listen in-game
+node tools/voice/build-lookup.mjs && node tools/voice/validate-audio.mjs
+./scripts/deploy.sh                                     # symlinks ZoneLoreAudio too
+
+node tools/voice/generate.mjs --all --zones-only --generate   # 49 lines, 58k chars
+node tools/voice/generate.mjs --all --generate                # the remaining ~614k
+```
+
+Staging costs nothing extra — ElevenLabs bills per character either way — and it
+is the only thing standing between a bad `stability` setting and 672k characters
+of narration nobody has heard. `--sample` deliberately renders one long zone *and*
+one entry under 250 characters, because v3 is documented as unreliable below that
+length and **305 of the 1353 entries are shorter**.
+
+Generation never overwrites existing audio without `--force`: a clip already made
+cost real money and a re-roll is not always an improvement. Files are written to a
+temp name and renamed, and the manifest is written after every line, so an
+interrupted run keeps everything already paid for.
+
+### How long a full run takes
+
+Requests run in parallel, and the budget comes from **the account's plan** rather
+than a constant, because ElevenLabs limits concurrency per plan and per model
+family and publishes the numbers: 2 on free, 3 starter, 5 creator, 10 pro, 15
+scale and business, with flash models doubled. The tier is read once from
+`GET /v1/user/subscription`; `--concurrency n` overrides it.
+
+An unrecognised or unreadable tier falls back to **2**, not to the highest —
+finding out the plan is unknown must not be the moment this code is at its most
+aggressive.
+
+A 429 means the published number is wrong for right now — another process on the
+same key, or a limit that moved. The budget halves and stays halved for a minute
+rather than retrying into a wall, then restores itself. The limiter resizes while
+requests are in flight, so this costs no restart.
+
+The manifest is written by every worker after every line, so writes are serialised
+and go through a temp file and a rename. Two concurrent writers on one path
+interleave into invalid JSON, and this is the one file here that cannot be
+regenerated — it is the record of everything already paid for.
+
+### Square brackets are the one hard rule
+
+Eleven v3 reads bracketed text as an **audio tag** — a performance direction — so
+`[Deviate Fish]` would be acted rather than spoken. The lore carries 163 bracketed
+spans. `tools/voice/normalise.mjs` drops IPA guides (`Kalimdor [ˈkælɪmdɔɹ]`) and
+level ranges entirely, and unwraps the rest to keep the words. The generator
+refuses to start if any bracket survives, and `validate-audio.mjs` checks it too.
+
+The **spoken** text is what gets hashed into the manifest, so editing
+`tools/voice/pronunciation.json` correctly marks the lines it affects as `--stale`.
+That file ships empty on purpose: every rule in it is a claim that the model
+mispronounces a word, and that claim can only be made after listening.
+
+### Pronunciation: prefer the uploaded dictionary
+
+There are two ways to fix a mispronunciation, and they are not equivalent.
+
+`tools/voice/pronunciation.json` rewrites the text before it is sent — spelling
+"Kalimdor" as "Kalimdore" and hoping. An **ElevenLabs pronunciation dictionary**
+carries real IPA phoneme rules and is applied by the model, which is strictly
+better where it works. Phoneme rules are honoured by `eleven_v3` and
+`eleven_flash_v2` only; this project is on v3, so they apply.
+
+`config.json` names one:
+
+```json
+"dictionaryId": "Elx0hcDze8EXW2rImeLT",
+"dictionaryVersionId": null
+```
+
+Give the **id alone**. The API wants an id *and* a version, so the generator
+resolves the latest version once and writes it back into `dictionaryVersionId`.
+The version is pinned rather than left floating on purpose: naming a dictionary
+without one would let a later upload change how already-generated lines would
+sound, which is exactly what the manifest exists to make knowable. Clear both
+fields to re-resolve after editing the dictionary — and note that re-resolving
+does *not* mark existing lines stale, because the text did not change. Use
+`--force` over the lines you want re-cut.
+
+Every generated line records the dictionary id and version it was made with, so a
+pronunciation change can be told apart from a text change after the fact.
+
+### Characters are not credits
+
+ElevenLabs bills `round(characters × rate)`, and **the rate belongs to the plan,
+not the request**. On this account with `eleven_v3` it is **0.607**, measured over
+the first 44 generated lines — so the corpus is 672,550 characters but roughly
+**408,000 credits**.
+
+That number is measured rather than assumed, because assuming it was wrong twice:
+0.55 carried over from the sibling project understated the bill by 10%, and 15
+characters/second understated the runtime by the same (it is 12.9). Every
+generated line records what it actually cost and how long it came out, so the dry
+run derives both from the manifest and says how many lines it measured over. The
+`config.json` values are only the answer for an empty manifest.
+
+The `character-cost` response header is always authoritative, and is what the
+manifest stores.
+
+### What is committed, and what is not
+
+`tools/voice/manifest.json` (what exists, when it was made, from which text) and
+`addon/ZoneLoreAudio/Data/Sounds.lua` (the generated lookup) are committed. The
+mp3s are not — `addon/ZoneLoreAudio/Sounds/` is gitignored, like
+`../wow-voiceover`'s `audio/`.
+
+`tools/voice/naming.mjs` owns both the line id and the file path, and nothing else
+derives either. The addon resolves clips through the lookup table, so a filename
+that drifts plays silence rather than failing — which is why `validate-audio.mjs`
+checks the manifest, the files on disk and the lookup table against each other, and
+why `package-audio.sh` refuses to build without it.
+
+### Bitrate is a packaging decision, not a generation one
+
+ElevenLabs bills **characters, not bytes**, so output format does not change the
+price. Audio is generated at the default 128kbps and shrunk at packaging time:
+
+```sh
+./scripts/package-audio.sh              # ship the masters (~700MB)
+BITRATE=64 ./scripts/package-audio.sh   # transcode on the way in (~360MB)
+```
+
+Generating at a low bitrate to save money would save nothing, and would make a
+later quality bump a second purchase rather than a re-run.
 
 ## Options
 

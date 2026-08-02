@@ -2,7 +2,7 @@
 # Everything here is a thin wrapper -- the scripts remain runnable on their own.
 
 .DEFAULT_GOAL := help
-.PHONY: help package check validate lint deploy deploy-copy status remove clean
+.PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy status remove clean voice voice-zones lookup sample
 
 # The \# escapes are required: an unescaped # starts a make comment, even
 # inside a $(shell ...) call.
@@ -41,3 +41,28 @@ remove: ## Uninstall the addon from the client
 clean: ## Remove build output
 	@rm -rf dist
 	@echo "removed dist/"
+
+#-------------------------------------------------------------------------------
+# Voicelines
+#
+# Every target here that costs money says so and needs --generate spelled out;
+# the bare ones are all dry runs. See README "Generating voicelines".
+#-------------------------------------------------------------------------------
+
+voice: ## Dry run over every voiceline (costs nothing)
+	@node tools/voice/generate.mjs --all
+
+voice-zones: ## Dry run over the 49 zone lines (costs nothing)
+	@node tools/voice/generate.mjs --all --zones-only
+
+sample: ## Generate two sample lines to audio-samples/ (SPENDS CREDITS)
+	@node tools/voice/generate.mjs --sample
+
+lookup: ## Rebuild the addon's audio lookup table from the manifest
+	@node tools/voice/build-lookup.mjs
+
+validate-audio: ## Check manifest, files on disk and lookup table agree
+	@node tools/voice/validate-audio.mjs
+
+package-audio: validate-audio ## Build dist/ZoneLoreAudio-<version>.zip
+	@./scripts/package-audio.sh
