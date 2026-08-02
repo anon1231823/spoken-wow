@@ -300,5 +300,5 @@ rollback: ## Roll back to the previous release (or RELEASE=<name>)
 logs: ## Tail the droplet's application log
 	@$(SSH) $(DROPLET) 'pm2 logs zonelore --lines 100'
 
-package-audio: validate-audio ## Build dist/ZoneLoreAudio-<version>.zip
+package-audio: validate-audio ## Build both sound-pack zips (standard + high)
 	@./scripts/package-audio.sh

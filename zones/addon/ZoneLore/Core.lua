@@ -37,6 +37,9 @@ local defaults = {
 	autoplaySubzones = true,
 	-- `playbackBarPos` is deliberately absent: nil means "below the minimap", which
 	-- is an anchor rather than a coordinate and so cannot be expressed here.
+	-- `audioPack` likewise: nil means "the best pack installed", which is a rule
+	-- rather than a folder name, and naming a default here would pin the player to
+	-- a pack they may never install. See Audio.lua.
 	debug = false,
 	-- `hide` and `minimapPos` are intentionally absent: LibDBIcon owns those keys
 	-- inside ZoneLoreDB and writes them itself. See UI/MinimapButton.lua.
@@ -468,6 +471,13 @@ local function CmdStatus()
 		ZoneLore:DescribeAutoplay()
 	end
 
+	local pack = ZoneLore:GetActiveAudioPack()
+	if pack then
+		ZoneLore:Print("sound pack: %s -- %s", pack.addon, ZoneLore:GetAudioPackLabel(pack))
+	else
+		ZoneLore:Print("|cffffcc00no sound pack installed|r -- narration uses the placeholder clip")
+	end
+
 	if ZoneLore:Get("debug") then
 		ZoneLore:Print("|cff66bbffdebug mode is on|r")
 	end
@@ -517,6 +527,47 @@ local function CmdPlay()
 	end
 end
 
+-- `/zl audio` lists installed sound packs; `/zl audio <folder>` switches to one.
+-- Worth a command of its own because having two tiers installed at once is the
+-- case where the addon's behaviour is otherwise invisible: both play, and only
+-- the disk footprint differs.
+local function CmdAudioPack(arg)
+	local packs = ZoneLore:GetAudioPacks()
+	if #packs == 0 then
+		ZoneLore:Print("|cffffcc00no sound pack installed|r")
+		ZoneLore:Print("  install ZoneLoreAudio (standard) or ZoneLoreAudioHQ (high) alongside ZoneLore")
+		return
+	end
+
+	if arg and arg ~= "" then
+		-- Matched case-insensitively: the player is reading the folder name off a
+		-- listing and retyping it, and "zoneloreaudiohq" is the same request.
+		for i = 1, #packs do
+			if packs[i].addon:lower() == arg:lower() then
+				ZoneLore:SetActiveAudioPack(packs[i].addon)
+				ZoneLore:Print("now playing from %s -- %s", packs[i].addon, ZoneLore:GetAudioPackLabel(packs[i]))
+				return
+			end
+		end
+		ZoneLore:Print('|cffffcc00"%s" is not an installed sound pack|r', arg)
+		return
+	end
+
+	local active = ZoneLore:GetActiveAudioPack()
+	ZoneLore:Print("sound packs:")
+	for i = 1, #packs do
+		local pack = packs[i]
+		ZoneLore:Print(
+			"  %s %s -- %s, v%s",
+			pack == active and "|cff66bbff*|r" or " ",
+			pack.addon, ZoneLore:GetAudioPackLabel(pack), tostring(pack.packVersion)
+		)
+	end
+	if #packs > 1 then
+		ZoneLore:Print("  /zl audio <name> to switch")
+	end
+end
+
 local function CmdHelp()
 	ZoneLore:Print("commands:")
 	ZoneLore:Print("  /zl            -- status for the current zone and subzone")
@@ -528,6 +579,7 @@ local function CmdHelp()
 	ZoneLore:Print("  /zl stop       -- stop the narration")
 	ZoneLore:Print("  /zl voice      -- toggle narration on or off")
 	ZoneLore:Print("  /zl autoplay   -- toggle narrating areas as you discover them")
+	ZoneLore:Print("  /zl audio      -- list sound packs, or switch with /zl audio <name>")
 	ZoneLore:Print("  /zl discover   -- pretend to discover an area (dev)")
 	ZoneLore:Print("  /zl forget     -- replay the login greeting on next login (dev)")
 	ZoneLore:Print("  /zl bar        -- move the playback controls back below the minimap")
@@ -583,6 +635,8 @@ SlashCmdList["ZONELORE"] = function(msg)
 		end
 		ZoneLore:NotifyAudioChanged()
 		ZoneLore:Print("narration %s", enabled and "enabled" or "disabled")
+	elseif cmd == "audio" then
+		CmdAudioPack((msg or ""):match("^%s*%S+%s+(.-)%s*$"))
 	elseif cmd == "autoplay" then
 		local enabled = not ZoneLore:Get("autoplay")
 		ZoneLore:Set("autoplay", enabled)

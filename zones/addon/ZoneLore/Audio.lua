@@ -4,15 +4,23 @@
 -- it. One clip plays at a time, addon-wide, so starting a new one always stops
 -- whatever was running.
 --
--- Audio ships in a separate ZoneLoreAudio addon, which is optional: without it
+-- Audio ships in separate sound-pack addons, all of them optional: without one
 -- every lookup falls back to the bundled placeholder, so the button is testable
 -- before any audio exists and merely sounds wrong rather than erroring.
+--
+-- More than one pack can be installed at a time -- they differ only in bitrate,
+-- so the same lore is available at ~400MB or ~790MB on disk. Each registers
+-- itself into ZoneLoreAudioPacks under its own folder name; this file picks
+-- which one to play from.
 
 local ADDON_NAME, ZoneLore = ...
 
-local AUDIO_ADDON = "ZoneLoreAudio"
-local SOUND_ROOT = "Interface\\AddOns\\" .. AUDIO_ADDON .. "\\Sounds\\"
 local PLACEHOLDER = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Sounds\\placeholder.mp3"
+
+-- The pack table shape this version knows how to read. A pack declaring anything
+-- else is ignored with a warning: refusing to read it is recoverable, guessing at
+-- an unknown layout plays silence and reports nothing.
+local PACK_FORMAT = 1
 
 -- Measured from the file. Hardcoded because the client cannot report a sound's
 -- length, and without a duration the "clip finished" path -- the button resetting
@@ -69,6 +77,106 @@ function ZoneLore:NotifyAudioChanged()
 end
 
 --------------------------------------------------------------------------------
+-- Sound packs
+--------------------------------------------------------------------------------
+
+-- Warned-about folder names, so an unreadable pack says so once per session
+-- rather than on every lookup.
+local warnedFormat = {}
+
+-- Every installed pack this version can read, highest bitrate first. Packs are
+-- registered by the data addons themselves at load time, so this is cheap enough
+-- to walk on demand and always reflects what is actually loaded.
+function ZoneLore:GetAudioPacks()
+	local packs = {}
+	local registry = _G.ZoneLoreAudioPacks
+
+	if type(registry) == "table" then
+		for name, pack in pairs(registry) do
+			if type(pack) == "table" and pack.version == PACK_FORMAT then
+				table.insert(packs, pack)
+			elseif type(pack) == "table" and not warnedFormat[name] then
+				warnedFormat[name] = true
+				self:Print(
+					"|cffffcc00%s is built for a different version of ZoneLore|r "
+						.. "(pack format %s, this build reads %d) -- update both to the same major version",
+					name, tostring(pack.version), PACK_FORMAT
+				)
+			end
+		end
+	elseif type(_G.ZoneLoreAudioData) == "table" and _G.ZoneLoreAudioData.version == PACK_FORMAT then
+		-- A pack predating the registry. It only knew the one folder name.
+		local legacy = _G.ZoneLoreAudioData
+		legacy.addon = legacy.addon or "ZoneLoreAudio"
+		legacy.quality = legacy.quality or "standard"
+		legacy.bitrate = legacy.bitrate or 0
+		table.insert(packs, legacy)
+	end
+
+	-- Bitrate descending, then folder name, so the order is stable when two packs
+	-- report the same bitrate (or none at all).
+	table.sort(packs, function(a, b)
+		if (a.bitrate or 0) ~= (b.bitrate or 0) then
+			return (a.bitrate or 0) > (b.bitrate or 0)
+		end
+		return tostring(a.addon) < tostring(b.addon)
+	end)
+
+	return packs
+end
+
+-- The pack narration plays from, or nil when none is installed.
+--
+-- The stored preference is a folder name rather than an index: a player who
+-- uninstalls the high-quality pack should fall back to whatever is left instead
+-- of pointing at whichever pack happens to occupy that slot afterwards.
+function ZoneLore:GetActiveAudioPack()
+	local packs = self:GetAudioPacks()
+	if #packs == 0 then
+		return nil
+	end
+
+	local preferred = self:Get("audioPack")
+	if type(preferred) == "string" then
+		for i = 1, #packs do
+			if packs[i].addon == preferred then
+				return packs[i]
+			end
+		end
+	end
+
+	-- No preference, or the preferred pack is gone: best available wins.
+	return packs[1]
+end
+
+-- Switches packs. Returns false when the name is not an installed pack, so the
+-- caller can say so rather than storing a preference that resolves to nothing.
+function ZoneLore:SetActiveAudioPack(name)
+	local packs = self:GetAudioPacks()
+	for i = 1, #packs do
+		if packs[i].addon == name then
+			self:Set("audioPack", name)
+			self:StopLore()
+			self:NotifyAudioChanged()
+			return true
+		end
+	end
+	return false
+end
+
+-- "High (128 kbps)" -- for the options dropdown and /zl audio.
+function ZoneLore:GetAudioPackLabel(pack)
+	if not pack then
+		return "none"
+	end
+	local quality = pack.quality or "standard"
+	if pack.bitrate and pack.bitrate > 0 then
+		return ("%s (%d kbps)"):format(quality, pack.bitrate)
+	end
+	return quality
+end
+
+--------------------------------------------------------------------------------
 -- Lookup
 --------------------------------------------------------------------------------
 
@@ -94,17 +202,17 @@ function ZoneLore:GetAudioClip(mapID, areaKey)
 		return nil, nil
 	end
 
-	local data = _G.ZoneLoreAudioData
-	if data then
+	local pack = self:GetActiveAudioPack()
+	if pack then
 		local clip
 		if areaKey then
-			local zoneClips = data.subzones and data.subzones[mapID]
+			local zoneClips = pack.subzones and pack.subzones[mapID]
 			clip = zoneClips and zoneClips[areaKey]
 		else
-			clip = data.zones and data.zones[mapID]
+			clip = pack.zones and pack.zones[mapID]
 		end
 		if clip and clip.file then
-			return SOUND_ROOT .. clip.file .. ".mp3", clip.len
+			return "Interface\\AddOns\\" .. pack.addon .. "\\Sounds\\" .. clip.file .. ".mp3", clip.len
 		end
 	end
 

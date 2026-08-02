@@ -286,7 +286,63 @@ function ZoneLore:SetupOptions()
 	MakeNote(panel, "Dialog follows the Dialog volume slider in the game's sound options.",
 		INDENT + 4, y)
 
-	y = y + ROW_GAP - 20
+	y = y + ROW_GAP - 4
+	-- Same cycle-button trade as the channel above. The list it cycles through is
+	-- whatever is installed, so it is built on click rather than captured here:
+	-- packs cannot be installed mid-session, but a player who disables one in the
+	-- AddOns list and reloads should not find this button offering it.
+	local packButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	packButton:SetPoint("TOPLEFT", INDENT + 4, y)
+	packButton:SetSize(220, 22)
+
+	local packNote = MakeNote(panel, "", INDENT + 4, y - 26)
+
+	local function SyncPack()
+		local packs = ZoneLore:GetAudioPacks()
+		local active = ZoneLore:GetActiveAudioPack()
+
+		if #packs == 0 then
+			packButton:SetText("No sound pack installed")
+			packButton:Disable()
+			packNote:SetText("Narration plays a placeholder clip. Install ZoneLoreAudio "
+				.. "or ZoneLoreAudioHQ for the real voiceover.")
+			return
+		end
+
+		packButton:SetText("Sound pack: " .. ZoneLore:GetAudioPackLabel(active))
+		if #packs > 1 then
+			packButton:Enable()
+			packNote:SetText(("%s. Click to switch between the %d installed packs.")
+				:format(active.addon, #packs))
+		else
+			-- Nothing to cycle to. Disabled rather than hidden: the pack in use is
+			-- worth reporting even when there is no choice to make.
+			packButton:Disable()
+			packNote:SetText(active.addon .. ". Install another pack to switch quality.")
+		end
+	end
+
+	packButton:SetScript("OnClick", function()
+		local packs = ZoneLore:GetAudioPacks()
+		if #packs < 2 then
+			return
+		end
+		local active = ZoneLore:GetActiveAudioPack()
+		local index = 1
+		for i = 1, #packs do
+			if packs[i] == active then
+				index = i
+				break
+			end
+		end
+		ZoneLore:SetActiveAudioPack(packs[(index % #packs) + 1].addon)
+		SyncPack()
+	end)
+	packButton:SetScript("OnShow", SyncPack)
+	SyncPack()
+
+	-- Clears the button and the two-line note beneath it.
+	y = y + ROW_GAP - 46
 	MakeHeading(panel, "Troubleshooting", INDENT, y, "GameFontNormal")
 
 	y = y + ROW_GAP

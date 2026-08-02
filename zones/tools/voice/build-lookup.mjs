@@ -73,10 +73,15 @@ export async function buildLookup() {
     "-- Durations are recorded at generation time because the client cannot report",
     "-- how long a sound file is; without them the Play button never resets itself.",
     "--",
-    "-- A global rather than a private namespace: a data addon cannot reach into",
+    "-- Globals rather than a private namespace: a data addon cannot reach into",
     "-- ZoneLore's, which is how AI_VoiceOverData_Vanilla does the same job.",
     "",
-    "ZoneLoreAudioData = {",
+    "local ADDON_NAME = ...",
+    "",
+    "local pack = {",
+    // Bumped only when the shape below changes in a way ZoneLore cannot read.
+    // Audio.lua refuses a pack whose format it does not know rather than playing
+    // silence, so this is the compatibility contract between the two addons.
     "\tversion = 1,",
     "\tzones = {",
   ];
@@ -98,7 +103,28 @@ export async function buildLookup() {
     lines.push("\t\t},");
   }
 
-  lines.push("\t},", "}", "");
+  lines.push(
+    "\t},",
+    "}",
+    "",
+    "-- The folder name comes from the loader rather than being baked in, so one",
+    "-- generated file serves every quality tier: ZoneLoreAudio and ZoneLoreAudioHQ",
+    "-- ship the same Sounds.lua and differ only in their .toc and their mp3s.",
+    "pack.addon = ADDON_NAME",
+    'pack.quality = C_AddOns.GetAddOnMetadata(ADDON_NAME, "X-ZoneLore-Quality") or "standard"',
+    'pack.bitrate = tonumber(C_AddOns.GetAddOnMetadata(ADDON_NAME, "X-ZoneLore-Bitrate")) or 0',
+    'pack.packVersion = C_AddOns.GetAddOnMetadata(ADDON_NAME, "Version") or "dev"',
+    "",
+    "-- Keyed by folder name so two tiers installed at once both register instead of",
+    "-- the second silently overwriting the first. ZoneLore picks between them.",
+    "ZoneLoreAudioPacks = ZoneLoreAudioPacks or {}",
+    "ZoneLoreAudioPacks[ADDON_NAME] = pack",
+    "",
+    "-- What ZoneLore 0.2 and earlier read. Harmless once the registry above exists,",
+    "-- and it keeps an old ZoneLore working with a new pack rather than going quiet.",
+    "ZoneLoreAudioData = ZoneLoreAudioData or pack",
+    "",
+  );
 
   await mkdir(join(ROOT, "addon/ZoneLoreAudio/Data"), { recursive: true });
   await writeFile(OUT_PATH, lines.join("\n"));
