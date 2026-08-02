@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Check, RotateCw } from "lucide-react";
+import { AlertTriangle, Check, MessageSquare, RotateCw } from "lucide-react";
 
 import type { ResultLine } from "@/lib/search";
 import { cn } from "@/lib/utils";
@@ -10,6 +10,8 @@ type Props = {
   current: boolean;
   onPlay: (line: ResultLine) => void;
   onNarrowToZone: (line: ResultLine) => void;
+  onFlag: (line: ResultLine, status: "bad" | "ok" | null) => void;
+  onNote: (line: ResultLine) => void;
 };
 
 // The colour discipline is ../wow-voiceover's IssueChip: severity decides whether to
@@ -26,8 +28,9 @@ const STATE_LABEL = {
   current: "",
 } as const;
 
-export function LineRow({ line, current, onPlay, onNarrowToZone }: Props) {
+export function LineRow({ line, current, onPlay, onNarrowToZone, onFlag, onNote }: Props) {
   const playable = line.state !== "missing";
+  const status = line.flag?.status ?? null;
 
   return (
     <tr
@@ -60,19 +63,48 @@ export function LineRow({ line, current, onPlay, onNarrowToZone }: Props) {
 
       <td className="px-2 py-1.5 whitespace-nowrap">
         <div className="flex items-center gap-1.5">
-          {line.flag?.status === "bad" && (
-            <span
-              className="flex items-center gap-0.5 rounded bg-bad/15 px-1 text-xs text-bad"
-              title={line.flag.note ?? "Flagged bad"}
-            >
-              <AlertTriangle size={11} /> bad
-            </span>
-          )}
-          {line.flag?.status === "ok" && (
-            <span className="flex items-center gap-0.5 text-xs text-good" title="Reviewed, sounds fine">
-              <Check size={11} /> ok
-            </span>
-          )}
+          {/* Clicking the verdict you already hold clears it, so a mis-tap is undone
+              where it was made rather than through a separate control. */}
+          <button
+            type="button"
+            aria-pressed={status === "bad"}
+            onClick={() => onFlag(line, status === "bad" ? null : "bad")}
+            title={line.flag?.note ?? (status === "bad" ? "Clear (u)" : "Flag as bad (f)")}
+            className={cn(
+              "flex items-center gap-0.5 rounded px-1 text-xs",
+              status === "bad" ? "bg-bad/15 text-bad" : "text-faint/40 hover:text-bad",
+            )}
+          >
+            <AlertTriangle size={11} />
+            {status === "bad" && "bad"}
+          </button>
+
+          <button
+            type="button"
+            aria-pressed={status === "ok"}
+            onClick={() => onFlag(line, status === "ok" ? null : "ok")}
+            title={status === "ok" ? "Clear (u)" : "Reviewed, sounds fine (g)"}
+            className={cn(
+              "flex items-center gap-0.5 rounded px-1 text-xs",
+              status === "ok" ? "text-good" : "text-faint/40 hover:text-good",
+            )}
+          >
+            <Check size={11} />
+            {status === "ok" && "ok"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNote(line)}
+            title={line.flag?.note ? line.flag.note : "Add a note (n)"}
+            className={cn(
+              "rounded px-0.5 text-xs",
+              line.flag?.note ? "text-accent" : "text-faint/40 hover:text-fg",
+            )}
+          >
+            <MessageSquare size={11} />
+          </button>
+
           {STATE_LABEL[line.state] && (
             <span className={cn("text-xs", STATE_STYLE[line.state])}>{STATE_LABEL[line.state]}</span>
           )}

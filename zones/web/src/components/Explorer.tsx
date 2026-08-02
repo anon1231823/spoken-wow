@@ -4,9 +4,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { LineRow } from "@/components/LineRow";
+import { NoteDialog } from "@/components/NoteDialog";
 import { Player } from "@/components/Player";
 import { SearchBar } from "@/components/SearchBar";
-import type { ZoneFacet } from "@/lib/catalogue";
+import type { LineFlag, ZoneFacet } from "@/lib/catalogue";
 import { filterParams, filtersFromParams, PAGE_SIZE, type LineFilters } from "@/lib/filters";
 import type { ResultLine, SearchResult } from "@/lib/search";
 import * as echo from "@/lib/url-echo";
@@ -31,6 +32,12 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState<ResultLine | null>(null);
+  // Flags set since this page was fetched, overlaid on the fetched rows. Re-running
+  // the search after every keystroke of a review pass would reorder the table under
+  // the cursor -- and with ?flag=unreviewed it would make each line vanish as it is
+  // judged, moving the next one under the key you are about to press again.
+  const [flagged, setFlagged] = useState<Record<string, LineFlag | null>>({});
+  const [noteFor, setNoteFor] = useState<ResultLine | null>(null);
 
   const audio = useRef<HTMLAudioElement | null>(null);
   const searchInput = useRef<HTMLInputElement | null>(null);
@@ -101,6 +108,9 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       .then((response) => response.json())
       .then((data: SearchResult) => {
         setResult(data);
+        // The fetched rows carry the flags as they now are, so the local overlay has
+        // done its job and would only go stale from here.
+        setFlagged({});
         setLoading(false);
       })
       .catch((err) => {
@@ -109,6 +119,47 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
 
     return () => controller.abort();
   }, [filterQuery, page]);
+
+  //----------------------------------------------------------------------------
+  // Flags
+  //----------------------------------------------------------------------------
+
+  const setFlag = useCallback(
+    (line: ResultLine, status: "bad" | "ok" | null, note?: string) => {
+      // Optimistic: a review pass is one judgement per second and waiting for a round
+      // trip before showing it makes the whole thing feel broken. A failure rolls the
+      // row back rather than leaving the UI claiming something the database refused.
+      const previous = flagged[line.id] ?? line.flag;
+      setFlagged((current) => ({
+        ...current,
+        [line.id]:
+          status === null
+            ? null
+            : { status, note: note ?? previous?.note ?? null, updatedAt: new Date().toISOString() },
+      }));
+
+      fetch("/api/flags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lineId: line.id, status, note: note ?? null }),
+      })
+        .then((response) => (response.ok ? response.json() : Promise.reject(new Error("rejected"))))
+        .then((data: { flag: LineFlag | null }) => {
+          setFlagged((current) => ({ ...current, [line.id]: data.flag }));
+        })
+        .catch(() => {
+          setFlagged((current) => ({ ...current, [line.id]: previous }));
+        });
+    },
+    [flagged],
+  );
+
+  // The fetched row, with any judgement made since it was fetched laid over the top.
+  const withFlag = useCallback(
+    (line: ResultLine): ResultLine =>
+      line.id in flagged ? { ...line, flag: flagged[line.id] } : line,
+    [flagged],
+  );
 
   //----------------------------------------------------------------------------
   // Playback
@@ -172,12 +223,21 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       } else if (event.key === "k") {
         event.preventDefault();
         step(-1);
+      } else if (current && (event.key === "f" || event.key === "g" || event.key === "u")) {
+        event.preventDefault();
+        // f bad, g ok, u undo. Judging a line does NOT advance to the next one:
+        // deciding and moving on are separate thoughts, and a combined key would make
+        // a mistaken tap cost both a wrong verdict and a lost place.
+        setFlag(current, event.key === "f" ? "bad" : event.key === "g" ? "ok" : null);
+      } else if (current && event.key === "n") {
+        event.preventDefault();
+        setNoteFor(withFlag(current));
       }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [current, step]);
+  }, [current, setFlag, step, withFlag]);
 
   // Keep the selected row visible when j/k walks off the bottom of the viewport.
   useEffect(() => {
@@ -244,10 +304,12 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           {result?.lines.map((line) => (
             <LineRow
               key={line.id}
-              line={line}
+              line={withFlag(line)}
               current={line.id === current?.id}
               onPlay={play}
               onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
+              onFlag={setFlag}
+              onNote={(l) => setNoteFor(withFlag(l))}
             />
           ))}
         </tbody>
@@ -282,8 +344,18 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       )}
 
       <p className="px-4 pb-4 text-center text-xs text-faint">
-        <kbd>/</kbd> search · <kbd>space</kbd> play/pause · <kbd>j</kbd>/<kbd>k</kbd> next/previous
+        <kbd>/</kbd> search · <kbd>space</kbd> play/pause · <kbd>j</kbd>/<kbd>k</kbd> next/previous ·{" "}
+        <kbd>f</kbd> bad · <kbd>g</kbd> ok · <kbd>u</kbd> undo · <kbd>n</kbd> note
       </p>
+
+      <NoteDialog
+        line={noteFor}
+        onClose={() => setNoteFor(null)}
+        onSave={(line, note) => {
+          setFlag(line, line.flag?.status ?? "bad", note);
+          setNoteFor(null);
+        }}
+      />
 
       <div className="fixed inset-x-0 bottom-0 z-30">
         <Player line={current} version={current?.take?.version} audioRef={audio} />
