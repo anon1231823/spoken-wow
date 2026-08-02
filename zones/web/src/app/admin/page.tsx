@@ -6,7 +6,7 @@ import { UserTable } from "@/components/UserTable";
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";
 
-export const metadata: Metadata = { title: "Users · ZoneLore" };
+export const metadata: Metadata = { title: "Users" };
 
 /**
  * Who may do what. The real boundary for role changes is Better Auth's own admin plugin,

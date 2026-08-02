@@ -10,7 +10,7 @@ import type { Category, Status } from "@/lib/feedback";
 import { canTriageFeedback } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Feedback · ZoneLore" };
+export const metadata: Metadata = { title: "Feedback" };
 
 /**
  * Everything visitors have reported, newest first.

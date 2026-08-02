@@ -8,7 +8,9 @@ import { SUPPORT_URL } from "@/lib/support";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ZoneLore voicelines",
+  // Pages set only their own name; the template does the branding. `default` is what
+  // the homepage gets -- a bare "ZoneLore", with nothing after it to name.
+  title: { default: "ZoneLore", template: "ZoneLore — %s" },
   description: "Browse, listen to and regenerate the narrated zone lore.",
 };
 
