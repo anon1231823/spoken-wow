@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { UserMenu } from "@/components/UserMenu";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,9 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/" className="font-semibold">
               ZoneLore
             </Link>
-            <Link href="/lexicon" className="text-muted hover:text-fg">
-              Pronunciation
-            </Link>
+            {/* Pronunciation moved into UserMenu, which is where the links that need a
+                role live. It is not a page a visitor can do anything with. */}
+            <UserMenu />
           </div>
         </header>
         {children}

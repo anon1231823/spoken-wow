@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireConfigure } from "@/lib/authz";
 import { catalogue, invalidateCatalogue } from "@/lib/catalogue";
 import { loadManifest, loadPronunciation, savePronunciation, textHash, toSpokenText } from "@/lib/tools";
 
@@ -50,12 +51,21 @@ async function impactOf(rules: Record<string, string>): Promise<Impact> {
   return { matches, staleAfter, staleNow, totalLines: entries.length };
 }
 
+// Admins only, on both verbs. GET is guarded as well as POST because it is the editor's
+// data source and not a public one -- and because impactOf() walks 1353 entries and hashes
+// each one, which is not a computation to leave open to anyone who asks.
 export async function GET() {
+  const { denied } = await requireConfigure();
+  if (denied) return denied;
+
   const rules = await loadPronunciation();
   return NextResponse.json({ rules, impact: await impactOf(rules) });
 }
 
 export async function POST(request: Request) {
+  const { denied } = await requireConfigure();
+  if (denied) return denied;
+
   const body = (await request.json().catch(() => ({}))) as {
     rules?: unknown;
     preview?: unknown;

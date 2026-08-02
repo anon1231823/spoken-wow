@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 
+import { requireRegenerate } from "@/lib/authz";
 import { getBatch, latestBatch, quote, regenerateOne, startBatch, stopBatch } from "@/lib/regenerate";
 
 // THE ONLY ENDPOINT THAT SPENDS MONEY.
+//
+// Editors and admins only, and that is the whole reason this app has accounts at all: the
+// site is public, and without a check here the ElevenLabs bill is too. Guarded on GET as
+// well as POST -- the progress of a batch, including which lines failed and why, is not
+// something to hand out.
 //
 // lineIds ride in the body, not the path, because they contain colons
 // ('s:1411:razor hill').
@@ -15,6 +21,9 @@ import { getBatch, latestBatch, quote, regenerateOne, startBatch, stopBatch } fr
 type Body = { lineIds?: unknown; action?: unknown; batchId?: unknown };
 
 export async function POST(request: Request) {
+  const { denied } = await requireRegenerate();
+  if (denied) return denied;
+
   const body = (await request.json().catch(() => ({}))) as Body;
 
   if (body.action === "stop") {
@@ -53,6 +62,9 @@ export async function POST(request: Request) {
 // Progress. Polled at 1s while a batch runs; there is one process, so there is
 // nothing to reconcile and no cursor to keep.
 export async function GET(request: Request) {
+  const { denied } = await requireRegenerate();
+  if (denied) return denied;
+
   const id = new URL(request.url).searchParams.get("batchId");
   const batch = id ? getBatch(id) : latestBatch();
   return NextResponse.json({ batch });

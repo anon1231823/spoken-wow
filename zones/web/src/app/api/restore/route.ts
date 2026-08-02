@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 
 import { archivedVersions } from "@/lib/audio";
+import { requireRegenerate } from "@/lib/authz";
 import { catalogue } from "@/lib/catalogue";
 import { restore } from "@/lib/regenerate";
 
 // Which superseded takes a line has, and putting one back. Free -- no API call.
+//
+// Guarded at the same level as regeneration rather than a lower one: restoring costs
+// nothing, but it changes what the addon ships and what everyone else hears, and the pair
+// only makes sense held by the same person.
 
 export async function GET(request: Request) {
+  const { denied } = await requireRegenerate();
+  if (denied) return denied;
+
   const lineId = new URL(request.url).searchParams.get("lineId");
   if (!lineId) return NextResponse.json({ error: "lineId is required" }, { status: 400 });
 
@@ -18,6 +26,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const { denied } = await requireRegenerate();
+  if (denied) return denied;
+
   const body = (await request.json().catch(() => ({}))) as {
     lineId?: unknown;
     version?: unknown;

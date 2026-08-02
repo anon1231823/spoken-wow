@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { requireReview } from "@/lib/authz";
 import { catalogue } from "@/lib/catalogue";
 import { query } from "@/lib/db";
 
 // What a person decided about a line after listening to it.
+//
+// Editors and admins only. A verdict is a claim about the audio that other people act on
+// -- `flag=bad` is the regeneration worklist -- so it is not something a passer-by writes.
 //
 // status 'bad' | 'ok' sets it, null clears it back to unreviewed. Clearing has to be
 // possible: a mis-tapped `f` during a fast listening pass is otherwise permanent, and
@@ -21,6 +25,9 @@ async function isKnownLine(lineId: string): Promise<boolean> {
 }
 
 export async function POST(request: Request) {
+  const { denied } = await requireReview();
+  if (denied) return denied;
+
   const body = (await request.json().catch(() => ({}))) as Body;
 
   const { lineId, status, note } = body;
