@@ -1,17 +1,22 @@
 "use client";
 
-import { AlertTriangle, Check, MessageSquare, RotateCw } from "lucide-react";
+import { AlertTriangle, Check, Loader2, MessageSquare, RefreshCw, RotateCcw, RotateCw } from "lucide-react";
 
 import type { ResultLine } from "@/lib/search";
 import { cn } from "@/lib/utils";
 
+export type RowState = { phase: "busy" } | { phase: "done"; version: number } | { phase: "error"; message: string };
+
 type Props = {
   line: ResultLine;
   current: boolean;
+  state?: RowState;
   onPlay: (line: ResultLine) => void;
   onNarrowToZone: (line: ResultLine) => void;
   onFlag: (line: ResultLine, status: "bad" | "ok" | null) => void;
   onNote: (line: ResultLine) => void;
+  onRegenerate: (line: ResultLine) => void;
+  onRestore: (line: ResultLine) => void;
 };
 
 // The colour discipline is ../wow-voiceover's IssueChip: severity decides whether to
@@ -28,9 +33,22 @@ const STATE_LABEL = {
   current: "",
 } as const;
 
-export function LineRow({ line, current, onPlay, onNarrowToZone, onFlag, onNote }: Props) {
+export function LineRow({
+  line,
+  current,
+  state,
+  onPlay,
+  onNarrowToZone,
+  onFlag,
+  onNote,
+  onRegenerate,
+  onRestore,
+}: Props) {
   const playable = line.state !== "missing";
   const status = line.flag?.status ?? null;
+  // More than one take means there is something to go back to. Restoring is free, so
+  // the control is only ever hidden when it would do nothing.
+  const restorable = (line.take?.takes ?? 0) > 1;
 
   return (
     <tr
@@ -145,6 +163,45 @@ export function LineRow({ line, current, onPlay, onNarrowToZone, onFlag, onNote 
             !
           </span>
         )}
+      </td>
+
+      <td className="px-2 py-1.5 whitespace-nowrap">
+        <div className="flex items-center justify-end gap-1">
+          {/* Precedence: an error is what you need to read, then a fresh success,
+              then the controls. Showing all three at once buries the one that matters. */}
+          {state?.phase === "error" ? (
+            <span className="truncate text-xs text-bad" title={state.message}>
+              {state.message}
+            </span>
+          ) : state?.phase === "done" ? (
+            <span className="text-xs text-good">v{state.version}</span>
+          ) : null}
+
+          {restorable && (
+            <button
+              type="button"
+              onClick={() => onRestore(line)}
+              title="Restore an earlier take (free)"
+              className="rounded p-1 text-faint/50 hover:bg-panel-hover hover:text-fg"
+            >
+              <RotateCcw size={13} />
+            </button>
+          )}
+
+          <button
+            type="button"
+            disabled={state?.phase === "busy"}
+            onClick={() => onRegenerate(line)}
+            title="Regenerate this line (spends credits)"
+            className="rounded p-1 text-faint/50 hover:bg-panel-hover hover:text-fg disabled:opacity-40"
+          >
+            {state?.phase === "busy" ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <RefreshCw size={13} />
+            )}
+          </button>
+        </div>
       </td>
     </tr>
   );

@@ -3,16 +3,20 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { LineRow } from "@/components/LineRow";
+import { LineRow, type RowState } from "@/components/LineRow";
 import { NoteDialog } from "@/components/NoteDialog";
 import { Player } from "@/components/Player";
+import { RegenerateDialog } from "@/components/RegenerateDialog";
+import { RegenerationPanel } from "@/components/RegenerationPanel";
 import { SearchBar } from "@/components/SearchBar";
 import type { LineFlag, ZoneFacet } from "@/lib/catalogue";
 import { filterParams, filtersFromParams, PAGE_SIZE, type LineFilters } from "@/lib/filters";
+import type { Batch, Quote } from "@/lib/regenerate";
 import type { ResultLine, SearchResult } from "@/lib/search";
 import * as echo from "@/lib/url-echo";
 
 const DEBOUNCE_MS = 200;
+const POLL_MS = 1_000;
 
 export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const router = useRouter();
@@ -38,6 +42,14 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // judged, moving the next one under the key you are about to press again.
   const [flagged, setFlagged] = useState<Record<string, LineFlag | null>>({});
   const [noteFor, setNoteFor] = useState<ResultLine | null>(null);
+
+  const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
+  // Bumped per line after a regeneration, to bust the browser's audio cache: the
+  // filename does not change, so without this the old take keeps playing.
+  const [versions, setVersions] = useState<Record<string, number>>({});
+  const [pendingBatch, setPendingBatch] = useState<{ label: string; quote: Quote; lineIds: string[] } | null>(null);
+  const [batch, setBatch] = useState<Batch | null>(null);
+  const [batchId, setBatchId] = useState<string | null>(null);
 
   const audio = useRef<HTMLAudioElement | null>(null);
   const searchInput = useRef<HTMLInputElement | null>(null);
@@ -96,6 +108,14 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
 
   // A string, not the object: memoising on object identity would refetch every render.
   const filterQuery = useMemo(() => filterParams(filters).toString(), [filters]);
+
+  // Held in refs so refetch() -- called from a poll and from a completed regeneration
+  // -- reads the current view without being rebuilt on every filter change, which
+  // would restart the poll timer each time.
+  const filterQueryRef = useRef(filterQuery);
+  filterQueryRef.current = filterQuery;
+  const pageRef = useRef(page);
+  pageRef.current = page;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -159,6 +179,148 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     (line: ResultLine): ResultLine =>
       line.id in flagged ? { ...line, flag: flagged[line.id] } : line,
     [flagged],
+  );
+
+  //----------------------------------------------------------------------------
+  // Regeneration
+  //----------------------------------------------------------------------------
+
+  const refetch = useCallback(() => {
+    const search = new URLSearchParams(filterQueryRef.current);
+    if (pageRef.current > 1) search.set("page", String(pageRef.current));
+    fetch(`/api/search?${search}`)
+      .then((response) => response.json())
+      .then((data: SearchResult) => setResult(data))
+      .catch(() => {});
+  }, []);
+
+  const regenerateOne = useCallback(
+    (line: ResultLine) => {
+      setRowStates((current) => ({ ...current, [line.id]: { phase: "busy" } }));
+
+      fetch("/api/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lineIds: [line.id] }),
+      })
+        .then((response) => response.json())
+        .then((data: { job?: { state: string; version?: number; error?: string }; error?: string }) => {
+          const job = data.job;
+          if (!job || job.state === "failed") {
+            setRowStates((current) => ({
+              ...current,
+              [line.id]: { phase: "error", message: job?.error ?? data.error ?? "failed" },
+            }));
+            return;
+          }
+          setRowStates((current) => ({
+            ...current,
+            [line.id]: { phase: "done", version: job.version! },
+          }));
+          setVersions((current) => ({ ...current, [line.id]: job.version! }));
+          refetch();
+        })
+        .catch((err) => {
+          setRowStates((current) => ({
+            ...current,
+            [line.id]: { phase: "error", message: String(err.message ?? err) },
+          }));
+        });
+    },
+    [refetch],
+  );
+
+  // Quote first, always. The dialog is shown against a snapshot of the ids, not
+  // against the live filter: the dialog can sit open while the search box keeps being
+  // typed into, and spending on a set nobody was shown is the failure to avoid.
+  const askToRegenerateAll = useCallback(() => {
+    const lineIds = (result?.lines ?? []).map((line) => line.id);
+    if (lineIds.length === 0) return;
+
+    fetch("/api/regenerate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "quote", lineIds }),
+    })
+      .then((response) => response.json())
+      .then((quote: Quote) =>
+        setPendingBatch({ label: `${quote.lines} lines on this page`, quote, lineIds }),
+      )
+      .catch(() => {});
+  }, [result]);
+
+  const startBatch = useCallback(() => {
+    if (!pendingBatch) return;
+    const { lineIds } = pendingBatch;
+    setPendingBatch(null);
+
+    fetch("/api/regenerate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lineIds }),
+    })
+      .then((response) => response.json())
+      .then((data: { batchId?: string }) => {
+        if (data.batchId) setBatchId(data.batchId);
+      })
+      .catch(() => {});
+  }, [pendingBatch]);
+
+  // One process, so there is no cursor to keep and nothing to reconcile -- just ask
+  // what the batch is doing until it stops doing it.
+  useEffect(() => {
+    if (!batchId) return;
+    let timer: ReturnType<typeof setTimeout>;
+    let cancelled = false;
+
+    const poll = () => {
+      fetch(`/api/regenerate?batchId=${batchId}`)
+        .then((response) => response.json())
+        .then((data: { batch: Batch | null }) => {
+          if (cancelled) return;
+          setBatch(data.batch);
+          if (data.batch && data.batch.finishedAt === null) {
+            timer = setTimeout(poll, POLL_MS);
+          } else {
+            setBatchId(null);
+            refetch();
+          }
+        })
+        .catch(() => {
+          if (!cancelled) timer = setTimeout(poll, POLL_MS);
+        });
+    };
+
+    poll();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [batchId, refetch]);
+
+  const restore = useCallback(
+    (line: ResultLine) => {
+      fetch(`/api/restore?lineId=${encodeURIComponent(line.id)}`)
+        .then((response) => response.json())
+        .then((data: { versions: number[] }) => {
+          const newest = data.versions[0];
+          if (newest === undefined) return;
+          return fetch("/api/restore", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ lineId: line.id, version: newest }),
+          })
+            .then((response) => response.json())
+            .then((result: { version?: number }) => {
+              if (result.version !== undefined) {
+                setVersions((current) => ({ ...current, [line.id]: result.version! }));
+              }
+              refetch();
+            });
+        })
+        .catch(() => {});
+    },
+    [refetch],
   );
 
   //----------------------------------------------------------------------------
@@ -281,6 +443,16 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           </>
         )}
         {loading && <span className="text-faint">loading…</span>}
+
+        {result && result.total > 0 && (
+          <button
+            type="button"
+            onClick={askToRegenerateAll}
+            className="ml-auto rounded border border-border px-2 py-0.5 hover:bg-panel-hover hover:text-fg"
+          >
+            Regenerate this page…
+          </button>
+        )}
       </div>
 
       <table className="w-full table-fixed">
@@ -290,6 +462,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           <col className="w-40" />
           <col />
           <col className="w-20" />
+          <col className="w-28" />
         </colgroup>
         <thead className="text-left text-xs text-faint">
           <tr className="border-b border-border">
@@ -298,6 +471,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
             <th className="px-2 py-1 font-normal">State</th>
             <th className="px-2 py-1 font-normal">Lore</th>
             <th className="px-2 py-1 text-right font-normal">Chars</th>
+            <th className="px-2 py-1 text-right font-normal">Audio</th>
           </tr>
         </thead>
         <tbody>
@@ -308,8 +482,11 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
               current={line.id === current?.id}
               onPlay={play}
               onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
+              state={rowStates[line.id]}
               onFlag={setFlag}
               onNote={(l) => setNoteFor(withFlag(l))}
+              onRegenerate={regenerateOne}
+              onRestore={restore}
             />
           ))}
         </tbody>
@@ -357,8 +534,31 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         }}
       />
 
+      <RegenerateDialog
+        pending={pendingBatch}
+        onConfirm={startBatch}
+        onCancel={() => setPendingBatch(null)}
+      />
+
+      {/* One stack, so the panel sits flush on top of a player of any height. */}
       <div className="fixed inset-x-0 bottom-0 z-30">
-        <Player line={current} version={current?.take?.version} audioRef={audio} />
+        <RegenerationPanel
+          batch={batch}
+          onStop={() => {
+            if (!batch) return;
+            void fetch("/api/regenerate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "stop", batchId: batch.id }),
+            });
+          }}
+          onDismiss={() => setBatch(null)}
+        />
+        <Player
+          line={current}
+          version={current ? (versions[current.id] ?? current.take?.version) : undefined}
+          audioRef={audio}
+        />
       </div>
     </div>
   );

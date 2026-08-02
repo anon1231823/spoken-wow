@@ -22,6 +22,10 @@ import * as generateModule from "../../../tools/voice/generate.mjs";
 import * as storeModule from "../../../tools/voice/store.mjs";
 import * as normaliseModule from "../../../tools/voice/normalise.mjs";
 import * as namingModule from "../../../tools/voice/naming.mjs";
+import * as elevenModule from "../../../tools/voice/elevenlabs.mjs";
+import * as concurrencyModule from "../../../tools/voice/concurrency.mjs";
+import * as exportModule from "../../../tools/voice/export-manifest.mjs";
+import * as lookupModule from "../../../tools/voice/build-lookup.mjs";
 
 /** One voiceable entry: a zone, or a subzone of one. Mirrors buildCatalogue(). */
 export type CatalogueEntry = {
@@ -85,3 +89,83 @@ export const loadPronunciation = normaliseModule.loadPronunciation as () => Prom
 export const PRONUNCIATION_PATH = normaliseModule.PRONUNCIATION_PATH as string;
 
 export const textHash = namingModule.textHash as (spoken: string) => string;
+
+//------------------------------------------------------------------------------
+// Generation
+//------------------------------------------------------------------------------
+
+/** tools/voice/config.json. Written back when a voice or dictionary is resolved. */
+export type VoiceConfig = {
+  voiceName: string;
+  voiceId?: string;
+  modelId: string;
+  languageCode?: string;
+  outputFormat: string;
+  dictionaryId?: string | null;
+  dictionaryVersionId?: string | null;
+  creditRate?: number | null;
+  voiceSettings: Record<string, number | boolean>;
+};
+
+export const loadConfig = elevenModule.loadConfig as () => Promise<VoiceConfig>;
+export const apiKey = elevenModule.apiKey as () => Promise<string>;
+export const resolveVoiceId = elevenModule.resolveVoiceId as (
+  config: VoiceConfig,
+  key: string,
+) => Promise<string>;
+export const resolveDictionary = elevenModule.resolveDictionary as (
+  config: VoiceConfig,
+  key: string,
+) => Promise<void>;
+export const fetchTier = elevenModule.fetchTier as (key: string) => Promise<string | null>;
+
+/** Throws on a non-retryable failure; retries 429 and 5xx internally. */
+export const synthesize = elevenModule.synthesize as (
+  spoken: string,
+  config: VoiceConfig,
+  key: string,
+  options?: { attempts?: number; onRateLimit?: () => void },
+) => Promise<{ audio: Buffer; credits: number | null }>;
+
+export const budgetFor = concurrencyModule.budgetFor as (
+  tier: string | null,
+  modelId: string,
+) => number;
+
+type LimiterCtor = new (limit: number) => {
+  run<T>(task: () => Promise<T>): Promise<T>;
+  setLimit(limit: number): void;
+};
+export const Limiter = concurrencyModule.Limiter as LimiterCtor;
+export const afterRateLimit = concurrencyModule.afterRateLimit as (
+  budget: number,
+  at: number,
+  now: number,
+) => number;
+export const COOL_DOWN_MS = concurrencyModule.COOL_DOWN_MS as number;
+
+/** Archives the take being replaced, then writes. Returns the absolute path. */
+export const writeAudio = storeModule.writeAudio as (
+  file: string,
+  buffer: Buffer,
+) => Promise<string>;
+export const durationOf = storeModule.durationOf as (path: string) => Promise<number>;
+export const insertTake = storeModule.insertTake as (
+  lineId: string,
+  record: TakeRecord,
+  origin: "imported" | "generated",
+  settings?: Record<string, unknown> | null,
+) => Promise<number>;
+export const restoreTake = storeModule.restoreTake as (
+  file: string,
+  archiveVersion: number,
+) => Promise<string>;
+
+export const exportManifest = exportModule.exportManifest as (options?: {
+  check?: boolean;
+}) => Promise<{ skipped: boolean; changed: boolean; count: number }>;
+export const buildLookup = lookupModule.buildLookup as () => Promise<{
+  zones: number;
+  subzones: number;
+  missingFiles: number;
+}>;

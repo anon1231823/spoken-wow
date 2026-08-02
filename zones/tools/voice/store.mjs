@@ -19,10 +19,14 @@
 
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { execFile } from "node:child_process";
 import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 
 import { ROOT } from "../lib/loredata.mjs";
 import * as db from "./db.mjs";
+
+const execFileAsync = promisify(execFile);
 
 export const MANIFEST_PATH = join(ROOT, "tools/voice/manifest.json");
 export const SOUNDS_DIR = join(ROOT, "addon/ZoneLoreAudio/Sounds");
@@ -241,6 +245,24 @@ async function archiveExisting(file, path) {
   }, 0);
 
   await rename(path, join(dir, `v${highest + 1}.mp3`));
+}
+
+// ffprobe rather than parsing frame headers: the duration is what stops the addon's
+// Play button resetting at the wrong moment, and a CBR assumption in a hand-rolled
+// parser would be wrong silently.
+//
+// Here rather than in generate.mjs because the web app needs it for exactly the same
+// reason and on the same files -- a second copy is a second thing to get wrong.
+export async function durationOf(path) {
+  const { stdout } = await execFileAsync("ffprobe", [
+    "-v", "error",
+    "-show_entries", "format=duration",
+    "-of", "default=noprint_wrappers=1:nokey=1",
+    path,
+  ]);
+  const seconds = Number(stdout.trim());
+  if (!Number.isFinite(seconds)) throw new Error(`ffprobe gave no duration for ${path}`);
+  return Math.round(seconds * 1000) / 1000;
 }
 
 // Puts an archived take back. No API call and no credits -- this is the undo for a

@@ -33,16 +33,18 @@ function serialise(manifest) {
   return JSON.stringify(ordered, null, 2) + "\n";
 }
 
-async function main() {
-  const check = process.argv.includes("--check");
-
-  // Not an error, and deliberately so: `make lookup` runs this before build-lookup.mjs,
-  // and with no database the manifest is already the record rather than a stale copy of
-  // one. Failing here would make the whole addon build require Postgres, which is the
-  // opposite of what this seam is for.
+/**
+ * Writes the manifest from the database. Returns what happened, so the web app can
+ * call this after a generation without parsing anything.
+ *
+ * With no database this is a no-op rather than an error: `make lookup` runs it before
+ * build-lookup.mjs, and with DATABASE_URL unset the manifest is already the record
+ * rather than a stale copy of one. Failing here would make the addon build require
+ * Postgres, which is the opposite of what this seam is for.
+ */
+export async function exportManifest({ check = false } = {}) {
   if (!db.isEnabled()) {
-    console.log("DATABASE_URL is not set; tools/voice/manifest.json is already the record.");
-    return;
+    return { skipped: true, changed: false, count: 0 };
   }
 
   const manifest = await loadManifest();
@@ -53,17 +55,10 @@ async function main() {
   });
 
   const count = Object.keys(manifest).length;
+  const before = current === null ? 0 : Object.keys(JSON.parse(current)).length;
 
-  if (current === next) {
-    console.log(`${MANIFEST_PATH} is up to date (${count} lines).`);
-    return;
-  }
-
-  if (check) {
-    console.error(`error: ${MANIFEST_PATH} does not match the database.`);
-    console.error("       run:  node tools/voice/export-manifest.mjs");
-    process.exit(1);
-  }
+  if (current === next) return { skipped: false, changed: false, count, before };
+  if (check) return { skipped: false, changed: true, count, before, stale: true };
 
   // Temp file and rename, for the reason store.mjs gives: this is the record of
   // everything already paid for, and a crash partway through a write would destroy it.
@@ -71,9 +66,29 @@ async function main() {
   await writeFile(temp, next);
   await rename(temp, MANIFEST_PATH);
 
-  const before = current === null ? 0 : Object.keys(JSON.parse(current)).length;
+  return { skipped: false, changed: true, count, before };
+}
+
+async function main() {
+  const check = process.argv.includes("--check");
+  const result = await exportManifest({ check });
+
+  if (result.skipped) {
+    console.log("DATABASE_URL is not set; tools/voice/manifest.json is already the record.");
+    return;
+  }
+  if (!result.changed) {
+    console.log(`${MANIFEST_PATH} is up to date (${result.count} lines).`);
+    return;
+  }
+  if (result.stale) {
+    console.error(`error: ${MANIFEST_PATH} does not match the database.`);
+    console.error("       run:  node tools/voice/export-manifest.mjs");
+    process.exit(1);
+  }
+
   console.log(`wrote ${MANIFEST_PATH}`);
-  console.log(`  ${count} lines (was ${before})`);
+  console.log(`  ${result.count} lines (was ${result.before})`);
   console.log("\nnext:  node tools/voice/build-lookup.mjs");
 }
 
