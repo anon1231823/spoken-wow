@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { BODY_MAX, CATEGORIES, CATEGORY_LABEL, type Category } from "@/lib/feedback";
 import type { ResultLine } from "@/lib/search";
+import { SUPPORT_REASON, SUPPORT_URL } from "@/lib/support";
 
 /**
  * The one form anyone can submit, signed in or not.
@@ -110,7 +111,7 @@ export function FeedbackDialog({ target, onClose }: Props) {
     >
       {sent ? (
         <div>
-          <h2 className="font-medium">Thank you.</h2>
+          <h2 className="font-medium">Thank you!</h2>
           <p className="mt-2 text-muted">
             {target === "general"
               ? "Your feedback is with the editors."
@@ -118,12 +119,36 @@ export function FeedbackDialog({ target, onClose }: Props) {
             There is no reply address on this, so you will not hear back unless you left
             one.
           </p>
+          {/* The one moment somebody has demonstrably given us their attention on
+              purpose, which is why the ask lives here and not on every page. It sits
+              below the confirmation and does not replace the Done button: a thank-you
+              that turns out to be a donation prompt teaches people not to send the next
+              report.
+
+              Button first, reason second, and no panel around either. The ask is one
+              action, so it is one control -- burying it in a sentence makes the reader
+              hunt for the clickable words -- and the explanation is for the people who
+              want to know why before they press it, which is a thing you read second. */}
+          <div className="mt-4">
+            <a
+              href={SUPPORT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block rounded bg-accent px-3 py-1 font-medium text-bg hover:opacity-90"
+            >
+              Support the project
+            </a>
+            <p className="mt-2 text-sm text-muted">{SUPPORT_REASON}</p>
+          </div>
           <div className="mt-4 flex justify-end">
+            {/* Secondary, matching the form's Cancel: there is one accent control on this
+                screen and it is the ask above. Two filled buttons in a dialog this small
+                give the eye no way to tell which one is the point. */}
             <button
               type="button"
               autoFocus
               onClick={onClose}
-              className="rounded bg-accent px-3 py-1 text-bg hover:opacity-90"
+              className="rounded border border-border px-3 py-1 hover:bg-panel-hover"
             >
               Done
             </button>
