@@ -19,6 +19,7 @@ Autoplay.lua
 Data/Zones.lua
 Data/Subzones.lua
 UI/TextView.lua
+UI/Scroller.lua
 UI/CopyLink.lua
 UI/AudioButton.lua
 UI/ReportButton.lua

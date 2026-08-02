@@ -15,6 +15,9 @@ see [Compatibility](#compatibility) below.
   the controls carry the button, so you never have to find it at all.
 - Options gains a **Report a problem** link, for everything that belongs to no
   particular line: the addon erroring, the voice being wrong throughout.
+- The options panel scrolls. It had grown more rows than fit the settings window,
+  and the settings canvas neither scrolls nor clips what overflows it, so the last
+  few sections were drawing over the game world instead of being reachable.
 
 Both the lore text and the voice are beta, and which entries get rewritten first
 follows what comes in. Sound packs are unchanged — 0.2.0 packs work with this

@@ -149,9 +149,15 @@ function ZoneLore:SetupOptions()
 	panel = CreateFrame("Frame")
 	panel.name = "ZoneLore"
 
-	MakeHeading(panel, "ZoneLore", INDENT, -16)
+	-- Everything below is laid out in `content`, not in `panel`. The settings canvas
+	-- is a fixed size and neither scrolls nor clips what overflows it, so a panel
+	-- with more rows than fit draws them over the game world. See UI/Scroller.lua.
+	local scroller = ZoneLore:CreateScroller(panel)
+	local content = scroller.child
+
+	MakeHeading(content, "ZoneLore", INDENT, -16)
 	MakeNote(
-		panel,
+		content,
 		"Lore for zones and subzones on the world map and minimap. Text from "
 			.. "warcraft.wiki.gg, CC BY-SA 4.0.",
 		INDENT,
@@ -159,15 +165,15 @@ function ZoneLore:SetupOptions()
 	)
 
 	local y = -80
-	MakeHeading(panel, "World map", INDENT, y, "GameFontNormal")
+	MakeHeading(content, "World map", INDENT, y, "GameFontNormal")
 
 	y = y + ROW_GAP
-	MakeCheckbox(panel, "showMapPanel", "Show the lore panel beside the map",
+	MakeCheckbox(content, "showMapPanel", "Show the lore panel beside the map",
 		"The panel is hidden while the map is maximised, since it would sit off-screen.",
 		INDENT, y, RedrawPanel)
 
 	y = y + ROW_GAP
-	MakeCheckbox(panel, "showHoverPreview", "Show a lore tooltip on hover",
+	MakeCheckbox(content, "showHoverPreview", "Show a lore tooltip on hover",
 		"Hover a zone on a continent map, or a subzone on a zone map. Suppressed while "
 			.. "the cursor is over a map pin.",
 		INDENT, y, nil)
@@ -175,7 +181,7 @@ function ZoneLore:SetupOptions()
 	y = y + ROW_GAP - 8
 	-- Stored as a string ("LEFT"/"RIGHT") rather than a boolean, so this checkbox
 	-- cannot use MakeCheckbox's Get/Set path directly.
-	local sideBox = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+	local sideBox = CreateFrame("CheckButton", nil, content, "UICheckButtonTemplate")
 	sideBox:SetPoint("TOPLEFT", INDENT, y)
 	sideBox.text = sideBox:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
 	sideBox.text:SetPoint("LEFT", sideBox, "RIGHT", 2, 0)
@@ -191,16 +197,16 @@ function ZoneLore:SetupOptions()
 	SyncSide(sideBox)
 
 	y = y + ROW_GAP - 24
-	MakeSlider(panel, "panelWidth", "Panel width", 220, 520, 10, INDENT + 4, y, RedrawPanel)
+	MakeSlider(content, "panelWidth", "Panel width", 220, 520, 10, INDENT + 4, y, RedrawPanel)
 
 	y = y + ROW_GAP - 24
-	MakeSlider(panel, "fontSize", "Font size", 9, 20, 1, INDENT + 4, y, RedrawEverything)
+	MakeSlider(content, "fontSize", "Font size", 9, 20, 1, INDENT + 4, y, RedrawEverything)
 
 	y = y + ROW_GAP - 28
-	MakeHeading(panel, "Minimap", INDENT, y, "GameFontNormal")
+	MakeHeading(content, "Minimap", INDENT, y, "GameFontNormal")
 
 	y = y + ROW_GAP
-	MakeCheckbox(panel, "showMinimapButton", "Show the minimap button",
+	MakeCheckbox(content, "showMinimapButton", "Show the minimap button",
 		"Left-click opens the lore window, right-click opens these settings.",
 		INDENT, y, function()
 			-- The checkbox has already written the option, so sync rather than
@@ -211,10 +217,10 @@ function ZoneLore:SetupOptions()
 		end)
 
 	y = y + ROW_GAP - 28
-	MakeHeading(panel, "Narration", INDENT, y, "GameFontNormal")
+	MakeHeading(content, "Narration", INDENT, y, "GameFontNormal")
 
 	y = y + ROW_GAP
-	MakeCheckbox(panel, "voiceEnabled", "Show the Play button on lore descriptions",
+	MakeCheckbox(content, "voiceEnabled", "Show the Play button on lore descriptions",
 		"Reads the lore aloud. Needs the ZoneLoreAudio companion addon; without it "
 			.. "the button plays a placeholder.",
 		INDENT, y, function()
@@ -223,7 +229,7 @@ function ZoneLore:SetupOptions()
 		end)
 
 	y = y + ROW_GAP
-	MakeCheckbox(panel, "autoplay", "Narrate a zone when you discover it",
+	MakeCheckbox(content, "autoplay", "Narrate a zone when you discover it",
 		"Triggered by the game's own discovery -- the moment it prints "
 			.. "\"Discovered Durotar\". Fires once per character, because that is "
 			.. "when the game fires it.",
@@ -234,14 +240,14 @@ function ZoneLore:SetupOptions()
 		end)
 
 	y = y + ROW_GAP
-	MakeCheckbox(panel, "autoplaySubzones", "Also narrate subzones you discover",
+	MakeCheckbox(content, "autoplaySubzones", "Also narrate subzones you discover",
 		"Most discoveries are subzones -- a walk across Elwynn sets off several. "
 			.. "They queue rather than interrupt, so untick this only if the "
 			.. "narration feels constant.",
 		INDENT + INDENT, y, nil)
 
 	y = y + ROW_GAP
-	MakeCheckbox(panel, "showPlaybackBar", "Show playback controls while narrating",
+	MakeCheckbox(content, "showPlaybackBar", "Show playback controls while narrating",
 		"A small movable Pause/Stop widget below the minimap, so narration can be "
 			.. "stopped without reopening the map. It appears only while a clip is "
 			.. "playing. Drag it to move it; /zl bar puts it back.",
@@ -257,7 +263,7 @@ function ZoneLore:SetupOptions()
 	-- game, and five values do not justify the risk -- the same trade the
 	-- hand-rolled scrollbar in UI/TextView.lua makes.
 	local CHANNEL_ORDER = { "Dialog", "Master", "SFX", "Ambience", "Music" }
-	local channelButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	local channelButton = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
 	channelButton:SetPoint("TOPLEFT", INDENT + 4, y)
 	channelButton:SetSize(220, 22)
 
@@ -283,7 +289,7 @@ function ZoneLore:SetupOptions()
 	SyncChannel()
 
 	y = y + ROW_GAP - 4
-	MakeNote(panel, "Dialog follows the Dialog volume slider in the game's sound options.",
+	MakeNote(content, "Dialog follows the Dialog volume slider in the game's sound options.",
 		INDENT + 4, y)
 
 	y = y + ROW_GAP - 4
@@ -291,11 +297,11 @@ function ZoneLore:SetupOptions()
 	-- whatever is installed, so it is built on click rather than captured here:
 	-- packs cannot be installed mid-session, but a player who disables one in the
 	-- AddOns list and reloads should not find this button offering it.
-	local packButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	local packButton = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
 	packButton:SetPoint("TOPLEFT", INDENT + 4, y)
 	packButton:SetSize(220, 22)
 
-	local packNote = MakeNote(panel, "", INDENT + 4, y - 26)
+	local packNote = MakeNote(content, "", INDENT + 4, y - 26)
 
 	local function SyncPack()
 		local packs = ZoneLore:GetAudioPacks()
@@ -343,10 +349,10 @@ function ZoneLore:SetupOptions()
 
 	-- Clears the button and the two-line note beneath it.
 	y = y + ROW_GAP - 46
-	MakeHeading(panel, "Troubleshooting", INDENT, y, "GameFontNormal")
+	MakeHeading(content, "Troubleshooting", INDENT, y, "GameFontNormal")
 
 	y = y + ROW_GAP
-	MakeCheckbox(panel, "debug", "Report area names when clicking the map",
+	MakeCheckbox(content, "debug", "Report area names when clicking the map",
 		"Prints the raw area name the client reports, the key it normalises to, and "
 			.. "whether lore was found. Use this to spot a subzone needing an alias.",
 		INDENT, y, nil)
@@ -356,10 +362,10 @@ function ZoneLore:SetupOptions()
 	-- cover a bad line, and this covers everything that belongs to no line at all --
 	-- the addon erroring, the voice being wrong throughout, the site itself.
 	y = y + ROW_GAP - 8
-	MakeHeading(panel, "Feedback", INDENT, y, "GameFontNormal")
+	MakeHeading(content, "Feedback", INDENT, y, "GameFontNormal")
 
 	y = y + ROW_GAP
-	local feedbackButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	local feedbackButton = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
 	feedbackButton:SetPoint("TOPLEFT", INDENT + 4, y)
 	feedbackButton:SetSize(220, 22)
 	feedbackButton:SetText("Report a problem")
@@ -368,9 +374,16 @@ function ZoneLore:SetupOptions()
 			"Copy this address and open it in your browser to send feedback about ZoneLore.")
 	end)
 
-	MakeNote(panel, "There is a Report button on each lore entry for problems with that "
+	MakeNote(content, "There is a Report button on each lore entry for problems with that "
 		.. "entry. This one is for everything else. The game cannot open a link, so both "
 		.. "give you an address to copy.", INDENT + 4, y - 26)
+
+	-- `y` is the top of the last control, measured down from the canvas top, so the
+	-- content reaches -y plus that control and the note under it. Derived rather
+	-- than written as a number: a hardcoded height is a number nobody updates when a
+	-- row is added, and the failure it produces is the one this scroller exists to
+	-- fix -- a section you cannot reach.
+	scroller:SetContentHeight(-y + 80)
 
 	category = Settings.RegisterCanvasLayoutCategory(panel, "ZoneLore")
 	Settings.RegisterAddOnCategory(category)
