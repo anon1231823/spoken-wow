@@ -73,6 +73,22 @@ jobs:
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
 
+      # BOTH installs are required, and the root one is easy to think redundant.
+      #
+      # tools/voice/db.mjs does `import pg`, and it is resolved from where that file
+      # lives: node walks tools/voice -> tools -> the repo root, and never into
+      # web/node_modules. The root package.json is where tools/ declares that single
+      # dependency. Without this the build fails at
+      #   ../tools/voice/db.mjs  Module not found: Can't resolve 'pg'
+      # which reads like a missing web/ dependency and is not one -- web/ has pg too,
+      # and that copy is what the running server uses, because the compiled chunk
+      # resolves from web/.next/server/. Build-time and runtime look in different
+      # places, so both copies have to exist.
+      #
+      # npm, not pnpm: the root has a package-lock.json and no pnpm lockfile.
+      - name: Install tooling dependencies
+        run: npm ci
+
       - name: Install
         working-directory: web
         run: pnpm install --frozen-lockfile
