@@ -3,6 +3,23 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 0.2.1 — 2026-08-02
+
+**Reporting a bad line is now a button press**
+
+- A **Report** button on the map panel, the lore window and the playback
+  controls. The client cannot open a browser or send anything anywhere, so it
+  offers an address to copy: `lore.rusty.one/r/{zone}/{area}`, a page carrying
+  that line's text, its narration and a form. Reporting a bad reading no longer
+  means finding the line again among 1353 of them — and while a line is playing,
+  the controls carry the button, so you never have to find it at all.
+- Options gains a **Report a problem** link, for everything that belongs to no
+  particular line: the addon erroring, the voice being wrong throughout.
+
+Both the lore text and the voice are beta, and which entries get rewritten first
+follows what comes in. Sound packs are unchanged — 0.2.0 packs work with this
+release, as any 0.x pack does.
+
 ## 0.2.0 — 2026-08-02
 
 First public release.

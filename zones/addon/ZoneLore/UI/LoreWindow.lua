@@ -18,7 +18,12 @@ local ROW_HEIGHT = 16
 local PADDING = 14
 local SCROLL_STEP = ROW_HEIGHT * 3
 
-local window, listScroll, listChild, header, subheader, body, footer, audioButton
+-- Horizontal room kept clear at the right of the credit line for the report
+-- button, the same trade UI/MapPanel.lua makes: the credit is short and the
+-- button is a rare click, so they share the footer row.
+local REPORT_RESERVE = 64
+
+local window, listScroll, listChild, header, subheader, body, footer, audioButton, reportButton
 local rows = {}
 local expandedZone = nil
 local selection = nil -- { mapID = , key = nil|string }
@@ -98,6 +103,7 @@ local function ShowEntry()
 		subheader:SetText("")
 		body:SetText("|cff888888Pick a zone on the left. Zones with subzones show a count; click one to expand it.|r")
 		audioButton:SetTarget(nil, nil)
+		reportButton:SetTarget(nil, nil)
 		return
 	end
 
@@ -112,6 +118,7 @@ local function ShowEntry()
 			-- Rows are already keyed by the canonical form, so this needs no
 			-- normalising -- unlike the map panel, which starts from a client name.
 			audioButton:SetTarget(mapID, key)
+			reportButton:SetTarget(mapID, key)
 			return
 		end
 	end
@@ -122,6 +129,7 @@ local function ShowEntry()
 	subheader:SetText(subKeys and (#subKeys .. " subzones") or "")
 	body:SetText(entry and (entry.full or entry.short) or "|cff888888No lore recorded.|r")
 	audioButton:SetTarget(entry and mapID or nil, nil)
+	reportButton:SetTarget(entry and mapID or nil, nil)
 end
 
 --------------------------------------------------------------------------------
@@ -347,13 +355,18 @@ local function BuildWindow()
 
 	footer = window:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
 	footer:SetPoint("BOTTOMLEFT", listScroll, "BOTTOMRIGHT", PADDING, 0)
-	footer:SetPoint("RIGHT", window, "RIGHT", -PADDING, 0)
+	footer:SetPoint("RIGHT", window, "RIGHT", -(PADDING + REPORT_RESERVE), 0)
 	footer:SetJustifyH("LEFT")
 	footer:SetText("Lore: warcraft.wiki.gg (CC BY-SA 4.0)")
 
+	reportButton = ZoneLore:CreateReportButton(window)
+	reportButton:SetPoint("LEFT", footer, "RIGHT", 6, -4)
+
 	body = ZoneLore:CreateTextView(window)
 	body.frame:SetPoint("TOPLEFT", subheader, "BOTTOMLEFT", 0, -8)
-	body.frame:SetPoint("BOTTOMRIGHT", footer, "TOPRIGHT", 0, 6)
+	-- Cleared against the button rather than the credit line: the button is the
+	-- taller of the two, so it is the one that decides where the text has to stop.
+	body.frame:SetPoint("BOTTOMRIGHT", reportButton, "TOPRIGHT", 0, 6)
 
 	ZoneLore.window = window
 end

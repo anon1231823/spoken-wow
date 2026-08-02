@@ -174,6 +174,38 @@ function ZoneLore:NormaliseAreaKey(name)
 	return key
 end
 
+--------------------------------------------------------------------------------
+-- Report links
+--
+-- The game cannot open a URL or send anything anywhere, so the only way a player
+-- can report a bad line is to copy an address and open it themselves. The site
+-- resolves /r/{mapID}/{slug} back to a line by matching that path against the
+-- audio file paths it already assigns, which is why the slug is built the same
+-- way here as slugFor does in tools/voice/naming.mjs -- and why "zone", the file
+-- name a zone's own line gets, doubles as the slug for it.
+--
+-- tools/validate.mjs fails the build if these two ever drift, or if two subzones
+-- in one zone come to share a slug: the JS side has a hash fallback for that
+-- collision, and nothing here can reproduce it.
+--------------------------------------------------------------------------------
+
+ZoneLore.SITE_URL = "https://lore.rusty.one"
+
+function ZoneLore:ReportURL(mapID, areaKey)
+	if not mapID then
+		return nil
+	end
+	local slug = "zone"
+	if areaKey then
+		slug = areaKey:gsub("%s+", "-")
+		slug = slug:gsub("[^a-z0-9%-]", "")
+		if slug == "" then
+			slug = "zone"
+		end
+	end
+	return ("%s/r/%d/%s"):format(self.SITE_URL, mapID, slug)
+end
+
 -- Returns the lore entry and the key that was looked up. The key is returned
 -- even on a miss so /zl debug can report what failed to match.
 function ZoneLore:GetSubzoneLore(parentMapID, areaName)

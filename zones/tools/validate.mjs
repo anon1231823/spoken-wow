@@ -8,10 +8,14 @@
 // structure, properly terminated strings, no raw newlines or control characters
 // inside strings, deterministic ordering, and no post-vanilla lore leaking
 // through the era filter.
+//
+// It also guards the two places where Core.lua reimplements a JS function in Lua:
+// normaliseKey, and the slug half of naming.mjs that the report URLs are built from.
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ROOT, normaliseKey } from "./lib/wiki.mjs";
+import { slugFor } from "./voice/naming.mjs";
 
 const ZONES = join(ROOT, "addon/ZoneLore/Data/Zones.lua");
 const SUBZONES = join(ROOT, "addon/ZoneLore/Data/Subzones.lua");
@@ -170,10 +174,49 @@ if (subFields !== subKeys.length * 4) {
 }
 
 //------------------------------------------------------------------------------
-// Lua/JS normalisation parity
+// Report URL slugs
 //
-// Core.lua reimplements normaliseKey in Lua. If the two drift, lookups silently
-// miss, so check the Lua source still performs the same steps in the same order.
+// ZoneLore:ReportURL builds lore.rusty.one/r/{mapID}/{slug} in Lua, and the site
+// resolves that path back to a line by looking it up among the file paths
+// naming.mjs assigns. That only works while every slug is derivable from the key
+// alone: assignFiles has a hash fallback for collisions, and the addon has no way
+// to reproduce it, so a collision would ship a Report button that 404s.
+//
+// "zone" is reserved for a zone's own line, so a subzone slugging to it collides
+// with its own parent.
+//------------------------------------------------------------------------------
+
+const byParent = new Map();
+{
+  let parent = null;
+  for (const m of subSrc.matchAll(/^\t\[(\d+)\] = \{$|^\t\t\["([^"]*)"\] = \{$/gm)) {
+    if (m[1] !== undefined) {
+      parent = Number(m[1]);
+      byParent.set(parent, []);
+    } else if (parent !== null) {
+      byParent.get(parent).push(m[2]);
+    }
+  }
+}
+
+for (const [parent, keys] of byParent) {
+  const taken = new Map([["zone", "(the zone's own line)"]]);
+  for (const key of keys) {
+    const slug = slugFor(key);
+    const other = taken.get(slug);
+    if (other !== undefined) {
+      note(`Subzones.lua: [${parent}] "${key}" and ${other} both slug to "${slug}" -- report URLs collide`);
+    }
+    taken.set(slug, `"${key}"`);
+  }
+}
+
+//------------------------------------------------------------------------------
+// Lua/JS parity
+//
+// Core.lua reimplements normaliseKey and naming.mjs's slugFor in Lua. If either
+// drifts, lookups silently miss and report links point at nothing, so check the
+// Lua source still performs the same steps in the same order.
 //------------------------------------------------------------------------------
 
 const coreSrc = await readFile(join(ROOT, "addon/ZoneLore/Core.lua"), "utf8");
@@ -186,6 +229,16 @@ const expectedSteps = [
 for (const step of expectedSteps) {
   if (!step.test(coreSrc)) {
     note(`Core.lua: NormaliseAreaKey no longer matches lib/wiki.mjs normaliseKey (missing ${step})`);
+  }
+}
+
+const expectedSlugSteps = [
+  /slug = areaKey:gsub\("%s\+", "-"\)/,
+  /slug = slug:gsub\("\[\^a-z0-9%-\]", ""\)/,
+];
+for (const step of expectedSlugSteps) {
+  if (!step.test(coreSrc)) {
+    note(`Core.lua: ReportURL no longer matches voice/naming.mjs slugFor (missing ${step})`);
   }
 }
 
@@ -207,4 +260,4 @@ console.log(
   `     Subzones.lua: ${subKeys.length} subzones across ${subParents.length} zones ` +
     `(${(subSrc.length / 1024).toFixed(1)} KB), all keys canonical`
 );
-console.log("     no era leaks, Lua/JS key normalisation in step");
+console.log("     no era leaks, report slugs unique, Lua/JS normalisation and slugging in step");
