@@ -30,6 +30,24 @@ TOC="$SRC/ZoneLoreAudio.toc"
 SOUNDS="$SRC/Sounds"
 DIST="$REPO/dist"
 
+# Transcoded clips, kept between runs. A sibling of dist/ rather than a child,
+# because `make clean` removes dist/ and re-encoding the corpus is five minutes.
+#
+# CONTENT-ADDRESSED: the file name is the checksum of the master it came from, so
+# a cache hit cannot be stale -- a re-cut voiceline hashes differently and misses.
+# Keying on mtime would be cheaper and wrong: `make pull` copies the droplet's
+# timestamps, so a freshly pulled clip can be older than the cache entry it should
+# be replacing. Checksumming all 1353 masters costs ~2s against ~5min of ffmpeg.
+CACHE_ROOT="$REPO/audio-transcoded"
+
+checksum() {
+  if command -v md5sum >/dev/null 2>&1; then
+    md5sum "$1" | cut -d' ' -f1
+  else
+    md5 -q "$1"
+  fi
+}
+
 # tier -> folder name, bitrate, title. The source tree is already the high tier,
 # so that one is copied rather than transcoded, and it keeps the unqualified name:
 # the full-quality pack is the one a player should land on without having to
@@ -127,16 +145,75 @@ for tier in "${tiers[@]}"; do
   rm -f "$staging/$folder/$folder.toc.bak"
 
   if [[ "$bitrate" == "128" ]]; then
+    # No transcode, but ~790MB of copying is still a long silence.
+    echo "copying $count masters..."
     rsync -a --exclude '.DS_Store' --exclude '*.part' "$SOUNDS/" "$staging/$folder/Sounds/"
   else
-    echo "transcoding $count files to ${bitrate}k mono..."
+    cache="$CACHE_ROOT/$bitrate"
+    mkdir -p "$cache"
+    used="$(mktemp)"
+    hits=0
+    encoded=0
+
+    done_n=0
+
+    # Minutes of ffmpeg with nothing on stdout is indistinguishable from a hang.
+    # On a terminal the count is rewritten in place; piped to a file or a CI log,
+    # \r would produce one unreadable line, so there it is a line every 100.
+    progress() {
+      if [[ -t 1 ]]; then
+        printf '\r  %4d/%-4d  %d encoded, %d reused' "$done_n" "$count" "$encoded" "$hits"
+      elif (( done_n % 100 == 0 || done_n == count )); then
+        echo "  $done_n/$count  $encoded encoded, $hits reused"
+      fi
+    }
+
+    echo "encoding $count files to ${bitrate}k mono (cache: $cache)"
     while IFS= read -r file; do
       rel="${file#"$SOUNDS"/}"
       out="$staging/$folder/Sounds/$rel"
       mkdir -p "$(dirname "$out")"
-      ffmpeg -nostdin -loglevel error -i "$file" -codec:a libmp3lame -b:a "${bitrate}k" -ac 1 "$out"
+
+      key="$(checksum "$file")"
+      cached="$cache/$key.mp3"
+      echo "$key.mp3" >>"$used"
+
+      if [[ -f "$cached" ]]; then
+        hits=$((hits + 1))
+      else
+        # Via .part and mv, so an interrupted run cannot leave a truncated file
+        # under a name that claims to be a complete encode of that checksum.
+        # -f mp3 is required with it: ffmpeg picks the muxer from the extension,
+        # and ".part" is not one it knows.
+        ffmpeg -nostdin -loglevel error -f mp3 -i "$file" \
+          -codec:a libmp3lame -b:a "${bitrate}k" -ac 1 -f mp3 "$cached.part"
+        mv "$cached.part" "$cached"
+        encoded=$((encoded + 1))
+      fi
+
+      cp "$cached" "$out"
+      done_n=$((done_n + 1))
+      progress
     done < <(find "$SOUNDS" -name '*.mp3')
+    [[ -t 1 ]] && printf '\n'
+
+    # Entries for masters that have since been re-cut or deleted. Without this the
+    # cache keeps every superseded encode forever, which is what audio-history/ is
+    # for and this is not.
+    pruned=0
+    while IFS= read -r stale; do
+      [[ -n "$stale" ]] || continue
+      rm -f "$cache/$stale"
+      pruned=$((pruned + 1))
+    done < <(comm -23 \
+      <(find "$cache" -name '*.mp3' -exec basename {} \; | sort) \
+      <(sort -u "$used") || true)
+    rm -f "$used"
+
+    echo "  $hits reused, $encoded encoded, $pruned superseded entries dropped"
   fi
+
+  echo "zipping $folder..."
 
   (cd "$staging" && zip -r -q -X "$zip_path" "$folder" \
     -x '*.DS_Store' '*/.git/*' '*.bak' '*.orig' '*.part')
