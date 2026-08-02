@@ -24,6 +24,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Outside UserMenu because it needs no role and no session -- see the
                 component for why that matters. */}
             <FeedbackLauncher />
+            {/* A plain <a>, not <Link>: next/link exists to prefetch in-app routes and
+                there is nothing here to prefetch. rel="noopener" because target="_blank"
+                otherwise hands the opened page a window.opener handle on this one. */}
+            <a
+              href="https://buymeacoffee.com/rustykey"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted hover:text-fg"
+            >
+              Support
+            </a>
             {/* Pronunciation moved into UserMenu, which is where the links that need a
                 role live. It is not a page a visitor can do anything with. */}
             <UserMenu />
