@@ -3,7 +3,8 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy \
-        status remove clean voice voice-zones lookup sample db-up db-down migrate import export
+        status remove clean voice voice-zones lookup sample db-up db-down migrate import export \
+        web push push-dry pull pull-dry audio-status
 
 # The \# escapes are required: an unescaped # starts a make comment, even
 # inside a $(shell ...) call.
@@ -88,6 +89,64 @@ import: ## Seed the database from tools/voice/manifest.json (idempotent)
 
 export: ## Write tools/voice/manifest.json from the database
 	@node tools/voice/export-manifest.mjs
+
+web: ## Run the voiceline explorer at localhost:3000
+	@cd web && pnpm dev
+
+#-------------------------------------------------------------------------------
+# Moving the audio between machines
+#
+# 1353 mp3s, ~700MB with the archive, gitignored and never in CI. It moves by
+# rsync, only when you say so. Override the target:
+#
+#   make pull REMOTE=user@host:/srv/zonelore
+#-------------------------------------------------------------------------------
+
+REMOTE ?=
+
+# macOS ships openrsync as /usr/bin/rsync, which reports itself as "2.6.9 compatible"
+# and rejects --info. Prefer a real rsync 3.x anywhere on PATH.
+RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(command -v rsync); do \
+	[ -x "$$r" ] && "$$r" --version 2>/dev/null | head -1 | grep -q 'version 3' && { echo "$$r"; exit 0; }; \
+	done)
+
+# No -z: mp3 is already compressed, so it is pure CPU for ~0 gain.
+# --delete keeps the two stores in exact correspondence, which is what makes the
+# "missing" counts in the explorer trustworthy.
+RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2
+
+define preflight
+	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. macOS ships openrsync, which lacks --info."; \
+	                        echo "Install one:  brew install rsync"; exit 1; }
+	@[ -n "$(REMOTE)" ] || { echo "REMOTE is not set. Example:"; \
+	                         echo "  make $@ REMOTE=user@host:/srv/zonelore"; exit 1; }
+endef
+
+push-dry: ## Preview what `make push` would send
+	$(preflight)
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run addon/ZoneLoreAudio/Sounds/ $(REMOTE)/Sounds/
+
+push: ## Send the audio store to REMOTE
+	$(preflight)
+	@$(RSYNC) $(RSYNC_OPTS) addon/ZoneLoreAudio/Sounds/ $(REMOTE)/Sounds/
+	@[ -d audio-history ] && $(RSYNC) $(RSYNC_OPTS) audio-history/ $(REMOTE)/audio-history/ || true
+
+pull-dry: ## Preview what `make pull` would change locally
+	$(preflight)
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE)/Sounds/ addon/ZoneLoreAudio/Sounds/
+
+pull: ## Fetch the audio store from REMOTE
+	$(preflight)
+	@$(RSYNC) $(RSYNC_OPTS) $(REMOTE)/Sounds/ addon/ZoneLoreAudio/Sounds/
+	@$(MAKE) --no-print-directory validate-audio
+
+audio-status: ## What is on disk locally
+	@printf 'live      %5s mp3  %s\n' \
+		"$$(find addon/ZoneLoreAudio/Sounds -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
+		"$$(du -sh addon/ZoneLoreAudio/Sounds 2>/dev/null | cut -f1)"
+	@printf 'archived  %5s mp3  %s\n' \
+		"$$(find audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
+		"$$(du -sh audio-history 2>/dev/null | cut -f1)"
 
 package-audio: validate-audio ## Build dist/ZoneLoreAudio-<version>.zip
 	@./scripts/package-audio.sh

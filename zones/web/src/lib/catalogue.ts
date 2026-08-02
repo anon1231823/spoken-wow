@@ -61,6 +61,19 @@ export function catalogue(): Promise<CatalogueEntry[]> {
   return globalForCatalogue.zoneloreCatalogue;
 }
 
+/**
+ * Drops the memoised catalogue so the next read rebuilds it.
+ *
+ * Required after writing pronunciation.json: every entry's `spoken` and `hash` are
+ * built from those rules at load time, and staleness is a comparison against `hash`.
+ * Without this, saving a rule would report an impact the explorer then refused to
+ * show -- the lines would stay "current" until the server was restarted, which is
+ * exactly the sort of disagreement this app exists to remove.
+ */
+export function invalidateCatalogue(): void {
+  globalForCatalogue.zoneloreCatalogue = undefined;
+}
+
 export async function loadContext(): Promise<SearchContext> {
   const [takeRows, flagRows] = await Promise.all([
     query<{
