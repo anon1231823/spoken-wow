@@ -3,10 +3,15 @@
  *
  * Four kinds of visitor, three of which are roles:
  *
- *   guest    not signed in. Browse, filter, play. Nothing else.
+ *   guest    not signed in. Browse, filter, play, and file feedback. Nothing else.
  *   member   signed in, and that is all it means. The same view as a guest.
- *   editor   may review lines and spend credits regenerating them.
+ *   editor   may review lines, spend credits regenerating them, and triage the feedback
+ *            anyone else has filed.
  *   admin    may also edit the pronunciation rules and hand out roles.
+ *
+ * Filing feedback is deliberately not a permission: it is the one thing a guest may write,
+ * and a report is a claim rather than a decision. Reading and resolving those reports is
+ * a permission, because a resolved report is a claim someone has ruled on.
  *
  * `member` deliberately carries no permission at all. It is the landing state for anyone
  * who registers, and the point of it is that opening the site to the world does not open
@@ -28,13 +33,17 @@ const statement = {
   // line's problem, and it is the input to the staleness calculation the addon pipeline
   // reads.
   lexicon: ["configure"],
+  // Reading what visitors reported, and ruling on it. Separate from `voiceline` because
+  // a report is not a verdict: an editor who marks a report "not an issue" has not
+  // touched the line, and an editor who flags a line has not answered anybody.
+  feedback: ["read", "resolve"],
 } as const;
 
 export const ac = createAccessControl(statement);
 
 export const roles = {
   member: ac.newRole({}),
-  editor: ac.newRole({ voiceline: ["review", "regenerate"] }),
+  editor: ac.newRole({ voiceline: ["review", "regenerate"], feedback: ["read", "resolve"] }),
   // Spreading adminAc keeps the admin plugin's own statements (user: set-role, list, ...).
   // Declaring a custom `admin` role REPLACES the built-in one, so without this the admin
   // loses access to the very page that hands out roles.
@@ -42,6 +51,7 @@ export const roles = {
     ...adminAc.statements,
     voiceline: ["review", "regenerate"],
     lexicon: ["configure"],
+    feedback: ["read", "resolve"],
   }),
 };
 
@@ -60,6 +70,11 @@ export function canReview(role: string | null | undefined): boolean {
 
 /** The one definition of who may spend credits, and who may restore an earlier take. */
 export function canRegenerate(role: string | null | undefined): boolean {
+  return role === "editor" || role === "admin";
+}
+
+/** The one definition of who may read visitor feedback and rule on it. */
+export function canTriageFeedback(role: string | null | undefined): boolean {
   return role === "editor" || role === "admin";
 }
 

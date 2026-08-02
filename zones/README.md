@@ -741,9 +741,9 @@ that is why it is hosted at all. Everything else needs an account *and* a role:
 
 | Role | May |
 |---|---|
-| *(nobody)* | browse, filter, search, play, download a clip |
+| *(nobody)* | browse, filter, search, play, download a clip, **file feedback** |
 | `member` | exactly the same. Registering grants nothing |
-| `editor` | flag lines and write notes; Regenerate, which spends credits; Restore |
+| `editor` | flag lines and write notes; Regenerate, which spends credits; Restore; read and resolve feedback |
 | `admin` | also edit the pronunciation rules, and grant these roles at `/admin` |
 
 `member` doing nothing is the point: the site is reachable from the internet, so anything
@@ -773,6 +773,47 @@ corpus under a GitHub runner's checkout path. So a deployed process is told inst
 
 Unset — every local run, CLI or `next dev` — each falls back to exactly the path it
 always had. Nothing about working locally changes.
+
+### Feedback is the one thing the world may write
+
+Filing feedback is the single exception to "public to read, closed to write", and it is
+the exception the rest of the table exists to make safe. A visitor who hears a
+mispronunciation or spots a Cataclysm sentence the era filter let through is the cheapest
+source of corrections this project has, and before `feedback` they had nowhere to put it.
+
+Two entry points, both open to anyone signed in or not: the **Feedback** button in the
+header, for anything that is about no particular line, and a small ✍ button in each row's
+State column, for a report against that line. A category is asked for up front — lore,
+audio, pronunciation, other — because it decides who looks: pronunciation is a `/lexicon`
+rule, audio is a re-roll, lore is the scraper or an override. Name and email are offered
+and optional; submitting anonymously is expected and fine. A signed-in reporter is
+identified by their account and is not asked.
+
+Editors and admins read them at **`/feedback`**, newest first, filtered to `open`,
+`resolved` or `all`, and close each one as **not an issue** or **fixed** — a report is a
+claim, not a verdict, so "not an issue" is a normal outcome. Reopening is always possible.
+The same reports also expand inline in the explorer, and `?fb=open` narrows the table to
+lines carrying an unresolved one.
+
+**`feedback` is a separate table from `line_flag`, not a status on it.** They look alike
+and are not the same thing: a flag is one editor's verdict and is the regeneration
+worklist, whereas a report is one visitor's claim and there can be several per line.
+Folding them together would mean either letting a passer-by write the worklist or
+throwing away what the passer-by had to say, and it could not hold "three people
+independently reported this line", which is the most useful signal here.
+
+**Open counts are public; report bodies are not.** The badge on a row and the `?fb=open`
+filter travel with the search results, because "someone has already reported this one" is
+the answer to the question a dissatisfied listener is about to ask — the same reason the
+`bad` badge is visible to a guest. The prose behind it is behind `requireFeedback()`.
+
+Two things stand between `POST /api/feedback` and the internet: a honeypot field a person
+never sees and a bot fills in — answered with `200` and no row, because a `400` teaches
+the script to stop sending it — and a cap of ten submissions per IP per hour, counted in
+Postgres rather than in memory so it survives a pm2 restart. Resolving lives at
+`/api/feedback/resolve`, its own route rather than another action on the public one:
+two verbs on one path with opposite access rules is an arrangement a later edit quietly
+breaks.
 
 ### Moving the audio between machines
 

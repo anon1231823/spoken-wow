@@ -40,9 +40,21 @@ export type LineFlag = {
 export type SearchContext = {
   takes: Map<string, Take>;
   flags: Map<string, LineFlag>;
+  /**
+   * lineId -> how many reports are still open. The COUNT only; the bodies are behind
+   * requireFeedback() in api/feedback. A guest already sees the `bad` badge on a line for
+   * the reason set out in LineRow -- "someone has already reported this one" is the answer
+   * to the question a dissatisfied listener is about to ask -- and a count says no more
+   * than that badge does.
+   */
+  feedback: Map<string, number>;
 };
 
-export const EMPTY_CONTEXT: SearchContext = { takes: new Map(), flags: new Map() };
+export const EMPTY_CONTEXT: SearchContext = {
+  takes: new Map(),
+  flags: new Map(),
+  feedback: new Map(),
+};
 
 // Memoised on globalThis, for the reason db.ts caches its pool: `next dev`
 // re-evaluates modules on every edit, and re-reading and re-normalising 1353 lore
@@ -75,7 +87,7 @@ export function invalidateCatalogue(): void {
 }
 
 export async function loadContext(): Promise<SearchContext> {
-  const [takeRows, flagRows] = await Promise.all([
+  const [takeRows, flagRows, feedbackRows] = await Promise.all([
     query<{
       lineId: string;
       version: number;
@@ -98,6 +110,15 @@ export async function loadContext(): Promise<SearchContext> {
     ),
     query<{ lineId: string; status: "bad" | "ok"; note: string | null; updatedAt: Date }>(
       `select "lineId", "status", "note", "updatedAt" from "line_flag"`,
+    ),
+    // Grouped in the database rather than counted here: the resolved rows are the ones
+    // that accumulate, and there is no reason to carry them across the wire to drop them.
+    // `lineId is not null` excludes feedback about the project, which belongs to no line.
+    query<{ lineId: string; open: number }>(
+      `select "lineId", count(*)::int as "open"
+         from "feedback"
+        where "status" = 'open' and "lineId" is not null
+        group by "lineId"`,
     ),
   ]);
 
@@ -128,7 +149,20 @@ export async function loadContext(): Promise<SearchContext> {
         { status: row.status, note: row.note, updatedAt: row.updatedAt.toISOString() },
       ]),
     ),
+    feedback: new Map(feedbackRows.map((row) => [row.lineId, row.open])),
   };
+}
+
+/**
+ * Whether a lineId names something that exists.
+ *
+ * Neither `line_flag` nor `feedback` has a foreign key -- a line is derived from committed
+ * Lua, not a row -- so this is the only thing standing between a typo and a row nothing
+ * will ever show or clean up. Every route that accepts a lineId from outside calls it.
+ */
+export async function isKnownLine(lineId: string): Promise<boolean> {
+  const entries = await catalogue();
+  return entries.some((entry) => entry.id === lineId);
 }
 
 /** The zone dropdown's options, derived from the catalogue rather than hardcoded. */

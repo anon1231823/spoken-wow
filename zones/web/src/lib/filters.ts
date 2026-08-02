@@ -9,12 +9,16 @@ export const FIELDS = ["any", "name", "zone", "text"] as const;
 export const KINDS = ["zone", "subzone"] as const;
 export const STATES = ["missing", "stale", "current"] as const;
 export const FLAGS = ["bad", "ok", "unreviewed"] as const;
+// One value rather than a boolean, so "resolved" or "any" can be added without changing
+// the shape of the URL that is already out there in shared links.
+export const FEEDBACK = ["open"] as const;
 
 export type Field = (typeof FIELDS)[number];
 export type Kind = (typeof KINDS)[number];
 /** missing = no audio; stale = audio predates a text change; current = neither. */
 export type State = (typeof STATES)[number];
 export type Flag = (typeof FLAGS)[number];
+export type Feedback = (typeof FEEDBACK)[number];
 
 export type LineFilters = {
   q?: string;
@@ -28,6 +32,8 @@ export type LineFilters = {
   short?: boolean;
   /** 'unreviewed' means no flag row at all -- what is left to listen to. */
   flag?: Flag;
+  /** 'open' selects lines carrying at least one unresolved visitor report. */
+  feedback?: Feedback;
   generatedBefore?: string; // YYYY-MM-DD
   generatedAfter?: string;
   /** Lines cut with a model that has since been changed in config.json. */
@@ -52,6 +58,7 @@ export function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.state) params.set("state", filters.state);
   if (filters.short) params.set("short", "1");
   if (filters.flag) params.set("flag", filters.flag);
+  if (filters.feedback) params.set("fb", filters.feedback);
   if (filters.generatedBefore) params.set("before", filters.generatedBefore);
   if (filters.generatedAfter) params.set("after", filters.generatedAfter);
   if (filters.modelId) params.set("model", filters.modelId);
@@ -80,6 +87,7 @@ export function filtersFromParams(params: URLSearchParams): LineFilters {
     state: oneOf(params.get("state"), STATES),
     short: params.get("short") === "1" || undefined,
     flag: oneOf(params.get("flag"), FLAGS),
+    feedback: oneOf(params.get("fb"), FEEDBACK),
     generatedBefore: before && DATE.test(before) ? before : undefined,
     generatedAfter: after && DATE.test(after) ? after : undefined,
     modelId: params.get("model") ?? undefined,
@@ -99,6 +107,7 @@ export function activeFilterCount(filters: LineFilters): number {
     filters.state,
     filters.short,
     filters.flag,
+    filters.feedback,
     filters.generatedBefore,
     filters.generatedAfter,
     filters.modelId,

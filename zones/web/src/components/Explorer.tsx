@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { FeedbackDialog, type FeedbackTarget } from "@/components/FeedbackDialog";
 import { LineRow, type RowState } from "@/components/LineRow";
 import { NoteDialog } from "@/components/NoteDialog";
 import { Player } from "@/components/Player";
@@ -37,6 +38,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const role = session?.user.role;
   const canReview = permissions.canReview(role);
   const canRegenerate = permissions.canRegenerate(role);
+  const canTriage = permissions.canTriageFeedback(role);
 
   // FILTERS ARE REBUILT FROM THE URL EVERY RENDER rather than held in state, so the
   // back button is a working undo for a filter change and a link carries the exact
@@ -58,6 +60,10 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // judged, moving the next one under the key you are about to press again.
   const [flagged, setFlagged] = useState<Record<string, LineFlag | null>>({});
   const [noteFor, setNoteFor] = useState<ResultLine | null>(null);
+  const [reportFor, setReportFor] = useState<FeedbackTarget | null>(null);
+  // One expansion at a time, mirroring `current`: the panel is a paragraph of prose to
+  // read, and a table with six of them open is no longer a table.
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
   // Bumped per line after a regeneration, to bust the browser's audio cache: the
@@ -147,6 +153,10 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         // The fetched rows carry the flags as they now are, so the local overlay has
         // done its job and would only go stale from here.
         setFlagged({});
+        // Collapse too. The expansion is keyed on a lineId, so a row left open across a
+        // filter change would reattach to whichever line now holds that id -- or, worse,
+        // stay open showing one line's reports under another line's row.
+        setExpanded(null);
         setLoading(false);
       })
       .catch((err) => {
@@ -438,11 +448,17 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
 
   const pages = result ? Math.max(1, Math.ceil(result.total / PAGE_SIZE)) : 1;
 
+  // The one place the column count is computed. Keep it in step with <colgroup> and
+  // <thead> below, and see the note on LineRow's colSpan prop for why it is not derived
+  // there.
+  const colSpan = canRegenerate ? 6 : 5;
+
   return (
     <div className="pb-24">
       <SearchBar
         zones={zones}
         filters={filters}
+        canReview={canReview}
         query={query}
         inputRef={searchInput}
         onQueryChange={setQuery}
@@ -512,11 +528,16 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
                 current={line.id === current?.id}
                 canReview={canReview}
                 canRegenerate={canRegenerate}
+                canTriage={canTriage}
+                expanded={expanded === line.id}
+                colSpan={colSpan}
                 onPlay={play}
                 onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
                 state={rowStates[line.id]}
                 onFlag={setFlag}
                 onNote={(l) => setNoteFor(withFlag(l))}
+                onReport={setReportFor}
+                onToggleExpand={(l) => setExpanded((open) => (open === l.id ? null : l.id))}
                 onRegenerate={regenerateOne}
                 onRestore={restore}
               />
@@ -571,6 +592,8 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           setNoteFor(null);
         }}
       />
+
+      <FeedbackDialog target={reportFor} onClose={() => setReportFor(null)} />
 
       <RegenerateDialog
         pending={pendingBatch}
