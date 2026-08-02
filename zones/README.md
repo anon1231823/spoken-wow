@@ -736,10 +736,25 @@ its own database, its own pm2 app, and **port 3001**, because voiceover holds 30
 CI builds and tests, ships a Next.js `standalone` bundle, and swaps a symlink;
 `deploy/README.md` is the full account, including first-time droplet setup.
 
-**The site has no authentication.** Anyone who finds the hostname can spend ElevenLabs
-credits through Regenerate. `deploy/nginx-lore.conf` carries a commented-out basic-auth
-block ready to uncomment; leaving `ELEVENLABS_API_KEY` out of the droplet's `app.env`
-closes off the expensive half on its own.
+**The site is public to read and closed to write.** Anyone may browse, filter and listen —
+that is why it is hosted at all. Everything else needs an account *and* a role:
+
+| Role | May |
+|---|---|
+| *(nobody)* | browse, filter, search, play, download a clip |
+| `member` | exactly the same. Registering grants nothing |
+| `editor` | flag lines and write notes; Regenerate, which spends credits; Restore |
+| `admin` | also edit the pronunciation rules, and grant these roles at `/admin` |
+
+`member` doing nothing is the point: the site is reachable from the internet, so anything
+a fresh registration unlocked would be unlocked for everyone. The first admin is promoted
+with one line of SQL — see `deploy/README.md` — because "the first account wins" is a race
+anyone could enter.
+
+The roles are defined once in `web/src/lib/permissions.ts` and shared by the browser and
+the server. What the browser decides is only what to draw; `web/src/lib/authz.ts` decides
+what actually happens, and does it again on every request. Leaving `ELEVENLABS_API_KEY` out
+of the droplet's `app.env` closes off the expensive half regardless of anyone's role.
 
 The one thing worth knowing here rather than there: **`tools/` paths are overridable by
 environment variable, and on the droplet all five are overridden.** Every path under

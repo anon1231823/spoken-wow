@@ -119,7 +119,8 @@ module.exports = {
         // from the release on the first deploy only.
         ZONELORE_PRONUNCIATION: `${SHARED}/pronunciation.json`,
 
-        // DATABASE_URL and, if you want the Regenerate button to work, ELEVENLABS_API_KEY.
+        // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, and -- if you want the
+        // Regenerate button to work -- ELEVENLABS_API_KEY.
         ...readSecrets(),
       },
     },

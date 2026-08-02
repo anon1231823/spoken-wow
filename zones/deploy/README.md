@@ -20,7 +20,7 @@ the system Node for another service, bump that value to match and redeploy.
     audio-history/<file>/v<n>.mp3  superseded takes. Loss is permanent - see below.
     manifest.json               exported from the database; `make pull-manifest`
     pronunciation.json          written by /lexicon; `make pull-lexicon`
-    app.env                     DATABASE_URL + ELEVENLABS_API_KEY. Mode 600, never in git.
+    app.env                     DATABASE_URL, BETTER_AUTH_*, ELEVENLABS_API_KEY. Mode 600, never in git.
     ecosystem.config.js         pm2 config, outlives every release
   releases/
     20260802-1143-a1b2c3d/      ~62 MB bundle + the lore corpus + migrations
@@ -101,6 +101,8 @@ them from here.
 ```bash
 cat > /srv/zonelore/shared/app.env <<EOF
 DATABASE_URL=postgres://zonelore:<password>@127.0.0.1:5432/zonelore
+BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+BETTER_AUTH_URL=https://lore.rusty.one
 ELEVENLABS_API_KEY=sk_your_key_here
 EOF
 chown deploy:deploy /srv/zonelore/shared/app.env
@@ -109,6 +111,15 @@ chmod 600 /srv/zonelore/shared/app.env
 
 **Port 5432 here, 5433 in `.env.example`.** The 5433 is a workstation quirk — voiceover's
 docker Postgres holds 5432 there. On the droplet the cluster is on its default port.
+
+`BETTER_AUTH_SECRET` signs the session cookies. Rotating it signs everyone out, which is
+also the way to revoke every session at once.
+
+**`BETTER_AUTH_URL` is the one worth double-checking.** It must be the public origin
+exactly — scheme, host, no trailing slash. Better Auth validates the `Origin` header of
+every state-changing request against it, so a stale or mismatched value does not fail
+loudly at boot: the site loads, browsing works, and every sign-in, registration and role
+change returns `403 Invalid origin`.
 
 `ELEVENLABS_API_KEY` is optional and is what decides whether the site can spend money.
 Without it everything works except the Regenerate button, which refuses with the reason.
@@ -142,6 +153,22 @@ this runs the explorer shows 1353 lines with no audio at all:
 ```bash
 make db-push
 ```
+
+**8. Promote yourself to admin.** Register at `https://lore.rusty.one/register` — which
+grants nothing, by design — and then, once, as root:
+
+```bash
+su - postgres -c "psql -d zonelore \
+  -c \"UPDATE \\\"user\\\" SET role = 'admin' WHERE email = 'you@example.com'\""
+```
+
+There is no way to create the first admin through the UI, deliberately: the alternative is
+a rule like "the first account registered becomes admin", and on a site that is reachable
+from the internet the moment nginx reloads, that is a race anyone can enter. Every
+promotion after this one goes through `/admin`.
+
+Sign out and back in is not required — the role is read from the database on each request,
+not baked into the session cookie.
 
 ## GitHub credentials, step by step
 
@@ -244,12 +271,19 @@ releases instead of bouncing between the newest two.
 
 ## Gotchas worth knowing
 
-- **The site is open.** No accounts, no authorization: anyone who finds the hostname can
-  spend ElevenLabs credits through Regenerate, rewrite the pronunciation rules, and edit
-  the review flags. `nginx-lore.conf` carries a commented-out basic-auth block in all three
-  location blocks — uncomment them and `htpasswd -c /etc/nginx/.htpasswd-zonelore <you>` to
-  close it. Leaving `ELEVENLABS_API_KEY` out of `app.env` closes off the expensive half on
-  its own.
+- **The site is public to read and closed to write.** Anyone may browse, filter and listen;
+  that is the point of hosting it. Everything that costs money or changes shared state —
+  Regenerate, Restore, the review flags, the pronunciation rules, `/admin` — needs a role,
+  and registering grants none. See `web/src/lib/permissions.ts` for the three, and
+  `web/src/lib/authz.ts` for where each one is actually enforced. The role checks in the
+  components decide what to draw and nothing more.
+- **`nginx-lore.conf` still carries a commented-out basic-auth block** in all three
+  location blocks. It predates the accounts and is now a blunt instrument for taking the
+  whole site private — a maintenance window, say — rather than the access control it was
+  standing in for. `htpasswd -c /etc/nginx/.htpasswd-zonelore <you>` to use it.
+- **Leaving `ELEVENLABS_API_KEY` out of `app.env` is still the hardest possible stop** on
+  spending. It closes the expensive path for admins too, which is occasionally what you
+  want.
 - **One pm2 worker, deliberately.** Regeneration batches are in-process state on
   `globalThis`, not queue tables, so a second worker would answer "no such batch" to half
   the progress polls. The cost is a brief blip on each deploy rather than a rolling reload.

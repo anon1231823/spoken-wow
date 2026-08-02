@@ -55,6 +55,10 @@ jobs:
       # 5432 here, 5433 locally: the local port avoids ../wow-voiceover's docker postgres,
       # and nothing else is on 5432 in a CI service container.
       DATABASE_URL: postgres://zonelore:zonelore@127.0.0.1:5432/zonelore
+      # Better Auth refuses to start on its built-in default secret, and `next build`
+      # evaluates src/lib/auth.ts while prerendering. Nothing signed with this value ever
+      # leaves the runner; the droplet's real one lives in shared/app.env.
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-in-production
 
     steps:
       - uses: actions/checkout@v5
@@ -176,6 +180,11 @@ jobs:
           PORT: 3999
           HOSTNAME: 127.0.0.1
           NODE_ENV: production
+          # Better Auth checks the Origin header of every state-changing request against
+          # this, so the sign-up below must send exactly this value. Getting it wrong on
+          # the droplet is what makes every sign-in return "Invalid origin" while the rest
+          # of the site looks perfectly healthy.
+          BETTER_AUTH_URL: http://127.0.0.1:3999
         run: |
           set -euo pipefail
           export ZONELORE_ROOT="$PWD"
@@ -208,9 +217,33 @@ jobs:
           [ "$durotar" -gt 0 ] || { echo "::error::zone filter matched nothing"; exit 1; }
           echo "Durotar: $durotar lines"
 
+          # Auth has to survive the standalone bundle too: better-auth and its kysely
+          # adapter are traced into it, and the schema has to be the one migrate.sh just
+          # applied. A registered user must come back as a `member` -- the default role is
+          # what everything else gates on, and a plugin misconfiguration that quietly
+          # handed out `admin` would look identical from the outside.
+          signup=$(curl -fsS -X POST "http://127.0.0.1:3999/api/auth/sign-up/email" \
+            -H 'Content-Type: application/json' \
+            -H "Origin: $BETTER_AUTH_URL" \
+            -c cookies.txt \
+            -d '{"name":"CI","email":"ci-'"$GITHUB_RUN_ID"'@example.com","password":"ci-smoke-password"}')
+          echo "$signup" | grep -q '"role":"member"'
+          echo "sign-up works against the shipped bundle"
+
+          # And the guard actually guards. This is the endpoint the whole scheme exists
+          # for -- one POST away from it is the ElevenLabs bill.
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            -H 'Content-Type: application/json' -H "Origin: $BETTER_AUTH_URL" \
+            -b cookies.txt -d '{"lineIds":["z:1411"]}' \
+            "http://127.0.0.1:3999/api/regenerate")
+          [ "$code" = "403" ] || { echo "::error::a member got $code from /api/regenerate"; exit 1; }
+          echo "members are refused a regeneration"
+
           # The lexicon reads pronunciation.json off disk and re-derives staleness across
-          # the whole catalogue. If ZONELORE_PRONUNCIATION were wrong this 500s.
-          curl -fsS "http://127.0.0.1:3999/api/lexicon" | grep -q '"totalLines"'
+          # the whole catalogue. If ZONELORE_PRONUNCIATION were wrong this 500s -- so the
+          # CI user is promoted for one request rather than the check being dropped.
+          psql "$DATABASE_URL" -qc "update \"user\" set role = 'admin'"
+          curl -fsS -b cookies.txt "http://127.0.0.1:3999/api/lexicon" | grep -q '"totalLines"'
 
           # The stylesheet must resolve, or .next/static did not make it into the release.
           css=$(curl -fsS http://127.0.0.1:3999/ | grep -o '_next/static/css/[^"]*' | head -1)

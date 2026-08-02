@@ -9,8 +9,10 @@ import { Player } from "@/components/Player";
 import { RegenerateDialog } from "@/components/RegenerateDialog";
 import { RegenerationPanel } from "@/components/RegenerationPanel";
 import { SearchBar } from "@/components/SearchBar";
+import { useSession } from "@/lib/auth-client";
 import type { LineFlag, ZoneFacet } from "@/lib/catalogue";
 import { filterParams, filtersFromParams, PAGE_SIZE, type LineFilters } from "@/lib/filters";
+import * as permissions from "@/lib/permissions";
 import type { Batch, Quote } from "@/lib/regenerate";
 import type { ResultLine, SearchResult } from "@/lib/search";
 import * as echo from "@/lib/url-echo";
@@ -21,6 +23,20 @@ const POLL_MS = 1_000;
 export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const router = useRouter();
   const params = useSearchParams();
+
+  // What this visitor may do, which is what the rest of this component draws from.
+  //
+  // Read here rather than passed down from a server component, for UserMenu's reason: a
+  // session read in the layout would put a database round trip in front of every page
+  // view. While it is still pending both are false, so the controls appear once rather
+  // than appearing and being taken away.
+  //
+  // Every one of these is checked again in src/lib/authz.ts. Nothing below is an access
+  // control; it decides what is worth drawing.
+  const { data: session } = useSession();
+  const role = session?.user.role;
+  const canReview = permissions.canReview(role);
+  const canRegenerate = permissions.canRegenerate(role);
 
   // FILTERS ARE REBUILT FROM THE URL EVERY RENDER rather than held in state, so the
   // back button is a working undo for a filter change and a link carries the exact
@@ -385,13 +401,20 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       } else if (event.key === "k") {
         event.preventDefault();
         step(-1);
-      } else if (current && (event.key === "f" || event.key === "g" || event.key === "u")) {
+      } else if (
+        // The review keys are gated with the buttons they mirror. Left ungated they would
+        // be the one way a member could still write a flag -- a shortcut for a control
+        // that is not on their screen, failing silently against a 403.
+        canReview &&
+        current &&
+        (event.key === "f" || event.key === "g" || event.key === "u")
+      ) {
         event.preventDefault();
         // f bad, g ok, u undo. Judging a line does NOT advance to the next one:
         // deciding and moving on are separate thoughts, and a combined key would make
         // a mistaken tap cost both a wrong verdict and a lost place.
         setFlag(current, event.key === "f" ? "bad" : event.key === "g" ? "ok" : null);
-      } else if (current && event.key === "n") {
+      } else if (canReview && current && event.key === "n") {
         event.preventDefault();
         setNoteFor(withFlag(current));
       }
@@ -399,7 +422,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [current, setFlag, step, withFlag]);
+  }, [canReview, current, setFlag, step, withFlag]);
 
   // Keep the selected row visible when j/k walks off the bottom of the viewport.
   useEffect(() => {
@@ -444,7 +467,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         )}
         {loading && <span className="text-faint">loading…</span>}
 
-        {result && result.total > 0 && (
+        {canRegenerate && result && result.total > 0 && (
           <button
             type="button"
             onClick={askToRegenerateAll}
@@ -459,13 +482,17 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           globals.css for why a collapsed table cannot carry it itself. */}
       <div className="shell shell-table">
         <table className="w-full table-fixed">
+          {/* Two columns narrow or vanish for a visitor rather than being drawn empty:
+              State keeps the missing/stale label but loses the three flag controls, and
+              Audio is nothing but controls, so it goes. The width lands on Lore, which
+              is the column anyone here to read is here for. */}
           <colgroup>
             <col className="w-36" />
             <col className="w-44" />
-            <col className="w-40" />
+            <col className={canReview ? "w-40" : "w-28"} />
             <col />
             <col className="w-16" />
-            <col className="w-28" />
+            {canRegenerate && <col className="w-28" />}
           </colgroup>
           <thead className="text-left text-xs text-faint">
             <tr className="border-b border-border">
@@ -474,7 +501,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
               <th className="px-2 py-1 font-normal">State</th>
               <th className="px-2 py-1 font-normal">Lore</th>
               <th className="px-2 py-1 text-right font-normal">Chars</th>
-              <th className="px-2 py-1 text-right font-normal">Audio</th>
+              {canRegenerate && <th className="px-2 py-1 text-right font-normal">Audio</th>}
             </tr>
           </thead>
           <tbody>
@@ -483,6 +510,8 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
                 key={line.id}
                 line={withFlag(line)}
                 current={line.id === current?.id}
+                canReview={canReview}
+                canRegenerate={canRegenerate}
                 onPlay={play}
                 onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
                 state={rowStates[line.id]}
@@ -525,8 +554,13 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       )}
 
       <p className="shell pb-4 text-center text-xs text-faint">
-        <kbd>/</kbd> search · <kbd>space</kbd> play/pause · <kbd>j</kbd>/<kbd>k</kbd> next/previous ·{" "}
-        <kbd>f</kbd> bad · <kbd>g</kbd> ok · <kbd>u</kbd> undo · <kbd>n</kbd> note
+        <kbd>/</kbd> search · <kbd>space</kbd> play/pause · <kbd>j</kbd>/<kbd>k</kbd> next/previous
+        {canReview && (
+          <>
+            {" "}
+            · <kbd>f</kbd> bad · <kbd>g</kbd> ok · <kbd>u</kbd> undo · <kbd>n</kbd> note
+          </>
+        )}
       </p>
 
       <NoteDialog
