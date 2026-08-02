@@ -41,6 +41,17 @@ bitrate:
 Install either. If you install both, ZoneLore plays the higher-quality one;
 `/zl audio` lists what you have and switches between them.
 
+### The voice is in beta
+
+What is in the packs today is a **proof of concept**. All 1353 lines are
+recorded, but the voice is being redesigned — better delivery, consistent
+pronunciation, one pass over the whole script — which means generating every line
+again. That costs money per line and time to check, so it lands in batches rather
+than all at once.
+
+If a line reads badly, report it on [lore.rusty.one](https://lore.rusty.one); the
+re-record follows what comes in.
+
 ## Commands
 
 ```

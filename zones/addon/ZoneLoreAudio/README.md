@@ -6,6 +6,24 @@ This addon is data only — it does nothing on its own.
 1353 voicelines covering all 49 Classic Era zones and 1304 subzones, generated
 with ElevenLabs from the same warcraft.wiki.gg text ZoneLore displays.
 
+## Beta: this voice is not the finished one
+
+Read this before spending the download. **What is in this pack is a proof of
+concept.** Every line is recorded and the whole thing works end to end, but the
+voice was chosen to get all 1353 lines made at once, not because it is the voice
+this should ship with.
+
+It is being redesigned — better delivery, pronunciation that stays consistent
+between lines, one pass over the whole script rather than patches to individual
+entries. That means generating all 1353 lines again. Every one of them costs
+money to synthesise and time to listen back to, which is the honest reason it is
+taking a while: it lands in batches, as it can be paid for.
+
+If a line reads badly, report it — there is a Feedback button on
+[lore.rusty.one](https://lore.rusty.one), and the re-record is driven by what
+comes in. [Supporting the project](https://buymeacoffee.com/rustykey) pays for
+the generation directly.
+
 ## Which pack to install
 
 Two packs exist, with identical content at different bitrates. Install one:

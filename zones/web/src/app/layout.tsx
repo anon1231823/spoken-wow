@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { BetaBadge } from "@/components/BetaBadge";
+import { BrandMark } from "@/components/BrandMark";
 import { FeedbackLauncher } from "@/components/FeedbackLauncher";
 import { UserMenu } from "@/components/UserMenu";
 import { SUPPORT_URL } from "@/lib/support";
@@ -21,9 +23,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* The rule spans the viewport; only its contents are constrained. */}
         <header className="border-b border-border">
           <div className="shell flex h-12 items-center gap-4">
-            <Link href="/" className="font-semibold">
-              ZoneLore
-            </Link>
+            {/* Mark, wordmark and qualifier are one unit, so they get their own gap:
+                the header's gap-4 is the distance between separate controls, and at
+                that spacing "beta" reads as a fourth link rather than as part of the
+                logo. The badge is a sibling of the link, not a child -- it opens a
+                dialog of its own, and a button inside an anchor is neither valid nor
+                clickable in the way either one wants. */}
+            <div className="flex items-center gap-2">
+              <Link href="/" className="flex items-center gap-2 font-semibold">
+                <BrandMark className="h-5 w-5" />
+                ZoneLore
+              </Link>
+              <BetaBadge />
+            </div>
             {/* Outside UserMenu because it needs no role and no session -- see the
                 component for why that matters. */}
             <FeedbackLauncher />

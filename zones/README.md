@@ -338,6 +338,32 @@ Its duration is hardcoded in `Audio.lua` as `PLACEHOLDER_DURATION`, because the
 client cannot report how long a sound file is. Swap the file and that number has
 to change with it.
 
+### The beta disclaimer, and the files that carry it
+
+The shipped voice is a first pass, and the places that describe it say so. The
+wording is duplicated rather than shared, because Lua and TypeScript cannot import
+from each other and a `.toc` cannot import from anything — so these are edited
+together, and all of them become wrong on the same day, the day the redesigned
+voice ships:
+
+| File | Where it shows |
+|---|---|
+| `addon/ZoneLore/ZoneLore.toc` and `addon/ZoneLoreAudio/ZoneLoreAudio.toc` (`## Notes:`) | the in-game addon list, and the CurseForge blurb |
+| `addon/ZoneLore/README.md`, `addon/ZoneLoreAudio/README.md` | the two CurseForge project descriptions |
+| `web/src/lib/beta.ts` | the **beta** badge beside the logo on lore.rusty.one |
+
+**Descriptions only, in the addon.** Nothing in the client says any of this out
+loud: not `/zl audio`, not the options panel, and nothing at login or on first
+playback. A player who has installed the pack has already read the description
+that came with it, and an addon that repeats its own caveat into chat is an addon
+that talks over the thing it is apologising for.
+
+The site is the exception, and only because it has room to be: the badge is
+silent until it is clicked, and what is behind it ends on the Support ask, for the
+same reason `SUPPORT_REASON` exists — the sentence explaining that the re-record
+is waiting on money is unfinished without somewhere to send the reader who wants
+to do something about it.
+
 ### Autoplay on discovery
 
 On by default: **the game's own discovery is the trigger** — the moment it prints
