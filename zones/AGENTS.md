@@ -40,18 +40,14 @@ A change that reaches players bumps the `## Version:` of every addon it affects
 and writes that version's section of `CHANGELOG.md`, in the same PR as the change.
 Not as a follow-up, and not left to whoever releases.
 
-**The addon and the sound packs carry one version between them.**
-`addon/ZoneLore/ZoneLore.toc` and `addon/ZoneLoreAudio/ZoneLoreAudio.toc` bump
-together even when only one of them changed, which is what `CHANGELOG.md` means
-by "both are versioned together". `scripts/release.sh` reads each .toc
-independently and would happily let them drift, and drift is exactly the thing
-worth avoiding: the compatibility rule players have to reason about is that
-ZoneLore reads any pack sharing its **major** version, and matching numbers make
-"do these two go together" answerable at a glance instead of from a table.
-
-Bumping a pack's version does not oblige anyone to re-upload it. Re-cutting a
-790 MB zip so CurseForge displays a new number is a release decision, not a
-consequence of the bump — an 0.2.0 pack keeps working against 0.2.1 ZoneLore.
+**Bump only what the PR actually changes.** `addon/ZoneLore/ZoneLore.toc` and
+`addon/ZoneLoreAudio/ZoneLoreAudio.toc` carry their own versions and
+`scripts/release.sh` reads each independently, so they are free to diverge. The
+one rule binding them is compatibility: ZoneLore reads any pack sharing its
+**major** version, and says so in chat rather than going silent when handed one
+it cannot. So a change to the addon alone bumps the addon alone. Re-cutting a
+790 MB sound pack because a Lua file moved is not thoroughness, it is a
+four-hour upload.
 
 **There is no "Unreleased" heading.** `changelog_for()` in `scripts/release.sh`
 finds the `## <version>` section matching the .toc and *exits* if there is not
