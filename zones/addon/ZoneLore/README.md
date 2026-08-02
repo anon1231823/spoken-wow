@@ -49,8 +49,7 @@ pronunciation, one pass over the whole script — which means generating every l
 again. That costs money per line and time to check, so it lands in batches rather
 than all at once.
 
-`/zl audio` and the **Narration** section of the options panel say the same. If a
-line reads badly, report it on [lore.rusty.one](https://lore.rusty.one); the
+If a line reads badly, report it on [lore.rusty.one](https://lore.rusty.one); the
 re-record follows what comes in.
 
 ## Commands

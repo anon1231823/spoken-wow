@@ -19,11 +19,10 @@ entries. That means generating all 1353 lines again. Every one of them costs
 money to synthesise and time to listen back to, which is the honest reason it is
 taking a while: it lands in batches, as it can be paid for.
 
-In-game, `/zl audio` says the same thing, and the ZoneLore options panel carries
-it under **Narration**. If a line reads badly, report it — there is a Feedback
-button on [lore.rusty.one](https://lore.rusty.one), and the re-record is driven
-by what comes in. [Supporting the project](https://buymeacoffee.com/rustykey)
-pays for the generation directly.
+If a line reads badly, report it — there is a Feedback button on
+[lore.rusty.one](https://lore.rusty.one), and the re-record is driven by what
+comes in. [Supporting the project](https://buymeacoffee.com/rustykey) pays for
+the generation directly.
 
 ## Which pack to install
 

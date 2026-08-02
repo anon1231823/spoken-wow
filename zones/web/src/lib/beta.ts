@@ -6,10 +6,10 @@
 // ~400MB of it, and a disclaimer that is current in one of those places and stale in
 // the other is worse than not having one.
 //
-// The addon half of that pair cannot import this file. `addon/ZoneLore/Audio.lua` and
-// `addon/ZoneLoreAudio/README.md` carry the same claim in their own words, and the four
-// of them are meant to be edited in one sitting -- the voice stops being "in redesign"
-// everywhere on the same day.
+// The addon half of that pair cannot import this file. Both `## Notes:` lines and both
+// project READMEs under `addon/` carry the same claim in their own words -- and only
+// those: nothing the client says out loud repeats it. They are meant to be edited in one
+// sitting; the voice stops being "in redesign" everywhere on the same day.
 
 /** What the badge itself says. Lowercase: it is a qualifier on the logo, not a heading. */
 export const BETA_LABEL = "beta";
