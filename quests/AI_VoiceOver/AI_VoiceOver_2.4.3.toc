@@ -1,5 +1,6 @@
 ## Interface: 20400
 ## Title: VoiceOver
+## IconTexture: Interface\AddOns\AI_VoiceOver\Textures\AddonIcon
 ## Notes: Adds voiceovers to npcs.
 ## Version: 0.0.0
 ## SavedVariables: VoiceOverDB
