@@ -34,6 +34,24 @@ make validate-audio # manifest, files on disk and lookup table agree
 Those are the verification. Do not add extra self-review passes on top, and do
 not re-check work you have already checked — it costs tokens and finds nothing.
 
+## Code comments
+
+- Explain the *why*, never the *what*. The code already says what it does; a
+  comment carries the reasoning, intent, or context behind it.
+- Never comment obvious code. Noise is worse than silence.
+- Prefer readable code to a comment. If a comment is needed to explain unclear
+  code, fix the naming, the function size, or the logic first.
+- Never leave commented-out code. Delete it; git remembers.
+- Be concise. One clear sentence beats a paragraph, and skip filler like "this
+  function basically just".
+- Keep comments in sync with the code they sit on. A stale comment is a bug.
+- Write for a competent developer with no prior context: they understand code,
+  they do not know your decisions.
+- Use full sentences in block comments, and no private jargon.
+
+The `Makefile` is the model — its targets are commented with the failure each
+one exists to prevent. Read that comment before changing a target.
+
 ## Delegation
 
 Delegate only for large tasks that are genuinely independent and parallelizable,
@@ -68,3 +86,27 @@ are what the world reads — the addon READMEs are the CurseForge descriptions.
 They are prose, with headings that state a decision ("Port 5433, not 5432",
 "Characters are not credits") and a paragraph on why. Match that. A new section
 is warranted by a decision worth recording, not by space to fill.
+
+## Pull request descriptions
+
+A description is written for the person reviewing it and for whoever finds the
+branch in a year. Prose, not a form.
+
+- **Title states the outcome**, as a sentence: "Make the explorer's filters
+  legible, clearable, and answerable by date", not "filter updates".
+- **Open with the problem**, not a summary heading. What was wrong, and what
+  followed from it. Then what this changes.
+- **Headings say something.** "What is deliberately different from the original
+  design", "The bug the chips introduced" — not "Changes" and "Testing".
+- **Record the decisions, including the rejected ones.** Why this approach and
+  not the obvious one; what is load-bearing and what breaks without it; what was
+  found along the way that the plan never mentioned.
+- **Numbers where they prove something** — real counts from a real run, in a
+  table if it is more than a couple. Cite code as `path/file.lua:12`.
+- **Verification is a section, and it is honest.** Say what you ran and what it
+  reported. Say plainly what you did *not* check — "not looked at in-game" is
+  information the reviewer needs, not an admission to bury.
+- **Notes for review** at the end: what deserves the reviewer's eyes, known
+  divergences, deliberate non-fixes, and anything that must land together.
+
+Length follows the change. A one-line fix gets a paragraph.
