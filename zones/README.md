@@ -1037,14 +1037,45 @@ match**; `PACK_FORMAT` in `Audio.lua` is the machine-checkable half of that rule
 and is bumped only alongside a major.
 
 **Per release:** bump the `.toc`s, add a `CHANGELOG.md` entry, commit, tag
-`v<version>`, build, then upload with the changelog entry as the release notes and
-**Classic Era** selected as the game version. The `Interface:` line in the `.toc`
-is not what CurseForge files on — the upload form's own selector is.
+`v<version>`, build, then upload:
 
-**Relations to set on each project once:** ZoneLore lists both packs as optional
-dependencies; each pack lists ZoneLore as a required dependency; ZoneLore lists
-LibStub, CallbackHandler-1.0, LibDataBroker-1.1 and LibDBIcon-1.0 as includes,
-since they are embedded under `Libs/` rather than fetched.
+```sh
+make release-dry                # what would be sent, sending nothing
+make release                    # all three
+./scripts/release.sh zonelore   # or one at a time
+```
+
+`scripts/release.sh` posts to the CurseForge author API. It needs
+`CURSEFORGE_TOKEN` in `.env` — an account-wide token from
+[the API tokens page](https://authors-old.curseforge.com/account/api-tokens),
+not a per-project one, so one token covers all three.
+
+The project IDs live in the script. Three things it derives rather than repeats:
+the version comes from the `.toc` being uploaded, the zip is whatever
+`package*.sh` named for that version, and the release notes are the matching
+`## <version>` section of `CHANGELOG.md` — sent as markdown, so the notes on the
+site cannot drift from the ones in the repository.
+
+The game version is resolved by **name** (`1.15.9`) against
+`/api/game/versions` at upload time rather than being hardcoded as the numeric ID
+the API actually wants. That ID is undocumented, and a wrong one produces a file
+filed against the wrong client, which players experience as the addon not
+appearing in their AddOns list at all. `GAME_VERSION_NAME=` overrides it.
+
+Uploads go out as CurseForge release type `release`, which is not the same claim
+as the beta disclaimer in the descriptions: marking the files `beta` would stop
+most addon managers offering them to players on the default channel, which is the
+audience this is for. `RELEASE_TYPE=beta` overrides it.
+
+**What the script deliberately does not do** is create projects, edit
+descriptions, or set relations. Those are one-time settings that live in the web
+UI, and a script that rewrote them on every release would be a script that could
+quietly undo an edit made there.
+
+**Relations to set on each project once, by hand:** ZoneLore lists both packs as
+optional dependencies; each pack lists ZoneLore as a required dependency; ZoneLore
+lists LibStub, CallbackHandler-1.0, LibDataBroker-1.1 and LibDBIcon-1.0 as
+includes, since they are embedded under `Libs/` rather than fetched.
 
 ## Licensing
 

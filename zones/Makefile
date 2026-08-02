@@ -5,7 +5,8 @@
 .PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy \
         status remove clean voice voice-zones lookup sample db-up db-down migrate import export \
         web push push-dry pull pull-dry audio-status ssh-check pull-manifest pull-lexicon \
-        db-push db-pull bootstrap deploy-scripts releases rollback logs
+        db-push db-pull bootstrap deploy-scripts releases rollback logs \
+        release release-dry
 
 # The \# escapes are required: an unescaped # starts a make comment, even
 # inside a $(shell ...) call.
@@ -302,3 +303,9 @@ logs: ## Tail the droplet's application log
 
 package-audio: validate-audio ## Build both sound-pack zips (standard + high)
 	@./scripts/package-audio.sh
+
+release-dry: ## Show what `make release` would upload to CurseForge
+	@./scripts/release.sh --dry-run
+
+release: ## Upload the built zips to CurseForge (needs CURSEFORGE_TOKEN)
+	@./scripts/release.sh
