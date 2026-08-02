@@ -305,7 +305,7 @@ function ZoneLore:SetupOptions()
 			packButton:SetText("No sound pack installed")
 			packButton:Disable()
 			packNote:SetText("Narration plays a placeholder clip. Install ZoneLoreAudio "
-				.. "or ZoneLoreAudioHQ for the real voiceover.")
+				.. "or ZoneLoreAudio64 for the real voiceover.")
 			return
 		end
 

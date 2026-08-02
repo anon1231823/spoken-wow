@@ -108,7 +108,7 @@ export async function buildLookup() {
     "}",
     "",
     "-- The folder name comes from the loader rather than being baked in, so one",
-    "-- generated file serves every quality tier: ZoneLoreAudio and ZoneLoreAudioHQ",
+    "-- generated file serves every quality tier: ZoneLoreAudio and ZoneLoreAudio64",
     "-- ship the same Sounds.lua and differ only in their .toc and their mp3s.",
     "pack.addon = ADDON_NAME",
     'pack.quality = C_AddOns.GetAddOnMetadata(ADDON_NAME, "X-ZoneLore-Quality") or "standard"',

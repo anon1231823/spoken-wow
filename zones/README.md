@@ -21,8 +21,8 @@ because they are a large download. Two tiers with identical content:
 
 | Folder | Bitrate | Zip |
 |---|---|---|
-| `ZoneLoreAudio` | 64 kbps mono | ~400 MB |
-| `ZoneLoreAudioHQ` | 128 kbps (the masters) | ~790 MB |
+| `ZoneLoreAudio` | 128 kbps (the masters) | ~790 MB |
+| `ZoneLoreAudio64` | 64 kbps mono | ~400 MB |
 
 Both can be installed at once. ZoneLore plays the higher-bitrate one and `/zl
 audio` switches; see "Sound packs are self-describing" below for how it decides.
@@ -711,10 +711,14 @@ the masters; every shipped tier is derived from them.
 
 ### Sound packs are self-describing
 
-A tier is an addon folder of its own — `ZoneLoreAudio` at 64kbps,
-`ZoneLoreAudioHQ` at 128 — rather than two files under one project. One project
+A tier is an addon folder of its own — `ZoneLoreAudio` at 128kbps,
+`ZoneLoreAudio64` at 64 — rather than two files under one project. One project
 with two files would mean the addon manager silently "updating" a player from the
 tier they chose to whichever file is newest, which is a 400MB surprise.
+
+The full-quality pack holds the unqualified name because it is the one a player
+should land on without having to make a decision first; the smaller tier names its
+own trade-off, so nobody installs it wondering what "64" cost them.
 
 Separate folders means ZoneLore cannot hardcode where the audio is. Each pack
 registers itself:
@@ -1020,7 +1024,7 @@ do not touch a voiceline, and the packs should not re-upload 400MB for a Lua fix
 
 ```sh
 make package                    # dist/ZoneLore-<version>.zip
-make package-audio              # dist/ZoneLoreAudio-<v>.zip + ZoneLoreAudioHQ-<v>.zip
+make package-audio              # dist/ZoneLoreAudio-<v>.zip + ZoneLoreAudio64-<v>.zip
 ```
 
 `make package` refuses to build from a dirty `addon/` tree, so a zip can always be

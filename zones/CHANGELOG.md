@@ -43,8 +43,8 @@ Two tiers, differing only in bitrate. Install either, or both:
 
 | Pack | Bitrate | Download |
 |---|---|---|
-| `ZoneLoreAudio` | 64 kbps mono | ~400 MB |
-| `ZoneLoreAudioHQ` | 128 kbps | ~790 MB |
+| `ZoneLoreAudio` | 128 kbps | ~790 MB |
+| `ZoneLoreAudio64` | 64 kbps mono | ~400 MB |
 
 With both installed, ZoneLore plays the higher-quality one. `/zl audio` lists
 what is installed and switches between them.

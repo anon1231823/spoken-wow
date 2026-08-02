@@ -30,11 +30,13 @@ TOC="$SRC/ZoneLoreAudio.toc"
 SOUNDS="$SRC/Sounds"
 DIST="$REPO/dist"
 
-# tier -> folder name, bitrate, title suffix. The source tree is already the high
-# tier, so that one is copied rather than transcoded.
-tier_folder() { case "$1" in standard) echo "ZoneLoreAudio";; high) echo "ZoneLoreAudioHQ";; esac; }
+# tier -> folder name, bitrate, title. The source tree is already the high tier,
+# so that one is copied rather than transcoded, and it keeps the unqualified name:
+# the full-quality pack is the one a player should land on without having to
+# choose, and the smaller one advertises the trade in its own name.
+tier_folder() { case "$1" in standard) echo "ZoneLoreAudio64";; high) echo "ZoneLoreAudio";; esac; }
 tier_bitrate() { case "$1" in standard) echo "64";; high) echo "128";; esac; }
-tier_title()   { case "$1" in standard) echo "ZoneLore Audio";; high) echo "ZoneLore Audio (High Quality)";; esac; }
+tier_title()   { case "$1" in standard) echo "ZoneLore Audio 64";; high) echo "ZoneLore Audio";; esac; }
 
 tiers=("standard" "high")
 if [[ $# -gt 0 ]]; then
@@ -99,7 +101,11 @@ for tier in "${tiers[@]}"; do
   # copied into place, so the tree the client sees is identical apart from the
   # bitrate and the three .toc lines rewritten below.
   rsync -a --exclude 'Sounds/' --exclude '.DS_Store' "$SRC/" "$staging/$folder/"
-  mv "$staging/$folder/ZoneLoreAudio.toc" "$staging/$folder/$folder.toc"
+  # The .toc must be named after its folder. The high tier already is, and mv
+  # onto itself is an error rather than a no-op.
+  if [[ "$folder" != "ZoneLoreAudio" ]]; then
+    mv "$staging/$folder/ZoneLoreAudio.toc" "$staging/$folder/$folder.toc"
+  fi
 
   # The .toc is the only place the tier is recorded. Data/Sounds.lua reads these
   # back through GetAddOnMetadata, which is what lets one generated file serve

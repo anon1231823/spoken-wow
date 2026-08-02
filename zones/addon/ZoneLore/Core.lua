@@ -535,7 +535,7 @@ local function CmdAudioPack(arg)
 	local packs = ZoneLore:GetAudioPacks()
 	if #packs == 0 then
 		ZoneLore:Print("|cffffcc00no sound pack installed|r")
-		ZoneLore:Print("  install ZoneLoreAudio (standard) or ZoneLoreAudioHQ (high) alongside ZoneLore")
+		ZoneLore:Print("  install ZoneLoreAudio (128 kbps) or ZoneLoreAudio64 (64 kbps) alongside ZoneLore")
 		return
 	end
 

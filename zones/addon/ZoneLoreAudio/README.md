@@ -3,6 +3,9 @@
 Narrated zone lore for [ZoneLore](https://www.curseforge.com/wow/addons/zonelore).
 This addon is data only — it does nothing on its own.
 
+Both quality tiers ship this same file; `/zl audio` in-game reports which one you
+have installed.
+
 1353 voicelines covering all 49 Classic Era zones and 1304 subzones, generated
 with ElevenLabs from the same warcraft.wiki.gg text ZoneLore displays.
 
@@ -30,11 +33,12 @@ Two packs exist, with identical content at different bitrates. Install one:
 
 | Pack | Bitrate | Download |
 |---|---|---|
-| **ZoneLore Audio** (`ZoneLoreAudio`) | 64 kbps mono | ~400 MB |
-| **ZoneLore Audio HQ** (`ZoneLoreAudioHQ`) | 128 kbps | ~790 MB |
+| **ZoneLore Audio** (`ZoneLoreAudio`) | 128 kbps | ~790 MB |
+| **ZoneLore Audio 64** (`ZoneLoreAudio64`) | 64 kbps mono | ~400 MB |
 
-64 kbps mono is close to transparent for speech and half the download. Take the
-HQ pack if disk and bandwidth are free and you would rather not wonder.
+Take ZoneLore Audio unless the download is a problem. 64 kbps mono is close to
+transparent for speech and half the size, so the smaller pack costs less than the
+gap between the numbers suggests.
 
 Both can be installed at once — ZoneLore plays the higher-quality one, and
 `/zl audio` switches between them.

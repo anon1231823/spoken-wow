@@ -35,11 +35,13 @@ bitrate:
 
 | Pack | Bitrate | Download |
 |---|---|---|
-| **ZoneLore Audio** (`ZoneLoreAudio`) | 64 kbps mono | ~400 MB |
-| **ZoneLore Audio HQ** (`ZoneLoreAudioHQ`) | 128 kbps | ~790 MB |
+| **ZoneLore Audio** (`ZoneLoreAudio`) | 128 kbps | ~790 MB |
+| **ZoneLore Audio 64** (`ZoneLoreAudio64`) | 64 kbps mono | ~400 MB |
 
-Install either. If you install both, ZoneLore plays the higher-quality one;
-`/zl audio` lists what you have and switches between them.
+Install either — ZoneLore Audio unless the download is a problem, in which case
+the 64 kbps pack is half the size and close to transparent for speech. If you
+install both, ZoneLore plays the higher-quality one; `/zl audio` lists what you
+have and switches between them.
 
 ### The voice is in beta
 
