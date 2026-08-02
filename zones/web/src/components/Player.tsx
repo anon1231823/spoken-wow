@@ -91,8 +91,8 @@ export function Player({ line, version, audioRef }: Props) {
   const total = duration || line?.take?.durationSec || 0;
 
   return (
-    <div className="border-t border-border bg-panel px-4 py-2">
-      <div className="flex items-center gap-3">
+    <div className="border-t border-border bg-panel">
+      <div className="shell flex items-center gap-3 py-2">
         <button
           type="button"
           disabled={!hasAudio}

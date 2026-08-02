@@ -12,13 +12,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="min-h-screen bg-bg text-fg">
-        <header className="flex h-12 items-center gap-4 border-b border-border px-4">
-          <Link href="/" className="font-semibold">
-            ZoneLore
-          </Link>
-          <Link href="/lexicon" className="text-muted hover:text-fg">
-            Pronunciation
-          </Link>
+        {/* The rule spans the viewport; only its contents are constrained. */}
+        <header className="border-b border-border">
+          <div className="shell flex h-12 items-center gap-4">
+            <Link href="/" className="font-semibold">
+              ZoneLore
+            </Link>
+            <Link href="/lexicon" className="text-muted hover:text-fg">
+              Pronunciation
+            </Link>
+          </div>
         </header>
         {children}
       </body>

@@ -30,64 +30,69 @@ export function RegenerationPanel({ batch, onStop, onDismiss }: Props) {
   const unpriced = done.filter((job) => job.credits === null || job.credits === undefined).length;
 
   return (
-    <div className="border-t border-border bg-panel px-4 py-2">
-      <div className="flex items-center gap-3">
-        {active && <Loader2 size={14} className="animate-spin text-accent" />}
-        <span className="font-medium">
-          {active ? "Regenerating" : batch.stoppedBecause ? "Stopped" : "Finished"}
-        </span>
-        <span className="text-muted">
-          {attempted}/{total}
-          {running.length > 0 && ` · ${running.length} at once`}
-          {failed.length > 0 && <span className="text-bad"> · {failed.length} failed</span>}
-        </span>
+    <div className="border-t border-border bg-panel">
+      {/* One shell around all of it, not just the status row: the progress rule and the
+          failure list belong to the same column, and full-bleed they would run to the
+          viewport edge -- which is the thing being fixed. */}
+      <div className="shell py-2">
+        <div className="flex items-center gap-3">
+          {active && <Loader2 size={14} className="animate-spin text-accent" />}
+          <span className="font-medium">
+            {active ? "Regenerating" : batch.stoppedBecause ? "Stopped" : "Finished"}
+          </span>
+          <span className="text-muted">
+            {attempted}/{total}
+            {running.length > 0 && ` · ${running.length} at once`}
+            {failed.length > 0 && <span className="text-bad"> · {failed.length} failed</span>}
+          </span>
 
-        <span className="ml-auto font-mono text-xs text-muted">
-          {credits.toLocaleString()} credits
-          {unpriced > 0 && ` · ${unpriced} unpriced`}
-        </span>
+          <span className="ml-auto font-mono text-xs text-muted">
+            {credits.toLocaleString()} credits
+            {unpriced > 0 && ` · ${unpriced} unpriced`}
+          </span>
 
-        {active ? (
-          <button
-            type="button"
-            onClick={onStop}
-            className="rounded border border-border px-2 py-0.5 hover:bg-panel-hover"
-          >
-            Stop
-          </button>
-        ) : (
-          <button type="button" onClick={onDismiss} aria-label="Dismiss" className="rounded p-1 hover:bg-panel-hover">
-            <X size={14} />
-          </button>
+          {active ? (
+            <button
+              type="button"
+              onClick={onStop}
+              className="rounded border border-border px-2 py-0.5 hover:bg-panel-hover"
+            >
+              Stop
+            </button>
+          ) : (
+            <button type="button" onClick={onDismiss} aria-label="Dismiss" className="rounded p-1 hover:bg-panel-hover">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="mt-1.5 h-px w-full bg-border">
+          <div
+            className="h-px bg-accent transition-[width]"
+            style={{ width: `${total === 0 ? 0 : Math.round((attempted / total) * 100)}%` }}
+          />
+        </div>
+
+        {running.length > 0 && (
+          <p className="mt-1 truncate text-xs text-faint">
+            {running.map((job) => job.name).join(" · ")}
+          </p>
+        )}
+
+        {batch.stoppedBecause && batch.stoppedBecause !== "stopped" && (
+          <p className="mt-1 text-xs text-bad">{batch.stoppedBecause}</p>
+        )}
+
+        {failed.length > 0 && (
+          <ul className="mt-1 max-h-24 overflow-y-auto text-xs text-bad">
+            {failed.map((job) => (
+              <li key={job.lineId} className="truncate">
+                {job.name}: {job.error}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
-
-      <div className="mt-1.5 h-px w-full bg-border">
-        <div
-          className="h-px bg-accent transition-[width]"
-          style={{ width: `${total === 0 ? 0 : Math.round((attempted / total) * 100)}%` }}
-        />
-      </div>
-
-      {running.length > 0 && (
-        <p className="mt-1 truncate text-xs text-faint">
-          {running.map((job) => job.name).join(" · ")}
-        </p>
-      )}
-
-      {batch.stoppedBecause && batch.stoppedBecause !== "stopped" && (
-        <p className="mt-1 text-xs text-bad">{batch.stoppedBecause}</p>
-      )}
-
-      {failed.length > 0 && (
-        <ul className="mt-1 max-h-24 overflow-y-auto text-xs text-bad">
-          {failed.map((job) => (
-            <li key={job.lineId} className="truncate">
-              {job.name}: {job.error}
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

@@ -427,7 +427,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         onClearAll={() => router.replace("/", { scroll: false })}
       />
 
-      <div className="flex items-center gap-4 px-4 py-2 text-muted">
+      <div className="shell flex items-center gap-4 py-2 text-muted">
         {result && (
           <>
             <span>
@@ -455,49 +455,53 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         )}
       </div>
 
-      <table className="w-full table-fixed">
-        <colgroup>
-          <col className="w-44" />
-          <col className="w-56" />
-          <col className="w-40" />
-          <col />
-          <col className="w-20" />
-          <col className="w-28" />
-        </colgroup>
-        <thead className="text-left text-xs text-faint">
-          <tr className="border-b border-border">
-            <th className="px-2 py-1 font-normal">Zone</th>
-            <th className="px-2 py-1 font-normal">Subzone</th>
-            <th className="px-2 py-1 font-normal">State</th>
-            <th className="px-2 py-1 font-normal">Lore</th>
-            <th className="px-2 py-1 text-right font-normal">Chars</th>
-            <th className="px-2 py-1 text-right font-normal">Audio</th>
-          </tr>
-        </thead>
-        <tbody>
-          {result?.lines.map((line) => (
-            <LineRow
-              key={line.id}
-              line={withFlag(line)}
-              current={line.id === current?.id}
-              onPlay={play}
-              onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
-              state={rowStates[line.id]}
-              onFlag={setFlag}
-              onNote={(l) => setNoteFor(withFlag(l))}
-              onRegenerate={regenerateOne}
-              onRestore={restore}
-            />
-          ))}
-        </tbody>
-      </table>
+      {/* The wrapper carries the column, not the table: see .shell-table in
+          globals.css for why a collapsed table cannot carry it itself. */}
+      <div className="shell shell-table">
+        <table className="w-full table-fixed">
+          <colgroup>
+            <col className="w-36" />
+            <col className="w-44" />
+            <col className="w-40" />
+            <col />
+            <col className="w-16" />
+            <col className="w-28" />
+          </colgroup>
+          <thead className="text-left text-xs text-faint">
+            <tr className="border-b border-border">
+              <th className="px-2 py-1 font-normal">Zone</th>
+              <th className="px-2 py-1 font-normal">Subzone</th>
+              <th className="px-2 py-1 font-normal">State</th>
+              <th className="px-2 py-1 font-normal">Lore</th>
+              <th className="px-2 py-1 text-right font-normal">Chars</th>
+              <th className="px-2 py-1 text-right font-normal">Audio</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result?.lines.map((line) => (
+              <LineRow
+                key={line.id}
+                line={withFlag(line)}
+                current={line.id === current?.id}
+                onPlay={play}
+                onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
+                state={rowStates[line.id]}
+                onFlag={setFlag}
+                onNote={(l) => setNoteFor(withFlag(l))}
+                onRegenerate={regenerateOne}
+                onRestore={restore}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {result && result.total === 0 && !loading && (
-        <p className="px-4 py-8 text-center text-muted">Nothing matches these filters.</p>
+        <p className="shell py-8 text-center text-muted">Nothing matches these filters.</p>
       )}
 
       {pages > 1 && (
-        <div className="flex items-center justify-center gap-4 py-4">
+        <div className="shell flex items-center justify-center gap-4 py-4">
           <button
             type="button"
             disabled={page <= 1}
@@ -520,7 +524,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         </div>
       )}
 
-      <p className="px-4 pb-4 text-center text-xs text-faint">
+      <p className="shell pb-4 text-center text-xs text-faint">
         <kbd>/</kbd> search · <kbd>space</kbd> play/pause · <kbd>j</kbd>/<kbd>k</kbd> next/previous ·{" "}
         <kbd>f</kbd> bad · <kbd>g</kbd> ok · <kbd>u</kbd> undo · <kbd>n</kbd> note
       </p>
