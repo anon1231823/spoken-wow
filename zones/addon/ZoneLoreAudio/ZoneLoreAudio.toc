@@ -1,13 +1,21 @@
 ## Interface: 11509
 ## Title: ZoneLore Audio
 ## Notes: Narrated zone lore for ZoneLore. Install alongside ZoneLore.
-## Version: 0.1.0
+## Version: 0.2.0
 ## Author: rusty
 ## IconTexture: Interface\ICONS\INV_Misc_Book_09
 ## X-License: Audio generated with ElevenLabs from warcraft.wiki.gg lore text (CC BY-SA 4.0).
 ## X-Credits: Lore text sourced from warcraft.wiki.gg contributors (CC BY-SA 4.0).
 
-# Defines the global ZoneLoreAudioData that ZoneLore reads. No dependency is
-# declared in either direction: ZoneLore falls back to a placeholder when this
-# addon is absent, and this addon is inert without it.
+# The tier this folder is. scripts/package-audio.sh rewrites these two lines, and
+# the Title above, once per tier it builds; the tree in the repository is the
+# 128kbps master every shipped tier is transcoded from, so it describes itself as
+# the high tier. Data/Sounds.lua reads these back at load time and reports them
+# to ZoneLore, which is how two tiers installed side by side can be told apart.
+## X-ZoneLore-Quality: high
+## X-ZoneLore-Bitrate: 128
+
+# Defines the ZoneLoreAudioPacks registry entry that ZoneLore reads. No dependency
+# is declared in either direction: ZoneLore falls back to a placeholder when no
+# pack is present, and a pack is inert without it.
 Data/Sounds.lua

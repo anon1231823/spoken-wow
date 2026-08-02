@@ -6,22 +6,39 @@ with lore text built from warcraft.wiki.gg at development time.
 Target client: **Classic Era 1.15.9** (`## Interface: 11509`). Not built for
 retail or the Anniversary/TBC client.
 
-## Status
+This repository holds three things: the addon, the sound packs it plays, and the
+tooling that produces both.
 
-| Milestone | State |
-|---|---|
-| M0 skeleton, saved vars, slash commands | done, tested in-game |
-| M1 wiki scraper → generated lore data | done, 49 zones |
-| M2 world map side panel | done, tested in-game |
-| M2.5 subzone lore on map click | done; mechanism tested in-game, now all 46 zones |
-| M3 hover preview on the map | done, tested in game |
-| M4 minimap button + standalone lore window | done, **untested in-game** |
-| M5 options panel and polish | done, **untested in-game** |
-| M6 narration playback + autoplay on discovery | done, tested in-game |
-| M7 voiceline generation tool | done; all 1353 lines generated |
-| M8 Postgres behind the voiceline store | done |
-| M9-M12 voiceline explorer (`web/`) | done; not yet used for a full listening pass |
-| M13 deploy the explorer (`deploy/`) | done; droplet not yet bootstrapped |
+## What ships
+
+**`ZoneLore`** — the addon. World map side panel, subzone lore on click, hover
+preview, standalone lore window, minimap button, options panel, narration
+playback with floating controls, and autoplay on area discovery. 49 zones and
+1304 subzones of text are bundled; nothing is fetched at runtime.
+
+**Sound packs** — 1353 voicelines, built from the same text, shipped separately
+because they are a large download. Two tiers with identical content:
+
+| Folder | Bitrate | Zip |
+|---|---|---|
+| `ZoneLoreAudio` | 64 kbps mono | ~400 MB |
+| `ZoneLoreAudioHQ` | 128 kbps (the masters) | ~790 MB |
+
+Both can be installed at once. ZoneLore plays the higher-bitrate one and `/zl
+audio` switches; see "Sound packs are self-describing" below for how it decides.
+
+Player-facing documentation lives in `addon/ZoneLore/README.md` and
+`addon/ZoneLoreAudio/README.md` — those are the CurseForge project descriptions.
+Release history is in `CHANGELOG.md`.
+
+## What is here but not shipped
+
+**`web/`** — the voiceline explorer, for listening through takes and
+regenerating the bad ones. Backed by Postgres. Deployed to lore.rusty.one via
+`deploy/`; it is a working tool, not a public one.
+
+**`tools/`** — the wiki scraper, the ElevenLabs generation pipeline, and the
+validators that keep the generated Lua honest.
 
 ## Layout
 
@@ -46,10 +63,12 @@ addon/ZoneLore/          the addon itself (this is what WoW loads)
   UI/Options.lua         settings panel
   Libs/                  LibStub, CallbackHandler-1.0, LibDataBroker-1.1,
                          LibDBIcon-1.0 (copied from AI_VoiceOver_Continued)
-addon/ZoneLoreAudio/     the optional voiceover companion addon
-  ZoneLoreAudio.toc
+  README.md              player-facing docs; the CurseForge description
+addon/ZoneLoreAudio/     the sound pack, at master (128kbps) quality
+  ZoneLoreAudio.toc      rewritten per tier at packaging time
   Data/Sounds.lua        GENERATED -- the clip lookup table
   Sounds/                GENERATED, gitignored -- the mp3s themselves
+  README.md              player-facing docs; the CurseForge description
 tools/
   lib/wiki.mjs           shared fetching, era filter, Lua emission
   lib/loredata.mjs       reads the generated Lua data back into JS
@@ -70,7 +89,8 @@ tools/
   seed/overrides.json    hand-written lore that beats the scraped text
 scripts/deploy.sh        install both addons into the Classic Era AddOns folder
 scripts/package.sh       build the ZoneLore zip
-scripts/package-audio.sh build the ZoneLoreAudio zip, optionally transcoded
+scripts/package-audio.sh build the sound pack zips, one per quality tier
+CHANGELOG.md             release notes; the text pasted into CurseForge
 ```
 
 ## Installing for development
@@ -302,11 +322,12 @@ Every lore description carries a **Play** button — top-right of the world map
 panel and of the lore window. `/zl play` narrates wherever the player is standing,
 preferring the subzone over the zone when the subzone has lore of its own.
 
-Audio ships in a **separate `ZoneLoreAudio` addon**, which is optional. ZoneLore
-looks up a clip in the global `ZoneLoreAudioData` table that addon defines, and
-falls back to `Sounds/placeholder.mp3` when there is no entry — so the button
-works before any voiceover exists, and a missing soundpack sounds wrong rather
-than erroring. `/zl play` says which of the two it played.
+Audio ships in **separate sound-pack addons**, all of them optional. ZoneLore
+looks up a clip in whichever pack is active — see "Sound packs are
+self-describing" — and falls back to `Sounds/placeholder.mp3` when there is no
+entry, so the button works before any voiceover exists and a missing pack sounds
+wrong rather than erroring. `/zl play` says which of the two it played, and
+`/zl audio` reports which packs are installed.
 
 The placeholder is a 40-second quest line borrowed from `../wow-voiceover`'s audio
 store. It is deliberately one of the longest lines there: a short clip finishes
@@ -653,12 +674,46 @@ ElevenLabs bills **characters, not bytes**, so output format does not change the
 price. Audio is generated at the default 128kbps and shrunk at packaging time:
 
 ```sh
-./scripts/package-audio.sh              # ship the masters (~700MB)
-BITRATE=64 ./scripts/package-audio.sh   # transcode on the way in (~360MB)
+./scripts/package-audio.sh              # both tiers
+./scripts/package-audio.sh standard     # just the 64kbps one
+./scripts/package-audio.sh high         # just the masters
 ```
 
 Generating at a low bitrate to save money would save nothing, and would make a
-later quality bump a second purchase rather than a re-run.
+later quality bump a second purchase rather than a re-run. The repository holds
+the masters; every shipped tier is derived from them.
+
+### Sound packs are self-describing
+
+A tier is an addon folder of its own — `ZoneLoreAudio` at 64kbps,
+`ZoneLoreAudioHQ` at 128 — rather than two files under one project. One project
+with two files would mean the addon manager silently "updating" a player from the
+tier they chose to whichever file is newest, which is a 400MB surprise.
+
+Separate folders means ZoneLore cannot hardcode where the audio is. Each pack
+registers itself:
+
+```lua
+ZoneLoreAudioPacks[ADDON_NAME] = pack
+```
+
+...keyed by folder name, so two installed tiers both appear instead of the second
+clobbering the first. The pack reads its own folder name, quality and bitrate out
+of its `.toc` through `GetAddOnMetadata` at load time, which is what lets a single
+generated `Data/Sounds.lua` serve every tier — `package-audio.sh` rewrites three
+`.toc` lines per tier and changes nothing else. Adding a 32kbps tier later is a
+line in that script.
+
+ZoneLore picks the highest bitrate installed unless the player has chosen
+otherwise, and stores that choice as a folder name rather than an index: someone
+who uninstalls the HQ pack should fall back to what remains, not to whichever
+pack happens to occupy that slot afterwards.
+
+`pack.version` is the compatibility contract, checked against `PACK_FORMAT` in
+`Audio.lua`. A pack whose format this build does not know is skipped with a
+message in chat, because the alternative — reading an unknown layout hopefully —
+plays silence and reports nothing, which is indistinguishable from a broken
+install.
 
 ## The voiceline explorer
 
@@ -903,6 +958,7 @@ here:     node tools/seed-from-dump.mjs           # report differences
 /zl play                    narrate the lore for where you are standing
 /zl stop                    stop the narration
 /zl voice                   turn narration on or off
+/zl audio                   list sound packs, or switch with /zl audio <name>
 /zl autoplay                toggle narrating areas as you discover them
 /zl discover [area]         pretend to discover an area (dev)
 /zl forget                  replay the login greeting on next login (dev)
@@ -928,14 +984,54 @@ maximize the map, then close and reopen it. The panel hides while the map is
 maximized by design.
 
 Also test with `Leatrix_Maps` both enabled and disabled — it manipulates the same
-`WorldMapFrame` and will contend for the same area-label script once M3 lands.
+`WorldMapFrame` and contends for the same area-label script the hover preview
+uses.
+
+## Releasing
+
+Three CurseForge projects, released on their own cadences: most ZoneLore releases
+do not touch a voiceline, and the packs should not re-upload 400MB for a Lua fix.
+
+```sh
+make package                    # dist/ZoneLore-<version>.zip
+make package-audio              # dist/ZoneLoreAudio-<v>.zip + ZoneLoreAudioHQ-<v>.zip
+```
+
+`make package` refuses to build from a dirty `addon/` tree, so a zip can always be
+traced back to a commit. Both scripts unpack to the addon folder itself, which is
+what the addon hosts expect — check with `unzip -l` if that ever seems in doubt.
+
+**Versioning.** All three carry the same version, bumped together in their
+`.toc`s. ZoneLore and a pack interoperate as long as their **major versions
+match**; `PACK_FORMAT` in `Audio.lua` is the machine-checkable half of that rule
+and is bumped only alongside a major.
+
+**Per release:** bump the `.toc`s, add a `CHANGELOG.md` entry, commit, tag
+`v<version>`, build, then upload with the changelog entry as the release notes and
+**Classic Era** selected as the game version. The `Interface:` line in the `.toc`
+is not what CurseForge files on — the upload form's own selector is.
+
+**Relations to set on each project once:** ZoneLore lists both packs as optional
+dependencies; each pack lists ZoneLore as a required dependency; ZoneLore lists
+LibStub, CallbackHandler-1.0, LibDataBroker-1.1 and LibDBIcon-1.0 as includes,
+since they are embedded under `Libs/` rather than fetched.
 
 ## Licensing
 
 Addon code: MIT.
 
-Zone lore text in `addon/ZoneLore/Data/Zones.lua` is derived from
-[warcraft.wiki.gg](https://warcraft.wiki.gg) and is licensed
-**CC BY-SA 4.0**; each entry carries a `source` URL to its page. Any distribution
-of this addon must keep that attribution and license the lore data under CC BY-SA.
-Text in `tools/seed/overrides.json` is original and not covered by that.
+Zone lore text in `addon/ZoneLore/Data/Zones.lua` and `Data/Subzones.lua` is
+derived from [warcraft.wiki.gg](https://warcraft.wiki.gg) and is licensed
+**CC BY-SA 4.0**; each entry carries a `source` URL to its page. The narration in
+the sound packs is generated from that text and carries the same license. Any
+distribution must keep that attribution and license the lore data and audio under
+CC BY-SA. Text in `tools/seed/overrides.json` is original and not covered by that.
+
+Because the split does not match any single entry in CurseForge's license
+dropdown, all three projects declare a **custom** license reproducing it:
+
+> ZoneLore addon code is MIT.
+>
+> Zone and subzone lore text is derived from warcraft.wiki.gg and is licensed
+> CC BY-SA 4.0. Narration audio is generated from that text and carries the same
+> license. Attribution: warcraft.wiki.gg contributors.
