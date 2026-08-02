@@ -141,11 +141,14 @@ export function FeedbackDialog({ target, onClose }: Props) {
             <p className="mt-2 text-sm text-muted">{SUPPORT_REASON}</p>
           </div>
           <div className="mt-4 flex justify-end">
+            {/* Secondary, matching the form's Cancel: there is one accent control on this
+                screen and it is the ask above. Two filled buttons in a dialog this small
+                give the eye no way to tell which one is the point. */}
             <button
               type="button"
               autoFocus
               onClick={onClose}
-              className="rounded bg-accent px-3 py-1 text-bg hover:opacity-90"
+              className="rounded border border-border px-3 py-1 hover:bg-panel-hover"
             >
               Done
             </button>
