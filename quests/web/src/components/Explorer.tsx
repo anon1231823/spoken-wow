@@ -749,17 +749,25 @@ export default function Explorer({ facets }: { facets: Facets }) {
         onCancel={() => setPendingBatch(null)}
       />
 
-      <RegenerationPanel
-        queue={dismissed ? null : queue}
-        note={dismissed ? null : queueNote}
-        onStop={() => void stopQueue()}
-        onDismiss={() => {
-          setDismissed(true);
-          setQueueNote(null);
-        }}
-      />
+      {/* Panel and player are stacked in one fixed container so the panel sits flush on top of
+          the player, whatever height the player happens to be. */}
+      <div className="fixed inset-x-0 bottom-0 z-40">
+        <RegenerationPanel
+          queue={dismissed ? null : queue}
+          note={dismissed ? null : queueNote}
+          onStop={() => void stopQueue()}
+          onDismiss={() => {
+            setDismissed(true);
+            setQueueNote(null);
+          }}
+        />
 
-      <Player ref={audio} line={current} version={current ? versions[current.audioPath] : undefined} />
+        <Player
+          ref={audio}
+          line={current}
+          version={current ? versions[current.audioPath] : undefined}
+        />
+      </div>
     </>
   );
 }
