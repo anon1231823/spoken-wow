@@ -421,6 +421,22 @@ function ZoneLore:ToggleLoreWindow()
 	ZoneLore:RefreshLoreWindow(true)
 end
 
+-- Open on a named entry rather than on the player's location. Deliberately not
+-- routed through ToggleLoreWindow: that re-syncs to where the player is standing
+-- on every open, which is right for the minimap button and wrong for anything
+-- naming an entry -- narration outlives the zone you started it in.
+function ZoneLore:ShowLoreFor(mapID, areaKey)
+	if not window or not mapID then
+		return
+	end
+
+	expandedZone = mapID
+	selection = { mapID = mapID, key = areaKey }
+
+	window:Show()
+	ZoneLore:RefreshLoreWindow(true)
+end
+
 function ZoneLore:SetupLoreWindow()
 	if window then
 		return

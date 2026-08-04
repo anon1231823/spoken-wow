@@ -35,6 +35,9 @@ local defaults = {
 	showPlaybackBar = true,
 	autoplay = true,
 	autoplaySubzones = true,
+	-- Off, so Read means "read along". Stopping discards the queue as well, which
+	-- is not something to do to a player who only wanted to see the words.
+	stopAudioOnRead = false,
 	-- `playbackBarPos` is deliberately absent: nil means "below the minimap", which
 	-- is an anchor rather than a coordinate and so cannot be expressed here.
 	-- `audioPack` likewise: nil means "the best pack installed", which is a rule
