@@ -6,6 +6,7 @@
         status remove clean voice voice-zones lookup sample db-up db-down migrate import export \
         web push push-dry pull pull-dry audio-status ssh-check pull-manifest pull-lexicon \
         db-push db-pull bootstrap deploy-scripts releases rollback logs \
+        lore-import lore-export lore-check \
         release release-dry descriptions descriptions-check descriptions-published
 
 # The \# escapes are required: an unescaped # starts a make comment, even
@@ -100,6 +101,25 @@ import: ## Seed the database from tools/voice/manifest.json (idempotent)
 
 export: ## Write tools/voice/manifest.json from the database
 	@node tools/voice/export-manifest.mjs
+
+#-------------------------------------------------------------------------------
+# The lore corpus
+#
+# The text lives in the database so it can be rewritten from the explorer, and the
+# addon ships the two committed Lua files. These targets are the traffic between
+# them. Neither is needed to build the addon from a clone: without DATABASE_URL the
+# committed files are the whole story, which is what keeps the release path free of
+# Postgres.
+#-------------------------------------------------------------------------------
+
+lore-import: ## Seed lore_line from the committed Lua data files (idempotent)
+	@node tools/lore/import.mjs
+
+lore-export: ## Write addon/ZoneLore/Data/*.lua from the database
+	@node tools/lore/export.mjs
+
+lore-check: ## Confirm the committed Lua matches the database
+	@node tools/lore/export.mjs --check
 
 web: ## Run the voiceline explorer at localhost:3000
 	@cd web && pnpm dev
@@ -239,7 +259,7 @@ audio-status: ## What is on disk locally and on the droplet
 
 # Unquoted because both names are already all-lowercase; quoting them here would have to
 # survive two levels of shell inside the ssh command below, and does not.
-DUMP_TABLES := --table=voiceline_take --table=line_flag
+DUMP_TABLES := --table=voiceline_take --table=line_flag --table=lore_line
 PGDUMP      := docker compose exec -T postgres pg_dump -U zonelore -d zonelore --data-only $(DUMP_TABLES)
 
 # pg_dump 16.10 and later wrap their output in \restrict / \unrestrict, psql meta-commands
@@ -248,7 +268,7 @@ PGDUMP      := docker compose exec -T postgres pg_dump -U zonelore -d zonelore -
 # droplet's psql to match the container's.
 UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
 
-db-push: ## Copy the local voiceline_take + line_flag into the droplet's database (REPLACES them)
+db-push: ## Copy the local takes, flags and lore into the droplet's database (REPLACES them)
 	@echo "local:"
 	@docker compose exec -T postgres psql -U zonelore -d zonelore \
 		-c 'select (select count(*) from "voiceline_take") as takes, (select count(*) from "line_flag") as flags'
@@ -257,20 +277,20 @@ db-push: ## Copy the local voiceline_take + line_flag into the droplet's databas
 		-c "select (select count(*) from \"voiceline_take\") as takes, (select count(*) from \"line_flag\") as flags"'
 	@printf 'Replace the droplet contents with the local ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@( echo 'begin;'; \
-	   echo 'truncate "voiceline_take", "line_flag";'; \
+	   echo 'truncate "voiceline_take", "line_flag", "lore_line";'; \
 	   $(PGDUMP) | $(UNRESTRICT); \
 	   echo 'commit;' ) \
 	  | $(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 -q'
 	@echo "==> pushed"
 
-db-pull: ## Copy the droplet's voiceline_take + line_flag into the local database (REPLACES them)
+db-pull: ## Copy the droplet's takes, flags and lore into the local database (REPLACES them)
 	@printf 'Replace the LOCAL database contents with the droplet ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@( echo 'begin;'; \
-	   echo 'truncate "voiceline_take", "line_flag";'; \
+	   echo 'truncate "voiceline_take", "line_flag", "lore_line";'; \
 	   $(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; pg_dump "$$DATABASE_URL" --data-only $(DUMP_TABLES)' | $(UNRESTRICT); \
 	   echo 'commit;' ) \
 	  | docker compose exec -T postgres psql -U zonelore -d zonelore -v ON_ERROR_STOP=1 -q
-	@echo "==> pulled. Bring the addon into step with:  make lookup"
+	@echo "==> pulled. Bring the addon into step with:  make lore-export && make lookup"
 
 #-------------------------------------------------------------------------------
 # Deploying

@@ -5,8 +5,15 @@
 
 import "server-only";
 
-import { buildCatalogue, type CatalogueEntry } from "./tools";
+import {
+  buildCatalogue,
+  loadPronunciation,
+  textHash,
+  toSpokenText,
+  type CatalogueEntry,
+} from "./tools";
 import { query } from "./db";
+import { currentLore } from "./lore";
 
 export type { CatalogueEntry };
 
@@ -59,17 +66,52 @@ export const EMPTY_CONTEXT: SearchContext = {
 // Memoised on globalThis, for the reason db.ts caches its pool: `next dev`
 // re-evaluates modules on every edit, and re-reading and re-normalising 1353 lore
 // entries (a megabyte of Lua, plus a sha1 per line) on each one is a visible pause.
-// The catalogue is derived from committed files that do not change while the server
-// runs -- regenerating the lore data means restarting it, which is already true of
-// every other constant here.
+// The Lua half is derived from committed files that do not change while the server runs.
+// The lore_line half does change, on every text edit -- which is why saving one calls
+// invalidateCatalogue() rather than trusting the next request to notice.
 const globalForCatalogue = globalThis as unknown as {
   zoneloreCatalogue?: Promise<CatalogueEntry[]>;
   zoneloreByPath?: Promise<Map<string, CatalogueEntry>>;
 };
 
+/**
+ * The catalogue as the Lua files have it, with the live rows of `lore_line` laid over
+ * the top.
+ *
+ * Two sources rather than one because they answer different questions. The Lua is what
+ * the addon currently ships and what a clone with no database can still build from; the
+ * table is what the corpus has been edited to since. Layering keeps `tools/` free of a
+ * database -- buildCatalogue() is the same function the CLI runs -- while making an edit
+ * visible in the explorer immediately, instead of after an export, a commit and a deploy.
+ *
+ * An overlaid line has its spoken text and hash recomputed, which is what makes the
+ * staleness badge honest: rewriting the prose moves the hash away from the take's
+ * textHash, and the line reads "text changed" exactly as it does after a pronunciation
+ * rule is added.
+ */
+async function buildOverlaidCatalogue(): Promise<CatalogueEntry[]> {
+  const [entries, overrides, rules] = await Promise.all([
+    buildCatalogue(),
+    // An unseeded table is not an error: before `make lore-import` has ever run, this is
+    // empty and the explorer shows exactly what the committed Lua says.
+    currentLore(),
+    loadPronunciation(),
+  ]);
+
+  if (overrides.size === 0) return entries;
+
+  return entries.map((entry) => {
+    const row = overrides.get(entry.id);
+    if (!row || (row.full === entry.full && row.name === entry.name)) return entry;
+
+    const spoken = toSpokenText(row.full, rules);
+    return { ...entry, name: row.name, full: row.full, spoken, hash: textHash(spoken) };
+  });
+}
+
 export function catalogue(): Promise<CatalogueEntry[]> {
   if (!globalForCatalogue.zoneloreCatalogue) {
-    globalForCatalogue.zoneloreCatalogue = buildCatalogue();
+    globalForCatalogue.zoneloreCatalogue = buildOverlaidCatalogue();
   }
   return globalForCatalogue.zoneloreCatalogue;
 }
@@ -77,7 +119,7 @@ export function catalogue(): Promise<CatalogueEntry[]> {
 /**
  * Drops the memoised catalogue so the next read rebuilds it.
  *
- * Required after writing pronunciation.json: every entry's `spoken` and `hash` are
+ * Required after saving a lore edit, and after writing pronunciation.json: every entry's `spoken` and `hash` are
  * built from those rules at load time, and staleness is a comparison against `hash`.
  * Without this, saving a rule would report an impact the explorer then refused to
  * show -- the lines would stay "current" until the server was restarted, which is

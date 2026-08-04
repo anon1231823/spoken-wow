@@ -86,7 +86,10 @@ tools/
   seed-from-dump.mjs     compares the seed against a live client map dump
   seed/zones.json        uiMapID -> wiki page title
   seed/subzones.json     which parent zones to scrape subzones for
-  seed/overrides.json    hand-written lore that beats the scraped text
+  seed/overrides.json    hand-written zone lore that beats the scraped text
+  lore/import.mjs        seed the lore_line table from the committed Lua
+  lore/export.mjs        write the addon's Lua data files from lore_line
+  lore/store.mjs         the seam between the lore table and the Lua files
 scripts/deploy.sh        install both addons into the Classic Era AddOns folder
 scripts/package.sh       build the ZoneLore zip
 scripts/package-audio.sh build the sound pack zips, one per quality tier
@@ -955,11 +958,35 @@ deterministic 50 lines beat untestable inheritance. The wheel works either way.
 This closes the last item left over from sidestepping
 `UIPanelScrollFrameTemplate` back in M2.
 
-### Fixing a zone by hand
+### Fixing a line by hand
 
-Add an entry to `tools/seed/overrides.json` keyed by uiMapID with `full` (and
-optionally `short`). Overrides win over scraped text and are the escape hatch for
-a zone whose wiki intro is entirely post-vanilla.
+Rewrite it in the explorer. The pencil beside a line opens its text, and saving
+records a new version in `lore_line` — the corpus lives in the database so that
+the person who notices a bad line is the person who can fix it, without a
+checkout. Editors and admins may do this; it costs nothing, and the rewritten
+line simply becomes stale, joining the regeneration worklist rather than spending
+credits on the spot.
+
+Getting that into the addon is one command and a commit:
+
+```
+make lore-export        # rewrite addon/ZoneLore/Data/*.lua from the database
+git diff addon/ZoneLore/Data/
+make lookup             # only if the text moved and the audio was regenerated
+```
+
+`make lore-check` answers the other direction — whether the committed Lua still
+matches the database.
+
+A re-scrape never takes a hand edit back. `node tools/scrape.mjs` records what
+the wiki says now as a new version, but a line whose live version was edited
+keeps that edit; the wiki text waits in the history for someone to compare and
+promote. That is what makes re-scraping safe to run.
+
+`tools/seed/overrides.json` still exists and still wins over scraped text for
+**zones**, keyed by uiMapID. It is the right place for lore that should survive a
+rebuild of the database from a fresh scrape; the explorer is the right place for
+everything else.
 
 ### Correcting uiMapIDs
 
@@ -1112,7 +1139,11 @@ derived from [warcraft.wiki.gg](https://warcraft.wiki.gg) and is licensed
 **CC BY-SA 4.0**; each entry carries a `source` URL to its page. The narration in
 the sound packs is generated from that text and carries the same license. Any
 distribution must keep that attribution and license the lore data and audio under
-CC BY-SA. Text in `tools/seed/overrides.json` is original and not covered by that.
+CC BY-SA. Text in `tools/seed/overrides.json` is original and not covered by that,
+and so is any entry the data files emit with an empty `source` — a line rewritten
+in the explorer keeps the source of the text it was derived from, because an edit
+of wiki prose is still a derivative of it, so an empty `source` means the entry
+has no wiki ancestor at all.
 
 All three CurseForge projects declare **MIT** in the license dropdown, which is
 the code half of that and the closest single entry the field offers. The wiki's

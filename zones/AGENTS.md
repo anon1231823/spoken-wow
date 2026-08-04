@@ -18,7 +18,9 @@ Scope expansion is expensive here specifically:
 - `make push`, `make pull`, `make db-push`, `make db-pull` are destructive
   (`rsync --delete`, table replacement). Confirm before running one.
 - `addon/ZoneLore/Data/*.lua` and `addon/ZoneLoreAudio/Data/Sounds.lua` are
-  generated. Fix the generator or `tools/seed/overrides.json`, not the output.
+  generated. Fix the source, not the output. For lore text that source is the
+  `lore_line` table -- edit it through the explorer, or re-scrape, then
+  `make lore-export` and commit the diff.
 - Regenerating lore or voicelines because it seemed related to a UI fix is scope
   expansion, not thoroughness.
 
