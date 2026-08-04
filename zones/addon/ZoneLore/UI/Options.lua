@@ -257,6 +257,18 @@ function ZoneLore:SetupOptions()
 			end
 		end)
 
+	y = y + ROW_GAP
+	MakeCheckbox(content, "stopAudioOnRead", "Stop narrating when you open the text",
+		"The Read button on those controls opens the lore window on whatever is "
+			.. "playing. Ticked, it stops the narration too -- and discards anything "
+			.. "queued behind it -- so the button reads \"Read instead\". Unticked, "
+			.. "you read along.",
+		INDENT + INDENT, y, function()
+			if ZoneLore.RefreshPlaybackBar then
+				ZoneLore:RefreshPlaybackBar()
+			end
+		end)
+
 	y = y + ROW_GAP - 6
 	-- A cycle button rather than a dropdown. UIDropDownMenuTemplate works on 11509
 	-- but none of its Initialize plumbing can be checked without launching the

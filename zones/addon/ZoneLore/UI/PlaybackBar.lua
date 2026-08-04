@@ -11,15 +11,22 @@
 
 local ADDON_NAME, ZoneLore = ...
 
--- Three buttons at 54 plus the padding is 178; the bar was 158 with two at 62.
--- Widening by 20 costs less than shrinking the labels until "Report" clips.
-local BAR_WIDTH = 178
-local BAR_HEIGHT = 52
-local BUTTON_WIDTH = 54
+-- Two rows of two rather than one row of four: four buttons in a line make a
+-- widget too wide to park under the minimap. The width is set by the longest
+-- label, "Read instead", which does not fit the 54 the single row used.
+local BAR_WIDTH = 196
+local BAR_HEIGHT = 74
+local BUTTON_WIDTH = 84
 local BUTTON_HEIGHT = 20
+local BUTTON_GAP = 4
 local PADDING = 8
 
-local bar, label, pauseButton, stopButton, reportButton
+-- Measured from the bar's bottom edge. The transport pair sits on the upper row
+-- so Pause and Stop keep the position players already reach for.
+local ROW_ONE_Y = PADDING - 2
+local ROW_TWO_Y = ROW_ONE_Y + BUTTON_HEIGHT + BUTTON_GAP
+
+local bar, label, pauseButton, stopButton, readButton, reportButton
 
 --------------------------------------------------------------------------------
 -- Position
@@ -87,6 +94,7 @@ local function Refresh()
 	label:SetText(ZoneLore:GetAudioLabel(mapID, areaKey))
 	pauseButton:SetText(isPaused and "Play" or "Pause")
 	reportButton:SetTarget(mapID, areaKey)
+	readButton:SetText(ZoneLore:Get("stopAudioOnRead") and "Read instead" or "Read")
 
 	-- With a queue waiting, the useful action is moving on to it rather than
 	-- ending everything. Stop is still there on right-click; see the tooltip.
@@ -132,7 +140,7 @@ local function BuildBar()
 
 	pauseButton = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
 	pauseButton:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
-	pauseButton:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", PADDING - 2, PADDING - 2)
+	pauseButton:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", PADDING - 2, ROW_TWO_Y)
 	pauseButton:SetText("Pause")
 	pauseButton:SetScript("OnClick", function()
 		ZoneLore:TogglePauseLore()
@@ -150,11 +158,9 @@ local function BuildBar()
 	end)
 	pauseButton:SetScript("OnLeave", GameTooltip_Hide)
 
-	-- Centred rather than at the right edge, so the two transport controls stay
-	-- adjacent and in their old order once Report joins the row.
 	stopButton = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
 	stopButton:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
-	stopButton:SetPoint("BOTTOM", bar, "BOTTOM", 0, PADDING - 2)
+	stopButton:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", -(PADDING - 2), ROW_TWO_Y)
 	stopButton:SetText("Stop")
 	-- Right-click has to be asked for explicitly; a button registered for
 	-- LeftButton only never sees it.
@@ -180,12 +186,46 @@ local function BuildBar()
 	end)
 	stopButton:SetScript("OnLeave", GameTooltip_Hide)
 
+	-- Narration outlives both panels, so what is being read aloud may be nowhere on
+	-- screen. This opens the lore window on it, either alongside the audio or in
+	-- place of it -- the player's choice, since some read along and some would
+	-- rather the voice stopped talking over them.
+	readButton = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
+	readButton:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
+	readButton:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", PADDING - 2, ROW_ONE_Y)
+	readButton:SetText("Read")
+	readButton:SetScript("OnClick", function()
+		local mapID, areaKey = ZoneLore:GetNowPlaying()
+		if not mapID then
+			return
+		end
+		-- Opened before stopping: StopLore hides this bar, and reading the state
+		-- after that would be reading it from under our own feet.
+		ZoneLore:ShowLoreFor(mapID, areaKey)
+		if ZoneLore:Get("stopAudioOnRead") then
+			ZoneLore:StopLore()
+		end
+	end)
+	readButton:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+		if ZoneLore:Get("stopAudioOnRead") then
+			GameTooltip:SetText("Read instead")
+			GameTooltip:AddLine("Opens this lore in the window and stops the narration, "
+				.. "discarding anything queued behind it.", 1, 1, 1, true)
+		else
+			GameTooltip:SetText("Read")
+			GameTooltip:AddLine("Opens this lore in the window and keeps playing.", 1, 1, 1, true)
+		end
+		GameTooltip:AddLine("Which one this does is a ZoneLore setting.", 0.7, 0.7, 0.7, true)
+		GameTooltip:Show()
+	end)
+	readButton:SetScript("OnLeave", GameTooltip_Hide)
+
 	-- The reason a report control belongs here and not only on the panels: the
-	-- complaint people actually have is about the line they are hearing right now,
-	-- and narration outlives both panels.
+	-- complaint people actually have is about the line they are hearing right now.
 	reportButton = ZoneLore:CreateReportButton(bar)
 	reportButton:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
-	reportButton:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", -(PADDING - 2), PADDING - 2)
+	reportButton:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", -(PADDING - 2), ROW_ONE_Y)
 
 	ZoneLore.playbackBar = bar
 end

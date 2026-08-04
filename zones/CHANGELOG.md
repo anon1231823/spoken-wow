@@ -3,6 +3,22 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 0.2.2 — 2026-08-04
+
+**Read what you are hearing**
+
+- A **Read** button on the playback controls, opening the lore window on whatever
+  is being narrated. Narration follows you out of the zone it started in, so the
+  words behind a voice you want to reread were often nowhere on screen; finding
+  them meant hunting the entry down by name.
+- A setting decides whether it stops the narration as well — unticked, the voice
+  keeps going and you read along; ticked, the button becomes **Read instead** and
+  clicking it leaves you with the text alone. Find it under Narration.
+- The controls are now two rows of two rather than one row of three, to fit the
+  new button without becoming too wide to sit under the minimap.
+
+Sound packs are unchanged — any 0.x pack works with this release.
+
 ## 0.2.1 — 2026-08-02
 
 **Reporting a bad line is now a button press**
