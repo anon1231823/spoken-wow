@@ -47,6 +47,12 @@ checksum() {
     md5 -q "$1"
   fi
 }
+export -f checksum
+
+# libmp3lame is single-threaded, so the corpus encodes as fast as there are cores
+# to put ffmpeg processes on. Override with JOBS=1 to get the old serial order
+# back when a failing encode needs readable output.
+JOBS="${JOBS:-$( (command -v nproc >/dev/null 2>&1 && nproc) || sysctl -n hw.ncpu 2>/dev/null || echo 4 )}"
 
 # tier -> folder name, bitrate, title. The source tree is already the high tier,
 # so that one is copied rather than transcoded, and it keeps the unqualified name:
@@ -151,51 +157,74 @@ for tier in "${tiers[@]}"; do
   else
     cache="$CACHE_ROOT/$bitrate"
     mkdir -p "$cache"
-    used="$(mktemp)"
-    hits=0
-    encoded=0
 
-    done_n=0
+    # Three passes rather than one loop, because only the middle one is expensive
+    # and only it is worth spreading over the cores: checksum every master to
+    # learn its cache key, encode the keys that are missing, then place them.
+    plan="$(mktemp)"
+    find "$SOUNDS" -name '*.mp3' -print0 \
+      | xargs -0 -P "$JOBS" -n 1 bash -c 'printf "%s\t%s\n" "$(checksum "$1")" "$1"' _ \
+      >"$plan"
 
-    # Minutes of ffmpeg with nothing on stdout is indistinguishable from a hang.
-    # On a terminal the count is rewritten in place; piped to a file or a CI log,
-    # \r would produce one unreadable line, so there it is a line every 100.
-    progress() {
-      if [[ -t 1 ]]; then
-        printf '\r  %4d/%-4d  %d encoded, %d reused' "$done_n" "$count" "$encoded" "$hits"
-      elif (( done_n % 100 == 0 || done_n == count )); then
-        echo "  $done_n/$count  $encoded encoded, $hits reused"
-      fi
-    }
+    # Deduplicated, because two identical masters share a key and must not become
+    # two workers writing the same cache entry.
+    todo="$(mktemp)"
+    sort -u -t"$(printf '\t')" -k1,1 "$plan" | while IFS=$'\t' read -r key file; do
+      [[ -f "$cache/$key.mp3" ]] || printf '%s\t%s\n' "$key" "$file"
+    done >"$todo"
 
-    echo "encoding $count files to ${bitrate}k mono (cache: $cache)"
-    while IFS= read -r file; do
-      rel="${file#"$SOUNDS"/}"
-      out="$staging/$folder/Sounds/$rel"
-      mkdir -p "$(dirname "$out")"
+    encoded="$(wc -l <"$todo" | tr -d ' ')"
+    hits=$((count - encoded))
 
-      key="$(checksum "$file")"
-      cached="$cache/$key.mp3"
-      echo "$key.mp3" >>"$used"
-
-      if [[ -f "$cached" ]]; then
-        hits=$((hits + 1))
-      else
+    if (( encoded > 0 )); then
+      # Minutes of ffmpeg with nothing on stdout is indistinguishable from a hang.
+      # The count has to come from a file rather than a variable: each worker is
+      # its own process, so an incremented shell variable would die with it.
+      progress_file="$(mktemp)"
+      export CACHE="$cache" BITRATE="$bitrate" PROGRESS="$progress_file" TOTAL="$encoded"
+      encode_one() {
         # Via .part and mv, so an interrupted run cannot leave a truncated file
-        # under a name that claims to be a complete encode of that checksum.
+        # under a name that claims to be a complete encode of that checksum. The
+        # pid is in there too, so a second copy of this script running against the
+        # same cache cannot land in the other's scratch file.
         # -f mp3 is required with it: ffmpeg picks the muxer from the extension,
         # and ".part" is not one it knows.
-        ffmpeg -nostdin -loglevel error -f mp3 -i "$file" \
-          -codec:a libmp3lame -b:a "${bitrate}k" -ac 1 -f mp3 "$cached.part"
-        mv "$cached.part" "$cached"
-        encoded=$((encoded + 1))
-      fi
+        local part="$CACHE/$2.$$.part"
+        ffmpeg -nostdin -loglevel error -f mp3 -i "$1" \
+          -codec:a libmp3lame -b:a "${BITRATE}k" -ac 1 -f mp3 "$part"
+        mv "$part" "$CACHE/$2.mp3"
 
-      cp "$cached" "$out"
-      done_n=$((done_n + 1))
-      progress
-    done < <(find "$SOUNDS" -name '*.mp3')
-    [[ -t 1 ]] && printf '\n'
+        # One byte appended per finished file; short appends to O_APPEND do not
+        # interleave, so the size is the count.
+        printf '.' >>"$PROGRESS"
+        local n
+        n="$(wc -c <"$PROGRESS" | tr -d ' ')"
+        # On a terminal the count is rewritten in place; piped to a file or a CI
+        # log, \r would produce one unreadable line, so there it is every 100.
+        if [[ -t 1 ]]; then
+          printf '\r  %4d/%-4d encoded' "$n" "$TOTAL"
+        elif (( n % 100 == 0 || n == TOTAL )); then
+          echo "  $n/$TOTAL encoded"
+        fi
+      }
+      export -f encode_one
+
+      echo "encoding $encoded files to ${bitrate}k mono across $JOBS jobs (cache: $cache)"
+      echo "  $hits of $count already cached"
+      tr '\t\n' '\0\0' <"$todo" \
+        | xargs -0 -P "$JOBS" -n 2 bash -c 'encode_one "$1" "$0"'
+      [[ -t 1 ]] && printf '\n'
+      rm -f "$progress_file"
+    else
+      echo "all $count files already cached at ${bitrate}k ($cache)"
+    fi
+
+    # Directories first in one pass, so placing the clips is a flat run of cp
+    # rather than 1353 mkdir processes.
+    rsync -a -f'+ */' -f'- *' "$SOUNDS/" "$staging/$folder/Sounds/"
+    while IFS=$'\t' read -r key file; do
+      cp "$cache/$key.mp3" "$staging/$folder/Sounds/${file#"$SOUNDS"/}"
+    done <"$plan"
 
     # Entries for masters that have since been re-cut or deleted. Without this the
     # cache keeps every superseded encode forever, which is what audio-history/ is
@@ -207,8 +236,8 @@ for tier in "${tiers[@]}"; do
       pruned=$((pruned + 1))
     done < <(comm -23 \
       <(find "$cache" -name '*.mp3' -exec basename {} \; | sort) \
-      <(sort -u "$used") || true)
-    rm -f "$used"
+      <(cut -f1 "$plan" | sed 's/$/.mp3/' | sort -u) || true)
+    rm -f "$plan" "$todo"
 
     echo "  $hits reused, $encoded encoded, $pruned superseded entries dropped"
   fi
