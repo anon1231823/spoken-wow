@@ -178,14 +178,33 @@ for target in "${targets[@]}"; do
 
   # --progress-bar because the packs are hundreds of megabytes and a silent curl
   # for six minutes is indistinguishable from a hang.
-  response="$(curl -fsS --progress-bar \
+  #
+  # Deliberately not -f: on a rejection the API explains itself in the response
+  # body, and -f discards exactly that, leaving "curl: (56) error 400" as the only
+  # evidence of a release that will not go out. The status code is appended on its
+  # own line instead, and split back off below.
+  #
+  # --form-string for the metadata, never -F: -F reads `;` in a value as the start
+  # of a `;type=` parameter and silently truncates there, so a changelog with a
+  # semicolon in it arrives as invalid JSON and the API rejects the whole release.
+  # The file part stays -F, which is what makes @ mean "read this file".
+  response="$(curl -sS --progress-bar -w '\n%{http_code}' \
     -H "X-Api-Token: $CURSEFORGE_TOKEN" \
-    -F "metadata=$metadata" \
+    --form-string "metadata=$metadata" \
     -F "file=@$zip_path" \
     "$API/projects/$project/upload-file")" || {
-      echo "error: upload failed for $target" >&2
+      echo "error: could not reach CurseForge for $target" >&2
       exit 1
     }
+
+  status="${response##*$'\n'}"
+  response="${response%$'\n'*}"
+
+  if [[ "$status" != 2* ]]; then
+    echo "error: upload failed for $target -- HTTP $status" >&2
+    echo "$response" >&2
+    exit 1
+  fi
 
   file_id="$(node -e 'process.stdout.write(String(JSON.parse(process.argv[1]).id ?? "?"))' "$response")"
   echo "  uploaded -- file id $file_id"
