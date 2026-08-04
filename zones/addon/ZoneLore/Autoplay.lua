@@ -10,8 +10,16 @@
 --     answer to that is a guess. The client already knows, exactly, and remembers
 --     per character across sessions for free.
 --
--- So there is no per-character bookkeeping here. The game fires a discovery once
--- and never again, which is precisely the semantics this feature wanted.
+-- The game fires a discovery once and never again, which is precisely the
+-- semantics this feature wanted.
+--
+-- The cost of leaning on it is that a character who explored Azeroth before
+-- installing ZoneLore already spent every discovery it will ever get, and so is
+-- narrated nothing at all. The `autoplayExplored` option answers that by keeping
+-- the record here instead -- see "Per-character record" below -- and narrating on
+-- zone change rather than on discovery. It is off by default, and on a fresh
+-- character it changes nothing observable: the discovery message still arrives
+-- first and marks the area heard, leaving the override with nothing to say.
 
 local ADDON_NAME, ZoneLore = ...
 
@@ -204,6 +212,112 @@ local function Enqueue(mapID, areaKey)
 end
 
 --------------------------------------------------------------------------------
+-- Per-character record
+--------------------------------------------------------------------------------
+--
+-- What this character has already been narrated. Only `autoplayExplored` reads it;
+-- everything writes it, because an area heard from the map panel is still an area
+-- the player has heard.
+--
+-- Marking happens when playback starts rather than when an area is queued. The
+-- queue holds three, so riding across an explored Stranglethorn drops most of what
+-- it queues; marking on entry would spend those areas on silence and the player
+-- would never get them back. Marking on playback leaves them eligible, at the price
+-- of a place passed through weeks ago narrating late.
+
+local function CharDB()
+	if type(ZoneLoreCharDB) ~= "table" then
+		ZoneLoreCharDB = {}
+	end
+	return ZoneLoreCharDB
+end
+
+-- String keys throughout, including for zones, so the two kinds cannot collide and
+-- the saved variable reads the same way for both.
+local function HeardKey(mapID, areaKey)
+	if areaKey then
+		return mapID .. "/" .. areaKey
+	end
+	return tostring(mapID)
+end
+
+local function HeardSet()
+	local db = CharDB()
+	if type(db.heard) ~= "table" then
+		db.heard = {}
+	end
+	return db.heard
+end
+
+function ZoneLore:HasHeard(mapID, areaKey)
+	if not mapID then
+		return false
+	end
+	return HeardSet()[HeardKey(mapID, areaKey)] == true
+end
+
+-- Called by ZoneLore:PlayLore once a clip is confirmed started, whatever asked for
+-- it. That is what keeps a discovery and a zone change landing together from
+-- narrating the same area twice.
+function ZoneLore:MarkHeard(mapID, areaKey)
+	if not mapID then
+		return
+	end
+	HeardSet()[HeardKey(mapID, areaKey)] = true
+end
+
+function ZoneLore:HeardCount()
+	local count = 0
+	for _ in pairs(HeardSet()) do
+		count = count + 1
+	end
+	return count
+end
+
+--------------------------------------------------------------------------------
+-- Narrating what the client already considers explored
+--------------------------------------------------------------------------------
+--
+-- Zone changes, not discoveries. Core dispatches these from ZONE_CHANGED,
+-- ZONE_CHANGED_INDOORS and ZONE_CHANGED_NEW_AREA, which between them cover subzone
+-- transitions as well as zone ones -- and unlike a discovery they fire every time,
+-- which is exactly why the record above has to exist.
+
+local function NarrateUnheard()
+	if not ZoneLore:Get("autoplayExplored") then
+		return
+	end
+	if not ZoneLore:Get("autoplay") or not ZoneLore:IsVoiceEnabled() then
+		return
+	end
+
+	local _, mapID = ZoneLore:GetLoreWithFallback(ZoneLore:GetPlayerMapID())
+	if not mapID then
+		return
+	end
+
+	-- The zone first: entering a new zone at one of its subzones leaves both
+	-- unheard, and the wider piece is the one that sets up the other.
+	if not ZoneLore:HasHeard(mapID, nil) and ZoneLore:GetLore(mapID) then
+		Enqueue(mapID, nil)
+	end
+
+	if not ZoneLore:Get("autoplaySubzones") then
+		return
+	end
+
+	local subZone = GetSubZoneText()
+	if not subZone or subZone == "" then
+		return
+	end
+
+	local entry, key = ZoneLore:GetSubzoneLore(mapID, subZone)
+	if entry and key and not ZoneLore:HasHeard(mapID, key) then
+		Enqueue(mapID, key)
+	end
+end
+
+--------------------------------------------------------------------------------
 -- The one discovery the client never announces
 --------------------------------------------------------------------------------
 --
@@ -217,13 +331,6 @@ end
 -- only place left that guesses at a first visit rather than being told about one.
 
 local LOGIN_SEED_DELAY = 2
-
-local function CharDB()
-	if type(ZoneLoreCharDB) ~= "table" then
-		ZoneLoreCharDB = {}
-	end
-	return ZoneLoreCharDB
-end
 
 local function SeedLoginArea()
 	local db = CharDB()
@@ -259,9 +366,13 @@ local function SeedLoginArea()
 	end
 end
 
--- Lets the greeting be tested without rolling another character.
-function ZoneLore:ForgetGreeting()
-	CharDB().greeted = nil
+-- Everything this character is remembered for: the greeting it has had, and the
+-- areas it has been narrated. Lets both be tested without rolling another
+-- character, and lets a player hear the lot again.
+function ZoneLore:ForgetAutoplayHistory()
+	local db = CharDB()
+	db.greeted = nil
+	db.heard = nil
 end
 
 --------------------------------------------------------------------------------
@@ -376,12 +487,20 @@ function ZoneLore:SetupAutoplay()
 	end)
 
 	self:OnAudioChanged(Drain)
+	self:OnZoneChanged(NarrateUnheard)
 	self.autoplayFrame = frame
 
 	-- Delayed because GetSubZoneText is not reliably populated the instant the
 	-- world finishes loading. The cinematic needs no handling of its own: the
 	-- greeting queues immediately and CanPlayNow holds it until the intro ends.
-	C_Timer.After(LOGIN_SEED_DELAY, SeedLoginArea)
+	C_Timer.After(LOGIN_SEED_DELAY, function()
+		SeedLoginArea()
+		-- Logging in is not a zone change, so without this a player who logs out
+		-- and back in somewhere unheard stands there in silence until they walk
+		-- into the next subzone. The greeting runs first and Enqueue refuses a
+		-- duplicate, so the spawn area cannot end up queued by both.
+		NarrateUnheard()
+	end)
 end
 
 -- Reports whether the client defined the strings this feature is built on, so a
@@ -397,4 +516,11 @@ function ZoneLore:DescribeAutoplay()
 	self:Print("autoplay %s, matching %d discovery message form(s); subzones %s",
 		self:Get("autoplay") and "on" or "off", found,
 		self:Get("autoplaySubzones") and "included" or "excluded")
+
+	-- The count distinguishes "the option is doing nothing yet" from "everything
+	-- around here is already marked", which otherwise sound identical: silence.
+	if self:Get("autoplayExplored") then
+		self:Print("already-explored areas included -- %d narrated on this character so far",
+			self:HeardCount())
+	end
 end

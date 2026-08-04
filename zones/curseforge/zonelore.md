@@ -25,7 +25,7 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 - **Hover preview** — point at a subzone for the first lines in a tooltip, without disturbing the panel.
 - **Lore window** — browse zones without opening the map, from the minimap button or `/zl window`.
 - **Narration** — a play button beside the lore, with floating pause/skip/stop controls.
-- **Autoplay** — walking into an area you've never discovered narrates it once, tracked per character.
+- **Autoplay** — walking into an area you've never discovered narrates it once, tracked per character. Already explored the world? A setting narrates those areas too, still once each.
 - **Report a problem** — a Report button on every entry and on the playback controls. The game can't open a browser, so it hands you a short link to that exact line; the page at the other end has the text, the audio and a form.
 
 ## Narration needs a sound pack

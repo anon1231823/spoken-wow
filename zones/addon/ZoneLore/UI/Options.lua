@@ -247,6 +247,14 @@ function ZoneLore:SetupOptions()
 		INDENT + INDENT, y, nil)
 
 	y = y + ROW_GAP
+	MakeCheckbox(content, "autoplayExplored", "Also narrate areas you explored before installing",
+		"The game announces a discovery once per character, ever -- so a character "
+			.. "who already explored Azeroth is never narrated anything. Tick this "
+			.. "and ZoneLore keeps its own record instead, still one clip per area "
+			.. "per character. /zl forget clears it.",
+		INDENT + INDENT, y, nil)
+
+	y = y + ROW_GAP
 	MakeCheckbox(content, "showPlaybackBar", "Show playback controls while narrating",
 		"A small movable Pause/Stop widget below the minimap, so narration can be "
 			.. "stopped without reopening the map. It appears only while a clip is "

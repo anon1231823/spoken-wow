@@ -3,6 +3,23 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 0.2.3 — 2026-08-04
+
+**Narration for characters who already explored**
+
+- Autoplay rides the game's own "Discovered Durotar" message, which fires once per
+  character and never again. On a character who explored Azeroth before installing
+  ZoneLore, all of those fired long ago, so the addon had nothing to say — the
+  people most likely to want the lore heard the least of it.
+- A new setting under Narration, **Also narrate areas you explored before
+  installing**, has ZoneLore keep its own record instead and narrate when you
+  enter an area rather than when the game announces it. Still one clip per area
+  per character; it is off by default, and on a fresh character it changes nothing.
+- `/zl forget` now clears that record along with the login greeting, so a
+  character can hear the whole thing again.
+
+Sound packs are unchanged — any 0.x pack works with this release.
+
 ## 0.2.2 — 2026-08-04
 
 **Read what you are hearing**
