@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { Analytics } from "@/components/Analytics";
 import { BetaBadge } from "@/components/BetaBadge";
 import { BrandMark } from "@/components/BrandMark";
 import { FeedbackLauncher } from "@/components/FeedbackLauncher";
@@ -61,6 +62,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </div>
         </header>
         {children}
+        <Analytics />
       </body>
     </html>
   );
