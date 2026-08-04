@@ -388,6 +388,13 @@ function ZoneLore:PlayLore(mapID, areaKey)
 	token = token + 1
 	current = { handle = handle, mapID = mapID, areaKey = areaKey, token = token }
 
+	-- Recorded here rather than where autoplay queues things, so that every route
+	-- to a clip counts -- a discovery, a zone change, or the player clicking Play.
+	-- Only the autoplayExplored option reads it; see Autoplay.lua.
+	if self.MarkHeard then
+		self:MarkHeard(mapID, areaKey)
+	end
+
 	-- Reset the button when the clip runs out. The client fires no event for this,
 	-- so a recorded duration is the only signal; a clip of unknown length would stay
 	-- in Stop state until the player clicks it or something else interrupts.

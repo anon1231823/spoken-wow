@@ -35,6 +35,10 @@ local defaults = {
 	showPlaybackBar = true,
 	autoplay = true,
 	autoplaySubzones = true,
+	-- Off, because it replaces the client's own record of what a character has
+	-- discovered with one ZoneLore keeps itself. Only a character who explored
+	-- before installing the addon needs that; see Autoplay.lua.
+	autoplayExplored = false,
 	-- Off, so Read means "read along". Stopping discards the queue as well, which
 	-- is not something to do to a player who only wanted to see the words.
 	stopAudioOnRead = false,
@@ -616,7 +620,7 @@ local function CmdHelp()
 	ZoneLore:Print("  /zl autoplay   -- toggle narrating areas as you discover them")
 	ZoneLore:Print("  /zl audio      -- list sound packs, or switch with /zl audio <name>")
 	ZoneLore:Print("  /zl discover   -- pretend to discover an area (dev)")
-	ZoneLore:Print("  /zl forget     -- replay the login greeting on next login (dev)")
+	ZoneLore:Print("  /zl forget     -- forget what this character has been narrated")
 	ZoneLore:Print("  /zl bar        -- move the playback controls back below the minimap")
 	ZoneLore:Print("  /zl minimap    -- show or hide the minimap button")
 	ZoneLore:Print("  /zl debug      -- report area names on map click")
@@ -680,9 +684,10 @@ SlashCmdList["ZONELORE"] = function(msg)
 		end
 		ZoneLore:Print("autoplay %s", enabled and "enabled" or "disabled")
 	elseif cmd == "forget" then
-		if ZoneLore.ForgetGreeting then
-			ZoneLore:ForgetGreeting()
-			ZoneLore:Print("greeting reset -- log out and back in to hear it again")
+		if ZoneLore.ForgetAutoplayHistory then
+			ZoneLore:ForgetAutoplayHistory()
+			ZoneLore:Print("this character's narration history is cleared -- the "
+				.. "greeting returns on next login, and every area counts as unheard again")
 		end
 	elseif cmd == "discover" then
 		-- Simulates a discovery, because the real one happens once per character
