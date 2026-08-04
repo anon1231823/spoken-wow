@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { FeedbackDialog, type FeedbackTarget } from "@/components/FeedbackDialog";
 import { LineRow, type RowState } from "@/components/LineRow";
+import { LoreDialog } from "@/components/LoreDialog";
 import { NoteDialog } from "@/components/NoteDialog";
 import { Player } from "@/components/Player";
 import { RegenerateDialog } from "@/components/RegenerateDialog";
@@ -60,6 +61,11 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // judged, moving the next one under the key you are about to press again.
   const [flagged, setFlagged] = useState<Record<string, LineFlag | null>>({});
   const [noteFor, setNoteFor] = useState<ResultLine | null>(null);
+  const [editFor, setEditFor] = useState<ResultLine | null>(null);
+  // Text rewritten since this page was fetched, overlaid like `flagged` and for the same
+  // reason: re-running the search would reorder the table under the cursor, and with
+  // ?state=stale the line just edited would vanish as it was saved.
+  const [rewritten, setRewritten] = useState<Record<string, string>>({});
   const [reportFor, setReportFor] = useState<FeedbackTarget | null>(null);
   // One expansion at a time, mirroring `current`: the panel is a paragraph of prose to
   // read, and a table with six of them open is no longer a table.
@@ -200,11 +206,25 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     [flagged],
   );
 
-  // The fetched row, with any judgement made since it was fetched laid over the top.
+  // The fetched row, with any judgement or rewrite made since it was fetched laid over
+  // the top. A rewritten line is stale by definition -- the text no longer hashes to what
+  // was spoken -- so the state moves with the text rather than waiting for a refetch.
   const withFlag = useCallback(
-    (line: ResultLine): ResultLine =>
-      line.id in flagged ? { ...line, flag: flagged[line.id] } : line,
-    [flagged],
+    (line: ResultLine): ResultLine => {
+      let out = line;
+      if (line.id in flagged) out = { ...out, flag: flagged[line.id] };
+      if (line.id in rewritten) {
+        const text = rewritten[line.id];
+        out = {
+          ...out,
+          text,
+          chars: text.length,
+          state: out.state === "missing" ? "missing" : "stale",
+        };
+      }
+      return out;
+    },
+    [flagged, rewritten],
   );
 
   //----------------------------------------------------------------------------
@@ -538,6 +558,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
                 onNote={(l) => setNoteFor(withFlag(l))}
                 onReport={setReportFor}
                 onToggleExpand={(l) => setExpanded((open) => (open === l.id ? null : l.id))}
+                onEditText={(l) => setEditFor(withFlag(l))}
                 onRegenerate={regenerateOne}
                 onRestore={restore}
               />
@@ -591,6 +612,12 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           setFlag(line, line.flag?.status ?? "bad", note);
           setNoteFor(null);
         }}
+      />
+
+      <LoreDialog
+        line={editFor}
+        onClose={() => setEditFor(null)}
+        onSaved={(line, full) => setRewritten((current) => ({ ...current, [line.id]: full }))}
       />
 
       <FeedbackDialog target={reportFor} onClose={() => setReportFor(null)} />

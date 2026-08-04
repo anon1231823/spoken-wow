@@ -8,6 +8,7 @@ import {
   Loader2,
   MessageSquare,
   MessageSquarePlus,
+  Pencil,
   RefreshCw,
   RotateCcw,
   RotateCw,
@@ -46,6 +47,7 @@ type Props = {
   onNote: (line: ResultLine) => void;
   onReport: (line: ResultLine) => void;
   onToggleExpand: (line: ResultLine) => void;
+  onEditText: (line: ResultLine) => void;
   onRegenerate: (line: ResultLine) => void;
   onRestore: (line: ResultLine) => void;
 };
@@ -79,6 +81,7 @@ export function LineRow({
   onNote,
   onReport,
   onToggleExpand,
+  onEditText,
   onRegenerate,
   onRestore,
 }: Props) {
@@ -196,6 +199,21 @@ export function LineRow({
             >
               <MessageSquarePlus size={11} />
             </button>
+
+            {/* Sits with the other per-line judgements rather than in the Audio column:
+                rewriting the prose is not an audio action, and it is free. It is gated on
+                canRegenerate because the edit is what a later regeneration would speak,
+                and /api/lore holds the same line. */}
+            {canRegenerate && (
+              <button
+                type="button"
+                onClick={() => onEditText(line)}
+                title="Rewrite this line's text"
+                className="rounded px-0.5 text-xs text-faint/40 hover:text-fg"
+              >
+                <Pencil size={11} />
+              </button>
+            )}
 
             {/* The count is public; the bodies are not. So everyone sees how many open
                 reports a line carries -- the same argument the `bad` badge above makes
