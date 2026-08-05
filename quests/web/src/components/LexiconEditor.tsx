@@ -281,6 +281,27 @@ function Editor({
     }
   }, [draft, query, ok, editing, pinned]);
 
+  /**
+   * The rows to draw: what the filter shows, with the last removal still standing in place.
+   *
+   * The gap an entry left is where someone looks for it, so the undo is a row of the same
+   * height where the row was, rather than a message under the table that moves everything
+   * between here and there. It ignores the filter and the search box - a tombstone that
+   * matched neither would vanish along with the offer to bring the entry back.
+   */
+  const rows = useMemo(() => {
+    const entries = shown.map((row) => ({ kind: "entry" as const, ...row }));
+    if (!removed) return entries;
+
+    const at = entries.findIndex(
+      (row) => COLLATOR.compare(row.entry.grapheme, removed.entry.grapheme) > 0,
+    );
+    const tombstone = { kind: "tombstone" as const, entry: removed.entry, index: -1 };
+    return at === -1
+      ? [...entries, tombstone]
+      : [...entries.slice(0, at), tombstone, ...entries.slice(at)];
+  }, [shown, removed]);
+
   const checks = draft.filter((entry) => entry.confidence === "check").length;
 
   function patch(target: number, change: Partial<LexiconEntry>) {
@@ -322,6 +343,9 @@ function Editor({
     openRow(0, entry);
     setQuery("");
     setOk("all");
+    // Prepending shifts every index by one, and `removed.index` is a position in the draft:
+    // an undo taken afterwards would put the entry back one place from where it left.
+    setRemoved(null);
   }
 
   /**
@@ -453,51 +477,37 @@ function Editor({
           <span className="shrink-0">Edit · find · hear · re-roll</span>
         </div>
 
-        {shown.length === 0 && (
+        {rows.length === 0 && (
           <p className="text-muted-foreground px-4 py-8 text-center text-sm">
             Nothing matches that filter.
           </p>
         )}
 
-        {shown.map(({ entry, index }) => (
-          <Row
-            key={index}
-            entry={entry}
-            index={index}
-            editing={editing === index}
-            cached={cache[entry.grapheme] ?? EMPTY_CACHE}
-            preview={preview}
-            onChange={(change) => patch(index, change)}
-            onOpen={() => openRow(index, entry)}
-            onClose={() => setEditing(null)}
-            onRemove={() => remove(index)}
-            onConfirm={(confirmed) => patch(index, { confidence: confirmed ? "high" : "check" })}
-          />
-        ))}
+        {rows.map(({ kind, entry, index }) =>
+          kind === "tombstone" ? (
+            <Tombstone
+              key="tombstone"
+              entry={entry}
+              onUndo={undo}
+              onDismiss={() => setRemoved(null)}
+            />
+          ) : (
+            <Row
+              key={index}
+              entry={entry}
+              index={index}
+              editing={editing === index}
+              cached={cache[entry.grapheme] ?? EMPTY_CACHE}
+              preview={preview}
+              onChange={(change) => patch(index, change)}
+              onOpen={() => openRow(index, entry)}
+              onClose={() => setEditing(null)}
+              onRemove={() => remove(index)}
+              onConfirm={(confirmed) => patch(index, { confidence: confirmed ? "high" : "check" })}
+            />
+          ),
+        )}
       </div>
-
-      {removed && (
-        <div
-          role="status"
-          className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs"
-        >
-          <span>
-            Removed <strong className="text-foreground">{removed.entry.grapheme || "a new entry"}</strong>.
-            Nothing is gone until you save.
-          </span>
-          <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={undo}>
-            <Undo2 className="size-3" aria-hidden /> Undo
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 px-2 text-xs"
-            onClick={() => setRemoved(null)}
-          >
-            Dismiss
-          </Button>
-        </div>
-      )}
 
       {error && (
         <div
@@ -652,6 +662,43 @@ function Banner({ tone, children }: { tone: "warn" | "error"; children: React.Re
       )}
     >
       {children}
+    </div>
+  );
+}
+
+/**
+ * Where an entry was, until it is put back or the save makes the removal real.
+ *
+ * Built to the height of a row rather than to its own: the list is scanned by position, and a
+ * shorter placeholder would slide every row below it up the moment something was removed and
+ * back down the moment it was restored.
+ */
+function Tombstone({
+  entry,
+  onUndo,
+  onDismiss,
+}: {
+  entry: LexiconEntry;
+  onUndo: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      className="bg-destructive/5 text-muted-foreground flex h-10 items-center gap-3 px-3 text-sm"
+    >
+      <span className="truncate">
+        Removed <span className="text-foreground font-medium line-through">{entry.grapheme || "a new entry"}</span>
+        {" — gone once you save."}
+      </span>
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={onUndo}>
+          <Undo2 className="size-3" aria-hidden /> Undo
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onDismiss}>
+          Dismiss
+        </Button>
+      </div>
     </div>
   );
 }
