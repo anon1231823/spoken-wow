@@ -748,21 +748,6 @@ function Row({
       )}
 
       <div className="flex shrink-0 items-center gap-0.5">
-        <Button
-          size="icon"
-          variant="ghost"
-          className={cn("size-6", editing ? "text-primary" : "text-muted-foreground")}
-          title={editing ? "Done editing" : `Edit ${entry.grapheme || "this entry"}`}
-          aria-label={editing ? "Done editing" : `Edit ${entry.grapheme || "this entry"}`}
-          onClick={editing ? onClose : onOpen}
-        >
-          {editing ? (
-            <Check className="size-3" aria-hidden />
-          ) : (
-            <Pencil className="size-3" aria-hidden />
-          )}
-        </Button>
-
         {/* Only while open, so the one irreversible control on the page is never a
             mis-click away from a row somebody is only reading. */}
         {editing && (
@@ -777,6 +762,21 @@ function Row({
             <Trash2 className="size-3" aria-hidden />
           </Button>
         )}
+
+        <Button
+          size="icon"
+          variant="ghost"
+          className={cn("size-6", editing ? "text-primary" : "text-muted-foreground")}
+          title={editing ? "Done editing" : `Edit ${entry.grapheme || "this entry"}`}
+          aria-label={editing ? "Done editing" : `Edit ${entry.grapheme || "this entry"}`}
+          onClick={editing ? onClose : onOpen}
+        >
+          {editing ? (
+            <Check className="size-3" aria-hidden />
+          ) : (
+            <Pencil className="size-3" aria-hidden />
+          )}
+        </Button>
 
         {/* A new tab, deliberately. The editor holds an unsaved draft - navigating away in
             this one would discard every edit made since the last save, which is a steep
