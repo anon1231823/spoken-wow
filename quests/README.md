@@ -254,7 +254,7 @@ before, so a model absent from that list loses nothing.
 **Every upload is read back and counted.** Send N rules, download the dictionary, count the
 lexemes. A mismatch is shown on the page rather than trusted away — the absence of this check
 is why a lexicon that had never applied a single pronunciation reported itself healthy for
-weeks. Saving creates a new dictionary and pins every later request to that exact version.
+weeks.
 
 **Saving does not touch audio already in the store.** Each take records the dictionary version
 and a hash of the text it was spoken with, so a line generated before a fix stays playable and
@@ -269,6 +269,23 @@ time.
 
 The Python CLI sends no dictionary at all — it is the one place the two generators no longer
 produce identical audio.
+
+**One dictionary, one id, updated in place.** `ELEVENLABS_DICTIONARY_ID` names it, and a save
+brings its rules to whatever the lexicon now holds rather than creating a new dictionary. The
+id has to be stable because it is shared: `../wow-lore` narrates a different corpus on the
+same ElevenLabs account, gets the same names wrong, and simply writes this id into its
+`tools/voice/config.json`. Nothing else crosses between the two projects — no database, no
+API, no exported file — and this one is the only place the lexicon is edited.
+
+A save sends *every* rule the lexicon holds and then removes only the strings it no longer
+has. `add-rules` replaces a rule matching the same string, so the upload needs no diff, and
+adding before removing means there is no instant at which a name still in the lexicon has no
+pronunciation. This is why the earlier design — a fresh dictionary per save, to avoid a diff
+whose failure mode is an invisible leftover rule — is no longer worth its cost. Versions stay
+immutable and every request still pins one, so generation already in flight is untouched.
+
+With the id unset the old behaviour returns: a dictionary is created, and its id is logged as
+the value to configure.
 
 #### What the corpus scan found
 
