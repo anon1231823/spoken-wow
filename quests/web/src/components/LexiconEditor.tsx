@@ -30,13 +30,18 @@ const MODE_LABELS: Record<PreviewMode, string> = {
 const EMPTY_CACHE: CacheState = { word: false, sentence: false };
 
 /**
- * Focus a field by its border alone, rather than by the ring Input draws by default.
+ * What every field in an open row shares.
  *
- * A ring is painted outside the border, and these fields sit edge to edge inside a bordered
- * list - so the ring of the first and last one is drawn under its neighbours and reads as a
- * half-missing outline. The border is the whole width of the row, and cannot be clipped.
+ * Focus is the border alone rather than the ring Input draws by default: a ring is painted
+ * outside the border, and these fields sit edge to edge inside a bordered list, so the first
+ * and last one's ring was drawn under its neighbour and read as a half-missing outline.
+ *
+ * The placeholder is fainter than the default because this page is skimmed for what is still
+ * missing: at full muted-foreground weight, "silent G" in an empty note is hard to tell from
+ * a note that says silent G.
  */
-const FOCUS = "focus-visible:ring-0 focus-visible:border-ring";
+const FIELD =
+  "h-7 text-sm placeholder:text-muted-foreground/45 focus-visible:ring-0 focus-visible:border-ring";
 
 type OkFilter = "all" | "yes" | "no";
 
@@ -713,7 +718,7 @@ function Row({
             placeholder="Gnomeregan"
             aria-label="Written"
             title="Exactly as the corpus spells it. Matching ignores case."
-            className={cn("h-7 w-40 shrink-0 text-sm", FOCUS)}
+            className={cn("w-40 shrink-0", FIELD)}
             autoFocus
           />
           <div className="flex w-52 shrink-0 items-center gap-1">
@@ -731,7 +736,7 @@ function Row({
                   onChange={(event) => onChange({ ipa: event.target.value })}
                   placeholder="ˈnoʊmɹəɡæn"
                   aria-label="IPA"
-                  className="placeholder:text-muted-foreground w-full min-w-0 flex-1 bg-transparent outline-none"
+                  className="placeholder:text-muted-foreground/45 w-full min-w-0 flex-1 bg-transparent outline-none"
                 />
                 <span aria-hidden className="text-muted-foreground/60 select-none">
                   /
@@ -744,7 +749,7 @@ function Row({
                 placeholder="nomeregan"
                 aria-label="Respelling"
                 title="Respell it as it should be said — “nomeregan”, not “NOME-reh-gan”."
-                className={cn("h-7 flex-1 text-sm", FOCUS)}
+                className={cn("flex-1", FIELD)}
               />
             )}
             {/* Switching clears the other field rather than keeping it, because an entry
@@ -776,7 +781,7 @@ function Row({
             placeholder="silent G"
             aria-label="Note"
             title="Why this entry exists, or what is disputed about it."
-            className={cn("h-7 flex-1 text-sm", FOCUS)}
+            className={cn("flex-1", FIELD)}
           />
         </div>
       ) : (
