@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Pencil, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Check, Pencil, RefreshCw, Search, Trash2, Undo2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -233,6 +233,10 @@ function Editor({
   // Which side of the OK column to show. "no" is the working view - the entries nobody has
   // confirmed yet are the ones still to be listened to.
   const [ok, setOk] = useState<OkFilter>("all");
+  // The last removal, held so it can be put back. A removed entry is otherwise unrecoverable
+  // until a save - the draft is the only copy of an edit, and a mis-clicked remove would take
+  // the pronunciation with it.
+  const [removed, setRemoved] = useState<{ entry: LexiconEntry; index: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Seeded from the server and kept up to date as previews are rendered, so a re-roll button
@@ -286,8 +290,21 @@ function Editor({
   }
 
   function remove(target: number) {
+    setRemoved({ entry: draft[target], index: target });
     setDraft((current) => current.filter((_, index) => index !== target));
     setEditing(null);
+  }
+
+  // Back where it was, not appended: the stored order is what the saved document keeps, so
+  // restoring to the end would turn an undone mistake into a diff across the whole file.
+  function undo() {
+    if (!removed) return;
+    setDraft((current) => [
+      ...current.slice(0, removed.index),
+      removed.entry,
+      ...current.slice(removed.index),
+    ]);
+    setRemoved(null);
   }
 
   function add(grapheme = "") {
@@ -359,6 +376,9 @@ function Editor({
       setSaved(next);
       setDraft(next.entries);
       setEditing(null);
+      // The removal is in force now, and an undo against a draft it no longer indexes would
+      // put the entry back in the wrong place.
+      setRemoved(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -451,6 +471,29 @@ function Editor({
         ))}
       </div>
 
+      {removed && (
+        <div
+          role="status"
+          className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs"
+        >
+          <span>
+            Removed <strong className="text-foreground">{removed.entry.grapheme || "a new entry"}</strong>.
+            Nothing is gone until you save.
+          </span>
+          <Button size="sm" variant="outline" className="h-6 px-2 text-xs" onClick={undo}>
+            <Undo2 className="size-3" aria-hidden /> Undo
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-xs"
+            onClick={() => setRemoved(null)}
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
+
       {error && (
         <div
           role="alert"
@@ -471,6 +514,7 @@ function Editor({
           onClick={() => {
             setDraft(saved.entries);
             setEditing(null);
+            setRemoved(null);
           }}
         >
           Discard
