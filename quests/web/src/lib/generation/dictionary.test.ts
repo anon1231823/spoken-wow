@@ -8,7 +8,7 @@
  * Needs DATABASE_URL and migrations applied:
  *   docker compose up -d postgres && deploy/bin/migrate.sh "$PWD/web"
  */
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { closeDb, db } = await import("@/lib/db");
 const { currentLocator, readLexicon, resync, sync, writeLexicon } = await import("./dictionary");
@@ -339,5 +339,112 @@ describe("resync", () => {
   it("refuses when there is no lexicon at all", async () => {
     await db().query(`delete from "pronunciation_lexicon" where "id"`);
     expect(await resync(OPTIONS(accepts().fetchImpl))).toMatch(/no saved lexicon/);
+  });
+});
+
+/**
+ * With ELEVENLABS_DICTIONARY_ID set, one dictionary is updated in place forever instead of a
+ * new one being created per save. The id has to stay put because ../wow-lore names it in its
+ * own config and pins versions of it; a save that minted a fresh id would silently strand it
+ * on whatever the rules were the day the id was copied.
+ */
+describe("the pinned dictionary", () => {
+  const PINNED = "dict-shared";
+
+  /**
+   * An ElevenLabs holding `stored` rule strings, recording what it is asked to do.
+   *
+   * The version returned climbs, so a test can tell which call produced the locator that was
+   * saved - the whole point being that the removal, when there is one, is what finishes.
+   */
+  function holding(stored: string[]) {
+    const seen: { endpoint: string; body: unknown }[] = [];
+    let version = 0;
+    let sent = 0;
+
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      const target = String(url);
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+
+      if (target.includes("/download")) return new Response(pls(sent));
+      if (target.endsWith(`/v1/pronunciation-dictionaries/${PINNED}`)) {
+        return new Response(
+          JSON.stringify({
+            id: PINNED,
+            latest_version_id: `ver-${version}`,
+            rules: stored.map((string_to_replace) => ({ string_to_replace })),
+          }),
+        );
+      }
+
+      const endpoint = target.endsWith("/add-rules") ? "add-rules" : "remove-rules";
+      if (endpoint === "add-rules") sent = body.rules.length;
+      seen.push({ endpoint, body });
+      return new Response(JSON.stringify({ id: PINNED, version_id: `ver-${++version}` }));
+    });
+
+    return { fetchImpl: fetchImpl as unknown as typeof globalThis.fetch, seen };
+  }
+
+  beforeEach(() => vi.stubEnv("ELEVENLABS_DICTIONARY_ID", PINNED));
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("keeps the id across saves and never creates a dictionary", async () => {
+    const { fetchImpl, seen } = holding([]);
+    const { lexicon, syncError } = await writeLexicon(ENTRIES, null as unknown as string,
+      OPTIONS(fetchImpl));
+
+    expect(syncError).toBeNull();
+    expect(lexicon.locator?.dictionaryId).toBe(PINNED);
+    expect(seen.map((call) => call.endpoint)).toEqual(["add-rules"]);
+    expect(await currentLocator()).toEqual(lexicon.locator);
+  });
+
+  /**
+   * Add first, remove second. add-rules replaces a rule matching the same string, so sending
+   * everything makes every rule current; removing first would leave a window in which a name
+   * the lexicon still holds has no pronunciation at all.
+   */
+  it("adds every rule, then removes only the strings the lexicon dropped", async () => {
+    const { fetchImpl, seen } = holding(["Gnomeregan", "Ysera", "Nozdormu"]);
+    await writeLexicon(ENTRIES, null as unknown as string, OPTIONS(fetchImpl));
+
+    expect(seen.map((call) => call.endpoint)).toEqual(["add-rules", "remove-rules"]);
+    expect((seen[0].body as { rules: { string_to_replace: string }[] }).rules
+      .map((rule) => rule.string_to_replace)).toContain("Gnomeregan");
+    // Gnomeregan is still in the lexicon, so it must survive; the other two are gone.
+    expect((seen[1].body as { rule_strings: string[] }).rule_strings.sort())
+      .toEqual(["Nozdormu", "Ysera"]);
+  });
+
+  it("issues no removal when nothing was dropped", async () => {
+    const { fetchImpl, seen } = holding(["Gnomeregan"]);
+    await writeLexicon(ENTRIES, null as unknown as string, OPTIONS(fetchImpl));
+
+    expect(seen.map((call) => call.endpoint)).toEqual(["add-rules"]);
+  });
+
+  /**
+   * Without the stored rules there is no way to know which ones the lexicon no longer wants,
+   * and adding anyway would leave rules in force that the editor page cannot show. Failing
+   * before the first write is what keeps the dictionary consistent with the row.
+   */
+  it("refuses to update a dictionary whose current rules it could not read", async () => {
+    const fetchImpl = vi.fn(async (url: string) =>
+      String(url).endsWith(`/v1/pronunciation-dictionaries/${PINNED}`)
+        ? new Response(JSON.stringify({ id: PINNED, latest_version_id: "ver-1" }))
+        : new Response(JSON.stringify({ id: PINNED, version_id: "ver-2" })),
+    ) as unknown as typeof globalThis.fetch;
+
+    await db().query(
+      `update "pronunciation_lexicon"
+          set "dictionaryId" = null, "versionId" = null, "syncedAt" = null where "id"`,
+    );
+    const { lexicon, syncError } = await writeLexicon(ENTRIES, null as unknown as string,
+      OPTIONS(fetchImpl));
+
+    expect(syncError).toMatch(/returned no rules/);
+    expect(lexicon.entries).toEqual(ENTRIES);
+    expect(lexicon.locator).toBeNull();
   });
 });

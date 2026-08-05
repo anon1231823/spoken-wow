@@ -12,18 +12,27 @@
  * been uploaded. Saving does two things that can fail independently, so the row records both
  * the entries and the locator they produced, and readLexicon reports a save that reached
  * Postgres but not ElevenLabs as exactly that rather than as success.
+ *
+ * The dictionary this uploads to is shared with ../wow-lore, which narrates a different
+ * corpus on the same ElevenLabs account and gets the same names wrong. It names the
+ * dictionary by id in tools/voice/config.json and pins a version, so the id has to be
+ * stable across saves - which is what ELEVENLABS_DICTIONARY_ID and the in-place update
+ * below are for. This is the only project that edits the lexicon; wow-lore reads it.
  */
 import { db } from "@/lib/db";
 import {
+  addDictionaryRules,
   countLexemes,
   createPronunciationDictionary,
   downloadPronunciationDictionary,
+  readDictionary,
+  removeDictionaryRules,
   type DictionaryLocator,
   type ElevenLabsOptions,
 } from "@/lib/voices/elevenlabs";
 
 import { graphemeCasings } from "./casings";
-import { toRules, type LexiconEntry } from "./lexicon";
+import { toRules, type DictionaryRule, type LexiconEntry } from "./lexicon";
 
 export type LexiconSync = "synced" | "pending" | "never";
 
@@ -173,6 +182,61 @@ export async function writeLexicon(
 }
 
 /**
+ * Bring the configured dictionary's rules to exactly `rules`, and return the version that is.
+ *
+ * Add first, remove second, and remove only what is genuinely gone. add-rules replaces any
+ * rule matching the same string, so sending the whole lexicon makes every rule in it current
+ * without anything having to work out which ones changed - and at no instant is a rule the
+ * lexicon still holds missing from the dictionary. The reverse order would have one: a
+ * window where a name that is still in the lexicon has no pronunciation.
+ *
+ * The intermediate version between the two calls is harmless whichever way round, because
+ * versions are immutable and every request names one. Generation in flight is pinned to the
+ * version it started with.
+ */
+async function updateDictionary(
+  dictionaryId: string,
+  rules: DictionaryRule[],
+  options: ElevenLabsOptions,
+): Promise<DictionaryLocator> {
+  const stored = await readDictionary(dictionaryId, options);
+
+  const wanted = new Set(rules.map((rule) => rule.string_to_replace));
+  const gone = stored.ruleStrings.filter((string) => !wanted.has(string));
+
+  // The latest version stands in for "nothing to do", which is the case where an admin saves
+  // the lexicon back unchanged: neither call fires and the locator is what it already was.
+  let versionId = stored.latestVersionId;
+  if (rules.length) versionId = await addDictionaryRules(dictionaryId, rules, options);
+  if (gone.length) versionId = await removeDictionaryRules(dictionaryId, gone, options);
+
+  return { dictionaryId, versionId };
+}
+
+/**
+ * Create the dictionary, for the one save that happens before there is an id to update.
+ *
+ * The id is logged because it is the value to put in ELEVENLABS_DICTIONARY_ID and in
+ * wow-lore's tools/voice/config.json. Without it configured, every save creates another
+ * dictionary and no other project can name this one.
+ */
+async function createDictionary(
+  rules: DictionaryRule[],
+  options: ElevenLabsOptions,
+): Promise<DictionaryLocator> {
+  // Dated, because without a configured id a save creates another of these, and the account
+  // list would otherwise be a column of identical names with no way to tell which is live.
+  const name = `wow-voiceover ${new Date().toISOString().slice(0, 19).replace("T", " ")}`;
+  const locator = await createPronunciationDictionary(name, rules, options);
+
+  console.warn(
+    `ELEVENLABS_DICTIONARY_ID is not set, so a new pronunciation dictionary was created: ` +
+      `${locator.dictionaryId}. Set it to that id so later saves update it in place.`,
+  );
+  return locator;
+}
+
+/**
  * Upload the entries and record where they landed. Returns null, or why it failed.
  *
  * The failure is returned rather than thrown because it is not the save failing: the entries
@@ -191,13 +255,14 @@ export async function sync(
     graphemeCasings(entries.filter((e) => !e.alias).map((e) => e.grapheme)),
   );
 
+  const pinned = process.env.ELEVENLABS_DICTIONARY_ID?.trim();
+
   let locator: DictionaryLocator;
   let kept: number | null = null;
   try {
-    // Dated, because a new dictionary is created per save and the account list would
-    // otherwise be a column of identical names with no way to tell which is live.
-    const name = `wow-voiceover ${new Date().toISOString().slice(0, 19).replace("T", " ")}`;
-    locator = await createPronunciationDictionary(name, rules, options);
+    locator = pinned
+      ? await updateDictionary(pinned, rules, options)
+      : await createDictionary(rules, options);
 
     // Read it back rather than trusting the 200. This is the check whose absence let 134
     // phoneme rules upload as 2 and look like success from every surface this app had.

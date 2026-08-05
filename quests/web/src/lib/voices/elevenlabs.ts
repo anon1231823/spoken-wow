@@ -196,14 +196,13 @@ export async function addVoice(
 export type DictionaryLocator = { dictionaryId: string; versionId: string };
 
 /**
- * Upload a set of pronunciation rules and get back the locator for them.
+ * Create a dictionary from a set of rules and get back the locator for them.
  *
- * A fresh dictionary every time, rather than adding and removing rules on the existing one.
- * The alternative is to diff the saved lexicon against the uploaded one and issue add-rules
- * and remove-rules for the difference, which is more requests, more code, and a new way to
- * be wrong - a diff that misses a removal leaves a rule in force that nobody can see on the
- * editor page. Creating one dictionary per save costs an unused dictionary on the account
- * per edit, which is the cheaper of the two mistakes.
+ * This is how a dictionary is brought into existence, not how one is kept up to date. A save
+ * updates the dictionary named by ELEVENLABS_DICTIONARY_ID in place - see updateDictionary -
+ * so that the id stays the same forever and a sibling project can name it in its own config
+ * and keep getting the current rules. This function runs only when no id is configured, and
+ * the id it returns is the one to adopt.
  *
  * The rules are phoneme rules, and phoneme rules are honoured by eleven_v3 and
  * eleven_flash_v2 only. This function does not check the model: the dictionary is worth
@@ -228,6 +227,97 @@ export async function createPronunciationDictionary(
     throw new Error("ElevenLabs accepted the dictionary but returned no id and version");
   }
   return { dictionaryId: body.id, versionId: body.version_id };
+}
+
+/** What a stored dictionary holds right now: its newest version, and the rules in it. */
+export type StoredDictionary = { latestVersionId: string; ruleStrings: string[] };
+
+/**
+ * Read a dictionary's current state by id.
+ *
+ * The `rules` array is what makes an in-place update knowable: it says which strings the
+ * dictionary is matching today, and therefore which of them the lexicon no longer wants.
+ * A response without it is treated as a failure rather than as "no rules", because the
+ * difference between those two is a rule left in force that the editor page cannot show.
+ */
+export async function readDictionary(
+  dictionaryId: string,
+  options: ElevenLabsOptions = {},
+): Promise<StoredDictionary> {
+  const { apiKey, baseUrl, fetchImpl } = config(options);
+
+  const response = await fetchImpl(`${baseUrl}/v1/pronunciation-dictionaries/${dictionaryId}`, {
+    headers: { "xi-api-key": apiKey },
+    cache: "no-store",
+  });
+  if (!response.ok) throw await failure(response, `reading pronunciation dictionary ${dictionaryId}`);
+
+  const body = (await response.json()) as {
+    latest_version_id?: string;
+    rules?: { string_to_replace?: string }[];
+  };
+  if (!body.latest_version_id) {
+    throw new Error(`pronunciation dictionary ${dictionaryId} returned no version id`);
+  }
+  if (!Array.isArray(body.rules)) {
+    throw new Error(
+      `pronunciation dictionary ${dictionaryId} returned no rules, so the rules it no longer ` +
+        "needs cannot be identified; refusing to update it half way",
+    );
+  }
+
+  return {
+    latestVersionId: body.latest_version_id,
+    ruleStrings: body.rules.flatMap((rule) => (rule.string_to_replace ? [rule.string_to_replace] : [])),
+  };
+}
+
+/**
+ * Add rules to an existing dictionary, and return the version that results.
+ *
+ * An upsert, not an append: ElevenLabs replaces any rule already matching the same
+ * `string_to_replace`. That is what lets a save be "send everything the lexicon holds"
+ * rather than a diff, and it is why the id can stay stable without the update needing to
+ * work out which rules changed.
+ */
+export async function addDictionaryRules(
+  dictionaryId: string,
+  rules: unknown[],
+  options: ElevenLabsOptions = {},
+): Promise<string> {
+  return ruleChange(dictionaryId, "add-rules", { rules }, options);
+}
+
+/** Drop rules by the string they match, and return the version that results. */
+export async function removeDictionaryRules(
+  dictionaryId: string,
+  ruleStrings: string[],
+  options: ElevenLabsOptions = {},
+): Promise<string> {
+  return ruleChange(dictionaryId, "remove-rules", { rule_strings: ruleStrings }, options);
+}
+
+async function ruleChange(
+  dictionaryId: string,
+  endpoint: "add-rules" | "remove-rules",
+  body: unknown,
+  options: ElevenLabsOptions,
+): Promise<string> {
+  const { apiKey, baseUrl, fetchImpl } = config(options);
+
+  const response = await fetchImpl(
+    `${baseUrl}/v1/pronunciation-dictionaries/${dictionaryId}/${endpoint}`,
+    {
+      method: "POST",
+      headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!response.ok) throw await failure(response, `${endpoint} on dictionary ${dictionaryId}`);
+
+  const parsed = (await response.json()) as { version_id?: string };
+  if (!parsed.version_id) throw new Error(`${endpoint} returned no version id`);
+  return parsed.version_id;
 }
 
 /**

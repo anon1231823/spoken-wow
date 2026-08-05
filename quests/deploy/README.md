@@ -65,7 +65,7 @@ The app reads three things from disk. In production all come from env vars set i
 
 All five exist as overrides in `web/src/lib/paths.ts` — no app code changed for this.
 
-Four more come from `shared/app.env`, which `ecosystem.config.js` parses and merges into
+Five more come from `shared/app.env`, which `ecosystem.config.js` parses and merges into
 the pm2 environment. They are secrets, and that file is the only place they exist:
 
 | Env var | Value | Notes |
@@ -74,6 +74,7 @@ the pm2 environment. They are secrets, and that file is the only place they exis
 | `BETTER_AUTH_SECRET` | 32 random bytes | signs session cookies; rotating it signs everyone out |
 | `BETTER_AUTH_URL` | `https://voiceover.rusty.one` | **must match the public origin exactly** |
 | `ELEVENLABS_API_KEY` | `sk_…` | reads the voice roster, creates clones, and generates every voiceline. `/voices` reports the failure and still renders without it; Regenerate is refused with the reason |
+| `ELEVENLABS_DICTIONARY_ID` | `Elx0…` | the pronunciation dictionary `/lexicon` updates in place. Shared with wow-lore, which names the same id, so **it must not change**: unset, every save creates a new dictionary and that project stays on an old one |
 
 `BETTER_AUTH_URL` is the one worth double-checking. Better Auth validates the `Origin`
 header of every state-changing request against it, so a stale or mismatched value does not
