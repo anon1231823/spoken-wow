@@ -50,6 +50,7 @@ function parseArgs(argv) {
     subzonesOnly: false,
     missing: false,
     stale: false,
+    dictionaryDrift: false,
     olderThan: null,
     all: false,
     limit: null,
@@ -74,6 +75,7 @@ function parseArgs(argv) {
       case "--subzones-only": args.subzonesOnly = true; break;
       case "--missing": args.missing = true; break;
       case "--stale": args.stale = true; break;
+      case "--dictionary-drift": args.dictionaryDrift = true; break;
       case "--older-than": args.olderThan = next(); break;
       case "--all": args.all = true; break;
       case "--limit": args.limit = Number(next()); break;
@@ -98,6 +100,10 @@ Selectors (combine freely; a zone selects its subzones too):
   --subzones-only      subzone entries only
   --missing            no audio yet
   --stale              spoken text changed since it was generated
+  --dictionary-drift   spoken with a pronunciation dictionary other than the
+                       one config.json pins. Never implied by --stale: a
+                       lexicon change does not alter the text, so these lines
+                       are only worth re-cutting deliberately
   --older-than <date>  generated before this ISO date
   --all                every entry
   --limit <n>          cap the selection
@@ -153,7 +159,25 @@ function normaliseName(name) {
   return name.toLowerCase().replace(/^the\s+/, "").replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-export function select(catalogue, args, manifest) {
+// Whether a line's audio was made with a pronunciation dictionary other than the
+// one config.json now pins.
+//
+// This is the only way a lexicon change is visible here. The lexicon lives in
+// ../wow-voiceover and reaches this project as dictionary rules, which the model
+// applies to text this project never rewrites -- so the spoken text, and the hash
+// --stale compares, do not move when a pronunciation is fixed.
+//
+// False when no version is pinned, because "unknown" and "changed" are not the
+// same thing and only the second is worth spending credits on.
+export function driftsFromDictionary(record, config) {
+  if (!record || !config?.dictionaryId || !config?.dictionaryVersionId) return false;
+  return (
+    record.dictionaryId !== config.dictionaryId ||
+    record.dictionaryVersionId !== config.dictionaryVersionId
+  );
+}
+
+export function select(catalogue, args, manifest, config = {}) {
   let out = catalogue;
 
   if (args.zones.length) out = out.filter((e) => matchesZone(e, args.zones));
@@ -163,6 +187,12 @@ export function select(catalogue, args, manifest) {
   const conditions = [];
   if (args.missing) conditions.push((e) => !manifest[e.id]);
   if (args.stale) conditions.push((e) => manifest[e.id] && manifest[e.id].textHash !== e.hash);
+  // Never implied by --stale, and never automatic. Adopting a shared dictionary
+  // drifts all 1353 lines at once, and re-cutting them is a four-figure credit
+  // decision that belongs to whoever is reading the number, not to this flag.
+  if (args.dictionaryDrift) {
+    conditions.push((e) => driftsFromDictionary(manifest[e.id], config));
+  }
   if (args.olderThan) {
     const cutoff = Date.parse(args.olderThan);
     if (Number.isNaN(cutoff)) throw new Error(`--older-than: cannot parse "${args.olderThan}"`);
@@ -273,6 +303,17 @@ function summarise(selected, manifest, label, config) {
   );
   console.log(`  audio      : ~${Math.round(chars / charsPerSecond / 60)} minutes at ${charsPerSecond.toFixed(1)} chars/second`);
   console.log(`  state      : ${missing} missing, ${stale} stale, ${selected.length - missing - stale} already current`);
+
+  // Reported, never acted on. A dictionary change does not move the text hash, so
+  // none of these lines count as stale and none of them are selected unless
+  // --dictionary-drift asks for them by name.
+  const drifted = selected.filter((e) => driftsFromDictionary(manifest[e.id], config)).length;
+  if (drifted) {
+    console.log(
+      `  dictionary : ${drifted} spoken with an older pronunciation dictionary ` +
+        "(--dictionary-drift selects them)",
+    );
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -444,7 +485,7 @@ async function main() {
   const manifest = await loadManifest();
   const anySelector =
     args.all || args.zones.length || args.zonesOnly || args.subzonesOnly ||
-    args.missing || args.stale || args.olderThan;
+    args.missing || args.stale || args.dictionaryDrift || args.olderThan;
 
   if (!anySelector) {
     usage();
@@ -452,7 +493,14 @@ async function main() {
     process.exit(1);
   }
 
-  const selected = select(catalogue, args, manifest);
+  // Only for the flag that cannot work without it. Every other dry run stays
+  // offline and needs no key, which is what makes the cost of a run checkable
+  // from a laptop with no credentials.
+  if (args.dictionaryDrift && config.dictionaryId && !config.dictionaryVersionId) {
+    await resolveDictionary(config, await apiKey());
+  }
+
+  const selected = select(catalogue, args, manifest, config);
   if (selected.length === 0) {
     console.log("nothing selected.");
     return;
