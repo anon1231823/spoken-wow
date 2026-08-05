@@ -792,7 +792,7 @@ function Row({
           <span className="text-primary w-52 shrink-0 truncate text-sm">
             {entry.alias ? `“${entry.alias}”` : `/${entry.ipa}/`}
           </span>
-          <span className="text-muted-foreground truncate text-xs">{entry.note}</span>
+          <span className="truncate text-xs">{entry.note}</span>
         </div>
       )}
 
