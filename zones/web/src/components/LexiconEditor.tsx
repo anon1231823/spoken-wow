@@ -11,6 +11,12 @@ import { useCallback, useEffect, useState } from "react";
 // becomes stale, which means a paid regeneration. So the editor's real job is to
 // answer "how many lines does this affect and what does saving it commit me to"
 // before anything is written, which is what the preview does.
+//
+// It is also no longer where a mispronunciation is fixed. The lexicon moved to
+// ../wow-voiceover, which owns the pronunciation dictionary both projects share, so what
+// is left here is the escape hatch for a line that needs different words rather than a
+// different pronunciation. The page says so rather than being removed: the file still
+// exists, still applies, and still costs a regeneration when it changes.
 
 type Impact = {
   matches: Record<string, number>;
@@ -95,11 +101,12 @@ export function LexiconEditor() {
       </p>
 
       <div className="mb-6 rounded border border-warn/40 bg-warn/10 p-3 text-xs">
-        <strong className="text-warn">Prefer the uploaded dictionary.</strong> An ElevenLabs
-        pronunciation dictionary carries real IPA phoneme rules and is applied by the model,
-        which is strictly better than respelling a word here and hoping. Phoneme rules are
-        honoured by <code>eleven_v3</code>, which this project uses. Reach for this file only
-        when a dictionary entry cannot express the fix.
+        <strong className="text-warn">Pronunciations are not fixed here.</strong> The lexicon
+        lives in wow-voiceover, which narrates a different corpus on the same ElevenLabs
+        account and shares this project&apos;s pronunciation dictionary. An entry there carries
+        a real IPA phoneme rule applied by the model, which is strictly better than respelling
+        a word here and hoping. Reach for this page only when a dictionary entry cannot express
+        the fix — a line that needs different words, rather than a different pronunciation.
       </div>
 
       {error && <p className="mb-4 text-bad">{error}</p>}

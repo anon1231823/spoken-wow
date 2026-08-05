@@ -13,6 +13,8 @@ import { join } from "node:path";
 import { readdir } from "node:fs/promises";
 
 import { ROOT, readLines } from "../lib/loredata.mjs";
+import { apiKey, downloadDictionary, loadConfig } from "./elevenlabs.mjs";
+import { parseDictionary, uncoveredSpellings } from "./lexicon.mjs";
 import { assignFiles, lineId } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
 import { loadManifest, SOUNDS_DIR } from "./store.mjs";
@@ -36,6 +38,43 @@ async function mp3sOnDisk(dir, prefix = "") {
   return found;
 }
 
+/**
+ * Names the shared lexicon knows, spelled here in a way none of its rules match.
+ *
+ * A note rather than a problem, and skipped rather than failed when there is no
+ * key or no pinned dictionary: this is the only check here that needs the
+ * network, and `make check` has to keep working on a machine with no
+ * credentials. What it finds is not broken data either -- it is a pronunciation
+ * that will come out wrong, and the fix is an entry in ../wow-voiceover's
+ * /lexicon, which is not something this run can do.
+ */
+async function checkDictionary(spokenTexts) {
+  const config = await loadConfig().catch(() => null);
+  if (!config?.dictionaryId || !config.dictionaryVersionId) {
+    note("no pronunciation dictionary is pinned in tools/voice/config.json; coverage unchecked");
+    return;
+  }
+
+  let pls;
+  try {
+    pls = await downloadDictionary(config, await apiKey());
+  } catch (err) {
+    note(`pronunciation dictionary not checked: ${err.message.slice(0, 120)}`);
+    return;
+  }
+
+  const uncovered = uncoveredSpellings(parseDictionary(pls), spokenTexts);
+  if (!uncovered.length) return;
+
+  const worst = uncovered.slice(0, 5).map((row) => `${row.spelling} (${row.occurrences})`);
+  note(
+    `${uncovered.length} spelling(s) of a lexicon name have no rule that matches them: ` +
+      `${worst.join(", ")}${uncovered.length > 5 ? ", ..." : ""}. ` +
+      "A phoneme rule is case-sensitive and wow-voiceover derives its spellings from its own " +
+      "corpus, so add these in that project's /lexicon.",
+  );
+}
+
 async function main() {
   const entries = await readLines();
   const rules = await loadPronunciation();
@@ -51,6 +90,9 @@ async function main() {
     problem(`${bracketed} lines still contain square brackets after normalising; `
       + "Eleven v3 reads those as performance directions");
   }
+
+  //-- the shared lexicon covers this project's spellings ---------------------
+  await checkDictionary(entries.map((e) => toSpokenText(e.full, rules)));
 
   //-- file paths are unique -------------------------------------------------
   const byFile = new Map();

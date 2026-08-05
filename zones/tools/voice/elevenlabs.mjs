@@ -154,6 +154,25 @@ export async function resolveDictionary(config, key) {
   console.log(`pinned pronunciation dictionary ${config.dictionaryId} at version ${version}`);
 }
 
+// The pinned dictionary as ElevenLabs stores it: a PLS document, one lexeme per
+// rule. This is the only way to see what the shared lexicon actually contains --
+// it is edited in ../wow-voiceover, and nothing about it lives in this repo
+// beyond the id.
+export async function downloadDictionary(config, key) {
+  const response = await fetch(
+    "https://api.elevenlabs.io/v1/pronunciation-dictionaries/" +
+      `${config.dictionaryId}/${config.dictionaryVersionId}/download`,
+    { headers: { "xi-api-key": key } },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `could not download pronunciation dictionary ${config.dictionaryId} ` +
+        `(${response.status}): ${(await response.text()).slice(0, 200)}`,
+    );
+  }
+  return response.text();
+}
+
 //------------------------------------------------------------------------------
 // Account
 //------------------------------------------------------------------------------

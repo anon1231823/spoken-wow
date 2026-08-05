@@ -638,34 +638,52 @@ The **spoken** text is what gets hashed into the manifest, so editing
 That file ships empty on purpose: every rule in it is a claim that the model
 mispronounces a word, and that claim can only be made after listening.
 
-### Pronunciation: prefer the uploaded dictionary
+### The pronunciation lexicon lives in wow-voiceover
 
-There are two ways to fix a mispronunciation, and they are not equivalent.
+A mispronounced name is fixed **in `../wow-voiceover`**, at its `/lexicon` page,
+not here. That project narrates a different corpus on the same ElevenLabs account
+and gets the same names wrong, and it already has what this side never built: an
+editor, 134 curated entries, IPA phoneme rules alongside plain respellings, and a
+check that reads every upload back to see what ElevenLabs actually kept.
 
-`tools/voice/pronunciation.json` rewrites the text before it is sent — spelling
-"Kalimdor" as "Kalimdore" and hoping. An **ElevenLabs pronunciation dictionary**
-carries real IPA phoneme rules and is applied by the model, which is strictly
-better where it works. Phoneme rules are honoured by `eleven_v3` and
-`eleven_flash_v2` only; this project is on v3, so they apply.
-
-`config.json` names one:
+What crosses between the two projects is **one id**, and nothing else. No shared
+database, no API call, no exported file:
 
 ```json
 "dictionaryId": "Elx0hcDze8EXW2rImeLT",
 "dictionaryVersionId": null
 ```
 
-Give the **id alone**. The API wants an id *and* a version, so the generator
+voiceover updates that dictionary in place on every save, so the id never moves.
+Give the **id alone** here. The API wants an id *and* a version, so the generator
 resolves the latest version once and writes it back into `dictionaryVersionId`.
 The version is pinned rather than left floating on purpose: naming a dictionary
 without one would let a later upload change how already-generated lines would
 sound, which is exactly what the manifest exists to make knowable. Clear both
-fields to re-resolve after editing the dictionary — and note that re-resolving
-does *not* mark existing lines stale, because the text did not change. Use
-`--force` over the lines you want re-cut.
+fields to pick up the current lexicon.
 
-Every generated line records the dictionary id and version it was made with, so a
-pronunciation change can be told apart from a text change after the fact.
+**A lexicon change does not mark anything stale, and that is deliberate.** The
+rules are applied by the model, not by rewriting the text, so the spoken text and
+its hash do not move — and `--stale` is a text comparison. Re-cutting 1,353 lines
+because a name was corrected is a ~408,000-credit decision, so it is never made
+by a flag that means something else. Every generated line records the dictionary
+id and version it was spoken with, and that provenance is reported: dry runs
+count the lines made with an older dictionary, and `--dictionary-drift` selects
+them for anyone who wants exactly that.
+
+`validate-audio.mjs` checks the other half — that the shared dictionary covers
+*this* corpus. A phoneme rule cannot be case-insensitive, so voiceover uploads one
+rule per spelling **its** corpus contains; a name this lore text capitalises
+differently would have no rule at all. That is reported as a note, with the fix
+being an entry in voiceover's editor. The check needs the network, so it skips
+itself rather than failing when there is no key.
+
+`tools/voice/pronunciation.json` is what remains here, and it is now the last
+resort rather than the route. It rewrites the text before it is sent — spelling
+"Kalimdor" as "Kalimdore" and hoping — which is worse than a phoneme rule
+wherever a phoneme rule works, and it is the only mechanism that *does* move the
+text hash. Reach for it when a line needs different words, not a different
+pronunciation.
 
 ### Characters are not credits
 
