@@ -673,25 +673,6 @@ function Row({
             autoFocus
           />
           <div className="flex w-52 shrink-0 items-center gap-1">
-            {/* Switching clears the other field rather than keeping it, because an entry
-                holding both is one ElevenLabs would resolve arbitrarily. */}
-            <Button
-              size="icon"
-              variant={ipa ? "secondary" : "ghost"}
-              aria-pressed={ipa}
-              className="size-7 shrink-0 text-sm"
-              title={
-                ipa
-                  ? "Writing IPA. Only eleven_v3 and eleven_flash_v2 honour it — click for a respelling."
-                  : "Respelling it as it should be said. Click to write IPA instead."
-              }
-              aria-label={ipa ? "Switch to a respelling" : "Switch to IPA"}
-              onClick={() =>
-                onChange(ipa ? { ipa: undefined, alias: "" } : { alias: undefined, ipa: "" })
-              }
-            >
-              ʒ
-            </Button>
             {/* The slashes are decoration inside the field, not content: IPA is written
                 between them everywhere else, and the validator rejects a rule that actually
                 contains one. Rendering them here says which notation is in force without
@@ -722,6 +703,28 @@ function Row({
                 className={cn("h-7 flex-1 text-sm", FOCUS)}
               />
             )}
+            {/* Switching clears the other field rather than keeping it, because an entry
+                holding both is one ElevenLabs would resolve arbitrarily. */}
+            <Button
+              size="icon"
+              variant={ipa ? "secondary" : "ghost"}
+              aria-pressed={ipa}
+              className="size-7 shrink-0 text-sm"
+              title={
+                ipa
+                  ? "Writing IPA. Only eleven_v3 and eleven_flash_v2 honour it — click for a respelling."
+                  : "Respelling it as it should be said. Click to write IPA instead."
+              }
+              aria-label={ipa ? "Switch to a respelling" : "Switch to IPA"}
+              onClick={() =>
+                onChange(ipa ? { ipa: undefined, alias: "" } : { alias: undefined, ipa: "" })
+              }
+            >
+              {/* Struck through while off, so the button says which notation is in force on
+                  its own - an unpressed ghost button and a pressed one are a shade apart, and
+                  a shade is not enough to tell IPA from a respelling at a glance. */}
+              <span className={cn(!ipa && "line-through decoration-2")}>ʒ</span>
+            </Button>
           </div>
           <Input
             value={entry.note ?? ""}
