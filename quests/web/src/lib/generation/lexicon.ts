@@ -20,16 +20,6 @@
 export const CONFIDENCES = ["high", "check"] as const;
 export type Confidence = (typeof CONFIDENCES)[number];
 
-export const CATEGORIES = ["place", "character", "lesser", "creature"] as const;
-export type Category = (typeof CATEGORIES)[number];
-
-export const CATEGORY_LABELS: Record<Category, string> = {
-  place: "Place",
-  character: "Character",
-  lesser: "Lesser name",
-  creature: "Creature & faction",
-};
-
 /** Models that honour phoneme rules. Everything else ignores the dictionary entirely. */
 export const PHONEME_MODELS = ["eleven_v3", "eleven_flash_v2"] as const;
 
@@ -51,7 +41,6 @@ export type LexiconEntry = {
    */
   alias?: string;
   confidence: Confidence;
-  category: Category;
   note?: string;
 };
 
@@ -217,15 +206,12 @@ export function validateEntry(input: unknown, index: number): LexiconEntry {
     throw new LexiconError(`${where}: unknown confidence ${JSON.stringify(confidence)}`);
   }
 
-  const category = raw.category;
-  if (!(CATEGORIES as readonly unknown[]).includes(category)) {
-    throw new LexiconError(`${where}: unknown category ${JSON.stringify(category)}`);
-  }
-
+  // Anything else on the object - `category`, which entries seeded by migration 0008 still
+  // carry - is dropped here rather than migrated away: the lexicon is stored as one JSON
+  // document, so a key nobody reads disappears the next time the editor saves.
   const entry: LexiconEntry = {
     grapheme,
     confidence: confidence as Confidence,
-    category: category as Category,
   };
   if (ipa) entry.ipa = ipa;
   if (alias) entry.alias = alias;

@@ -1,33 +1,22 @@
 "use client";
 
-import { RefreshCw, Search } from "lucide-react";
+import { Check, Pencil, RefreshCw, Search, Trash2, Undo2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { EffectiveLexicon } from "@/lib/generation/dictionary";
 import { PREVIEW_MODES, type PreviewMode } from "@/lib/generation/preview-modes";
 import type { CacheState } from "@/lib/generation/preview";
 import { Toaster, useToast } from "@/components/ui/toast";
 import {
-  CATEGORIES,
-  CATEGORY_LABELS,
   honoursPhonemes,
   kindOf,
   LexiconError,
   validateLexicon,
-  type Category,
   type LexiconEntry,
 } from "@/lib/generation/lexicon";
 
@@ -39,6 +28,28 @@ const MODE_LABELS: Record<PreviewMode, string> = {
 };
 
 const EMPTY_CACHE: CacheState = { word: false, sentence: false };
+
+/**
+ * What every field in an open row shares.
+ *
+ * Focus is the border alone rather than the ring Input draws by default: a ring is painted
+ * outside the border, and these fields sit edge to edge inside a bordered list, so the first
+ * and last one's ring was drawn under its neighbour and read as a half-missing outline.
+ *
+ * The placeholder is fainter than the default because this page is skimmed for what is still
+ * missing: at full muted-foreground weight, "silent G" in an empty note is hard to tell from
+ * a note that says silent G.
+ */
+const FIELD =
+  "h-7 text-sm placeholder:text-muted-foreground/45 focus-visible:ring-0 focus-visible:border-ring";
+
+type OkFilter = "all" | "yes" | "no";
+
+const OK_FILTERS: { value: OkFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "yes", label: "OK" },
+  { value: "no", label: "Not OK" },
+];
 
 /**
  * Where this name is spoken, in the explorer.
@@ -58,7 +69,6 @@ const BLANK: LexiconEntry = {
   grapheme: "",
   alias: "",
   confidence: "check",
-  category: "place",
 };
 
 /**
@@ -225,7 +235,13 @@ function Editor({
   // from under the cursor, and past whichever rows the new spelling had overtaken.
   const [pinned, setPinned] = useState("");
   const [query, setQuery] = useState("");
-  const [onlyChecks, setOnlyChecks] = useState(false);
+  // Which side of the OK column to show. "no" is the working view - the entries nobody has
+  // confirmed yet are the ones still to be listened to.
+  const [ok, setOk] = useState<OkFilter>("all");
+  // The last removal, held so it can be put back. A removed entry is otherwise unrecoverable
+  // until a save - the draft is the only copy of an edit, and a mis-clicked remove would take
+  // the pronunciation with it.
+  const [removed, setRemoved] = useState<{ entry: LexiconEntry; index: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Seeded from the server and kept up to date as previews are rendered, so a re-roll button
@@ -245,7 +261,9 @@ function Editor({
     return draft
       .map((entry, index) => ({ entry, index }))
       .filter(({ entry }) => {
-        if (onlyChecks && entry.confidence !== "check") return false;
+        const confirmed = entry.confidence === "high";
+        if (ok === "yes" && !confirmed) return false;
+        if (ok === "no" && confirmed) return false;
         if (!needle) return true;
         return [entry.grapheme, entry.ipa ?? entry.alias ?? "", entry.note ?? ""]
           .join(" ")
@@ -261,7 +279,28 @@ function Editor({
     function sortName({ entry, index }: { entry: LexiconEntry; index: number }): string {
       return index === editing ? pinned : entry.grapheme;
     }
-  }, [draft, query, onlyChecks, editing, pinned]);
+  }, [draft, query, ok, editing, pinned]);
+
+  /**
+   * The rows to draw: what the filter shows, with the last removal still standing in place.
+   *
+   * The gap an entry left is where someone looks for it, so the undo is a row of the same
+   * height where the row was, rather than a message under the table that moves everything
+   * between here and there. It ignores the filter and the search box - a tombstone that
+   * matched neither would vanish along with the offer to bring the entry back.
+   */
+  const rows = useMemo(() => {
+    const entries = shown.map((row) => ({ kind: "entry" as const, ...row }));
+    if (!removed) return entries;
+
+    const at = entries.findIndex(
+      (row) => COLLATOR.compare(row.entry.grapheme, removed.entry.grapheme) > 0,
+    );
+    const tombstone = { kind: "tombstone" as const, entry: removed.entry, index: -1 };
+    return at === -1
+      ? [...entries, tombstone]
+      : [...entries.slice(0, at), tombstone, ...entries.slice(at)];
+  }, [shown, removed]);
 
   const checks = draft.filter((entry) => entry.confidence === "check").length;
 
@@ -277,8 +316,21 @@ function Editor({
   }
 
   function remove(target: number) {
+    setRemoved({ entry: draft[target], index: target });
     setDraft((current) => current.filter((_, index) => index !== target));
     setEditing(null);
+  }
+
+  // Back where it was, not appended: the stored order is what the saved document keeps, so
+  // restoring to the end would turn an undone mistake into a diff across the whole file.
+  function undo() {
+    if (!removed) return;
+    setDraft((current) => [
+      ...current.slice(0, removed.index),
+      removed.entry,
+      ...current.slice(removed.index),
+    ]);
+    setRemoved(null);
   }
 
   function add(grapheme = "") {
@@ -290,7 +342,10 @@ function Editor({
     // is being typed instead of sliding away as the name takes shape.
     openRow(0, entry);
     setQuery("");
-    setOnlyChecks(false);
+    setOk("all");
+    // Prepending shifts every index by one, and `removed.index` is a position in the draft:
+    // an undo taken afterwards would put the entry back one place from where it left.
+    setRemoved(null);
   }
 
   /**
@@ -350,6 +405,9 @@ function Editor({
       setSaved(next);
       setDraft(next.entries);
       setEditing(null);
+      // The removal is in force now, and an undo against a draft it no longer indexes would
+      // put the entry back in the wrong place.
+      setRemoved(null);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -375,14 +433,20 @@ function Editor({
           className="max-w-xs"
           aria-label="Filter entries"
         />
-        <Button
-          size="sm"
-          variant={onlyChecks ? "secondary" : "ghost"}
-          aria-pressed={onlyChecks}
-          onClick={() => setOnlyChecks((value) => !value)}
-        >
-          Unconfirmed · {checks}
-        </Button>
+        <div className="flex items-center gap-1" role="group" aria-label="Filter by OK">
+          {OK_FILTERS.map(({ value, label }) => (
+            <Button
+              key={value}
+              size="sm"
+              variant={ok === value ? "secondary" : "ghost"}
+              aria-pressed={ok === value}
+              onClick={() => setOk(value)}
+            >
+              {label}
+              {value === "no" && ` · ${checks}`}
+            </Button>
+          ))}
+        </div>
         <Button size="sm" variant="ghost" onClick={() => add()}>
           Add name
         </Button>
@@ -394,9 +458,9 @@ function Editor({
       </div>
 
       <div className="divide-y rounded-md border">
-        {/* Column names, aligned to the widths the rows below use. Not a <table>, because a
-            row expands into a form in place and a form inside a table cell inherits the
-            column widths it needs to escape. */}
+        {/* Column names, aligned to the widths the rows below use. Not a <table>, because the
+            fields a row edits in place are inputs, and an input inside a table cell inherits
+            the column width it needs to escape. */}
         <div
           aria-hidden
           className="text-muted-foreground bg-muted/40 flex items-center gap-3 px-3 py-1.5 text-[10.5px] font-semibold tracking-wider uppercase"
@@ -407,38 +471,39 @@ function Editor({
           </span>
           <span className="flex flex-1 gap-3 overflow-hidden">
             <span className="w-40 shrink-0">Written</span>
-            <span className="w-44 shrink-0">Sound</span>
+            <span className="w-52 shrink-0">Sound</span>
             <span className="truncate">Note</span>
           </span>
-          <span className="shrink-0">Find · hear · re-roll</span>
+          <span className="shrink-0">Edit · find · hear · re-roll</span>
         </div>
 
-        {shown.length === 0 && (
+        {rows.length === 0 && (
           <p className="text-muted-foreground px-4 py-8 text-center text-sm">
             Nothing matches that filter.
           </p>
         )}
 
-        {shown.map(({ entry, index }) =>
-          editing === index ? (
-            <EntryForm
-              key={index}
+        {rows.map(({ kind, entry, index }) =>
+          kind === "tombstone" ? (
+            <Tombstone
+              key="tombstone"
               entry={entry}
-              onChange={(change) => patch(index, change)}
-              onClose={() => setEditing(null)}
-              onRemove={() => remove(index)}
+              onUndo={undo}
+              onDismiss={() => setRemoved(null)}
             />
           ) : (
             <Row
               key={index}
               entry={entry}
               index={index}
+              editing={editing === index}
               cached={cache[entry.grapheme] ?? EMPTY_CACHE}
               preview={preview}
+              onChange={(change) => patch(index, change)}
               onOpen={() => openRow(index, entry)}
-              onConfirm={(confirmed) =>
-                patch(index, { confidence: confirmed ? "high" : "check" })
-              }
+              onClose={() => setEditing(null)}
+              onRemove={() => remove(index)}
+              onConfirm={(confirmed) => patch(index, { confidence: confirmed ? "high" : "check" })}
             />
           ),
         )}
@@ -464,6 +529,7 @@ function Editor({
           onClick={() => {
             setDraft(saved.entries);
             setEditing(null);
+            setRemoved(null);
           }}
         >
           Discard
@@ -601,32 +667,86 @@ function Banner({ tone, children }: { tone: "warn" | "error"; children: React.Re
 }
 
 /**
- * One entry at rest: confirm it, hear it, re-roll it, or open it.
+ * Where an entry was, until it is put back or the save makes the removal real.
  *
- * A row of controls rather than one big button. It used to be a single <button> covering the
- * whole row, which is no longer possible - a checkbox and four buttons cannot be nested
- * inside a button, and browsers do not agree on what happens if you try. The clickable
- * region that opens the editor is now just the text.
+ * Built to the height of a row rather than to its own: the list is scanned by position, and a
+ * shorter placeholder would slide every row below it up the moment something was removed and
+ * back down the moment it was restored.
+ */
+function Tombstone({
+  entry,
+  onUndo,
+  onDismiss,
+}: {
+  entry: LexiconEntry;
+  onUndo: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      role="status"
+      className="bg-destructive/5 text-muted-foreground flex h-10 items-center gap-3 px-3 text-sm"
+    >
+      <span className="truncate">
+        Removed <span className="text-foreground font-medium line-through">{entry.grapheme || "a new entry"}</span>
+        {" — gone once you save."}
+      </span>
+      <div className="ml-auto flex shrink-0 items-center gap-1">
+        <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={onUndo}>
+          <Undo2 className="size-3" aria-hidden /> Undo
+        </Button>
+        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={onDismiss}>
+          Dismiss
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One entry: confirm it, hear it, re-roll it, or edit it in place.
+ *
+ * Editing swaps the three text cells for inputs of the same widths rather than expanding the
+ * row into a form. The row keeps its height and its buttons, so the loop this page exists for
+ * - hear it, change it, hear it again - never has a form opening and closing across it.
+ *
+ * It is entered from the pencil, not from clicking the row. The cells hold text a reviewer
+ * selects and copies, and a whole row that turns into inputs when brushed is a row that
+ * cannot be read.
  */
 function Row({
   entry,
   index,
+  editing,
   cached,
   preview,
+  onChange,
   onOpen,
+  onClose,
+  onRemove,
   onConfirm,
 }: {
   entry: LexiconEntry;
   index: number;
+  editing: boolean;
   cached: CacheState;
   preview: ReturnType<typeof usePreview>;
+  onChange: (change: Partial<LexiconEntry>) => void;
   onOpen: () => void;
+  onClose: () => void;
+  onRemove: () => void;
   onConfirm: (confirmed: boolean) => void;
 }) {
   const playable = Boolean(entry.grapheme.trim() && (entry.ipa ?? entry.alias ?? "").trim());
+  const ipa = formKind(entry) === "ipa";
 
   return (
-    <div className="hover:bg-muted/50 flex items-center gap-3 px-3 py-1.5">
+    <div
+      className={cn(
+        "flex items-center gap-3 px-3 py-1.5",
+        editing ? "bg-muted/30" : "hover:bg-muted/50",
+      )}
+    >
       <Checkbox
         checked={entry.confidence === "high"}
         onCheckedChange={(value) => onConfirm(value === true)}
@@ -634,21 +754,126 @@ function Row({
         className="shrink-0"
       />
 
-      <button
-        type="button"
-        onClick={onOpen}
-        className="flex flex-1 items-baseline gap-3 overflow-hidden text-left"
-      >
-        <span className="w-40 shrink-0 truncate text-sm font-medium">
-          {entry.grapheme || <span className="text-muted-foreground">(new entry)</span>}
-        </span>
-        <span className="text-primary w-44 shrink-0 truncate text-sm">
-          {entry.alias ? `“${entry.alias}”` : `/${entry.ipa}/`}
-        </span>
-        <span className="text-muted-foreground truncate text-xs">{entry.note}</span>
-      </button>
+      {editing ? (
+        // No overflow-hidden, unlike the row at rest: the fields are fixed widths and a
+        // flex-1, so nothing here overflows, and a clip would cut the focus outline off at
+        // the first and last field.
+        <div className="flex flex-1 items-center gap-3">
+          <Input
+            value={entry.grapheme}
+            onChange={(event) => onChange({ grapheme: event.target.value })}
+            placeholder="Gnomeregan"
+            aria-label="Written"
+            title="Exactly as the corpus spells it. Matching ignores case."
+            className={cn("w-40 shrink-0", FIELD)}
+            autoFocus
+          />
+          <div className="flex w-52 shrink-0 items-center gap-1">
+            {/* The slashes are decoration inside the field, not content: IPA is written
+                between them everywhere else, and the validator rejects a rule that actually
+                contains one. Rendering them here says which notation is in force without
+                putting a character in the value. */}
+            {ipa ? (
+              <div className="border-input focus-within:border-ring dark:bg-input/30 flex h-7 flex-1 items-center gap-0.5 rounded-lg border px-2 text-sm">
+                <span aria-hidden className="text-muted-foreground/60 select-none">
+                  /
+                </span>
+                <input
+                  value={entry.ipa ?? ""}
+                  onChange={(event) => onChange({ ipa: event.target.value })}
+                  placeholder="ˈnoʊmɹəɡæn"
+                  aria-label="IPA"
+                  className="placeholder:text-muted-foreground/45 w-full min-w-0 flex-1 bg-transparent outline-none"
+                />
+                <span aria-hidden className="text-muted-foreground/60 select-none">
+                  /
+                </span>
+              </div>
+            ) : (
+              <Input
+                value={entry.alias ?? ""}
+                onChange={(event) => onChange({ alias: event.target.value })}
+                placeholder="nomeregan"
+                aria-label="Respelling"
+                title="Respell it as it should be said — “nomeregan”, not “NOME-reh-gan”."
+                className={cn("flex-1", FIELD)}
+              />
+            )}
+            {/* Switching clears the other field rather than keeping it, because an entry
+                holding both is one ElevenLabs would resolve arbitrarily. */}
+            <Button
+              size="icon"
+              variant={ipa ? "secondary" : "ghost"}
+              aria-pressed={ipa}
+              className="size-7 shrink-0 text-sm"
+              title={
+                ipa
+                  ? "Writing IPA. Only eleven_v3 and eleven_flash_v2 honour it — click for a respelling."
+                  : "Respelling it as it should be said. Click to write IPA instead."
+              }
+              aria-label={ipa ? "Switch to a respelling" : "Switch to IPA"}
+              onClick={() =>
+                onChange(ipa ? { ipa: undefined, alias: "" } : { alias: undefined, ipa: "" })
+              }
+            >
+              {/* Struck through while off, so the button says which notation is in force on
+                  its own - an unpressed ghost button and a pressed one are a shade apart, and
+                  a shade is not enough to tell IPA from a respelling at a glance. */}
+              <span className={cn(!ipa && "line-through decoration-2")}>ʒ</span>
+            </Button>
+          </div>
+          <Input
+            value={entry.note ?? ""}
+            onChange={(event) => onChange({ note: event.target.value })}
+            placeholder="silent G"
+            aria-label="Note"
+            title="Why this entry exists, or what is disputed about it."
+            className={cn("flex-1", FIELD)}
+          />
+        </div>
+      ) : (
+        <div className="flex flex-1 items-baseline gap-3 overflow-hidden">
+          <span className="w-40 shrink-0 truncate text-sm font-medium">
+            {entry.grapheme || <span className="text-muted-foreground">(new entry)</span>}
+          </span>
+          <span className="text-primary w-52 shrink-0 truncate text-sm">
+            {entry.alias ? `“${entry.alias}”` : `/${entry.ipa}/`}
+          </span>
+          <span className="truncate text-xs">{entry.note}</span>
+        </div>
+      )}
 
       <div className="flex shrink-0 items-center gap-0.5">
+        {/* Only while open, so the one irreversible control on the page is never a
+            mis-click away from a row somebody is only reading. */}
+        {editing && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="text-destructive size-6"
+            title={`Remove ${entry.grapheme || "this entry"}`}
+            aria-label={`Remove ${entry.grapheme || "this entry"}`}
+            onClick={onRemove}
+          >
+            <Trash2 className="size-3" aria-hidden />
+          </Button>
+        )}
+
+        <Button
+          size="icon"
+          variant="ghost"
+          className={cn("size-6", editing ? "text-primary" : "text-muted-foreground")}
+          title={editing ? "Done editing" : `Edit ${entry.grapheme || "this entry"}`}
+          aria-label={editing ? "Done editing" : `Edit ${entry.grapheme || "this entry"}`}
+          onClick={editing ? onClose : onOpen}
+        >
+          {editing ? (
+            <Check className="size-3" aria-hidden />
+          ) : (
+            <Pencil className="size-3" aria-hidden />
+          )}
+        </Button>
+
         {/* A new tab, deliberately. The editor holds an unsaved draft - navigating away in
             this one would discard every edit made since the last save, which is a steep
             price for looking something up.
@@ -707,7 +932,10 @@ function Row({
                 }
                 onClick={() => void preview.play(entry, mode, index)}
               >
-                {rendering ? "…" : MODE_LABELS[mode]}
+                {/* The label stays put while a render is in flight. Swapping it for an
+                    ellipsis resized the button, moving the one beside it under a cursor
+                    already on the way to it. The spinner to the right says it is working. */}
+                {MODE_LABELS[mode]}
               </Button>
 
               {/* Greyed until there is something to replace: re-rolling a take that does not
@@ -723,134 +951,17 @@ function Row({
                 }
                 className={cn(
                   "size-6",
-                  onDisk ? "text-muted-foreground" : "text-muted-foreground/30",
+                  onDisk || rendering ? "text-muted-foreground" : "text-muted-foreground/30",
                 )}
                 disabled={!playable || !onDisk || rendering}
                 onClick={() => void preview.play(entry, mode, index, true)}
               >
-                <RefreshCw className="size-3" aria-hidden />
+                <RefreshCw className={cn("size-3", rendering && "animate-spin")} aria-hidden />
               </Button>
             </span>
           );
         })}
       </div>
-    </div>
-  );
-}
-
-function EntryForm({
-  entry,
-  onChange,
-  onClose,
-  onRemove,
-}: {
-  entry: LexiconEntry;
-  onChange: (change: Partial<LexiconEntry>) => void;
-  onClose: () => void;
-  onRemove: () => void;
-}) {
-  return (
-    <div className="bg-muted/30 space-y-3 px-3 py-3">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Written" hint="Exactly as the corpus spells it. Matching ignores case.">
-          <Input
-            value={entry.grapheme}
-            onChange={(event) => onChange({ grapheme: event.target.value })}
-            placeholder="Gnomeregan"
-          />
-        </Field>
-        <Field
-          label="How it sounds"
-          hint={
-            formKind(entry) === "ipa"
-              ? "Bare phonemes — no slashes or brackets. Only eleven_v3 and eleven_flash_v2 honour these."
-              : "Respell it as it should be said — “nomeregan”, not “NOME-reh-gan”. Works on every model."
-          }
-        >
-          <div className="flex gap-1.5">
-            {formKind(entry) === "ipa" ? (
-              <Input
-                value={entry.ipa ?? ""}
-                onChange={(event) => onChange({ ipa: event.target.value })}
-                placeholder="ˈnoʊmɹəɡæn"
-              />
-            ) : (
-              <Input
-                value={entry.alias ?? ""}
-                onChange={(event) => onChange({ alias: event.target.value })}
-                placeholder="nomeregan"
-              />
-            )}
-            {/* Switching clears the other field rather than keeping it, because an entry
-                holding both is one ElevenLabs would resolve arbitrarily. */}
-            <Button
-              size="sm"
-              variant="outline"
-              className="shrink-0"
-              onClick={() =>
-                onChange(
-                  formKind(entry) === "ipa"
-                    ? { ipa: undefined, alias: "" }
-                    : { alias: undefined, ipa: "" },
-                )
-              }
-            >
-              {formKind(entry) === "ipa" ? "Use spelling" : "Use IPA"}
-            </Button>
-          </div>
-        </Field>
-        <Field label="Note" hint="Why this entry exists, or what is disputed about it.">
-          <Input
-            value={entry.note ?? ""}
-            onChange={(event) => onChange({ note: event.target.value })}
-            placeholder="silent G"
-          />
-        </Field>
-        <Field label="Category" hint="Grouping for this page only.">
-          <Select
-            value={entry.category}
-            onValueChange={(value) => onChange({ category: value as Category })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {CATEGORY_LABELS[category]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="secondary" onClick={onClose}>
-          Done
-        </Button>
-        <Button size="sm" variant="ghost" className="text-destructive ml-auto" onClick={onRemove}>
-          Remove
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
-      {children}
-      <p className="text-muted-foreground text-xs">{hint}</p>
     </div>
   );
 }

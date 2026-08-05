@@ -18,7 +18,6 @@ const ENTRIES = [
     grapheme: "Gnomeregan",
     ipa: "ˈnoʊmɹəɡæn",
     confidence: "high" as const,
-    category: "place" as const,
   },
 ];
 

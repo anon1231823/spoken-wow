@@ -189,8 +189,8 @@ export function speakable(entry: LexiconEntry, sentence: string): string {
  *
  * The spoken text rather than the entry, so an IPA edit and an alias edit that happen to
  * produce the same request share a cached file. The voice and the settings are in it because
- * the same phonemes in a different voice are a different preview; `say`, the note, the
- * confidence and the category are not, because none of them reach ElevenLabs.
+ * the same phonemes in a different voice are a different preview; `say`, the note and the
+ * confidence are not, because none of them reach ElevenLabs.
  */
 export function previewKey(input: {
   text: string;
