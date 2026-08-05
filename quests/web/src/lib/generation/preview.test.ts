@@ -22,7 +22,6 @@ const IPA: LexiconEntry = {
   grapheme: "Gnomeregan",
   ipa: "ˈnoʊmɹəɡæn",
   confidence: "high",
-  category: "place",
 };
 
 const ALIAS: LexiconEntry = { ...IPA, ipa: undefined, alias: "nomeregan" };

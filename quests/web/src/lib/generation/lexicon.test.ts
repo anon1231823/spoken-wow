@@ -16,7 +16,6 @@ const ENTRY = {
   grapheme: "Gnomeregan",
   ipa: "ˈnoʊmɹəɡæn",
   confidence: "high",
-  category: "place",
   note: "silent G",
 };
 
@@ -68,9 +67,14 @@ describe("validateEntry", () => {
     expect(() => validateEntry({ ...ENTRY, ipa: "" }, 0)).toThrow(/either IPA or a respelling/);
   });
 
-  it("rejects an unknown confidence or category", () => {
+  it("rejects an unknown confidence", () => {
     expect(() => validateEntry({ ...ENTRY, confidence: "probably" }, 0)).toThrow(/confidence/);
-    expect(() => validateEntry({ ...ENTRY, category: "dungeon" }, 0)).toThrow(/category/);
+  });
+
+  // Entries seeded by migration 0008 still carry a category the editor no longer shows, and
+  // the stored lexicon is one JSON document nothing rewrites until a save.
+  it("drops a key it no longer keeps rather than rejecting the entry", () => {
+    expect(validateEntry({ ...ENTRY, category: "place" }, 0)).toEqual(ENTRY);
   });
 
   it("names the index, so the editor can say which entry is wrong", () => {
@@ -110,7 +114,6 @@ const RESPELLED = {
   grapheme: "Gnomeregan",
   alias: "nomeregan",
   confidence: "high" as const,
-  category: "place" as const,
 };
 
 describe("respelled entries", () => {

@@ -220,8 +220,13 @@ with its silent G, Kel'Thuzad, Cairne, and the 131 others it starts with. Saving
 uploads them to ElevenLabs as a pronunciation dictionary and pins every later request to that
 exact version.
 
+Every entry is one row, edited in place: the pencil turns its cells into fields of the same
+width, and the checkbox in the OK column records that somebody has listened. The All / OK /
+Not OK filter is how you find the ones still to be checked.
+
 **You do not need IPA.** An entry gives either an IPA pronunciation or a plain respelling —
-`nomeregan` — and the editor switches between the two in one click. The trade is exactness
+`nomeregan` — and the `ʒ` button switches between the two in one click; the slashes around an
+IPA field are drawn by the editor, and never part of the value. The trade is exactness
 against reach: IPA becomes a phoneme rule, which is precise but honoured only by `eleven_v3`
 and `eleven_flash_v2`; a respelling becomes an alias rule, which is only as good as the guess
 at the new spelling but works on every model. Both kinds sit in one dictionary, so the lexicon
