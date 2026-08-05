@@ -29,6 +29,15 @@ const MODE_LABELS: Record<PreviewMode, string> = {
 
 const EMPTY_CACHE: CacheState = { word: false, sentence: false };
 
+/**
+ * Focus a field by its border alone, rather than by the ring Input draws by default.
+ *
+ * A ring is painted outside the border, and these fields sit edge to edge inside a bordered
+ * list - so the ring of the first and last one is drawn under its neighbours and reads as a
+ * half-missing outline. The border is the whole width of the row, and cannot be clipped.
+ */
+const FOCUS = "focus-visible:ring-0 focus-visible:border-ring";
+
 type OkFilter = "all" | "yes" | "no";
 
 const OK_FILTERS: { value: OkFilter; label: string }[] = [
@@ -650,14 +659,17 @@ function Row({
       />
 
       {editing ? (
-        <div className="flex flex-1 items-center gap-3 overflow-hidden">
+        // No overflow-hidden, unlike the row at rest: the fields are fixed widths and a
+        // flex-1, so nothing here overflows, and a clip would cut the focus outline off at
+        // the first and last field.
+        <div className="flex flex-1 items-center gap-3">
           <Input
             value={entry.grapheme}
             onChange={(event) => onChange({ grapheme: event.target.value })}
             placeholder="Gnomeregan"
             aria-label="Written"
             title="Exactly as the corpus spells it. Matching ignores case."
-            className="h-7 w-40 shrink-0 text-sm"
+            className={cn("h-7 w-40 shrink-0 text-sm", FOCUS)}
             autoFocus
           />
           <div className="flex w-52 shrink-0 items-center gap-1">
@@ -685,7 +697,7 @@ function Row({
                 contains one. Rendering them here says which notation is in force without
                 putting a character in the value. */}
             {ipa ? (
-              <div className="border-input focus-within:border-ring focus-within:ring-ring/50 flex h-7 flex-1 items-center gap-0.5 rounded-lg border px-2 text-sm focus-within:ring-3 dark:bg-input/30">
+              <div className="border-input focus-within:border-ring dark:bg-input/30 flex h-7 flex-1 items-center gap-0.5 rounded-lg border px-2 text-sm">
                 <span aria-hidden className="text-muted-foreground/60 select-none">
                   /
                 </span>
@@ -707,7 +719,7 @@ function Row({
                 placeholder="nomeregan"
                 aria-label="Respelling"
                 title="Respell it as it should be said — “nomeregan”, not “NOME-reh-gan”."
-                className="h-7 flex-1 text-sm"
+                className={cn("h-7 flex-1 text-sm", FOCUS)}
               />
             )}
           </div>
@@ -717,7 +729,7 @@ function Row({
             placeholder="silent G"
             aria-label="Note"
             title="Why this entry exists, or what is disputed about it."
-            className="h-7 flex-1 text-sm"
+            className={cn("h-7 flex-1 text-sm", FOCUS)}
           />
         </div>
       ) : (
