@@ -880,7 +880,10 @@ function Row({
                 }
                 onClick={() => void preview.play(entry, mode, index)}
               >
-                {rendering ? "…" : MODE_LABELS[mode]}
+                {/* The label stays put while a render is in flight. Swapping it for an
+                    ellipsis resized the button, moving the one beside it under a cursor
+                    already on the way to it. The spinner to the right says it is working. */}
+                {MODE_LABELS[mode]}
               </Button>
 
               {/* Greyed until there is something to replace: re-rolling a take that does not
@@ -896,12 +899,12 @@ function Row({
                 }
                 className={cn(
                   "size-6",
-                  onDisk ? "text-muted-foreground" : "text-muted-foreground/30",
+                  onDisk || rendering ? "text-muted-foreground" : "text-muted-foreground/30",
                 )}
                 disabled={!playable || !onDisk || rendering}
                 onClick={() => void preview.play(entry, mode, index, true)}
               >
-                <RefreshCw className="size-3" aria-hidden />
+                <RefreshCw className={cn("size-3", rendering && "animate-spin")} aria-hidden />
               </Button>
             </span>
           );
