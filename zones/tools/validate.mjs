@@ -35,6 +35,11 @@ const FORBIDDEN = [
   /\bBroken Isles\b/,
   /\bIcecrown Citadel\b/,
   /\bphas(?:ed|ing)\b/i,
+  // Battle for Azeroth and Shadowlands respectively, named as events rather than
+  // expansions, so nothing above caught them. Eleven shipped lines described
+  // Tirisfal and Lordaeron as they stand after a war that has not happened in Era.
+  /\bBattle (?:for|of) Lordaeron\b/,
+  /\bthe Jailer\b/,
 ];
 
 const problems = [];
