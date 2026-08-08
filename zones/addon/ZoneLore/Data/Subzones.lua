@@ -12,7 +12,7 @@
 local _, ZoneLore = ...
 
 ZoneLore.Subzones = {
-	-- Durotar: 43 subzones
+	-- Durotar: 27 subzones
 	[1411] = {
 		["bladefist bay"] = {
 			name = "Bladefist Bay",
@@ -20,47 +20,17 @@ ZoneLore.Subzones = {
 			full = "The waters east of Orgrimmar carry the name of Kargath Bladefist, once chieftain of the Shattered Hand clan. Where the road runs past the Dranosh'ar Blockade and down to the sea, the bay opens onto Skull Rock, and across the water the southern coast of Azshara can be seen.\n\nThe port here is built of wood and steel, raised to take ships coming in off the Great Sea. It has earned a rough name among sailors, who call it the Great Sea's midden heap, for the rubble and wreckage the tide washes in without pause. Fishermen still work the pier, casting their lines into water that has carried both cargo and ruin.\n\nKargath Bladefist never ruled here himself. It is enough that the sea remembers him in name, while the docks below fill and empty with whatever the current decides to bring home.",
 			source = "https://warcraft.wiki.gg/wiki/Bladefist_Bay",
 		},
-		["bloodtalon shore"] = {
-			name = "Bloodtalon Shore",
-			short = "The Bloodtalon Shore lies at the southern edge of the Echo Isles, where raptors bearing the shore's name are bred and raised.",
-			full = "The Bloodtalon Shore lies at the southern edge of the Echo Isles, where raptors bearing the shore's name are bred and raised.",
-			source = "https://warcraft.wiki.gg/wiki/Bloodtalon_Shore",
-		},
 		["burning blade coven"] = {
 			name = "Burning Blade Coven",
 			short = "The cave that gives the Burning Blade Coven its name opens in the dusty red mountains along the northern edge of the Valley of Trials, a place meant only as a proving ground for young orcs and trolls.",
 			full = "The cave that gives the Burning Blade Coven its name opens in the dusty red mountains along the northern edge of the Valley of Trials, a place meant only as a proving ground for young orcs and trolls. It no longer feels so contained.\n\nImps and lesser demons have spilled from its mouth, and those who look deeper say something worse waits inside: members of the Burning Blade cult, from whom the coven takes its name, led by a warlock called Yarrog Baneshadow.\n\nBefore the demons came, the cave was only stone. A foreman named Thazz'ril once surveyed it for minerals, then left before finishing. His pick still lies inside, abandoned with whatever plans he had for the place.",
 			source = "https://warcraft.wiki.gg/wiki/Burning_Blade_Coven",
 		},
-		["darkspear hold"] = {
-			name = "Darkspear Hold",
-			short = "Darkspear Hold stands as the main fortress on Darkspear Isle, liberated by Thrall and a Horde adventurer who slew Gul'tar the Subjugator there.",
-			full = "Darkspear Hold stands as the main fortress on Darkspear Isle, liberated by Thrall and a Horde adventurer who slew Gul'tar the Subjugator there. The adventurer had come for a glaive, claimed from the Subjugator's fall.",
-			source = "https://warcraft.wiki.gg/wiki/Darkspear_Hold",
-		},
-		["darkspear isle"] = {
-			name = "Darkspear Isle",
-			short = "The Echo Isles hold a name of their own now among the Darkspear trolls, for the largest of them was reborn as Darkspear Isle.",
-			full = "The Echo Isles hold a name of their own now among the Darkspear trolls, for the largest of them was reborn as Darkspear Isle. It was Thrall who came here, alongside the Horde, to end the reign of Zalazane, the witch doctor who had turned traitor and taken the isles for his own. With his death, the tribe returned to the shore and hold that had once been theirs, raising training grounds and a hold once more, vowing to stand against whatever came next.\n\nSomething did come. Bwonsamdi found the tribe slipping toward the worship of Mueh'zala, and called on Rokhan to set it right. Rokhan turned to Witch Doctor Tzadah to begin the trials meant to restore the tribe's old loa, only to find that Tzadah herself had already given her allegiance to Mueh'zala.\n\nWhen Mueh'zala's forces poured onto the isle and made a battleground of it, Rokhan fought until the invasion broke, and struck down Tzadah with his own hand, ending the dark loa's grip on the island she had once served to protect.",
-			source = "https://warcraft.wiki.gg/wiki/Darkspear_Isle",
-		},
-		["darkspear shore"] = {
-			name = "Darkspear Shore",
-			short = "A narrow beach on Darkspear Isle, beside the training grounds where young trolls learn the tribe's ways. Jin'thala and Zuni greet them at the shore, while a Darkspear Watcher keeps a steady drumbeat over the sand.",
-			full = "A narrow beach on Darkspear Isle, beside the training grounds where young trolls learn the tribe's ways. Jin'thala and Zuni greet them at the shore, while a Darkspear Watcher keeps a steady drumbeat over the sand.",
-			source = "https://warcraft.wiki.gg/wiki/Darkspear_Shore",
-		},
 		["darkspear strand"] = {
 			name = "Darkspear Strand",
 			short = "The Darkspear Strand is where the Darkspear trolls came ashore after fleeing the Echo Isles.",
 			full = "The Darkspear Strand is where the Darkspear trolls came ashore after fleeing the Echo Isles. Just yards from the water sits Sen'jin Village, where the trolls gathered once they reached land, beginning their life on this new shore.",
 			source = "https://warcraft.wiki.gg/wiki/Darkspear_Strand",
-		},
-		["darkspear training grounds"] = {
-			name = "Darkspear Training Grounds",
-			short = "The training grounds spread across much of Darkspear Isle, where the tribe drills its warriors and hunters.",
-			full = "The training grounds spread across much of Darkspear Isle, where the tribe drills its warriors and hunters. Hostile orcs once seized many who trained here, overwhelming the guards who stood against them, until Thrall came and broke their hold, freeing the captured Darkspear.\n\nYears later, as the tribe undertook the Trial of the Loa, the witch doctor Tzadah turned against her own people and summoned Mueh'zala, who poured his power into her. Empowered, she raised an undead army and took the grounds, scattering the trainees and cursing them where they stood.",
-			source = "https://warcraft.wiki.gg/wiki/Darkspear_Training_Grounds",
 		},
 		["deadeye shore"] = {
 			name = "Deadeye Shore",
@@ -73,12 +43,6 @@ ZoneLore.Subzones = {
 			short = "The Den is a cave in the Valley of Trials, sheltering young orcs as they take their first steps beyond childhood.",
 			full = "The Den is a cave in the Valley of Trials, sheltering young orcs as they take their first steps beyond childhood. Its walls hold cages, and in them are kept Captured Northwatch Scouts, humans taken and held prisoner within the orc stronghold. Zekhan once came to see the captives himself, standing before the cages to look upon the enemies of his people.",
 			source = "https://warcraft.wiki.gg/wiki/The_Den",
-		},
-		["dranoshar blockade"] = {
-			name = "Dranosh'ar Blockade",
-			short = "The line of fortifications outside Orgrimmar's gates carries a dead man's name.",
-			full = "The line of fortifications outside Orgrimmar's gates carries a dead man's name. Dranosh Saurfang fell far away, at the Wrathgate, in the war against the Lich King, and the Horde raised these walls in his memory, stretching from Skull Rock to Rocktusk Farm across the northern approach to Durotar.\n\nWhat stands here now is a working line, not a monument. Siege engines wait at the front rank. Behind them archers of the Horde drill in the dust, laborers haul timber and iron for new machinery, and the old hut at Jaggedswine Farm has been given over to storage. In the hut west of the front gate, two voices argue without ever agreeing: Gor the Enforcer and Shin Stonepillar, each holding a different view of who ought to lead the Horde. Their quarrel is small against the size of the blockade, but it says something true about the place -- that even here, prepared for war, the Horde is not of one mind about itself.",
-			source = "https://warcraft.wiki.gg/wiki/Dranosh'ar_Blockade",
 		},
 		["drygulch ravine"] = {
 			name = "Drygulch Ravine",
@@ -98,12 +62,6 @@ ZoneLore.Subzones = {
 			full = "The Darkspear trolls did not choose the Echo Isles so much as return to them, again and again.\n\nTheir first homecoming came after Warchief Thrall pulled the tribe from ruin and led them to Kalimdor, where the islands became theirs to settle. That peace lasted only until Kul Tiras warships forced the trolls to flee. Only after their enemy's defeat could the Darkspear come back at all.\n\nThey had barely settled before betrayal came from within. Zalazane, a witch doctor of their own tribe, had somehow learned the secrets of undeath. He turned on his people with zombies and dark minions, seeding the main isle with tainted ju-ju heaps that corrupted the wildlife and warped the flow of magic across Durotar. From his stolen island he sent undead trolls to hex and drag away those who remained free. Attempt after attempt to slay him was fooled and turned false, until the tribe rallied together, aided by the loa Bwonsamdi, and cut him down for good. His remains lie now on the isle called Zalazane's Fall, where trolls still dance in memory of that day.\n\nThe Echo Isles have never once been given to the Darkspear without a price.",
 			source = "https://warcraft.wiki.gg/wiki/Echo_Isles",
 		},
-		["hellscreams fist"] = {
-			name = "Hellscream's Fist",
-			short = "The wreck lies broken across the cliffs, one half torn open on the rock and the other sunk into the sea below.",
-			full = "The wreck lies broken across the cliffs, one half torn open on the rock and the other sunk into the sea below.\n\nIt was a gunship of the Horde. Nazgrim and Dubs led a party from its deck to strike an Alliance stronghold, and there Captain Doren met them. He could not stop them, but before fleeing on a gyrocopter, he dealt the vessel a fatal blow. The Hellscream's Fist broke apart in the air and came down hard, scattering its ruin across the cliffside and into the water.\n\nFew aboard escaped before she struck. Kiryn, Shokia, Gorrok, Rivett Clutchpop, and Zin'Jun with his pet Snuff got clear in time. The rest went down with the ship.",
-			source = "https://warcraft.wiki.gg/wiki/Hellscream's_Fist",
-		},
 		["hidden path"] = {
 			name = "Hidden Path",
 			short = "The Hidden Path winds through the mountains walling off the Valley of Trials, known chiefly to those walking the shaman's road, for it leads to the Spirit Rock where the spirits are met.",
@@ -122,12 +80,6 @@ ZoneLore.Subzones = {
 			full = "Kolkar Crag is a craggy gorge in southern Durotar, named for the Kolkar centaurs who made it their den.\n\nFrom this gorge, the Kolkar, led by Warlord Kolkanis, plotted to strike at Durotar itself: the Valley of Trials, Sen'jin Village, Razor Hill, even the gates of Orgrimmar. When word of the massing orc troops reached Theramore, reinforcements were sent to Northwatch Hold to answer the threat.",
 			source = "https://warcraft.wiki.gg/wiki/Kolkar_Crag",
 		},
-		["northwatch foothold"] = {
-			name = "Northwatch Foothold",
-			short = "The valley west of Sen'jin Village was once called the Kolkar Crag.",
-			full = "The valley west of Sen'jin Village was once called the Kolkar Crag. Now it takes its name from the humans of Northwatch Hold, who have pushed into it, unloading crate after crate of supplies from two icebreakers anchored off Darkspear Strand.\n\nRazor Hill's orcs have troubles enough of their own. So it falls to the Darkspear trolls to hold this ground.",
-			source = "https://warcraft.wiki.gg/wiki/Northwatch_Foothold",
-		},
 		["orgrimmar"] = {
 			name = "Orgrimmar",
 			short = "Warchief Thrall named this place for a friend he could no longer thank in person.",
@@ -145,18 +97,6 @@ ZoneLore.Subzones = {
 			short = "The barracks stands as the largest building in Razor Hill, its size alone marking the settlement as one of the true strongholds of Durotar, second only to Orgrimmar itself.",
 			full = "The barracks stands as the largest building in Razor Hill, its size alone marking the settlement as one of the true strongholds of Durotar, second only to Orgrimmar itself.",
 			source = "https://warcraft.wiki.gg/wiki/Razor_Hill_Barracks",
-		},
-		["razor hill outskirts"] = {
-			name = "Razor Hill Outskirts",
-			short = "The land around Razor Hill saw fighting when the Darkspear rose against the Kor'kron.",
-			full = "The land around Razor Hill saw fighting when the Darkspear rose against the Kor'kron. On the southern side, Darkspear warriors struck at the Kor'kron soldiers stationed there, carrying the rebellion to the very edge of the hill's holdings.",
-			source = "https://warcraft.wiki.gg/wiki/Razor_Hill_Outskirts",
-		},
-		["razor hill watchtower"] = {
-			name = "Razor Hill Watchtower",
-			short = "On the cliffs above Razor Hill, the watchtower looks down over the Southfury Watershed. Thonk keeps the post, spyglass in hand, watching the waters below for survivors of the flood that swept through the watershed.",
-			full = "On the cliffs above Razor Hill, the watchtower looks down over the Southfury Watershed. Thonk keeps the post, spyglass in hand, watching the waters below for survivors of the flood that swept through the watershed.",
-			source = "https://warcraft.wiki.gg/wiki/Razor_Hill_Watchtower",
 		},
 		["razormane grounds"] = {
 			name = "Razormane Grounds",
@@ -188,12 +128,6 @@ ZoneLore.Subzones = {
 			full = "Sen'jin Village sits on the southern coast of Durotar, a scatter of small huts and one larger longhouse gathered above a dock that runs into the sea. It is a quiet place beside a crossroads, one path bending north toward Razor Hill, the other winding southeast down to the village itself.\n\nThe Darkspear trolls who hold it are mostly herbalists and alchemists, gathering what grows along the coast and turning it into potions over the huts' low fires.\n\nIn the days of the Darkspear Rebellion, Sen'jin became once more the tribe's rallying point, before the fight moved on and Razor Hill, retaken, became the rebellion's new heart in its place.",
 			source = "https://warcraft.wiki.gg/wiki/Sen'jin_Village",
 		},
-		["senjin village outskirts"] = {
-			name = "Sen'jin Village Outskirts",
-			short = "The fighting for Sen'jin Village did not stay within its huts and totems.",
-			full = "The fighting for Sen'jin Village did not stay within its huts and totems. It spilled outward, into the outskirts surrounding the village, and it was here, in the open ground beyond the homes, that most of the battle was actually fought.",
-			source = "https://warcraft.wiki.gg/wiki/Sen'jin_Village_Outskirts",
-		},
 		["shrine of the dormant flame"] = {
 			name = "Shrine of the Dormant Flame",
 			short = "The Shrine of the Dormant Flame crowns the tallest peak of the region, reached only by a hidden path that spirals up from beside the Southfury River, northwest of the Valley of Trials.",
@@ -212,35 +146,11 @@ ZoneLore.Subzones = {
 			full = "The Southfury River rises high on Mount Hyjal, spilling from a mountain lake into a cascade of waterfalls before widening into the swift, churning water that gives the land below its shape. It marks the boundary between Ashenvale and Azshara to the north, and further south divides the Northern Barrens from Durotar, before finally pouring itself into the Great Sea in one last waterfall near the goblin port of Ratchet.\n\nThree bridges cross it: one linking Azshara to Ashenvale, one carrying travelers into Orgrimmar itself, and one joining Durotar to the Northern Barrens. Just north of the western bridge into the orc capital, there is a single point where four lands touch at once, the water running between them all.\n\nAt the river's mouth, a goblin named Horton Hornblower keeps a riverboat tied at his dock, ferrying those who need passage upstream toward the Barrens.\n\nThe river still runs strong enough to water the fields along its banks, but its water can no longer be drunk.",
 			source = "https://warcraft.wiki.gg/wiki/Southfury_River",
 		},
-		["southfury watershed"] = {
-			name = "Southfury Watershed",
-			short = "The Southfury Watershed lies where the river bends past Razor Hill, a stretch of ground once no different from the rest of Durotar.",
-			full = "The Southfury Watershed lies where the river bends past Razor Hill, a stretch of ground once no different from the rest of Durotar. Quilboars root through it now, scorpids and crocolisks lurk in its waters, and raptors stalk its open ground, making it a dangerous place to cross.\n\nThe danger is not only what prowls there. Flooding swept through the watershed and claimed many who lived along its banks. Those who survived it are scattered and in need of rescue, watched over from the guard tower at the western edge of Razor Hill, where Thonk keeps watch over the region and sends what help he can to those still stranded in the flooded ground.",
-			source = "https://warcraft.wiki.gg/wiki/Southfury_Watershed",
-		},
 		["spirit rock"] = {
 			name = "Spirit Rock",
 			short = "Above the Valley of Trials, reached by the Hidden Path, stands Spirit Rock, sacred to the shaman of the Horde. Aspiring shaman once drank sapta beside the stone, sitting with the earth until it answered them.",
 			full = "Above the Valley of Trials, reached by the Hidden Path, stands Spirit Rock, sacred to the shaman of the Horde. Aspiring shaman once drank sapta beside the stone, sitting with the earth until it answered them.",
 			source = "https://warcraft.wiki.gg/wiki/Spirit_Rock",
-		},
-		["spitescale cavern"] = {
-			name = "Spitescale Cavern",
-			short = "Deep within Spitescale Cove, the cavern winds beneath the Echo Isles, home to the naga who took the cove's name for their own.",
-			full = "Deep within Spitescale Cove, the cavern winds beneath the Echo Isles, home to the naga who took the cove's name for their own. The tunnels remain theirs, coiling through rock and salt water where the sea has carved its way into the isles.",
-			source = "https://warcraft.wiki.gg/wiki/Spitescale_Cavern",
-		},
-		["spitescale cove"] = {
-			name = "Spitescale Cove",
-			short = "The naga chose Spitescale Cove, northernmost of the Echo Isles, as their staging ground against the Darkspear tribe, massing there to attack and destroy the trolls.",
-			full = "The naga chose Spitescale Cove, northernmost of the Echo Isles, as their staging ground against the Darkspear tribe, massing there to attack and destroy the trolls. Zar'jira, a sea witch, led them from the isle's cave, from which the assault was made ready.",
-			source = "https://warcraft.wiki.gg/wiki/Spitescale_Cove",
-		},
-		["sunstrider"] = {
-			name = "The Sunstrider",
-			short = "The Sunstrider carries the name of a fallen line, and Fleet Admiral Zar'gov commands her.",
-			full = "The Sunstrider carries the name of a fallen line, and Fleet Admiral Zar'gov commands her.\n\nLady Liadrin and Aethas Sunreaver boarded her from Bladefist Bay, with Silgryn alongside them, bound across the sea toward Azuremyst.",
-			source = "https://warcraft.wiki.gg/wiki/The_Sunstrider",
 		},
 		["thunder ridge"] = {
 			name = "Thunder Ridge",
@@ -266,26 +176,14 @@ ZoneLore.Subzones = {
 			full = "Every young orc who takes up a blade or a totem first proves it here, in this walled valley of southern Durotar, where the sun bakes the sand hard and shows no mercy to those who fail. Those who die in the attempt are left where they fall.\n\nAt the valley's heart stands the Den, a cave hollowed from the cliff and fitted with what comforts the desert allows. Here the recruiters and trainers make their home, and here the young return to report what they have overcome before they are judged ready for the world beyond the walls.\n\nBut the valley is no longer as safe as its purpose demands. In the caves to the north, once empty and natural, demons of the Burning Blade have taken root. They are weak things individually, but they have begun creeping south into the valley proper. Their presence lends weight to old rumors that the Shadow Council has found a foothold somewhere in the region.",
 			source = "https://warcraft.wiki.gg/wiki/Valley_of_Trials",
 		},
-		["zalazanes fall subzone"] = {
-			name = "Zalazane's Fall (subzone)",
-			short = "Zalazane's Fall takes its name from the witch doctor struck down here, whose corruption seeped into the ground and never left it.",
-			full = "Zalazane's Fall takes its name from the witch doctor struck down here, whose corruption seeped into the ground and never left it. Naj'tess, an undead sorcerer, claimed the tainted island afterward, using his Orb of Corruption to twist the Bloodtalon hatchlings that wander too near.",
-			source = "https://warcraft.wiki.gg/wiki/Zalazane's_Fall_(subzone)",
-		},
 	},
-	-- Mulgore: 25 subzones
+	-- Mulgore: 18 subzones
 	[1412] = {
 		["baeldun digsite"] = {
 			name = "Bael'dun Digsite",
 			short = "Dwarves from Bael Modan cut a quarry into the western edge of Mulgore, against the warnings of Baine Bloodhoof, who saw it as an affront to the Earth Mother.",
 			full = "Dwarves from Bael Modan cut a quarry into the western edge of Mulgore, against the warnings of Baine Bloodhoof, who saw it as an affront to the Earth Mother. When talk failed, the Bloodhoof tribe seized the dwarves' pickaxes and broke them, hoping to stop the digging without bloodshed.\n\nThe dwarves refused to listen and kept digging. Their reckless excavation roused the spirits of the land, and the diggers were killed for their persistence. The quarry still scars the mountainside.",
 			source = "https://warcraft.wiki.gg/wiki/Bael'dun_Digsite",
-		},
-		["battleboar pen"] = {
-			name = "Battleboar Pen",
-			short = "In the pens of Red Cloud Mesa, the Bristleback quilboar under Chief Squealer Thornmantle breed their Armored Battleboars, force-feeding the beasts raw flesh until they grow vicious enough for war.",
-			full = "In the pens of Red Cloud Mesa, the Bristleback quilboar under Chief Squealer Thornmantle breed their Armored Battleboars, force-feeding the beasts raw flesh until they grow vicious enough for war. The tauren Adana Thunderhorn has not forgotten that this land was theirs, and means to see the quilboar driven out and their battleboars slaughtered.",
-			source = "https://warcraft.wiki.gg/wiki/Battleboar_Pen",
 		},
 		["bloodhoof village"] = {
 			name = "Bloodhoof Village",
@@ -305,29 +203,11 @@ ZoneLore.Subzones = {
 			full = "Camp Narache sits at the northern edge of the Red Cloud Mesa, tents of the Hawkwind Tribe gathered around a center where its teachers stand in a circle, paying respect to the fallen Greatmother Hawkwind. The main tent shelters wounded braves; nearby stand a spirit lounge, a bakery, an armory, and a trader's tent.\n\nWhen Muln and his shaman could do nothing but retreat, it was Shotoa who took care of it. The wounded still resting in the main tent are proof the cost was recent, not a story worn smooth by years.",
 			source = "https://warcraft.wiki.gg/wiki/Camp_Narache",
 		},
-		["camp sungraze"] = {
-			name = "Camp Sungraze",
-			short = "Camp Sungraze sits northeast of Thunder Bluff, a small outpost of the Horde watching over the plains of Mulgore.",
-			full = "Camp Sungraze sits northeast of Thunder Bluff, a small outpost of the Horde watching over the plains of Mulgore.",
-			source = "https://warcraft.wiki.gg/wiki/Camp_Sungraze",
-		},
-		["fargaze mesa"] = {
-			name = "Fargaze Mesa",
-			short = "Fargaze Mesa rises above southwestern Mulgore, sacred to the spiritwalkers who climb it to commune with tauren ancestors. Spiritwalker Ussoh keeps that vigil, seated within the stone ring at its top.",
-			full = "Fargaze Mesa rises above southwestern Mulgore, sacred to the spiritwalkers who climb it to commune with tauren ancestors. Spiritwalker Ussoh keeps that vigil, seated within the stone ring at its top.\n\nDyami Windsoar also dwells here, guiding young tauren from Red Cloud Mesa onward into the wider plains of Mulgore.",
-			source = "https://warcraft.wiki.gg/wiki/Fargaze_Mesa",
-		},
 		["golden plains"] = {
 			name = "Golden Plains",
 			short = "The Golden Plains open in a great basin below Thunder Bluff, treasured ground in the tauren homeland. Herds of kodo move across the grass, and tauren hunters favor this basin above nearly any other.",
 			full = "The Golden Plains open in a great basin below Thunder Bluff, treasured ground in the tauren homeland. Herds of kodo move across the grass, and tauren hunters favor this basin above nearly any other.\n\nSomewhere in that shifting green sea, it is said, the famous Arra'chea still dwells.",
 			source = "https://warcraft.wiki.gg/wiki/Golden_Plains",
-		},
-		["great gate"] = {
-			name = "Great Gate",
-			short = "The Great Gate stands where the tauren tribes hold their line, a bulwark against quilboar pressing into Mulgore and the Alliance's needling strikes.",
-			full = "The Great Gate stands where the tauren tribes hold their line, a bulwark against quilboar pressing into Mulgore and the Alliance's needling strikes. Zekhan's report after the war said simply that the gate still stands, still holding back what it has always held back.",
-			source = "https://warcraft.wiki.gg/wiki/Great_Gate",
 		},
 		["kodo rock"] = {
 			name = "Kodo Rock",
@@ -371,24 +251,6 @@ ZoneLore.Subzones = {
 			full = "Stonebull Lake curls in a long horseshoe around Bloodhoof Village, holding it close on three sides. The water runs cool and full of fish, and lines are cast into it through long, quiet hours. Where the lake pinches narrowest, a bridge crosses over, carrying the road that links Bloodhoof Village to Thunder Bluff.",
 			source = "https://warcraft.wiki.gg/wiki/Stonebull_Lake",
 		},
-		["stonetalon pass mulgore"] = {
-			name = "Stonetalon Pass (Mulgore)",
-			short = "The pass climbs northwest out of Mulgore, a narrow trail where the Grimtotem hold ground against those who pass. It ends at a painted rock set high on a plateau.",
-			full = "The pass climbs northwest out of Mulgore, a narrow trail where the Grimtotem hold ground against those who pass. It ends at a painted rock set high on a plateau.\n\nFrom that height, the land does not simply stop. One who walks the rim northeast can fall from Mulgore into the Stonetalon Mountains below, toward Boulderslide Ravine or Malaka'jin. Along the same rim runs the High Road, a way to travel from Stonetalon toward the Southern Barrens without passing beneath the Alliance watch at Honor's Stand.",
-			source = "https://warcraft.wiki.gg/wiki/Stonetalon_Pass_(Mulgore)",
-		},
-		["thornmantles hideout"] = {
-			name = "Thornmantle's Hideout",
-			short = "In the southwestern reach of Mulgore, thorns grown thick by quilboar hands close overhead until the ground feels less like open land than a cave.",
-			full = "In the southwestern reach of Mulgore, thorns grown thick by quilboar hands close overhead until the ground feels less like open land than a cave. This is Thornmantle's Hideout, seat of Chief Squealer Thornmantle and his Thornguards.\n\nAround the chief lie the burning corpses of tauren braves who came against him and did not leave. No tauren passing this way, on the path toward Bloodhoof Village, can mistake what the sight means.",
-			source = "https://warcraft.wiki.gg/wiki/Thornmantle's_Hideout",
-		},
-		["thornsnarl"] = {
-			name = "Thornsnarl",
-			short = "In the tangled thickets of southern Mulgore, the Bristleback quilboar have pushed into tauren land, seeking to claim it for their own.",
-			full = "In the tangled thickets of southern Mulgore, the Bristleback quilboar have pushed into tauren land, seeking to claim it for their own. Fledgling braves stand against them, holding the line for a people who call this ground theirs.\n\nIn the northern reaches of the thicket, young braves taken captive by the Bristleback are held among the thorns, awaiting rescue.",
-			source = "https://warcraft.wiki.gg/wiki/Thornsnarl",
-		},
 		["thunder bluff"] = {
 			name = "Thunder Bluff",
 			short = "Thunder Bluff rises on four windswept mesas above the grasslands of Mulgore, reached only by rope-and-wood elevators of tauren make, or by long bridges strung between the rises.",
@@ -426,7 +288,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Winterhoof_Water_Well",
 		},
 	},
-	-- The Barrens: 34 subzones
+	-- The Barrens: 31 subzones
 	[1413] = {
 		["agamagor"] = {
 			name = "Agama'gor",
@@ -469,12 +331,6 @@ ZoneLore.Subzones = {
 			short = "Camp Taurajo stood in the Southern Barrens, near the pass into Mulgore, a small tauren outpost where travelers rested before the road home.",
 			full = "Camp Taurajo stood in the Southern Barrens, near the pass into Mulgore, a small tauren outpost where travelers rested before the road home.\n\nThe Alliance came down from Northwatch Hold on false word that the tauren meant to strike first, and on that lie they burned the camp to the ground. It was no battle, only a massacre, an outpost of herders and travelers put to the torch.\n\nWhat remains is ash, and a name the tauren do not say lightly.",
 			source = "https://warcraft.wiki.gg/wiki/Camp_Taurajo",
-		},
-		["cavern of mists"] = {
-			name = "Cavern of Mists",
-			short = "Just outside the Wailing Caverns proper lies a chamber apart from the deeper dark, where geysers break from the stone floor and throw up a mist that never clears, hanging over a wide green pool at its heart.",
-			full = "Just outside the Wailing Caverns proper lies a chamber apart from the deeper dark, where geysers break from the stone floor and throw up a mist that never clears, hanging over a wide green pool at its heart.\n\nRaptors, snakes, oozes, and toads move along its edges, wind serpents coil through the damp air, and threshadons glide through the deep water. Among them, rarely, drifts Trigore the Lasher, a hydra said to haunt the pool.",
-			source = "https://warcraft.wiki.gg/wiki/Cavern_of_Mists",
 		},
 		["crossroads"] = {
 			name = "Crossroads",
@@ -572,18 +428,6 @@ ZoneLore.Subzones = {
 			full = "Ratchet sits on the eastern shore of the Barrens, a harbor built by nobody's design and everybody's leftovers. Gazlowe raised it after Orgrimmar was finished, flush with the coin Thrall had paid him and his crew for their work on the Warchief's city. The town began with smugglers and grew from there, filling up with whoever the rest of the world had thrown out. It kept no flag but its own, trading through Booty Bay and Baron Revilgaz across the sea, and let orc and human money spend the same in its streets.\n\nThat neutrality nearly broke it. The Burning Blade worked quietly at the seams between Orgrimmar and Theramore, staging shipping incidents near the port until traders and sailors of both nations were brawling in its streets. When the bruiser Muzzlecrank arrested the captains Klatt and Joq, Northwatch Hold read it as the opening move of an orcish war and called for reinforcements. Ratchet became a staging ground for a Horde army marching against Northwatch. Only when the cult's hand in the whole affair came to light did Thrall call the fighting off.",
 			source = "https://warcraft.wiki.gg/wiki/Ratchet",
 		},
-		["razorfen downs classic"] = {
-			name = "Razorfen Downs",
-			short = "The entrance to Razorfen Downs is said to be Agamaggan's own maw, a gap in the thorns so well hidden that only those who already know its shape can find it.",
-			full = "The entrance to Razorfen Downs is said to be Agamaggan's own maw, a gap in the thorns so well hidden that only those who already know its shape can find it. Beyond lies the ancestral burial ground of the quilboar, their traditional capital, grown rather than built from the same great vines as Razorfen Kraul. Charlga Razorflank shaped most of the thorn dome that shelters it, and in time passed the knowledge of tending it to Chugara Razorflank.\n\nAfter the Third War, the lich Amnennar the Coldbringer turned his agents loose upon the quilboar, binding many of the tribe to his will and remaking the labyrinth into a stronghold of the Scourge. The quilboar fought bitterly to win back their holy ground before his plague could spread beyond it.\n\nAmnennar was struck down, yet his phylactery survived him, and Death Speaker Blackthorn labored among the dead to call his master back into the world. It was Reigol Valdread who struck Blackthorn down instead, ending Amnennar's return for good.",
-			source = "https://warcraft.wiki.gg/wiki/Razorfen_Downs_(Classic)",
-		},
-		["razorfen kraul classic"] = {
-			name = "Razorfen Kraul",
-			short = "The thorns of Razorfen Kraul did not grow from ordinary ground.",
-			full = "The thorns of Razorfen Kraul did not grow from ordinary ground. Ten thousand years ago, during the War of the Ancients, the demigod Agamaggan came forth to battle the Burning Legion, and though the colossal boar fell in that fight, his sacrifice helped save Azeroth from ruin. Where his blood soaked into the earth, thick thorn-ridden vines rose up unbidden, and the quilboar came to dwell among them, holding the tangled ground sacred as the flesh and blood of their own progenitor. They call themselves his mortal offspring, and the heart of these thorn-colonies took the name Razorfen.\n\nThe great mass of Razorfen Kraul now answers to the old crone Charlga Razorflank, who conquered it and bent its shamanistic tribes to her will. Under her rule the quilboar raid rival tribes and Horde villages beyond the thorns, and it is whispered that Charlga has gone further still, treating in secret with agents of the Scourge, binding her own unwitting people toward some purpose that serves the dead rather than the living.",
-			source = "https://warcraft.wiki.gg/wiki/Razorfen_Kraul_(Classic)",
-		},
 		["shrine of the fallen warrior"] = {
 			name = "Shrine of the Fallen Warrior",
 			short = "On a small hill west of the Crossroads, a trail winds up from the base of a mound, climbing the ridge until it reaches the shrine at the top.",
@@ -666,31 +510,13 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Uplands",
 		},
 	},
-	-- Arathi Highlands: 46 subzones
+	-- Arathi Highlands: 19 subzones
 	[1417] = {
-		["argorok"] = {
-			name = "Ar'gorok",
-			short = "Ar'gorok rose on the bones of Northfold Manor, in the northwestern Arathi Highlands, raised as the Horde's great anchor in its struggle for the western Highlands.",
-			full = "Ar'gorok rose on the bones of Northfold Manor, in the northwestern Arathi Highlands, raised as the Horde's great anchor in its struggle for the western Highlands. It was built for war and paid for war: when the Alliance broke it, the keep did not merely fall but was left in ruins, its dead refusing to lie quiet, vengeful ghosts walking its broken halls, until the Horde clawed back the resources to rebuild it and fight on. That cycle ended when the Alliance finally won the western Highlands outright. Ar'gorok was destroyed a last time and left empty, and the ghosts that haunt it now are angrier for it, defeated spirits with nothing left to defend.\n\nLater, the gnolls, ogres, kobolds, and ettins of the Highlands set aside their quarrels and made Ar'gorok the staging ground for their chieftain Ro'grok's assault on Stromgarde Keep. Thrall and Jaina Proudmoore came against him together, Jaina freezing the ogres holding the walls while Ro'grok was cut down before the fortress he had claimed.",
-			source = "https://warcraft.wiki.gg/wiki/Ar'gorok",
-		},
-		["barracks stromgarde keep"] = {
-			name = "Barracks (Stromgarde Keep)",
-			short = "The barracks still stands at Stromgarde Keep, empty now of the soldiers who once mustered there.",
-			full = "The barracks still stands at Stromgarde Keep, empty now of the soldiers who once mustered there. Its walls remember the kingdom's defenders, though the ranks that filled it are gone, leaving only the stone shell behind at the keep.",
-			source = "https://warcraft.wiki.gg/wiki/Barracks_(Stromgarde_Keep)",
-		},
 		["boulderfist hall"] = {
 			name = "Boulderfist Hall",
 			short = "Boulderfist Hall is a fortified ogre mound in southern Arathi Highlands, near Thandol Span and Witherbark Village. Deep within its largest cave broods Kor'gresh Coldrage, chief of the Boulderfist clan.",
 			full = "Boulderfist Hall is a fortified ogre mound in southern Arathi Highlands, near Thandol Span and Witherbark Village. Deep within its largest cave broods Kor'gresh Coldrage, chief of the Boulderfist clan.\n\nBy the time of the Battle for Stromgarde, the Boulderfist had pushed outward, spreading their camp across the surrounding hills and fortifying it further.",
 			source = "https://warcraft.wiki.gg/wiki/Boulderfist_Hall",
-		},
-		["boulderfist outpost"] = {
-			name = "Boulderfist Outpost",
-			short = "Boulderfist Outpost is a mound of piled stone within Boulder'gor in western Arathi Highlands, held by ogres.",
-			full = "Boulderfist Outpost is a mound of piled stone within Boulder'gor in western Arathi Highlands, held by ogres. Most of the ogres in this stretch make their home inside it, while only a few forest trolls linger there alongside them.",
-			source = "https://warcraft.wiki.gg/wiki/Boulderfist_Outpost",
 		},
 		["bouldergor"] = {
 			name = "Boulder'gor",
@@ -698,23 +524,11 @@ ZoneLore.Subzones = {
 			full = "North of Stromgarde Keep rises the hill called Boulder'gor. Boulderfist ogres hold their mound here at the Boulderfist Outpost, and Witherbark forest trolls keep to the same high ground. On its eastern side stands the Circle of Elements, and just south of it lie a pair of farms.",
 			source = "https://warcraft.wiki.gg/wiki/Boulder'gor",
 		},
-		["brew bay"] = {
-			name = "Brew Bay",
-			short = "Brew Bay lies along the southeastern shore of the Arathi Highlands, where dwarven farmers once worked the coastal soil.",
-			full = "Brew Bay lies along the southeastern shore of the Arathi Highlands, where dwarven farmers once worked the coastal soil. Captain Keg Leg and his crew have claimed the bay for themselves, gathering there in search of plunder.",
-			source = "https://warcraft.wiki.gg/wiki/Brew_Bay",
-		},
 		["circle of east binding"] = {
 			name = "Circle of East Binding",
 			short = "The Stone of East Binding stands in the eastern Arathi Highlands, near Hammerfall, one of the Circles of Binding raised across the region.",
 			full = "The Stone of East Binding stands in the eastern Arathi Highlands, near Hammerfall, one of the Circles of Binding raised across the region. Water elementals still keep watch over the stone, holding to whatever charge was laid upon them long ago.",
 			source = "https://warcraft.wiki.gg/wiki/Circle_of_East_Binding",
-		},
-		["circle of elements"] = {
-			name = "Circle of Elements",
-			short = "In the western reaches of the Arathi Highlands stands the Circle of Elements, a place bound long ago by magic that held the elements themselves in check.",
-			full = "In the western reaches of the Arathi Highlands stands the Circle of Elements, a place bound long ago by magic that held the elements themselves in check. Whoever holds this circle can turn that binding to war, raising a mage tower before its stones to draw power from the elements against their enemies.\n\nThe binding did not hold forever. In time, the magic that chained the elementals to the earth began to fray, and they broke loose across the Highlands, no longer content to serve as a weapon for whichever banner flew over the circle. Those who had claimed the ground were forced to turn their strength instead toward putting the elementals down before they could rage across territory only just won.\n\nAfter the fighting at Go'Shek Farm, fire elementals came to hold the circle themselves. But Stromgarde's banner flies here now, the circle and its tower standing under Alliance control once more.",
-			source = "https://warcraft.wiki.gg/wiki/Circle_of_Elements",
 		},
 		["circle of inner binding"] = {
 			name = "Circle of Inner Binding",
@@ -734,24 +548,6 @@ ZoneLore.Subzones = {
 			full = "The Stone of West Binding once stood near Thoradin's Wall in the Arathi Highlands, guarded by fire elementals, one of the old Circles of Binding set into that land.\n\nThen the Horde raised Ar'gorok upon the site. Where the stone and its guardians stood, the Horde now cuts timber at Hatchet Ridge, and the circle is gone.",
 			source = "https://warcraft.wiki.gg/wiki/Circle_of_West_Binding",
 		},
-		["clearfells patch"] = {
-			name = "Clearfell's Patch",
-			short = "The fields at Clearfell's Patch lie quiet against the northern stretch of Thoradin's Wall, the old bulwark of Arathi still rising nearby as it has for centuries, watching over ground that has seen little but grass and silence.",
-			full = "The fields at Clearfell's Patch lie quiet against the northern stretch of Thoradin's Wall, the old bulwark of Arathi still rising nearby as it has for centuries, watching over ground that has seen little but grass and silence.",
-			source = "https://warcraft.wiki.gg/wiki/Clearfell's_Patch",
-		},
-		["contested pass"] = {
-			name = "Contested Pass",
-			short = "A narrow pass lies east of Ar'gorok in the Arathi Highlands, a stretch of contested ground between the higher settlement and the lands beyond it.",
-			full = "A narrow pass lies east of Ar'gorok in the Arathi Highlands, a stretch of contested ground between the higher settlement and the lands beyond it. Nothing marks who holds it for long.",
-			source = "https://warcraft.wiki.gg/wiki/Contested_Pass",
-		},
-		["crypt stromgarde keep"] = {
-			name = "Crypt (Stromgarde Keep)",
-			short = "Beneath the chapel of Stromgarde Keep lies the Sanctum, and within it the crypt where Thoras Trollbane was laid to rest. His tomb held more than his bones: sheathed with him was Trol'kalar, the sword he carried as king.",
-			full = "Beneath the chapel of Stromgarde Keep lies the Sanctum, and within it the crypt where Thoras Trollbane was laid to rest. His tomb held more than his bones: sheathed with him was Trol'kalar, the sword he carried as king.\n\nIt did not stay a quiet grave. Trol'kalar was taken up out of the tomb, and with it the dead king was raised, drawn from his crypt to stand among the Four Horsemen. The sword was carried off after, and when Mathias Shaw came looking for the king who should have been lying there, he found only the empty stone.",
-			source = "https://warcraft.wiki.gg/wiki/Crypt_(Stromgarde_Keep)",
-		},
 		["dabyries farmstead"] = {
 			name = "Dabyrie's Farmstead",
 			short = "In the northern reaches of Arathi Highlands stands the farmstead of the Dabyrie family, Kenata and her children Fardel and Marcel, loyal citizens of Stromgarde.",
@@ -770,53 +566,11 @@ ZoneLore.Subzones = {
 			full = "Drywhisker Gorge cuts through the mountains in the eastern Arathi Highlands, northeast of Hammerfall, ending in a cave the Drywhisker kobolds have made their own. Allies to the giants of the highlands, these kobolds guard a scattering of motes and, buried deeper still, a stone shard holding a fragment of the essence of Princess Myzrael.\n\nAmong the Drywhisker, one name stood above the rest: Overseer Krix, who kept a donkey penned near his hollow, fattened for slaughter and meant to be his dinner. He never got the chance. Krix fell, and the donkey he had marked for the pot was spared, led out of the gorge to find a home far from the kobolds' fires.",
 			source = "https://warcraft.wiki.gg/wiki/Drywhisker_Gorge",
 		},
-		["drywhisker mine"] = {
-			name = "Drywhisker Mine",
-			short = "Drywhisker Mine, beside Ar'gorok, supplied the iron that armed that Horde stronghold, and its tunnels became a contested foothold in the battle for Stromgarde.",
-			full = "Drywhisker Mine, beside Ar'gorok, supplied the iron that armed that Horde stronghold, and its tunnels became a contested foothold in the battle for Stromgarde. When the Alliance won that struggle, the mine slipped from Horde hands, and the Drywhisker kobolds who burrow its shafts took it back for their own.",
-			source = "https://warcraft.wiki.gg/wiki/Drywhisker_Mine",
-		},
 		["faldirs cove"] = {
 			name = "Faldir's Cove",
 			short = "Faldir's Cove takes its name from Faldir, who is said to have launched his voyage from this harbor with the followers who would go on to found the kingdom of Stormwind.",
 			full = "Faldir's Cove takes its name from Faldir, who is said to have launched his voyage from this harbor with the followers who would go on to found the kingdom of Stormwind. The name has clung to it ever since as a marker of that first departure.\n\nIn more recent memory, the Blackwater Raiders came here hunting an elven treasure, sailing three ships under Captains Steelgut and O'Breen. A tide raised by naga guarding sunken ruins nearby dragged two of the vessels under; only the Harbinger reached the cove safely, its crew trapped in the bay until the naga were driven off and the lost ships' navigation logs recovered from the wreckage.\n\nWhen war broke out over Stromgarde, the Alliance and the keep's returning citizens seized the cove, and held it through the fighting even after Stromgarde itself fell, keeping it still when the war had ended.",
 			source = "https://warcraft.wiki.gg/wiki/Faldir's_Cove",
-		},
-		["fishing shack arathi highlands"] = {
-			name = "Fishing Shack (Arathi Highlands)",
-			short = "Faldir's Cove holds a fishing shack, weathered by the wind off the coast, standing as a quiet mark of the folk who once worked these waters.",
-			full = "Faldir's Cove holds a fishing shack, weathered by the wind off the coast, standing as a quiet mark of the folk who once worked these waters.",
-			source = "https://warcraft.wiki.gg/wiki/Fishing_Shack_(Arathi_Highlands)",
-		},
-		["forsaken wagon"] = {
-			name = "Forsaken Wagon",
-			short = "A wagon stands abandoned northwest of Boulderfist Hall in the Arathi Highlands, its wheels sunk in the churned earth.",
-			full = "A wagon stands abandoned northwest of Boulderfist Hall in the Arathi Highlands, its wheels sunk in the churned earth. Forsaken keep watch over it, silent and unmoving among the wreckage, giving nothing away of what the wagon carries or why it was left here.",
-			source = "https://warcraft.wiki.gg/wiki/Forsaken_Wagon",
-		},
-		["galens fall"] = {
-			name = "Galen's Fall",
-			short = "Galen's Fall takes its name from Prince Galen Trollbane, killed by the Forsaken at this stretch of Thoradin's Wall where it meets the passage into the Hillsbrad Foothills.",
-			full = "Galen's Fall takes its name from Prince Galen Trollbane, killed by the Forsaken at this stretch of Thoradin's Wall where it meets the passage into the Hillsbrad Foothills.\n\nYears after, on the day before the Gathering, Elsie Benton and Parqual Fintallas met here to speak of what was to come, while Annie Lansing moved among the gathered Forsaken, pressing scarves and sachets into their hands.",
-			source = "https://warcraft.wiki.gg/wiki/Galen's_Fall",
-		},
-		["galsons lode"] = {
-			name = "Galson's Lode",
-			short = "Galson's Lode sits near the Circle of Inner Binding, not far from Stromgarde Keep, and it is the keep's lifeblood: every vein of iron pulled from this mine feeds Stromgarde's forges.",
-			full = "Galson's Lode sits near the Circle of Inner Binding, not far from Stromgarde Keep, and it is the keep's lifeblood: every vein of iron pulled from this mine feeds Stromgarde's forges. Foreman Tully oversees the digging, and speaks of the Horde pressing at the mine's edges and the kobolds burrowing up from the dark the same way -- nuisances his miners can handle.\n\nAmong those kobolds was an overseer named Krix, who kept a donkey penned, meant for nothing but his supper. Krix did not last. He was brought down, and the donkey he'd meant to eat was led out of the mine instead, given a home away from the tunnels.\n\nThe mine stands now in Stromgarde's hands, its shafts still worked, its ore still bound for the keep's walls.",
-			source = "https://warcraft.wiki.gg/wiki/Galson's_Lode",
-		},
-		["goblin workshop argorok"] = {
-			name = "Goblin Workshop (Ar'gorok)",
-			short = "At Ar'gorok in the Arathi Highlands stands the Goblin Workshop, a place of goblin tinkering amid the highland ruins.",
-			full = "At Ar'gorok in the Arathi Highlands stands the Goblin Workshop, a place of goblin tinkering amid the highland ruins.",
-			source = "https://warcraft.wiki.gg/wiki/Goblin_Workshop_(Ar'gorok)",
-		},
-		["goblin workshop stromgarde keep"] = {
-			name = "Goblin Workshop (Stromgarde Keep)",
-			short = "The Goblin Workshop stands within Stromgarde Keep, in the ruined halls the Arathi kings once held.",
-			full = "The Goblin Workshop stands within Stromgarde Keep, in the ruined halls the Arathi kings once held.",
-			source = "https://warcraft.wiki.gg/wiki/Goblin_Workshop_(Stromgarde_Keep)",
 		},
 		["goshek farm"] = {
 			name = "Go'Shek Farm",
@@ -830,66 +584,6 @@ ZoneLore.Subzones = {
 			full = "The stone walls that ring Hammerfall once held orcs in chains. After the Second War, it stood as one of the largest of the internment camps raised by the Alliance of Lordaeron, a place built to keep a broken people caged.\n\nIt did not stay a cage. Thrall and Orgrim Doomhammer led the Horde against it to free those held within, and in the chaos of that assault, as Thrall worked to cover the retreat of the freed orcs, a knight's lance found Doomhammer from behind. It struck with such force that it pierced the plate of his armor front and back, and the old Warchief fell there, in the camp he had come to liberate.\n\nAfter the Third War, the Horde returned to the ruins and rebuilt them as a forward base, naming the place Hammerfall in memory of the Warchief who died taking it.",
 			source = "https://warcraft.wiki.gg/wiki/Hammerfall",
 		},
-		["hatchet ridge"] = {
-			name = "Hatchet Ridge",
-			short = "Hatchet Ridge is a lumber mill that once fed timber to Ar'gorok. It became a contested foothold in the Battle for Stromgarde, and when the Alliance won that fight, the ridge passed from its former hands.",
-			full = "Hatchet Ridge is a lumber mill that once fed timber to Ar'gorok. It became a contested foothold in the Battle for Stromgarde, and when the Alliance won that fight, the ridge passed from its former hands. Now a group of wildkin holds the mill among the stacked logs.",
-			source = "https://warcraft.wiki.gg/wiki/Hatchet_Ridge",
-		},
-		["high perch"] = {
-			name = "High Perch",
-			short = "High Perch stands on a high hill between Stromgarde Keep and Ar'gorok, its tower and camp overlooking the ground between them.",
-			full = "High Perch stands on a high hill between Stromgarde Keep and Ar'gorok, its tower and camp overlooking the ground between them. Whoever held that hill commanded the middle of the whole contested stretch, a place from which supply and reinforcement could reach every other foothold in the fight for Stromgarde. It changed hands as the battle for the ruined kingdom turned back and forth, each side stripping the camp bare before the other returned to take it again. In the end Stromgarde's banners were the ones left flying over it, and High Perch remains under the keep's control.",
-			source = "https://warcraft.wiki.gg/wiki/High_Perch",
-		},
-		["highlands mill"] = {
-			name = "Highlands Mill",
-			short = "Highlands Mill stands in western Arathi Highlands, its timber feeding the rebuilding of Stromgarde Keep.",
-			full = "Highlands Mill stands in western Arathi Highlands, its timber feeding the rebuilding of Stromgarde Keep. The mill has long been contested ground in the struggle for Stromgarde, and whoever holds it controls the lumber the Keep depends on.\n\nThe mill now stands under Stromgarde's control.",
-			source = "https://warcraft.wiki.gg/wiki/Highlands_Mill",
-		},
-		["labors rest"] = {
-			name = "Labor's Rest",
-			short = "Behind the Highlands Mill, east among the stones, lies Labor's Rest. The dead sleep where the mill's toil once ended, a quiet plot of graves for those whose work was done.",
-			full = "Behind the Highlands Mill, east among the stones, lies Labor's Rest. The dead sleep where the mill's toil once ended, a quiet plot of graves for those whose work was done.",
-			source = "https://warcraft.wiki.gg/wiki/Labor's_Rest",
-		},
-		["mage tower plunderstorm"] = {
-			name = "Mage Tower (Plunderstorm)",
-			short = "The Mage Tower stands within the Circle of Elements in the Arathi Highlands.",
-			full = "The Mage Tower stands within the Circle of Elements in the Arathi Highlands.",
-			source = "https://warcraft.wiki.gg/wiki/Mage_Tower_(Plunderstorm)",
-		},
-		["mangled chord"] = {
-			name = "Mangled Chord",
-			short = "In the Arathi Highlands, southwest of the Circle of Outer Binding, lies a stretch of ground known as the Mangled Chord.",
-			full = "In the Arathi Highlands, southwest of the Circle of Outer Binding, lies a stretch of ground known as the Mangled Chord. No tale is told of how it earned its name, only that it stands where it stands, quiet and broken among the hills.",
-			source = "https://warcraft.wiki.gg/wiki/Mangled_Chord",
-		},
-		["marrows farm"] = {
-			name = "Marrow's Farm",
-			short = "The fields at Marrow's Farm lie quiet, given over to whatever passes through them, remembered less for who once worked the soil than for the ground itself, caught between the Circle of Elements and Valorcall Pass.",
-			full = "The fields at Marrow's Farm lie quiet, given over to whatever passes through them, remembered less for who once worked the soil than for the ground itself, caught between the Circle of Elements and Valorcall Pass.",
-			source = "https://warcraft.wiki.gg/wiki/Marrow's_Farm",
-		},
-		["neglected seat"] = {
-			name = "Neglected Seat",
-			short = "The Neglected Seat lies between Dabyrie's Farmstead and the Circle of East Binding in the Arathi Highlands, a place left to itself.",
-			full = "The Neglected Seat lies between Dabyrie's Farmstead and the Circle of East Binding in the Arathi Highlands, a place left to itself. Water elementals and raging waters have settled into its emptiness, the only claimants to a seat no one else has bothered to hold.",
-			source = "https://warcraft.wiki.gg/wiki/Neglected_Seat",
-		},
-		["newstead"] = {
-			name = "Newstead",
-			short = "Newstead sits along the road to Thoradin's Wall, a farmstead in the western Arathi Highlands, fought over more than once.",
-			full = "Newstead sits along the road to Thoradin's Wall, a farmstead in the western Arathi Highlands, fought over more than once.\n\nIn the long struggle for Stromgarde, Newstead changed hands as a foothold for cavalry: the Alliance trained elekks there under Vindicator Banra, the Horde trained kodo beasts under Raider Zugg, and each time control shifted, the farmstead's stores were stripped bare to resupply whichever army held it. When the battle for Stromgarde was finally decided, the Alliance held the ground, and Newstead passed back under Stromgarde's banner.\n\nThat victory did not leave it safe. With Stromgarde's army drawn away, Defias bandits tied to the Red Dawn found the farmstead unguarded and struck it, making off with tar and torches and dragging off captives, among them Marshal and Sharon Wiltshire. Only when King Danath Trollbane returned to the Highlands with his allies were the raiders driven off and the Wiltshires freed.",
-			source = "https://warcraft.wiki.gg/wiki/Newstead",
-		},
-		["northfold crossing"] = {
-			name = "Northfold Crossing",
-			short = "Northfold Crossing sits at the crossroads before Ar'gorok, the last ground the Horde holds before the stronghold itself. A small camp guards the intersection, its two siege towers raised against any Alliance advance.",
-			full = "Northfold Crossing sits at the crossroads before Ar'gorok, the last ground the Horde holds before the stronghold itself. A small camp guards the intersection, its two siege towers raised against any Alliance advance. Should the crossing fall, those towers are left broken, marking how far the line was pushed back.",
-			source = "https://warcraft.wiki.gg/wiki/Northfold_Crossing",
-		},
 		["northfold manor"] = {
 			name = "Northfold Manor",
 			short = "Northfold Manor stood empty after Stromgarde fell, until the Syndicate took it for their own and made it an outpost in Arathi Highlands.",
@@ -901,12 +595,6 @@ ZoneLore.Subzones = {
 			short = "When Stromgarde's capital fell in the Third War, most of its people fled south, but the proud remnant of the army refused to leave the Highlands.",
 			full = "When Stromgarde's capital fell in the Third War, most of its people fled south, but the proud remnant of the army refused to leave the Highlands. They made their stand at Refuge Pointe, and from its tents the war to reclaim Arathi was directed ever since.\n\nThat cause was paid for dearly. With most of the Stromgarde army gone to Khaz Algar, Refuge Pointe was left thin of defenders, and Joseph led the Scarlet Crusade's Red Dawn against it. Civilians and guards were cut down, others dragged off as captives, and only the passerby Karga Bloodfury managed to pull a few free. Faerin Lothar and a company of adventurers arrived seeking King Danath Trollbane, found the zealots still at their work, and cut them down, driving Joseph to flee.\n\nRefuge Pointe still stands, its southernmost tent kept as an inn, held by soldiers who have never stopped waiting to march north again.",
 			source = "https://warcraft.wiki.gg/wiki/Refuge_Pointe",
-		},
-		["sanctum stromgarde keep"] = {
-			name = "Sanctum (Stromgarde Keep)",
-			short = "The Sanctum lies past the chapel of the Church of Light within Stromgarde Keep, a passage leading down to the Trollbane family crypt, with a graveyard set beside the church above.",
-			full = "The Sanctum lies past the chapel of the Church of Light within Stromgarde Keep, a passage leading down to the Trollbane family crypt, with a graveyard set beside the church above.\n\nFor a time Stromgarde soldiers held it for the Alliance, and Prince Galen Trollbane could be found within the chapel. It was there, before the crypt of his own ancestors, that Galen met his death at the hands of the Knights of the Ebon Blade, who came also to raise King Thoras Trollbane from that same crypt as a death knight.",
-			source = "https://warcraft.wiki.gg/wiki/Sanctum_(Stromgarde_Keep)",
 		},
 		["stromgarde keep"] = {
 			name = "Stromgarde Keep",
@@ -932,12 +620,6 @@ ZoneLore.Subzones = {
 			full = "The Tower of Arathor stands in the mage district of Stromgarde Keep, named for the old empire whose sons once studied the arcane within its walls. Among them was Trelane, who as a young wizard built into the tower a defense of water and stone, sealed behind an enchanted gem, so that no enemy could walk its halls unchallenged.\n\nThe defense did not save him. When the Syndicate and the Boulderfist ogres broke Stromgarde, Trelane fought to hold the tower and failed, fleeing the city he had studied in. The ogres took the district for their own, and an ogre mage named Ruul Onestone made his den within.\n\nYears later, still grieving what he had left behind, Trelane asked his former apprentice Malin to recover what remained inside: his phylactery, his orb, an ember agate he had prized. A stolen gem, remade, was pressed to the old pedestals near the entrance, and the guardians Trelane had set decades before woke again to drive back the ogres while his treasures were carried out.",
 			source = "https://warcraft.wiki.gg/wiki/Tower_of_Arathor",
 		},
-		["valorcall pass"] = {
-			name = "Valorcall Pass",
-			short = "Valorcall Pass sits before the gates of Stromgarde Keep, the last foothold before the citadel itself. A small camp holds the crossroads, its two siege towers raised to cover the road against the Horde.",
-			full = "Valorcall Pass sits before the gates of Stromgarde Keep, the last foothold before the citadel itself. A small camp holds the crossroads, its two siege towers raised to cover the road against the Horde. As long as they stand, Stromgarde holds a line beyond its own walls. Should the pass fall, those towers are left in ruins, and the road to the keep lies open.",
-			source = "https://warcraft.wiki.gg/wiki/Valorcall_Pass",
-		},
 		["witherbark village"] = {
 			name = "Witherbark Village",
 			short = "Witherbark Village sits around a small lake in the southeast of the Arathi Highlands, its huts ringing the water and a wide cavern opening behind them where the tribe's leaders hold court.",
@@ -945,7 +627,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Witherbark_Village",
 		},
 	},
-	-- Badlands: 30 subzones
+	-- Badlands: 17 subzones
 	[1418] = {
 		["agmonds end"] = {
 			name = "Agmond's End",
@@ -964,12 +646,6 @@ ZoneLore.Subzones = {
 			short = "A dragon's skeleton lies broken in the dust south of Kargath, vast enough to bear its own name: Apocryphan's Rest. Only the great ribs and jaw remain, picked bare by the buzzards that nest and hunt among the bones still.",
 			full = "A dragon's skeleton lies broken in the dust south of Kargath, vast enough to bear its own name: Apocryphan's Rest. Only the great ribs and jaw remain, picked bare by the buzzards that nest and hunt among the bones still.",
 			source = "https://warcraft.wiki.gg/wiki/Apocryphan's_Rest",
-		},
-		["bloodwatcher point"] = {
-			name = "Bloodwatcher Point",
-			short = "Blood elves of the Reliquary raised Bloodwatcher Point as a foothold in the Badlands, close by the Tomb of the Watchers.",
-			full = "Blood elves of the Reliquary raised Bloodwatcher Point as a foothold in the Badlands, close by the Tomb of the Watchers. Tents and a wagon stand beneath banners marking the camp, a base from which the Reliquary presses its search of the tombs nearby.",
-			source = "https://warcraft.wiki.gg/wiki/Bloodwatcher_Point",
 		},
 		["camp boff"] = {
 			name = "Camp Boff",
@@ -995,18 +671,6 @@ ZoneLore.Subzones = {
 			full = "Camp Wurg stands as one of the homes of the Dustbelcher ogres, kin to the camps of Cagg, Boff, and Kosh. Their leader, Boss Tho'grun, kept to no single camp, but roamed the Badlands between all four, watching over the ogres wherever they made their ground.",
 			source = "https://warcraft.wiki.gg/wiki/Camp_Wurg",
 		},
-		["crypt badlands"] = {
-			name = "Crypt (Badlands)",
-			short = "An unmarked path up the hill behind Sigrun Ironhew leads to a crypt cut into the stone. Urns and chests lie among scattered skeletons.",
-			full = "An unmarked path up the hill behind Sigrun Ironhew leads to a crypt cut into the stone. Urns and chests lie among scattered skeletons. At the center sits a throne, and on it, still armored, still seated, is the Barbarian King. His sword rests beside him where it was laid. No one has taken it.",
-			source = "https://warcraft.wiki.gg/wiki/Crypt_(Badlands)",
-		},
-		["dragons mouth"] = {
-			name = "Dragon's Mouth",
-			short = "Dragon's Mouth sits at the southwest end of the Scar of the Worldbreaker, a scatter of tents and stakes in the cracked earth of the Badlands, between Camp Cagg and New Kargath.",
-			full = "Dragon's Mouth sits at the southwest end of the Scar of the Worldbreaker, a scatter of tents and stakes in the cracked earth of the Badlands, between Camp Cagg and New Kargath.\n\nOgres range close by, and Terrance, watching their numbers grow, sends fighters to strike at them before they can mass into something the camp cannot turn back.\n\nBlack dragons ravaged the hunting grounds the camp depended on, leaving it without meat or supplies. With nothing left to hunt, Victoria Dolen turned to the ogres' own stores, sending people to take food and materials from them instead.",
-			source = "https://warcraft.wiki.gg/wiki/Dragon's_Mouth",
-		},
 		["dustbelch grotto"] = {
 			name = "Dustbelch Grotto",
 			short = "In the southwestern reaches of the Badlands rises a great mound of earth, hollowed and heaped by generations of labor.",
@@ -1019,41 +683,17 @@ ZoneLore.Subzones = {
 			full = "The Dustbowl is a stretch of cracked, arid ground in the northwest of the Badlands, between Kargath and the Valley of Fangs. Little grows here but scattered cacti and a few hardy trees. Coyotes, rock elementals, and buzzards share the waste, and Camp Wurg stands among them.",
 			source = "https://warcraft.wiki.gg/wiki/Dustbowl",
 		},
-		["dustwind dig"] = {
-			name = "Dustwind Dig",
-			short = "In the hills above Hammertoe's Digsite stands the camp of Sigrun Ironhew, grown into Dustwind Dig as her work there expanded.",
-			full = "In the hills above Hammertoe's Digsite stands the camp of Sigrun Ironhew, grown into Dustwind Dig as her work there expanded.",
-			source = "https://warcraft.wiki.gg/wiki/Dustwind_Dig",
-		},
 		["dustwind gulch"] = {
 			name = "Dustwind Gulch",
 			short = "The heat in Dustwind Gulch settles into the rock and never quite leaves. Little grows here among the dry stone, and the wind carries only dust across the ravine's western reaches, out toward Lethlor.",
 			full = "The heat in Dustwind Gulch settles into the rock and never quite leaves. Little grows here among the dry stone, and the wind carries only dust across the ravine's western reaches, out toward Lethlor.",
 			source = "https://warcraft.wiki.gg/wiki/Dustwind_Gulch",
 		},
-		["fuselight"] = {
-			name = "Fuselight",
-			short = "Fuselight sits in the Lethlor Ravine, a goblin town run by the Steamwheedle Cartel, home to a goblin laboratory. Dealing fairly with the town wins the Cartel's favor more easily than most small settlements allow.",
-			full = "Fuselight sits in the Lethlor Ravine, a goblin town run by the Steamwheedle Cartel, home to a goblin laboratory. Dealing fairly with the town wins the Cartel's favor more easily than most small settlements allow. The Cartel even recruits for it as far off as the Eastern Plaguelands.",
-			source = "https://warcraft.wiki.gg/wiki/Fuselight",
-		},
-		["fuselight by the sea"] = {
-			name = "Fuselight-by-the-Sea",
-			short = "Fuselight-by-the-Sea is a seaside town in the Badlands, raised by the Steamwheedle Cartel for those who love explosives and the trades that come with them.",
-			full = "Fuselight-by-the-Sea is a seaside town in the Badlands, raised by the Steamwheedle Cartel for those who love explosives and the trades that come with them. It stands linked to its sister settlement, Fuselight, by transporter, the two towns bound together though the land between them is harsh and broken.",
-			source = "https://warcraft.wiki.gg/wiki/Fuselight-by-the-Sea",
-		},
 		["hammertoes digsite"] = {
 			name = "Hammertoe's Digsite",
 			short = "Hammertoe's Digsite lies in the northern Badlands, its excavation abandoned by Hammertoe and now held by a gang of Dark Irons, likely part of the same force that has pushed into Uldaman.",
 			full = "Hammertoe's Digsite lies in the northern Badlands, its excavation abandoned by Hammertoe and now held by a gang of Dark Irons, likely part of the same force that has pushed into Uldaman.",
 			source = "https://warcraft.wiki.gg/wiki/Hammertoe's_Digsite",
-		},
-		["hidden clutch"] = {
-			name = "Hidden Clutch",
-			short = "The Hidden Clutch lies in the mountains north of New Kargath, a small hollow easy to miss.",
-			full = "The Hidden Clutch lies in the mountains north of New Kargath, a small hollow easy to miss. A shallow cave opens into the rock, and stone-skinned elementals move restlessly through the area, keeping watch over the ground they consider theirs.",
-			source = "https://warcraft.wiki.gg/wiki/Hidden_Clutch",
 		},
 		["kargath"] = {
 			name = "Kargath",
@@ -1079,47 +719,11 @@ ZoneLore.Subzones = {
 			full = "The Mirage Flats lie between Dragon's Mouth and New Kargath, east of Dustbelch Grotto. Little of it remains whole, and what is left has become no-man's land, held by neither side.\n\nGiant buzzards, ridge stalker patriarchs, and rabid crag coyotes are all that claim it now.",
 			source = "https://warcraft.wiki.gg/wiki/Mirage_Flats",
 		},
-		["new kargath"] = {
-			name = "New Kargath",
-			short = "New Kargath bristles with catapults and blade throwers, aimed skyward against the Black dragonflight that assails it without end.",
-			full = "New Kargath bristles with catapults and blade throwers, aimed skyward against the Black dragonflight that assails it without end. Its forge has already been lost, the blacksmith's shop overrun and held by the dragons the town still fights to drive out.",
-			source = "https://warcraft.wiki.gg/wiki/New_Kargath",
-		},
-		["rheas camp"] = {
-			name = "Rhea's Camp",
-			short = "Rhea's Camp is a small patch of ground in Lethlor Ravine, home to a lone goblin trader named Rhea. But the goblin shape is a mask: beneath it Rhea is a red dragon, hidden among the rocks of the Badlands.",
-			full = "Rhea's Camp is a small patch of ground in Lethlor Ravine, home to a lone goblin trader named Rhea. But the goblin shape is a mask: beneath it Rhea is a red dragon, hidden among the rocks of the Badlands.",
-			source = "https://warcraft.wiki.gg/wiki/Rhea's_Camp",
-		},
-		["ruins of kargath"] = {
-			name = "Ruins of Kargath",
-			short = "The Ruins of Kargath lie broken in the Badlands, claimed now by Nyxondra. Her black dragon whelps swarm the wreckage, small and many, while their mother watches over them, ever wakeful, letting nothing near her brood.",
-			full = "The Ruins of Kargath lie broken in the Badlands, claimed now by Nyxondra. Her black dragon whelps swarm the wreckage, small and many, while their mother watches over them, ever wakeful, letting nothing near her brood.",
-			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Kargath",
-		},
-		["scar of the worldbreaker"] = {
-			name = "Scar of the Worldbreaker",
-			short = "A wound runs across the land, from south of Angor Fortress to the zone's southwest corner. Camp Wurg, the Valley of Fangs, and stretches of the Dustbowl lie charred within it.",
-			full = "A wound runs across the land, from south of Angor Fortress to the zone's southwest corner. Camp Wurg, the Valley of Fangs, and stretches of the Dustbowl lie charred within it. Nearby mountaintops have been sheared away, their broken crowns still simmering like molten glass.",
-			source = "https://warcraft.wiki.gg/wiki/Scar_of_the_Worldbreaker",
-		},
-		["tomb of the watchers"] = {
-			name = "Tomb of the Watchers",
-			short = "The Tomb of the Watchers lies open in the Badlands, its stonework echoing the ancient halls of Uldaman.",
-			full = "The Tomb of the Watchers lies open in the Badlands, its stonework echoing the ancient halls of Uldaman. Around it the earth has been turned over again and again, trenches cut into the dry ground by hands searching for what the dwarves left behind.\n\nThe Alliance keeps its watch from Dustwind Dig on the hills above, while the Horde works from Bloodwatcher Point nearby, each hauling dwarven relics up out of the dust.",
-			source = "https://warcraft.wiki.gg/wiki/Tomb_of_the_Watchers",
-		},
 		["uldaman"] = {
 			name = "Uldaman",
 			short = "Uldaman is a huge and ancient, massive vault created by the titan keepers, buried deep within mountains of Khaz Modan. It is located in the Badlands, west of what was once the entrance to Loch Modan.",
 			full = "Uldaman is a huge and ancient, massive vault created by the titan keepers, buried deep within mountains of Khaz Modan. It is located in the Badlands, west of what was once the entrance to Loch Modan. Prior to the Third War, it was partially excavated by the dwarves from Ironforge, but has since fallen into the hands of the troggs and Dark Irons, who find the place ideal to dig for earthly riches. It was previously a titan-forged facility.\n\nUldaman contains many artifacts for those willing to seek them out, primarily archaeologists and adventurers, who are slowly digging up this ruin of a titan-forged city. There are members of the Explorers' League, but also of the Reliquary, equally eager to get their hands on ancient treasures.",
 			source = "https://warcraft.wiki.gg/wiki/Uldaman",
-		},
-		["uldaman legacy of tyr"] = {
-			name = "Uldaman: Legacy of Tyr",
-			short = "The halls of Uldaman run deeper than the ancient chambers first uncovered.",
-			full = "The halls of Uldaman run deeper than the ancient chambers first uncovered. Beyond the familiar passages lies a newly-revealed section, hidden until now, leading to the Discs of Tyr -- record of the titan Tyr's own hand, sealed away in the dark beneath the earth.",
-			source = "https://warcraft.wiki.gg/wiki/Uldaman%3A_Legacy_of_Tyr",
 		},
 		["valley of fangs"] = {
 			name = "Valley of Fangs",
@@ -1128,43 +732,13 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Valley_of_Fangs",
 		},
 	},
-	-- Blasted Lands: 26 subzones
+	-- Blasted Lands: 7 subzones
 	[1419] = {
-		["altar of storms blasted lands"] = {
-			name = "Altar of Storms (Blasted Lands)",
-			short = "The Altar of Storms stands at the western edge of the Blasted Lands, raised by Lady Sevine, who is dead now, her purpose known only through the stones she left behind.",
-			full = "The Altar of Storms stands at the western edge of the Blasted Lands, raised by Lady Sevine, who is dead now, her purpose known only through the stones she left behind.\n\nThe cultists of the Veiled Hand later took the altar for their own, led by Caden Shadowgaze.",
-			source = "https://warcraft.wiki.gg/wiki/Altar_of_Storms_(Blasted_Lands)",
-		},
-		["bloodwash cavern"] = {
-			name = "Bloodwash Cavern",
-			short = "Bloodwash Cavern opens near the shores of the Red Reaches, its depths claimed by the Bloodwash naga as a fortress. Murlocs enslaved to their will are sent into the dark in numbers.",
-			full = "Bloodwash Cavern opens near the shores of the Red Reaches, its depths claimed by the Bloodwash naga as a fortress. Murlocs enslaved to their will are sent into the dark in numbers. Amid it all stand ruins left by elves long before, swallowed into naga stone.",
-			source = "https://warcraft.wiki.gg/wiki/Bloodwash_Cavern",
-		},
-		["bloodwash fighting pits"] = {
-			name = "Bloodwash Fighting Pits",
-			short = "At the Red Reaches, in the Blasted Lands, the naga of the Bloodwash keep their murlocs not as servants but as fighters.",
-			full = "At the Red Reaches, in the Blasted Lands, the naga of the Bloodwash keep their murlocs not as servants but as fighters. The captives are driven into the pits and set against one another, forced to spill each other's blood for the amusement of their captors.",
-			source = "https://warcraft.wiki.gg/wiki/Bloodwash_Fighting_Pits",
-		},
-		["bloodwash shrine"] = {
-			name = "Bloodwash Shrine",
-			short = "On the Red Reaches, the Bloodwash naga raised a shrine to Queen Azshara. Here they bring the Rockpool murlocs to be sacrificed, offering their blood to the sea queen they still serve.",
-			full = "On the Red Reaches, the Bloodwash naga raised a shrine to Queen Azshara. Here they bring the Rockpool murlocs to be sacrificed, offering their blood to the sea queen they still serve.",
-			source = "https://warcraft.wiki.gg/wiki/Bloodwash_Shrine",
-		},
 		["dark portal"] = {
 			name = "Dark Portal",
 			short = "The Dark Portal was raised by treachery. The human mage Medivh, his mind no longer wholly his own, worked with the warlock Gul'dan to tear open a passage between Draenor and Azeroth.",
 			full = "The Dark Portal was raised by treachery. The human mage Medivh, his mind no longer wholly his own, worked with the warlock Gul'dan to tear open a passage between Draenor and Azeroth. On Draenor, Gul'dan had orcish stonemasons build the frame at a place where the world's power ran strong -- and when the work was done, the warlocks murdered the very masons who had built it, their deaths priming the final seal. Then, as the ritual began, Gul'dan drained the life from nearly every draenei prisoner still held by the Horde, all at once, to force the tear wide enough to reach Azeroth. Medivh answered from the other side, ripping open the Black Morass. Through that opening the orcs marched into the Kingdom of Stormwind, and the First War began.\n\nFor years after, armies of orcs and ogres came through it without end. But when the Horde broke at Blackrock Spire and the Alliance took the ruined gateway, the archmage Khadgar worked a spell meant to end it forever. The blast destroyed the stone frame the orcs had built, but the tear in reality itself could not be unmade. Khadgar urged Lordaeron to build Nethergarde Keep to keep watch over the ruins, in case it ever opened again.",
 			source = "https://warcraft.wiki.gg/wiki/Dark_Portal",
-		},
-		["dreadmaul furnace"] = {
-			name = "Dreadmaul Furnace",
-			short = "Within an ogre mound northwest of Dreadmaul Post, in the Blasted Lands, the siblings Lynnore and Drazial once struck a bargain with the Dreadmaul ogres, winning leave to keep a chamber inside the mound.",
-			full = "Within an ogre mound northwest of Dreadmaul Post, in the Blasted Lands, the siblings Lynnore and Drazial once struck a bargain with the Dreadmaul ogres, winning leave to keep a chamber inside the mound. Whether that agreement still holds is unclear. A Dreadmaul Flamebelcher occupies the chamber now, and neither elf can be found there.",
-			source = "https://warcraft.wiki.gg/wiki/Dreadmaul_Furnace",
 		},
 		["dreadmaul post"] = {
 			name = "Dreadmaul Post",
@@ -1172,23 +746,11 @@ ZoneLore.Subzones = {
 			full = "Dreadmaul Post is a mound of the Dreadmaul ogre clan, who crossed into Azeroth from Draenor and chose to stay close to the Dark Portal ever since. Their hold on the ground here has never slackened. A lost draenei can sometimes still be found wandering nearby.",
 			source = "https://warcraft.wiki.gg/wiki/Dreadmaul_Post",
 		},
-		["forge grounds"] = {
-			name = "Forge Grounds",
-			short = "The Forge Grounds lie outside Nethergarde Mines, in ground once known as the Nethergarde Supply Camps.",
-			full = "The Forge Grounds lie outside Nethergarde Mines, in ground once known as the Nethergarde Supply Camps. The Iron Horde has since taken the land for its own, turning the old supply camps into an outpost from which it drives the mining of the nearby mine onward.",
-			source = "https://warcraft.wiki.gg/wiki/Forge_Grounds",
-		},
 		["garrison armory"] = {
 			name = "Garrison Armory",
 			short = "The Garrison Armory is a mining outpost near Nethergarde Keep in the Blasted Lands.",
 			full = "The Garrison Armory is a mining outpost near Nethergarde Keep in the Blasted Lands. Alliance miners here draw ore and minerals from the scarred ground, shipping them to Stormwind in exchange for the supplies Nethergarde depends upon to survive.",
 			source = "https://warcraft.wiki.gg/wiki/Garrison_Armory",
-		},
-		["maldraz"] = {
-			name = "Maldraz",
-			short = "Maldraz stands as a great tree in the Tainted Forest of the Blasted Lands, and beneath its trunk a druid once tried to undo what the land had become.",
-			full = "Maldraz stands as a great tree in the Tainted Forest of the Blasted Lands, and beneath its trunk a druid once tried to undo what the land had become.\n\nThat druid was Wormthorn. He entered a trance beneath Maldraz to call life back into the poisoned ground, and for a time it worked: the forest greened again, enough that refugees were able to raise Surwich upon it. But the ground still carried the demonic taint left behind, and as Wormthorn poured his strength into holding it back, he left himself open. The nathrezim who had once dwelt there slipped into his trance and turned it against him, unmaking his mind and bending his own body into a weapon to twist Maldraz and the forest back toward corruption.\n\nTo stop him, a Demoniac Vessel was made to break the trance, and the corrupted druid was killed, his hold on the tree ended.\n\nThe tree still stands in the Tainted Forest, the ground beneath it once a place where a druid's trance held back the dark, and then became the way the dark got in.",
-			source = "https://warcraft.wiki.gg/wiki/Maldraz",
 		},
 		["nethergarde keep"] = {
 			name = "Nethergarde Keep",
@@ -1196,89 +758,17 @@ ZoneLore.Subzones = {
 			full = "Nethergarde Keep stands on a high bluff above the only road into the Blasted Lands, built to watch the Dark Portal after the Second War at the insistence of Archmage Khadgar, who feared Draenor would send its armies through again. The kingdoms of the Alliance of Lordaeron paid for it, some more willingly than others, and the Stonemasons Guild raised its walls under Edwin VanCleef.\n\nKhadgar remained master of the keep until Ner'zhul's clans reopened the Portal from Draenor's side and besieged Nethergarde once more. Khadgar rallied Turalyon, Danath Trollbane, Alleria Windrunner, and Kurdran Wildhammer, and led the Alliance through the Portal to end the war at its source. When Ner'zhul's tearing of Draenor threatened to spill ruin back into Azeroth, the five sealed the Portal from the other side and did not return. For twenty years afterward, the Dark Portal stood silent, and Nethergarde's mages turned to studying what its energies had done to the land around them.",
 			source = "https://warcraft.wiki.gg/wiki/Nethergarde_Keep",
 		},
-		["nethergarde mines"] = {
-			name = "Nethergarde Mines",
-			short = "The iron mine north of Nethergarde Keep feeds the fortress above, and lately that has made it a target.",
-			full = "The iron mine north of Nethergarde Keep feeds the fortress above, and lately that has made it a target. Horde raiders have taken to striking the tunnels themselves, hoping to choke off the keep's supply before ever reaching its walls.\n\nThe entrance galleries already tell that story: the bodies of Nethergarde defenders lie where they fell, and beyond them the mine's own workers press on regardless, cutting iron under the eye of Chief Prospector Hondo, who runs the operation from an office in the upper chamber.\n\nSomewhere in the lower workings the miners cut into something that should have stayed buried. A demon named Illycor had been sealed deep in the mine, and the digging let it loose. What answers for that mistake now walks the same passages the miners still work.",
-			source = "https://warcraft.wiki.gg/wiki/Nethergarde_Mines",
-		},
-		["nethergarde supply camps"] = {
-			name = "Nethergarde Supply Camps",
-			short = "Outside the Nethergarde Mines, Alliance and Horde soldiers grind against each other over the supply camps.",
-			full = "Outside the Nethergarde Mines, Alliance and Horde soldiers grind against each other over the supply camps. Captain Metlek leads the Okril'lon Infantry into the fighting, pressing the attack where the Horde lines meet the Alliance defenders.",
-			source = "https://warcraft.wiki.gg/wiki/Nethergarde_Supply_Camps",
-		},
-		["okrillon hold"] = {
-			name = "Okril'lon Hold",
-			short = "Rockard was old ground even by orcish reckoning, raised in the Black Morass as an outpost when the Dark Portal first tore open, sister to Stonard among the earliest orc footholds in Azeroth.",
-			full = "Rockard was old ground even by orcish reckoning, raised in the Black Morass as an outpost when the Dark Portal first tore open, sister to Stonard among the earliest orc footholds in Azeroth. It weathered the Second War still in orc hands, but what the humans could not take from it, the Dreadmaul ogres did, driving the orcs out and renaming it Dreadmaul Hold.\n\nUnder Grol the Destroyer the hold became the ogres' seat, and Grol gave himself in service to the demon Razelikh the Defiler. When Loramus Thalipedes came into the Blasted Lands hunting that demon, Grol met him in ambush, and the two killed each other in the fight. The ogres who followed Grol were scattered afterward: some enslaved, many driven off to become raiders themselves, harrying the hold they had once held.\n\nOkrilla took the fortress next, an orc leader who bars any non-orc from passing its gates, and who has turned its strength against the Alliance holding Nethergarde Keep.",
-			source = "https://warcraft.wiki.gg/wiki/Okril'lon_Hold",
-		},
-		["red reaches"] = {
-			name = "Red Reaches",
-			short = "Along the shore called the Red Reaches, the Rockpool murlocs and the Bloodwash naga once lived side by side in peace, bound by shared worship of Neptulon.",
-			full = "Along the shore called the Red Reaches, the Rockpool murlocs and the Bloodwash naga once lived side by side in peace, bound by shared worship of Neptulon. That peace broke when the naga turned on the murlocs, enslaving them, sacrificing them, and forcing them to fight one another.",
-			source = "https://warcraft.wiki.gg/wiki/Red_Reaches",
-		},
 		["rise of the defiler"] = {
 			name = "Rise of the Defiler",
 			short = "The mountains take their name from the demon who claims them. Razelikh the Defiler makes his home in this broken, craggy rise at the heart of the Blasted Lands, and nothing softens the ground around him.",
 			full = "The mountains take their name from the demon who claims them. Razelikh the Defiler makes his home in this broken, craggy rise at the heart of the Blasted Lands, and nothing softens the ground around him.",
 			source = "https://warcraft.wiki.gg/wiki/Rise_of_the_Defiler",
 		},
-		["rockpool village"] = {
-			name = "Rockpool Village",
-			short = "The Rockpool murlocs once held their village on the eastern shores of the Red Reaches. The Bloodwash naga turned on them, seizing the village and enslaving its people.",
-			full = "The Rockpool murlocs once held their village on the eastern shores of the Red Reaches. The Bloodwash naga turned on them, seizing the village and enslaving its people. What stands there now belongs to the naga, and the murlocs labor there still, as captives.",
-			source = "https://warcraft.wiki.gg/wiki/Rockpool_Village",
-		},
 		["serpents coil"] = {
 			name = "Serpent's Coil",
 			short = "Serpent's Coil twists through the eastern Blasted Lands, its passages carved past burnt-out orcish structures left standing since the Second War.",
 			full = "Serpent's Coil twists through the eastern Blasted Lands, its passages carved past burnt-out orcish structures left standing since the Second War.\n\nArchmage Allistarj once commanded his Shadowsworn from within this labyrinth. He is dead now, killed in the cave he ruled, and the amulet he wore was left behind in a chest near the entrance. His Shadowsworn did not scatter when he fell. They found another master and kept to their tunnels, as if nothing had changed.\n\nDeeper in, a gnome named Kasim Sharim has made his camp. He is Alliance, by his own oath, yet he has raised a Horde banner over his fire and settled in alone among the cave's old dangers.",
 			source = "https://warcraft.wiki.gg/wiki/Serpent's_Coil",
-		},
-		["shattered beachhead"] = {
-			name = "Shattered Beachhead",
-			short = "The Shattered Beachhead stands north of the Shattershore battlefield, a small foothold raised by the Alliance in answer to the Iron Horde's push into the Blasted Lands.",
-			full = "The Shattered Beachhead stands north of the Shattershore battlefield, a small foothold raised by the Alliance in answer to the Iron Horde's push into the Blasted Lands. It is a place built for war, not for comfort - a line drawn in the sand to hold against what came through.",
-			source = "https://warcraft.wiki.gg/wiki/Shattered_Beachhead",
-		},
-		["shattered front"] = {
-			name = "Shattered Front",
-			short = "The Shattered Front lies just beyond the Shattershore in the Blasted Lands, ground held by the Iron Horde.",
-			full = "The Shattered Front lies just beyond the Shattershore in the Blasted Lands, ground held by the Iron Horde.",
-			source = "https://warcraft.wiki.gg/wiki/Shattered_Front",
-		},
-		["shattered landing"] = {
-			name = "Shattered Landing",
-			short = "Nothing yet marks this ground.",
-			full = "Nothing yet marks this ground.",
-			source = "https://warcraft.wiki.gg/wiki/Shattered_Landing",
-		},
-		["shattershore"] = {
-			name = "Shattershore",
-			short = "The wrecks of Gilnean ships lie broken along this stretch of coast, timbers half-buried in sand. No one can say why the fleet came to grief here, or what drove those ships onto the rocks.",
-			full = "The wrecks of Gilnean ships lie broken along this stretch of coast, timbers half-buried in sand. No one can say why the fleet came to grief here, or what drove those ships onto the rocks. What is known is that the crews did not survive it, and have not entirely left. Worgen shapes, pale and half-seen, still move along the shore at night.\n\nIn the cargo hold of one wreck lies a severed head, still wearing an amulet around its ruined neck. It belonged to one called Grol. How his head came to rest there, no one has explained. But a spirit answering to Grol's name lingers near the wreck, and some say it had a hand in the wrecking of the fleet.",
-			source = "https://warcraft.wiki.gg/wiki/Shattershore",
-		},
-		["sunveil excursion"] = {
-			name = "Sunveil Excursion",
-			short = "The Sunveil Excursion sits southwest of the Blasted Lands, a blood elf camp raised for a single purpose: the demonic artifacts once hidden within the Tainted Scar.",
-			full = "The Sunveil Excursion sits southwest of the Blasted Lands, a blood elf camp raised for a single purpose: the demonic artifacts once hidden within the Tainted Scar. Its leader, Rohan Sunveil, ordered the camp built so his people could gather, catalog, and preserve whatever magical relics they could pull from the Tainted Forest.\n\nThe forest did not yield easily. A corrupted Gilnean druid of great power, Marl Wormthorn, had turned the woods against them. Roots snapped their picks, moss swallowed their dig sites, and the animals of the forest fell upon their men. Rohan Sunveil could not continue his study while the corruption held the ground, so he asked Warlord Dar'toon to send Horde fighters to thin the demons and bring down Wormthorn himself.\n\nYears later, when the Ironmarch broke through the Dark Portal into Azeroth, the Sunveil Excursion stood empty, its occupants gone.",
-			source = "https://warcraft.wiki.gg/wiki/Sunveil_Excursion",
-		},
-		["surwich"] = {
-			name = "Surwich",
-			short = "Surwich stands on ground once called the Tainted Scar, a wound torn into the earth by demons that came with the invasion of Gilneas.",
-			full = "Surwich stands on ground once called the Tainted Scar, a wound torn into the earth by demons that came with the invasion of Gilneas. After that invasion, a druid named Wormthorn believed the scar could be healed. He poured his power into a great tree, Maldraz, willing the forest to grow back over it. For a time it worked, and the land recovered enough that Gilnean refugees built their village upon it.\n\nBut the tree's growing pulled the demons still lingering in the scar back toward it, and dreadlords seized the chance to corrupt both Maldraz and the druid who had made it. What was meant to heal the land instead gave rise to the Tainted Forest that presses close against Surwich now.\n\nTo stop the corruption from spreading further, Wormthorn was quietly killed. It was done in secret, for the people's spirits were already low, and they had clung so hard to his dream of a restored forest that the truth of his death was kept from them.",
-			source = "https://warcraft.wiki.gg/wiki/Surwich",
-		},
-		["tainted forest"] = {
-			name = "Tainted Forest",
-			short = "A worgen druid named Marl Wormthorn once walked into the ruin of the Tainted Scar and made it green again. His work held long enough that refugees settled the land and raised Surwich upon ground once scarred by demons.",
-			full = "A worgen druid named Marl Wormthorn once walked into the ruin of the Tainted Scar and made it green again. His work held long enough that refugees settled the land and raised Surwich upon ground once scarred by demons.\n\nBut the taint soaked into that earth did not leave with the trees' return. While Wormthorn spent himself fighting back the demonic power still lingering, the nathrezim who had once made their home there slipped into Maldraz unseen. They found him deep in his trance and turned it against him, unmaking his mind and bending his own body into a weapon. Through him they corrupted the great tree at the forest's heart, and the corruption spread into the wood itself.\n\nTo stop the rot from spreading further, the worgen of Surwich and the blood elves of the Sunveil Excursion each sent their own people into the forest, working toward the same end: to thin the demons' numbers, and to strike down the druid the demons had made their instrument.",
-			source = "https://warcraft.wiki.gg/wiki/Tainted_Forest",
 		},
 		["tainted scar"] = {
 			name = "Tainted Scar",
@@ -1287,7 +777,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Tainted_Scar",
 		},
 	},
-	-- Tirisfal Glades: 45 subzones
+	-- Tirisfal Glades: 28 subzones
 	[1420] = {
 		["agamand family crypt"] = {
 			name = "Agamand Family Crypt",
@@ -1331,12 +821,6 @@ ZoneLore.Subzones = {
 			full = "The Bulwark stands where Tirisfal Glades gives way to the Western Plaguelands, the last line the Forsaken hold against the Scourge pressing from the east. Here the Argent Dawn and the Forsaken set aside their long distrust of one another and stand together, watching the same horizon for the same enemy.\n\nNot long ago this ground was choked in plaguemist, its sky stained the same sickly yellow-gray as the blighted land beyond it. Reclamation efforts pushing into the Plaguelands have since thinned that mist, and the Bulwark now looks much like the rest of Tirisfal around it.",
 			source = "https://warcraft.wiki.gg/wiki/Bulwark",
 		},
-		["calston estate"] = {
-			name = "Calston Estate",
-			short = "The estate stands west of Stillwater Pond, its dark timbers and iron-worked halls built in the style of the Forsaken. It belongs to Sedrick Calston, who keeps it alone.",
-			full = "The estate stands west of Stillwater Pond, its dark timbers and iron-worked halls built in the style of the Forsaken. It belongs to Sedrick Calston, who keeps it alone. From this ground the Forsaken send their raiders against the Solliden Farmstead, and carry out their grim experiments along the Tirisfal coast.\n\nPamphlets have turned up near the estate's walls, printed by the Scarlet Crusade. They accuse the king of conspiring with Sylvanas, his secret lover, to murder Calia Menethil at a gathering in the Arathi Highlands, so his claim to the throne might stand unchallenged. The pamphlets claim further that the Crusade holds Calia's surviving son, the last heir of the Menethil line, meant one day to end the king's puppet reign.",
-			source = "https://warcraft.wiki.gg/wiki/Calston_Estate",
-		},
 		["cold hearth manor"] = {
 			name = "Cold Hearth Manor",
 			short = "Cold Hearth Manor once earned its name honestly, known through Tirisfal for its warmth and the richness of its crops. The Plague of Undeath ended that.",
@@ -1349,35 +833,11 @@ ZoneLore.Subzones = {
 			full = "The tower stands on the hills of eastern Tirisfal Glades, watching the road below. The Scarlet Crusade holds it, using the height to guard the road and to catch by surprise any who move against the Scarlet Monastery. Captain Vachon commands here.\n\nThe stones still bear marks of an attack by Lilian Voss, evidence of a fight fiercer than the outpost's usual watch.",
 			source = "https://warcraft.wiki.gg/wiki/Crusader_Outpost",
 		},
-		["crusaders outpost"] = {
-			name = "Crusader's Outpost",
-			short = "The tower stands as the westernmost watch of the Scarlet Crusade in all of Lordaeron, one of four such outposts raised within the Scarlet Palisade.",
-			full = "The tower stands as the westernmost watch of the Scarlet Crusade in all of Lordaeron, one of four such outposts raised within the Scarlet Palisade. From its height the Crusade keeps watch on the Scourge and Forsaken who have made their homes too near for comfort, allied here with the farmers of Solliden Farmstead, who till their fields under the promise of Crusader steel standing between them and the dead.\n\nIt is a lonely posting. So far west of Tyr's Hand, no relief could reach these walls in time should the tower ever be overrun.",
-			source = "https://warcraft.wiki.gg/wiki/Crusader's_Outpost",
-		},
-		["darkwalk"] = {
-			name = "Darkwalk",
-			short = "The Darkwalk runs beneath the Tomb of Tyr, a broken passage leading down from the tomb chamber to the Grave-Prison of Zakajz.",
-			full = "The Darkwalk runs beneath the Tomb of Tyr, a broken passage leading down from the tomb chamber to the Grave-Prison of Zakajz.\n\nHere the Argent Crusade, Tyr's Guard, priests of the Conclave, and Valarjar warriors sent by Odyn once forced their way through, cutting down the Twilight's Hammer and the Old Gods' forces that had overrun the tomb.\n\nLater, Travard returned with Watcher Koranos. Fleeing into the Darkwalk, they came upon a damaged titan matrix guarded by two silver golems, and beside it a titan transporter, standing silent in the dark.",
-			source = "https://warcraft.wiki.gg/wiki/Darkwalk",
-		},
 		["deathknell"] = {
 			name = "Deathknell",
 			short = "The valley of Deathknell lies within Tirisfal Glades, its narrow approaches held by lines of Deathguard Elites, watchful against the Scourge that spawned the Forsaken and the Scarlet Crusade that hunts them still.",
 			full = "The valley of Deathknell lies within Tirisfal Glades, its narrow approaches held by lines of Deathguard Elites, watchful against the Scourge that spawned the Forsaken and the Scarlet Crusade that hunts them still. It is here that the newly-risen dead first open their eyes to their second existence, in a place that offers little beyond bare survival.\n\nGold is the village's constant want. The mine that might supply it lies northwest, but spiders have long since claimed its tunnels, and the folk of Deathknell labor again and again to drive them out, without lasting success.\n\nThe name itself sets Deathknell apart. Every other settlement raised by the Banshee Queen's rebel dead kept the name it bore in life. Deathknell alone was given a new name, and no one now living can say why, or what it was called before.",
 			source = "https://warcraft.wiki.gg/wiki/Deathknell",
-		},
-		["deathknell graves"] = {
-			name = "Deathknell Graves",
-			short = "Deathknell Graves is a mass grave beside the Shadow Grave, and it is where the newly-raised dead of Deathknell first come back to themselves.",
-			full = "Deathknell Graves is a mass grave beside the Shadow Grave, and it is where the newly-raised dead of Deathknell first come back to themselves. The soil here is thin, and turned often, for the Forsaken do not stay buried.\n\nThe val'kyr Agatha, Arthura, and Aradne keep watch over the plots. Aradne walks among the corpses calling out, \"Rise from the grave and serve the Dark Lady,\" and pulls the Risen Dead up out of the earth by her word. Most take their new lives quietly, resigned, and go to Undertaker Mordo for guidance. Some do not. A few cry out that they should be dead and mean to return to it, and fall still again. Others rage against the waking and turn feral, shambling off as mindless things that haunt the graves ever after, deaf to reason and lost to whoever they were.\n\nCaretaker Caice sees to the ones who keep their minds, among them Voss, Marshal Redpath, and Valdred Moray, guiding them toward whatever purpose remains to the dead.",
-			source = "https://warcraft.wiki.gg/wiki/Deathknell_Graves",
-		},
-		["deaths watch waystation"] = {
-			name = "Death's Watch Waystation",
-			short = "Southeast of Brill stands a small Deathguard waystation.",
-			full = "Southeast of Brill stands a small Deathguard waystation. When the Forsaken reclaimed Brill, they staged the Plague Eater here, sending it out from Death's Watch to consume the blight still clinging to the soil of Tirisfal.",
-			source = "https://warcraft.wiki.gg/wiki/Death's_Watch_Waystation",
 		},
 		["faols rest"] = {
 			name = "Faol's Rest",
@@ -1396,18 +856,6 @@ ZoneLore.Subzones = {
 			short = "Garren's Haunt was once a bountiful farmstead in the northern Tirisfal Glades, its fields wide and its barn full.",
 			full = "Garren's Haunt was once a bountiful farmstead in the northern Tirisfal Glades, its fields wide and its barn full. That ended with the Scourging of Lordaeron, when the Scourge fell upon it and put Garren and his family to the sword. The Plague of Undeath followed, and the land itself turned gray and lifeless, the crops dead in the furrows.\n\nWhat was left standing did not stay empty. The Rot Hide gnolls took the farmhouse and fields for their own, led by Maggot Eye, who fell upon anyone who wandered too near. A darkhound named Plague now lairs in the barn where livestock once sheltered.\n\nNo one can say what became of Maggot Eye and his gnolls in the end. The farmhouse, the silos, and the barn still stand over the wide field, gray and empty, with no one left to claim them.",
 			source = "https://warcraft.wiki.gg/wiki/Garren's_Haunt",
-		},
-		["grand vestibule"] = {
-			name = "Grand Vestibule",
-			short = "The Grand Vestibule is the outermost chamber of the Scarlet Monastery, lined with pillars and statues of scarlet warriors standing watch in stone.",
-			full = "The Grand Vestibule is the outermost chamber of the Scarlet Monastery, lined with pillars and statues of scarlet warriors standing watch in stone.\n\nIt is a crossing-point without a single master. Horde and Alliance often meet within its hall, and such meetings turn brutal more often than not.",
-			source = "https://warcraft.wiki.gg/wiki/Grand_Vestibule",
-		},
-		["grave prison of zakajz"] = {
-			name = "Grave-Prison of Zakajz",
-			short = "Deep beneath the Tomb of Tyr, reached only by the passage called the Darkwalk, lies a cavern half given over to collapse. This is the Grave-Prison of Zakajz.",
-			full = "Deep beneath the Tomb of Tyr, reached only by the passage called the Darkwalk, lies a cavern half given over to collapse. This is the Grave-Prison of Zakajz.\n\nThousands of years ago, the titan keeper Tyr met the C'Thrax known as Zakajz the Corruptor in battle and broke him. Rather than destroy what remained, Tyr bound the Corruptor here, sealing him beneath his own tomb where the dead could stand watch over what the living could not be trusted to guard.\n\nThe stone still bears the weight of that binding. It is a quiet place, and an old one, holding something that was never meant to wake.",
-			source = "https://warcraft.wiki.gg/wiki/Grave-Prison_of_Zakajz",
 		},
 		["gunthers retreat"] = {
 			name = "Gunther's Retreat",
@@ -1433,23 +881,11 @@ ZoneLore.Subzones = {
 			full = "The beach along the northern edge of Tirisfal Glades has gone dark and cold since the Plague of Undeath marred the region. Dead sea creatures rot at the waterline. Murlocs have overrun the shore, ravenous things that pick through the wrack alongside other marine scavengers.\n\nThe scar that cuts inland from where the Alliance came ashore, running through to the ruins of Brill, is remembered as the Lion's Wake, a line of destruction still visible in the land.",
 			source = "https://warcraft.wiki.gg/wiki/North_Coast",
 		},
-		["rotbrain encampment"] = {
-			name = "Rotbrain Encampment",
-			short = "The Rotbrain Encampment sits just outside Deathknell, home to undead who could not accept what they had become.",
-			full = "The Rotbrain Encampment sits just outside Deathknell, home to undead who could not accept what they had become. Some remained in denial of their death and rebirth, some were confused by it, others wanted vengeance for it. Under Marcus Redpath, they organized rather than wandered, and what they organized toward was an assault on the Forsaken themselves.\n\nIn the end the camp was attacked by Forsaken adventurers, and Marcus Redpath's rebellion was destroyed before it could become the assault he intended.",
-			source = "https://warcraft.wiki.gg/wiki/Rotbrain_Encampment",
-		},
 		["ruins of lordaeron"] = {
 			name = "Ruins of Lordaeron",
 			short = "The palace of Lordaeron still stands above the ruin, its gardens broken, its courtyard empty of the crowds that once filled it.",
 			full = "The palace of Lordaeron still stands above the ruin, its gardens broken, its courtyard empty of the crowds that once filled it. Here Arthas Menethil returned from Northrend and slew his own father, King Terenas, before opening the gates to the Scourge and letting them put the city's people to the sword. Those who linger in the courtyard say they can still hear it: hushed voices before the killing, bells in the entryway, a cheer for the returning prince, murmurs from the throne room, and beneath it all Arthas's words after the deed was done, promising a new order risen from the ashes of the old. Those who can see beyond the veil say the citizens themselves still walk there, unaware they are dead.\n\nSylvanas Windrunner later turned on her own allies, the very forces she had fought beside to break the dreadlords holding the city, and claimed the ruin for herself. Beneath its stones now lies the Undercity, the buried capital of the Forsaken.",
 			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Lordaeron",
-		},
-		["scarlet encampment"] = {
-			name = "Scarlet Encampment",
-			short = "Lieutenant Sanders commanded the Scarlet Encampment, a small Scarlet Crusade camp in Venomweb Vale.",
-			full = "Lieutenant Sanders commanded the Scarlet Encampment, a small Scarlet Crusade camp in Venomweb Vale.\n\nLilian Voss came and destroyed it, leaving Sanders and everyone within it dead among the ruins.",
-			source = "https://warcraft.wiki.gg/wiki/Scarlet_Encampment",
 		},
 		["scarlet monastery"] = {
 			name = "Scarlet Monastery",
@@ -1457,29 +893,11 @@ ZoneLore.Subzones = {
 			full = "The halls of the Scarlet Monastery were built for quieter purposes. Once the seat of Archbishop Alonsus Faol, it held the libraries and seminaries where paladins of the Silver Hand trained in their youth. Alexandros Mograine himself once prayed and studied within these walls.\n\nAfter Lordaeron fell, Mograine led the last Knights of the Silver Hand back here as a forward base against the Forsaken. It was in these halls that the order split, and the fanatics who remained renamed the place the Scarlet Monastery, turning it into a fortress of zealotry where any non-human, and eventually anyone unmarked by their tabard, was condemned as plagued.\n\nThe monastery's chapel bears the memory of its darkest betrayal. Renault Mograine, who had murdered his own father Alexandros for the Crusade's cause, was struck down here by that same father's spirit, called forth through the voice of the Ashbringer and given form by Darion Mograine.",
 			source = "https://warcraft.wiki.gg/wiki/Scarlet_Monastery",
 		},
-		["scarlet palisade"] = {
-			name = "Scarlet Palisade",
-			short = "The Scarlet Palisade stands west of Solliden Farmstead, raised by the Scarlet Crusade to guard the farm from any non-human that strays near.",
-			full = "The Scarlet Palisade stands west of Solliden Farmstead, raised by the Scarlet Crusade to guard the farm from any non-human that strays near. At its center stands the Crusader's Outpost, seat of the watch kept over the fields beyond.",
-			source = "https://warcraft.wiki.gg/wiki/Scarlet_Palisade",
-		},
 		["scarlet watch post"] = {
 			name = "Scarlet Watch Post",
 			short = "North of the Scarlet Monastery, in the Tirisfal Glades, stands the Scarlet Watch Post.",
 			full = "North of the Scarlet Monastery, in the Tirisfal Glades, stands the Scarlet Watch Post. The monastery's northern side has no natural defense, so the Scarlet Crusade keeps this tower manned to see danger coming before it reaches the gates.\n\nCaptain Melrache commands it, one of four such Crusader's Outposts set across the Glades to watch over the monastery's weaker approaches.",
 			source = "https://warcraft.wiki.gg/wiki/Scarlet_Watch_Post",
-		},
-		["scarlet watchtower"] = {
-			name = "Scarlet Watchtower",
-			short = "The Scarlet Watchtower stands broken in southern Tirisfal Glades, near the entrance to the sewers beneath the Undercity.",
-			full = "The Scarlet Watchtower stands broken in southern Tirisfal Glades, near the entrance to the sewers beneath the Undercity. The Scarlet Crusade holds it still, one of four such outposts raised across the Glades, using its height to watch the flight routes to and from the Forsaken capital. Command of the tower falls to Captain Perrine.",
-			source = "https://warcraft.wiki.gg/wiki/Scarlet_Watchtower",
-		},
-		["sewers"] = {
-			name = "Sewers",
-			short = "Beneath the Ruins of Lordaeron, west of the main gate near the Scarlet Watchtower, a hidden passage drops down into the dark below Undercity, a lesser way in beside the great elevators that fall from the ruins above.",
-			full = "Beneath the Ruins of Lordaeron, west of the main gate near the Scarlet Watchtower, a hidden passage drops down into the dark below Undercity, a lesser way in beside the great elevators that fall from the ruins above.\n\nIt was through these sewers that the Alliance found its way into the city during the Battle for the Undercity, slipping past the surface defenses to strike at the Forsaken capital from below.",
-			source = "https://warcraft.wiki.gg/wiki/Sewers",
 		},
 		["shadow grave"] = {
 			name = "Shadow Grave",
@@ -1505,47 +923,17 @@ ZoneLore.Subzones = {
 			full = "The hedges here are trimmed square, the fountain runs clear, and the grass holds a green found nowhere else in Tirisfal Glades, where the Plague of Undeath has turned water to stagnant rot. This terrace alone escaped it, and the Scarlet Crusade tends it still, just north of the gates of Scarlet Monastery.",
 			source = "https://warcraft.wiki.gg/wiki/Terrace_of_Repose",
 		},
-		["tomb of tyr"] = {
-			name = "Tomb of Tyr",
-			short = "Beneath the still water of Tyr's Fall lies the tomb where the fallen keeper was laid to rest beside his weapon, the Silver Hand, and beside Zakajz the Corruptor, the horror he died defeating.",
-			full = "Beneath the still water of Tyr's Fall lies the tomb where the fallen keeper was laid to rest beside his weapon, the Silver Hand, and beside Zakajz the Corruptor, the horror he died defeating. His champion Yrgrim the Truthseeker helped seal the grave, then stayed on to teach the vrykul of Tirisfal his tenets of sacrifice and justice before departing to seek one worthy of his artifact. Generations later, their descendants formed the secret Tyr's Guard to keep the tomb hidden.\n\nTheir vigilance was not enough. King Thoradin forced his way past the guardians and, unaware what slept below, had his magi break the seals. Zakajz woke and tore through his retinue, but Thoradin held his ground long enough to bury his sword Strom'kar in the creature's brain before dying of his wounds. His ghost lingered there for centuries, unable to rest.",
-			source = "https://warcraft.wiki.gg/wiki/Tomb_of_Tyr",
-		},
-		["tyrs fall"] = {
-			name = "Tyr's Fall",
-			short = "A crater lake lies still in the western Whispering Forest. It was not always water.",
-			full = "A crater lake lies still in the western Whispering Forest. It was not always water. Thousands of years ago this glade was a battlefield, where the titan-forged Tyr held the line against two C'Thraxxi generals so his allies, Archaedas and Ironaya, could flee south with the stolen Discs of Norgannon. For six days the ground tore itself apart with arcane and shadow fire, and Tyr would not yield. When his strength failed, he gave what remained of it in a single blast that killed one of his hunters outright and left the other fleeing west, broken. Ironaya named the crater in his memory: Tyr's Fall, Tirisfal to the vrykul who came after.\n\nThey buried him where he fell, his silver hand set above the grave, and stayed to guard it, an order that endured long enough to pass into human hands as the Tyr's Guard.\n\nThe lake filled in over the tomb long ago, and the water has kept its secrets since.",
-			source = "https://warcraft.wiki.gg/wiki/Tyr's_Fall",
-		},
 		["undercity"] = {
 			name = "Undercity",
 			short = "Beneath the ruined palace of Lordaeron lie crypts and sewers older than the Scourge itself, where the poorest of the old kingdom once huddled among the dead.",
 			full = "Beneath the ruined palace of Lordaeron lie crypts and sewers older than the Scourge itself, where the poorest of the old kingdom once huddled among the dead. It was here that Arthas Menethil meant to build the Scourge's seat of power, only to abandon the half-finished catacombs when the Lich King called him north.\n\nSylvanas Windrunner and her free-willed dead finished what Arthas began, twisting the tunnels into an unassailable stronghold, and named themselves the Forsaken. In the throne room they raised, a stone tomb honors King Terenas, crafted by the humans who once served him, though his ashes were spent long ago to raise Kel'Thuzad from death. A trail of blood still marks the floor by the throne, left by a crown that rolled from a dying king's head.\n\nRivers of poisoned sludge now run through every quarter, choking the air for the living. Yet for Sylvanas and her kind, it remains the only refuge left to them.",
 			source = "https://warcraft.wiki.gg/wiki/Undercity",
 		},
-		["underwater passage"] = {
-			name = "Underwater Passage",
-			short = "Beneath the still surface of Tyr's Fall, in the Whispering Forest, a flooded tunnel drops down through the dark to the Tomb of Tyr, hidden under the lake's floor.",
-			full = "Beneath the still surface of Tyr's Fall, in the Whispering Forest, a flooded tunnel drops down through the dark to the Tomb of Tyr, hidden under the lake's floor. To reach the tomb, one must pass through this drowned passage, where no light from above remains.",
-			source = "https://warcraft.wiki.gg/wiki/Underwater_Passage",
-		},
 		["venomweb vale"] = {
 			name = "Venomweb Vale",
 			short = "Venomweb Vale lies south of the Scarlet Monastery, and once it was the kind of place hunters came for deer and rabbit, its grass green and its trees full of birdsong.",
 			full = "Venomweb Vale lies south of the Scarlet Monastery, and once it was the kind of place hunters came for deer and rabbit, its grass green and its trees full of birdsong. None of that remains. The vale is thick with poisonous spiders now, ruled by the brood-mother Sri'skulk.\n\nThe spiders are not natural. This valley was once the traditional meeting place of the Council of Tirisfal, sacred ground where the first Guardian was empowered. To defend that secret place, one of the Council's own bred the spiders that now choke it, trading the vale's peace for its protection.\n\nA single rock of fool's gold still sits where Aegwynn once met with the Council. It was ordinary stone once, until Magna Scavell's apprentice Falric transformed it by accident, centuries ago, and it has stayed that way since.",
 			source = "https://warcraft.wiki.gg/wiki/Venomweb_Vale",
-		},
-		["vestibule of the silver hand"] = {
-			name = "Vestibule of the Silver Hand",
-			short = "The Vestibule of the Silver Hand lies beyond the Underwater Passage, the true threshold to the Tomb of Tyr. Here Travard, an old paladin, was found locked out, frustrated by the tomb's defenses.",
-			full = "The Vestibule of the Silver Hand lies beyond the Underwater Passage, the true threshold to the Tomb of Tyr. Here Travard, an old paladin, was found locked out, frustrated by the tomb's defenses. He chose to aid those who came seeking entry, hoping their memories might awaken the Silver Scale and restore Tyr's new body.",
-			source = "https://warcraft.wiki.gg/wiki/Vestibule_of_the_Silver_Hand",
-		},
-		["whispering forest"] = {
-			name = "Whispering Forest",
-			short = "The Whispering Forest lies shut behind the mountains west of Deathknell, beneath Tyr's Fall, reachable only by wing or by druid magic bound to the wild places.",
-			full = "The Whispering Forest lies shut behind the mountains west of Deathknell, beneath Tyr's Fall, reachable only by wing or by druid magic bound to the wild places.\n\nWhat remains within are diseased stags, does, and fawns, rats, and a single bear, all touched by sickness.",
-			source = "https://warcraft.wiki.gg/wiki/Whispering_Forest",
 		},
 		["whispering gardens"] = {
 			name = "Whispering Gardens",
@@ -1560,25 +948,13 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Whispering_Shore",
 		},
 	},
-	-- Silverpine Forest: 33 subzones
+	-- Silverpine Forest: 22 subzones
 	[1421] = {
-		["7th legion base camp"] = {
-			name = "7th Legion Base Camp",
-			short = "General Marstone commands the dwarven camp in Silverpine Forest, its infantry standing patrol against the Forsaken lands beyond.",
-			full = "General Marstone commands the dwarven camp in Silverpine Forest, its infantry standing patrol against the Forsaken lands beyond. It is a foothold of the Alliance advance, small but watched closely by those who would see it fail.",
-			source = "https://warcraft.wiki.gg/wiki/7th_Legion_Base_Camp",
-		},
 		["ambermill"] = {
 			name = "Ambermill",
 			short = "After the Scourge and the Burning Legion tore through the north, the wizards of Dalaran discovered that Ambermill sat above a dormant ley line, and set about waking it for their own purposes.",
 			full = "After the Scourge and the Burning Legion tore through the north, the wizards of Dalaran discovered that Ambermill sat above a dormant ley line, and set about waking it for their own purposes. The town became a source of human resistance the Forsaken could not ignore. To keep it safe, Archmage Ataeric bound Ambermill into a pocket dimension of its own, reachable only through a portal and passable only by one carrying an Archmage's signet ring, while elemental servitors guarded the grounds outside against Sylvanas Windrunner's dead.\n\nThat single requirement proved the town's undoing. Sent by Sylvanas herself, an intruder passed the portal, cut down magi in the streets, and killed Ataeric where he kept the dimension alive. With him dead, Ambermill fell back into Azeroth, its warding gone, and the Forsaken took it before it could be defended. Ataeric and his wizards did not stay buried; they rose again in Forsaken service.\n\nServitors walk Ambermill's mills and stables once more, though the shield that once held the town apart from the world is gone for good.",
 			source = "https://warcraft.wiki.gg/wiki/Ambermill",
-		},
-		["battlefront"] = {
-			name = "Battlefront",
-			short = "The Battlefront lies between Shadowfang Keep and the Greymane Wall, a stretch of Silverpine Forest given over entirely to war.",
-			full = "The Battlefront lies between Shadowfang Keep and the Greymane Wall, a stretch of Silverpine Forest given over entirely to war.\n\nThe Forsaken hold the ground here in force, gathered at the Forsaken Front, where Sylvanas Windrunner herself oversees preparations for a reckoning still to come. Against them stand the Alliance's 7th Legion, dwarves under General Marstone, and the Gilneas Liberation Front, rallied under Lorna Crowley, who has not given up hope of taking back what Gilneas lost.\n\nBetween them sits Pyrewood Village, once a quiet, isolated place, now ground zero for the two sides grinding against each other.",
-			source = "https://warcraft.wiki.gg/wiki/Battlefront",
 		},
 		["berens peril"] = {
 			name = "Beren's Peril",
@@ -1604,12 +980,6 @@ ZoneLore.Subzones = {
 			full = "The dock at Fenris Isle once kept a simple rhythm: farmsteads sent part of their harvest across to the island's lord, and the ferryman carried it over for a small fee.\n\nThe Scourge ended that. The ferryman was killed, his boat broken apart, and the crossing he tended became a wound instead of a road. Ghouls and skeletal warriors moved into the ruined docks, and Rot Hide gnolls settled among them.\n\nNo ferry runs there now, only the dead.",
 			source = "https://warcraft.wiki.gg/wiki/Decrepit_Ferry",
 		},
-		["decrepit fields"] = {
-			name = "Decrepit Fields",
-			short = "The Decrepit Fields lie on the shore of Lordamere Lake, between the Sepulcher and Fenris Isle, and the ground here still holds the wreckage of Forsaken catapults from fighting that has not entirely stopped.",
-			full = "The Decrepit Fields lie on the shore of Lordamere Lake, between the Sepulcher and Fenris Isle, and the ground here still holds the wreckage of Forsaken catapults from fighting that has not entirely stopped.\n\nThe worgen who gather here are Hillsbrad folk who, when the plague came for them, refused the Forsaken's offer of undeath and chose to become something else instead. What they became they have turned to vengeance, hunting the Forsaken who would have raised them as corpses.\n\nWarlord Torok sent his Orc Sea Dogs against these worgen without seeing to it that they had drink enough to face them. They failed, and now lie scattered and unconscious across the fields, useless to him.\n\nAlong the shoreline runs a pier that once carried a ferry loaded with the dead. The strangest thing about it now is a man named Killian Sanatha, who fishes there undisturbed, ignored entirely by the worgen who tore through everything else nearby.",
-			source = "https://warcraft.wiki.gg/wiki/Decrepit_Fields",
-		},
 		["deep elem mine"] = {
 			name = "Deep Elem Mine",
 			short = "The Deep Elem Mine once had a foreman named Grimson the Pale. When Arugal's magic spread through Silverpine Forest, Grimson turned worgen, and led the beasts to make the mine their own den.",
@@ -1627,30 +997,6 @@ ZoneLore.Subzones = {
 			short = "The gloomy Fenris Keep lays at the center of Lordamere Lake in Silverpine Forest upon the Fenris Isle. The keep had strategic significance, and was home to a sizable portion of Lordaeron's military.",
 			full = "The gloomy Fenris Keep lays at the center of Lordamere Lake in Silverpine Forest upon the Fenris Isle. The keep had strategic significance, and was home to a sizable portion of Lordaeron's military.",
 			source = "https://warcraft.wiki.gg/wiki/Fenris_Keep",
-		},
-		["forsaken front"] = {
-			name = "Forsaken Front",
-			short = "The Forsaken Front stands where Sylvanas commands the attack on the Gilneas Liberation Front. Here she had Lord Godfrey, Walden, and Baron Ashbury raised into her service, their deaths turned to service under her banner.",
-			full = "The Forsaken Front stands where Sylvanas commands the attack on the Gilneas Liberation Front. Here she had Lord Godfrey, Walden, and Baron Ashbury raised into her service, their deaths turned to service under her banner.",
-			source = "https://warcraft.wiki.gg/wiki/Forsaken_Front",
-		},
-		["forsaken high command"] = {
-			name = "Forsaken High Command",
-			short = "Forsaken High Command stands at the edge of Silverpine Forest, the first ground the Forsaken hold beyond Tirisfal Glades.",
-			full = "Forsaken High Command stands at the edge of Silverpine Forest, the first ground the Forsaken hold beyond Tirisfal Glades. Dreadguards march its length in patrol, while Forsaken Troopers and Apothecaries ready themselves among them, preparing for war against Gilneas beyond the forest's edge. It is a staging ground, not a settlement, built for the fight to come.",
-			source = "https://warcraft.wiki.gg/wiki/Forsaken_High_Command",
-		},
-		["forsaken rear guard"] = {
-			name = "Forsaken Rear Guard",
-			short = "The Forsaken Rear Guard lies between the Forsaken High Command and the Sepulcher in Silverpine Forest.",
-			full = "The Forsaken Rear Guard lies between the Forsaken High Command and the Sepulcher in Silverpine Forest. Orgrimmar has sent a contingent of its sea forces here, orc Sea Dogs stationed alongside the Forsaken, better known for their drinking than their discipline.",
-			source = "https://warcraft.wiki.gg/wiki/Forsaken_Rear_Guard",
-		},
-		["gilneas liberation front base camp"] = {
-			name = "Gilneas Liberation Front Base Camp",
-			short = "Commander Lorna Crowley holds this camp in Silverpine Forest, her Worgen Warbringers gathered around her as the base of the Gilneas Liberation Front.",
-			full = "Commander Lorna Crowley holds this camp in Silverpine Forest, her Worgen Warbringers gathered around her as the base of the Gilneas Liberation Front. Lord Godfrey has sought her capture, sending Horde hands to seize her from among her own warbringers. The camp remains dangerous ground for any who blunder in unprepared.",
-			source = "https://warcraft.wiki.gg/wiki/Gilneas_Liberation_Front_Base_Camp",
 		},
 		["greymane wall"] = {
 			name = "Greymane Wall",
@@ -1676,12 +1022,6 @@ ZoneLore.Subzones = {
 			full = "The orchard still bears its owner's name, though Malden himself is long gone, driven from his home when the Scourge came down upon Lordaeron. His trees remain, dark and evergreen, heavy with fruit no one has picked in years, and his cottage still stands empty beside them.\n\nBlack worgs have since taken the orchard for their own. When the Deathstalker Erland McKree was sent to scout it, he found the pack too numerous to pass and was driven to shelter inside Malden's abandoned cottage, pinned there for days. Only with the help of other Forsaken agents did he finally break free, fleeing southwest to rejoin his partners at the Ivar Patch.",
 			source = "https://warcraft.wiki.gg/wiki/Malden's_Orchard",
 		},
-		["north tides beachhead"] = {
-			name = "North Tide's Beachhead",
-			short = "Two Horde ships, filled with reinforcements, made landfall here and their crews, drunk, threw up a small camp instead of pushing inland.",
-			full = "Two Horde ships, filled with reinforcements, made landfall here and their crews, drunk, threw up a small camp instead of pushing inland. The Bloodfang worgen fell on them and slaughtered them where they camped.\n\nA third ship never reached shore at all, sinking just north at the Skittering Dark.",
-			source = "https://warcraft.wiki.gg/wiki/North_Tide's_Beachhead",
-		},
 		["north tides hollow"] = {
 			name = "North Tide's Hollow",
 			short = "North Tide's Hollow lay just north of the Sepulcher, a stretch of forest given over to the Moonrage worgen, servants of the Archmage Arugal.",
@@ -1699,24 +1039,6 @@ ZoneLore.Subzones = {
 			short = "Olsen's Farthing once stood on the main road that carried trade through Silverpine Forest, its fields busy with the ordinary work of a farmstead.",
 			full = "Olsen's Farthing once stood on the main road that carried trade through Silverpine Forest, its fields busy with the ordinary work of a farmstead.\n\nThat ended a few years after the Third War, when the farm was left in ruins. Undead answering to Thule Ravenclaw took the ground for their own, falling on anyone who wandered too near, and Olsen's Farthing never returned to the plow.\n\nLater still, the Scarlet Crusade, holding Fenris Isle, turned the ruined farm into another front in their war against the Forsaken. They let the plague run loose in the wolves, bears, and deer that ranged the fields until the animals sickened and turned savage, and they nailed their condemnations of the Forsaken to the trees standing among the wreckage, so that the farm itself became a message to anyone still living who might pass through.",
 			source = "https://warcraft.wiki.gg/wiki/Olsen's_Farthing",
-		},
-		["pyrewood chapel"] = {
-			name = "Pyrewood Chapel",
-			short = "The chapel stands near the entrance to Pyrewood Village, its stones long since gone quiet.",
-			full = "The chapel stands near the entrance to Pyrewood Village, its stones long since gone quiet. Whatever prayers were once said within its walls have faded, leaving only the shape of the building to mark where the village once turned for faith.",
-			source = "https://warcraft.wiki.gg/wiki/Pyrewood_Chapel",
-		},
-		["pyrewood inn"] = {
-			name = "Pyrewood Inn",
-			short = "The Pyrewood Inn stands on a hill at the back of the village, above the rest of the houses. Worgen have overrun the settlement below, and the inn shares its fate, standing empty and abandoned like the rest of Pyrewood.",
-			full = "The Pyrewood Inn stands on a hill at the back of the village, above the rest of the houses. Worgen have overrun the settlement below, and the inn shares its fate, standing empty and abandoned like the rest of Pyrewood.",
-			source = "https://warcraft.wiki.gg/wiki/Pyrewood_Inn",
-		},
-		["pyrewood town hall"] = {
-			name = "Pyrewood Town Hall",
-			short = "The town hall stands at the back of Pyrewood Village, and the worgen have claimed it as their own.",
-			full = "The town hall stands at the back of Pyrewood Village, and the worgen have claimed it as their own.",
-			source = "https://warcraft.wiki.gg/wiki/Pyrewood_Town_Hall",
 		},
 		["pyrewood village"] = {
 			name = "Pyrewood Village",
@@ -1761,14 +1083,8 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Valgan's_Field",
 		},
 	},
-	-- Western Plaguelands: 29 subzones
+	-- Western Plaguelands: 18 subzones
 	[1422] = {
-		["andorhal"] = {
-			name = "Andorhal",
-			short = "Andorhal is a destroyed human city located in the Western Plaguelands, formerly known as the western Eastweald, Lordaeron's breadbasket.",
-			full = "Andorhal is a destroyed human city located in the Western Plaguelands, formerly known as the western Eastweald, Lordaeron's breadbasket. One of the largest cities in northern Lordaeron, Andorhal was the main agricultural distribution point in the region. It is from here that the plague of undeath started to spread at the beginning of the Third War. Following the Scourging of Lordaeron, the undead Scourge took control of the ruined city for years, until the Alliance and the Forsaken expelled them and fought each other in the Battle for Andorhal. The waters around Andorhal are still contaminated by the plague.",
-			source = "https://warcraft.wiki.gg/wiki/Andorhal",
-		},
 		["bulwark"] = {
 			name = "Bulwark",
 			short = "The Bulwark stands where Tirisfal Glades gives way to the Western Plaguelands, the last line the Forsaken hold against the Scourge pressing from the east.",
@@ -1781,23 +1097,11 @@ ZoneLore.Subzones = {
 			full = "The keep on Caer Darrow was raised by human hands long ago, and within it stood an ancient high elven runestone, sacred and old. When the Horde came in the Second War, they sacked the fortress and tore the stone from its place, breaking it apart to forge the Altars of Storms, through which Gul'dan bound magic into his ogre allies.\n\nThe keep was rebuilt and became the seat of House Barov. But the Barovs grew greedy and afraid of their own mortality, and struck a bargain with Kel'Thuzad to preserve their power beyond their years. Within six months the manor had become Scholomance, a school of necromancy hidden beneath the old halls. The family's own servants were used to test the plague of undeath, and that plague was loosed and killed everyone on the island. None survived as living things; their spirits remain, bound to relive their final moments, and the lake around them has stood lifeless and still ever since.",
 			source = "https://warcraft.wiki.gg/wiki/Caer_Darrow",
 		},
-		["charred outpost"] = {
-			name = "Charred Outpost",
-			short = "The camp lies burned between Felstone Field and Dalson's Farm, once one of the last outposts the Scarlet Crusade held there, garrisoned with hunters, medics, and invokers.",
-			full = "The camp lies burned between Felstone Field and Dalson's Farm, once one of the last outposts the Scarlet Crusade held there, garrisoned with hunters, medics, and invokers. Something ended that garrison outright. Only a Scarlet High Clerist remained among the dead, moving from body to body as if searching for someone left alive.\n\nLater, Lindsay Ravensun used the ruin as a staging point, working out of the wreckage to direct Horde agents against Felstone Field.",
-			source = "https://warcraft.wiki.gg/wiki/Charred_Outpost",
-		},
 		["chillwind camp"] = {
 			name = "Chillwind Camp",
 			short = "Chillwind Camp sits where the road out of the Alterac Mountains drops into the Western Plaguelands, the last safe ground before the poisoned country begins.",
 			full = "Chillwind Camp sits where the road out of the Alterac Mountains drops into the Western Plaguelands, the last safe ground before the poisoned country begins. The Argent Dawn keeps it under Lord Maxwell Tyrosus, and it was here that Darion Mograine came looking for volunteers after he joined their cause. His father Alexandros Mograine's soul was trapped in Naxxramas, and Darion asked the camp to give him men willing to go in after it. Enough answered, and they rode out from Chillwind on gryphons.\n\nLater the camp became a staging ground for Lord Grayson Shadowbreaker's Knights of the Silver Hand, sent to fight under Commander Ashlam Valorfist against the Scourge holding Andorhal. The knights he sent were young and promising. All of them died here, cut down by the undead they had come to burn out.\n\nAfter the Alliance was broken at the Battle for Andorhal, Valorfist said plainly what everyone at Chillwind already feared: that the Forsaken would come for the camp next.",
 			source = "https://warcraft.wiki.gg/wiki/Chillwind_Camp",
-		},
-		["dalsons farm"] = {
-			name = "Dalson's Farm",
-			short = "Dalson's Farm was once Dalson's Orchard, and then Dalson's Tears, when the Scourge held these fields. That plague has since been driven out, and the land rebuilt under its old name.",
-			full = "Dalson's Farm was once Dalson's Orchard, and then Dalson's Tears, when the Scourge held these fields. That plague has since been driven out, and the land rebuilt under its old name.\n\nThe farm stands as though abandoned, yet pumpkins and other vegetables still grow untended in its rows.",
-			source = "https://warcraft.wiki.gg/wiki/Dalson's_Farm",
 		},
 		["dalsons tears"] = {
 			name = "Dalson's Tears",
@@ -1829,29 +1133,11 @@ ZoneLore.Subzones = {
 			full = "Hearthglen sits north of Andorhal, its walls holding a peaceful order rare in the Western Plaguelands, its keep and mine and mage tower ringed by stone that has never once fallen. Its history is written in the Fordrings.\n\nTirion Fordring once ruled the town from Mardenholde Keep, until he was cast out for treason after showing mercy to an orc, Eitrigg. His son Taelan later took his place as Lord of Mardenholde, and it was Taelan who opened the gates to the shattered Order of the Silver Hand after the fall of Capital City. That refuge did not last: the order was remade into the Scarlet Crusade by a man whose body was worn by a demon, and the town was seized for it.\n\nYears later Tirion tried to win his son back, sending a hidden gift into Hearthglen. Taelan agreed to abandon the zealots and meet his father outside the walls, but the betrayal was sensed, and an inquisitor was sent to silence it. Tirion arrived to find his son dying, killed the man who had done it, and swore there, over Taelan's body, to raise the Silver Hand again as a force of good. He returned to lead Hearthglen once more, and it now trains the Argent Crusade in his name.",
 			source = "https://warcraft.wiki.gg/wiki/Hearthglen",
 		},
-		["legacy of scholomance"] = {
-			name = "Legacy of Scholomance",
-			short = "The chamber lies apart from the halls of Scholomance itself, reached only by those who carry the memory of what happened within.",
-			full = "The chamber lies apart from the halls of Scholomance itself, reached only by those who carry the memory of what happened within.",
-			source = "https://warcraft.wiki.gg/wiki/Legacy_of_Scholomance",
-		},
-		["malicias outpost"] = {
-			name = "Malicia's Outpost",
-			short = "South of the Weeping Cave stands Malicia's Outpost, a camp of the Cult of the Damned under Malicia's command. Cages ring the place, holding animals taken and kept captive there.",
-			full = "South of the Weeping Cave stands Malicia's Outpost, a camp of the Cult of the Damned under Malicia's command. Cages ring the place, holding animals taken and kept captive there.",
-			source = "https://warcraft.wiki.gg/wiki/Malicia's_Outpost",
-		},
 		["mardenholde keep"] = {
 			name = "Mardenholde Keep",
 			short = "Mardenholde Keep was long the seat from which Tirion Fordring ruled Hearthglen, Arden captain of its guard.",
 			full = "Mardenholde Keep was long the seat from which Tirion Fordring ruled Hearthglen, Arden captain of its guard. In the council room a great oak table stood at its center, covered by a map of the principality rendered down to the smallest detail, and there Tirion met with his advisors to weigh the safety of the land he had been given to keep. The keep's walls had never fallen, not even in the darkest years of the orcish invasion, and its people took pride in that. Tirion's downfall came when he was charged with treason for sparing the orc Eitrigg, and he was cast out and exiled.\n\nAfter the Scourging of Lordaeron, Tirion's son Taelan gave the keep to the surviving Knights of the Silver Hand, who in time renamed themselves the Scarlet Crusade. Taelan rose among them as Highlord, and Mardenholde became the heart of Scarlet rule in the region, its walls now holding the son against his father's name.",
 			source = "https://warcraft.wiki.gg/wiki/Mardenholde_Keep",
-		},
-		["menders stead"] = {
-			name = "Menders' Stead",
-			short = "In the heart of the Western Plaguelands, where the blight once lay thickest, the Cenarion Circle has taken up the slow work of healing the land, standing alongside the Argent Crusade as they labor to cleanse the corruption from the soil.",
-			full = "In the heart of the Western Plaguelands, where the blight once lay thickest, the Cenarion Circle has taken up the slow work of healing the land, standing alongside the Argent Crusade as they labor to cleanse the corruption from the soil.",
-			source = "https://warcraft.wiki.gg/wiki/Menders'_Stead",
 		},
 		["northridge lumber camp"] = {
 			name = "Northridge Lumber Camp",
@@ -1859,23 +1145,11 @@ ZoneLore.Subzones = {
 			full = "The Northridge Lumber Camp stands where the trees of the northern Western Plaguelands have been stripped back, close to Hearthglen, the timber turned to lumber for the Scarlet Crusade's stockpiles. The Crusade prized this wood enough to work the mill hard, and both the Alliance and the Horde saw the worth in denying it to them, loosing termites into the stacked timber to rot the supply from within.\n\nThe mill was not always the Crusade's. Nathaniel Dumah's family ran it before the Third War took the land from people like them. Dumah returned and reclaimed it for the Argent Crusade, though the camp now stands under siege by Northridge Spiders.",
 			source = "https://warcraft.wiki.gg/wiki/Northridge_Lumber_Camp",
 		},
-		["path of uther"] = {
-			name = "Path of Uther",
-			short = "The Path of Uther climbs to Sorrow Hill, where Uther's Tomb stands. Hedges line the way now, and a great lion's-head gate marks where the path begins, the grounds around it set right again after long neglect.",
-			full = "The Path of Uther climbs to Sorrow Hill, where Uther's Tomb stands. Hedges line the way now, and a great lion's-head gate marks where the path begins, the grounds around it set right again after long neglect.",
-			source = "https://warcraft.wiki.gg/wiki/Path_of_Uther",
-		},
 		["plaguemist ravine"] = {
 			name = "Plaguemist Ravine",
 			short = "A mist hangs low and sickly in this ravine, where the rest of the Hinterlands stays green and clean.",
 			full = "A mist hangs low and sickly in this ravine, where the rest of the Hinterlands stays green and clean. It seeps down from the north, from the Western Plaguelands, following the path that climbs toward Caer Darrow, as if the plague itself had crept south along this one narrow seam in the hills. The contrast between that poisoned air and the untouched woods around it is what gave the ravine its name.",
 			source = "https://warcraft.wiki.gg/wiki/Plaguemist_Ravine",
-		},
-		["redpine dell"] = {
-			name = "Redpine Dell",
-			short = "Redpine Dell is a clearing south of Hearthglen, taking its name from the Redpine gnolls that wander it, prowling the road all the way to Hearthglen's gates.",
-			full = "Redpine Dell is a clearing south of Hearthglen, taking its name from the Redpine gnolls that wander it, prowling the road all the way to Hearthglen's gates.",
-			source = "https://warcraft.wiki.gg/wiki/Redpine_Dell",
 		},
 		["ruins of andorhal"] = {
 			name = "Ruins of Andorhal",
@@ -1889,29 +1163,11 @@ ZoneLore.Subzones = {
 			full = "The Scholomance, also known as the School of Necromancy, is a vile academy for prospective necromancers of the Scourge, is located in the ruins of the palatial House of Barov, on a rise overlooking the abandoned city of Caer Darrow. The layout of the dungeon changed to be less confusing, similar to how the Sunken Temple was done. Five bosses await adventurers there.",
 			source = "https://warcraft.wiki.gg/wiki/Scholomance",
 		},
-		["scholomance classic"] = {
-			name = "Scholomance",
-			short = "The Scholomance, a vile academy for prospective necromancers of the Scourge, is located in the ruins of the palatial House of Barov, on a rise overlooking the abandoned city of Caer Darrow.",
-			full = "The Scholomance, a vile academy for prospective necromancers of the Scourge, is located in the ruins of the palatial House of Barov, on a rise overlooking the abandoned city of Caer Darrow. The enemy level range is 57-62.",
-			source = "https://warcraft.wiki.gg/wiki/Scholomance_(Classic)",
-		},
 		["sorrow hill"] = {
 			name = "Sorrow Hill",
 			short = "In gentler days, Sorrow Hill received the dead of Andorhal and the villages around it, rich and poor alike, in crypts and simple plots on the slope south of the town.",
 			full = "In gentler days, Sorrow Hill received the dead of Andorhal and the villages around it, rich and poor alike, in crypts and simple plots on the slope south of the town. When the plague came and the Scourge began their raids, the hill filled faster than it could hold, its graves shallow and hurried, scarcely marked, the toll of the town's defense laid down in rows. Before long the living gave up burying their dead altogether, digging instead a mass grave south of the cemetery where they burned their own, dreading what the plague would make of them if left whole in the ground.\n\nThe last blow fell when Arthas cut down Lord Uther the Lightbringer. What remained of Andorhal's people, before they abandoned the town for good, carried Uther's broken body to the crown of the hill and raised a great tomb over it. Some say the hill itself takes its name from that grave.",
 			source = "https://warcraft.wiki.gg/wiki/Sorrow_Hill",
-		},
-		["sorrow hill crypt"] = {
-			name = "Sorrow Hill Crypt",
-			short = "Sorrow Hill is a graveyard vast enough to hold the dead of both the plague and the Scourge War together, among them the tomb of Uther the Lightbringer.",
-			full = "Sorrow Hill is a graveyard vast enough to hold the dead of both the plague and the Scourge War together, among them the tomb of Uther the Lightbringer.\n\nAt its eastern edge stands a crumbling crypt, once held by skeletal magi and Scourge warders, now empty of them. Inside, weapons are stored as if for a force that never came, and books lie scattered among them, unexplained, their purpose as lost as the dead outside.",
-			source = "https://warcraft.wiki.gg/wiki/Sorrow_Hill_Crypt",
-		},
-		["taelans tower"] = {
-			name = "Taelan's Tower",
-			short = "Redpine gnolls now hold the tower along the road to Hearthglen, having killed the Hearthglen troops once posted there.",
-			full = "Redpine gnolls now hold the tower along the road to Hearthglen, having killed the Hearthglen troops once posted there. At its top rests a Holy Coffer holding the Mark of the Lightbringer, still tended from afar by the Hearthglen priest Daria L'Rayne.\n\nIt was here that Taelan Fordring died, struck down by Grand Inquisitor Isillien. Isillien did not leave the tower alive either -- Tirion Fordring came and killed the Inquisitor in turn, a father answering his son's death with the man who dealt it.",
-			source = "https://warcraft.wiki.gg/wiki/Taelan's_Tower",
 		},
 		["thondroril river"] = {
 			name = "Thondroril River",
@@ -1938,14 +1194,8 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Writhing_Haunt",
 		},
 	},
-	-- Eastern Plaguelands: 49 subzones
+	-- Eastern Plaguelands: 28 subzones
 	[1423] = {
-		["acherus the ebon hold"] = {
-			name = "Acherus: The Ebon Hold",
-			short = "Acherus: The Ebon Hold is a former Scourge necropolis originally floating above Light's Hope Chapel in the Eastern Plaguelands.",
-			full = "Acherus: The Ebon Hold is a former Scourge necropolis originally floating above Light's Hope Chapel in the Eastern Plaguelands. It is the headquarters of the Knights of the Ebon Blade and the starting area for all death knights of the Alliance and the Horde. As such, the Ebon Hold has been designated as a sanctuary, and can be reached by death knights through the [Death Gate] ability.",
-			source = "https://warcraft.wiki.gg/wiki/Acherus%3A_The_Ebon_Hold",
-		},
 		["blackwood lake"] = {
 			name = "Blackwood Lake",
 			short = "Blackwood Lake lies foul and stagnant in the Eastern Plaguelands, its waters given over to corrupted elementals. Beneath the surface, the annals say, rests the head of Horgus the Ravager.",
@@ -1970,47 +1220,11 @@ ZoneLore.Subzones = {
 			full = "Crown Guard Tower once stood watch over Lordaeron, until the Scourge swept through the Eastern Plaguelands and left it broken stone and silence, one more ruin among many.\n\nFor a time the ruin itself became a prize. Neither Alliance nor Horde could let it lie, and both sides bled for the chance to hold its fallen walls, each hoping to turn the wreck into a foothold in the plague-lands.\n\nIt stands rebuilt now, raised again by the Argent Crusade along with the other watchtowers of the region, and serves them as an outpost. Like Light's Hope Chapel nearby, there are signs of life around it again after so much ruin.",
 			source = "https://warcraft.wiki.gg/wiki/Crown_Guard_Tower",
 		},
-		["crypt lights hope chapel"] = {
-			name = "Crypt (Light's Hope Chapel)",
-			short = "Behind Light's Hope Chapel, past its cemetery, lies a crypt cut into the earth. It is here that Lord Raymond George can be summoned back.",
-			full = "Behind Light's Hope Chapel, past its cemetery, lies a crypt cut into the earth. It is here that Lord Raymond George can be summoned back.\n\nThe crypt is unlike the chapel above: the Light does not reach into it. When the chapel was invaded, the dead were raised within these walls, ghouls loosed against the sentries outside while the true assault pressed toward the Sanctum of Light. It succeeded because here, in the crypt, the Light offered no resistance to the dead.",
-			source = "https://warcraft.wiki.gg/wiki/Crypt_(Light's_Hope_Chapel)",
-		},
-		["crypt of remembrance"] = {
-			name = "Crypt of Remembrance",
-			short = "The Crypt of Remembrance stands in southern Havenshire, south of the Havenshire Farms and just north of New Avalon's wall.",
-			full = "The Crypt of Remembrance stands in southern Havenshire, south of the Havenshire Farms and just north of New Avalon's wall.\n\nFor a time Baron Rivendare and Prince Keleseth, known elsewhere as the masters of Stratholme and Utgarde Keep, made this crypt their own, overtaking it and setting Crypt Guardians to hold its ground, with Fineous trading among them.\n\nThe crypt did not stay as it was, growing most crowded with the Scourge's purpose before quieting again.\n\nWhat remains now is simply called Crypt, the old name for remembrance worn away with use.",
-			source = "https://warcraft.wiki.gg/wiki/Crypt_of_Remembrance",
-		},
 		["darrowshire"] = {
 			name = "Darrowshire",
 			short = "Darrowshire once stood as a village in the south, until the Third War brought the Scourge to its gates.",
 			full = "Darrowshire once stood as a village in the south, until the Third War brought the Scourge to its gates. The ghoul lord Horgus the Ravager and the death knight Marduk Blackpool led the assault, and though the defenders fought hard and won ground at first, they were overwhelmed and slaughtered to the last.\n\nThose who died did not simply die. Their bodies rose again as ghouls bound to the Scourge, spirits trapped inside the rotting flesh that once was theirs.\n\nDarrowshire stands silent and broken now, empty but for ghosts. Rarely, the ruins stir, and the battle plays itself out again, phantom against phantom, the dead relighting a fight already lost.",
 			source = "https://warcraft.wiki.gg/wiki/Darrowshire",
-		},
-		["darrowshire hunting grounds"] = {
-			name = "Darrowshire Hunting Grounds",
-			short = "The Darrowshire Hunting Grounds lie within the Eastern Plaguelands, contested ground where no banner holds for long.",
-			full = "The Darrowshire Hunting Grounds lie within the Eastern Plaguelands, contested ground where no banner holds for long.",
-			source = "https://warcraft.wiki.gg/wiki/Darrowshire_Hunting_Grounds",
-		},
-		["death cultist base camp"] = {
-			name = "Death Cultist Base Camp",
-			short = "A cauldron of the Scourge's plague stands west of Tyr's Hand, tended by the death cultists who hold this camp.",
-			full = "A cauldron of the Scourge's plague stands west of Tyr's Hand, tended by the death cultists who hold this camp. Betina Bigglezink sought to see it fouled with her own mixture, turning the Scourge's own poison back against the corruption that made it.",
-			source = "https://warcraft.wiki.gg/wiki/Death_Cultist_Base_Camp",
-		},
-		["deaths breach"] = {
-			name = "Death's Breach",
-			short = "The plateau lies below Acherus, reached through the cave at the Noxious Glade, with the ruins of the Scarlet Enclave falling away on ramps to either side.",
-			full = "The plateau lies below Acherus, reached through the cave at the Noxious Glade, with the ruins of the Scarlet Enclave falling away on ramps to either side. A teleporter in its northern reach leads up to the hold above.\n\nDeath's Breach does not hold still. It shifts with the fortunes of the Scarlet Enclave below it, changing as that struggle turns. What stands here now is only the shape it has taken for the moment.",
-			source = "https://warcraft.wiki.gg/wiki/Death's_Breach",
-		},
-		["deaths step"] = {
-			name = "Death's Step",
-			short = "By the shore of Darrowmere Lake, west of the Undercroft, trees close around a small clearing called Death's Step. Putrifiers and their Miscreations gather here, the Plaguelands' corruption given shambling form.",
-			full = "By the shore of Darrowmere Lake, west of the Undercroft, trees close around a small clearing called Death's Step. Putrifiers and their Miscreations gather here, the Plaguelands' corruption given shambling form. Among the rot, Tarenar Sunstrike keeps his place.",
-			source = "https://warcraft.wiki.gg/wiki/Death's_Step",
 		},
 		["eastwall gate"] = {
 			name = "Eastwall Gate",
@@ -2030,23 +1244,11 @@ ZoneLore.Subzones = {
 			full = "The ground of the Fungal Vale has turned a sickly purple, wrapped in a murky haze where the Plague of Undeath runs deepest through the Eastern Plaguelands. The Scourge holds this ground alongside the Cult of the Damned, working freely in the mist. It lies north of the Marris Stead and the Crown Guard Tower.",
 			source = "https://warcraft.wiki.gg/wiki/Fungal_Vale",
 		},
-		["hall of arms tyrs hand"] = {
-			name = "Hall of Arms (Tyr's Hand)",
-			short = "The Hall of Arms stands south of the abbey's Main Hall, its length reaching east and just north, facing the Library Wing across the courtyard.",
-			full = "The Hall of Arms stands south of the abbey's Main Hall, its length reaching east and just north, facing the Library Wing across the courtyard. Here the Scarlet Crusade quarters its militant brothers, those sworn to the sword rather than the scripture, and the hall holds them still.",
-			source = "https://warcraft.wiki.gg/wiki/Hall_of_Arms_(Tyr's_Hand)",
-		},
 		["infectis scar"] = {
 			name = "Infectis Scar",
 			short = "The Infectis Scar was not cut by water, like the Pestilent Scar nearby. It was torn open by a broken sword.",
 			full = "The Infectis Scar was not cut by water, like the Pestilent Scar nearby. It was torn open by a broken sword.\n\nNear Corin's Crossing, the death knight Marduk Blackpool's runesword shattered against a dwarf captain's shield. He kept the hilt and let the blade fall. Where the evil steel struck the blighted earth, the ground gave way, opening into the chasm that now holds this dark lake.",
 			source = "https://warcraft.wiki.gg/wiki/Infectis_Scar",
-		},
-		["ixlars domain"] = {
-			name = "Ix'lar's Domain",
-			short = "Ix'lar's Domain lies north of Eastwall Tower, a small holding of Scourge who never bent to the Lich King's fall from grace.",
-			full = "Ix'lar's Domain lies north of Eastwall Tower, a small holding of Scourge who never bent to the Lich King's fall from grace. Here rules Ix'lar the Underlord, a crypt lord who dreams beyond his station, seeing in the wreckage of the Scourge an empty throne meant for him.",
-			source = "https://warcraft.wiki.gg/wiki/Ix'lar's_Domain",
 		},
 		["lake mereldar"] = {
 			name = "Lake Mereldar",
@@ -2054,29 +1256,11 @@ ZoneLore.Subzones = {
 			full = "Lake Mereldar lies south of Corin's Crossing, its waters fouled by the blight and stirred by corrupted water elementals. Along its shore stand the ruins of an old house, and a shack and ferry that once belonged to a farm long since abandoned.",
 			source = "https://warcraft.wiki.gg/wiki/Lake_Mereldar",
 		},
-		["library wing tyrs hand"] = {
-			name = "Library Wing (Tyr's Hand)",
-			short = "The Library Wing stands south of the Main Hall within Tyr's Hand Abbey, facing north, with the Hall of Arms set opposite across the grounds.",
-			full = "The Library Wing stands south of the Main Hall within Tyr's Hand Abbey, facing north, with the Hall of Arms set opposite across the grounds. Its shelves hold the tomes of the Scarlet Crusade, works of religious conviction pressed to the edge of madness, and the faithful who came here sought enlightenment within their pages. In the back room stands a table bearing a Basin of Holy Water, a small and unassuming thing to look at, though it was sought after for the sanctity it held.",
-			source = "https://warcraft.wiki.gg/wiki/Library_Wing_(Tyr's_Hand)",
-		},
 		["lights hope chapel"] = {
 			name = "Light's Hope Chapel",
 			short = "Light's Hope Chapel is the Argent Crusade base of operations in the Eastern Plaguelands, and a place of comfort for those who make the journey here.",
 			full = "Light's Hope Chapel is the Argent Crusade base of operations in the Eastern Plaguelands, and a place of comfort for those who make the journey here. Located on the slopes of a mountainous area east of the region, it was originally a mere chapel of the Church of the Holy Light, until it expanded into a full-fledged fortified outpost after the end of the Scourgewar. Underneath is the Sanctum of Light, catacombs which house the remains of the heroes of Lordaeron. Many were exhumed from around Lordaeron and moved to here so they could not be resurrected in the service of the Lich King.",
 			source = "https://warcraft.wiki.gg/wiki/Light's_Hope_Chapel",
-		},
-		["lights shield tower"] = {
-			name = "Light's Shield Tower",
-			short = "Light's Shield Tower rises near Corin's Crossing, raised by the Argent Crusade as a watch over the blighted plain. Its banners answer to no single power, open to any who oppose the plague's rot.",
-			full = "Light's Shield Tower rises near Corin's Crossing, raised by the Argent Crusade as a watch over the blighted plain. Its banners answer to no single power, open to any who oppose the plague's rot.",
-			source = "https://warcraft.wiki.gg/wiki/Light's_Shield_Tower",
-		},
-		["main hall tyrs hand"] = {
-			name = "Main Hall (Tyr's Hand)",
-			short = "The Main Hall is the heart of Tyr's Hand Abbey, the passage through which the tower, the Hall of Arms, and the Library Wing are all reached.",
-			full = "The Main Hall is the heart of Tyr's Hand Abbey, the passage through which the tower, the Hall of Arms, and the Library Wing are all reached. The Scarlet Crusade kept it heavily patrolled, watching over the one way in.",
-			source = "https://warcraft.wiki.gg/wiki/Main_Hall_(Tyr's_Hand)",
 		},
 		["marris stead"] = {
 			name = "Marris Stead",
@@ -2120,29 +1304,11 @@ ZoneLore.Subzones = {
 			full = "The Plaguewood stretches south from Stratholme toward Terrordale, and once it was a gentle woodland, the kind of green country a traveler might have found in Elwynn Forest. A small village stood near the arch at the forest's entrance. That peace ended when the grain poisoned at Andorhal found its way here. A Lordaeronian soldier named Sergeant Morigan, stationed in the village, was the first to sense that something in his home had gone wrong. By the time the Scourging of Lordaeron was done, the forest was already ruined.\n\nThe land itself changed. The soil turned soft and spongy underfoot, and the trees gave way to fungus grown monstrous, toadstools dwarfing what remained of the old canopy, some venting a dark brown gas not unlike the vapor that hisses from the Scourge's plague cauldrons. The forest earned a new name from it: the Plaguewood.\n\nNow ziggurats and slaughterhouses fill the woodland, thick with the Scourge, while Scarlet Crusade patrols work the road to and from Stratholme, cutting down undead and any living travelers unlucky enough to cross their path.",
 			source = "https://warcraft.wiki.gg/wiki/Plaguewood",
 		},
-		["plaguewood tower"] = {
-			name = "Plaguewood Tower",
-			short = "Plaguewood Tower stands broken among the twisted trees of the Plaguewood, near Terrordale, left in ruins when the Scourge swept through Lordaeron.",
-			full = "Plaguewood Tower stands broken among the twisted trees of the Plaguewood, near Terrordale, left in ruins when the Scourge swept through Lordaeron.\n\nSince then it has become a battleground, one of the fallen towers where the Alliance and the Horde fight for a foothold in the blighted region.\n\nYet signs of life persist here, as at Light's Hope Chapel, and a neutral flight master keeps to the tower, untouched by the quarrel around it.",
-			source = "https://warcraft.wiki.gg/wiki/Plaguewood_Tower",
-		},
 		["quellithien lodge"] = {
 			name = "Quel'Lithien Lodge",
 			short = "Quel'Lithien Lodge stood near the entrance to Quel'Thalas, one of two great gatherings of the high elves in Lordaeron, a Farstrider camp where rangers came and went freely and were greeted warmly as kin.",
 			full = "Quel'Lithien Lodge stood near the entrance to Quel'Thalas, one of two great gatherings of the high elves in Lordaeron, a Farstrider camp where rangers came and went freely and were greeted warmly as kin. By the Second War its hunters answered to Renthar Hawkspear.\n\nThe Scourge invasion of Quel'Thalas broke that warmth. The teachings practiced at the lodge had become a source of division dangerous enough that Lor'themar, now regent of a wounded nation, exiled the group south rather than let the quarrel tear the kingdom apart. Among those cast out was the priestess Aurora Skycaller. From then on the lodge was no longer a waypoint but a home, and a bitter one.\n\nCut off from their homeland, the exiles heard nothing of what followed until Lor'themar made one last journey south to tell them himself, and to offer aid now that the land stood safer. Renthar's answer was fury: he refused outright and swore to kill any messenger sent bearing it. Lor'themar could not blame him for that anger, only grieve for it, and left in sorrow.",
 			source = "https://warcraft.wiki.gg/wiki/Quel'Lithien_Lodge",
-		},
-		["ruins of the scarlet enclave"] = {
-			name = "Ruins of the Scarlet Enclave",
-			short = "The banners of the Ebon Blade now hang where the Scarlet Crusade's colors once flew, planted in the courtyard of New Avalon and before the ruined gates of Scarlet Hold.",
-			full = "The banners of the Ebon Blade now hang where the Scarlet Crusade's colors once flew, planted in the courtyard of New Avalon and before the ruined gates of Scarlet Hold.\n\nNew Avalon and Havenshire were the last human settlements standing in the Eastern Plaguelands, refuges of the Scarlet Crusade. King's Harbor served them as a way out, and the last ship left its dock only shortly before the Scourge came and the Crusade was all but annihilated. Acherus still floats over Death's Breach to the north, a reminder of whose hand ended them.\n\nThe ruin is fresh enough to still feel inhabited. Corpses lie unburied in the streets of New Avalon and across the fields of Havenshire. Some of the broken buildings still hold a fire burning in the hearth, as though someone might come back to it.\n\nA red-orange smog hangs over all of it, the same haze that lies across the rest of the Eastern Plaguelands, so the ruins of the last human towns here are seen, if at all, through a permanent dusk.",
-			source = "https://warcraft.wiki.gg/wiki/Ruins_of_the_Scarlet_Enclave",
-		},
-		["sanctum of light"] = {
-			name = "Sanctum of Light",
-			short = "Beneath Light's Hope Chapel lies a catacomb holding the remains of a thousand heroes of Lordaeron.",
-			full = "Beneath Light's Hope Chapel lies a catacomb holding the remains of a thousand heroes of Lordaeron. During the Third War, Lord Maxwell Tyrosus and a chosen few exhumed the bravest of Lordaeron's dead, among them the hero Killoren, so their bodies would never be raised by the Scourge, and interred them once more in secret beneath the chapel.\n\nAfter Alexandros Mograine's death, the paladins who could not follow the Scarlet Crusade left Hearthglen and made the chapel their home, calling themselves the Argent Dawn, sworn to guard the catacombs below. Kel'Thuzad came for the Sanctum himself, leading the Scourge against the chapel until its defenders were nearly overrun. Darion Mograine drove the Ashbringer through his own chest to free his father's soul, and the deed woke the thousand dead beneath the floor, who rose and tore the Scourge apart.\n\nThe halls now hold what is too dangerous to leave elsewhere: weapons and armor stripped from the dreadlord Balnazzar, and the runeblade of Baron Rivendare, sealed away where no one could be tempted to wield them.",
-			source = "https://warcraft.wiki.gg/wiki/Sanctum_of_Light",
 		},
 		["scarlet base camp"] = {
 			name = "Scarlet Base Camp",
@@ -2156,35 +1322,11 @@ ZoneLore.Subzones = {
 			full = "The Scarlet Basilica stands at the heart of Tyr's Hand, the high seat of religious power for the Scarlet Crusade, bound to the nearby Tyr's Hand Abbey and to the Scarlet Monastery in Tirisfal Glades. Crusader Lord Valdelmar holds his place within its walls.",
 			source = "https://warcraft.wiki.gg/wiki/Scarlet_Basilica",
 		},
-		["siege vise"] = {
-			name = "Siege Vise",
-			short = "The Siege Vise sits near the gateway to Quel'Thalas, where the Scourge have raised a small siege camp. Its engineers work among rows of meat wagons, holding the ground before the road into the elven kingdom.",
-			full = "The Siege Vise sits near the gateway to Quel'Thalas, where the Scourge have raised a small siege camp. Its engineers work among rows of meat wagons, holding the ground before the road into the elven kingdom.",
-			source = "https://warcraft.wiki.gg/wiki/Siege_Vise",
-		},
 		["stratholme"] = {
 			name = "Stratholme",
 			short = "Stratholme (or Stratholme City) was the northernmost and second-most populous city of the kingdom of Lordaeron. It was here that the Order of the Silver Hand was founded prior to the Second War.",
 			full = "Stratholme (or Stratholme City) was the northernmost and second-most populous city of the kingdom of Lordaeron. It was here that the Order of the Silver Hand was founded prior to the Second War. Years later, the port city was plagued by the Cult of the Damned, using infected grain from Andorhal, and its population was ultimately purged by the mad Prince Arthas Menethil. In the aftermath, Stratholme became the Scourge's capital in Lordaeron after the undead moved in, and is still burning to this day.\n\nThe city included many well-known buildings, from the glorious Bastion of the Silver Hand to Ezra Grimm's famous tobacco shop.",
 			source = "https://warcraft.wiki.gg/wiki/Stratholme",
-		},
-		["stratholme classic"] = {
-			name = "Stratholme",
-			short = "Stratholme was the second city of the kingdom of Lordaeron, a port whose oil once supplied the armies of the Alliance, and whose holy water was famed for cleansing even the darkest magics.",
-			full = "Stratholme was the second city of the kingdom of Lordaeron, a port whose oil once supplied the armies of the Alliance, and whose holy water was famed for cleansing even the darkest magics. At Alonsus Chapel, Archbishop Alonsus Faol founded the Order of the Knights of the Silver Hand, raising up its first five paladins, Uther the Lightbringer among them.\n\nThe city's end came in grain shipped from Andorhal, secretly rotten with plague. The people baked it into their bread and ate it, unknowing. When Prince Arthas Menethil arrived with Uther and Jaina Proudmoore, he found the infection had already taken root, and declared that the city must be purged before its dead could rise as the Scourge. Uther, Jaina, and most of the paladins refused, calling it madness. Arthas went on without them. Fire swept the streets and the blood of the innocent ran with that of the plagued. When Jaina and Uther returned, they found the bodies of the dead littering the cobblestones and the city burned to a husk.\n\nStratholme still burns. The undead Scourge holds it now, and its ashes never settle.",
-			source = "https://warcraft.wiki.gg/wiki/Stratholme_(Classic)",
-		},
-		["stratholme main gate"] = {
-			name = "Stratholme Main Gate",
-			short = "The gate stands where Stratholme's watchtowers rise, iron-bound and massive, the way into what was once the jewel of northern Lordaeron and the birthplace of the Order of the Silver Hand.",
-			full = "The gate stands where Stratholme's watchtowers rise, iron-bound and massive, the way into what was once the jewel of northern Lordaeron and the birthplace of the Order of the Silver Hand.\n\nIt was through streets beyond this gate that Prince Arthas turned on his own people. Told the city's grain had been tainted with the plague of undeath, he gave the order to put every citizen to the sword before the corruption could spread, cutting down hundreds who had not yet even sickened. His mentor Uther Lightbringer refused the command and turned his knights away. What followed was ruin: the prince's slide into the Lich King's service, and the city's slide into fire.\n\nThe undead moved in soon after and never left. Stratholme burns still, and behind these gates the Scourge has massed under the death knight Lord Aurius Rivendare and the dreadlord Balnazzar, who wait to boil forth and ravage Lordaeron again if not held within.",
-			source = "https://warcraft.wiki.gg/wiki/Stratholme_Main_Gate",
-		},
-		["stratholme service entrance"] = {
-			name = "Stratholme Service Entrance",
-			short = "The Eastwall Gate opens onto the lesser road into Stratholme, the service way behind the city's grand front, leading into the same ruin all the same.",
-			full = "The Eastwall Gate opens onto the lesser road into Stratholme, the service way behind the city's grand front, leading into the same ruin all the same.\n\nStratholme was once the jewel of northern Lordaeron, second only to the capital in its people. Here Prince Arthas turned against his mentor Uther Lightbringer, putting hundreds of his own subjects to the sword because they were believed to carry the plague of undeath. That slaughter marked the beginning of his fall, and not long after he surrendered himself entirely to the Lich King.\n\nThe city has burned ever since. Behind its watchtowers and iron gates, the broken city became a haven for the Scourge. Champions of the Light and the zealots of the Scarlet Crusade both marched in to cleanse it, and both failed nearly to the last man - and now those very champions walk again as Stratholme's own dead, bound to Lord Aurius Rivendare and the dreadlord Balnazzar, who hold the city still.",
-			source = "https://warcraft.wiki.gg/wiki/Stratholme_Service_Entrance",
 		},
 		["terrordale"] = {
 			name = "Terrordale",
@@ -2198,12 +1340,6 @@ ZoneLore.Subzones = {
 			full = "The tunnel bores through the mountain northwest of Terrordale, opening south onto the Thondroril River. Nerubian crypt fiends have claimed it entirely, thick along its length in the dark. Among them stalks something worse: a Nerubian Overseer, elite and powerful, that turns a dangerous crossing into something far worse.\n\nAt the river entrance stands Tirion Fordring, keeping watch over the mouth of the tunnel where the nerubian dark spills into daylight.",
 			source = "https://warcraft.wiki.gg/wiki/Terrorweb_Tunnel",
 		},
-		["thalassian pass"] = {
-			name = "Thalassian Pass",
-			short = "The gatehouse spanning the pass was raised as one of the elfgates, the great seals meant to close Quel'Thalas off from Lordaeron.",
-			full = "The gatehouse spanning the pass was raised as one of the elfgates, the great seals meant to close Quel'Thalas off from Lordaeron. It still stands where the mountains part, the only way south from the Ghostlands into the Eastern Plaguelands.\n\nIt was through here, by most reckoning, that the Scourge came, let in by the treachery of Dar'Khan Drathir. For long after the Fall, the banners of the Scourge hung from the gates where the invaders had planted them, left untouched by a people too disheartened to tear them down.\n\nThat has since changed. With the Ghostlands healed in large part, the Scourge banners were pulled down and replaced with the heraldry of Quel'Thalas. The pass stands quiet now, watched over by Bloodguard Nelric.",
-			source = "https://warcraft.wiki.gg/wiki/Thalassian_Pass",
-		},
 		["thondroril river"] = {
 			name = "Thondroril River",
 			short = "The Thondroril divides the Western and Eastern Plaguelands, rising near the Terrorweb Tunnel in the north and flowing down into Darrowmere Lake, where it becomes the Darrowmere River.",
@@ -2215,12 +1351,6 @@ ZoneLore.Subzones = {
 			short = "Tyr's Hand stands in the mountains of the southeastern Plaguelands, its ground spared the worst of the blight even as its trees decay.",
 			full = "Tyr's Hand stands in the mountains of the southeastern Plaguelands, its ground spared the worst of the blight even as its trees decay. It takes its name from the keeper Tyr, who lost his hand to the proto-dragon Galakrond and had one of silver forged for him by the watcher Jotun. Tyr died far from here, but his name remained on this city, one of the oldest and most revered holy sites of the Church of the Light, a city of churches built around the Scarlet Basilica and a fortified abbey.\n\nWhen the Third War turned the Eastweald into the Plaguelands, Tyr's Hand did not fall. Lord Valdelmar held it through daily assaults by the undead, allying first with the Knights of the Silver Hand and then with the Scarlet Crusade, sending supplies and reinforcements out to other Scarlet holdouts even as the rest of the region burned around it.\n\nIn the end no blade of the Scourge took the city. Every Crusader within its walls was turned to undeath from within, Valdelmar among them, and the Brotherhood of the Light marched against their own former allies, cut down the undead leadership, and took Tyr's Hand for their own.",
 			source = "https://warcraft.wiki.gg/wiki/Tyr's_Hand",
-		},
-		["tyrs hand abbey"] = {
-			name = "Tyr's Hand Abbey",
-			short = "The abbey at Tyr's Hand, smaller than the basilica beside it, follows the old pattern of Northshire: a Main Hall, a Hall of Arms, and a Library Wing, serving the Scarlet Crusade's devotions in ways the basilica does not.",
-			full = "The abbey at Tyr's Hand, smaller than the basilica beside it, follows the old pattern of Northshire: a Main Hall, a Hall of Arms, and a Library Wing, serving the Scarlet Crusade's devotions in ways the basilica does not.\n\nIts holy water carried a purpose beyond the Crusade's own faith. Blood Knights seeking the rank of Master, and the right to ride the Thalassian charger, had to enter the abbey, take a vial of that water, and carry it back to Lord Solanar Bloodwrath in Silvermoon City to complete the rite.",
-			source = "https://warcraft.wiki.gg/wiki/Tyr's_Hand_Abbey",
 		},
 		["undercroft"] = {
 			name = "Undercroft",
@@ -2235,7 +1365,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Zul'Mashar",
 		},
 	},
-	-- Hillsbrad Foothills: 38 subzones
+	-- Hillsbrad Foothills: 29 subzones
 	[1424] = {
 		["alterac mountains"] = {
 			name = "Alterac Mountains",
@@ -2248,12 +1378,6 @@ ZoneLore.Subzones = {
 			short = "Before the Greymane Wall sealed Gilneas away, Azurelode Mine and the hill above it belonged to that kingdom.",
 			full = "Before the Greymane Wall sealed Gilneas away, Azurelode Mine and the hill above it belonged to that kingdom. It lies in the southwestern Hillsbrad Foothills, south of Hillsbrad Fields and west of what was once Southshore.\n\nLater it became an Alliance mine, worked by miners under Foreman Bonds out of Hillsbrad Fields, guarded and kept running to supply iron to Alliance armories.\n\nThat order has broken. Spiders' paralytic poison has taken the sentries, the foreman, and the miners who could not flee in time, and they lie helpless where they fell, kept rather than killed, held for use at the Sludge Fields to the north.\n\nThe mine's own creatures, the domesticated Mine Creepers, have gone unfed for days, and hunger has turned them against the paralyzed humans in their reach; they no longer answer to command.",
 			source = "https://warcraft.wiki.gg/wiki/Azurelode_Mine",
-		},
-		["brazie farmstead"] = {
-			name = "Brazie Farmstead",
-			short = "The Brazie Farmstead stands where the Lordamere Internment Camp once held its prisoners. Now Brazie the Botanist tends the land, defending it against attacks from Warden Stillwater of the nearby Sludge Fields.",
-			full = "The Brazie Farmstead stands where the Lordamere Internment Camp once held its prisoners. Now Brazie the Botanist tends the land, defending it against attacks from Warden Stillwater of the nearby Sludge Fields.",
-			source = "https://warcraft.wiki.gg/wiki/Brazie_Farmstead",
 		},
 		["chillwind point"] = {
 			name = "Chillwind Point",
@@ -2272,12 +1396,6 @@ ZoneLore.Subzones = {
 			short = "The Crushridge ogres have dug their mound into the earth near the Ruins of Alterac, and around it their encampments spread across the mountainside.",
 			full = "The Crushridge ogres have dug their mound into the earth near the Ruins of Alterac, and around it their encampments spread across the mountainside. The cave holds a large number of them still.",
 			source = "https://warcraft.wiki.gg/wiki/Crushridge_Hold",
-		},
-		["dalaran crater"] = {
-			name = "Dalaran Crater",
-			short = "Where the shores of Lordamere Lake meet the western edge of Hillsbrad, the ground itself gives way into a vast crater. This is all that remains of the city of Dalaran, torn from the earth during the Third War.",
-			full = "Where the shores of Lordamere Lake meet the western edge of Hillsbrad, the ground itself gives way into a vast crater. This is all that remains of the city of Dalaran, torn from the earth during the Third War.\n\nWhat stands here now is a great dome of purple light, sealing off the wound in the land. Wizards of the Kirin Tor patrol its edges alongside rock elementals bound to their service, and their camp is led by Archmage Ansirem Runeweaver. These mages hold the ruin as Alliance ground, and they do not welcome the Horde who come near it.\n\nNo one walks through the dome. It cannot be passed, though those with certain gifts of sight can look through the barrier and see what lies within: the bare, empty ground where the city once stood, as if Dalaran had simply been lifted away and the hollow left behind had never been filled again. The crater keeps its silence and its light, a scar in the shape of a city, waiting.",
-			source = "https://warcraft.wiki.gg/wiki/Dalaran_Crater",
 		},
 		["dandreds fold"] = {
 			name = "Dandred's Fold",
@@ -2309,12 +1427,6 @@ ZoneLore.Subzones = {
 			full = "The Eastern Strand runs along the southeastern shore of Hillsbrad Foothills, its sands and shallows claimed by the Daggerspine naga, coiled in the surf and along the beach. Among their dead, plans for an attack have been found, carried on their persons, hinting at some design the sea-born naga mean to see through.",
 			source = "https://warcraft.wiki.gg/wiki/Eastern_Strand",
 		},
-		["eastpoint tower"] = {
-			name = "Eastpoint Tower",
-			short = "Eastpoint Tower stands southwest of Durnholde Keep, once nameless and held by the Syndicate before the Forsaken took it for their own.",
-			full = "Eastpoint Tower stands southwest of Durnholde Keep, once nameless and held by the Syndicate before the Forsaken took it for their own.\n\nNow two orcs, Drull and Tog'thar, spend their days stretched out on couches side by side, keeping company with Nils Beerot, a self-styled psylosopher. Nils has convinced himself that the owlbeasts prowling nearby are massing to strike the tower. No attack has come, but he watches for it all the same.",
-			source = "https://warcraft.wiki.gg/wiki/Eastpoint_Tower",
-		},
 		["gallows corner"] = {
 			name = "Gallows' Corner",
 			short = "The crossroads at Gallows' Corner sits near the Ruins of Alterac, marked by a scout tower long since fallen to ruin.",
@@ -2344,12 +1456,6 @@ ZoneLore.Subzones = {
 			short = "The Hillsbrad Fields refers to the area which included the town of Hillsbrad and a large and fertile cultivated area that provided food for the people of Southshore and the whole of Hillsbrad Foothills.",
 			full = "The Hillsbrad Fields refers to the area which included the town of Hillsbrad and a large and fertile cultivated area that provided food for the people of Southshore and the whole of Hillsbrad Foothills.",
 			source = "https://warcraft.wiki.gg/wiki/Hillsbrad_Fields",
-		},
-		["hillsbrad subzone"] = {
-			name = "Hillsbrad (subzone)",
-			short = "The town hall of Hillsbrad stands amid the fields that gave the foothills their name, the seat of what governance remains to the western Foothills.",
-			full = "The town hall of Hillsbrad stands amid the fields that gave the foothills their name, the seat of what governance remains to the western Foothills.",
-			source = "https://warcraft.wiki.gg/wiki/Hillsbrad_(subzone)",
 		},
 		["lordamere lake"] = {
 			name = "Lordamere Lake",
@@ -2387,29 +1493,11 @@ ZoneLore.Subzones = {
 			full = "Broken walls climb the slopes of the Alterac Mountains where a city once stood, its palace half-standing, its church and town hall fallen in on themselves, its gate built in the fashion of Stormwind's own.\n\nIts ruin came from its own king. During the Second War, King Aiden Perenolde turned traitor, casting his lot with the Orcish Horde against his fellow humans. Alteraci soldiers were found fighting alongside the orcs, and a prison camp near the city held captive citizens of Dalaran. When the truth came out, the other human kingdoms marched on Alterac in retaliation. The people fled or were driven from their homes, and King Terenas Menethil II of Lordaeron declared the city under martial law, casting Perenolde down and throwing him into chains.\n\nThe city never rose again. Crushridge ogres, led by Mug'thol, settled into the empty streets and palace, while the scattered remnants of the old Alteraci people held the outlying villages beyond. Wrecked meat wagons still lie near the northern rampart and the gate, and the graveyards within and beyond the walls, the snow-buried farm, and shattered ballistae among the rubble remain as they were left.",
 			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Alterac",
 		},
-		["ruins of southshore"] = {
-			name = "Ruins of Southshore",
-			short = "Southshore was once a working port, one of the last Alliance towns still standing whole in Lordaeron, and a place the Forsaken feared could become a staging ground against them.",
-			full = "Southshore was once a working port, one of the last Alliance towns still standing whole in Lordaeron, and a place the Forsaken feared could become a staging ground against them. That fear is why it no longer stands.\n\nThe Forsaken struck it with a potent strain of the New Plague, ignoring the order handed down after Wrathgate that only diluted blight was to be used. Even the apothecaries who unleashed it were taken aback by how thoroughly it worked. The town's leaders managed to lead a portion of the people out, fleeing to Fenris Keep in Silverpine Forest, but many more had no warning and no chance; the chemical weapon that swept the streets left nothing living behind that could run.\n\nWhat remains is a corpse of a town. The blight soaked so deep into the ground that the ruins were judged unfit for the living for a hundred years to come. The streets now belong to the slimes the blight spawned, among them a bloated creature the Forsaken call Chet the Slime-Breeder.",
-			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Southshore",
-		},
 		["slaughter hollow"] = {
 			name = "Slaughter Hollow",
 			short = "Deep in the Alterac Mountains, Slaughter Hollow rises as a mound of packed earth and refuse, the seat of the Crushridge ogres.",
 			full = "Deep in the Alterac Mountains, Slaughter Hollow rises as a mound of packed earth and refuse, the seat of the Crushridge ogres. Nothing here is built to human scale; the ground itself has been beaten into ramps and dens by generations of heavy tread.",
 			source = "https://warcraft.wiki.gg/wiki/Slaughter_Hollow",
-		},
-		["sludge fields"] = {
-			name = "Sludge Fields",
-			short = "Where the fields of Hillsbrad once stood, the Forsaken raised guard towers and searchlights over rows of mushrooms grown for poison.",
-			full = "Where the fields of Hillsbrad once stood, the Forsaken raised guard towers and searchlights over rows of mushrooms grown for poison. The town fell to the Forsaken war machine, and those who did not flee were taken prisoner. Those who had stayed to defend Hillsbrad and survived were put to work in the mushroom fields under Forsaken guard, laboring under conditions that killed as surely as any blade.\n\nOver time the human workers began to vanish. Ghouls were seen moving through the camp at night, and few asked after the missing. Warden Stillwater, who holds the camp, was behind it: the prisoners were being used to breed a new kind of slave, mindless and utterly loyal. He did not stop at humans. Forsaken were experimented on as well, though the penalty for such a thing among his own kind was true death -- and so Stillwater labored as hard to bury the evidence of what he had done as he did to produce it, keeping the Sludge Fields as much a place of secrets as of chains.",
-			source = "https://warcraft.wiki.gg/wiki/Sludge_Fields",
-		},
-		["sludgeguard tower"] = {
-			name = "Sludgeguard Tower",
-			short = "Sludgeguard Tower stands watch over the Sludge Fields, beside the Brazie Farmstead, its walls held by the Forsaken.",
-			full = "Sludgeguard Tower stands watch over the Sludge Fields, beside the Brazie Farmstead, its walls held by the Forsaken. From here they keep their vigil over the crater and the ruined ground around it, a grim eye set upon land long since gone to rot.",
-			source = "https://warcraft.wiki.gg/wiki/Sludgeguard_Tower",
 		},
 		["soferas naze"] = {
 			name = "Sofera's Naze",
@@ -2417,23 +1505,11 @@ ZoneLore.Subzones = {
 			full = "The Syndicate once held this rise, one of the four fingers of Hillsbrad, until SI:7 came to root them out, called in by the Stormpike clan. Where the Syndicate's watch used to stand, a small scouting camp now keeps the hill instead.",
 			source = "https://warcraft.wiki.gg/wiki/Sofera's_Naze",
 		},
-		["southpoint gate"] = {
-			name = "Southpoint Gate",
-			short = "Southpoint Gate stands where Southpoint Tower once stood, on the border between Hillsbrad Foothills and Silverpine Forest, now held as a Forsaken outpost.",
-			full = "Southpoint Gate stands where Southpoint Tower once stood, on the border between Hillsbrad Foothills and Silverpine Forest, now held as a Forsaken outpost. The tower that came before it is gone entirely, its stones given over to whatever the Forsaken raised in its place.\n\nThe ground around the gate has turned strange and foul. Domesticated Creepers crawl through the fields, and bears that once roamed the foothills now stumble about infested, spider eggs clinging to their backs like a second hide.",
-			source = "https://warcraft.wiki.gg/wiki/Southpoint_Gate",
-		},
 		["southpoint tower"] = {
 			name = "Southpoint Tower",
 			short = "Southpoint Tower stands broken at the western edge of Hillsbrad Foothills, south of the road into Silverpine Forest.",
 			full = "Southpoint Tower stands broken at the western edge of Hillsbrad Foothills, south of the road into Silverpine Forest. The Forsaken have set a Deathstalker named Lesh among its stones, watching the road for Alliance movement. It is lonely work, her post far from any other Forsaken presence, and she has fallen more than once to those she was sent to watch, with no one near enough to help her.\n\nThe tower was not always a ruin. It stood whole as a human structure until the Forsaken at last won the long battle for Hillsbrad. In victory they tore it down completely and raised Southpoint Gate on the ground where it had stood, leaving no trace of what came before.",
 			source = "https://warcraft.wiki.gg/wiki/Southpoint_Tower",
-		},
-		["southshore town hall"] = {
-			name = "Southshore Town Hall",
-			short = "Magistrate Henry Maleb once ruled Southshore from its town hall.",
-			full = "Magistrate Henry Maleb once ruled Southshore from its town hall.\n\nThat rule ended when the Forsaken loosed their plague upon Hillsbrad and won the town. The bombing left the hall in ruins, and Maleb fled to Fenris Isle.\n\nWhat remains is not administration but residue: slime creatures bred of the plague toxins now hold the hall, among them Chet the Slime-Breeder.",
-			source = "https://warcraft.wiki.gg/wiki/Southshore_Town_Hall",
 		},
 		["strahnbrad"] = {
 			name = "Strahnbrad",
@@ -2466,7 +1542,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Western_Strand",
 		},
 	},
-	-- The Hinterlands: 22 subzones
+	-- The Hinterlands: 20 subzones
 	[1425] = {
 		["aerie peak"] = {
 			name = "Aerie Peak",
@@ -2509,12 +1585,6 @@ ZoneLore.Subzones = {
 			short = "The Witherbark trolls hold Hiri'watha south of Quel'Danil Lodge, deep in the Hinterlands woods.",
 			full = "The Witherbark trolls hold Hiri'watha south of Quel'Danil Lodge, deep in the Hinterlands woods.",
 			source = "https://warcraft.wiki.gg/wiki/Hiri'watha",
-		},
-		["hiriwatha research station"] = {
-			name = "Hiri'watha Research Station",
-			short = "The Hiri'watha Research Station stands quiet in the Hinterlands, a place given over to study rather than settlement.",
-			full = "The Hiri'watha Research Station stands quiet in the Hinterlands, a place given over to study rather than settlement.",
-			source = "https://warcraft.wiki.gg/wiki/Hiri'watha_Research_Station",
 		},
 		["jinthaalor"] = {
 			name = "Jintha'Alor",
@@ -2576,12 +1646,6 @@ ZoneLore.Subzones = {
 			full = "Skulk Rock stands as a ruin of the forest trolls, its stones given over to slimes, with a cave beneath where ghost mushrooms grow, found in few other places.\n\nDuring the Second War the Old Horde held Skulk Rock as a base, abandoned when the Alliance of Lordaeron drove them out.\n\nA shadow of Skulk Rock also exists within the Emerald Dream, corrupted by the Nightmare, where wildkin serve the Doomkin and guard the Elunar Relic.",
 			source = "https://warcraft.wiki.gg/wiki/Skulk_Rock",
 		},
-		["stormfeather outpost"] = {
-			name = "Stormfeather Outpost",
-			short = "The wind off the peaks carries little else here. Stormfeather Outpost keeps its fire lit and its doors open to travelers of the Alliance passing through the heights.",
-			full = "The wind off the peaks carries little else here. Stormfeather Outpost keeps its fire lit and its doors open to travelers of the Alliance passing through the heights.",
-			source = "https://warcraft.wiki.gg/wiki/Stormfeather_Outpost",
-		},
 		["valorwind lake"] = {
 			name = "Valorwind Lake",
 			short = "Valorwind Lake lies northeast of Shadra'Alor in the Hinterlands. Along its banks grows the Violet Tragan, a strange mushroom found nowhere else in the world, drawing those who prize rare things to its quiet shore.",
@@ -2601,7 +1665,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Zun'watha",
 		},
 	},
-	-- Dun Morogh: 40 subzones
+	-- Dun Morogh: 25 subzones
 	[1426] = {
 		["amberstill ranch"] = {
 			name = "Amberstill Ranch",
@@ -2614,12 +1678,6 @@ ZoneLore.Subzones = {
 			short = "Anvilmar stands in the north of Coldridge Valley, built around a great central forge. It was the first settlement of any size its people raised here, the gathering place before all else that followed.",
 			full = "Anvilmar stands in the north of Coldridge Valley, built around a great central forge. It was the first settlement of any size its people raised here, the gathering place before all else that followed. The forge still stands, cold iron waiting under the same roof.",
 			source = "https://warcraft.wiki.gg/wiki/Anvilmar",
-		},
-		["bahrums post"] = {
-			name = "Bahrum's Post",
-			short = "Bahrum's Post stands as a small outpost in eastern Dun Morogh, a quiet waypoint against the mountain cold.",
-			full = "Bahrum's Post stands as a small outpost in eastern Dun Morogh, a quiet waypoint against the mountain cold.",
-			source = "https://warcraft.wiki.gg/wiki/Bahrum's_Post",
 		},
 		["brewnall village"] = {
 			name = "Brewnall Village",
@@ -2645,35 +1703,11 @@ ZoneLore.Subzones = {
 			full = "Coldridge Valley lies shut away in the southwestern corner of Dun Morogh, its only way out the tunnel of Coldridge Pass to the northeast, infested with trogg raiders. Beyond it the road runs east, then north through Kharanos, climbing at last into the mountains to the gates of Ironforge.\n\nEven before the troggs choked the pass, the valley was a place of small, constant labor: trolls and troggs harried its edges, and its folk spent their days tending the wildlife around them.\n\nThat is still its character: a narrow, guarded hollow whose one way out is barred by raiders, so that anyone leaving it must pass through danger before ever reaching Ironforge's gates.",
 			source = "https://warcraft.wiki.gg/wiki/Coldridge_Valley",
 		},
-		["crushcogs arsenal"] = {
-			name = "Crushcog's Arsenal",
-			short = "Before the locked gate of the hangar, Irradiated Technicians tend Crushcog Battle Suits and Repaired Mechano-Tanks, keeping them ready for a fight that never comes.",
-			full = "Before the locked gate of the hangar, Irradiated Technicians tend Crushcog Battle Suits and Repaired Mechano-Tanks, keeping them ready for a fight that never comes. The gate has not opened, and whatever waits behind it stays sealed away.\n\nNearby, Rocket Defense Turrets and a few Gnomeregan Recruits keep their own watch, apart from it all.",
-			source = "https://warcraft.wiki.gg/wiki/Crushcog's_Arsenal",
-		},
-		["frostmane front"] = {
-			name = "Frostmane Front",
-			short = "The Frostmane Front lies west of the Frostmane Retreat, ground held by the ice trolls and pressed hard by dwarves who mean to drive them back before they seize more of Dun Morogh.",
-			full = "The Frostmane Front lies west of the Frostmane Retreat, ground held by the ice trolls and pressed hard by dwarves who mean to drive them back before they seize more of Dun Morogh. Siege engines and mortar teams back dwarven riflemen along the line, while wrecked ballistae and fallen steam tanks litter the field, stripped by trolls for whatever iron still serves.",
-			source = "https://warcraft.wiki.gg/wiki/Frostmane_Front",
-		},
 		["frostmane hold"] = {
 			name = "Frostmane Hold",
 			short = "Frostmane Hold stands on the western edge of Dun Morogh's cold mountains, its buildings and cave system once held by the Frostmane ice trolls, guarded close by headhunters and hideskinners.",
 			full = "Frostmane Hold stands on the western edge of Dun Morogh's cold mountains, its buildings and cave system once held by the Frostmane ice trolls, guarded close by headhunters and hideskinners. That grip broke, and the trolls fell back to Frostmane Retreat, leaving the hold empty.\n\nTroggs came after, spilling up through a tunnel and taking gnomes captive. Kharmarn Palegrip answered them, ordering explosives set to bring the tunnel down and seal the troggs out for good.\n\nThe hold still bears both tenants' marks: troll-built walls around a cave mouth choked with fallen stone.",
 			source = "https://warcraft.wiki.gg/wiki/Frostmane_Hold",
-		},
-		["frostmane hovel"] = {
-			name = "Frostmane Hovel",
-			short = "The Frostmane trolls den in a cave south in Coldridge Valley.",
-			full = "The Frostmane trolls den in a cave south in Coldridge Valley. Among them stands Grik'nir, a chieftain of the tribe, who has bound to his cause a Wayward Fire Elemental, a creature of flame sheltered in the heart of the dwarven ice.",
-			source = "https://warcraft.wiki.gg/wiki/Frostmane_Hovel",
-		},
-		["frostmane retreat"] = {
-			name = "Frostmane Retreat",
-			short = "In the high snows between Kharanos and the Tundrid Hills, the ice trolls of the Frostmane raised a village under Battok the Berserker, with builders working the frozen ground.",
-			full = "In the high snows between Kharanos and the Tundrid Hills, the ice trolls of the Frostmane raised a village under Battok the Berserker, with builders working the frozen ground. Alliance forces came down with flying machines, fought Battok and his warriors, and struck at the builders before the village could rise. The trolls' numbers were broken there, and the retreat never grew into what the Frostmane had meant it to be.",
-			source = "https://warcraft.wiki.gg/wiki/Frostmane_Retreat",
 		},
 		["gates of ironforge"] = {
 			name = "Gates of Ironforge",
@@ -2692,12 +1726,6 @@ ZoneLore.Subzones = {
 			short = "The dwarves cut deep into the rock at Gol'Bolar Quarry, seeking what the stone of Dun Morogh always gives them, and for a time they had it.",
 			full = "The dwarves cut deep into the rock at Gol'Bolar Quarry, seeking what the stone of Dun Morogh always gives them, and for a time they had it. Then the troggs came up from below and overran the excavation, driving the miners back from the pits they had opened and claiming the mine as their own.\n\nThe camp that stands there now is what is left of that dig, held by miners who have not given up the ground, still contesting the tunnels one collapse at a time.",
 			source = "https://warcraft.wiki.gg/wiki/Gol'Bolar_Quarry",
-		},
-		["golbolar quarry mine"] = {
-			name = "Gol'Bolar Quarry Mine",
-			short = "Dwarves once sank their shafts deep into Gol'Bolar, until their picks broke through into a cavern that belonged to no dwarf: an ancient hollow of the troggs.",
-			full = "Dwarves once sank their shafts deep into Gol'Bolar, until their picks broke through into a cavern that belonged to no dwarf: an ancient hollow of the troggs. The troggs rose through the breach and drove the miners out, taking not only the tunnels but the quarry above.\n\nThe mine holds their strongest numbers, far fiercer than the scattered troggs above. Among them broods their leader, Hammerspine, ruling the dark the dwarves once carved.",
-			source = "https://warcraft.wiki.gg/wiki/Gol'Bolar_Quarry_Mine",
 		},
 		["grizzled den"] = {
 			name = "Grizzled Den",
@@ -2729,41 +1757,17 @@ ZoneLore.Subzones = {
 			full = "Ironforge (displayed as the City of Ironforge in the overworld) is the capital city of the dwarves, proud members of the Alliance. Carved into the depths of Ironforge Mountain in northern Dun Morogh, it is the ancestral home of the dwarves and one of the oldest cities on Azeroth. The Council of Three Hammers rules over the city to ensure the fair and equal treatment of all dwarves within its walls from the High Seat. The city is also the capital of the Kingdom of Khaz Modan, which is ruled by the Bronzebeard clan.\n\nAn expansive underground city of craftsmen, explorers, miners, and warriors, famous for its industry and as an Alliance center of commerce, Ironforge is equal parts fortress and capital and a testament to the dwarves' strength and resilience. The city consists of a series of concentric rings, with the smaller levels deeper underground, all radiating out from the namesake Great Forge at its center. Ironforge is perhaps the most intricate of the Alliance cities, boasting many small passageways, shops built into the rock walls, and cavernous rooms. The feel of the city is a bustling, rowdy, and somewhat industrial one, where there are always a thousand things happening at any time of the day or night. However, it is predominantly safe-feeling and cozy; fires roar in the hearths of the inns and shops, and much dwarven laughing and frivolity is to be heard. Also, unlike Stormwind and Darnassus, the city is actually a massive cavern carved into the earth by the dwarves; the ceiling and floor are both hard stone.\n\nMainly because of the Deeprun Tram, linking Ironforge and Stormwind City, and the district of Tinker Town, Ironforge is one of the most racially diverse cities in the Alliance world. With the Council of Three Hammers uniting all three dwarven clans, Ironforge has recently welcomed Dark Iron dwarves and Wildhammer dwarves into Ironforge as well.\n\nThe collective frivolity, the bustling and gruff manner of the dwarves, and the proximity to many quest and raid areas have historically made Ironforge, along with Stormwind City, a popular place to idle.",
 			source = "https://warcraft.wiki.gg/wiki/Ironforge",
 		},
-		["ironforge airfield"] = {
-			name = "Ironforge Airfield",
-			short = "The Ironforge Airfield, formerly known as the Airstrip or the Dun Morogh airfield, among other (unofficial) things, is an airfield located in a high mountain valley northeast of the dwarven capital city of Ironforge.",
-			full = "The Ironforge Airfield, formerly known as the Airstrip or the Dun Morogh airfield, among other (unofficial) things, is an airfield located in a high mountain valley northeast of the dwarven capital city of Ironforge. It has two landing strips, and several gnome pilots are there standing next to their planes or tinkering with them. Around the airfield, there are a series of dwarven buildings and structures. Mountaineers from Ironforge patrol the area, and some members of the Stormpike Guard can be found here too. North of the airfield there is a gryphon roost, but it only connects to Gol'Bolar Quarry via a flying machine. Further north, near the Wetlands, there is a crashed gnome plane along with some bones.",
-			source = "https://warcraft.wiki.gg/wiki/Ironforge_Airfield",
-		},
 		["kharanos"] = {
 			name = "Kharanos",
 			short = "Kharanos sits among the wind-scoured peaks of Dun Morogh, a small town built for a hard country.",
 			full = "Kharanos sits among the wind-scoured peaks of Dun Morogh, a small town built for a hard country. Its forge stays lit through the frost, its gnomish workshop clatters through the day, and the Thunderbrew Distillery pours some of the finest ale to be found anywhere, a small comfort against the wilds pressing in on every side. To the west a cavern shelters wendigo; to the northwest, atop Shimmer Ridge, the Frostmane trolls have made their hold. Kharanos stands as the forward post against both, and it is here that new recruits from Anvilmar report before going out into the mountains in earnest.\n\nThe town's name is bound up with a single night when a giant of a Frostmane troll came down on Kharanos and nearly finished it, dwarf by dwarf, before anyone could stand against it. It was Lazlo Grindwidget who finally brought the troll down, and for it he is remembered as a hero of the town.",
 			source = "https://warcraft.wiki.gg/wiki/Kharanos",
 		},
-		["loading room"] = {
-			name = "Loading Room",
-			short = "In the Train Depot at Gnomeregan lies the Loading Room, where survivors pulled from the ruined city are gathered and tended by members of S.A.F.E.",
-			full = "In the Train Depot at Gnomeregan lies the Loading Room, where survivors pulled from the ruined city are gathered and tended by members of S.A.F.E. A Physician's Assistant stands ready to welcome each one as they arrive.",
-			source = "https://warcraft.wiki.gg/wiki/Loading_Room",
-		},
 		["misty pine refuge"] = {
 			name = "Misty Pine Refuge",
 			short = "Father Gavin keeps the Argent Dawn's watch at Misty Pine Refuge alone now. Refugees linger here, cared for by Buin \"Phloppy\" Freehand, who gives freely and asks nothing in return.",
 			full = "Father Gavin keeps the Argent Dawn's watch at Misty Pine Refuge alone now. Refugees linger here, cared for by Buin \"Phloppy\" Freehand, who gives freely and asks nothing in return.\n\nWhen demons swept into the area during the invasions, Mountaineer Helmholt and his mountaineers held the refuge against them, alongside the guards.",
 			source = "https://warcraft.wiki.gg/wiki/Misty_Pine_Refuge",
-		},
-		["mountain den"] = {
-			name = "Mountain Den",
-			short = "The Mountain Den lies northeast of South Gate Outpost, a hollow in the mountains of Dun Morogh. No one dwells within it, and it serves no purpose that can be named.",
-			full = "The Mountain Den lies northeast of South Gate Outpost, a hollow in the mountains of Dun Morogh. No one dwells within it, and it serves no purpose that can be named. It is simply a cave, empty and waiting.",
-			source = "https://warcraft.wiki.gg/wiki/Mountain_Den",
-		},
-		["new tinkertown"] = {
-			name = "New Tinkertown",
-			short = "Just outside the sealed gates of Gnomeregan stands New Tinkertown, small and hastily built, and every timber of it remembers why.",
-			full = "Just outside the sealed gates of Gnomeregan stands New Tinkertown, small and hastily built, and every timber of it remembers why.\n\nHigh Tinker Gelbin Mekkatorque had gathered his exiled people's forces at Steelgrill's Depot, building mechano-tanks for Operation: Gnomeregan, the assault meant to win back the techno-city. It took the airfield, the surface command post, and pushed down into the tunnels below. It should have been the homecoming the gnomes had waited for. Instead Mekgineer Sicco Thermaplugg, rather than surrender the city he had already poisoned once, detonated a radiation bomb and flooded Gnomeregan with fire a second time. Gelbin's forces had only moments to teleport clear before the tunnels became unlivable again. What they carried out with them was not the city, only their lives, and a foothold at its very gates.\n\nThat foothold is New Tinkertown. The survivors who escape the radiated ruin are teleported here still. Gelbin did not withdraw to safety once the town was raised. He made a habit of meeting the survivors in person, unwilling to let the loss of the city become the loss of anything more.",
-			source = "https://warcraft.wiki.gg/wiki/New_Tinkertown",
 		},
 		["north gate outpost"] = {
 			name = "North Gate Outpost",
@@ -2776,12 +1780,6 @@ ZoneLore.Subzones = {
 			short = "North Gate Pass cuts through the mountains between Dun Morogh above and Loch Modan below, the shortest way down toward the Wetlands, and so it sees steady traffic.",
 			full = "North Gate Pass cuts through the mountains between Dun Morogh above and Loch Modan below, the shortest way down toward the Wetlands, and so it sees steady traffic. At the pass stands North Gate Outpost, a guard station set to watch the road between the two lands.",
 			source = "https://warcraft.wiki.gg/wiki/North_Gate_Pass",
-		},
-		["old dormitory"] = {
-			name = "Old Dormitory",
-			short = "The Old Dormitory lies beneath ruined Gnomeregan, holding gnomes irradiated and stranded after the city's fall.",
-			full = "The Old Dormitory lies beneath ruined Gnomeregan, holding gnomes irradiated and stranded after the city's fall. Here Nevin Twistwrench and S.A.F.E. work to guide the survivors out of the poisoned dark and back to the surface.",
-			source = "https://warcraft.wiki.gg/wiki/Old_Dormitory",
 		},
 		["shimmer ridge"] = {
 			name = "Shimmer Ridge",
@@ -2813,38 +1811,14 @@ ZoneLore.Subzones = {
 			full = "The Thunderbrew Distillery stands in Kharanos, its ale known far beyond the mountains. Innkeeper Belm keeps the place, and warriors, priests, paladins, mages, and rogues have all trained beneath its roof.\n\nIt took its name from Grimbooze Thunderbrew, who owned it when the wandering brewmaster Chen Stormstout once came through its doors.",
 			source = "https://warcraft.wiki.gg/wiki/Thunderbrew_Distillery",
 		},
-		["toxic airfield"] = {
-			name = "Toxic Airfield",
-			short = "Wreckage litters the Toxic Airfield: shattered flying machines and bombers scattered across ground that still seethes and glows.",
-			full = "Wreckage litters the Toxic Airfield: shattered flying machines and bombers scattered across ground that still seethes and glows. This is what remained after Operation: Gnomeregan, when the Irradiator 3000 was unleashed and turned the field above into ruin.\n\nNot everything that fell here stayed dead in any ordinary sense. The gnomes who died or lay dying during the operation twisted into Toxic Sludge, pooling across the wreckage, while Living Contaminations move among it still.\n\nNo one holds this ground. Corporal Fizzwhistle and his Gnomeregan Recruits fight the contamination here, though it shows no sign of ending.",
-			source = "https://warcraft.wiki.gg/wiki/Toxic_Airfield",
-		},
-		["train depot"] = {
-			name = "Train Depot",
-			short = "The Train Depot is the first wound of Gnomeregan a traveler sees after the long descent from Dun Morogh. Once, by every sign of its bones, this was a transportation hub, where the city's rail networks converged.",
-			full = "The Train Depot is the first wound of Gnomeregan a traveler sees after the long descent from Dun Morogh. Once, by every sign of its bones, this was a transportation hub, where the city's rail networks converged. Now leper gnomes shamble through it alongside troggs pushed up from below, and the platforms that once rang with trains stand hollow and wrong.\n\nThe Clockwerk Run tunnel opens west toward the heart of the city. To the north stands a back door, once locked behind the Workshop Key, leading down into the Engineering Labs deeper within.\n\nOn the lower level, pressed against the platform's northern side, a gnome named Namdo Bizzfizzle keeps himself hidden from whatever else moves through the ruin.",
-			source = "https://warcraft.wiki.gg/wiki/Train_Depot",
-		},
 		["tundrid hills"] = {
 			name = "Tundrid Hills",
 			short = "The Tundrid Hills lie in south-central Dun Morogh, west of Gol'Bolar Quarry, a stretch of broken ground where wolves and other wild things prowl and few walk unarmed.",
 			full = "The Tundrid Hills lie in south-central Dun Morogh, west of Gol'Bolar Quarry, a stretch of broken ground where wolves and other wild things prowl and few walk unarmed. Some cut through the hills to pass between Coldridge Valley and eastern Dun Morogh, though it is a far harsher road than the one through Kharanos.\n\nThe Frostmane trolls have raised a large camp in the valley here, holding this ground and hostile to any who wander too near.",
 			source = "https://warcraft.wiki.gg/wiki/Tundrid_Hills",
 		},
-		["whitebeards encampment"] = {
-			name = "Whitebeard's Encampment",
-			short = "In central Coldridge Valley stands a small camp, worn into the earth by whoever has stopped here before, bearing the name of the dwarf they called Whitebeard.",
-			full = "In central Coldridge Valley stands a small camp, worn into the earth by whoever has stopped here before, bearing the name of the dwarf they called Whitebeard.",
-			source = "https://warcraft.wiki.gg/wiki/Whitebeard's_Encampment",
-		},
-		["workshop entrance"] = {
-			name = "Workshop Entrance",
-			short = "The door at the far side of the Workshop room is a plain one, easy to miss beside the wreckage of the Train Depot, but it once stood locked and required the Workshop Key to open.",
-			full = "The door at the far side of the Workshop room is a plain one, easy to miss beside the wreckage of the Train Depot, but it once stood locked and required the Workshop Key to open. Beyond it lies a hall running down into the Engineering Labs, deep in the ruin of Gnomeregan proper. Those who worked this edge of the workshop floor came to call it simply the Backdoor, a quieter way into the flooded halls than the front approach through the depot itself.",
-			source = "https://warcraft.wiki.gg/wiki/Workshop_Entrance",
-		},
 	},
-	-- Searing Gorge: 14 subzones
+	-- Searing Gorge: 11 subzones
 	[1427] = {
 		["blackchar cave"] = {
 			name = "Blackchar Cave",
@@ -2882,18 +1856,6 @@ ZoneLore.Subzones = {
 			full = "The Grimesilt Dig Site once belonged to the Ironforge dwarves before the Dark Iron dwarves seized it and made it their own. Dorius Stonetender, one of the original diggers, still lies injured at the bottom of the pit, left among the ruins of the work he started.",
 			source = "https://warcraft.wiki.gg/wiki/Grimesilt_Dig_Site",
 		},
-		["iron summit"] = {
-			name = "Iron Summit",
-			short = "The Iron Summit rises northeast of Blackrock Mountain, a small peak over the Searing Gorge, held by a camp of dark dwarves who answer to no one.",
-			full = "The Iron Summit rises northeast of Blackrock Mountain, a small peak over the Searing Gorge, held by a camp of dark dwarves who answer to no one. They are not Dark Iron, nor bound to the Thorium Brotherhood. They follow Mountain-Lord Rendan alone, and Rendan's loyalty goes to whoever pays him.\n\nThe incendosaurs that once kept to the depths of the Slag Pit have since climbed, and now roam the rocky slopes around the Summit itself.",
-			source = "https://warcraft.wiki.gg/wiki/Iron_Summit",
-		},
-		["pyrox flats"] = {
-			name = "Pyrox Flats",
-			short = "The Pyrox Flats stretch north of the Cauldron, a scorched expanse where the Dark Iron dwarves have raised their camps amid the heat and ash of Searing Gorge.",
-			full = "The Pyrox Flats stretch north of the Cauldron, a scorched expanse where the Dark Iron dwarves have raised their camps amid the heat and ash of Searing Gorge.",
-			source = "https://warcraft.wiki.gg/wiki/Pyrox_Flats",
-		},
 		["sea of cinders"] = {
 			name = "Sea of Cinders",
 			short = "The Sea of Cinders lies flat and black in the southern Searing Gorge, beneath the shadow of Blackrock Mountain. Nothing grows here.",
@@ -2918,12 +1880,6 @@ ZoneLore.Subzones = {
 			full = "Sarah Tanner keeps her tent in the Searing Gorge, the master of elemental leatherworking for the Alliance. Behind her camp a long passage winds back into the rock, leading at last to the thunder lizard Margol the Rager, who lairs where the tunnel ends.",
 			source = "https://warcraft.wiki.gg/wiki/Tanner_Camp",
 		},
-		["thorium advance"] = {
-			name = "Thorium Advance",
-			short = "The Thorium Brotherhood keeps a camp here, set along the road that runs into the Badlands, holding this stretch of the Searing Gorge under their watch.",
-			full = "The Thorium Brotherhood keeps a camp here, set along the road that runs into the Badlands, holding this stretch of the Searing Gorge under their watch.",
-			source = "https://warcraft.wiki.gg/wiki/Thorium_Advance",
-		},
 		["thorium point"] = {
 			name = "Thorium Point",
 			short = "Thorium Point sits in the northern reaches of Searing Gorge, held by neither Horde nor Alliance but by the Thorium Brotherhood, a guild of dwarves apart from the old quarrels of their kin.",
@@ -2931,20 +1887,8 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Thorium_Point",
 		},
 	},
-	-- Burning Steppes: 20 subzones
+	-- Burning Steppes: 11 subzones
 	[1428] = {
-		["altar of storms burning steppes"] = {
-			name = "Altar of Storms (Burning Steppes)",
-			short = "The Altar of Storms stands in the shadow of Blackrock Spire, claimed by warlock members of the Blackrock clan, who gather there to work strange rituals upon the stone.",
-			full = "The Altar of Storms stands in the shadow of Blackrock Spire, claimed by warlock members of the Blackrock clan, who gather there to work strange rituals upon the stone. Madam Shadow used it as bait, luring new warlock initiates there with false promises and leading them straight into a trap.\n\nOn the hill to the west stands the home of Gorzeeki Wildeyes, overrun by Blackrock orcs. He keeps now to a small campsite nearby, waiting for the chance to take it back.",
-			source = "https://warcraft.wiki.gg/wiki/Altar_of_Storms_(Burning_Steppes)",
-		},
-		["black tooth hovel"] = {
-			name = "Black Tooth Hovel",
-			short = "In the central Burning Steppes stands Black Tooth Hovel, a Dark Horde camp of Blackrock orcs, Firegut ogres, and Smolderthorn trolls, watched over by Quartermaster Kaoshin at the Pillar of Ash.",
-			full = "In the central Burning Steppes stands Black Tooth Hovel, a Dark Horde camp of Blackrock orcs, Firegut ogres, and Smolderthorn trolls, watched over by Quartermaster Kaoshin at the Pillar of Ash.\n\nRising above the camp is a huge statue of Anduin Lothar, sword raised toward Blackrock Mountain, built in the months after the Second War upon the very plain where Lothar had fallen during the siege of Blackrock Spire. The orcs defeated in that war were the ones made to raise it, an irony Turalyon was said to have appreciated. The orcs who camp here now do not look at it, passing beneath Lothar's raised sword as though it were only weather. At the statue's base a single Lotharian lotus still grows, untouched.",
-			source = "https://warcraft.wiki.gg/wiki/Black_Tooth_Hovel",
-		},
 		["blackrock mountain"] = {
 			name = "Blackrock Mountain",
 			short = "Blackrock Mountain is a volcanic zone located between the Burning Steppes and the Searing Gorge, linking the two regions.",
@@ -2963,12 +1907,6 @@ ZoneLore.Subzones = {
 			full = "The stronghold rises at the northern edge of the Burning Steppes, just outside Blackrock Spire, a mass of dark stone held by the Blackrock clan. Beyond its walls, in the Fields of Honor, orcs and their allies muster and drill, kept in line by the Blackrock Sergeants who patrol among them. General Thorg'izog commands from within, meting out discipline to the troops and setting the order of the field.\n\nThe sergeants who once ruled the Fields of Honor met their end in a single mysterious spate of violence, cudgeled to death by an unseen hand that moved through their ranks and left the stronghold's discipline in ruin.",
 			source = "https://warcraft.wiki.gg/wiki/Blackrock_Stronghold",
 		},
-		["chiselgrip"] = {
-			name = "Chiselgrip",
-			short = "Chiselgrip sits southwest of the Ruins of Thaurissan, held by the Thorium Brotherhood, who use it as a base against the Blackrock clan.",
-			full = "Chiselgrip sits southwest of the Ruins of Thaurissan, held by the Thorium Brotherhood, who use it as a base against the Blackrock clan. Two forges burn near where Stebben Oreknuckle keeps his post, and Hoddruc Bladebender, though he claims no formal trade, will still see to a traveler's gear when asked.",
-			source = "https://warcraft.wiki.gg/wiki/Chiselgrip",
-		},
 		["dracodar"] = {
 			name = "Draco'dar",
 			short = "Scorched hills rise in the southwest of the Burning Steppes, their slopes blackened and bare. This is Draco'dar, ground claimed by the black dragonflight, and its minions still crawl over every ridge and hollow.",
@@ -2981,29 +1919,11 @@ ZoneLore.Subzones = {
 			full = "Dreadmaul Rock is a hollowed mass of stone, its paths winding past ogre dens burrowed into the rock itself. The Firegut clan holds it as their seat, staging raids southward into the Redridge Mountains from its heights and tangled caves.",
 			source = "https://warcraft.wiki.gg/wiki/Dreadmaul_Rock",
 		},
-		["fields of honor"] = {
-			name = "Fields of Honor",
-			short = "The ground before Blackrock Stronghold is given over to war.",
-			full = "The ground before Blackrock Stronghold is given over to war. Here the Blackrock clan mass their forces, soldiers, Smolderthorn assassins, and Firegut flamespeakers held in ranks by their sergeants, awaiting the word of General Thorg'izog. The muster stretches east toward the Ruins of Thaurissan and south to Black Tooth Hovel, all of it staged for battle.",
-			source = "https://warcraft.wiki.gg/wiki/Fields_of_Honor",
-		},
-		["firegut furnace"] = {
-			name = "Firegut Furnace",
-			short = "Firegut Furnace sits at the base of Dreadmaul Rock, home to the Firegut ogres.",
-			full = "Firegut Furnace sits at the base of Dreadmaul Rock, home to the Firegut ogres. Since their alliance with the Blackrock clan, high-ranking Blackrock orcs are occasionally seen passing through, welcomed among the ogres who dwell there.",
-			source = "https://warcraft.wiki.gg/wiki/Firegut_Furnace",
-		},
 		["flame crest"] = {
 			name = "Flame Crest",
 			short = "Flame Crest is a small rock outcropping in the Burning Steppes, reachable only by a crude bridge. In a shallow cave at its back lives the hermit Kibler and his ever-talking parrot Opus.",
 			full = "Flame Crest is a small rock outcropping in the Burning Steppes, reachable only by a crude bridge. In a shallow cave at its back lives the hermit Kibler and his ever-talking parrot Opus. It was here that Eitrigg and Ariok made their base while planning an attack against the Blackrock clan.",
 			source = "https://warcraft.wiki.gg/wiki/Flame_Crest",
-		},
-		["flamestar post"] = {
-			name = "Flamestar Post",
-			short = "Flamestar Post stands just south of the bridge that leads up to Blackrock Mountain, a small camp held by the Thorium Brotherhood.",
-			full = "Flamestar Post stands just south of the bridge that leads up to Blackrock Mountain, a small camp held by the Thorium Brotherhood. From here the Brotherhood watches the mountain and works toward striking back at the Blackrock orcs entrenched within it.",
-			source = "https://warcraft.wiki.gg/wiki/Flamestar_Post",
 		},
 		["morgans vigil"] = {
 			name = "Morgan's Vigil",
@@ -3023,12 +1943,6 @@ ZoneLore.Subzones = {
 			full = "Once these ashen flats in the Burning Steppes were green, and the city here bore the name of its founder: Thaurissan City, capital of the Dark Iron clan, exiled from Ironforge and led south by Sorcerer-Thane Thaurissan during the War of the Three Hammers.\n\nThe Dark Irons were losing that war. Their army had just been broken against the other two clans' strongholds when Thaurissan, desperate to turn the tide, gathered seven of his most trusted dwarves and called down into the powers sleeping beneath the earth for a servant to win the war back. What answered was no servant, but Ragnaros, Elemental Lord of Fire, and his coming split the mountains with a volcano that burned the valley to ash. The city was annihilated with him in it, and the surviving Dark Irons were enslaved to the Firelord. What freedom Thaurissan had won at Ironforge, he lost here, forever.\n\nRelics still lie among the ruined stones, and to touch one is to be flooded with the memory it holds: a lone dwarf kneeling among seven corpses before a pillar of flame, the last vision of the city as it burned.",
 			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Thaurissan",
 		},
-		["skull warren"] = {
-			name = "Skull Warren",
-			short = "Skull Warren burrows into the eastern face of Dreadmaul Rock.",
-			full = "Skull Warren burrows into the eastern face of Dreadmaul Rock. Once a mound of the Firegut ogres, it passed to the Blackrock clan through their alliance, who turned the old den into a training ground for their warlocks, overseen by High Warlock Xi'lun.",
-			source = "https://warcraft.wiki.gg/wiki/Skull_Warren",
-		},
 		["slither rock"] = {
 			name = "Slither Rock",
 			short = "Past the Terror Wing Path in the far northeast of the Burning Steppes, a small cave opens into the rock.",
@@ -3041,20 +1955,8 @@ ZoneLore.Subzones = {
 			full = "The valley called Terror Wing Path lies in the eastern Burning Steppes, and it earns its name honestly: whelps and dragonkin of the black dragonflight nest and hunt throughout it.\n\nThrough its southeastern edge runs Redridge Pass, a goblin-built road climbing into the hills toward the Redridge Mountains and the Swamp of Sorrows. There, Sharon Boomgetter offers passage to the resort town of Bogpaddle.",
 			source = "https://warcraft.wiki.gg/wiki/Terror_Wing_Path",
 		},
-		["valley of ashes"] = {
-			name = "Valley of Ashes",
-			short = "The Valley of Ashes lies smoldering between the hills, molten flows to the south, a charred plain to the north. Nothing lives here but tough wildlife and the black dragonflight, who claim the valley as their own.",
-			full = "The Valley of Ashes lies smoldering between the hills, molten flows to the south, a charred plain to the north. Nothing lives here but tough wildlife and the black dragonflight, who claim the valley as their own.\n\nThe land around offers no shelter. Dreadmaul Rock looms to the northeast, the Ruins of Thaurissan crumble to the northwest, and the Blackrock clan holds Black Tooth Hovel to the west. A road runs south through the valley, through Blackrock Pass and on toward the Redridge Mountains.",
-			source = "https://warcraft.wiki.gg/wiki/Valley_of_Ashes",
-		},
-		["whelping downs"] = {
-			name = "Whelping Downs",
-			short = "South of Blackrock Mountain, the Whelping Downs hold hordes of young dragons. Here the Blackrock clan raises black dragonflight whelps free, minded by the orcs called Blackrock Whelpers.",
-			full = "South of Blackrock Mountain, the Whelping Downs hold hordes of young dragons. Here the Blackrock clan raises black dragonflight whelps free, minded by the orcs called Blackrock Whelpers.\n\nWhelps of other dragonflights are kept here too, but not to be raised. They wait only for transfer to Blackrock Spire, where they are given over to gruesome experiments.",
-			source = "https://warcraft.wiki.gg/wiki/Whelping_Downs",
-		},
 	},
-	-- Elwynn Forest: 30 subzones
+	-- Elwynn Forest: 23 subzones
 	[1429] = {
 		["brackwell pumpkin patch"] = {
 			name = "Brackwell Pumpkin Patch",
@@ -3098,29 +2000,11 @@ ZoneLore.Subzones = {
 			full = "Goldshire rose small and quiet, one of the first towns to spring up in Elwynn Forest after Stormwind's founding, when its people began spilling into the surrounding country.\n\nIts worst hour came during the First War, when Warchief Blackhand turned the Horde against it and Moonbrook together, the last two towns left standing between King Llane and his people, cut down deliberately to sever Stormwind from everything beyond its walls before the keep itself was put to the sack. Goldshire fell. It did not rise again until after the Second War, when Turalyon himself oversaw the return of the kingdom's scattered people and saw the town rebuilt from what the orcs had left of it.\n\nThe Lion's Pride Inn has kept its doors open all the while, one of the most respectable ale houses in Azeroth, and Marshal Dughan keeps the peace under its roof.",
 			source = "https://warcraft.wiki.gg/wiki/Goldshire",
 		},
-		["goldtooths den"] = {
-			name = "Goldtooth's Den",
-			short = "In a hollow above Fargodeep Mine sits a small camp, worn into the ground by the passage of kobolds.",
-			full = "In a hollow above Fargodeep Mine sits a small camp, worn into the ground by the passage of kobolds. It takes its name from Goldtooth, who once dug in the mine below before moving his den to the rise just above it, where he keeps watch over the tunnels now.",
-			source = "https://warcraft.wiki.gg/wiki/Goldtooth's_Den",
-		},
-		["hall of arms northshire"] = {
-			name = "Hall of Arms (Northshire)",
-			short = "The Hall of Arms lies south of the Abbey's Main Hall, where paladin and warrior trainers take the least experienced Stormwind recruits, teaching sword and shield.",
-			full = "The Hall of Arms lies south of the Abbey's Main Hall, where paladin and warrior trainers take the least experienced Stormwind recruits, teaching sword and shield. The Library Wing stands on the far side of the Abbey.",
-			source = "https://warcraft.wiki.gg/wiki/Hall_of_Arms_(Northshire)",
-		},
 		["heroes vigil"] = {
 			name = "Heroes' Vigil",
 			short = "A ring of stones circles the Stone of Remembrance on the small island in Stone Cairn Lake, raised for the dead of the First War, when orcs swept down on Goldshire and the lands around it.",
 			full = "A ring of stones circles the Stone of Remembrance on the small island in Stone Cairn Lake, raised for the dead of the First War, when orcs swept down on Goldshire and the lands around it. Rogue wizards hold the island now, dealing roughly with any who wander in. Among the stones lies the body of Henze Faulk, left where he fell.",
 			source = "https://warcraft.wiki.gg/wiki/Heroes'_Vigil",
-		},
-		["hogger hill"] = {
-			name = "Hogger Hill",
-			short = "South of Westbrook Garrison, a low hill rises where the gnoll Hogger paces still. A dead thief lies there among scattered carcasses, mute witness to what became of those who crossed him.",
-			full = "South of Westbrook Garrison, a low hill rises where the gnoll Hogger paces still. A dead thief lies there among scattered carcasses, mute witness to what became of those who crossed him. Alliance troops came to the hill to face the gnoll down and take him into custody, bound at last for the Stockade.",
-			source = "https://warcraft.wiki.gg/wiki/Hogger_Hill",
 		},
 		["jasperlode mine"] = {
 			name = "Jasperlode Mine",
@@ -3134,29 +2018,11 @@ ZoneLore.Subzones = {
 			full = "Jerod's Landing sits on the Elwynn bank of the Nazferiti. The Defias Brotherhood once seized it, and under the Dockmaster's men it became a smuggling dock, ferrying stolen goods from Redridge to Klaven's Tower in Westfall. The Brotherhood has fallen, but a band of thieves runs the landing still.",
 			source = "https://warcraft.wiki.gg/wiki/Jerod's_Landing",
 		},
-		["library wing northshire"] = {
-			name = "Library Wing (Northshire)",
-			short = "South of the Main Hall, the Library Wing trains the Stormwind Army's newest recruits in prayer and spellcraft, under Priestess Anetta and the mage Khelden Bremen, apart from the Hall of Arms across the abbey.",
-			full = "South of the Main Hall, the Library Wing trains the Stormwind Army's newest recruits in prayer and spellcraft, under Priestess Anetta and the mage Khelden Bremen, apart from the Hall of Arms across the abbey. Wounded trainees rest here too, tended among the shelves alongside those just learning their craft.",
-			source = "https://warcraft.wiki.gg/wiki/Library_Wing_(Northshire)",
-		},
-		["lions pride inn"] = {
-			name = "Lion's Pride Inn",
-			short = "The Lion's Pride Inn has stood in Goldshire since the days of King Llane Wrynn I, kept all that time by the Farley family.",
-			full = "The Lion's Pride Inn has stood in Goldshire since the days of King Llane Wrynn I, kept all that time by the Farley family. Innkeeper Farley holds to the same words that have hung over its door for generations: rest and relaxation for the tired and cold.\n\nThe Farleys take pride in running an honest house, a place where a traveler can trust the drink poured and the bed offered.",
-			source = "https://warcraft.wiki.gg/wiki/Lion's_Pride_Inn",
-		},
 		["maclure vineyards"] = {
 			name = "Maclure Vineyards",
 			short = "The Maclure Vineyards in southern Elwynn Forest belong to the Maclure family, who carry a bitter rivalry with the neighboring Stonefields.",
 			full = "The Maclure Vineyards in southern Elwynn Forest belong to the Maclure family, who carry a bitter rivalry with the neighboring Stonefields. Yet a child of the Maclures and a child of the Stonefields have fallen in love, in defiance of everything their families taught them, and those who know of it hope the two young hearts might mend what generations of quarreling never could.\n\nWild boars now root freely through the vineyard rows, more numerous than the hands left to chase them off.",
 			source = "https://warcraft.wiki.gg/wiki/Maclure_Vineyards",
-		},
-		["main hall northshire"] = {
-			name = "Main Hall (Northshire)",
-			short = "The Main Hall stands at the heart of Northshire Abbey, the doorway through which one passes to reach the tower, the Hall of Arms, and the Library Wing beyond.",
-			full = "The Main Hall stands at the heart of Northshire Abbey, the doorway through which one passes to reach the tower, the Hall of Arms, and the Library Wing beyond. In its side rooms lie the wounded, tended within these walls, a quiet reminder that the abbey's peace was bought at some cost.",
-			source = "https://warcraft.wiki.gg/wiki/Main_Hall_(Northshire)",
 		},
 		["mirror lake"] = {
 			name = "Mirror Lake",
@@ -3212,12 +2078,6 @@ ZoneLore.Subzones = {
 			full = "The stones of Stormwind carry more grief than any human city on Azeroth, and more stubborn hope besides.\n\nWhen the Horde marched on the city, siege engines battered its walls through the night and warlocks burned its soldiers where they stood. The city held only because Anduin Lothar circled his knights around by sea and struck the orcs from behind while the gates opened and the defenders poured out to meet them. A year later the orcs returned and broke through. King Llane Wrynn was cut down by the assassin Garona, and Stormwind burned to ash. Its survivors fled north to Lordaeron in a fleet of small boats.\n\nThe city was rebuilt stone by stone by the Stonemasons' Guild, white and whole again, under the boy-king Varian. But the nobles who commissioned the work ran the treasury dry, and when Guildmaster Edwin VanCleef demanded the wages owed his men, the House of Nobles disbanded the guild instead. The riot that followed killed Queen Tiffin. Varian's fury drove the stonemasons from the city they had raised with their own hands; they fled into Westfall and became the Defias Brotherhood.",
 			source = "https://warcraft.wiki.gg/wiki/Stormwind_City",
 		},
-		["stormwind gate"] = {
-			name = "Stormwind Gate",
-			short = "The Stormwind Gate stands where the road out of Elwynn Forest meets the Valley of Heroes, the threshold between the wilds and the human capital.",
-			full = "The Stormwind Gate stands where the road out of Elwynn Forest meets the Valley of Heroes, the threshold between the wilds and the human capital. Its doors are never shut, and guards hold their posts on both sides of the arch, watching the road that runs on to the valley beyond, where more of their number keep the way between the gate and the city's approaches.\n\nStanding in that gate, one feels less like a barrier than a seam -- the last stretch of open forest folding into stone and banners. It is the place the city shows to those arriving from the countryside, and the place the countryside first sees of the city.",
-			source = "https://warcraft.wiki.gg/wiki/Stormwind_Gate",
-		},
 		["thunder falls"] = {
 			name = "Thunder Falls",
 			short = "A steep path climbs from the shore of Mirror Lake, past a small rural cottage where an anvil sits warm beside a cozy fire, and up into the mountains of north-western Elwynn Forest to Thunder Falls.",
@@ -3237,20 +2097,8 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Westbrook_Garrison",
 		},
 	},
-	-- Deadwind Pass: 20 subzones
+	-- Deadwind Pass: 9 subzones
 	[1430] = {
-		["abandoned kirin tor camp"] = {
-			name = "Abandoned Kirin Tor Camp",
-			short = "In the hills west of Karazhan, where the border runs into Duskwood, the ruins of a Kirin Tor camp still stand. An old circle of power remains among the stones, now the haunt of arcane hunters and mana scavengers.",
-			full = "In the hills west of Karazhan, where the border runs into Duskwood, the ruins of a Kirin Tor camp still stand. An old circle of power remains among the stones, now the haunt of arcane hunters and mana scavengers.\n\nLong before the First War, the mage Arrexis of the Council of Tirisfal camped here while studying how Karazhan warped the space around it. He found a way to hold that warping back within specially wrought wards, but raising them came at a cost: reality grew thin wherever they stood. Medivh, unbeknownst to the Council already possessed by Sargeras and quietly arranging the deaths of its members, urged Arrexis to turn his ritual toward demonic realms instead. The working drew the attention of the eredar Balaadur, and what followed was catastrophe: Arrexis and every apprentice who had come here with him died. Balaadur claimed the blade Ebonchill for himself. Afterward the Council struck every record of Arrexis from its archives, so his mistake could never be repeated.",
-			source = "https://warcraft.wiki.gg/wiki/Abandoned_Kirin_Tor_Camp",
-		},
-		["alturus sanctum"] = {
-			name = "Alturus' Sanctum",
-			short = "Alturus' Sanctum belongs to Archmage Alturus, a member of the Violet Eye, the Kirin Tor agents set to watch Medivh and Karazhan.",
-			full = "Alturus' Sanctum belongs to Archmage Alturus, a member of the Violet Eye, the Kirin Tor agents set to watch Medivh and Karazhan.\n\nWhile apprenticed to Medivh, Khadgar would slip away here to work with Alturus on a fragment of the Archmage's Prismatic Disc, entrusted to him by Archmage Antonidas.\n\nThe way in lies through the Master's Cellar in Deadwind Pass.",
-			source = "https://warcraft.wiki.gg/wiki/Alturus'_Sanctum",
-		},
 		["aridens camp"] = {
 			name = "Ariden's Camp",
 			short = "The camp stands empty north of the road through Deadwind Pass, a scatter of cold fire rings and abandoned tents between Duskwood and the Swamp of Sorrows.",
@@ -3269,12 +2117,6 @@ ZoneLore.Subzones = {
 			full = "The cleft cuts through the mountains of Deadwind Pass, its walls rising toward Karazhan to the south. The western road runs along its upper level, ending at the southern bridge, near enough the tower that its shadow falls over the stones.",
 			source = "https://warcraft.wiki.gg/wiki/Deadwind_Ravine",
 		},
-		["forgotten crypt"] = {
-			name = "Forgotten Crypt",
-			short = "Behind the tower of Karazhan, in the cemetery at Morgan's Plot, a stair leads down into the ground and ends in the Forgotten Crypt.",
-			full = "Behind the tower of Karazhan, in the cemetery at Morgan's Plot, a stair leads down into the ground and ends in the Forgotten Crypt. It is not the catacomb beneath the tower itself, but a separate hollow cut into the earth of Deadwind Pass, sealed and left to sit in the dark.\n\nNothing was ever finished down there. The passages break off unworked, the chambers stop short of purpose, and among them lies a room where the dead hang sinner-fashion, upside-down, undisturbed by whatever was meant to come for them. No tale explains the room. No hand ever returned to complete the rest of the crypt around it. It was cut, and then abandoned, and it has stayed exactly as it was left.",
-			source = "https://warcraft.wiki.gg/wiki/Forgotten_Crypt",
-		},
 		["groshgok compound"] = {
 			name = "Grosh'gok Compound",
 			short = "The Deadwind ogres hold the Grosh'gok Compound, southernmost and largest of the mounds burrowed into the Vice's caves.",
@@ -3286,18 +2128,6 @@ ZoneLore.Subzones = {
 			short = "Karazhan (a.k.a. Medivh's Tower) is an abandoned citadel (or castle) located on a nexus of ley lines in southern Deadwind Pass.",
 			full = "Karazhan (a.k.a. Medivh's Tower) is an abandoned citadel (or castle) located on a nexus of ley lines in southern Deadwind Pass. The tower is best known for its last known occupant -- Medivh, the last Guardian of Tirisfal. After Medivh was killed by Khadgar, Anduin Lothar, and Garona, the tower sealed itself off from the rest of the world. But recently, Karazhan has reawakened -- an evil presence has taken the tower as its own, its halls crawling with spirits and demons, and with the Shade of Medivh, his power being so great that his magic still echoes through the halls of Karazhan.\n\nIt is impossible to set eyes upon Karazhan without reflecting on the dark saga of its master. As befitting his title, the Last Guardian of Tirisfal had amassed a vast collection of writings and artifacts that dwarfs even that of the Kirin Tor. The tower is vast, dangerous, with ghosts everywhere, and where some of the world's most powerful and dangerous artifacts are stored, brought for years by the Dark Riders. Following the third invasion of the Burning Legion, Khadgar moved into the tower, seeking knowledge to save Azeroth.",
 			source = "https://warcraft.wiki.gg/wiki/Karazhan",
-		},
-		["karazhan catacombs"] = {
-			name = "Karazhan Catacombs",
-			short = "Beneath Karazhan, past the gate at the tower's foot, lie catacombs that hold no ghost of Medivh, only thieves and the things they hoarded.",
-			full = "Beneath Karazhan, past the gate at the tower's foot, lie catacombs that hold no ghost of Medivh, only thieves and the things they hoarded. This was the hideout of the Dark Riders, and every relic they took in their raids across the land was carried down into that dark to be kept.\n\nThe place drew its worst trouble when the rider Ariden stole the Scythe of Elune out of Duskwood, a relic his band had hunted for a long time. He fled to his old camp and then down into the catacombs themselves, followed by others who wanted what lay hidden there: a warlock after Ulthalesh, the Deadwind Harvester, and a death knight after Apocalypse, alongside the priest Revil Kost, who had crossed the Dark Riders before. Ariden and his riders fought to hold the catacombs, and for a moment he even held all the artifacts in his own hands, but he was cut down there in the dark. Afterward Kost declared the Dark Riders broken, and swore to see the stolen relics returned to whoever they had first belonged to.",
-			source = "https://warcraft.wiki.gg/wiki/Karazhan_Catacombs",
-		},
-		["karazhan raid"] = {
-			name = "Karazhan (raid)",
-			short = "Karazhan stands sealed in southern Deadwind Pass, a tower of seven stories above a guest complex once meant for the living. No living hand keeps it now.",
-			full = "Karazhan stands sealed in southern Deadwind Pass, a tower of seven stories above a guest complex once meant for the living. No living hand keeps it now. What walks its halls are spirits and demons, and passage through it answers to will, not stone: Moroes still holds his table below, the Opera plays its haunted bill, the Curator watches over what must not be disturbed, and above, a game of chess is played with pieces that are not pieces. None of the four can be passed around; each must be answered before the tower yields further.\n\nAt the top waits Prince Malchezzar, the last to claim the tower. He did not build it, nor die in it. That was Medivh, last Guardian of Tirisfal, whose death emptied Karazhan of its master. In his absence something else moved in, and Malchezzar's place at the summit is less inheritance than occupation -- a demon sitting the seat of a dead man.",
-			source = "https://warcraft.wiki.gg/wiki/Karazhan_(raid)",
 		},
 		["masters cellar"] = {
 			name = "Master's Cellar",
@@ -3311,41 +2141,11 @@ ZoneLore.Subzones = {
 			full = "Morgan's Plot is a small decrepit church with a graveyard and crypt located in Deadwind Pass. It can be found just behind Karazhan, and its graveyard serves as the respawn and spirit healer point for adventurers who die within the actual Karazhan instance. Lydia Accoste is found here.\n\nThe chapel itself was once inhabited by two Unliving Residents, and there was a third patrolling just down the hill.\n\nAegwynn and Cook are buried here, and Moroes and Medivh were before they were revived.\n\nThis section concerns content related to Legion.\n\nSince the third invasion of the Burning Legion, the place is now inhabited by Restless Spirits.",
 			source = "https://warcraft.wiki.gg/wiki/Morgan's_Plot",
 		},
-		["paupers walk"] = {
-			name = "Pauper's Walk",
-			short = "The Pauper's Walk runs long and quiet around the Forgotten Crypt, reached by passing through the Well of the Forgotten.",
-			full = "The Pauper's Walk runs long and quiet around the Forgotten Crypt, reached by passing through the Well of the Forgotten. No name is remembered for those who lie along it, only the walk itself, hall after hall, leading deeper toward the dead.",
-			source = "https://warcraft.wiki.gg/wiki/Pauper's_Walk",
-		},
-		["pit of criminals"] = {
-			name = "Pit of Criminals",
-			short = "In the Forgotten Crypt lies the Pit of Criminals, a hollow choked with a heap of bones. No names remain, only the pile itself, left to mark where the condemned were cast and forgotten.",
-			full = "In the Forgotten Crypt lies the Pit of Criminals, a hollow choked with a heap of bones. No names remain, only the pile itself, left to mark where the condemned were cast and forgotten.",
-			source = "https://warcraft.wiki.gg/wiki/Pit_of_Criminals",
-		},
 		["sleeping gorge"] = {
 			name = "Sleeping Gorge",
 			short = "In eastern Deadwind Pass, the land dips into a small chasm known as the Sleeping Gorge. One of the paths leading south to Karazhan runs through it for a time, before turning east into the Vice.",
 			full = "In eastern Deadwind Pass, the land dips into a small chasm known as the Sleeping Gorge. One of the paths leading south to Karazhan runs through it for a time, before turning east into the Vice.",
 			source = "https://warcraft.wiki.gg/wiki/Sleeping_Gorge",
-		},
-		["slough of dispair"] = {
-			name = "Slough of Dispair",
-			short = "The Slough of Dispair is a bare, empty room within the Forgotten Crypt, its floor broken by a hole at the center.",
-			full = "The Slough of Dispair is a bare, empty room within the Forgotten Crypt, its floor broken by a hole at the center.",
-			source = "https://warcraft.wiki.gg/wiki/Slough_of_Dispair",
-		},
-		["tome of the unrepentant"] = {
-			name = "Tome of the Unrepentant",
-			short = "In the Forgotten Crypt lies a place called the Tome of the Unrepentant, a wide pool sunk among old graves. No verses mark its stones, no name explains its dead.",
-			full = "In the Forgotten Crypt lies a place called the Tome of the Unrepentant, a wide pool sunk among old graves. No verses mark its stones, no name explains its dead. It waits in the dark, keeping whatever it knows to itself.",
-			source = "https://warcraft.wiki.gg/wiki/Tome_of_the_Unrepentant",
-		},
-		["upside down sinners"] = {
-			name = "Upside-down Sinners",
-			short = "In the Forgotten Crypt, ropes and chains hang down into the black water, and from them dangle men and women bound upside down, sinners left to hang above their own reflections.",
-			full = "In the Forgotten Crypt, ropes and chains hang down into the black water, and from them dangle men and women bound upside down, sinners left to hang above their own reflections.",
-			source = "https://warcraft.wiki.gg/wiki/Upside-down_Sinners",
 		},
 		["vice"] = {
 			name = "Vice",
@@ -3353,14 +2153,8 @@ ZoneLore.Subzones = {
 			full = "The Vice lies along the southern stretch of the road to Karazhan, in the desolate reach of Deadwind Pass. Here the Deadwind ogres have raised their mounds and camps, scattered across ground that offers nothing to sustain them but restless spirits and the few vultures that circle overhead. Why they chose such a barren stretch to call home, no one can say.",
 			source = "https://warcraft.wiki.gg/wiki/Vice",
 		},
-		["well of the forgotten"] = {
-			name = "Well of the Forgotten",
-			short = "The Well of the Forgotten lies as the outermost chamber of the Forgotten Crypt, a place of little more than an altar and a gate standing before the dark that follows.",
-			full = "The Well of the Forgotten lies as the outermost chamber of the Forgotten Crypt, a place of little more than an altar and a gate standing before the dark that follows.",
-			source = "https://warcraft.wiki.gg/wiki/Well_of_the_Forgotten",
-		},
 	},
-	-- Duskwood: 19 subzones
+	-- Duskwood: 17 subzones
 	[1431] = {
 		["addles stead"] = {
 			name = "Addle's Stead",
@@ -3391,12 +2185,6 @@ ZoneLore.Subzones = {
 			short = "Darkshire was not always so named. It rose long ago as Grand Hamlet, a small woodland town built up as Stormwind's people spread into the nearby lands.",
 			full = "Darkshire was not always so named. It rose long ago as Grand Hamlet, a small woodland town built up as Stormwind's people spread into the nearby lands. But the land itself never recovered from what happened at Karazhan. When the Guardian Medivh was slain in his tower there, the fel energy loosed by his death crept into the surrounding forest, twisting it into the thorned, lightless place it remains. Brightwood became Duskwood, and Grand Hamlet took the truer name of Darkshire.\n\nThe town's militia, the Night Watch, exists because Stormwind abandoned it. When Lady Katrana Prestor's schemes in Stormwind emptied the kingdom's garrisons from the forest, the townsfolk armed themselves rather than wait for soldiers who were never coming. Formed and trained entirely by the people of the forest, they have since held the roads against wolves, walking corpses, and worse, with no army left to call upon but themselves.",
 			source = "https://warcraft.wiki.gg/wiki/Darkshire",
-		},
-		["darkshire town hall"] = {
-			name = "Darkshire Town Hall",
-			short = "The town hall stands at the western edge of Darkshire's square, the seat from which Lord Ello Ebonlocke once governed.",
-			full = "The town hall stands at the western edge of Darkshire's square, the seat from which Lord Ello Ebonlocke once governed. Beneath its roof sat the mayor, the Darkshire Council, its historians, and its clerks, among them Clerk Daltry, who keeps the town's records still, though years of neglect have left some badly out of date.\n\nThe council that met there did not stay loyal. Promised freedom and respect by a figure known only as the Herald, its members turned traitor and gave themselves to the Veiled Hand, a cult bound to the Burning Legion. Commander Althea Ebonlocke, sworn to protect the town, went with them. Within the town hall, Sister Althea Ebonlocke told the gathered Council that once the Shadowgaze Batrider arrived, they would leave Darkshire behind and carry the cult's work to Stormwind City itself, to open the way for a demonic invasion. The speech was cut short when the Shadow of the Uncrowned burst in to strike her down. The blow failed, and Althea and her councilmen fled, their treason exposed but unpunished.",
-			source = "https://warcraft.wiki.gg/wiki/Darkshire_Town_Hall",
 		},
 		["dawning wood catacombs"] = {
 			name = "Dawning Wood Catacombs",
@@ -3446,12 +2234,6 @@ ZoneLore.Subzones = {
 			full = "The trees of the Rotting Orchard have gone black and brittle, their fruit rotting where it fell between the farmstead and the cemetery. The dilapidated buildings standing open to the weather are now home to the Nightbane pack of worgen. Shadow Weavers work their magic in hidden camps, Stalkers keep to the shadows, and Marus, the packleader, patrols the ground between the orchard and his den.\n\nA mirror of this orchard exists within the Emerald Dream, corrupted by the Nightmare. There, worgen twisted further still guard the Shadowscythe under the command of Amokarok.",
 			source = "https://warcraft.wiki.gg/wiki/Rotting_Orchard",
 		},
-		["scarlet raven tavern"] = {
-			name = "Scarlet Raven Tavern",
-			short = "The Scarlet Raven Tavern stands in Darkshire, its hearth kept burning even as the darkness of Duskwood presses close against its walls.",
-			full = "The Scarlet Raven Tavern stands in Darkshire, its hearth kept burning even as the darkness of Duskwood presses close against its walls. Once the tavern was a lively stop, and Marshal Haggard and the Stormwind Guard would come to drink here before he retired from duty. That trade has thinned since the corruption spread through the forest outside, though travelers still pass through often enough to keep the fire lit.\n\nThe tavern's people met a grim end when fanatical members of the Night Watch murdered every occupant inside it. Only Chef Grual survived, having grown obsessed with the Burning Legion and thrown in with the Veiled Hand. The cult later used the tavern to hide the Skull of the Innocent, meant for a demonic assault on Stormwind City, until the Shadow of the Uncrowned crept in and stole the skull away, buying time against the cult's designs.",
-			source = "https://warcraft.wiki.gg/wiki/Scarlet_Raven_Tavern",
-		},
 		["tranquil gardens cemetery"] = {
 			name = "Tranquil Gardens Cemetery",
 			short = "Southeast of Darkshire, the Tranquil Gardens Cemetery keeps a name it no longer earns, for the dead here do not lie still, though they rise weak and thin, the least of Duskwood's horrors.",
@@ -3477,7 +2259,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Yorgen_Farmstead",
 		},
 	},
-	-- Loch Modan: 18 subzones
+	-- Loch Modan: 16 subzones
 	[1432] = {
 		["algaz station"] = {
 			name = "Algaz Station",
@@ -3508,12 +2290,6 @@ ZoneLore.Subzones = {
 			short = "Ironband's Excavation Site cuts deep into southeastern Loch Modan, where Prospector Ironband set his miners digging.",
 			full = "Ironband's Excavation Site cuts deep into southeastern Loch Modan, where Prospector Ironband set his miners digging.\n\nThe earth did not stay quiet. Troggs broke up from below, larger and more violent than their kin at other dwarven digs, and drove the miners from their own trenches. The site remains unfinished, its trenches held now by the troggs that took them.",
 			source = "https://warcraft.wiki.gg/wiki/Ironband's_Excavation_Site",
-		},
-		["ironwing cavern"] = {
-			name = "Ironwing Cavern",
-			short = "South of Ironband's Excavation Site, the cavern teems with wild proto-striders, among them the great Optimo, and battle-chickens gone haywire in the dark.",
-			full = "South of Ironband's Excavation Site, the cavern teems with wild proto-striders, among them the great Optimo, and battle-chickens gone haywire in the dark. Deeper in lies Rusted Skystrider, still and silent, rusted through and long dead.",
-			source = "https://warcraft.wiki.gg/wiki/Ironwing_Cavern",
 		},
 		["loch"] = {
 			name = "The Loch",
@@ -3575,12 +2351,6 @@ ZoneLore.Subzones = {
 			full = "Thelsamar sits on the western shore of Loch Modan, north of Grizzlepaw Ridge and northeast of Stonesplinter Valley, a dwarven town with gryphons wheeling from its roost. A road runs just west of it, climbing through the passes toward Dun Morogh and the Wetlands.",
 			source = "https://warcraft.wiki.gg/wiki/Thelsamar",
 		},
-		["twilight camp"] = {
-			name = "Twilight Camp",
-			short = "The ground at Twilight Camp is scorched black beneath a sky that no longer matches Loch Modan's own, elementium spikes driven into the earth in the same jagged style as the ruined Twilight Highlands.",
-			full = "The ground at Twilight Camp is scorched black beneath a sky that no longer matches Loch Modan's own, elementium spikes driven into the earth in the same jagged style as the ruined Twilight Highlands. Among them stands a landshaping device, built by the Twilight's Hammer to tear the region apart.",
-			source = "https://warcraft.wiki.gg/wiki/Twilight_Camp",
-		},
 		["valley of kings"] = {
 			name = "Valley of Kings",
 			short = "The Valley of Kings lies in the southwestern reach of Loch Modan, a strip of green pressed between the dwarven highlands and the scorched country beyond.",
@@ -3588,7 +2358,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Valley_of_Kings",
 		},
 	},
-	-- Redridge Mountains: 24 subzones
+	-- Redridge Mountains: 16 subzones
 	[1433] = {
 		["althers mill"] = {
 			name = "Alther's Mill",
@@ -3596,23 +2366,11 @@ ZoneLore.Subzones = {
 			full = "The mill northeast of Lakeshire was once a quiet backwater, troubled only by spiders, buzzards, and the odd stray orc, a place travelers passed on their way to Stonewatch Keep.\n\nThen the Blackrock clan took it and built a great worg kennel here. Under the orcs Homurk and Murdunk, the mill became a prison as much as a camp, and it was here that the human Messner was held captive among the howling worgs.",
 			source = "https://warcraft.wiki.gg/wiki/Alther's_Mill",
 		},
-		["camp everstill"] = {
-			name = "Camp Everstill",
-			short = "Camp Everstill sits quiet on the shores of the lake that gives it its name, a small Alliance post keeping watch over the water in Redridge.",
-			full = "Camp Everstill sits quiet on the shores of the lake that gives it its name, a small Alliance post keeping watch over the water in Redridge.",
-			source = "https://warcraft.wiki.gg/wiki/Camp_Everstill",
-		},
 		["galardell valley"] = {
 			name = "Galardell Valley",
 			short = "Galardell Valley cuts through the northeastern Redridge Mountains, thick with gnolls under Lieutenant Fangore, who calls the pack down on any who face him alone.",
 			full = "Galardell Valley cuts through the northeastern Redridge Mountains, thick with gnolls under Lieutenant Fangore, who calls the pack down on any who face him alone.\n\nAbove them stands the Tower of Ilgalar, where the evil Morganth dwells, drawing far more dread than the gnolls below.",
 			source = "https://warcraft.wiki.gg/wiki/Galardell_Valley",
-		},
-		["keeshans post"] = {
-			name = "Keeshan's Post",
-			short = "At the post north of Stonewatch Keep, a telescope stands trained on the tower below. Colonel Troteman keeps the watch there now, eyes fixed on Stonewatch, ready to mark whatever stirs among its stones.",
-			full = "At the post north of Stonewatch Keep, a telescope stands trained on the tower below. Colonel Troteman keeps the watch there now, eyes fixed on Stonewatch, ready to mark whatever stirs among its stones.\n\nThe post bears the name of John J. Keeshan.",
-			source = "https://warcraft.wiki.gg/wiki/Keeshan's_Post",
 		},
 		["lake everstill"] = {
 			name = "Lake Everstill",
@@ -3632,29 +2390,11 @@ ZoneLore.Subzones = {
 			full = "Lake Everstill lies still and cold beneath the Redridge peaks, and the town on its shore has bled for that ground more than once. When Warchief Blackhand first led orcs into these mountains, Sir Anduin Lothar and the Knights of Stormwind ambushed them on the slopes and nearly broke them, until two Shadow Council warlocks turned the battle and forced Lothar back. Blackhand returned weeks later with a greater host and took Lakeshire outright. Only after the Second War did the Alliance of Lordaeron reclaim it, Supreme Commander Turalyon overseeing the return of its scattered people.\n\nPeace never held long. Stonewatch Keep's guard platoon fell to Blackrock orcs driven by the warlock Morganth, who then turned on his own allies and raised an army of Shadowhide gnolls from the Tower of Ilgalar. Magistrate Solomon begged Stormwind for soldiers and was given none. In the end it was John J. Keeshan's Bravo Company that broke the siege, storming Stonewatch. Against the dragon Darkblaze over the lake, the company was destroyed to a man; Keeshan leapt onto the dying wyrm's back and vanished with it into the water. The townsfolk later recovered what belongings of his the lake gave back.",
 			source = "https://warcraft.wiki.gg/wiki/Lakeshire",
 		},
-		["lakeshire inn"] = {
-			name = "Lakeshire Inn",
-			short = "The Lakeshire Inn stands in Redridge, and for all the trouble that has settled over the town, it has never lost its warmth.",
-			full = "The Lakeshire Inn stands in Redridge, and for all the trouble that has settled over the town, it has never lost its warmth. Wine and ale still flow at its tables, and its beds still take in travelers worn down by the road. Innkeeper Brianna keeps it running, no small task the night a soldier drank himself senseless and Darcy Parker hauled him into one of the beds before returning to his post, leaving Brianna to clean up the mess he left behind.",
-			source = "https://warcraft.wiki.gg/wiki/Lakeshire_Inn",
-		},
-		["lakeshire town hall"] = {
-			name = "Lakeshire Town Hall",
-			short = "The Lakeshire Town Hall has been rebuilt so often that little of it is old, though it still holds the bearing of a seat of power. It is the heart of Lakeshire, home to whichever magistrate rules the town.",
-			full = "The Lakeshire Town Hall has been rebuilt so often that little of it is old, though it still holds the bearing of a seat of power. It is the heart of Lakeshire, home to whichever magistrate rules the town.\n\nThe current magistrate, Solomon, is kind and wise, but gnolls and Blackrock orcs have worn at him, and he no longer turns away help, however it comes.",
-			source = "https://warcraft.wiki.gg/wiki/Lakeshire_Town_Hall",
-		},
 		["redridge canyons"] = {
 			name = "Redridge Canyons",
 			short = "The gnolls of Redridge answer to Yowler, who dens among the canyon walls in the northwestern reaches of the mountains, holding the pack together as their leader.",
 			full = "The gnolls of Redridge answer to Yowler, who dens among the canyon walls in the northwestern reaches of the mountains, holding the pack together as their leader.",
 			source = "https://warcraft.wiki.gg/wiki/Redridge_Canyons",
-		},
-		["redridge pass"] = {
-			name = "Redridge Pass",
-			short = "Redridge Pass runs the length of the eastern Redridge Mountains, with no way down into the lowlands below.",
-			full = "Redridge Pass runs the length of the eastern Redridge Mountains, with no way down into the lowlands below. To the north it opens onto the Burning Steppes; to the south it descends toward Bogpaddle on the edge of the Swamp of Sorrows.\n\nThe Steamwheedle Cartel runs the Bogpaddle Bullet, a rocket carrying travelers down the pass to Bogpaddle. No such passage runs the other way. Anyone bound north must walk the pass the whole length, mountain on one side and the long drop to the swamp on the other.",
-			source = "https://warcraft.wiki.gg/wiki/Redridge_Pass",
 		},
 		["renders camp"] = {
 			name = "Render's Camp",
@@ -3679,12 +2419,6 @@ ZoneLore.Subzones = {
 			short = "The caverns cut deep into the northwestern Redridge Mountains, dark tunnels held by gnolls under their cunning chieftain, Ardo Dirtpaw.",
 			full = "The caverns cut deep into the northwestern Redridge Mountains, dark tunnels held by gnolls under their cunning chieftain, Ardo Dirtpaw. Within them lies Rethban ore, guarded jealously by his pack. The caverns are said to take their name from a man called Bart Rethban, though little else of him remains.",
 			source = "https://warcraft.wiki.gg/wiki/Rethban_Caverns",
-		},
-		["shalewind canyon"] = {
-			name = "Shalewind Canyon",
-			short = "The Shalewind Canyon cuts through the eastern Redridge Mountains, close by Stonewatch Falls, where a small human encampment holds its ground.",
-			full = "The Shalewind Canyon cuts through the eastern Redridge Mountains, close by Stonewatch Falls, where a small human encampment holds its ground.",
-			source = "https://warcraft.wiki.gg/wiki/Shalewind_Canyon",
 		},
 		["stonewatch"] = {
 			name = "Stonewatch",
@@ -3722,20 +2456,8 @@ ZoneLore.Subzones = {
 			full = "Morganth once ruled the Tower of Ilgalar, deep in the eastern Redridge Mountains. Exiled from the Mage Quarter of Stormwind City for his study of the dark arts, he made this tower his refuge and bent the Shadowhide gnoll clan to his will.\n\nMorganth is gone now. In his place stands Grand Magus Doane -- in truth the black dragon Darkblaze, wearing a man's shape.",
 			source = "https://warcraft.wiki.gg/wiki/Tower_of_Ilgalar",
 		},
-		["tower watch"] = {
-			name = "Tower Watch",
-			short = "At the meeting point of the Three Corners, the Stormwind Guard keeps a tower to watch the crossroads.",
-			full = "At the meeting point of the Three Corners, the Stormwind Guard keeps a tower to watch the crossroads.",
-			source = "https://warcraft.wiki.gg/wiki/Tower_Watch",
-		},
-		["yowlers den"] = {
-			name = "Yowler's Den",
-			short = "Yowler, son of Yowler, dens in the Redridge Canyons north of Lakeshire, at the northern reach of that broken country.",
-			full = "Yowler, son of Yowler, dens in the Redridge Canyons north of Lakeshire, at the northern reach of that broken country.",
-			source = "https://warcraft.wiki.gg/wiki/Yowler's_Den",
-		},
 	},
-	-- Stranglethorn Vale: 40 subzones
+	-- Stranglethorn Vale: 38 subzones
 	[1434] = {
 		["baliamah ruins"] = {
 			name = "Balia'mah Ruins",
@@ -3851,12 +2573,6 @@ ZoneLore.Subzones = {
 			full = "Below the river north of Lake Nazferiti sits the camp the dwarven hunter Hemet Nesingwary carved out of the jungle. He led an expedition deep into Stranglethorn for the sake of the wild game that filled its valleys and hunting grounds. What began as little more than a hunter's camp has grown since into a proper station, reached now by a road cut through the undergrowth, and fortified against the jungle around it.",
 			source = "https://warcraft.wiki.gg/wiki/Nesingwary's_Expedition",
 		},
-		["old port authority"] = {
-			name = "Old Port Authority",
-			short = "The roof of the Old Port Authority sags and gapes over Booty Bay's warehouse floor, and the Goblin Construction Crews work at patching it, board by board, against whatever storm or neglect tore it open.",
-			full = "The roof of the Old Port Authority sags and gapes over Booty Bay's warehouse floor, and the Goblin Construction Crews work at patching it, board by board, against whatever storm or neglect tore it open.",
-			source = "https://warcraft.wiki.gg/wiki/Old_Port_Authority",
-		},
 		["rebel camp"] = {
 			name = "Rebel Camp",
 			short = "The Rebel Camp stands in the northern reach of Stranglethorn Vale, west of the road down from Duskwood, within sight of Kurzen's Compound.",
@@ -3886,12 +2602,6 @@ ZoneLore.Subzones = {
 			short = "Ruined and hemmed in by mountains on every side but the north, Zul'Mamwe belongs to the Skullsplitters, the second great troll tribe of Stranglethorn Vale, ruled by their chieftain Ana'thek the Cruel.",
 			full = "Ruined and hemmed in by mountains on every side but the north, Zul'Mamwe belongs to the Skullsplitters, the second great troll tribe of Stranglethorn Vale, ruled by their chieftain Ana'thek the Cruel. During the war against the Zandalari, jungle serpents pressed into the ruins, forcing their way in alongside the trolls.",
 			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Zul'Mamwe",
-		},
-		["salty sailor tavern"] = {
-			name = "Salty Sailor Tavern",
-			short = "The Salty Sailor Tavern stands as Booty Bay's local inn, kept by Innkeeper Skindle.",
-			full = "The Salty Sailor Tavern stands as Booty Bay's local inn, kept by Innkeeper Skindle. Sailors and smugglers passing through the port know it for one thing above all: the South Island Iced Tea, poured here and nowhere else quite the same.",
-			source = "https://warcraft.wiki.gg/wiki/Salty_Sailor_Tavern",
 		},
 		["savage coast"] = {
 			name = "Savage Coast",
@@ -3978,43 +2688,13 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Zuuldaia_Ruins",
 		},
 	},
-	-- Swamp of Sorrows: 22 subzones
+	-- Swamp of Sorrows: 14 subzones
 	[1435] = {
-		["bloodmire"] = {
-			name = "Bloodmire",
-			short = "The Bloodmire lies churned and bloody between Stonard and Marshtide Watch, a stretch of the Swamp of Sorrows claimed by neither side for long.",
-			full = "The Bloodmire lies churned and bloody between Stonard and Marshtide Watch, a stretch of the Swamp of Sorrows claimed by neither side for long. Marshtide Watch grew alarmed at the Horde garrison camped so near its borders, and its commanders pressed an aggressive campaign to drive Stonard from the swamp entirely. Neither side has managed to break the other.\n\nThe fighting comes in waves. Stonard warriors, driven forward by wardrummers, clash with Marshtide footmen rallied by their clerics, while peasants and peons strip the fringes for lumber under fire. As the battle deepens, warlocks and mages summon ogres and knights onto the field, and the corpses of both armies pile in the mud between the camps.\n\nThe ground still shows what that fighting cost: a wrecked steam tank rusting where it fell, ballistae and siege engines abandoned to the swamp. The Bloodmire keeps none of these as trophies. They simply never left.",
-			source = "https://warcraft.wiki.gg/wiki/Bloodmire",
-		},
-		["bogpaddle"] = {
-			name = "Bogpaddle",
-			short = "Bogpaddle sits on the beach in the Swamp of Sorrows, neutral ground held by no crown but Trade Baron Silversnap's own word.",
-			full = "Bogpaddle sits on the beach in the Swamp of Sorrows, neutral ground held by no crown but Trade Baron Silversnap's own word. Silversnap calls his port \"the only beachfront resort and military-grade weapons yard in the Eastern Kingdoms,\" and the boast is not far wrong: goblin merchants deal arms and comforts alike out of the same stalls.\n\nWhat makes the place strange is who drinks there. Stonard and Marshtide Watch are locked in war across the swamp, and yet soldiers from both camps slip away to Bogpaddle's shore to carouse side by side with the goblins. Silversnap asks no loyalty of anyone who pays, and so the sand fills with mixed company that would mean bloodshed anywhere else in the swamp.",
-			source = "https://warcraft.wiki.gg/wiki/Bogpaddle",
-		},
-		["broken hall"] = {
-			name = "Broken Hall",
-			short = "The Broken Hall is the outermost chamber of the Temple of Atal'Hakkar, and it wears the temple's ruin plainly.",
-			full = "The Broken Hall is the outermost chamber of the Temple of Atal'Hakkar, and it wears the temple's ruin plainly. When the green dragonflight sank the temple beneath the Pool of Tears, this hall's floor gave way, and the swamp above poured in, leaving it flooded almost completely.\n\nThe Atal'ai have withdrawn from here to deeper levels, and the hall now lies abandoned. Stairs beyond it climb on toward the Hall of Masks.",
-			source = "https://warcraft.wiki.gg/wiki/Broken_Hall",
-		},
 		["fallow sanctuary"] = {
 			name = "Fallow Sanctuary",
 			short = "In the Swamp of Sorrows stands the Fallow Sanctuary, village of a tribe called simply the Lost Ones. Homesickness has driven every one of them mad, until nothing gentle was left.",
 			full = "In the Swamp of Sorrows stands the Fallow Sanctuary, village of a tribe called simply the Lost Ones. Homesickness has driven every one of them mad, until nothing gentle was left. All have gone completely feral.",
 			source = "https://warcraft.wiki.gg/wiki/Fallow_Sanctuary",
-		},
-		["fortunes fist"] = {
-			name = "Fortune's Fist",
-			short = "The frigate Fortune's Fist rides at anchor off the Misty Reed Strand, a shipping freighter taken by gilgoblins. Between the wreck and the shore the water holds the bodies of much of her former crew.",
-			full = "The frigate Fortune's Fist rides at anchor off the Misty Reed Strand, a shipping freighter taken by gilgoblins. Between the wreck and the shore the water holds the bodies of much of her former crew. Those who survived fled inland and now hole up in a camp in the Sorrowmurk.\n\nAboard stands the Landward Cannon, built to fire a passage back to solid ground. It works, mostly. It is the only way off the frigate that does not mean swimming through the drowned.",
-			source = "https://warcraft.wiki.gg/wiki/Fortune's_Fist",
-		},
-		["hall of masks"] = {
-			name = "Hall of Masks",
-			short = "Skull masks carved to no mortal scale still line these walls, though what the room served the Atal'ai for is not known.",
-			full = "Skull masks carved to no mortal scale still line these walls, though what the room served the Atal'ai for is not known. The trench cut into its floor speaks plainly enough: it lies littered with bones, and no other purpose put them there. In the Atal'ai's height this was a place of blood-work.\n\nFrom the Broken Hall's stair the chamber opens onward, its passages parting toward the Butchery, the Chamber of Blood, and the Den of the Caller.",
-			source = "https://warcraft.wiki.gg/wiki/Hall_of_Masks",
 		},
 		["harborage"] = {
 			name = "Harborage",
@@ -4027,18 +2707,6 @@ ZoneLore.Subzones = {
 			short = "In the far southwestern reaches of the Swamp of Sorrows, a cave shelters the high elf Itharius.",
 			full = "In the far southwestern reaches of the Swamp of Sorrows, a cave shelters the high elf Itharius. Outside, green whelps stumble and scrap among themselves, unruly and young, and it is Itharius who watches over them as they grow.",
 			source = "https://warcraft.wiki.gg/wiki/Itharius's_Cave",
-		},
-		["marshtide watch"] = {
-			name = "Marshtide Watch",
-			short = "Marshtide Watch stands north of the sunken Temple of Atal'Hakkar, a cluster of cannon towers, stables, and a blacksmith holding the shoreline of the Swamp of Sorrows.",
-			full = "Marshtide Watch stands north of the sunken Temple of Atal'Hakkar, a cluster of cannon towers, stables, and a blacksmith holding the shoreline of the Swamp of Sorrows. Joanna Blueheart commands here, and can point the way home for anyone who asks: Redridge Mountains, Duskwood, and Elwynn Forest each lie no more than a day's march from her walls.\n\nThe outpost's walls have cracked and been rebuilt more than once, and peasants sent into the surrounding woods to cut lumber for the mending have become targets when fighting flares nearby. Yet not every soldier here treats the swamp only as a battlefield. In the nearby goblin town of Bogpaddle, off to the side of the war in the Bloodmire, Marshtide men can be found sharing a drink with the very Horde forces they face across the mire.",
-			source = "https://warcraft.wiki.gg/wiki/Marshtide_Watch",
-		},
-		["misty reed farm"] = {
-			name = "Misty Reed Farm",
-			short = "Misty Reed Farm, once called Misty Reed Post, remembers the day Dark Ranger Lyana came for Varok on Sylvanas Windrunner's order, vowing to burn the place like Teldrassil.",
-			full = "Misty Reed Farm, once called Misty Reed Post, remembers the day Dark Ranger Lyana came for Varok on Sylvanas Windrunner's order, vowing to burn the place like Teldrassil. Zekhan and a Horde champion stood against her Deathguard Elites and cut them down. Varok survived, then left the farm behind him for good.",
-			source = "https://warcraft.wiki.gg/wiki/Misty_Reed_Farm",
 		},
 		["misty reed post"] = {
 			name = "Misty Reed Post",
@@ -4063,12 +2731,6 @@ ZoneLore.Subzones = {
 			short = "Beneath the still waters of the Pool of Tears rests the Temple of Atal'Hakkar, sunk there by Ysera herself to seal away its corruption.",
 			full = "Beneath the still waters of the Pool of Tears rests the Temple of Atal'Hakkar, sunk there by Ysera herself to seal away its corruption. Green dragons once watched over the drowned temple.\n\nThe pool has never been at peace since. Blood-thirsty frenzies move through its depths, and along the shore and underwater lie the broken remains of Atal'ai ruins, among which relics of the drowned cult can still be found.",
 			source = "https://warcraft.wiki.gg/wiki/Pool_of_Tears",
-		},
-		["purespring cavern"] = {
-			name = "Purespring Cavern",
-			short = "Purespring Cavern lies in the southwest Swamp of Sorrows, south of Splinterspear Junction, its waters running clear against the surrounding muck.",
-			full = "Purespring Cavern lies in the southwest Swamp of Sorrows, south of Splinterspear Junction, its waters running clear against the surrounding muck. Within its depths lairs Dreamwatcher Forktongue, a creature spoken of as rare even among the swamp's dangers.",
-			source = "https://warcraft.wiki.gg/wiki/Purespring_Cavern",
 		},
 		["shifting mire"] = {
 			name = "Shifting Mire",
@@ -4113,19 +2775,13 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Temple_of_Atal'Hakkar",
 		},
 	},
-	-- Westfall: 23 subzones
+	-- Westfall: 17 subzones
 	[1436] = {
 		["alexston farmstead"] = {
 			name = "Alexston Farmstead",
 			short = "The fields at Alexston Farmstead once fed families, before the Defias Brotherhood claimed them as they claimed so many farms across Westfall.",
 			full = "The fields at Alexston Farmstead once fed families, before the Defias Brotherhood claimed them as they claimed so many farms across Westfall. The Brotherhood has since fallen, but no one has returned to work the soil. Only the mechanical Harvest Watchers remain, striding through empty rows as if still guarding a harvest no one will bring in.\n\nBaros Alexston, who rose to serve Stormwind City as an architect, was born to nothing here, and worked this same land as a boy.",
 			source = "https://warcraft.wiki.gg/wiki/Alexston_Farmstead",
-		},
-		["cooper residence"] = {
-			name = "Cooper Residence",
-			short = "In Moonbrook stands the house that once belonged to the Cooper family.",
-			full = "In Moonbrook stands the house that once belonged to the Cooper family. Little remains of them now but a dusty journal left behind and a scattered copy of the Moonbrook Times, pages left on the floor where no one has come to read them.",
-			source = "https://warcraft.wiki.gg/wiki/Cooper_Residence",
 		},
 		["dagger hills"] = {
 			name = "Dagger Hills",
@@ -4144,12 +2800,6 @@ ZoneLore.Subzones = {
 			short = "Beneath Moonbrook the tunnels run deep, and once they ran with gold. Before the orcs ever crossed into human lands, the Deadmines fed Stormwind's treasury -- by some accounts a third of it came from this rock.",
 			full = "Beneath Moonbrook the tunnels run deep, and once they ran with gold. Before the orcs ever crossed into human lands, the Deadmines fed Stormwind's treasury -- by some accounts a third of it came from this rock. The First War emptied the mines of miners, and afterward they were left for dead, thought haunted, and untouched for a long while.\n\nInto that silence came Edwin VanCleef, who gathered the Defias Brotherhood, former laborers turned brigands, and set them to building a juggernaught in the depths with goblin help.\n\nVanCleef's reckoning came when Gryan Stoutmantle sent soldiers through Ironclad Cove to the juggernaught itself. They killed VanCleef there and carried his head off as proof. What none of them saw was his daughter, watching from the shadows as her father was beheaded. Vanessa VanCleef did not forget it. Five years later she had made herself leader of the Defias in his place, and set the mines back to their old purpose, raising new hands to finish the juggernaught her father had begun.",
 			source = "https://warcraft.wiki.gg/wiki/Deadmines",
-		},
-		["defias hideout"] = {
-			name = "Defias Hideout",
-			short = "The Defias Hideout stands in Moonbrook, unremarkable but for the hidden way upstairs leading down into the Deadmines. It is often empty, the Defias out guarding the town or below at work in the mines.",
-			full = "The Defias Hideout stands in Moonbrook, unremarkable but for the hidden way upstairs leading down into the Deadmines. It is often empty, the Defias out guarding the town or below at work in the mines. Vagrants have since drifted in and filled it, as they have the rest of Moonbrook.",
-			source = "https://warcraft.wiki.gg/wiki/Defias_Hideout",
 		},
 		["demonts place"] = {
 			name = "Demont's Place",
@@ -4205,24 +2855,6 @@ ZoneLore.Subzones = {
 			full = "Beneath the fields of Moonbrook once ran a third of Stormwind's treasury, gold pulled from the tunnels later called the Deadmines. The town was the kingdom's breadbasket, until the disbanding of the Stonemasons Guild set off riots that killed Queen Tiffin Wrynn. King Varian's vengeance for her death fell hardest on the guild, and the Stonemasons fled into the farmlands of Westfall to escape him. Stoked from the shadows, their anger became the Defias Brotherhood. Under Edwin VanCleef they turned to banditry, drove the farmers from Moonbrook, and took the abandoned mine tunnels beneath the town as their headquarters, working there in secret to build a weapon meant to destroy Stormwind from the sea.\n\nFor years no army came to answer them. It was Gryan Stoutmantle's People's Militia, and the heroes he gathered to his cause, who finally broke the Brotherhood's hold, following VanCleef into the Deadmines and killing him there. Only then was Moonbrook free again.",
 			source = "https://warcraft.wiki.gg/wiki/Moonbrook",
 		},
-		["moonbrook schoolhouse"] = {
-			name = "Moonbrook Schoolhouse",
-			short = "The schoolhouse stands in the north-western corner of Moonbrook, built like a town hall, with a cemetery laid out behind it.",
-			full = "The schoolhouse stands in the north-western corner of Moonbrook, built like a town hall, with a cemetery laid out behind it.\n\nIt was raised for one purpose: to give Stalvan Mistmantle a place to teach, and in time he became its headmaster. Within the main room of the ground floor, a footlocker once held a letter revealing this -- that the building was never simply a hall of learning, but one shaped around a single man.",
-			source = "https://warcraft.wiki.gg/wiki/Moonbrook_Schoolhouse",
-		},
-		["mortwakes tower"] = {
-			name = "Mortwake's Tower",
-			short = "Mortwake's Tower stands at the southeastern edge of Westfall, near the river, north of the Dagger Hills. It was once called Klaven's Tower, after Klaven Mortwake, the rogue Defias master who claimed it.",
-			full = "Mortwake's Tower stands at the southeastern edge of Westfall, near the river, north of the Dagger Hills. It was once called Klaven's Tower, after Klaven Mortwake, the rogue Defias master who claimed it.\n\nMortwake ran the place as a hub for smuggling, working it alongside Jerod's Landing in Elwynn Forest to move goods stolen out of the Redridge Mountains. It became so central to Defias operations that people stopped calling it anything else -- simply the \"Defias Tower.\"\n\nThe tower stayed thick with the fumes of troll poisons Mortwake's people worked with, and those fumes left the inhabitants weakened, an unintended gift to anyone skilled enough to move through unseen.",
-			source = "https://warcraft.wiki.gg/wiki/Mortwake's_Tower",
-		},
-		["raging chasm"] = {
-			name = "Raging Chasm",
-			short = "A beam of energy tears upward from the earth here, and around it the ground itself seems undone -- trees and stones caught turning in the air.",
-			full = "A beam of energy tears upward from the earth here, and around it the ground itself seems undone -- trees and stones caught turning in the air. Slimes have taken to the crater, glistening in the broken light.",
-			source = "https://warcraft.wiki.gg/wiki/Raging_Chasm",
-		},
 		["saldeans farm"] = {
 			name = "Saldean's Farm",
 			short = "Saldean's Farm stands alone among the farmsteads of Westfall, for it is the one the Defias Brotherhood never fully took.",
@@ -4234,12 +2866,6 @@ ZoneLore.Subzones = {
 			short = "Sentinel Hill stands on its rise above Westfall, a tower ringed by cottages, forge, and lumber mill.",
 			full = "Sentinel Hill stands on its rise above Westfall, a tower ringed by cottages, forge, and lumber mill. King Varian Wrynn poured supplies, troops, and siege engines into it, hoping to raise it from the wreckage of a kingdom's breadbasket and shelter Stormwind's homeless. That hope is unfinished. The stronghold's gates are still closed to the ragged crowds camped in its shadow, waiting for walls that are not yet theirs to enter.\n\nFrom this hill the garrison has pushed outward, clawing back Moonbrook, the Furlbrow's Pumpkin Farm, and the Jansen Stead. But the reclaiming has come at a cost: the Defias Brotherhood, born of Westfall's own dispossessed, has turned on the very hill meant to save them.\n\nSentinel Hill remains a promise still being paid for, watched over by soldiers holding a line between a starving countryside and the crowd outside the gate.",
 			source = "https://warcraft.wiki.gg/wiki/Sentinel_Hill",
-		},
-		["sentinel tower"] = {
-			name = "Sentinel Tower",
-			short = "Sentinel Tower is a prominent landmark in Westfall. It stands upon the apex of Sentinel Hill as a scout tower to watch over the surrounding landscape.",
-			full = "Sentinel Tower is a prominent landmark in Westfall. It stands upon the apex of Sentinel Hill as a scout tower to watch over the surrounding landscape. This is where one can find the Westfall Brigade's leaders, including Gryan Stoutmantle, the group's commander.\n\nAt some point, James Blackridge and his parents, accompanied by his friends Liam and Bram Woodring, came to take refuge at the Sentinel Tower after fleeing the Deadmines, where a conflict took place between the Defias Brotherhood and the Bloodsail Buccaneers.\n\nWhen Gryan tried to interrogate him about Helix Gearbreaker, he only announced the end for them. He was later freed by Vanessa VanCleef when the Defias Brotherhood attacked and burned Sentinel Hill, so that he could command the Juggernaught, which was being built in the Deadmines.",
-			source = "https://warcraft.wiki.gg/wiki/Sentinel_Tower",
 		},
 		["stendels pond"] = {
 			name = "Stendel's Pond",
@@ -4254,7 +2880,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Westfall_Lighthouse",
 		},
 	},
-	-- Wetlands: 27 subzones
+	-- Wetlands: 23 subzones
 	[1437] = {
 		["angerfang encampment"] = {
 			name = "Angerfang Encampment",
@@ -4316,12 +2942,6 @@ ZoneLore.Subzones = {
 			full = "The Green Belt is a marsh thick with crocolisks, bog beasts, and oozes, its ground never solid. Rethiel the Greenwarden watches over it, and lately his patience has worn thin, as flooding and stranger disturbances creep through the wetland he tends.\n\nTo the southeast lies a wrecked Dragonmaw clan caravan, half-sunk in the bog and crawling with red whelps, a wound left from the clan's ruin at Grim Batol. The Dragonmaw have not learned from it. Bands of their orcs still work the marsh, hunting black dragon whelps to steal and break to their will. The black dragon Pyrricion has not forgiven them for it, and neither have his slavers, who are often seen there with blades drawn against the Dragonmaw over the stolen brood.",
 			source = "https://warcraft.wiki.gg/wiki/Green_Belt",
 		},
-		["greenwardens grove"] = {
-			name = "Greenwarden's Grove",
-			short = "A dwarven legend spoke of a plant-man who watched over the Wetlands, and the night elves who heard it would not rest until they had found him.",
-			full = "A dwarven legend spoke of a plant-man who watched over the Wetlands, and the night elves who heard it would not rest until they had found him. They found Rethiel the Greenwarden, and rather than leave him to his solitary watch, they settled beside him, raising a grove to guard the one who had guarded the land. Ferilon Leafborn leads the druids who keep it now.\n\nA tower and an inn stand within the grove, and a moonwell besides, its waters once visited by Arwis Blackstone.",
-			source = "https://warcraft.wiki.gg/wiki/Greenwarden's_Grove",
-		},
 		["grim batol"] = {
 			name = "Grim Batol",
 			short = "Grim Batol is a mountain fortress located in the western Twilight Highlands (formerly in the eastern Wetlands). It has great walls and spires that reach toward a steel-gray sky, but the stronghold's bulk is underground.",
@@ -4376,23 +2996,11 @@ ZoneLore.Subzones = {
 			full = "Saltspray Glen lies where the Wetlands meet Baradin Bay, bordered by Bluegill Marsh and Ironbeard's Tomb. When the wind rises off the water, the bay throws its spray far inland here, salting the ground, which is how the glen earned its name. Like Black Channel Marsh, Whelgar's Excavation Site, and Raptor Ridge nearby, it crawls with nesting raptors.",
 			source = "https://warcraft.wiki.gg/wiki/Saltspray_Glen",
 		},
-		["slabchisels survey"] = {
-			name = "Slabchisel's Survey",
-			short = "Slabchisel's Survey sits near the deserted gnoll camps close to Dun Algaz, a dwarven foothold raised where the gnolls once denned before they abandoned the ground to whoever would claim it.",
-			full = "Slabchisel's Survey sits near the deserted gnoll camps close to Dun Algaz, a dwarven foothold raised where the gnolls once denned before they abandoned the ground to whoever would claim it.",
-			source = "https://warcraft.wiki.gg/wiki/Slabchisel's_Survey",
-		},
 		["sundown marsh"] = {
 			name = "Sundown Marsh",
 			short = "Sundown Marsh is the deepest, wettest reach of the Wetlands, its waters full of crocolisks, gnolls, raptors, bog beasts, and oozes.",
 			full = "Sundown Marsh is the deepest, wettest reach of the Wetlands, its waters full of crocolisks, gnolls, raptors, bog beasts, and oozes.\n\nYet in the middle of it stands Swiftgear Station, a small stone house with a windmill turning over the swamp. Here live an odd couple, Fradd Swiftgear and Wenna Silkbeard, trading the strange things the marsh gives up and recipes found nowhere else, a single dry light in a swamp that welcomes almost no one.",
 			source = "https://warcraft.wiki.gg/wiki/Sundown_Marsh",
-		},
-		["swiftgear station"] = {
-			name = "Swiftgear Station",
-			short = "Swiftgear Station stands in Sundown Marsh, in the northwest of the Wetlands. Fradd built the outpost up from nothing, and it took his name.",
-			full = "Swiftgear Station stands in Sundown Marsh, in the northwest of the Wetlands. Fradd built the outpost up from nothing, and it took his name. Now Shilah Slabchisel keeps watch here, holding the ground safe enough for more settlers to follow where Fradd began.",
-			source = "https://warcraft.wiki.gg/wiki/Swiftgear_Station",
 		},
 		["thandol span"] = {
 			name = "Thandol Span",
@@ -4412,14 +3020,8 @@ ZoneLore.Subzones = {
 			full = "Whelgar's Excavation Site lies east of Menethil Harbor, a dwarven dig overrun by mottled raptors. The diggers were pinned on a ridge above their own pits and did not hold; they abandoned the site and fell back to Whelgar's Retreat, a camp raised off the main road.\n\nThe dig itself has not gone quiet. Paleolithic elementals and living fossils move among the exposed earth, and Sarltooth, once hunted here and killed, is seen again from time to time.",
 			source = "https://warcraft.wiki.gg/wiki/Whelgar's_Excavation_Site",
 		},
-		["whelgars retreat"] = {
-			name = "Whelgar's Retreat",
-			short = "Whelgar's Retreat sits on a hill above the Whelgar Excavation Site, marked by Explorer's League banners and torches, dead raptors along the western path showing what it costs to keep the way clear.",
-			full = "Whelgar's Retreat sits on a hill above the Whelgar Excavation Site, marked by Explorer's League banners and torches, dead raptors along the western path showing what it costs to keep the way clear. Prospector Whelgar leads the dig below, his crew turning up artifacts and fossils at the League's direction.\n\nBut the Retreat stands close enough to a Dragonmaw clan encampment that Whelgar cannot set the thought aside.",
-			source = "https://warcraft.wiki.gg/wiki/Whelgar's_Retreat",
-		},
 	},
-	-- Teldrassil: 18 subzones
+	-- Teldrassil: 17 subzones
 	[1438] = {
 		["aldrassil"] = {
 			name = "Aldrassil",
@@ -4511,12 +3113,6 @@ ZoneLore.Subzones = {
 			full = "Starbreeze Village stood once as a home of the night elves, its few small houses set among the trees southeast of Shadowglen. That life ended when the Gnarlpine furbolgs, twisted by corruption, overran the village and made it theirs. Uruson now paces its paths in place of the elves who once lived there, and Ferocitas the Dream Eater lurks at its edges, watching over what the furbolgs have claimed.",
 			source = "https://warcraft.wiki.gg/wiki/Starbreeze_Village",
 		},
-		["wellspring hovel"] = {
-			name = "Wellspring Hovel",
-			short = "The Wellspring Hovel sits along the road between Darnassus and Dolanaar, a small hamlet of little note, quiet against the great trees of Teldrassil.",
-			full = "The Wellspring Hovel sits along the road between Darnassus and Dolanaar, a small hamlet of little note, quiet against the great trees of Teldrassil.",
-			source = "https://warcraft.wiki.gg/wiki/Wellspring_Hovel",
-		},
 		["wellspring lake"] = {
 			name = "Wellspring Lake",
 			short = "Wellspring Lake is fed by a spring rising from deep within Teldrassil, its overflow running off as the Wellspring River. Night elven fishermen once favored these waters.",
@@ -4530,7 +3126,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Wellspring_River",
 		},
 	},
-	-- Darkshore: 48 subzones
+	-- Darkshore: 15 subzones
 	[1439] = {
 		["ametharan"] = {
 			name = "Ameth'Aran",
@@ -4538,41 +3134,11 @@ ZoneLore.Subzones = {
 			full = "The ruins of Ameth'Aran can be found to the southeast of the Ruins of Auberdine, and east from the Blazing Strand, in Darkshore. Once it was a place where the servants of Queen Azshara freely practiced their powerful magics. Now it is inhabited by the restless spirits of the Highborne that once dwelt within its walls.\n\nIn Ameth'Aran's ruins lie two large ancient tablets, scrawled with the stories of the town and its fall.",
 			source = "https://warcraft.wiki.gg/wiki/Ameth'Aran",
 		},
-		["apothecary darkshore"] = {
-			name = "Apothecary (Darkshore)",
-			short = "A Forsaken tent stands on Gloomtide Strand, its alchemy vat kept boiling. When the Alliance holds Darkshore, the Druids of the Branch smother it in creeping growth.",
-			full = "A Forsaken tent stands on Gloomtide Strand, its alchemy vat kept boiling. When the Alliance holds Darkshore, the Druids of the Branch smother it in creeping growth.",
-			source = "https://warcraft.wiki.gg/wiki/Apothecary_(Darkshore)",
-		},
-		["ashenvale front"] = {
-			name = "Ashenvale Front",
-			short = "The Ashenvale Front is located in Darkshore.",
-			full = "The Ashenvale Front is located in Darkshore.",
-			source = "https://warcraft.wiki.gg/wiki/Ashenvale_Front",
-		},
-		["ashwood depot"] = {
-			name = "Ashwood Depot",
-			short = "I'm not able to write this one. The events described -- the War of the Thorns, the Battle for Darkshore, Tyrande as the avatar of the Night Warrior -- all fall after the point where this world stops.",
-			full = "I'm not able to write this one. The events described -- the War of the Thorns, the Battle for Darkshore, Tyrande as the avatar of the Night Warrior -- all fall after the point where this world stops. Nothing in the article describes Ashwood Depot as it stood before that war, so there's no lore here I can retell within the bounds set.",
-			source = "https://warcraft.wiki.gg/wiki/Ashwood_Depot",
-		},
 		["auberdine"] = {
 			name = "Auberdine",
 			short = "Auberdine stood where the land itself remembers an older shape. Before the Sundering tore the world apart, this coast lay far inland, in the shadow of the great cities of the Kaldorei Empire.",
 			full = "Auberdine stood where the land itself remembers an older shape. Before the Sundering tore the world apart, this coast lay far inland, in the shadow of the great cities of the Kaldorei Empire. When the seas rushed in and carved Darkshore into being, those cities were lost, and every attempt to settle the new coastline afterward came to nothing. Only Auberdine endured, the one stronghold that held against the emptiness of the shore.\n\nIt grew strange for a night elven town, and Darnassus never let it forget it. Lit brighter than kin thought proper, its signposts written in both Darnassian and Common so that dwarves, gnomes, humans and high elves passing through its port could read them, Auberdine earned a reputation as a home for outcasts and misfits. Those who knew it otherwise, like Shandris Feathermoon, remembered it as a place that had once rung with laughter.\n\nThen the whole town fell still. Every soul in Auberdine sank into the unwaking grip of the Emerald Nightmare, and only fire and a shaking of the earth followed, breaking the port from its footing and wrecking most of what stood. Those who survived did not stay.",
 			source = "https://warcraft.wiki.gg/wiki/Auberdine",
-		},
-		["auberdine coast"] = {
-			name = "Auberdine Coast",
-			short = "A long pier still reaches out from the Ruins of Auberdine into the water, and wisps drift along its length, tending to what remains as though the town beneath them might still be waiting for care.",
-			full = "A long pier still reaches out from the Ruins of Auberdine into the water, and wisps drift along its length, tending to what remains as though the town beneath them might still be waiting for care.",
-			source = "https://warcraft.wiki.gg/wiki/Auberdine_Coast",
-		},
-		["auberdine refugee camp"] = {
-			name = "Auberdine Refugee Camp",
-			short = "Outside the ruins of Auberdine, a camp of tents and cookfires holds what remains of the town's people, who fled here when Auberdine fell, unwilling to leave the wreckage of their home entirely behind.",
-			full = "Outside the ruins of Auberdine, a camp of tents and cookfires holds what remains of the town's people, who fled here when Auberdine fell, unwilling to leave the wreckage of their home entirely behind.",
-			source = "https://warcraft.wiki.gg/wiki/Auberdine_Refugee_Camp",
 		},
 		["bashalaran"] = {
 			name = "Bashal'Aran",
@@ -4580,41 +3146,11 @@ ZoneLore.Subzones = {
 			full = "Bashal'Aran is a night elven ruin found to the southwest of Lor'danel in northern Darkshore, formerly consisting of ancient Highborne ruins.\n\nDuring the Battle for Darkshore, the ruins could be captured and turned into a night elven or a Forsaken base of operations, from where to launch an attack against the Alliance or Horde forces controlling the region. The warfront was won by the Alliance, but Bashal'Aran was later left in ruins once again.",
 			source = "https://warcraft.wiki.gg/wiki/Bashal'Aran",
 		},
-		["bashalaran collapse"] = {
-			name = "Bashal'Aran Collapse",
-			short = "The Bashal'Aran Collapse lies beneath the Maw of the Void, the sunken remnant of what was once Bashal'Aran. Water pools at its bottom, and a path spirals upward along the broken stone.",
-			full = "The Bashal'Aran Collapse lies beneath the Maw of the Void, the sunken remnant of what was once Bashal'Aran. Water pools at its bottom, and a path spirals upward along the broken stone.\n\nBielara Ivyshroud of the Cenarion Circle keeps watch near where one falls into the ruin, ready to lead a way back to the surface for anyone who reaches her.\n\nFurther up the spiral, Forlorn Highborne linger among the wreckage. At the path's end, on a cliff over the collapse, the demon hunter Telarius Voidstrider carries out a ritual of his own devising, working alone. Among his effects are writings called the Dark Herald's, dark enough to be worth carrying back out of the depths.",
-			source = "https://warcraft.wiki.gg/wiki/Bashal'Aran_Collapse",
-		},
-		["bitterstone quarry"] = {
-			name = "Bitterstone Quarry",
-			short = "The Bitterstone tribe of ogres has dug in north of the Eye of the Vortex, working the stone east of where the Auberdine refugees now shelter.",
-			full = "The Bitterstone tribe of ogres has dug in north of the Eye of the Vortex, working the stone east of where the Auberdine refugees now shelter. Their pits scar the earth of Darkshore, a rough and guarded place amid the quiet of the coast.",
-			source = "https://warcraft.wiki.gg/wiki/Bitterstone_Quarry",
-		},
-		["blackwood camp"] = {
-			name = "Blackwood Camp",
-			short = "Blackwood Camp lies south of the Ruins of Auberdine, home to the Blackwood furbolg.",
-			full = "Blackwood Camp lies south of the Ruins of Auberdine, home to the Blackwood furbolg. The tribe had fallen to corruption under the satyrs until Malfurion Stormrage called upon their leader, Elder Brownpaw, warning that the land itself was tearing apart. A night elf ritual cleansed the tribe and killed the satyrs, and once the fire elementals threatening the land were stopped, the Blackwoods honored their word and answered Stormrage's call.",
-			source = "https://warcraft.wiki.gg/wiki/Blackwood_Camp",
-		},
 		["blackwood den"] = {
 			name = "Blackwood Den",
 			short = "Deep in southern Darkshore, where the trees give way toward Ashenvale, a scatter of corrupted furbolg camps and a small cave once made up the Blackwood Den, also called Blackwood Hold.",
 			full = "Deep in southern Darkshore, where the trees give way toward Ashenvale, a scatter of corrupted furbolg camps and a small cave once made up the Blackwood Den, also called Blackwood Hold.\n\nWithin the cave a lone night elf named Volcor was held, awaiting rescue that had to be arranged from Auberdine.\n\nBy the time war came to Darkshore, the furbolgs had renamed their den Kor'gar.",
 			source = "https://warcraft.wiki.gg/wiki/Blackwood_Den",
-		},
-		["blazing strand"] = {
-			name = "Blazing Strand",
-			short = "The Blazing Strand runs from the ruins of Ameth'Aran west to the shore of Darkshore, a stretch of ground scorched and broken along its whole length.",
-			full = "The Blazing Strand runs from the ruins of Ameth'Aran west to the shore of Darkshore, a stretch of ground scorched and broken along its whole length. Bilgewater goblins once worked oil operations here, drilling into the burned earth for what it could still yield.",
-			source = "https://warcraft.wiki.gg/wiki/Blazing_Strand",
-		},
-		["cinderfall grove"] = {
-			name = "Cinderfall Grove",
-			short = "North of Bashal'Aran, in the shadowed reaches of Darkshore, stands a stretch of forest known as Cinderfall Grove.",
-			full = "North of Bashal'Aran, in the shadowed reaches of Darkshore, stands a stretch of forest known as Cinderfall Grove.",
-			source = "https://warcraft.wiki.gg/wiki/Cinderfall_Grove",
 		},
 		["cliffspring falls"] = {
 			name = "Cliffspring Falls",
@@ -4622,53 +3158,11 @@ ZoneLore.Subzones = {
 			full = "Cliffspring Falls once ran clear, the source of the Cliffspring River and the drinking water of Darkshore. Now the cave at its source is corrupted.\n\nNo one agrees why. Some blame a taint seeping down from Felwood; others point to the Twilight's Hammer, whose cultists have been found deep within the cave. Naga crawl through the tunnels behind the falls as well.\n\nWhat was once the region's lifeblood now rises through ground held by cultists and naga, carrying its corruption out into Darkshore.",
 			source = "https://warcraft.wiki.gg/wiki/Cliffspring_Falls",
 		},
-		["cliffspring hollow"] = {
-			name = "Cliffspring Hollow",
-			short = "Behind Cliffspring Falls, the rock opens into a hollow. Zenn Foulhoof holds this place, gathering satyrs and grells to his purpose: a corruption meant to spread through the wildlife beyond the falls.",
-			full = "Behind Cliffspring Falls, the rock opens into a hollow. Zenn Foulhoof holds this place, gathering satyrs and grells to his purpose: a corruption meant to spread through the wildlife beyond the falls. Apothecary Furrows lingers here as well, among his company.",
-			source = "https://warcraft.wiki.gg/wiki/Cliffspring_Hollow",
-		},
 		["cliffspring river"] = {
 			name = "Cliffspring River",
 			short = "The Cliffspring River spills from Cliffspring Falls in northern Darkshore and runs on to the sea. Its waters no longer run clean.",
 			full = "The Cliffspring River spills from Cliffspring Falls in northern Darkshore and runs on to the sea. Its waters no longer run clean. The Stormscale naga have tainted the river, and the creatures of Darkshore that come to drink from it sicken for the trouble.",
 			source = "https://warcraft.wiki.gg/wiki/Cliffspring_River",
-		},
-		["delaryns demise"] = {
-			name = "Delaryn's Demise",
-			short = "On Mist's Edge, west of Lor'danel Landing, the ground remembers Delaryn Summermoon, who died here after Sylvanas Windrunner ordered Teldrassil burned.",
-			full = "On Mist's Edge, west of Lor'danel Landing, the ground remembers Delaryn Summermoon, who died here after Sylvanas Windrunner ordered Teldrassil burned. Around her lie the fallen: Ralara, Sarvonis, Tavar, and sentinels cut down beside them, left where they fell.",
-			source = "https://warcraft.wiki.gg/wiki/Delaryn's_Demise",
-		},
-		["dredge"] = {
-			name = "Dredge",
-			short = "A goblin platform of the Bilgewater Dredge Fleet, the Dredge sits on the Veiled Sea north of Lor'danel Landing. Sira Moonwarden commands the Horde's defense from here when the Alliance attacks.",
-			full = "A goblin platform of the Bilgewater Dredge Fleet, the Dredge sits on the Veiled Sea north of Lor'danel Landing. Sira Moonwarden commands the Horde's defense from here when the Alliance attacks. When the Horde advances, the platform lies overgrown with plants, claimed as a base by Maiev Shadowsong.",
-			source = "https://warcraft.wiki.gg/wiki/Dredge",
-		},
-		["earthshatter cavern"] = {
-			name = "Earthshatter Cavern",
-			short = "Earthshatter Cavern, beneath Ameth'Aran, is held by the Twilight's Hammer, who have enslaved its earth elementals.",
-			full = "Earthshatter Cavern, beneath Ameth'Aran, is held by the Twilight's Hammer, who have enslaved its earth elementals. Inside, the cult has torn open a portal to the Emerald Nightmare, and through it they keep Thessera imprisoned.",
-			source = "https://warcraft.wiki.gg/wiki/Earthshatter_Cavern",
-		},
-		["eye of the vortex"] = {
-			name = "Eye of the Vortex",
-			short = "The land near Ameth'Aran rises into a hill, and at its top a vortex once turned, a storm so vast it could be seen across all of Darkshore.",
-			full = "The land near Ameth'Aran rises into a hill, and at its top a vortex once turned, a storm so vast it could be seen across all of Darkshore. Twilight's Hammer agents flew close about its peak, feeding it, for as long as it lived it threatened to tear the region loose and sweep it into the sea.\n\nIt was Malfurion Stormrage, newly woken, who set himself against it, spending every ounce of his power to hold the vortex from shattering. With the help of Elder Brownpaw, Selenn, Aroom, and Thessera, the cultists sustaining the storm were driven off, and in time the vortex died.\n\nBy the time war came again to the Thorns, the tornado was already gone.",
-			source = "https://warcraft.wiki.gg/wiki/Eye_of_the_Vortex",
-		},
-		["forlorn crossing"] = {
-			name = "Forlorn Crossing",
-			short = "Forlorn Crossing lies where the paths to Bashal'Aran, Gloomtide Strand, Cinderfall Grove, and Ashwood Depot all meet.",
-			full = "Forlorn Crossing lies where the paths to Bashal'Aran, Gloomtide Strand, Cinderfall Grove, and Ashwood Depot all meet. When Darkshore stands under Alliance control, night elven patrols move through the crossing in force, watching the roads that pass through it.",
-			source = "https://warcraft.wiki.gg/wiki/Forlorn_Crossing",
-		},
-		["gloomtide strand"] = {
-			name = "Gloomtide Strand",
-			short = "On the western shore of Darkshore stands a camp built to a design foreign to the forest around it, raised by Horde hands. The Forsaken hold it now.",
-			full = "On the western shore of Darkshore stands a camp built to a design foreign to the forest around it, raised by Horde hands. The Forsaken hold it now. Wagons rigged for plague stand among the timber walls, tended by an apothecary who mixes sickness meant to spread through the land. When Sentinels and Druids of the Branch reclaim the shore, the forest is coaxed back to grow over the camp itself, burying the Horde work in green.",
-			source = "https://warcraft.wiki.gg/wiki/Gloomtide_Strand",
 		},
 		["grove of the ancients"] = {
 			name = "Grove of the Ancients",
@@ -4676,35 +3170,11 @@ ZoneLore.Subzones = {
 			full = "The Grove of the Ancients is a sacred ruin, all that remains standing of an old night elven temple, built around the surging waters of the Wildbend River in the southeastern reaches of Darkshore, close against the mountains. Its stones are badly damaged, but the place has not been abandoned. Onu, an Ancient of Lore, still keeps residence here, and the Circle of Ancients gathers within its broken walls to counsel on the fate of the forests.\n\nProtecting the grove drew on an enormous store of energy, and in the end it cost the guardians their wakefulness. Most of them have fallen into a deep slumber, leaving the ruin quieter than it once was, its defenders sleeping among the roots and stones rather than standing watch.\n\nOnu does not stand alone. A pair of merchants keep their trade here amid the ruin, and a druid sleeps nearby, undisturbed by the grove's long history of guardianship.",
 			source = "https://warcraft.wiki.gg/wiki/Grove_of_the_Ancients",
 		},
-		["korgar"] = {
-			name = "Kor'gar",
-			short = "Blackwood Den once belonged to the furbolg tribe it was named for. The Horde seized it during the War of the Thorns, and the old name was seized with it.",
-			full = "Blackwood Den once belonged to the furbolg tribe it was named for. The Horde seized it during the War of the Thorns, and the old name was seized with it. By the time war returned to Darkshore, it stood renamed: Kor'gar, an orc outpost.",
-			source = "https://warcraft.wiki.gg/wiki/Kor'gar",
-		},
 		["long wash"] = {
 			name = "Long Wash",
 			short = "The Long Wash takes its name as a small joke, for it is the shortest stretch of coast in Darkshore, running south from the Ruins of Auberdine to a point due west of Ameth'Aran.",
 			full = "The Long Wash takes its name as a small joke, for it is the shortest stretch of coast in Darkshore, running south from the Ruins of Auberdine to a point due west of Ameth'Aran. The sky above is perpetually overcast, and the sand is littered with driftwood, wreckage, and the carcasses of dead sea creatures.\n\nDuring the Horde's invasion of Darkshore, the Long Wash became a battlefield, as soldiers came down onto the sand hunting for food and the night elves met them there.",
 			source = "https://warcraft.wiki.gg/wiki/Long_Wash",
-		},
-		["lordanel"] = {
-			name = "Lor'danel",
-			short = "Lor'danel sits between two waterfalls, on a spit of land where the sea pours inland through a whirlpool, the ground and trees kept a green that the rest of Darkshore has lost.",
-			full = "Lor'danel sits between two waterfalls, on a spit of land where the sea pours inland through a whirlpool, the ground and trees kept a green that the rest of Darkshore has lost. Bridges carry the land route in and out; no dock breaks the shore.\n\nWhen Auberdine fell to the water elementals that overran its ruins, it was Lor'danel that took in the last of its people. Sentinels and hippogryphs flew out to bring the survivors home, and the priests here spent their strength healing the wounded and the drowned.\n\nThe peace did not last. Before Teldrassil burned, the Horde struck Lor'danel from both directions at once, Sylvanas Windrunner coming from the south and Varok Saurfang from the north. Civilians were scattered in the chaos, some taken by the Horde, some found and carried to safety by the Alliance. Afterward Lor'danel remained a battlefield, its buildings burned and its moonwell defiled, while refugees crowded the beach north of the town with nowhere else to go.",
-			source = "https://warcraft.wiki.gg/wiki/Lor'danel",
-		},
-		["lordanel landing"] = {
-			name = "Lor'danel Landing",
-			short = "Lor'danel Landing stands on the shore of the Veiled Sea, just west of the blighted night elven town of Lor'danel, in the region called Mist's Edge.",
-			full = "Lor'danel Landing stands on the shore of the Veiled Sea, just west of the blighted night elven town of Lor'danel, in the region called Mist's Edge. The Horde raised this camp only after Lor'danel itself was poisoned. The Forsaken hold it now.",
-			source = "https://warcraft.wiki.gg/wiki/Lor'danel_Landing",
-		},
-		["lornesta mine"] = {
-			name = "Lornesta Mine",
-			short = "The mine lies quiet, its tunnels empty of story, waiting for no history worth telling yet.",
-			full = "The mine lies quiet, its tunnels empty of story, waiting for no history worth telling yet.",
-			source = "https://warcraft.wiki.gg/wiki/Lornesta_Mine",
 		},
 		["masters glaive"] = {
 			name = "Master's Glaive",
@@ -4712,35 +3182,11 @@ ZoneLore.Subzones = {
 			full = "In the southwest reaches of Darkshore lies a monstrous skull, and driven into it a blade too vast for any mortal hand: an adamantine glaive, buried to the hilt in bone.\n\nThe tablets unearthed at Remtravel's Excavation tell what happened here. The skull belongs to Soggoth the Slitherer, a herald of the Old Gods, and it was here that the titans sent twenty stone giants against him. Nineteen died. Only Kronn, the largest, remained, and Soggoth's tendrils closed around him. Kronn did not fight free. He let himself be dragged in, closer and closer to the thing's skull, until he was near enough to drive his sword through bone. He died doing it, but Soggoth fell, and the giant's sword stayed where he left it. It has been called the Master's Glaive ever since.\n\nThe ground here was sacred to the night elves once. It is theirs no longer. The Twilight's Hammer holds it now, digging through Soggoth's remains, working toward one end: to put life back into what Kronn's blade ended.",
 			source = "https://warcraft.wiki.gg/wiki/Master's_Glaive",
 		},
-		["maw of the void"] = {
-			name = "Maw of the Void",
-			short = "The waters of Darkshore do not simply reach the sea. Every stream in the zone, the Cliffspring River among them, is drawn southeast toward a single point where the coastline gives way to a vast whirlpool.",
-			full = "The waters of Darkshore do not simply reach the sea. Every stream in the zone, the Cliffspring River among them, is drawn southeast toward a single point where the coastline gives way to a vast whirlpool. Anything that falls into it is pulled down and away, vanishing beneath the surface into the dark below, only to fall a long way and come to rest, against all reason, unharmed in the collapse beneath Bashal'Aran.\n\nFor a time the Twilight's Hammer held the ground around the Maw, claiming it during the fighting that swept through Darkshore.",
-			source = "https://warcraft.wiki.gg/wiki/Maw_of_the_Void",
-		},
 		["mists edge"] = {
 			name = "Mist's Edge",
 			short = "The coast called Mist's Edge runs the length of Darkshore, from the ruins near Auberdine in the south, past Lor'danel, to the reach beyond the Shatterspear War Camp in the north.",
 			full = "The coast called Mist's Edge runs the length of Darkshore, from the ruins near Auberdine in the south, past Lor'danel, to the reach beyond the Shatterspear War Camp in the north. It is gray and gloomy, its beaches littered with the huge carcasses of sea animals and the wrecks of sunken ships. Crabs scuttle along the entire shore, and murlocs lurk in the shallows, an ever-present threat to anyone who lingers there.",
 			source = "https://warcraft.wiki.gg/wiki/Mist's_Edge",
-		},
-		["moonspray"] = {
-			name = "Moonspray",
-			short = "The Moonspray is a night elven transport vessel that serves as part of the Kaldorei Fleet in Kalimdor.",
-			full = "The Moonspray is a night elven transport vessel that serves as part of the Kaldorei Fleet in Kalimdor.",
-			source = "https://warcraft.wiki.gg/wiki/Moonspray",
-		},
-		["moontouched den"] = {
-			name = "Moontouched Den",
-			short = "East of the Ruins of Auberdine, the nests crowd together, hung with fetishes the wildkin wove long ago. Most of what moves among them now are not truly wildkin, but crazed spirits wearing their shapes.",
-			full = "East of the Ruins of Auberdine, the nests crowd together, hung with fetishes the wildkin wove long ago. Most of what moves among them now are not truly wildkin, but crazed spirits wearing their shapes.\n\nOnly one true wildkin remains. Aroom keeps to a small cave at the heart of the den, the last of her kind, while the mad spirits of her vanished kin circle outside.",
-			source = "https://warcraft.wiki.gg/wiki/Moontouched_Den",
-		},
-		["nazjvel"] = {
-			name = "Nazj'vel",
-			short = "The cave of Nazj'vel lies far south along the Twilight Shore, naga ground, its entrance long collapsed into rubble.",
-			full = "The cave of Nazj'vel lies far south along the Twilight Shore, naga ground, its entrance long collapsed into rubble.\n\nBefore the rock, goblins have piled explosives, meaning to blast their way back in.\n\nWhen the Horde holds Darkshore, Gilnean worgen come instead, tearing apart the goblins' machinery and leaving the charges unset before the sealed cave.",
-			source = "https://warcraft.wiki.gg/wiki/Nazj'vel",
 		},
 		["remtravels excavation"] = {
 			name = "Remtravel's Excavation",
@@ -4748,53 +3194,17 @@ ZoneLore.Subzones = {
 			full = "Prospector Remtravel gave his name to this dig site in Darkshore, and left it in disorder. Somewhere among the trenches lies a fossil he unearthed himself, a thing of unmistakable mystic properties, but the prospector's memory failed him and he could no longer say where he had put it down.\n\nThe digging woke worse things than forgetfulness. Gravelflint troggs came up out of the broken ground, and with them huge golems, stirred loose from whatever sleep the earth had kept them in. What was meant to be a place of careful study became a place no one enters without training.\n\nThe site was abandoned once, when the Horde marched in.",
 			source = "https://warcraft.wiki.gg/wiki/Remtravel's_Excavation",
 		},
-		["ruins of auberdine"] = {
-			name = "Ruins of Auberdine",
-			short = "While partially rebuilt by the night elves in the aftermath of the battle, a large portion of the town still remains ruined.",
-			full = "While partially rebuilt by the night elves in the aftermath of the battle, a large portion of the town still remains ruined.",
-			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Auberdine",
-		},
-		["ruins of lornesta"] = {
-			name = "Ruins of Lornesta",
-			short = "The waters of Darkshore have swallowed Lornesta, leaving a drowned tangle of stone where naga now nest.",
-			full = "The waters of Darkshore have swallowed Lornesta, leaving a drowned tangle of stone where naga now nest. Lady Janira commands the Darkscale Scouts who prowl these flooded ruins, and fuming toadstools grow rank among the wreckage.\n\nA cave has opened here, called the Lornesta Mine. Whoever holds Darkshore holds these ruins.",
-			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Lornesta",
-		},
 		["ruins of mathystra"] = {
 			name = "Ruins of Mathystra",
 			short = "The Ruins of Mathystra are located in northern Darkshore, just past the Tower of Althalaxx.",
 			full = "The Ruins of Mathystra are located in northern Darkshore, just past the Tower of Althalaxx. Mathystra used to be a night elven city before the Great Sundering, but it was utterly decimated by the destruction of the Well of Eternity, and has long since been abandoned by the night elves in favor of the smaller coastal villages further south.\n\nThe ruins contain scattered relics of the old Highborne, and young night elves sometimes attempt to search through Mathystra in search of these relics. Ghost Sabers can also be found here.\n\nThe ancient ruins were inhabited for a time by the Stormscale Naga, who aggressively guarded against any intrusions from outside sources. They established the Shatterspear War Camp next to the ruins. Several night elves are now scouting the area to learn about the trolls' intentions and movements.\n\nDuring the War of the Thorns, the area became a battlefield between the Horde and the night elves.\n\nWith the Battle for Darkshore, the Horde's actions drove the night elf spirits to madness. It is now solely occupied by the spirits of the Highborne.",
 			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Mathystra",
 		},
-		["shatterspear pass"] = {
-			name = "Shatterspear Pass",
-			short = "Shatterspear Pass climbs toward the trolls' vale, walled in timber at the bottom and watched by towers up to the tunnel through. The Horde built it once the Shatterspear tribe joined them.",
-			full = "Shatterspear Pass climbs toward the trolls' vale, walled in timber at the bottom and watched by towers up to the tunnel through. The Horde built it once the Shatterspear tribe joined them. Since the War of the Thorns, the Shatterspear have retaken the pass, and Moxo the Beheader now patrols it.\n\nAlong the road are said to lie failed messengers, or trolls who tried to force their way out and failed.",
-			source = "https://warcraft.wiki.gg/wiki/Shatterspear_Pass",
-		},
-		["shatterspear vale"] = {
-			name = "Shatterspear Vale",
-			short = "A waterfall has beaten against the stone of Shatterspear Vale for thousands of years, carving the bowl where the pool now lies, ringed by huts and fishing tents.",
-			full = "A waterfall has beaten against the stone of Shatterspear Vale for thousands of years, carving the bowl where the pool now lies, ringed by huts and fishing tents. The trolls who built them broke away from the Gurubashi Empire after the fall of Hakkar the Soulflayer, and when they settled this valley they struck a bargain with the night elves who held the region: they could stay so long as they never left the vale. Should anyone attack them there, no elf would come to their aid. The Shatterspears agreed, and counted the bargain a fortunate one.\n\nIt did not hold. When the Shatterspears took up with the Horde and raised fortifications around the vale for a strike on Lor'danel, the night elves answered first. Sentinels came down on hippogryphback and their ancient allies tore through the ground troops, and when the fighting ended the chieftain, Jor'kil the Soulripper, lay dead. His people's corpses still litter the ground outside the vale. The survivors scattered, and for a time nothing lived in the abandoned huts but a family of foxes.",
-			source = "https://warcraft.wiki.gg/wiki/Shatterspear_Vale",
-		},
-		["shatterspear war camp"] = {
-			name = "Shatterspear War Camp",
-			short = "Shatterspear War Camp stands north of the Ruins of Mathystra in Darkshore, raised by trolls of Shatterspear Vale preparing a strike against Lor'danel.",
-			full = "Shatterspear War Camp stands north of the Ruins of Mathystra in Darkshore, raised by trolls of Shatterspear Vale preparing a strike against Lor'danel. Orc and tauren enforcers hold the camp alongside them, guarding night elf prisoners, while a dock reaches into the ocean below.",
-			source = "https://warcraft.wiki.gg/wiki/Shatterspear_War_Camp",
-		},
 		["tower of althalaxx"] = {
 			name = "Tower of Althalaxx",
 			short = "In the days of the Great Sundering, when Queen Azshara raised the twin towns of Ameth'Aran and Bashal'Aran, she set an elf named Athrikus Narassin to govern them.",
 			full = "In the days of the Great Sundering, when Queen Azshara raised the twin towns of Ameth'Aran and Bashal'Aran, she set an elf named Athrikus Narassin to govern them. He was loyal at first, but the work bored him, and he withdrew more and more to a tower some distance away, until Althalaxx became his true home and his charge an afterthought.\n\nTen thousand years later, what had only been suspected of the tower proved true. A cult calling itself the Dark Strand had gathered within its walls, warlocks and a satyr among them, and Athrikus stood at their head. Behind them worked the Shadow Council, who had turned the idle elf's tower into an instrument of their own designs. Athrikus was struck down for it, and the tower itself was later burned to ruin.\n\nEven fire did not end it. War came again to Darkshore, and the ancestral spirits still bound to the ruins were driven to madness, Athrikus himself rising once more as a restless spectre. Soul gems of his making still lie among the stones, each one a small prison holding a Highborne spirit trapped since his death.",
 			source = "https://warcraft.wiki.gg/wiki/Tower_of_Althalaxx",
-		},
-		["twilight shore darkshore"] = {
-			name = "Twilight Shore (Darkshore)",
-			short = "The Twilight Shore is the wildest reach of Darkshore's coastline, where gray sands give way to broken cliffs and scattered islets as the shore runs south toward Ashenvale.",
-			full = "The Twilight Shore is the wildest reach of Darkshore's coastline, where gray sands give way to broken cliffs and scattered islets as the shore runs south toward Ashenvale. Murlocs crowd its shallows, and the waters beyond churn with threshadons fierce enough to drag down anyone who tries to swim for the beach.\n\nWhen war broke out across Darkshore between the Alliance and the Horde, the Darkscale naga saw their chance. While both sides were locked in the struggle further north, the naga slipped onto the Twilight Shore and seized it for their own.",
-			source = "https://warcraft.wiki.gg/wiki/Twilight_Shore_(Darkshore)",
 		},
 		["twilight vale"] = {
 			name = "Twilight Vale",
@@ -4808,20 +3218,8 @@ ZoneLore.Subzones = {
 			full = "The Wildbend River carries the corruption of Felwood down into Darkshore, its waters a continuation of the Bloodvenom River as it spills from the mountains above. It runs tainted through the southern reaches of the land, past the Grove of the Ancients, a wound in the water that never healed clean.",
 			source = "https://warcraft.wiki.gg/wiki/Wildbend_River",
 		},
-		["withering thicket"] = {
-			name = "Withering Thicket",
-			short = "The trees north of Auberdine's ruins grow thin and pale, and moonstalkers move easily between them where the canopy has failed to close.",
-			full = "The trees north of Auberdine's ruins grow thin and pale, and moonstalkers move easily between them where the canopy has failed to close.\n\nKeeper Karithus and Seraphine keep to this ground still.",
-			source = "https://warcraft.wiki.gg/wiki/Withering_Thicket",
-		},
-		["wreckage of the silver dawning"] = {
-			name = "Wreckage of the Silver Dawning",
-			short = "The Silver Dawning never reached port. Crossing the Great Sea toward Auberdine, she was set upon by murlocs off the northern coast of Darkshore, who dragged her down before she could make land.",
-			full = "The Silver Dawning never reached port. Crossing the Great Sea toward Auberdine, she was set upon by murlocs off the northern coast of Darkshore, who dragged her down before she could make land. Some of her crew swam ashore alive. Her captain went down with the ship. She rests still, just south of Mist Veil.",
-			source = "https://warcraft.wiki.gg/wiki/Wreckage_of_the_Silver_Dawning",
-		},
 	},
-	-- Ashenvale: 59 subzones
+	-- Ashenvale: 41 subzones
 	[1440] = {
 		["astranaar"] = {
 			name = "Astranaar",
@@ -4835,12 +3233,6 @@ ZoneLore.Subzones = {
 			full = "Bathran's Haunt was once a kaldorei place, its pillars raised and its marble cut in an age long past the elves who built it. They are gone now, and the ruin stood empty for that reason, forgotten among the trees of northwestern Ashenvale.\n\nIt stands empty no longer. Forsaken have taken the broken columns for their own, herbalists and the thugs who guard them, and wherever they walk the ground follows them into death: the grass browns, the flowers wither and drop. Among the fallen stone they have raised a rough laboratory, working over the local herbs for purposes they keep to themselves.\n\nChief among those herbs is Bathran's Hair, a remedial plant found nowhere else, and it is this that draws most who come here, cutting it from the tainted soil under the watch of the dead.",
 			source = "https://warcraft.wiki.gg/wiki/Bathran's_Haunt",
 		},
-		["blackfathom camp"] = {
-			name = "Blackfathom Camp",
-			short = "Talen leads the camp that watches the deep places to the northwest, keeping the Alliance's eye on Blackfathom and the darkness said to move beneath it.",
-			full = "Talen leads the camp that watches the deep places to the northwest, keeping the Alliance's eye on Blackfathom and the darkness said to move beneath it.",
-			source = "https://warcraft.wiki.gg/wiki/Blackfathom_Camp",
-		},
 		["blackfathom deeps"] = {
 			name = "Blackfathom Deeps",
 			short = "Blackfathom Deeps (or just Blackfathom) is a former, partially underwater temple to the moon goddess Elune that was once known as Lathar'Lazal.",
@@ -4852,12 +3244,6 @@ ZoneLore.Subzones = {
 			short = "Bloodtooth Camp lies west of the Falfarren River, southwest of the southern moonwell, named for Ran Bloodtooth, the furbolg who leads it.",
 			full = "Bloodtooth Camp lies west of the Falfarren River, southwest of the southern moonwell, named for Ran Bloodtooth, the furbolg who leads it. His tribe was once counted among the furbolgs of Ashenvale, but corruption has taken every one of them, and now they fall upon any outsider who comes near, Ran Bloodtooth guarded close by his own kind.",
 			source = "https://warcraft.wiki.gg/wiki/Bloodtooth_Camp",
-		},
-		["bolyuns camp"] = {
-			name = "Bolyun's Camp",
-			short = "Bolyun's Camp sits quiet in southwestern Ashenvale. Only three names are known to have kept it: Bolyun, whose camp it is, along with Alenndaar Lapidaar and Harlown Darkweave.",
-			full = "Bolyun's Camp sits quiet in southwestern Ashenvale. Only three names are known to have kept it: Bolyun, whose camp it is, along with Alenndaar Lapidaar and Harlown Darkweave. No battle marks it, no ruin looms over it -- only the three of them, dwelling there still.",
-			source = "https://warcraft.wiki.gg/wiki/Bolyun's_Camp",
 		},
 		["bough shadow"] = {
 			name = "Bough Shadow",
@@ -4919,18 +3305,6 @@ ZoneLore.Subzones = {
 			full = "Greenpaw Village is home to the Foulweald tribe, ruled by Chief Murgut and guided by the shaman Oakpaw. Its furbolg have turned corrupted, bearmen twisted from what their kind once were, drawing both Horde and Alliance against them.\n\nThe Horde struck hardest. Part of the village lies broken now, and the Foulweald furbolg who survived its fall were not driven off, but taken prisoner.",
 			source = "https://warcraft.wiki.gg/wiki/Greenpaw_Village",
 		},
-		["hellscreams watch"] = {
-			name = "Hellscream's Watch",
-			short = "Hellscream's Watch sits across the water from Astranaar, watching the elves it was raised to fight.",
-			full = "Hellscream's Watch sits across the water from Astranaar, watching the elves it was raised to fight. Named for the warchief, it stands as one of the Horde's most bitterly contested footholds in Ashenvale, a place won and held rather than settled in peace.",
-			source = "https://warcraft.wiki.gg/wiki/Hellscream's_Watch",
-		},
-		["house of edune"] = {
-			name = "House of Edune",
-			short = "The House of Edune stands in western Ashenvale, near the Shrine of Aessina by the shore of Lake Falathim. Here the Edune and Dunadaire families make their home.",
-			full = "The House of Edune stands in western Ashenvale, near the Shrine of Aessina by the shore of Lake Falathim. Here the Edune and Dunadaire families make their home.",
-			source = "https://warcraft.wiki.gg/wiki/House_of_Edune",
-		},
 		["howling vale"] = {
 			name = "Howling Vale",
 			short = "The Shrine of Mel'Thandris stands within the cave, its stone marked with an ancient inscription praising Elune, and beneath it, in Darnassian, the words: the truth is a guiding light.",
@@ -4949,12 +3323,6 @@ ZoneLore.Subzones = {
 			full = "Kargathia Keep stands among the felled trees of the Warsong Lumber Camp in eastern Ashenvale, near the Southfury River, its walls ringed with spiked barricades. It serves as the seat of command for the officers of the Warsong Clan, chosen for its position: close enough to Orgrimmar that reinforcements could reach it swiftly if the Alliance moved against the lumber camp.\n\nThe keep takes its name from Kargath Bladefist, honored also at Kargath in the Badlands and Bladefist Bay in Durotar. Overseer Gorthak commands here.",
 			source = "https://warcraft.wiki.gg/wiki/Kargathia_Keep",
 		},
-		["krolgs hut"] = {
-			name = "Krolg's Hut",
-			short = "Krolg's hut stands in the hills south of Mystral Lake, in Ashenvale, alone among the slopes.",
-			full = "Krolg's hut stands in the hills south of Mystral Lake, in Ashenvale, alone among the slopes.",
-			source = "https://warcraft.wiki.gg/wiki/Krolg's_Hut",
-		},
 		["lake falathim"] = {
 			name = "Lake Falathim",
 			short = "Lake Falathim once drew night elves to swim and fish, for the goddess's moonlight touched its waters always, day or night. It was a gentle place then.",
@@ -4966,24 +3334,6 @@ ZoneLore.Subzones = {
 			short = "Maestra's Post was once a small thing: a tower and a broad night elven hall, home to only a handful of souls, among them two humans, Feero Ironhand and Delgren the Purifier, the only ones of their kind anywhere in Ashenvale.",
 			full = "Maestra's Post was once a small thing: a tower and a broad night elven hall, home to only a handful of souls, among them two humans, Feero Ironhand and Delgren the Purifier, the only ones of their kind anywhere in Ashenvale.\n\nThat quiet ended when the Horde came. Under Orux Thrice-Damned, warriors overran the post, and in the chaos Feero and Delgren were taken. The Alliance defenders left behind are stretched thin, fighting the Horde on one side and the corrupted furbolgs of the surrounding wood on the other. What was once a modest outpost is now a battleground, its tower and hall standing over ground still contested.",
 			source = "https://warcraft.wiki.gg/wiki/Maestra's_Post",
-		},
-		["moonwell ashenvale"] = {
-			name = "Moonwell (Ashenvale)",
-			short = "Three moonwells lie hidden in the woods of Ashenvale, blessed under Elune's light. The Moonwell of Purity rests in the north, between Iris Lake and Raynewood Retreat.",
-			full = "Three moonwells lie hidden in the woods of Ashenvale, blessed under Elune's light. The Moonwell of Purity rests in the north, between Iris Lake and Raynewood Retreat. The Moonwell of Cleansing lies further south, near Silverwing Outpost, bound up in a night elf named Raene's trial. A third well waits at Raynewood Retreat itself.",
-			source = "https://warcraft.wiki.gg/wiki/Moonwell_(Ashenvale)",
-		},
-		["moonwell of cleansing"] = {
-			name = "Moonwell of Cleansing",
-			short = "The Moonwell of Cleansing sits along the Falfarren River, unmarked on any map, with a hidden bridge leading to Silverwing Outpost nearby.",
-			full = "The Moonwell of Cleansing sits along the Falfarren River, unmarked on any map, with a hidden bridge leading to Silverwing Outpost nearby. Overhead, a lone Blink Dragon circles endlessly above the still water, watching over a place few ever think to look for.",
-			source = "https://warcraft.wiki.gg/wiki/Moonwell_of_Cleansing",
-		},
-		["moonwell of purity"] = {
-			name = "Moonwell of Purity",
-			short = "At Thunder Peak in Ashenvale, the still water of the Moonwell of Purity rests guarded by blink dragons circling its edges.",
-			full = "At Thunder Peak in Ashenvale, the still water of the Moonwell of Purity rests guarded by blink dragons circling its edges.",
-			source = "https://warcraft.wiki.gg/wiki/Moonwell_of_Purity",
 		},
 		["morshan rampart"] = {
 			name = "Mor'shan Rampart",
@@ -5009,29 +3359,11 @@ ZoneLore.Subzones = {
 			full = "The Falfarren River cuts Nightsong Woods in two. West of it, the Silverwing Sentinels hold the ground for the night elves. East of it, the Warsong Clan has dug in, and the fighting between the two sides never really stops here -- this stretch of Ashenvale is where the war between Horde and Alliance is fought most openly, tree by tree and camp by camp.\n\nFarther east, past a second, nameless river, the land grows more crowded and more contested still. No one holds it whole. The draenei and night elves keep Forest Song there; the Horde works the Warsong Lumber Camp nearby; satyrs squat in Satyrnaar and Xavian; and the Burning Legion claims Felfire Hill and Demon Fall Canyon outright. Four powers, none at peace with any other, packed into one corner of the woods.\n\nSouth of all this, the Warsong orcs have stripped the trees for timber, feeding their settlements with wood torn from Ashenvale's own body -- the land itself scarred by who has been fighting whom.",
 			source = "https://warcraft.wiki.gg/wiki/Nightsong_Woods",
 		},
-		["orendils retreat"] = {
-			name = "Orendil's Retreat",
-			short = "Orendil's Retreat sits north of Maestra's Post and east of Blackfathom Deeps.",
-			full = "Orendil's Retreat sits north of Maestra's Post and east of Blackfathom Deeps. Sentinel Shyela leads the camp, and scholars make their home here alongside her, keeping to the quiet work of study within reach of the Deeps' dark waters.",
-			source = "https://warcraft.wiki.gg/wiki/Orendil's_Retreat",
-		},
 		["raynewood retreat"] = {
 			name = "Raynewood Retreat",
 			short = "Raynewood Retreat grew up around the great tree for which it is named, in the north-central reaches of Ashenvale.",
 			full = "Raynewood Retreat grew up around the great tree for which it is named, in the north-central reaches of Ashenvale. It became an Alliance outpost, its Cenarion Protectors, blink dragons, and Laughing Sisters keeping watch on the path north into the corrupted land of Felwood. Hidden at the very top of the great tree was Ordanus, a keeper of the grove and one of the eldest sons of Cenarius. The Shadow Council wanted him dead, and Braelyn Firehand made his death her own purpose, sending killers against him. Ordanus survived.\n\nWhen the Horde came in force during the Ashenvale war, they struck both the retreat and the newly raised Raynewood Tower beside it. It availed them little. Every dryad they cut down, Ordanus raised again the instant she struck the earth, and the nightsaber Shadumbra tore through their ranks besides. Thagg sent his own assassins after the keeper himself, but like the Shadow Council before him, he failed. Ordanus lived on, and the trees of Raynewood kept him still.",
 			source = "https://warcraft.wiki.gg/wiki/Raynewood_Retreat",
-		},
-		["raynewood tower"] = {
-			name = "Raynewood Tower",
-			short = "Raynewood Tower stands near Raynewood Retreat in Ashenvale, a small foothold held by the Alliance amid the forest's contested reaches.",
-			full = "Raynewood Tower stands near Raynewood Retreat in Ashenvale, a small foothold held by the Alliance amid the forest's contested reaches.",
-			source = "https://warcraft.wiki.gg/wiki/Raynewood_Tower",
-		},
-		["remains of iris lake"] = {
-			name = "Remains of Iris Lake",
-			short = "The lake called Iris is gone. Where water once stood, the ground now lies scorched, the earth burned dry by the lava flowing down from Thunder Peak nearby.",
-			full = "The lake called Iris is gone. Where water once stood, the ground now lies scorched, the earth burned dry by the lava flowing down from Thunder Peak nearby. Nothing remains but the cracked, blackened basin where the lake used to be.",
-			source = "https://warcraft.wiki.gg/wiki/Remains_of_Iris_Lake",
 		},
 		["ruins of ordilaran"] = {
 			name = "Ruins of Ordil'Aran",
@@ -5044,12 +3376,6 @@ ZoneLore.Subzones = {
 			short = "The Ruins of Stardust rise from a small island on a lake in southwestern Ashenvale, once counted among the holy places of the land.",
 			full = "The Ruins of Stardust rise from a small island on a lake in southwestern Ashenvale, once counted among the holy places of the land. What sanctity remained there has curdled since the demonic rot of Felwood seeped into these waters, tinting the whole island a sickly yellow-green. Bog beasts, corrupted by the tainted lake, now shamble among the broken stones.\n\nYet the stardust shrubs scattered through the ruins remain untouched by the blight, prized for the powerful healing properties held within their leaves.",
 			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Stardust",
-		},
-		["ruuzels isle"] = {
-			name = "Ruuzel's Isle",
-			short = "On a hill at the center of the small isle, amid the broken stonework the night elves left behind, Ruuzel holds command over her Wrathtail naga.",
-			full = "On a hill at the center of the small isle, amid the broken stonework the night elves left behind, Ruuzel holds command over her Wrathtail naga.",
-			source = "https://warcraft.wiki.gg/wiki/Ruuzel's_Isle",
 		},
 		["satyrnaar"] = {
 			name = "Satyrnaar",
@@ -5087,23 +3413,11 @@ ZoneLore.Subzones = {
 			full = "Silverwing Outpost stands on the wrong side of the Falfarren River, holding ground the orcs of Ashenvale consider their own to reclaim. Attack follows attack, unrelenting, for the woods will not be rid of the Silverwings without a fight.\n\nDuriel Moonfire commands here, and by his tactics the outpost has held as long as it has. But even he could not turn back every assault. One army broke through the fortifications entirely, driving the Silverwing Sentinels from their post and scattering or killing any who could not escape.",
 			source = "https://warcraft.wiki.gg/wiki/Silverwing_Outpost",
 		},
-		["skunkworks"] = {
-			name = "Skunkworks",
-			short = "Chief Bombgineer Sploder rules the Skunkworks by keeping his goblin technicians working instead of blowing themselves apart.",
-			full = "Chief Bombgineer Sploder rules the Skunkworks by keeping his goblin technicians working instead of blowing themselves apart. He holds his post atop a Super Reaper 6000, with The Bomb beside him, waiting to be shipped off to Stonetalon by balloon. Foreman Jinx works among the technicians as well, tending to Horde business in the camp.",
-			source = "https://warcraft.wiki.gg/wiki/Skunkworks",
-		},
 		["southfury river"] = {
 			name = "Southfury River",
 			short = "The Southfury River rises high on Mount Hyjal, spilling from a mountain lake into a cascade of waterfalls before widening into the swift, churning water that gives the land below its shape.",
 			full = "The Southfury River rises high on Mount Hyjal, spilling from a mountain lake into a cascade of waterfalls before widening into the swift, churning water that gives the land below its shape. It marks the boundary between Ashenvale and Azshara to the north, and further south divides the Northern Barrens from Durotar, before finally pouring itself into the Great Sea in one last waterfall near the goblin port of Ratchet.\n\nThree bridges cross it: one linking Azshara to Ashenvale, one carrying travelers into Orgrimmar itself, and one joining Durotar to the Northern Barrens. Just north of the western bridge into the orc capital, there is a single point where four lands touch at once, the water running between them all.\n\nAt the river's mouth, a goblin named Horton Hornblower keeps a riverboat tied at his dock, ferrying those who need passage upstream toward the Barrens.\n\nThe river still runs strong enough to water the fields along its banks, but its water can no longer be drunk.",
 			source = "https://warcraft.wiki.gg/wiki/Southfury_River",
-		},
-		["splintertree mine"] = {
-			name = "Splintertree Mine",
-			short = "At the back of Splintertree Post, the mine cuts into the earth under the watch of Splintertree Overseers, who set the peons to their work seam by seam.",
-			full = "At the back of Splintertree Post, the mine cuts into the earth under the watch of Splintertree Overseers, who set the peons to their work seam by seam.",
-			source = "https://warcraft.wiki.gg/wiki/Splintertree_Mine",
 		},
 		["splintertree post"] = {
 			name = "Splintertree Post",
@@ -5111,41 +3425,17 @@ ZoneLore.Subzones = {
 			full = "Splintertree Post stands where Grom Hellscream and his Warsong clan first drove stakes into Ashenvale soil during the Third War, when the orcs pushed into the forest for its timber. It has never been forgiven for it.\n\nThe night elves have not forgotten what the Warsong did to these woods, and Splintertree pays for it still. Raids on Astranaar are frequent, and the peace between Horde and Alliance counts for little out here -- the outpost sits under near-constant threat of retaliation from the Sentinels, its fortifications scarred, its outer camps sometimes found abandoned or burned before anyone can say who struck.\n\nWhat keeps the walls standing is the lumber camp nearby, whose steady wagons of timber and supply hold the post together. Zekhan's own reckoning of the place is grim: the fighting here will not end soon, not while the night elves still reckon a debt owed for Teldrassil, and not while Splintertree remains the nearest orc throat to put a blade to.",
 			source = "https://warcraft.wiki.gg/wiki/Splintertree_Post",
 		},
-		["stardust spire"] = {
-			name = "Stardust Spire",
-			short = "Stardust Spire rises where the mountains give way to Ashenvale, a sentry tower shored up against time, its watchtower set atop the bones of some older, larger structure.",
-			full = "Stardust Spire rises where the mountains give way to Ashenvale, a sentry tower shored up against time, its watchtower set atop the bones of some older, larger structure. It shelters the survivors of the Horde's seizure of Silverwind Refuge, night elf Sentinels alongside a gnome explosives squad sent up from Tinker Town, led by Huntress Jalin. They did not come here to hide. Every raid launched from the spire is aimed back at the refuge that was taken from them.\n\nWhen the Horde came for the spire itself, Sergeant Dontrag led the assault, and Alliance champions met him. Jalin did not wait behind the walls. She led her Sentinels out against Silverwind Refuge even as it was defended, and by the Horde's own reports, she broke them there. Every siege engine brought down from the Stonetalon Mountains was destroyed. She had the bones of the machines and the bodies of the engineers who built them dragged to the doorstep of the spire and left there, a warning for anyone who came looking next.",
-			source = "https://warcraft.wiki.gg/wiki/Stardust_Spire",
-		},
 		["talondeep path"] = {
 			name = "Talondeep Path",
 			short = "The Talondeep Path is a winding tunnel joining Ashenvale to the Stonetalon Mountains, its walls pocked with small dead ends and hollows, though nothing living dwells there.",
 			full = "The Talondeep Path is a winding tunnel joining Ashenvale to the Stonetalon Mountains, its walls pocked with small dead ends and hollows, though nothing living dwells there. One mouth opens west of Mystral Lake in Ashenvale; the other lies in northwestern Windshear Crag among the Stonetalons.",
 			source = "https://warcraft.wiki.gg/wiki/Talondeep_Path",
 		},
-		["talondeep vale"] = {
-			name = "Talondeep Vale",
-			short = "Talondeep Vale lies wooded between Silverwind Refuge and Talondeep Pass, within reach of the Ruins of Stardust. Amid the trees stands the Stardust Spire, watching over a vale otherwise left to silence and green shadow.",
-			full = "Talondeep Vale lies wooded between Silverwind Refuge and Talondeep Pass, within reach of the Ruins of Stardust. Amid the trees stands the Stardust Spire, watching over a vale otherwise left to silence and green shadow.",
-			source = "https://warcraft.wiki.gg/wiki/Talondeep_Vale",
-		},
-		["thistlefur hold"] = {
-			name = "Thistlefur Hold",
-			short = "Thistlefur Hold, in the north of Thistlefur Village, shelters the greater part of the Thistlefur furbolgs. They were not always hostile.",
-			full = "Thistlefur Hold, in the north of Thistlefur Village, shelters the greater part of the Thistlefur furbolgs. They were not always hostile. The tribe came to hold the Idol of Remulos within the hold, and its corruption turned them against all outsiders. Somewhere in that warren, Ruul Snowhoof remains caged, a captive of the sickness that consumed his own kind.",
-			source = "https://warcraft.wiki.gg/wiki/Thistlefur_Hold",
-		},
 		["thistlefur village"] = {
 			name = "Thistlefur Village",
 			short = "Thistlefur Village lies north of Astranaar in Ashenvale, home to the Thistlefur tribe, furbolgs turned savage and corrupted. They fall upon anyone who strays too near without waiting to ask why.",
 			full = "Thistlefur Village lies north of Astranaar in Ashenvale, home to the Thistlefur tribe, furbolgs turned savage and corrupted. They fall upon anyone who strays too near without waiting to ask why.\n\nThe tribe answers to two ferocious warriors, Dal Bloodclaw and Rorgish Jowl.",
 			source = "https://warcraft.wiki.gg/wiki/Thistlefur_Village",
-		},
-		["thunder peak"] = {
-			name = "Thunder Peak",
-			short = "Lord Magmathar makes his home atop Thunder Peak, the great mountain rising near the remains of Iris Lake in Ashenvale.",
-			full = "Lord Magmathar makes his home atop Thunder Peak, the great mountain rising near the remains of Iris Lake in Ashenvale.",
-			source = "https://warcraft.wiki.gg/wiki/Thunder_Peak",
 		},
 		["warsong labor camp"] = {
 			name = "Warsong Labor Camp",
@@ -5178,20 +3468,8 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Zoram'gar_Outpost",
 		},
 	},
-	-- Thousand Needles: 35 subzones
+	-- Thousand Needles: 20 subzones
 	[1441] = {
-		["admirals den"] = {
-			name = "Admiral's Den",
-			short = "The Admiral's Den lies within the Southsea Holdfast in the Thousand Needles. Southsea Admiral Tony Two-Tusk holds it, guarded by elite ogres sworn to keep out any who come looking for him.",
-			full = "The Admiral's Den lies within the Southsea Holdfast in the Thousand Needles. Southsea Admiral Tony Two-Tusk holds it, guarded by elite ogres sworn to keep out any who come looking for him.",
-			source = "https://warcraft.wiki.gg/wiki/Admiral's_Den",
-		},
-		["arikaras needle"] = {
-			name = "Arikara's Needle",
-			short = "Arikara's Needle rises as a small bluff within Darkcloud Pinnacle, in the heart of Thousand Needles. Here the Grimtotem tribe honors its dead, and it is here that Arikara can be summoned.",
-			full = "Arikara's Needle rises as a small bluff within Darkcloud Pinnacle, in the heart of Thousand Needles. Here the Grimtotem tribe honors its dead, and it is here that Arikara can be summoned.",
-			source = "https://warcraft.wiki.gg/wiki/Arikara's_Needle",
-		},
 		["camp ethok"] = {
 			name = "Camp E'thok",
 			short = "Camp E'thok, in northwestern Thousand Needles, was a Galak centaur camp.",
@@ -5203,12 +3481,6 @@ ZoneLore.Subzones = {
 			short = "Darkcloud Pinnacle rises east of the Great Lift, its settlement spread across three small mesas linked by rope bridges over open air.",
 			full = "Darkcloud Pinnacle rises east of the Great Lift, its settlement spread across three small mesas linked by rope bridges over open air. Smaller mesas nearby stand empty, unclaimed. Only two paths lead in: a natural slope up a fourth rise ending in a bridge crossing, or a second bridge reaching over from Razorfen Downs. Both are watched closely.\n\nThe Grimtotem tauren hold this place, led here by Arnak Grimtotem and Harb Foulmountain. From atop the mesas they carry on a secret correspondence with some dark power whose name and nature no one has spoken aloud, passed across the bridges and up the slope, into rooms no outsider is meant to see.",
 			source = "https://warcraft.wiki.gg/wiki/Darkcloud_Pinnacle",
-		},
-		["fizzle and pozziks speedbarge"] = {
-			name = "Fizzle and Pozzik's Speedbarge",
-			short = "Fizzle and Pozzik's Speedbarge floats above the Shimmering Deep, a city-sized ship bristling with pulsing tubes and improvised machinery, ringed by more boats than crowd Stormwind Harbor.",
-			full = "Fizzle and Pozzik's Speedbarge floats above the Shimmering Deep, a city-sized ship bristling with pulsing tubes and improvised machinery, ringed by more boats than crowd Stormwind Harbor. It bears the names of Fizzle Brassbolts and Pozzik, though Jinky Twizzlefixxit and Razzeric never let anyone forget that they were the ones who actually built it.\n\nWhat makes the place strange is not its engineering but its peace. Goblin and gnome engineers crowd its decks and warrens, racing each other along a course whose remnants still lie on the lake bed below, sponsored by the Mechanical Engineers' Guild of Azeroth, to which both Fizzle and Pozzik belong.\n\nYet no war has ever come to blows here. The barge is the only joint work of Alliance and Horde hands that answers to no neutral overseer, no third faction, no greater cause binding them together. It seems the two peoples had simply labored side by side too long to turn on one another once their nations went to war.",
-			source = "https://warcraft.wiki.gg/wiki/Fizzle_and_Pozzik's_Speedbarge",
 		},
 		["freewind post"] = {
 			name = "Freewind Post",
@@ -5234,23 +3506,11 @@ ZoneLore.Subzones = {
 			full = "Ironstone Camp sits at the edge of the Shimmering Flats, a small Horde foothold sent to drive dwarven excavators from the Rustmaul Digsite. Instead, Silithid broke from a nearby cave and fell upon them, turning conquest into survival.\n\nMoktar Krin, still holding the camp, now sends others out to kill the Silithid infesting the digsite.",
 			source = "https://warcraft.wiki.gg/wiki/Ironstone_Camp",
 		},
-		["mirage abyss"] = {
-			name = "Mirage Abyss",
-			short = "In the Shimmering Deep, the Mirage Abyss holds a Southsea ship wrecked by a rising whale shark. Southsea Treasure Hunters still dive there for the lost chests, while stranglekelp grows thick through the wreckage.",
-			full = "In the Shimmering Deep, the Mirage Abyss holds a Southsea ship wrecked by a rising whale shark. Southsea Treasure Hunters still dive there for the lost chests, while stranglekelp grows thick through the wreckage.",
-			source = "https://warcraft.wiki.gg/wiki/Mirage_Abyss",
-		},
 		["mirage raceway"] = {
 			name = "Mirage Raceway",
 			short = "The Mirage Raceway began as a rivalry made of steel.",
 			full = "The Mirage Raceway began as a rivalry made of steel. The goblin Pozzik and the gnome Fizzle Brassbolts, each certain his race was the superior engineer, built rocket cars and enlisted teams to race them, determined to settle the argument on the track rather than in words.\n\nThe contest outgrew them. Supporters of both Horde and Alliance came to cheer their favorites, and the daily races drew gamblers and seedier company besides, all wagering on which side's cars would win the day.\n\nThe raceway did not survive its own success and was submerged. Pozzik and Fizzle built a floating Speedbarge to hover above the drowned track, and the rivalry continues there still.",
 			source = "https://warcraft.wiki.gg/wiki/Mirage_Raceway",
-		},
-		["raceway ruins"] = {
-			name = "Raceway Ruins",
-			short = "The waters of the Shimmering Deep cover what remains of Mirage Raceway, its wreckage settled into the silt beneath Thousand Needles, rocket car parts scattered among the ruin.",
-			full = "The waters of the Shimmering Deep cover what remains of Mirage Raceway, its wreckage settled into the silt beneath Thousand Needles, rocket car parts scattered among the ruin.\n\nSouthsea Treasure Hunters comb the flooded buildings for salvage, having sealed a survivor inside an outhouse below, air running out.",
-			source = "https://warcraft.wiki.gg/wiki/Raceway_Ruins",
 		},
 		["razorfen downs"] = {
 			name = "Razorfen Downs",
@@ -5276,12 +3536,6 @@ ZoneLore.Subzones = {
 			full = "The Screeching Canyon cuts through the southern reaches of Thousand Needles, its walls echoing with the cries of the harpies that infest it. Deep in its back stands the Roguefeather Den, the harpies' stronghold, from which their screeching name spread to the canyon itself.",
 			source = "https://warcraft.wiki.gg/wiki/Screeching_Canyon",
 		},
-		["shimmering deep"] = {
-			name = "Shimmering Deep",
-			short = "At the center of the lake, gnomes and goblins raised a Speedbarge together, and their uneasy partnership continues there still.",
-			full = "At the center of the lake, gnomes and goblins raised a Speedbarge together, and their uneasy partnership continues there still.\n\nSomewhere in the deep water rests a crystal shard, broken from Aramar Thorne's compass.",
-			source = "https://warcraft.wiki.gg/wiki/Shimmering_Deep",
-		},
 		["shimmering flats"] = {
 			name = "Shimmering Flats",
 			short = "The Shimmering Flats stretches wide and white across the southeastern edge of Thousand Needles, a dried lakebed scoured bare of grass or scrub.",
@@ -5294,29 +3548,11 @@ ZoneLore.Subzones = {
 			full = "Between the two great continents, where the waters of the Great Sea run deep and warm, lies the tangle of islands and reefs known as the South Seas. Zandalar rises here, ancient seat of the trolls. Tel'Abim breaks the water further off. Kezan sits apart, its own scarred and smoking rock.\n\nThe coasts nearest the mainland are known better than the deep water beyond them. Stranglethorn Vale marks where the Eastern Kingdoms give way to this sea. To the west, Tanaris, the Thousand Needles, and Uldum stand where Kalimdor's shore meets the same waters.\n\nBeyond those known shores the South Seas keep their own geography of scattered, half-charted places: shallows and coves, sunken ruins, isles named for sailors and wrecks that found them and never came back to say more. Somewhere within this water, it is said, lies the Maelstrom itself, the great churning wound at the world's heart, though few who study the South Seas can say so with certainty.",
 			source = "https://warcraft.wiki.gg/wiki/South_Seas",
 		},
-		["southsea holdfast"] = {
-			name = "Southsea Holdfast",
-			short = "The Southsea Holdfast sits on a shelf above the Shimmering Deep, where the Southsea Pirates have carved ramps down to the water and anchored three ships below, awaiting orders.",
-			full = "The Southsea Holdfast sits on a shelf above the Shimmering Deep, where the Southsea Pirates have carved ramps down to the water and anchored three ships below, awaiting orders. The outpost answers to Tony Two-Tusk, who keeps himself apart in the cavern known as the Admiral's Den.\n\nA goblin and his gnome companion once came down from a nearby speedbarge to bargain with him. Instead they were seized and held captive. Since that day the Holdfast's pirates have turned on the speedbarge itself, harrying it whenever it comes within reach.",
-			source = "https://warcraft.wiki.gg/wiki/Southsea_Holdfast",
-		},
-		["speedbarge bar"] = {
-			name = "Speedbarge Bar",
-			short = "Below deck on Fizzle and Pozzik's Speedbarge, the Speedbarge Bar keeps its lamps lit while the deck above rattles with machinery.",
-			full = "Below deck on Fizzle and Pozzik's Speedbarge, the Speedbarge Bar keeps its lamps lit while the deck above rattles with machinery. Daisy tends the bar and the rooms alike, pouring drinks for whoever comes down from the noise above, while Hotfix works the place alongside her.",
-			source = "https://warcraft.wiki.gg/wiki/Speedbarge_Bar",
-		},
 		["splithoof crag"] = {
 			name = "Splithoof Crag",
 			short = "Splithoof Crag stood against the northern wall of Thousand Needles, a village of the Galak centaur east of Darkcloud Pinnacle.",
 			full = "Splithoof Crag stood against the northern wall of Thousand Needles, a village of the Galak centaur east of Darkcloud Pinnacle. At its heart, within a cavern called Splithoof Hold, the Galak guarded the Cloven Hoof, an ancient artifact kept before the Ancient Brazier and its Sacred Flame.\n\nThe village did not endure. The surviving Galak abandoned it, raising a new home, Splithoof Heights, on the cliffs above the Shimmering Deep. What remains now is debris and underwater life along the mountainside.",
 			source = "https://warcraft.wiki.gg/wiki/Splithoof_Crag",
-		},
-		["splithoof heights"] = {
-			name = "Splithoof Heights",
-			short = "The Galak centaur hold Splithoof Heights, a shelf above the Shimmering Deep where the ground weeps oil, pool after pool, hiding what is thought to be a vast reserve beneath.",
-			full = "The Galak centaur hold Splithoof Heights, a shelf above the Shimmering Deep where the ground weeps oil, pool after pool, hiding what is thought to be a vast reserve beneath. Both goblins and gnomes have sought drilling rights from the Galak, each hoping to outbid the other.\n\nBut the Galak bow to no such bargain. They worship the air, and answer to Whrrrl, a lord of the Skywall named as the tribe's true master.",
-			source = "https://warcraft.wiki.gg/wiki/Splithoof_Heights",
 		},
 		["splithoof hold"] = {
 			name = "Splithoof Hold",
@@ -5324,41 +3560,11 @@ ZoneLore.Subzones = {
 			full = "The Galak centaur made their stronghold in the cave of Splithoof Crag, keeping there the Ancient Brazier and its Sacred Flame, a fire said to burn even underwater. Eternal though it was called, Aquarian doused it, and the flame went dark.",
 			source = "https://warcraft.wiki.gg/wiki/Splithoof_Hold",
 		},
-		["sunken dig site"] = {
-			name = "Sunken Dig Site",
-			short = "The Rustmaul Dig Site once stood dry, riddled with silithid tunnels. When the region flooded, the swarm burrowed underground, leaving only their wasps circling above the water where the hive used to be.",
-			full = "The Rustmaul Dig Site once stood dry, riddled with silithid tunnels. When the region flooded, the swarm burrowed underground, leaving only their wasps circling above the water where the hive used to be.\n\nThe gnome Brivelthwerp saw the emptied hive as the perfect shell for a refrigeration vault for his ice cream empire, and set his workers installing pipes through the flooded tunnels. But the silithid had only gone to ground. As the work neared completion, they burrowed back up and killed every one of his employees.\n\nBrivelthwerp alone survived, waiting out the slaughter on his tugboat above. He remains there still, adrift over the drowned dig site he meant to turn into a fortune.",
-			source = "https://warcraft.wiki.gg/wiki/Sunken_Dig_Site",
-		},
 		["tahonda ruins"] = {
 			name = "Tahonda Ruins",
 			short = "Beneath the waves of the Shimmering Deep lies a sunken tauren village, remembered now only by its name: Tahonda.",
 			full = "Beneath the waves of the Shimmering Deep lies a sunken tauren village, remembered now only by its name: Tahonda.\n\nNothing explains why it fell. One wall of leather still bears two sets of three parallel tears, claws dragged deep enough to outlast the water and the sand. No record says who made them, or whether anyone survived.\n\nThe ruins keep that silence, settled near the mountain path to Tanaris, gone quiet beneath the shimmering water.",
 			source = "https://warcraft.wiki.gg/wiki/Tahonda_Ruins",
-		},
-		["tirths haunt"] = {
-			name = "Tirth's Haunt",
-			short = "Magus Tirth failed to hold back the waters that drowned Thousand Needles, and the failure broke him.",
-			full = "Magus Tirth failed to hold back the waters that drowned Thousand Needles, and the failure broke him. Mad now, he keeps a camp south of the Southsea Holdfast, tormenting a captive called \"Plucky\" Johnson, beside a portal he raised to Ajamon Ghostcaller.",
-			source = "https://warcraft.wiki.gg/wiki/Tirth's_Haunt",
-		},
-		["twilight aerie"] = {
-			name = "Twilight Aerie",
-			short = "Above Highperch, the Twilight's Hammer holds the shelf, guarded by its Aerie Aces. Twilight Skymaster Richtofen leads them, having invaded Highperching below, capturing and killing the wyverns that once nested there.",
-			full = "Above Highperch, the Twilight's Hammer holds the shelf, guarded by its Aerie Aces. Twilight Skymaster Richtofen leads them, having invaded Highperching below, capturing and killing the wyverns that once nested there.",
-			source = "https://warcraft.wiki.gg/wiki/Twilight_Aerie",
-		},
-		["twilight bulwark"] = {
-			name = "Twilight Bulwark",
-			short = "The Twilight Bulwark stands on a shelf above what was once Screeching Canyon, now flooded beneath it. The Twilight's Hammer built the outpost here, held by three commanders: Fastfuse, Deethuk, and Starion.",
-			full = "The Twilight Bulwark stands on a shelf above what was once Screeching Canyon, now flooded beneath it. The Twilight's Hammer built the outpost here, held by three commanders: Fastfuse, Deethuk, and Starion. So long as the three stand, the outpost stands with them.\n\nIn its eastern reaches, Magatha Grimtotem is held prisoner, bound by chains no blade can cut, loosed only by a code kept by her captors.",
-			source = "https://warcraft.wiki.gg/wiki/Twilight_Bulwark",
-		},
-		["twilight withering"] = {
-			name = "Twilight Withering",
-			short = "The Twilight Withering lies on a shelf southeast of Freewind Post, an outpost the Twilight's Hammer built to mirror their works at Twilight Bulwark.",
-			full = "The Twilight Withering lies on a shelf southeast of Freewind Post, an outpost the Twilight's Hammer built to mirror their works at Twilight Bulwark. Here the cult summoned Animus, a monstrous elemental infused with all four elements and Elementium, and set it to absorbing two bound elementals, Fury and Vortex. Using the Doomstone to force the feeding, they mean for Animus to grow until it explodes, taking Thousand Needles with it.",
-			source = "https://warcraft.wiki.gg/wiki/Twilight_Withering",
 		},
 		["weathered nook"] = {
 			name = "Weathered Nook",
@@ -5371,12 +3577,6 @@ ZoneLore.Subzones = {
 			short = "In the northern Shimmering Flats, the ground drops into a wide, deep crater. No one knows how it formed. Its name hints at some figure called Weazel, whether the one who found it or the one who blasted it into being.",
 			full = "In the northern Shimmering Flats, the ground drops into a wide, deep crater. No one knows how it formed. Its name hints at some figure called Weazel, whether the one who found it or the one who blasted it into being.\n\nScattered rubble across the flats, left by reckless racing machines, suggests the crater may be the wreck of some invention gone wrong.\n\nSaltstone basilisks now den in its depths.",
 			source = "https://warcraft.wiki.gg/wiki/Weazel's_Crater",
-		},
-		["westreach summit"] = {
-			name = "Westreach Summit",
-			short = "At Westreach Summit, tauren hold the high ground against their own kind.",
-			full = "At Westreach Summit, tauren hold the high ground against their own kind. The Grimtotem tribe presses the village from below, and Kanati Greycloud leads the defense atop the summit, standing with the Summit Defenders against the raids. Motega Firemane remains near the water below.",
-			source = "https://warcraft.wiki.gg/wiki/Westreach_Summit",
 		},
 		["whitereach post"] = {
 			name = "Whitereach Post",
@@ -5391,14 +3591,8 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Windbreak_Canyon",
 		},
 	},
-	-- Stonetalon Mountains: 40 subzones
+	-- Stonetalon Mountains: 18 subzones
 	[1442] = {
-		["battlescar valley"] = {
-			name = "Battlescar Valley",
-			short = "The valley takes its name honestly. Before the fighting began, the Horde ran a lumber operation here, cutting timber with the great machine known as the Super Reaper 6000.",
-			full = "The valley takes its name honestly. Before the fighting began, the Horde ran a lumber operation here, cutting timber with the great machine known as the Super Reaper 6000. Then the night elves came down and put a stop to it, setting the Reaper ablaze. Since that day the valley has not known peace, its ground churned by battles that never quite end.\n\nAt its heart, untouched by all this, stands an ancient tree that has withstood the ages, long served as a place of peace and learning.",
-			source = "https://warcraft.wiki.gg/wiki/Battlescar_Valley",
-		},
 		["blackwolf river"] = {
 			name = "Blackwolf River",
 			short = "The Blackwolf River flows through Windshear Crag from Cragpool Lake in the Stonetalon Mountains. Its waters once ran foul, choked by the Venture Company's deforestation of the valley above.",
@@ -5429,47 +3623,11 @@ ZoneLore.Subzones = {
 			full = "Once the Charred Vale was green, and Bloodfury harpies nested in its heights while treants walked among the trees, keeping the forest safe.\n\nThen the Venture Company came with axe and machine, tearing the vale apart. The treants rose against them and drove the goblins out, but the vale's spirits had already been enraged past calming, and elementals broke loose from the earth itself. Worse, the treants who fought to save the forest did not come away clean -- the goblins' weapons left something in them, twisting the very guardians that had won the fight. The vale burned, and the fire never fully went out. Lava threads through it still, and the ground smolders where soil once was.\n\nWhat rules the ashes now is not the old forest but the fire's own brood -- black dragon whelps and drakes answering to Seldarria. Yet at Sun Rock Retreat the druids have not given up. Slowly, stubbornly, green is returning to the black ground, a forest trying to remember what it once was.",
 			source = "https://warcraft.wiki.gg/wiki/Charred_Vale",
 		},
-		["cliffwalker post"] = {
-			name = "Cliffwalker Post",
-			short = "A path climbs the rise to Cliffwalker Post, marked with totems planted by the tauren family that gave the place its name.",
-			full = "A path climbs the rise to Cliffwalker Post, marked with totems planted by the tauren family that gave the place its name. Overlord Krom'gar ordered it burned after tauren leaders here killed one of his generals, and the village became ash on his command.\n\nBraves still watch the path closely. When Aramar Thorne and Taryndrella passed near, armed figures moved among the trees above, and one brave came partway down before turning back unseen. It was Galena Stormspear who was spotted; the braves charged down after her. She fled to Aram and Drella, and with their ram Blossom beside them, the three got clear together.",
-			source = "https://warcraft.wiki.gg/wiki/Cliffwalker_Post",
-		},
 		["cragpool lake"] = {
 			name = "Cragpool Lake",
 			short = "Cragpool Lake sits beneath the great timber structure the Venture Company raised above Windshear Crag.",
 			full = "Cragpool Lake sits beneath the great timber structure the Venture Company raised above Windshear Crag. Most of the company has pulled out since, but those who remain keep to the structure overhead, among them Gerenzo Wrenchwhistle, who once used this height to oversee the operation below.\n\nThe lake itself is closed to all now, home to Cragjaw, a fish grown far past any natural size.",
 			source = "https://warcraft.wiki.gg/wiki/Cragpool_Lake",
-		},
-		["dagger pass"] = {
-			name = "Dagger Pass",
-			short = "Dagger Pass runs narrow between Mirkfallon Lake and Battlescar Valley, hemmed in on both sides by steep, high mountains. Little grows here.",
-			full = "Dagger Pass runs narrow between Mirkfallon Lake and Battlescar Valley, hemmed in on both sides by steep, high mountains. Little grows here. At the pass's southwestern edge sits a small cave, empty, offering nothing but shelter from the bare stone around it.",
-			source = "https://warcraft.wiki.gg/wiki/Dagger_Pass",
-		},
-		["deep reaches"] = {
-			name = "Deep Reaches",
-			short = "The Deep Reaches lies dug from two directions at once, Horde and Alliance each cutting their own tunnels into the Stonetalon rock.",
-			full = "The Deep Reaches lies dug from two directions at once, Horde and Alliance each cutting their own tunnels into the Stonetalon rock. The Explorers' League, working the Alliance side, broke through too far and opened a hidden back way straight into Krom'gar Fortress.\n\nNothing came of that breach but slaughter. Krom'gar Assassins slipped through the opening and cut down the Alliance miners in the dark. The survivors did not fight on. They went to ground in side tunnels, waiting on rescue that has not come.\n\nWhat remains above is an effort to seal the passage shut again, against whatever still moves on the other side of the rock.",
-			source = "https://warcraft.wiki.gg/wiki/Deep_Reaches",
-		},
-		["fallowmere inn"] = {
-			name = "Fallowmere Inn",
-			short = "Alithia Fallowmere keeps the inn within Windshear Hold. Lord Fallowmere watches from here over Windshear Crag, flanked by the Hold's Guardians.",
-			full = "Alithia Fallowmere keeps the inn within Windshear Hold. Lord Fallowmere watches from here over Windshear Crag, flanked by the Hold's Guardians. Within, the wounded find shelter, among them Northwatch Captain Kosak.",
-			source = "https://warcraft.wiki.gg/wiki/Fallowmere_Inn",
-		},
-		["farwatchers glen"] = {
-			name = "Farwatcher's Glen",
-			short = "Farwatcher's Glen is built in the old night elf way, though those who hold it now come from many peoples of the Alliance, worgen prominent among them.",
-			full = "Farwatcher's Glen is built in the old night elf way, though those who hold it now come from many peoples of the Alliance, worgen prominent among them. Ravens gather here in numbers greater than one would expect of an ordinary settlement, watching from eave and branch, as if the glen's name were more than words.",
-			source = "https://warcraft.wiki.gg/wiki/Farwatcher's_Glen",
-		},
-		["fold"] = {
-			name = "The Fold",
-			short = "The Fold is a small Horde encampment in Stonetalon Mountains, near Talondeep Pass. It is the first stop for Horde soldiers entering from Ashenvale, the initial foothold marking their reach into the mountains.",
-			full = "The Fold is a small Horde encampment in Stonetalon Mountains, near Talondeep Pass. It is the first stop for Horde soldiers entering from Ashenvale, the initial foothold marking their reach into the mountains.",
-			source = "https://warcraft.wiki.gg/wiki/The_Fold",
 		},
 		["greatwood vale"] = {
 			name = "Greatwood Vale",
@@ -5483,12 +3641,6 @@ ZoneLore.Subzones = {
 			full = "Grimtotem Post is the tribe's foothold in Stonetalon Mountains, its brutes, ruffians, sorcerers, and mercenaries watching the slopes around it. Grundig Darkcloud commands them here, fierce enough to hold the post for the Grimtotem.",
 			source = "https://warcraft.wiki.gg/wiki/Grimtotem_Post",
 		},
-		["kromgar fortress"] = {
-			name = "Krom'gar Fortress",
-			short = "Krom'gar Fortress sits within Windshear Crag, facing the Alliance across the divide at Windshear Hold. It is a modest thing to bear the name fortress: a fortified burrow, a blacksmith, and two towers, nothing more.",
-			full = "Krom'gar Fortress sits within Windshear Crag, facing the Alliance across the divide at Windshear Hold. It is a modest thing to bear the name fortress: a fortified burrow, a blacksmith, and two towers, nothing more.\n\nBelow the cliff at its base lies the Horde's way down into the Deep Reaches.",
-			source = "https://warcraft.wiki.gg/wiki/Krom'gar_Fortress",
-		},
 		["malakajin"] = {
 			name = "Malaka'jin",
 			short = "Malaka'jin is a village of troll hunters south of the Grimtotem Post, living modestly off the game they bring down in the Stonetalon Mountains and sell to passing travelers.",
@@ -5501,41 +3653,11 @@ ZoneLore.Subzones = {
 			full = "Mirkfallon Lake sits at the heart of Stonetalon Mountains, once a wild place whose waters and shores were home to wyverns, slimes, and thunder lizards.\n\nThat is no longer true of the hill at its center. Goblins have carved it hollow and raised an oil platform there, ringing the lake with pumpjacks that draw up what lies beneath the water.\n\nSome of the old life remains. Above the lake, at Windshear Heights, the last of the area's wyverns still nest. To the southwest, the Alliance keeps a camp at Mirkfallon Post, watching over what the goblins have built.",
 			source = "https://warcraft.wiki.gg/wiki/Mirkfallon_Lake",
 		},
-		["mirkfallon post"] = {
-			name = "Mirkfallon Post",
-			short = "Two scout leaders keep watch at Mirkfallon Post, the Alliance camp south of Mirkfallon Lake in the Stonetalon Mountains.",
-			full = "Two scout leaders keep watch at Mirkfallon Post, the Alliance camp south of Mirkfallon Lake in the Stonetalon Mountains.",
-			source = "https://warcraft.wiki.gg/wiki/Mirkfallon_Post",
-		},
-		["northwatch expedition base camp"] = {
-			name = "Northwatch Expedition Base Camp",
-			short = "The camp sits above Grimtotem Post in the Stonetalon Mountains, close enough to watch the fighting below without joining it.",
-			full = "The camp sits above Grimtotem Post in the Stonetalon Mountains, close enough to watch the fighting below without joining it. Force Commander Valen commands here, and Northwatch Infantry pass through steadily, alongside members of the Explorers' League, who came for the digging that opened the Deep Reaches and the Unearthed Grounds beneath the camp.\n\nOnce, with the soldiers drawn away elsewhere, Malus and his crew called the Hidden lured Aramar Thorne into the empty camp. What followed was a slaughter dressed as a rescue: Aram's friends fought the Hidden across the base, and Malus cut down Taryndrella there. The arakkoa Ssarbik tore open a portal, and the Hidden vanished through it with Aram in hand. What was left afterward was wreckage.\n\nAram came back almost a year later, though he did not linger among the soldiers. He went instead to look down at the Forever Tree, which the camp's soldiers say never stops blooming, in any season.",
-			source = "https://warcraft.wiki.gg/wiki/Northwatch_Expedition_Base_Camp",
-		},
-		["northwatch expedition base camp inn"] = {
-			name = "Northwatch Expedition Base Camp Inn",
-			short = "The Northwatch Expedition Base Camp Inn stands within the base camp in the Stonetalon Mountains, offering shelter amid the expedition's holdings.",
-			full = "The Northwatch Expedition Base Camp Inn stands within the base camp in the Stonetalon Mountains, offering shelter amid the expedition's holdings.",
-			source = "https://warcraft.wiki.gg/wiki/Northwatch_Expedition_Base_Camp_Inn",
-		},
-		["ruins of eldrethar"] = {
-			name = "Ruins of Eldre'thar",
-			short = "The ruins of Eldre'thar lie broken in Sishir Canyon, all that remains of a highborne city. Their ghosts have never left.",
-			full = "The ruins of Eldre'thar lie broken in Sishir Canyon, all that remains of a highborne city. Their ghosts have never left. Nal'taszar drifts above the lake's waters, and among the fallen columns the voices of the dead can still be heard, carrying on conversations that outlasted the city itself.",
-			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Eldre'thar",
-		},
 		["sishir canyon"] = {
 			name = "Sishir Canyon",
 			short = "Sishir Canyon carries the road through the Stonetalon Mountains down toward the Ruins of Eldre'thar. Once its walls were choked with webbing, and clusters of spider eggs layered the rock in every hollow.",
 			full = "Sishir Canyon carries the road through the Stonetalon Mountains down toward the Ruins of Eldre'thar. Once its walls were choked with webbing, and clusters of spider eggs layered the rock in every hollow. The canyon belonged to the Deepmoss spiders, and deep within, where the light failed, waited Besseleth, greatest of their brood. The canyon still runs toward the ruins, webbed and thick with eggs, a passage best not lingered in.",
 			source = "https://warcraft.wiki.gg/wiki/Sishir_Canyon",
-		},
-		["sludgewerks"] = {
-			name = "Sludgewerks",
-			short = "The goblins of the Sludgewerks built their platform on Mirkfallon Lake to spare the local wyverns, keeping clear of their habitat by design.",
-			full = "The goblins of the Sludgewerks built their platform on Mirkfallon Lake to spare the local wyverns, keeping clear of their habitat by design. It seemed reasonable on parchment. In practice it has left the goblins working under a steady rain of wyvern droppings, the price of good intentions.",
-			source = "https://warcraft.wiki.gg/wiki/Sludgewerks",
 		},
 		["stonetalon peak"] = {
 			name = "Stonetalon Peak",
@@ -5555,47 +3677,11 @@ ZoneLore.Subzones = {
 			full = "The barrow den takes its name from the peak that holds it, its passages home to Mirkfallon dryads and Cenarion Caretakers who tend the mountain, alongside the Mirkfallon Keepers who watch over the same slopes.",
 			source = "https://warcraft.wiki.gg/wiki/Talon_Den",
 		},
-		["talondeep pass"] = {
-			name = "Talondeep Pass",
-			short = "Talondeep Pass did not begin as a road. It began as rock, until goblin hands cut the Talondeep Path away and opened a passage where none had stood before, joining Ashenvale to the Stonetalon Mountains.",
-			full = "Talondeep Pass did not begin as a road. It began as rock, until goblin hands cut the Talondeep Path away and opened a passage where none had stood before, joining Ashenvale to the Stonetalon Mountains.\n\nThe goblins who built it did not trust the ground they had made. They seeded the pass with mines, meaning to keep it dangerous, or perhaps simply to keep it theirs. The night elves who watched the borders of Ashenvale would not have it. Patient and thorough, they went through the pass and pulled every charge from the earth, leaving the goblins' handiwork stripped of its teeth.\n\nThe pass still shows its two faces. On the Ashenvale side the entrance opens near Stardust Spire. On the Stonetalon side it opens into Windshear Crag, beside the Fold.",
-			source = "https://warcraft.wiki.gg/wiki/Talondeep_Pass",
-		},
 		["talondeep path"] = {
 			name = "Talondeep Path",
 			short = "The Talondeep Path is a winding tunnel joining Ashenvale to the Stonetalon Mountains, its walls pocked with small dead ends and hollows, though nothing living dwells there.",
 			full = "The Talondeep Path is a winding tunnel joining Ashenvale to the Stonetalon Mountains, its walls pocked with small dead ends and hollows, though nothing living dwells there. One mouth opens west of Mystral Lake in Ashenvale; the other lies in northwestern Windshear Crag among the Stonetalons.",
 			source = "https://warcraft.wiki.gg/wiki/Talondeep_Path",
-		},
-		["thaldarah grove"] = {
-			name = "Thal'darah Grove",
-			short = "At the heart of Battlescar Valley in the Stonetalon Mountains stood Thal'darah Grove, an ancient tree that had served for generations as a place of peace and learning, where night elves and tauren alike trained as druids.",
-			full = "At the heart of Battlescar Valley in the Stonetalon Mountains stood Thal'darah Grove, an ancient tree that had served for generations as a place of peace and learning, where night elves and tauren alike trained as druids.\n\nThat peace ended with Overlord Krom'gar, who believed the grove concealed a weapon that could be turned against the Horde. Before the end came, some of the druids sheltering there were pulled free by the Alliance. Then the bomb fell, and Thal'darah Grove was destroyed.",
-			source = "https://warcraft.wiki.gg/wiki/Thal'darah_Grove",
-		},
-		["thaldarah overlook"] = {
-			name = "Thal'darah Overlook",
-			short = "Thal'darah Overlook stands south of Stonetalon Peak, a quiet foothold beneath the mountain's shadow.",
-			full = "Thal'darah Overlook stands south of Stonetalon Peak, a quiet foothold beneath the mountain's shadow. A moonwell rests here, its waters kept by the wisps that drift among the trees, small lights left over from the spirits of the ancients.",
-			source = "https://warcraft.wiki.gg/wiki/Thal'darah_Overlook",
-		},
-		["trueshot point"] = {
-			name = "Trueshot Point",
-			short = "Trueshot Point is a small Alliance encampment near the mouth of Talondeep Pass in the Stonetalon Mountains, held by Kalen Trueshot.",
-			full = "Trueshot Point is a small Alliance encampment near the mouth of Talondeep Pass in the Stonetalon Mountains, held by Kalen Trueshot.\n\nNo path connects it to the rest of the Stonetalons. The only way in on foot comes from Stardust Spire in Ashenvale, making the point feel like an outpost reaching in from elsewhere.",
-			source = "https://warcraft.wiki.gg/wiki/Trueshot_Point",
-		},
-		["unearthed grounds"] = {
-			name = "Unearthed Grounds",
-			short = "The Unearthed Grounds was once an Explorers' League dig, dwarves opening the earth north of the Greatwood Vale. The Horde came and took it by force, driving the dwarves out.",
-			full = "The Unearthed Grounds was once an Explorers' League dig, dwarves opening the earth north of the Greatwood Vale. The Horde came and took it by force, driving the dwarves out. What stands now is a seizure, not a discovery.",
-			source = "https://warcraft.wiki.gg/wiki/Unearthed_Grounds",
-		},
-		["webwinder hollow"] = {
-			name = "Webwinder Hollow",
-			short = "In Sishir Canyon, deep off Webwinder Path, the spiders came to outnumber all else. The Deepmoss spiders spread through the valley until it took their name, becoming Webwinder Hollow.",
-			full = "In Sishir Canyon, deep off Webwinder Path, the spiders came to outnumber all else. The Deepmoss spiders spread through the valley until it took their name, becoming Webwinder Hollow. At its heart broods their queen, Silith, ruler of the hollow she made her own.",
-			source = "https://warcraft.wiki.gg/wiki/Webwinder_Hollow",
 		},
 		["webwinder path"] = {
 			name = "Webwinder Path",
@@ -5609,32 +3695,14 @@ ZoneLore.Subzones = {
 			full = "Windshear Crag was once old-growth forest, thick and green in its valley among the Stonetalon Mountains. What stands there now is the wreckage of that forest.\n\nThe Venture Company came with saws and steam, and the man who ran the operation was the leper gnome Gerenzo Wrenchwhistle. He built the Super Reaper 6000, a machine that could grind the crag's oldest and largest trees to sawdust, and he watched his work from a platform raised above Cragpool Lake, lord of a valley he was busy erasing. His efficiency did not save him. Director Riddlevox of the Tinkers' Union in Undermine wanted him gone, and sent the goblin Ziz Fizziks to do it. Gerenzo lived through the attempt, and held on to the water wheel, the one piece of the crag still his, until Professor Xakxak Gyromate sent someone to finish the job.\n\nBy the time the deforestation was complete, the crag was stumps and polluted water and machinery left creaking in the quiet.",
 			source = "https://warcraft.wiki.gg/wiki/Windshear_Crag",
 		},
-		["windshear heights"] = {
-			name = "Windshear Heights",
-			short = "Windshear Heights rises east of Mirkfallon Lake, its cliffs riddled with nests.",
-			full = "Windshear Heights rises east of Mirkfallon Lake, its cliffs riddled with nests. Since the Sludgewerks was built upon the lake below, driving the wyverns from much of their range, the Heights has become one of the last great nesting grounds left to the Pridewings.",
-			source = "https://warcraft.wiki.gg/wiki/Windshear_Heights",
-		},
-		["windshear hold"] = {
-			name = "Windshear Hold",
-			short = "Windshear Hold rises from the crag of the same name in Stonetalon Mountains, its halls raised in night elven style though many peoples of the Alliance now walk them together beneath that ancient roofline.",
-			full = "Windshear Hold rises from the crag of the same name in Stonetalon Mountains, its halls raised in night elven style though many peoples of the Alliance now walk them together beneath that ancient roofline.",
-			source = "https://warcraft.wiki.gg/wiki/Windshear_Hold",
-		},
 		["windshear mine"] = {
 			name = "Windshear Mine",
 			short = "Windshear Mine lies at the end of Blackwolf River. The Venture Company once worked it, setting kobolds to dig the tin from its tunnels, until they abandoned the claim.",
 			full = "Windshear Mine lies at the end of Blackwolf River. The Venture Company once worked it, setting kobolds to dig the tin from its tunnels, until they abandoned the claim. The Horde moved in after and holds the mine now.",
 			source = "https://warcraft.wiki.gg/wiki/Windshear_Mine",
 		},
-		["windshear valley"] = {
-			name = "Windshear Valley",
-			short = "Windshear Valley, forested within Windshear Crag, once teemed with wildlife. The Northwatch Expeditionary Unit has since claimed it, clearing away most living things.",
-			full = "Windshear Valley, forested within Windshear Crag, once teemed with wildlife. The Northwatch Expeditionary Unit has since claimed it, clearing away most living things. Now only the Stonetalon rams remain alongside the soldiers who hold the ground.",
-			source = "https://warcraft.wiki.gg/wiki/Windshear_Valley",
-		},
 	},
-	-- Desolace: 32 subzones
+	-- Desolace: 20 subzones
 	[1443] = {
 		["bolgans hole"] = {
 			name = "Bolgan's Hole",
@@ -5642,35 +3710,11 @@ ZoneLore.Subzones = {
 			full = "Bolgan's Hole, in Gelkis Village, shelters the clan's most prominent members, among them the khan -- once Shaka, now Shodo.\n\nWithin grow blue crystals, tears of Theradras, hoarded by the Gelkis shaman, who believe the stones carry Princess Theradras' protection.",
 			source = "https://warcraft.wiki.gg/wiki/Bolgan's_Hole",
 		},
-		["cenarion wildlands"] = {
-			name = "Cenarion Wildlands",
-			short = "Where the desert of Desolace once ran unbroken, the Cenarion Wildlands now spread green.",
-			full = "Where the desert of Desolace once ran unbroken, the Cenarion Wildlands now spread green. At the heart of the grove stands Karnum's Glade, a shrine of night elf architecture, raised as the Cenarion Circle worked to bring life back to the barrens around it.\n\nThe change did not settle easily. Uprooted Lashers, torn loose by the sudden transformation, wander the east and south, tearing at the new growth, while air elementals to the west refuse to let the green spread further into the desert.",
-			source = "https://warcraft.wiki.gg/wiki/Cenarion_Wildlands",
-		},
-		["earth song gate"] = {
-			name = "Earth Song Gate",
-			short = "Earth Song Gate stands where Zaetar's Choice opens into the lower Wicked Tunnels, its stone arch watched over by carved centaur statues.",
-			full = "Earth Song Gate stands where Zaetar's Choice opens into the lower Wicked Tunnels, its stone arch watched over by carved centaur statues. Beyond it, the tunnels lead down toward Earth Song Falls.",
-			source = "https://warcraft.wiki.gg/wiki/Earth_Song_Gate",
-		},
 		["ethel rethor"] = {
 			name = "Ethel Rethor",
 			short = "Beneath the waves in northwest Desolace lie the drowned stones of Ethel Rethor, a night elven ruin. Only a lone tower breaks the surface, reached by a bridge ending at a sealed door.",
 			full = "Beneath the waves in northwest Desolace lie the drowned stones of Ethel Rethor, a night elven ruin. Only a lone tower breaks the surface, reached by a bridge ending at a sealed door. Naga have claimed the sunken halls below.",
 			source = "https://warcraft.wiki.gg/wiki/Ethel_Rethor",
-		},
-		["foulspore pools"] = {
-			name = "Foulspore Pools",
-			short = "The southern tunnel from Zaetar's Choice opens into the Foulspore Pools, where orange crystals drip their color into standing water until the pools themselves glow with poison.",
-			full = "The southern tunnel from Zaetar's Choice opens into the Foulspore Pools, where orange crystals drip their color into standing water until the pools themselves glow with poison. Basilisks and earth elementals move through the corruption undisturbed. Amid it all, one spring stays clean, and there the dryad Cavindra keeps apart from the blight surrounding her.",
-			source = "https://warcraft.wiki.gg/wiki/Foulspore_Pools",
-		},
-		["furiens post"] = {
-			name = "Furien's Post",
-			short = "Furien's Post is a small blood elf watch in Desolace, set to mark those who might threaten the Horde. The Cenarion Circle asked the elves to look after one of their researchers, Korrah.",
-			full = "Furien's Post is a small blood elf watch in Desolace, set to mark those who might threaten the Horde. The Cenarion Circle asked the elves to look after one of their researchers, Korrah. It is a task the blood elves resent, but they check on her now and then, unwilling to earn the Circle's displeasure.",
-			source = "https://warcraft.wiki.gg/wiki/Furien's_Post",
 		},
 		["gelkis village"] = {
 			name = "Gelkis Village",
@@ -5683,12 +3727,6 @@ ZoneLore.Subzones = {
 			short = "Ghost Walker Post stands beside the Kodo Graveyard in central Desolace, and the dead there shape everything about the place.",
 			full = "Ghost Walker Post stands beside the Kodo Graveyard in central Desolace, and the dead there shape everything about the place. Tauren shamans keep watch over the bones, easing the great kodo beasts into their next lives and, when the wind is right, speaking with the spirits of those already gone.\n\nGurda Wildmane leads the post, and her burden is heavier than that of her counterpart at Shadowprey Village to the south. Where Shadowprey sits secure, Ghost Walker Post is exposed on all sides, and from it the Horde carries the fight against the Burning Blade and against the centaur tribes that range across Desolace. Thrall sent a contingent of orcs to stand alongside the tauren here, a sign of how much this war was thought to matter.\n\nThere is little comfort at the post itself, only what is needed to keep the shamans safe while they tend the dead and the tauren and orcs hold the line.",
 			source = "https://warcraft.wiki.gg/wiki/Ghost_Walker_Post",
-		},
-		["karnums glade"] = {
-			name = "Karnum's Glade",
-			short = "Karnum's Glade lies within the Cenarion Wildlands of Desolace, tended by Karnum Marshweaver of the Cenarion Circle.",
-			full = "Karnum's Glade lies within the Cenarion Wildlands of Desolace, tended by Karnum Marshweaver of the Cenarion Circle. Above the glade, Cenarion hippogryphs wheel and circle, keeping their own quiet watch over the land he tends.",
-			source = "https://warcraft.wiki.gg/wiki/Karnum's_Glade",
 		},
 		["kodo graveyard"] = {
 			name = "Kodo Graveyard",
@@ -5707,12 +3745,6 @@ ZoneLore.Subzones = {
 			short = "The hut stands alone in north-central Desolace, its name a puzzle no one living can explain.",
 			full = "The hut stands alone in north-central Desolace, its name a puzzle no one living can explain.\n\nInside dwells Willow, a friendly member of the Twilight's Hammer. Outside, amid a pen scattered with kodo bones, Bibbly F'utzbuckle dances gleefully, dreaming of the profit such bones might fetch. Of Kormek himself, nothing remains.",
 			source = "https://warcraft.wiki.gg/wiki/Kormek's_Hut",
-		},
-		["magram territory"] = {
-			name = "Magram Territory",
-			short = "This village belonged to the Kolkar until the Magram clan fell upon them and nearly wiped them out, taking their ground.",
-			full = "This village belonged to the Kolkar until the Magram clan fell upon them and nearly wiped them out, taking their ground. The Magram had come north after demons of the Burning Blade overran their homeland in the south, and made this ruin their own.",
-			source = "https://warcraft.wiki.gg/wiki/Magram_Territory",
 		},
 		["magram village"] = {
 			name = "Magram Village",
@@ -5768,41 +3800,17 @@ ZoneLore.Subzones = {
 			full = "Shadowprey Village sits on the Sar'theris Strand, south of the Valley of Spears, where troll fishermen have long worked the coastal waters. Their catches feed not only the village but the Ghost Walker Post beyond it, a supply line the region depends on.\n\nThat line has grown thin. An orca called Blubbergut has taken to hunting the same waters, gorging himself on the shoals before the nets can find them, leaving the fishermen to scrape by on what little he leaves behind.",
 			source = "https://warcraft.wiki.gg/wiki/Shadowprey_Village",
 		},
-		["shokthokar"] = {
-			name = "Shok'Thokar",
-			short = "The village once belonged to the Magram centaur before the Burning Blade came out of Shadowbreak Ravine, bringing their demon masters with them, and drove the centaur out.",
-			full = "The village once belonged to the Magram centaur before the Burning Blade came out of Shadowbreak Ravine, bringing their demon masters with them, and drove the centaur out. The cultists raised a new tower against the mountainside to watch over the ground they had taken.\n\nNow the Khans of Gelkis, Magram, and Kolkar stand together at the main hut, three clans never united, holding what their enemies had taken.",
-			source = "https://warcraft.wiki.gg/wiki/Shok'Thokar",
-		},
-		["slitherblade shore"] = {
-			name = "Slitherblade Shore",
-			short = "Off this stretch of Desolace, a drowned island rose again from the sea, bringing night elven ruins dripping back into daylight.",
-			full = "Off this stretch of Desolace, a drowned island rose again from the sea, bringing night elven ruins dripping back into daylight. A naga priestess of the Slitherblade claimed the risen halls, and from them she commands her kind along the shore, amid the shipwrecks scattered between Ethel Rethor and the isle offshore.",
-			source = "https://warcraft.wiki.gg/wiki/Slitherblade_Shore",
-		},
 		["tethris aran"] = {
 			name = "Tethris Aran",
 			short = "Ruined columns rise from northern Desolace, the last remains of Tethris Aran, a night elven settlement long emptied of its people. Only wild creatures move among the fallen stones now.",
 			full = "Ruined columns rise from northern Desolace, the last remains of Tethris Aran, a night elven settlement long emptied of its people. Only wild creatures move among the fallen stones now. The settlement is thought to have fallen in the Great Sundering.",
 			source = "https://warcraft.wiki.gg/wiki/Tethris_Aran",
 		},
-		["thargads camp"] = {
-			name = "Thargad's Camp",
-			short = "Thargad's Camp sits north of Gelkis Village and east of Shadowprey Village, a small outpost of the Explorers' League. Only three dwarves keep the camp, and Thargad leads them.",
-			full = "Thargad's Camp sits north of Gelkis Village and east of Shadowprey Village, a small outpost of the Explorers' League. Only three dwarves keep the camp, and Thargad leads them.",
-			source = "https://warcraft.wiki.gg/wiki/Thargad's_Camp",
-		},
 		["thunder axe fortress"] = {
 			name = "Thunder Axe Fortress",
 			short = "Thunder Axe Fortress stands in northwestern Desolace, its stronghold, barracks, cave, and watchtowers held by the Burning Blade cult under Kohor's command.",
 			full = "Thunder Axe Fortress stands in northwestern Desolace, its stronghold, barracks, cave, and watchtowers held by the Burning Blade cult under Kohor's command.\n\nThe cult once kept the Hand of Iruxos within these walls, an artifact that could tear open demon portals at Mannoroc Coven, though it has been lost to them for years now. In its place, they have found a way to call forth Nazargen, a demon of terrible power -- one that could be destroyed easily enough if summoned before its time, but which would grow into something far worse if left to gather strength.\n\nThe fortress also once held the Sceptre of Light, stolen by the Burning Blade from the naga, until Azore Aldamorthas recovered it for the Argent Dawn.\n\nAmong those who dwelt here was Tyranis Malem, a traitor to his own people and a devoted student of demonic magic.",
 			source = "https://warcraft.wiki.gg/wiki/Thunder_Axe_Fortress",
-		},
-		["thunks abode"] = {
-			name = "Thunk's Abode",
-			short = "Thunk's Abode is a camp in northeastern Desolace, northeast of the Cenarion Wildlands and south of Sargeron.",
-			full = "Thunk's Abode is a camp in northeastern Desolace, northeast of the Cenarion Wildlands and south of Sargeron. Cenarion Embassador Thunk has set up here under Cenarion Circle's orders to turn the barren surrounding land into prairie. Thunk's Wyvern acts as a flight master.",
-			source = "https://warcraft.wiki.gg/wiki/Thunk's_Abode",
 		},
 		["valley of bones"] = {
 			name = "Valley of Bones",
@@ -5816,56 +3824,14 @@ ZoneLore.Subzones = {
 			full = "The Valley of Spears lies shut away in western Desolace, reachable only through narrow mountain passes to the south and east. It is Maraudine centaur ground, thick with their camps. At its southwestern end the earth opens into Maraudon. Somewhere among the centaur, held captive, is Melizza Brimbuzzle.",
 			source = "https://warcraft.wiki.gg/wiki/Valley_of_Spears",
 		},
-		["wicked tunnels"] = {
-			name = "Wicked Tunnels",
-			short = "The Wicked Tunnels wind beneath Desolace as part of the deep ways into Maraudon, splitting from Zaetar's Choice into two paths.",
-			full = "The Wicked Tunnels wind beneath Desolace as part of the deep ways into Maraudon, splitting from Zaetar's Choice into two paths.\n\nNorth, the tunnels rise into a tangled, multi-leveled maze of stone bridges lit by glowing purple crystals, home to earth elementals and burrowing rock borers. The maze leads on to the Wicked Grotto.\n\nEast, past Earth Song Gate, the tunnels fall into a smaller, plainer stretch that leads more directly down to Earth Song Falls.\n\nBetween the two lies Zaetar's Choice, the fork from which both paths descend.",
-			source = "https://warcraft.wiki.gg/wiki/Wicked_Tunnels",
-		},
-		["zaetars choice"] = {
-			name = "Zaetar's Choice",
-			short = "Beneath Desolace, the tunnel into Maraudon splits into three, each path holding a portal to a different part of the caverns below.",
-			full = "Beneath Desolace, the tunnel into Maraudon splits into three, each path holding a portal to a different part of the caverns below.\n\nTo the left, purple crystals mark the way through the Wicked Tunnels to the Wicked Grotto. Down the middle, between two standing statues, the path leads through Earth Song Gate to Earth Song Falls. To the right, orange crystals line the way through the Foulspore Pools to the Foulspore Cavern.\n\nThe crossroads is named for Zaetar, forefather of the centaur.",
-			source = "https://warcraft.wiki.gg/wiki/Zaetar's_Choice",
-		},
 	},
-	-- Feralas: 47 subzones
+	-- Feralas: 28 subzones
 	[1444] = {
-		["broken commons"] = {
-			name = "Broken Commons",
-			short = "The Broken Commons lies beyond Eldreth Row, where Dire Maul's paths meet. Warpwood Quarter opens to the east, the Capital Gardens to the west, Gordok Commons to the north.",
-			full = "The Broken Commons lies beyond Eldreth Row, where Dire Maul's paths meet. Warpwood Quarter opens to the east, the Capital Gardens to the west, Gordok Commons to the north. At its center stands the Maul, the arena around which the ruined city turns.",
-			source = "https://warcraft.wiki.gg/wiki/Broken_Commons",
-		},
-		["camp ataya"] = {
-			name = "Camp Ataya",
-			short = "Under the shadow of the Twin Colossals, Camp Ataya stands as a small tauren outpost. When trouble called for aid, the Horde Council answered by sending Belgrom Rockmaul to the camp's defense.",
-			full = "Under the shadow of the Twin Colossals, Camp Ataya stands as a small tauren outpost. When trouble called for aid, the Horde Council answered by sending Belgrom Rockmaul to the camp's defense.",
-			source = "https://warcraft.wiki.gg/wiki/Camp_Ataya",
-		},
 		["camp mojache"] = {
 			name = "Camp Mojache",
 			short = "Camp Mojache sits astride the swift stream feeding Wildwind Lake, its braves known for thick hides and the protection they offer travelers through the dangers of Feralas.",
 			full = "Camp Mojache sits astride the swift stream feeding Wildwind Lake, its braves known for thick hides and the protection they offer travelers through the dangers of Feralas.\n\nThe camp has swelled with refugees fleeing Thousand Needles, many from Freewind Post, driven out by the destruction that took their homes.\n\nCamp Mojache itself never fell, but its warriors marched away to fight in the retaking of Thunder Bluff, leaving the village to hold on its own while its braves bled for the high tribe elsewhere. The Horde Council did not forget the debt, sending Belgrom Rockmaul to bring the camp aid.",
 			source = "https://warcraft.wiki.gg/wiki/Camp_Mojache",
-		},
-		["camp mojache longhouse"] = {
-			name = "Camp Mojache Longhouse",
-			short = "The longhouse stands at the heart of Camp Mojache, its fires kept for any weary traveler passing through Feralas who needs rest and shelter beneath its timbered roof.",
-			full = "The longhouse stands at the heart of Camp Mojache, its fires kept for any weary traveler passing through Feralas who needs rest and shelter beneath its timbered roof.",
-			source = "https://warcraft.wiki.gg/wiki/Camp_Mojache_Longhouse",
-		},
-		["capital gardens"] = {
-			name = "Capital Gardens",
-			short = "The Capital Gardens once formed a park district where the Highborne made their homes, until their defeat drove them to flee Dire Maul.",
-			full = "The Capital Gardens once formed a park district where the Highborne made their homes, until their defeat drove them to flee Dire Maul.\n\nNo hand has tended the gardens since. The trees stand gray and withered, and ancients stalk the broken streets.",
-			source = "https://warcraft.wiki.gg/wiki/Capital_Gardens",
-		},
-		["darkmist ruins"] = {
-			name = "Darkmist Ruins",
-			short = "The Darkmist Ruins crown a mountain in Feralas, once a city of the Highborne of Shen'dralar. When the Shen'dralar turned to dealings with demons, those who wanted no part of it abandoned the city.",
-			full = "The Darkmist Ruins crown a mountain in Feralas, once a city of the Highborne of Shen'dralar. When the Shen'dralar turned to dealings with demons, those who wanted no part of it abandoned the city. Not all left at once.\n\nA citizen named Verinias lingered, loving a woman named Sensiria too deeply to go, until at last he came to bid her farewell. But Sensiria had already given herself to the demonic powers corrupting the city, and she had no patience for his love. She named him a fool and, as a parting cruelty, \"gifted\" him with the same twisted power that had claimed her.\n\nThe gift remade him. Verinias began hoarding the souls bound within the ruins, and used that hoarded power to keep Sensiria from ever leaving the place she had corrupted him in.",
-			source = "https://warcraft.wiki.gg/wiki/Darkmist_Ruins",
 		},
 		["dire maul"] = {
 			name = "Dire Maul",
@@ -5879,31 +3845,7 @@ ZoneLore.Subzones = {
 			full = "On a small island in the heart of Jademir Lake, in northern Feralas, stands the great tree called Dream Bough. It was planted by followers of Fandral Staghelm from a branch of Nordrassil, set there to hold back the saronite seeping up through the land. In time it became one of the places where the waking world touches the Emerald Dream, a portal opening at its roots, and the green dragonflight took up its guard.\n\nThe dragon Lethlas held that portal at the base of the tree, with dragonspawn watching the shores of the lake around it. It was from here that Taerar meant to pour the corruption of the Emerald Nightmare out across Feralas. Ysondre, who feared to be corrupted again herself, would not set foot near the island, and so it fell to others to close the way. The portal was sealed, and the tree's connection to the Dream was broken.",
 			source = "https://warcraft.wiki.gg/wiki/Dream_Bough",
 		},
-		["dreamers rest"] = {
-			name = "Dreamer's Rest",
-			short = "Dreamer's Rest sits south of Oneiros, on the eastern side of the Twin Colossals, kept by the Druids of the Talon.",
-			full = "Dreamer's Rest sits south of Oneiros, on the eastern side of the Twin Colossals, kept by the Druids of the Talon.\n\nIt was here that the memories of the ancients grew disturbed, their recollections unraveling into confusion. That disruption reached Thrall, and it was this that sent him to the Caverns of Time, seeking who or what was unmaking history.",
-			source = "https://warcraft.wiki.gg/wiki/Dreamer's_Rest",
-		},
-		["eldreth row"] = {
-			name = "Eldreth Row",
-			short = "Eldreth Row forms the ruined front of Eldre'Thalas, its tall halls broken open and overgrown with vines and moss. Gordunni ogres patrol the wreckage where elven architects once walked.",
-			full = "Eldreth Row forms the ruined front of Eldre'Thalas, its tall halls broken open and overgrown with vines and moss. Gordunni ogres patrol the wreckage where elven architects once walked. The Dire Pool lies to the west, and a passage east leads into the Warpwood Quarter, deeper into what remains of the city.",
-			source = "https://warcraft.wiki.gg/wiki/Eldreth_Row",
-		},
-		["emerald summit"] = {
-			name = "Emerald Summit",
-			short = "At the Emerald Summit, above the road from Camp Mojache, the dragon Ysondre waits, freed from the Nightmare's corruption. She calls for aid against Taerar, last of the Dragons of Nightmare still lost to it.",
-			full = "At the Emerald Summit, above the road from Camp Mojache, the dragon Ysondre waits, freed from the Nightmare's corruption. She calls for aid against Taerar, last of the Dragons of Nightmare still lost to it.",
-			source = "https://warcraft.wiki.gg/wiki/Emerald_Summit",
-		},
 		["feathermoon stronghold"] = {
-			name = "Feathermoon Stronghold",
-			short = "Feathermoon Stronghold rises from Sardor Isle off the coast of Feralas, a night elf fortress built and named for General Shandris Feathermoon, who for ten thousand years has stood at Tyrande Whisperwind's side among the Sentinels.",
-			full = "Feathermoon Stronghold rises from Sardor Isle off the coast of Feralas, a night elf fortress built and named for General Shandris Feathermoon, who for ten thousand years has stood at Tyrande Whisperwind's side among the Sentinels.\n\nThe stronghold has faced no shortage of enemies. The Gordok ogres of Dire Maul once threatened it as no other force did, until their king was slain and the invasion broken without further bloodshed. Later, when the Gordunni ogres were found taking magical orbs from Cho'gall and the Twilight's Hammer, the worgen Silvia rallied the Sentinels to march on Dire Maul itself. Under Shandris Feathermoon's own command, the night elf army drove the cultists from the ruins before they could carry off the Highborne artifacts hidden there.",
-			source = "https://warcraft.wiki.gg/wiki/Feathermoon_Stronghold_(Classic)",
-		},
-		["feathermoon stronghold classic"] = {
 			name = "Feathermoon Stronghold",
 			short = "Feathermoon Stronghold rises from Sardor Isle off the coast of Feralas, a night elf fortress built and named for General Shandris Feathermoon, who for ten thousand years has stood at Tyrande Whisperwind's side among the Sentinels.",
 			full = "Feathermoon Stronghold rises from Sardor Isle off the coast of Feralas, a night elf fortress built and named for General Shandris Feathermoon, who for ten thousand years has stood at Tyrande Whisperwind's side among the Sentinels.\n\nThe stronghold has faced no shortage of enemies. The Gordok ogres of Dire Maul once threatened it as no other force did, until their king was slain and the invasion broken without further bloodshed. Later, when the Gordunni ogres were found taking magical orbs from Cho'gall and the Twilight's Hammer, the worgen Silvia rallied the Sentinels to march on Dire Maul itself. Under Shandris Feathermoon's own command, the night elf army drove the cultists from the ruins before they could carry off the Highborne artifacts hidden there.",
@@ -5926,12 +3868,6 @@ ZoneLore.Subzones = {
 			short = "The Frayfeather Highlands rise as the domain of the Frayfeather hippogryphs, who take their name from the land itself and hold it as their own.",
 			full = "The Frayfeather Highlands rise as the domain of the Frayfeather hippogryphs, who take their name from the land itself and hold it as their own. Scattered through the high ground are their nests, cradling eggs left beneath watchful wings.",
 			source = "https://warcraft.wiki.gg/wiki/Frayfeather_Highlands",
-		},
-		["gordok commons"] = {
-			name = "Gordok Commons",
-			short = "The Gordok, elite of the Gordunni ogres, hold the northern quarter of Dire Maul as King Gordok's seat. But the crown is his only by old ogre law: whoever kills the king becomes king in his place.",
-			full = "The Gordok, elite of the Gordunni ogres, hold the northern quarter of Dire Maul as King Gordok's seat. But the crown is his only by old ogre law: whoever kills the king becomes king in his place.",
-			source = "https://warcraft.wiki.gg/wiki/Gordok_Commons",
 		},
 		["gordunni outpost"] = {
 			name = "Gordunni Outpost",
@@ -5963,12 +3899,6 @@ ZoneLore.Subzones = {
 			full = "On the island of Dream Bough, at the heart of Jademir Lake, lies a portal into the Emerald Dream, watched over by Lethlas and a company of green dragonspawn. Along the lake's northwestern shore, whelps twisted by infection still linger.",
 			source = "https://warcraft.wiki.gg/wiki/Jademir_Lake",
 		},
-		["lake dumont"] = {
-			name = "Lake Dumont",
-			short = "Lake Dumont spreads wide beneath the northern reaches of Feralas, wide enough to hold an island at its center, and it is that island that draws the eye.",
-			full = "Lake Dumont spreads wide beneath the northern reaches of Feralas, wide enough to hold an island at its center, and it is that island that draws the eye.\n\nA mage tower once stood there, and stands there still, but broken. Fire has not yet gone out of it, and rubble from its fall lies scattered across the island and beneath the water at its edges, as though the tower were thrown down only recently. A small boat rides at anchor nearby, and a handful of stranded souls linger on the isle, waiting for a way off that has not come.\n\nAt the lake's northern end lie older ruins, night elven work long since crumbled, keeping their own silence apart from the wreck on the island.",
-			source = "https://warcraft.wiki.gg/wiki/Lake_Dumont",
-		},
 		["lariss pavilion"] = {
 			name = "Lariss Pavilion",
 			short = "The Lariss Pavilion, built in the old night elf style, stands north of Camp Mojache. Its dryads once kept peaceful watch here, but the Emerald Nightmare has twisted their minds, and now they attack anyone who comes near.",
@@ -5981,18 +3911,6 @@ ZoneLore.Subzones = {
 			full = "The Lower Wilds mark the eastern reach of Feralas, falling toward Thousand Needles. Treants and corrupted dryads haunt the paths here, while refugees from Freewind Post pass through toward Camp Mojache. The Emerald Summit rises along the eastern road, where New Thalanaar stands.",
 			source = "https://warcraft.wiki.gg/wiki/Lower_Wilds",
 		},
-		["maul subzone"] = {
-			name = "Maul (subzone)",
-			short = "The pit sits in the middle of the Broken Commons, sunk below the three great wings of Dire Maul, a scar of open ground amid the ruin.",
-			full = "The pit sits in the middle of the Broken Commons, sunk below the three great wings of Dire Maul, a scar of open ground amid the ruin. A tunnel on the west side leads down into it, past packs of sleeping Gordok hyenas, ending in the bare fighting ground below. It is the only way in that does not mean a fall -- those who simply drop into the pit arrive bruised and slow, easy prey for whatever waits below with breath already caught.\n\nThe Maul keeps no faction and no peace. Whatever banner a fighter carries means nothing once they are down in the dirt; only those bound together in the same company are safe from each other. Everyone else in that pit is fair prey to everyone else in it.\n\nMushgog, the Razza, and Skarr the Unbreakable are known to hold the ground there.",
-			source = "https://warcraft.wiki.gg/wiki/Maul_(subzone)",
-		},
-		["new thalanaar"] = {
-			name = "New Thalanaar",
-			short = "New Thalanaar rose in the far east of Feralas after the sea took the original Thalanaar beneath its waters, meant to be a fresh footing for those who had lost their homes to the flood.",
-			full = "New Thalanaar rose in the far east of Feralas after the sea took the original Thalanaar beneath its waters, meant to be a fresh footing for those who had lost their homes to the flood.\n\nThat refuge did not last. Grimtotem forces fell upon the outpost and laid siege to it, and for months the settlement held as a war zone rather than a home, its people fleeing for the docks where a boat waited to carry them to safety.",
-			source = "https://warcraft.wiki.gg/wiki/New_Thalanaar",
-		},
 		["oneiros"] = {
 			name = "Oneiros",
 			short = "South of Jademir Lake, the ruins of Oneiros hold a small night elf camp, Dreamer's Rest.",
@@ -6004,12 +3922,6 @@ ZoneLore.Subzones = {
 			short = "Rage Scar Hold is a dug-in cave holding the most vicious yetis in Feralas.",
 			full = "Rage Scar Hold is a dug-in cave holding the most vicious yetis in Feralas. Among them lie scattered books and arcane symbols, as if the yetis study this magic themselves, or once took it from some unfortunate mage who met his end within the cave.",
 			source = "https://warcraft.wiki.gg/wiki/Rage_Scar_Hold",
-		},
-		["ruins of feathermoon"] = {
-			name = "Ruins of Feathermoon",
-			short = "The naga rose against Feathermoon, and the stronghold's name passed to a new home on the mainland. Yet the island was not abandoned.",
-			full = "The naga rose against Feathermoon, and the stronghold's name passed to a new home on the mainland. Yet the island was not abandoned. Feathermoon soldiers stayed on, alongside Gilnean troops, holding the ruins against the naga still.",
-			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Feathermoon",
 		},
 		["ruins of isildien"] = {
 			name = "Ruins of Isildien",
@@ -6035,41 +3947,17 @@ ZoneLore.Subzones = {
 			full = "Sardor Isle sits west of the Feralas mainland, its shores once home to Feathermoon Stronghold, the night elf village led by Shandris Feathermoon. Naga moved through its waters, and wolves ran wild across its ground, sharing the isle with those who kept watch there.",
 			source = "https://warcraft.wiki.gg/wiki/Sardor_Isle",
 		},
-		["shadebough"] = {
-			name = "Shadebough",
-			short = "Shadebough sits in the Lower Wilds of Feralas, northeast of the Writhing Deep, under Adella's leadership.",
-			full = "Shadebough sits in the Lower Wilds of Feralas, northeast of the Writhing Deep, under Adella's leadership. To reach it at all means passing through country thick with gnolls, unlike the other camps the Alliance holds in this land.",
-			source = "https://warcraft.wiki.gg/wiki/Shadebough",
-		},
 		["shalzarus lair"] = {
 			name = "Shalzaru's Lair",
 			short = "The lair twists south of Feathermoon Stronghold's island, at the northern end of the Isle of Dread, two caves joined by a dark waterway.",
 			full = "The lair twists south of Feathermoon Stronghold's island, at the northern end of the Isle of Dread, two caves joined by a dark waterway. Hatecrest sorceresses and serpent guards hold its passages. Deep within dwells Shalzaru, master of the Hatecrest, who few reach and fewer face.",
 			source = "https://warcraft.wiki.gg/wiki/Shalzaru's_Lair",
 		},
-		["steam pools"] = {
-			name = "Steam Pools",
-			short = "The Steam Pools rise through the mountains of southern Feralas, near Silithus, a lake at their base and hot pools steaming higher up the slope.",
-			full = "The Steam Pools rise through the mountains of southern Feralas, near Silithus, a lake at their base and hot pools steaming higher up the slope. Gadgetzan runs a resort here for the wealthy, who come to take the waters far from the city's dust.",
-			source = "https://warcraft.wiki.gg/wiki/Steam_Pools",
-		},
-		["stonemaul hold"] = {
-			name = "Stonemaul Hold",
-			short = "Stonemaul Hold rises southwest of Dire Maul, a mound outpost held by the Stonemaul clan under Orhan Ogreblade.",
-			full = "Stonemaul Hold rises southwest of Dire Maul, a mound outpost held by the Stonemaul clan under Orhan Ogreblade. From here Orhan turns his ogres against the Gordunni, working to bring them down so that the Horde might make use of what the Gordunni only waste.",
-			source = "https://warcraft.wiki.gg/wiki/Stonemaul_Hold",
-		},
 		["thalanaar"] = {
 			name = "Thalanaar",
 			short = "Thalanaar offers little to the traveler passing through, save Caryssia Moonhunter, who works hides and leather here in the manner of the tribes.",
 			full = "Thalanaar offers little to the traveler passing through, save Caryssia Moonhunter, who works hides and leather here in the manner of the tribes.\n\nNew Thalanaar rose just to the west of it, built fresh alongside the old ground.",
 			source = "https://warcraft.wiki.gg/wiki/Thalanaar",
-		},
-		["tower of estulan"] = {
-			name = "Tower of Estulan",
-			short = "South of Dire Maul stands the Tower of Estulan, where Estulan trains the next generation of Highborne mages. Among the camp's charges is Arcosin, an Arcane Ancient bound within its grounds.",
-			full = "South of Dire Maul stands the Tower of Estulan, where Estulan trains the next generation of Highborne mages. Among the camp's charges is Arcosin, an Arcane Ancient bound within its grounds.",
-			source = "https://warcraft.wiki.gg/wiki/Tower_of_Estulan",
 		},
 		["twin colossals"] = {
 			name = "Twin Colossals",
@@ -6082,12 +3970,6 @@ ZoneLore.Subzones = {
 			short = "The Verdantis River winds through central Feralas, southeast of Dire Maul, its waters cutting a quiet path through the wilds. Nowhere else in the world does the Feralas Ahi swim.",
 			full = "The Verdantis River winds through central Feralas, southeast of Dire Maul, its waters cutting a quiet path through the wilds. Nowhere else in the world does the Feralas Ahi swim.",
 			source = "https://warcraft.wiki.gg/wiki/Verdantis_River",
-		},
-		["warpwood quarter"] = {
-			name = "Warpwood Quarter",
-			short = "The Warpwood Quarter lies overgrown and wild, its ancient trees and crazed plant life a testament to what has taken root there.",
-			full = "The Warpwood Quarter lies overgrown and wild, its ancient trees and crazed plant life a testament to what has taken root there. Alzzin the Wildshaper, a satyr, holds the district now, and it was he who corrupted the Fruit of Fertility so that it no longer bears anything wholesome, only vile Felvine Shards twisted from its once-fertile power. That corruption has drawn its own company: satyrs, mages, demons, and plant life gone mad with whatever taint Alzzin has spread through the soil and canopy.\n\nAmong the tangled Warpwood ancients and grasping lashers there moves a smaller, stranger figure: the imp Pusillin, who cannot seem to hold still, forever darting off through the quarter and beyond into the Hidden Reach, dragging any pursuit behind him. At the heart of it all stands the Conservatory, sunken below the level of the surrounding ground, where the fruit's corruption seems to have taken deepest hold.",
-			source = "https://warcraft.wiki.gg/wiki/Warpwood_Quarter",
 		},
 		["wildwind lake"] = {
 			name = "Wildwind Lake",
@@ -6114,7 +3996,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Writhing_Deep",
 		},
 	},
-	-- Dustwallow Marsh: 30 subzones
+	-- Dustwallow Marsh: 24 subzones
 	[1445] = {
 		["alcaz island"] = {
 			name = "Alcaz Island",
@@ -6127,12 +4009,6 @@ ZoneLore.Subzones = {
 			short = "A goblin zeppelin bound south with a shipment of supplies never finished its run.",
 			full = "A goblin zeppelin bound south with a shipment of supplies never finished its run. It went down deep in Dustwallow Marsh, east of Tabetha's Farm, and its broken hull still lies there, cargo scattered through the wreckage, seaforium boosters still among it.",
 			source = "https://warcraft.wiki.gg/wiki/Beezil's_Wreck",
-		},
-		["blackhoof village"] = {
-			name = "Blackhoof Village",
-			short = "Blackhoof Village stands in northern Dustwallow Marsh, held by the Grimtotem tribe. Captured Theramore guards are kept there, watching for any friendly face that might free them.",
-			full = "Blackhoof Village stands in northern Dustwallow Marsh, held by the Grimtotem tribe. Captured Theramore guards are kept there, watching for any friendly face that might free them.",
-			source = "https://warcraft.wiki.gg/wiki/Blackhoof_Village",
 		},
 		["bloodfen burrow"] = {
 			name = "Bloodfen Burrow",
@@ -6164,12 +4040,6 @@ ZoneLore.Subzones = {
 			full = "The Den of Flame was raised by the Stonemaul ogres as their mound, its halls still bearing an ogre's hand in the stonework. Their banner yet stands within it, though the ogres are gone.\n\nBlack dragonkin hold the mound now, said to answer to Onyxia, the great black dragon who lairs nearby. Nothing remains of the Stonemaul but the walls and the banner they left behind.",
 			source = "https://warcraft.wiki.gg/wiki/Den_of_Flame",
 		},
-		["direhorn post"] = {
-			name = "Direhorn Post",
-			short = "Direhorn Post sits north of Tabetha's Farm, in the sucking mire of the Quagmire, held by Grimtotem tauren who answer to no chief but their own suspicion of outsiders.",
-			full = "Direhorn Post sits north of Tabetha's Farm, in the sucking mire of the Quagmire, held by Grimtotem tauren who answer to no chief but their own suspicion of outsiders.",
-			source = "https://warcraft.wiki.gg/wiki/Direhorn_Post",
-		},
 		["dragonmurk"] = {
 			name = "Dragonmurk",
 			short = "The waters here run murky for a reason. Whelps and dragonspawn of the black flight breed thick through this stretch of the marsh, so numerous that the mire itself bears their name.",
@@ -6200,29 +4070,11 @@ ZoneLore.Subzones = {
 			full = "Foothold Citadel served as headquarters of the Theramore Guard, holding the island's soldiers under the Alliance banner.\n\nHere Daelin Proudmoore met his end, cut down when Thrall's forces stormed Theramore, led into the keep by Rexxar and his companions.\n\nYears later, the citadel was destroyed along with the rest of Theramore.",
 			source = "https://warcraft.wiki.gg/wiki/Foothold_Citadel",
 		},
-		["jewelhammers vault"] = {
-			name = "Jewelhammer's Vault",
-			short = "Beneath Alcaz Island lies Jewelhammer's Vault, a titan observatory reached only through a flooded entrance.",
-			full = "Beneath Alcaz Island lies Jewelhammer's Vault, a titan observatory reached only through a flooded entrance. Within it stands a Vault Guardian, set to watch over Jewelhammer's Chest, which holds a missing chapter of some larger, unfinished record.",
-			source = "https://warcraft.wiki.gg/wiki/Jewelhammer's_Vault",
-		},
 		["lost point"] = {
 			name = "Lost Point",
 			short = "Lost Point was raised as a scout tower by Theramore, now rotting in the marsh damp and held by deserters from that same city.",
 			full = "Lost Point was raised as a scout tower by Theramore, now rotting in the marsh damp and held by deserters from that same city. Their leader, Balos Jacken, knows what became of Private Hendel, a man bound up in the kidnapping of someone of great importance to Theramore.",
 			source = "https://warcraft.wiki.gg/wiki/Lost_Point",
-		},
-		["mudsprocket"] = {
-			name = "Mudsprocket",
-			short = "Mudsprocket sits in the south-west mire of Dustwallow Marsh, a goblin town built up on stilts and salvage against the wet ground.",
-			full = "Mudsprocket sits in the south-west mire of Dustwallow Marsh, a goblin town built up on stilts and salvage against the wet ground. Its people keep faith with Gadgetzan, and the town's forge and anvil ring alongside the hum of a goblin laboratory tucked among the huts.",
-			source = "https://warcraft.wiki.gg/wiki/Mudsprocket",
-		},
-		["nats landing"] = {
-			name = "Nat's Landing",
-			short = "A tent, a lantern nailed to a tree, fish racks, and a rickety dock over Dustwallow Bay -- this is Nat Pagle's newly built spot.",
-			full = "A tent, a lantern nailed to a tree, fish racks, and a rickety dock over Dustwallow Bay -- this is Nat Pagle's newly built spot. Rods and reels lie ready, and Nat spends his days on the dock, line in the water, watching the bay.",
-			source = "https://warcraft.wiki.gg/wiki/Nat's_Landing",
 		},
 		["north point tower"] = {
 			name = "North Point Tower",
@@ -6266,12 +4118,6 @@ ZoneLore.Subzones = {
 			full = "Swamplight Manor sits on Witch Hill, home to \"Swamp Eye\" Jarl, a cook whose reputation has spread well beyond the marsh.\n\nIn the small garden outside, a pile of turned dirt marks where an orcish spy once buried a report, still hidden beneath the soil.",
 			source = "https://warcraft.wiki.gg/wiki/Swamplight_Manor",
 		},
-		["tabethas farm"] = {
-			name = "Tabetha's Farm",
-			short = "In the murkiest reach of the Quagmire, in Dustwallow Marsh, stands a small hut with a garden tended by a woman named Tabetha, alongside her two apprentices, Garion and Morlann.",
-			full = "In the murkiest reach of the Quagmire, in Dustwallow Marsh, stands a small hut with a garden tended by a woman named Tabetha, alongside her two apprentices, Garion and Morlann. A dock reaches from the hut into the swamp water, built for those who travel the mire by riverboat.",
-			source = "https://warcraft.wiki.gg/wiki/Tabetha's_Farm",
-		},
 		["theramore isle"] = {
 			name = "Theramore Isle",
 			short = "Theramore Isle (a.k.a. Theramore Keep, Theramore City or simply Theramore) was a human city and port town located in a rocky island east of Dustwallow Marsh, as well as the capital of the eponymous city-state/kingdom.",
@@ -6297,19 +4143,13 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Wyrmbog",
 		},
 	},
-	-- Tanaris: 31 subzones
+	-- Tanaris: 23 subzones
 	[1446] = {
 		["abyssal sands"] = {
 			name = "Abyssal Sands",
 			short = "The Abyssal Sands lie within the desert of Tanaris, a stretch of sand claimed for a time by the Burning Legion during its invasion.",
 			full = "The Abyssal Sands lie within the desert of Tanaris, a stretch of sand claimed for a time by the Burning Legion during its invasion.",
 			source = "https://warcraft.wiki.gg/wiki/Abyssal_Sands",
-		},
-		["bootlegger outpost"] = {
-			name = "Bootlegger Outpost",
-			short = "The goblins at Bootlegger Outpost came here on Marin Noggenfogger's orders, with a mission of two possible endings: find some way to turn the silithid swarming the Gaping Chasm into coin, or fail that, wipe them from the earth entirely.",
-			full = "The goblins at Bootlegger Outpost came here on Marin Noggenfogger's orders, with a mission of two possible endings: find some way to turn the silithid swarming the Gaping Chasm into coin, or fail that, wipe them from the earth entirely. Either outcome would have suited him.\n\nNarain Soothfancy can be found at the outpost now, his book Soothsaying for Dummies on hand for anyone who asks.",
-			source = "https://warcraft.wiki.gg/wiki/Bootlegger_Outpost",
 		},
 		["broken pillar"] = {
 			name = "Broken Pillar",
@@ -6323,35 +4163,11 @@ ZoneLore.Subzones = {
 			full = "In the eastern reaches of Tanaris, a labyrinth winds down into the dark, and at its heart burns a great hourglass. This is the lair of Nozdormu, the Dragon Aspect of Time, and the home of the bronze dragonflight he leads. Since the world was young the bronze dragons have kept this place sealed against mortal hands, for the titans charged them with a sacred duty: to guard the crossroads of the timeways, where every branching path of what-might-have-been forks away from the one true history. A single mortal footstep in the wrong moment of the past could unmake everything that followed, and so the dragons watch, and do not let anyone pass unchallenged.\n\nEven a guardian of time can be caught unaware. Nozdormu once awoke sensing a threat to the timeways he loved, and gathered heroes to his side to face it. While they meditated together in the caverns, an agent struck, killing Desharin where he sat. In the chaos, a bronze dragon flung Thrall bodily into one of the portals, casting him back along the corridors of history in a desperate journey that ended, at last, in Nozdormu's release.",
 			source = "https://warcraft.wiki.gg/wiki/Caverns_of_Time",
 		},
-		["circle of aquementas"] = {
-			name = "Circle of Aquementas",
-			short = "South of Lost Rigger Cove, on the eastern shore of Tanaris, stands a ring of upright stones swirled into pattern. Whatever it once bound is gone: the elemental Aquementas walks free of it now, called the Unchained.",
-			full = "South of Lost Rigger Cove, on the eastern shore of Tanaris, stands a ring of upright stones swirled into pattern. Whatever it once bound is gone: the elemental Aquementas walks free of it now, called the Unchained. Only pirate corpses litter the empty circle, left where they fell.",
-			source = "https://warcraft.wiki.gg/wiki/Circle_of_Aquementas",
-		},
-		["dawnrise expedition"] = {
-			name = "Dawnrise Expedition",
-			short = "The Reliquary keeps a small camp here, in the western reach of the Valley of the Watchers, its blood elves working the same dust as their Alliance counterparts at Gunstan's Dig across the way.",
-			full = "The Reliquary keeps a small camp here, in the western reach of the Valley of the Watchers, its blood elves working the same dust as their Alliance counterparts at Gunstan's Dig across the way.",
-			source = "https://warcraft.wiki.gg/wiki/Dawnrise_Expedition",
-		},
-		["deserted workshop"] = {
-			name = "Deserted Workshop",
-			short = "A wrecked rocket car rests on a hillside northwest of Gadgetzan, its tracks running north toward the mountains bordering Thousand Needles.",
-			full = "A wrecked rocket car rests on a hillside northwest of Gadgetzan, its tracks running north toward the mountains bordering Thousand Needles. The workshop that once stood here is empty now, its purpose gone.",
-			source = "https://warcraft.wiki.gg/wiki/Deserted_Workshop",
-		},
 		["dunemaul compound"] = {
 			name = "Dunemaul Compound",
 			short = "Sandscraper rules the Dunemaul ogres from his cave in the compound, the mound of stone and packed earth that gives the clan its ground.",
 			full = "Sandscraper rules the Dunemaul ogres from his cave in the compound, the mound of stone and packed earth that gives the clan its ground. East of the compound, Megs Dreadshredder works to bend these ogres to the Horde's purpose, trying to talk them into service where strength alone has failed.",
 			source = "https://warcraft.wiki.gg/wiki/Dunemaul_Compound",
-		},
-		["dunemaul recruitment camp"] = {
-			name = "Dunemaul Recruitment Camp",
-			short = "Megs Dreadshredder looked at the Dunemaul ogres sitting idle and saw only waste -- brute strength that could be turning a profit for the Bilgewater Cartel.",
-			full = "Megs Dreadshredder looked at the Dunemaul ogres sitting idle and saw only waste -- brute strength that could be turning a profit for the Bilgewater Cartel. She had no interest in loyalty, only cheap local labor.\n\nSo she recruited them, working through an ogre \"Ambassador\" to bring the rest around. It worked. The camp became the place where that bargain was struck: ogres put to work under Bilgewater direction.",
-			source = "https://warcraft.wiki.gg/wiki/Dunemaul_Recruitment_Camp",
 		},
 		["eastmoon ruins"] = {
 			name = "Eastmoon Ruins",
@@ -6395,18 +4211,6 @@ ZoneLore.Subzones = {
 			full = "The land here remembers water. The Noxious Lair, known also as the Centipaar Hive, sits sunken into the earth of southwestern Tanaris, its floor bowed in the shape of some broad river or shallow lake long since gone dry, still looking out over Un'Goro Crater as if waiting for the water to return.\n\nIt will not. The silithid came instead, digging down where the lake once stood, and Tanaris was left drier for it. Above ground, half-buried shapes still stir in the sand, great claws twitching up out of the earth, and around each one the soil is dark and wet with silithid goo, the only moisture left in a place that once held a river.\n\nBelow the surface the lair opens into tunnels coated in acid and studded with unborn insects waiting in the dark.",
 			source = "https://warcraft.wiki.gg/wiki/Noxious_Lair",
 		},
-		["road warrior"] = {
-			name = "Road Warrior",
-			short = "The Road Warrior stands as the inn of Gadgetzan, kept by Innkeeper Fizzgrimble.",
-			full = "The Road Warrior stands as the inn of Gadgetzan, kept by Innkeeper Fizzgrimble. Travelers who pass through can settle at its tables to sample the local specialty, Mechs on the Beach, a dish known well enough to keep the place a favored stop for those wandering far from home.",
-			source = "https://warcraft.wiki.gg/wiki/Road_Warrior",
-		},
-		["ruins of uldum"] = {
-			name = "Ruins of Uldum",
-			short = "The stone hall in the southern Valley of the Watchers opens onto a wall broken through on its western side, where the machinery of the titans can still be seen, half-buried and silent.",
-			full = "The stone hall in the southern Valley of the Watchers opens onto a wall broken through on its western side, where the machinery of the titans can still be seen, half-buried and silent. Sandstone Earthen stand frozen throughout the chamber, unprovoked and unmoving, their minds dimmed since the Well of Eternity's ruin sent its pain through the bones of the world. In that shattering the earthen lost themselves and withdrew into the stone chambers where they had first been shaped, and this hall was one of the places they returned to, sealing themselves inside for nearly eight thousand years.\n\nThe Stone Watcher of Norgannon still guards what memory the hall keeps: that none may pass without the Plates of Uldum, and that beyond this entrance lies a place built for the titans' work of tending Azeroth's living world.\n\nAt the back of the chamber sits the Antediluvean Chest, old and undisturbed, and something still wakes to guard it.",
-			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Uldum",
-		},
 		["sandsorrow watch"] = {
 			name = "Sandsorrow Watch",
 			short = "Sandsorrow Watch spreads west of Gadgetzan across the dunes of Tanaris, claimed by the Farraki tribe and the shambling dead they have raised among their own ranks.",
@@ -6436,12 +4240,6 @@ ZoneLore.Subzones = {
 			short = "Steamwheedle Port sits on the eastern coast of Tanaris, tied by road to Gadgetzan, its mother city, and by dock to ships from Kezan.",
 			full = "Steamwheedle Port sits on the eastern coast of Tanaris, tied by road to Gadgetzan, its mother city, and by dock to ships from Kezan. It belongs to the neutral goblin Steamwheedle Cartel, who take no side in others' wars and profit from all of them.\n\nThe port has emptied. Many who lived here are gone or dead, killed by forces that broke the place, and others took the cartel's fee to relocate to Gadgetzan rather than stay.",
 			source = "https://warcraft.wiki.gg/wiki/Steamwheedle_Port",
-		},
-		["steelspark station"] = {
-			name = "Steelspark Station",
-			short = "At Land's End Beach, in the northwestern reach of Tanaris, the gnomes of Gnomeregan Covert Ops keep a small station, watching the sands under the name Steelspark.",
-			full = "At Land's End Beach, in the northwestern reach of Tanaris, the gnomes of Gnomeregan Covert Ops keep a small station, watching the sands under the name Steelspark.",
-			source = "https://warcraft.wiki.gg/wiki/Steelspark_Station",
 		},
 		["thistleshrub valley"] = {
 			name = "Thistleshrub Valley",
@@ -6486,20 +4284,8 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Zul'Farrak",
 		},
 	},
-	-- Azshara: 49 subzones
+	-- Azshara: 26 subzones
 	[1447] = {
-		["ancient grove"] = {
-			name = "Ancient Grove",
-			short = "The Ancient Grove once stood along Azshara's southern edge, until Orgrimmar's rear gate rose nearby and the Horde began cutting it down.",
-			full = "The Ancient Grove once stood along Azshara's southern edge, until Orgrimmar's rear gate rose nearby and the Horde began cutting it down. Few trees remain, watched over by night elves and by the Talrendis Ancient, an elder tree-spirit guarding what is left.",
-			source = "https://warcraft.wiki.gg/wiki/Ancient_Grove",
-		},
-		["arcane pinnacle"] = {
-			name = "Arcane Pinnacle",
-			short = "A mountain peak rises above Azshara, its summit crowned with the image of Archmage Xylem, who keeps his apprentices about him and tends a portal set with three stones of frost, fire, and shadow.",
-			full = "A mountain peak rises above Azshara, its summit crowned with the image of Archmage Xylem, who keeps his apprentices about him and tends a portal set with three stones of frost, fire, and shadow.\n\nTouch a stone and the portal takes its name from the trial it opens onto: Icy Mortality, Burning Determination, Grim Intention. Whichever path is chosen, the way back is always named the same thing, Waning Sanity, a name Xylem gave it himself, and one that seems less a description of the portal than of the archmage who made it. Something in him has come loose from long study of these trials, and the portal only says so plainly.\n\nThe peak offers nothing else. No aid waits for those who fall from it or leave it; the climb up must be answered with a climb back, though Zoey Wizzlespark keeps a small store of enchanting supplies at hand for those who reach the top.",
-			source = "https://warcraft.wiki.gg/wiki/Arcane_Pinnacle",
-		},
 		["bay of storms"] = {
 			name = "Bay of Storms",
 			short = "The waters east of Azshara churn with a violence that gives the bay its name. Along its edge lie Scalebeard's Cave, Hetaera's Clutch, and the Temple of Arkkoran, half-drowned reminders of something older than the storms.",
@@ -6512,47 +4298,17 @@ ZoneLore.Subzones = {
 			full = "Bear's Head takes its name from the furbolg villages scattered across its slopes, small outposts answering to Timbermaw Hold and Ursolan to the north.\n\nOn the cliffs above stands Xylem's Tower, home to Archmage Xylem and his apprentices, among them the high elves Joy Ar'nareth and Rayan Dawnrisen.",
 			source = "https://warcraft.wiki.gg/wiki/Bear's_Head",
 		},
-		["bilgewater harbor"] = {
-			name = "Bilgewater Harbor",
-			short = "When Kezan's harbors burned, the surviving goblins of the Bilgewater Cartel threw in with their new Horde comrades and raised a home for themselves on an artificial island in the Bay of Storms, off Azshara.",
-			full = "When Kezan's harbors burned, the surviving goblins of the Bilgewater Cartel threw in with their new Horde comrades and raised a home for themselves on an artificial island in the Bay of Storms, off Azshara. It went up fast, as goblin things do, and it shows: gambling dens and pleasure houses stand shoulder to shoulder with the docks, all of it built for coin rather than order.\n\nOrgrimmar's soldiers came later, turning the harbor into a launching point for fleets and zeppelins serving the Warchief's designs on Kalimdor. But a naval front and a goblin pleasure town do not sit easily together. The military claims one half of Bilgewater Harbor, the goblins the other, and skull-and-crossbones markers warn against wandering from one side to the other unannounced. Discipline is hard to keep in a place where every vice is for sale at a handful of silver, and the rift between soldier and goblin runs deep enough that it seems likely to break into open trouble before long.",
-			source = "https://warcraft.wiki.gg/wiki/Bilgewater_Harbor",
-		},
 		["bitter reaches"] = {
 			name = "Bitter Reaches",
 			short = "The Bitter Reaches, in northeastern Azshara, are wild country. Hippogryphs, oozes, and chimaerae fill its crags and hollows, while mountain giants have driven off other creatures along the northern edge.",
 			full = "The Bitter Reaches, in northeastern Azshara, are wild country. Hippogryphs, oozes, and chimaerae fill its crags and hollows, while mountain giants have driven off other creatures along the northern edge. Mountain silversage grows here too, though sparsely.",
 			source = "https://warcraft.wiki.gg/wiki/Bitter_Reaches",
 		},
-		["blackmaw hold"] = {
-			name = "Blackmaw Hold",
-			short = "Blackmaw Hold sits along the northern mountains of Azshara, its camps linked by crude fencing beneath a giant totem, its entrance carved into the shape of a bear's maw.",
-			full = "Blackmaw Hold sits along the northern mountains of Azshara, its camps linked by crude fencing beneath a giant totem, its entrance carved into the shape of a bear's maw. It has been the capital of the Blackmaw tribe since before the War of the Ancients, more than ten thousand years standing.\n\nIt was here, in that ancient war, that the night elves came seeking the Blackmaws as allies against the Burning Legion. But Horde spies learned of the meeting and struck first, killing many furbolg in and around the hold. Whatever alliance might have been forged died with them.\n\nThe Blackmaws never forgot it. They remain hostile to outsiders to this day, and their anger burns hottest against the Bilgewater Cartel, whose work has torn into the land around their home.",
-			source = "https://warcraft.wiki.gg/wiki/Blackmaw_Hold",
-		},
-		["darnassian base camp"] = {
-			name = "Darnassian Base Camp",
-			short = "The camp in northern Azshara once belonged to blood elves, until a company of low-ranking Highborne night elves drove them out and took it for their own, renaming it as they went.",
-			full = "The camp in northern Azshara once belonged to blood elves, until a company of low-ranking Highborne night elves drove them out and took it for their own, renaming it as they went.\n\nUnder Lorekeeper Amberwind, the Highborne deal in arcane magic and dig into it further, raising an Arcane Construct to serve them, a thing the high elves of the Eastern Kingdoms outlawed fifteen hundred years past.\n\nThe blood elf Andorel Sunsworn watches them from outside, unimpressed by their clumsy magic, though he warns that should they stumble onto something of real power in the ruins of northern Azshara, the outcome could be terrible.",
-			source = "https://warcraft.wiki.gg/wiki/Darnassian_Base_Camp",
-		},
 		["forlorn ridge"] = {
 			name = "Forlorn Ridge",
 			short = "Forlorn Ridge once rose over southwestern Azshara, high enough that both the Alliance and the Horde built fortifications on its slopes, watching each other across the stone.",
 			full = "Forlorn Ridge once rose over southwestern Azshara, high enough that both the Alliance and the Horde built fortifications on its slopes, watching each other across the stone.\n\nThe mountain does not stand there now. The Bilgewater goblins tore it from its footing and moved the whole mass north, leaving behind the Mountainfoot Strip Mine, where digging woke basilisks nesting in the deep rock and turned them on the miners.",
 			source = "https://warcraft.wiki.gg/wiki/Forlorn_Ridge",
-		},
-		["gallywix pleasure palace"] = {
-			name = "Gallywix Pleasure Palace",
-			short = "The Bilgewater goblins tore Forlorn Ridge from its foundations and hauled it across western Azshara, northeast of Talrendis Point, not to build anything atop it but to strip it bare -- its minerals were worth more to the cartel than the mountain itself.",
-			full = "The Bilgewater goblins tore Forlorn Ridge from its foundations and hauled it across western Azshara, northeast of Talrendis Point, not to build anything atop it but to strip it bare -- its minerals were worth more to the cartel than the mountain itself. Only once the ridge had been picked clean did Trade Prince Jastor Gallywix decide its summit was worth keeping, and raised his pleasure palace there instead.\n\nIt is a place built for excess rather than defense. An ocean view stretches from its terraces, a golf course laid out with grenades in place of clubs winds across the grounds, and beneath it all runs a hidden cellar stocked with liquor. There is a pool tiled for luxury and a sauna kept always warm. Gallywix had dozens of onyx panthers, each set with jewels, turned loose to prowl the grounds among the golfers and sunbathers who come to be seen there.\n\nTrade Prince Donais visited the palace in the years after it was raised, one dignitary among the cartel's own kind granted a look at what Gallywix's fortune had bought him: a mountain moved, then made into a garden of excess for one goblin's pleasure.",
-			source = "https://warcraft.wiki.gg/wiki/Gallywix_Pleasure_Palace",
-		},
-		["gallywix rocketway exchange"] = {
-			name = "Gallywix Rocketway Exchange",
-			short = "The Gallywix Rocketway Exchange stands near the Gallywix Pleasure Palace in Azshara, a stop on the Bilgewater Cartel's rocketway.",
-			full = "The Gallywix Rocketway Exchange stands near the Gallywix Pleasure Palace in Azshara, a stop on the Bilgewater Cartel's rocketway. Arrivals are met by the rocket-jockey's greeting: \"Welcome to the Gallywix Rocketway Exchange! Debts to pay or get the heck away.\"",
-			source = "https://warcraft.wiki.gg/wiki/Gallywix_Rocketway_Exchange",
 		},
 		["haldarr encampment"] = {
 			name = "Haldarr Encampment",
@@ -6565,18 +4321,6 @@ ZoneLore.Subzones = {
 			short = "Beneath the Bay of Storms off Azshara lies the sunken temple of Elune called Hetaera's Clutch, home to hydras known as the children of Hetaera.",
 			full = "Beneath the Bay of Storms off Azshara lies the sunken temple of Elune called Hetaera's Clutch, home to hydras known as the children of Hetaera. Hetaera herself swims the waters north of the temple, sometimes resting on a small island there.",
 			source = "https://warcraft.wiki.gg/wiki/Hetaera's_Clutch",
-		},
-		["horizon scout"] = {
-			name = "Horizon Scout",
-			short = "The wreck of the Horizon Scout lies broken in the Ruined Reaches south of Azshara. Captain Vanessa Beltis washed ashore alive on the southern peninsula, but her ship did not carry the rest of her crew to safety with her.",
-			full = "The wreck of the Horizon Scout lies broken in the Ruined Reaches south of Azshara. Captain Vanessa Beltis washed ashore alive on the southern peninsula, but her ship did not carry the rest of her crew to safety with her.\n\nBelow decks, Roland Geardabbler and several of the crew remain trapped inside the drowned hull, alive only because Roland has held a water breathing aura around them, a faint shimmer that still clings to him as he keeps his people breathing in a ship that should have killed them all.\n\nIt is likely that the naga working these waters sank the Horizon Scout on purpose, not to kill her crew but to keep them from leaving until they gave up whatever it was the naga believed the humans had come here to find.",
-			source = "https://warcraft.wiki.gg/wiki/Horizon_Scout",
-		},
-		["hull of the foebreaker"] = {
-			name = "Hull of the Foebreaker",
-			short = "The Foebreaker lies at rest in the docks of Bilgewater Harbor, its hull broken open at Azshara's edge.",
-			full = "The Foebreaker lies at rest in the docks of Bilgewater Harbor, its hull broken open at Azshara's edge.",
-			source = "https://warcraft.wiki.gg/wiki/Hull_of_the_Foebreaker",
 		},
 		["jagged reef"] = {
 			name = "Jagged Reef",
@@ -6596,36 +4340,6 @@ ZoneLore.Subzones = {
 			full = "At the Legash Encampment, in northern Azshara, the Legashi satyr hold their ground.\n\nHere Archmage Xylem once found a grimoire, left among the satyr's holdings.",
 			source = "https://warcraft.wiki.gg/wiki/Legash_Encampment",
 		},
-		["mountainfoot strip mine"] = {
-			name = "Mountainfoot Strip Mine",
-			short = "Where Forlorn Ridge once stood, there is now only the pit of the Mountainfoot Strip Mine, the mountain stripped away.",
-			full = "Where Forlorn Ridge once stood, there is now only the pit of the Mountainfoot Strip Mine, the mountain stripped away.\n\nWhen the Burning Legion swept through, the mine fell under their control. The nathrezim enslaved its workers, driving them through the ruined shafts. Some were killed outright; others lived only because defenders came down and pulled them free.",
-			source = "https://warcraft.wiki.gg/wiki/Mountainfoot_Strip_Mine",
-		},
-		["northern rocketway exchange"] = {
-			name = "Northern Rocketway Exchange",
-			short = "The Northern Rocketway Exchange sits west of the Darnassian Base Camp, one stop on the Bilgewater Cartel's Rocketway. It offers little beyond a mailbox, a forge, and cooking fires grilling unusual delicacies.",
-			full = "The Northern Rocketway Exchange sits west of the Darnassian Base Camp, one stop on the Bilgewater Cartel's Rocketway. It offers little beyond a mailbox, a forge, and cooking fires grilling unusual delicacies. The resident Rocket-jockey greets arrivals dryly: glad, from Rocketway Relations, that they survived that last turn.",
-			source = "https://warcraft.wiki.gg/wiki/Northern_Rocketway_Exchange",
-		},
-		["northern rocketway terminus"] = {
-			name = "Northern Rocketway Terminus",
-			short = "The Northern Rocketway Terminus stands north of Bilgewater Harbor, at the end of the goblins' rocketway line, within the cold, empty ground of the Bitter Reaches.",
-			full = "The Northern Rocketway Terminus stands north of Bilgewater Harbor, at the end of the goblins' rocketway line, within the cold, empty ground of the Bitter Reaches.\n\nThe Bilgewater Cartel built it as they built the southern terminus, with a jockey stationed on the platform to greet arrivals. The welcome given here carries a wry edge: that whoever has landed probably meant to go elsewhere, but is welcome all the same.",
-			source = "https://warcraft.wiki.gg/wiki/Northern_Rocketway_Terminus",
-		},
-		["orgrimmar rear gate"] = {
-			name = "Orgrimmar Rear Gate",
-			short = "The Rear Gate stands where the canyon road out of the Valley of Honor opens onto Azshara, the way the Horde keeps to the goblins of the Bilgewater Cartel.",
-			full = "The Rear Gate stands where the canyon road out of the Valley of Honor opens onto Azshara, the way the Horde keeps to the goblins of the Bilgewater Cartel.\n\nIt was not always quiet ground. Talrendis Scouts once crept the rocks nearby, watching the gate without showing themselves, until Alliance forces came openly and laid siege to the approach. Orgrimmar's defenders, with those who fought alongside them, broke the assault and held the road.\n\nAg'tor Bloodfist and Labor Captain Grabbit keep watch here still, at the gate that ties the city to its goblin allies in Azshara.",
-			source = "https://warcraft.wiki.gg/wiki/Orgrimmar_Rear_Gate",
-		},
-		["orgrimmar rocketway exchange"] = {
-			name = "Orgrimmar Rocketway Exchange",
-			short = "The Rocketway Exchange stands near the rear gate of Orgrimmar, a station of the Bilgewater Cartel's line into the city.",
-			full = "The Rocketway Exchange stands near the rear gate of Orgrimmar, a station of the Bilgewater Cartel's line into the city. Its workers were once residents of the Goblin Slums, before that quarter was cleared to make way for the Orgrimmar Embassy. Displaced, they were resettled here under what the Cartel called a workforce adjustment, and it is their labor that keeps the station running now.",
-			source = "https://warcraft.wiki.gg/wiki/Orgrimmar_Rocketway_Exchange",
-		},
 		["ravencrest monument"] = {
 			name = "Ravencrest Monument",
 			short = "The Ravencrest Monument stands where Azshara's southern point breaks against the Great Sea, southeast of the Ruins of Eldarath.",
@@ -6644,41 +4358,17 @@ ZoneLore.Subzones = {
 			full = "The southern coast of Azshara breaks apart here into beach and cliff, cut by inlets where the water runs still over hidden shallows. Wreckage lies scattered along the shore, and the ruins that dot the coastline give the place its name. The waters are unkind, hiding shallows that can tear open a hull, and the shore itself is claimed by murlocs, hydras, and makrura, quick to violence toward anything that strays too close.\n\nOn the western shores, above the beach, a gnomish house stands on a hill, reachable only by a steep path from inland. Blimo Gadgetspring and Jubie Gadgetspring keep their home and trade here. Upstairs, in their bedroom, sits a third bed, kept and unexplained. No one knows whose it is, or who, if anyone, still sleeps in it.",
 			source = "https://warcraft.wiki.gg/wiki/Ruined_Reaches",
 		},
-		["ruins of arkkoran"] = {
-			name = "Ruins of Arkkoran",
-			short = "The ruins were once a great night elven temple, raised in honor of Arkkoran.",
-			full = "The ruins were once a great night elven temple, raised in honor of Arkkoran. Now only broken stone remains, claimed as the home of the sea giant Arkkoroc, who dwells among the fallen columns where priests once kept their rites.",
-			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Arkkoran",
-		},
 		["ruins of eldarath"] = {
 			name = "Ruins of Eldarath",
 			short = "Once Eldarath stood as one of the great strongholds of the night elves, before the world broke apart beneath it.",
 			full = "Once Eldarath stood as one of the great strongholds of the night elves, before the world broke apart beneath it. Its mages were among the most powerful of the Highborne, and they carved their findings into runes and tablets and left them standing in the open places of the city, so that any who came after might ponder the nature of the arcane. Many of those tablets still stand among the stones.\n\nIt was here, during the War of the Ancients, that the Kaldorei Resistance met the Burning Legion in battle. Jarod Shadowsong and Huln Highmountain stood against Tichondrius himself upon this ground. When the Great Sundering came, it tore the world apart, and most of Eldarath crumbled away into the Bay of Storms below, leaving only a cluster of ruins clinging to the eastern cliffs.\n\nNight elves have long shunned that remnant. Naga claimed it instead, ruling what was left of the city from the Temple of Zin-Malor.",
 			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Eldarath",
 		},
-		["ruins of nordressa"] = {
-			name = "Ruins of Nordressa",
-			short = "The ruins west of the Northern Rocketway Exchange are marked at their eastern edge by a line of torches. Among them stands the Image of Archmage Xylem, a projection of the archmage set among his gathered apprentices.",
-			full = "The ruins west of the Northern Rocketway Exchange are marked at their eastern edge by a line of torches. Among them stands the Image of Archmage Xylem, a projection of the archmage set among his gathered apprentices.\n\nSorata Firespinner, an apprentice long burnt out on the work of magic, sends seekers here. Xylem's image and his students set small trials to test discipline. Only those who complete them are sent onward to the Arcane Pinnacle, where Xylem's true trials wait.",
-			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Nordressa",
-		},
-		["sable ridge"] = {
-			name = "Sable Ridge",
-			short = "Sable Ridge lies in ruin, its stones stripped bare. When Raethas Dawnseer looked upon it, he remarked only that the place already seemed picked clean, as though the goblins had come through before anyone else could.",
-			full = "Sable Ridge lies in ruin, its stones stripped bare. When Raethas Dawnseer looked upon it, he remarked only that the place already seemed picked clean, as though the goblins had come through before anyone else could.",
-			source = "https://warcraft.wiki.gg/wiki/Sable_Ridge",
-		},
 		["scalebeards cave"] = {
 			name = "Scalebeard's Cave",
 			short = "On a small island in the western Bay of Storms sits a bare cave, home to Scalebeard, a great and rare turtle. He is seldom found within it, favoring the hunt out in the Great Sea over the shelter of his own den.",
 			full = "On a small island in the western Bay of Storms sits a bare cave, home to Scalebeard, a great and rare turtle. He is seldom found within it, favoring the hunt out in the Great Sea over the shelter of his own den.",
 			source = "https://warcraft.wiki.gg/wiki/Scalebeard's_Cave",
-		},
-		["secret lab"] = {
-			name = "Secret Lab",
-			short = "A crater in southern Azshara hides a Bilgewater goblin laboratory, one that built a working rocket to rival even Area 52's, alongside experiments performed on captured raptors.",
-			full = "A crater in southern Azshara hides a Bilgewater goblin laboratory, one that built a working rocket to rival even Area 52's, alongside experiments performed on captured raptors.\n\nX. Nizzlebex directed the work, but something has gone badly wrong. The buildings burn, and the buzzer meant to call for help rings for no one. Interns run in circles, patting out fires caught from their own experiments.\n\nTwo subjects broke loose. Subject Four escaped hating every humanoid it sees, hunting them for what was done to it. Subject Nine escaped too, wanting only a way out, still turning over some plan of escape.",
-			source = "https://warcraft.wiki.gg/wiki/Secret_Lab",
 		},
 		["shadowsong shrine"] = {
 			name = "Shadowsong Shrine",
@@ -6691,12 +4381,6 @@ ZoneLore.Subzones = {
 			short = "The Shattered Strand runs along the north side of the Bay of Storms, thick with hydras, sea giants, makrura, and murlocs.",
 			full = "The Shattered Strand runs along the north side of the Bay of Storms, thick with hydras, sea giants, makrura, and murlocs. Two remnants of older builders rise above the sand: the Temple of Arkkoran and the Tower of Eldara.\n\nWhen the Burning Legion's invasion swept through, the strand fell under demonic control. Naga died on that sand as Horde troops pressed their battle against the Legion along the shore.",
 			source = "https://warcraft.wiki.gg/wiki/Shattered_Strand",
-		},
-		["southern rocketway terminus"] = {
-			name = "Southern Rocketway Terminus",
-			short = "The Southern Rocketway Terminus stands south of Bilgewater Harbor, near the Secret Lab, one of two stations built by the Bilgewater Cartel to carry rocket traffic between its holdings.",
-			full = "The Southern Rocketway Terminus stands south of Bilgewater Harbor, near the Secret Lab, one of two stations built by the Bilgewater Cartel to carry rocket traffic between its holdings. A small landing pad below the platform serves those arriving by rocket, and the goblin who mans it greets each landing with pride, calling the station home to the world famous Secret Lab.",
-			source = "https://warcraft.wiki.gg/wiki/Southern_Rocketway_Terminus",
 		},
 		["southfury river"] = {
 			name = "Southfury River",
@@ -6746,24 +4430,6 @@ ZoneLore.Subzones = {
 			full = "The Tower of Eldara stands on the tip of land northeast of the Bay of Storms, a remnant of the night elven civilization that once spread across Azshara. Its beaches are patrolled by murlocs, makrura, and hydras.\n\nThe tower itself remains sealed. During the third invasion of the Burning Legion, one called Phloem sought to open it, but failed.",
 			source = "https://warcraft.wiki.gg/wiki/Tower_of_Eldara",
 		},
-		["trial of fire"] = {
-			name = "Trial of Fire",
-			short = "The Trial of Fire is where players complete the quest [5-30] The Trial of Fire and can earn the [Glutton for Fiery Punishment] achievement.",
-			full = "The Trial of Fire is where players complete the quest [5-30] The Trial of Fire and can earn the [Glutton for Fiery Punishment] achievement. It can be accessed by flying mount or by selecting the fire stone and teleporting here from the Arcane Pinnacle.\n\nAccording to the warning emotes provided in the quest:\n\nEvery few seconds, many of the nearby runes will burst with fire.\n\nAs each rune bursts, a bolt of fire will travel to one or more nearby runes, triggering it to be one of the next runes to burst.\n\nIf you watch these bolts of fire closely to see which runes are not hit, you can spot safe spots for the next burst.\n\nStay within the runes without getting hit by fire until you have 10 stacks of Fire Dancing to complete the trial.\n\nIn addition to Image of Archmage Xylem, an apprentice named Darwin can be found here attempting to perform the trial and dancing. You can follow Darwin's movements in order to accomplish it. Although the description calls it a fire dance you don't have to dance.",
-			source = "https://warcraft.wiki.gg/wiki/Trial_of_Fire",
-		},
-		["trial of frost"] = {
-			name = "Trial of Frost",
-			short = "On a frozen peak within the Bitter Reaches, an image of Archmage Xylem keeps watch, testing those who climb to him with trials of ice.",
-			full = "On a frozen peak within the Bitter Reaches, an image of Archmage Xylem keeps watch, testing those who climb to him with trials of ice. His apprentice Henny has made the attempt, working through the ordeal the archmage set before her. From this height, the dragons of Sable Ridge can be seen wheeling below, and eyes of frost drift across the slope, watching for any who falter in the cold.",
-			source = "https://warcraft.wiki.gg/wiki/Trial_of_Frost",
-		},
-		["trial of shadow"] = {
-			name = "Trial of Shadow",
-			short = "In a quiet fold of Azshara stands the Trial of Shadow, watched over by the Image of Archmage Xylem, a conjured likeness of the mage rather than the man himself.",
-			full = "In a quiet fold of Azshara stands the Trial of Shadow, watched over by the Image of Archmage Xylem, a conjured likeness of the mage rather than the man himself. It waits there still, silent and unmoving, holding whatever purpose Xylem shaped it for.",
-			source = "https://warcraft.wiki.gg/wiki/Trial_of_Shadow",
-		},
 		["ursolan"] = {
 			name = "Ursolan",
 			short = "Ursolan takes its name from Ursol, the bear demigod the furbolgs of Kalimdor hold in reverence. A deep scar cuts through the middle of the land, and Talrendis Biologists work within it.",
@@ -6776,14 +4442,8 @@ ZoneLore.Subzones = {
 			full = "The camp that once stood to the northwest was called Valormok too, in its first days, and it was a hard place even by the standards of Azshara. Belgrom Rockmaul had sent the blood elf Magus Rimtori there with warriors of her own, to hunt down riches and artifacts said to lie in the region. She found them, and decided to keep them. Rimtori turned on the orcs who marched with her and slaughtered them for what they carried. Ag'tor Bloodfist, who led the camp, would not let the betrayal stand. War was made on the elves quartered at the nearby Thalassian camp, and Rimtori was hunted down and killed for what she had done to Rockmaul's warriors and his pride.\n\nThat old camp is mostly emptied now. Its warriors went back to Orgrimmar or followed Ag'tor to the city's new rear gate, and only Kroum remains of the original garrison. Chawg commands what stands in Ag'tor's place, a new outpost built up with goblin barricades, a bomb wagon, and grunts enough to hold the line. The Horde needs this ground cleared to open the way toward Ashenvale, and that means driving the night elves from Talrendis Point. The elves have not let this pass quietly.",
 			source = "https://warcraft.wiki.gg/wiki/Valormok",
 		},
-		["xylems tower"] = {
-			name = "Xylem's Tower",
-			short = "Above Bear's Head in Azshara stands a mage tower, home to Archmage Xylem and Coral Moongale, among a few others who dwell there with them.",
-			full = "Above Bear's Head in Azshara stands a mage tower, home to Archmage Xylem and Coral Moongale, among a few others who dwell there with them. No path climbs to it. The only way in is a teleport granted by Sanath Lim-yo, who alone holds the means of passage to its heights.",
-			source = "https://warcraft.wiki.gg/wiki/Xylem's_Tower",
-		},
 	},
-	-- Felwood: 23 subzones
+	-- Felwood: 18 subzones
 	[1448] = {
 		["bloodvenom falls"] = {
 			name = "Bloodvenom Falls",
@@ -6827,12 +4487,6 @@ ZoneLore.Subzones = {
 			full = "Deep within Irontree Cavern the Warpwood dwell, shredders and moss flayers alike, their roots grown twisted and strange in the dark below the trees that give the place its name.",
 			source = "https://warcraft.wiki.gg/wiki/Irontree_Cavern",
 		},
-		["irontree clearing"] = {
-			name = "Irontree Clearing",
-			short = "Machinery, not timber, defines the northern reaches of Irontree Woods around Irontree Cavern.",
-			full = "Machinery, not timber, defines the northern reaches of Irontree Woods around Irontree Cavern. Goblins hold this ground, their shredders tearing through the forest in a strip mining operation that shows no patience for what grows there.\n\nThat patience ran out for the worgen and night elves of nearby Talonbranch Glade, who moved to stop the lumber operations eating into the woods. The goblins answered with open attacks on them.\n\nThe worgen did not simply endure it. In time they struck back at the clearing's lower reaches and tore them apart.",
-			source = "https://warcraft.wiki.gg/wiki/Irontree_Clearing",
-		},
 		["irontree woods"] = {
 			name = "Irontree Woods",
 			short = "The Irontree Woods once opened green and quiet in northern Felwood, before the taint of the Burning Legion crept through and blackened it.",
@@ -6875,12 +4529,6 @@ ZoneLore.Subzones = {
 			full = "Beneath Jaedenar in western Felwood runs a warren the night elves once raised as a barrow den for their honored dead. The Shadow Council took it for their own, and what was meant to hold the sleeping now holds warlocks and demons, with the dreadlord Lord Banehollow ruling from its depths alongside the satyr prince Xavalis.\n\nThe paladin Trey Lightforge and the night elf Arko'narin Starshade came here searching for signs of the Council's work. The cultists caught them both and caged them in the dark. Trey was tortured until he died. Arko'narin lived, carried out by one who broke the corrupted spirit her companion had become. That rescuer returned alone afterward, hunted down Trey's torturer Rakaiah, and killed him, then carried the paladin's remains out so they could be buried properly.",
 			source = "https://warcraft.wiki.gg/wiki/Shadow_Hold",
 		},
-		["shadowlurk ridge"] = {
-			name = "Shadowlurk Ridge",
-			short = "Shadowlurk Ridge runs the length of ground near the Ruins of Constellas in Felwood, and along its whole span the Jadefire Imps swarm, thick enough to fill the ridge from one end to the other.",
-			full = "Shadowlurk Ridge runs the length of ground near the Ruins of Constellas in Felwood, and along its whole span the Jadefire Imps swarm, thick enough to fill the ridge from one end to the other.",
-			source = "https://warcraft.wiki.gg/wiki/Shadowlurk_Ridge",
-		},
 		["shatter scar vale"] = {
 			name = "Shatter Scar Vale",
 			short = "North of the Bloodvenom Falls, Shatter Scar Vale still bears the wounds of the Third War, when the Burning Legion's infernals rained down upon Felwood.",
@@ -6892,12 +4540,6 @@ ZoneLore.Subzones = {
 			short = "At Jaedenar in Felwood stands the Shrine of the Deceiver, a barrow den corrupted to honor Kil'jaeden, the Burning Legion's deceiving lord.",
 			full = "At Jaedenar in Felwood stands the Shrine of the Deceiver, a barrow den corrupted to honor Kil'jaeden, the Burning Legion's deceiving lord. The Shadow Council has filled it with its warlocks, and it remains a dangerous place for anyone unprepared to face them.",
 			source = "https://warcraft.wiki.gg/wiki/Shrine_of_the_Deceiver",
-		},
-		["sindwellers rise"] = {
-			name = "Sindweller's Rise",
-			short = "The rise takes its name from Feronas Sindweller, who is found here still, in the small clearing off the road northwest of the Irontree Woods, in the corrupted reaches of northern Felwood.",
-			full = "The rise takes its name from Feronas Sindweller, who is found here still, in the small clearing off the road northwest of the Irontree Woods, in the corrupted reaches of northern Felwood.",
-			source = "https://warcraft.wiki.gg/wiki/Sindweller's_Rise",
 		},
 		["talonbranch glade"] = {
 			name = "Talonbranch Glade",
@@ -6911,20 +4553,8 @@ ZoneLore.Subzones = {
 			full = "Timbermaw Hold is the capital of the Timbermaw tribe of furbolgs. It is located in north east Felwood and includes the tunnel that connects Felwood with Moonglade and Winterspring.\n\nWhen the corruption of the Burning Legion crept into the sacred forests of Kalimdor, the furbolgs fell under the corruptive influence of the Burning Legion. However, amidst the chaos and the madness, the Timbermaw tribe escaped the darkness that had fallen on Kalimdor. In the safety of Timbermaw Hold, the furbolgs of the Timbermaw tribe weathered the storm, yet they were forced to watch helplessly as the forest they had loved so much was slowly turned into a twisted, festering perversion of its former self. The corruption had sunk in deep, so that even long after Illidan had consumed the source of the corruption, a powerful warlock artifact called the Skull of Gul'dan, and vanquished the demons' leader Tichondrius, the taint on the woods still remained.\n\nThe furbolgs wary of all strangers, fearing that they may mistake them for their corrupted brethren and attack. However, the Timbermaw tribe are painfully aware that they will not last on their own; adventurers who seek out Timbermaw Hold in northern Felwood and prove themselves as friends of the Timbermaw tribe will learn that the furbolgs value their friends above all else. Though they possess no fine jewels or any worldly riches, the Timbermaw's shamanistic tradition is still strong. They know much about the art of crafting armors from animal hides, and they are more than happy to share their healing/resurrection knowledge with friends of their tribe. The Timbermaw's main concerns are putting an end to their corrupted brethren's suffering and finding a cure to heal the wounds the corruption of Felwood has inflicted upon the land, so that one day, the ancient forests will once again resound with the peaceful chants and the soft laughter of the children of the forest.",
 			source = "https://warcraft.wiki.gg/wiki/Timbermaw_Hold",
 		},
-		["whisperwind grove"] = {
-			name = "Whisperwind Grove",
-			short = "Whisperwind Grove holds something the rest of Felwood has lost: an uncorrupted moonwell, the only one left untainted in the forest, its water still clear where the land elsewhere lies twisted.",
-			full = "Whisperwind Grove holds something the rest of Felwood has lost: an uncorrupted moonwell, the only one left untainted in the forest, its water still clear where the land elsewhere lies twisted. The grove itself has been cleansed and is held by the Emerald Circle, open to all.",
-			source = "https://warcraft.wiki.gg/wiki/Whisperwind_Grove",
-		},
-		["wildheart point"] = {
-			name = "Wildheart Point",
-			short = "At Wildheart Point, the Emerald Circle keeps its watch over Felwood's corruption, holding neutral ground east of Jaedenar's demon-haunted ruins.",
-			full = "At Wildheart Point, the Emerald Circle keeps its watch over Felwood's corruption, holding neutral ground east of Jaedenar's demon-haunted ruins.",
-			source = "https://warcraft.wiki.gg/wiki/Wildheart_Point",
-		},
 	},
-	-- Un'Goro Crater: 16 subzones
+	-- Un'Goro Crater: 9 subzones
 	[1449] = {
 		["fire plume ridge"] = {
 			name = "Fire Plume Ridge",
@@ -6944,12 +4574,6 @@ ZoneLore.Subzones = {
 			full = "The pools of Golakka steam in the shadow of the crater's volcano, fed by heat rising from beneath Fire Plume Ridge. Geysers burst along the shore, and Steaming Fury elementals prowl the banks, born of that same restless heat.\n\nThe link between the springs and the ridge once drew Krakle to study what fed the geysers their fire, before the search carried Krakle onward to Marshal's Stand, the question left unanswered.",
 			source = "https://warcraft.wiki.gg/wiki/Golakka_Hot_Springs",
 		},
-		["hall of repose ungoro crater"] = {
-			name = "Hall of Repose (Un'Goro Crater)",
-			short = "The Hall of Repose lies within the Shaper's Terrace in Un'Goro Crater. High Cultist Herenn keeps a solitary vigil here, holding the Omega Rune, the key needed to awaken the Etymidian.",
-			full = "The Hall of Repose lies within the Shaper's Terrace in Un'Goro Crater. High Cultist Herenn keeps a solitary vigil here, holding the Omega Rune, the key needed to awaken the Etymidian.",
-			source = "https://warcraft.wiki.gg/wiki/Hall_of_Repose_(Un'Goro_Crater)",
-		},
 		["ironstone plateau"] = {
 			name = "Ironstone Plateau",
 			short = "Bare rock rises along the northeastern wall of Un'Goro Crater at Ironstone Plateau, where young pterrordax find their footing away from the crater's fiercer predators.",
@@ -6968,41 +4592,11 @@ ZoneLore.Subzones = {
 			full = "Marshal's Refuge sits at the northern edge of Un'Goro Crater, a foothold clawed out by the Marshal Expeditions when the crater proved fiercer than Williden and Hol'anyee Marshal had reckoned. Their base camps below were overrun by the savage beasts of Un'Goro, and what remained of the expedition fled upward to this high ground to survive.\n\nThe refuge's peace ended when the Stone Guardians came in force, pouring into the cave at the back of the camp and claiming it as their own. In the fighting the kodo Dadanga was killed. The expedition could not hold against them and abandoned the refuge, retreating southeast to raise Marshal's Stand instead.\n\nDadanga was laid to rest outside the cavern mouth, in a grave that still bears her name. The cave itself remains thick with power crystals, and the Stone Guardians linger there still, watchful over it, quick to turn on anyone who disturbs what they now guard.",
 			source = "https://warcraft.wiki.gg/wiki/Marshal's_Refuge",
 		},
-		["marshals stand"] = {
-			name = "Marshal's Stand",
-			short = "Marshal's Stand sits along the road out of the Marshlands, in the shadow of Fire Plume Ridge to the north. The Marshal Expedition had already been driven from its original refuge once.",
-			full = "Marshal's Stand sits along the road out of the Marshlands, in the shadow of Fire Plume Ridge to the north. The Marshal Expedition had already been driven from its original refuge once. This time they built to last, a small fortified base meant to ensure they would not be run off so easily again.",
-			source = "https://warcraft.wiki.gg/wiki/Marshal's_Stand",
-		},
 		["marshlands"] = {
 			name = "Marshlands",
 			short = "The Marshlands spread across the southeastern reach of Un'Goro Crater, the first ground most travelers cross when climbing down from Tanaris, since any other way in tends to end badly.",
 			full = "The Marshlands spread across the southeastern reach of Un'Goro Crater, the first ground most travelers cross when climbing down from Tanaris, since any other way in tends to end badly. Raptors range the reeds in numbers, some plain, some venomous, and when the Primalists loosed elementals upon the crater, that power settled into the marsh and worked its way into the raptors living there, leaving them changed by a violence not their own.\n\nOn a mound above the water, Torwa Pathfinder and Garl Stormclaw keep a small foothold, having come to it by canoe from elsewhere in the crater.\n\nThe marsh holds one thing found nowhere else in Un'Goro: blue power crystals, formed in no other ground but this.",
 			source = "https://warcraft.wiki.gg/wiki/Marshlands",
-		},
-		["mossy pile"] = {
-			name = "Mossy Pile",
-			short = "A stockade of timber and stone stands northwest of Fire Plume Ridge, raised by a handful of goblins out of Gadgetzan. They work under Marshal Expeditions, turning Un'Goro's crater to profit.",
-			full = "A stockade of timber and stone stands northwest of Fire Plume Ridge, raised by a handful of goblins out of Gadgetzan. They work under Marshal Expeditions, turning Un'Goro's crater to profit.",
-			source = "https://warcraft.wiki.gg/wiki/Mossy_Pile",
-		},
-		["roiling gardens"] = {
-			name = "Roiling Gardens",
-			short = "The Roiling Gardens lie north of the Marshlands, where Un'Goro's growth has slipped its bounds.",
-			full = "The Roiling Gardens lie north of the Marshlands, where Un'Goro's growth has slipped its bounds. Trees stand thick with flowers and vines beyond their old measure, and spore-heavy blossoms push up from ground where none grew before. Bloodpetals spread through the place in growing numbers, and left unchecked, the balance of nature here will not hold.\n\nIt is here alone that green power crystals are found.",
-			source = "https://warcraft.wiki.gg/wiki/Roiling_Gardens",
-		},
-		["screaming reaches"] = {
-			name = "Screaming Reaches",
-			short = "The pterrordax gave this stretch of northwestern Un'Goro its name, their screeching filling the air west of Mossy Pile. A ramp in the far northwest climbs out of the crater into Silithus.",
-			full = "The pterrordax gave this stretch of northwestern Un'Goro its name, their screeching filling the air west of Mossy Pile. A ramp in the far northwest climbs out of the crater into Silithus.\n\nWhen the Primalists attacked, elementals invaded the Reaches, and their presence imbued the beasts denned here, a mark that lingered after the elementals were gone.",
-			source = "https://warcraft.wiki.gg/wiki/Screaming_Reaches",
-		},
-		["shapers terrace"] = {
-			name = "Shaper's Terrace",
-			short = "Shaper's Terrace bears the name of Khaz'goroth, the titan called the Shaper, and marks two places in Un'Goro Crater.",
-			full = "Shaper's Terrace bears the name of Khaz'goroth, the titan called the Shaper, and marks two places in Un'Goro Crater.\n\nOne lies on the bluffs east of Marshal's Refuge, where a waygate leads elsewhere.\n\nThe other sits in the crater's eastern cliffs, where the titanic watcher Nablya continues Khaz'goroth's old experiments on life.",
-			source = "https://warcraft.wiki.gg/wiki/Shaper's_Terrace",
 		},
 		["slithering scar"] = {
 			name = "Slithering Scar",
@@ -7016,14 +4610,8 @@ ZoneLore.Subzones = {
 			full = "The Primalists' assault brought elementals into Terror Run, west of the Slithering Scar, and their touch never left. The beasts here still carry that imbuement. Among its stones, red power crystals form nowhere else in the crater.",
 			source = "https://warcraft.wiki.gg/wiki/Terror_Run",
 		},
-		["waygate location"] = {
-			name = "Waygate (location)",
-			short = "The Waygate is titan work, a pillar of light marking a portal that once linked this ground to the Shaper's Terrace in Un'Goro Crater.",
-			full = "The Waygate is titan work, a pillar of light marking a portal that once linked this ground to the Shaper's Terrace in Un'Goro Crater. For seven hundred years it stood dark, its purpose long out of use. It wakes again only through switches set apart from the gate, at the Makers' Overlook and the Makers' Perch. Thrown together, they call the light back, and in an instant the gate carries whoever stands within it across to its twin in Un'Goro.\n\nMuradin Bronzebeard has noted that the Oracles settled their village nearby, close to the Mosslight Pillar, because of the Waygate.",
-			source = "https://warcraft.wiki.gg/wiki/Waygate_(location)",
-		},
 	},
-	-- Moonglade: 6 subzones
+	-- Moonglade: 5 subzones
 	[1450] = {
 		["lake eluneara"] = {
 			name = "Lake Elune'ara",
@@ -7036,12 +4624,6 @@ ZoneLore.Subzones = {
 			short = "Nighthaven rests on the shores of Lake Elune'ara, its stone and timber halls built in the old night elvish way, twin moonwells glowing beside its streets.",
 			full = "Nighthaven rests on the shores of Lake Elune'ara, its stone and timber halls built in the old night elvish way, twin moonwells glowing beside its streets. It is a druid's village before it is anything else, home to the Cenarion Circle, and it keeps itself apart from the wider world. Few outsiders ever see it.\n\nOnce a year that changes. During the Lunar Festival, Nighthaven opens its gates to Alliance and Horde alike, who come to celebrate Elune's power with fireworks lighting the lake and sky.\n\nThe village has not always known peace. It was here that the Nightmare took the dragon Eranikus, and nightmare creatures fell upon Nighthaven in force. The Keeper Remulos stood against him, but it was Tyrande Whisperwind who ended it, calling down the light of Elune to burn the corruption from Eranikus and cleanse him where he stood.",
 			source = "https://warcraft.wiki.gg/wiki/Nighthaven",
-		},
-		["nighthaven inn"] = {
-			name = "Nighthaven Inn",
-			short = "The inn at Nighthaven pours a brew all its own, Entangling Rootbeer, a taste found nowhere else in the world.",
-			full = "The inn at Nighthaven pours a brew all its own, Entangling Rootbeer, a taste found nowhere else in the world.",
-			source = "https://warcraft.wiki.gg/wiki/Nighthaven_Inn",
 		},
 		["shrine of remulos"] = {
 			name = "Shrine of Remulos",
@@ -7062,7 +4644,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Timbermaw_Hold",
 		},
 	},
-	-- Silithus: 23 subzones
+	-- Silithus: 19 subzones
 	[1451] = {
 		["bones of grakkarond"] = {
 			name = "Bones of Grakkarond",
@@ -7088,12 +4670,6 @@ ZoneLore.Subzones = {
 			full = "In the far northwestern corner of Silithus lies a vale of stone and crystal, where earth and air elementals move restlessly among rich seams of thorium. The Ravaged Twilight Camp sits within it, a scar left by those who once worked or warred there.\n\nThe elementals of the vale do not settle. They churn and rumble, chattering in tongues of wind and rock, telling over old griefs, the pains of Azeroth stretching back centuries and reaching into more recent days. To stand among them is to hear a restlessness that has no end, a sign that the spirits of earth and air here have not been quieted, and that whatever work might calm them remains undone.\n\nIt was in this vale that Thunderaan, the Windseeker, was once called forth and bound into a blade of storm and fury, a summoning that drew on the raw temper of the air itself.",
 			source = "https://warcraft.wiki.gg/wiki/Crystal_Vale",
 		},
-		["gates of ahnqiraj subzone"] = {
-			name = "Gates of Ahn'Qiraj (subzone)",
-			short = "The Scarab Wall stands broken here, the seal that once held back the black empire of the qiraj finally breached.",
-			full = "The Scarab Wall stands broken here, the seal that once held back the black empire of the qiraj finally breached. Beyond it, the gates lead down into the Temple and Ruins of Ahn'Qiraj, where the old horrors were kept from the world.",
-			source = "https://warcraft.wiki.gg/wiki/Gates_of_Ahn'Qiraj_(subzone)",
-		},
 		["hiveashi"] = {
 			name = "Hive'Ashi",
 			short = "Hive'Ashi stood in northern Silithus, its silithid swarming out to infest the nearby Swarming Pillar.",
@@ -7111,18 +4687,6 @@ ZoneLore.Subzones = {
 			short = "Hive'Zora was a silithid nest burrowed into the sands of western Silithus.",
 			full = "Hive'Zora was a silithid nest burrowed into the sands of western Silithus.\n\nIt was destroyed when Sargeras turned the Burning Legion's third invasion against Silithus, trying to end Azeroth itself. Only the broken hive remains.",
 			source = "https://warcraft.wiki.gg/wiki/Hive'Zora",
-		},
-		["magnis encampment"] = {
-			name = "Magni's Encampment",
-			short = "West of the Sword of Sargeras, where the earth lies open, Magni Bronzebeard has made his camp.",
-			full = "West of the Sword of Sargeras, where the earth lies open, Magni Bronzebeard has made his camp. The Cenarion Circle and the Earthen Ring gather here, working to heal the wound the fallen titan's blade left behind, and a Titan Translocator carries travelers down to the ancient vault below.",
-			source = "https://warcraft.wiki.gg/wiki/Magni's_Encampment",
-		},
-		["oasis inn"] = {
-			name = "Oasis Inn",
-			short = "At Cenarion Hold, the Oasis Inn stands under the keeping of Calandrath. Travelers who pass through are known to seek out its local specialty, the Liquid Qiraj.",
-			full = "At Cenarion Hold, the Oasis Inn stands under the keeping of Calandrath. Travelers who pass through are known to seek out its local specialty, the Liquid Qiraj.",
-			source = "https://warcraft.wiki.gg/wiki/Oasis_Inn",
 		},
 		["ortells hideout"] = {
 			name = "Ortell's Hideout",
@@ -7147,12 +4711,6 @@ ZoneLore.Subzones = {
 			short = "The Scarab Wall stands at the southern edge of Silithus, a hundred feet of sandstone rising from the desert floor and, above that height, a barrier of bronze dragonflight magic reaching many times taller still.",
 			full = "The Scarab Wall stands at the southern edge of Silithus, a hundred feet of sandstone rising from the desert floor and, above that height, a barrier of bronze dragonflight magic reaching many times taller still. It was raised at the end of the War of the Shifting Sands, when night elves and bronze dragons joined their strength to seal away what lay beyond. Together they named it Irana'ethil, Shield against the Shadow. The wall does not merely mark a boundary between the silithid-held sands and the ruins of Ahn'Qiraj beyond it -- it holds something in. C'Thun and its crawling brood are sealed behind that stone and that light, kept from the world by a working that has never fully faded.\n\nTo stand before it is to stand at the edge of a containment centuries old, sand given shape and shape given purpose, the last barrier between the desert and whatever still moves in the dark beneath Ahn'Qiraj.",
 			source = "https://warcraft.wiki.gg/wiki/Scarab_Wall",
-		},
-		["silithus the wound"] = {
-			name = "Silithus: The Wound",
-			short = "Silithus stretches out as a dry, sun-scoured waste, its silence broken only by the skittering of silithid vermin that burrow beneath the sand and scuttle across the dunes in great chittering swarms.",
-			full = "Silithus stretches out as a dry, sun-scoured waste, its silence broken only by the skittering of silithid vermin that burrow beneath the sand and scuttle across the dunes in great chittering swarms. Little else marks the land beyond that endless heat and the drone of insect life moving through the dust.",
-			source = "https://warcraft.wiki.gg/wiki/Silithus%3A_The_Wound",
 		},
 		["southwind village"] = {
 			name = "Southwind Village",
@@ -7203,25 +4761,13 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Valor's_Rest",
 		},
 	},
-	-- Winterspring: 23 subzones
+	-- Winterspring: 18 subzones
 	[1452] = {
 		["banthallow barrow den"] = {
 			name = "Ban'Thallow Barrow Den",
 			short = "The Ban'Thallow Barrow Den lies behind Starfall Village in Winterspring, tunnels once kept by the village's druids and holding blessed relics precious to Starfall's people.",
 			full = "The Ban'Thallow Barrow Den lies behind Starfall Village in Winterspring, tunnels once kept by the village's druids and holding blessed relics precious to Starfall's people.\n\nThe bugs came without warning, hatching overnight from eggs no one had seen laid, swarming through the den until it was theirs. Fortune spared Starfall a worse blow, for no druids were resting inside when the infestation broke.\n\nThe few druids left could do little more than hold the swarm back from spilling into the village itself, unable to clear the den on their own.",
 			source = "https://warcraft.wiki.gg/wiki/Ban'Thallow_Barrow_Den",
-		},
-		["beryl egress"] = {
-			name = "Beryl Egress",
-			short = "Beryl Egress is a small camp outside the cave of Mazthoril, home to blue dragonflight members driven from that cavern.",
-			full = "Beryl Egress is a small camp outside the cave of Mazthoril, home to blue dragonflight members driven from that cavern. Haleh leads them here, fixed on one goal: destroying Umbranse the Spiritspeaker and reclaiming Mazthoril from whatever now holds it.",
-			source = "https://warcraft.wiki.gg/wiki/Beryl_Egress",
-		},
-		["caverns of consumption"] = {
-			name = "Caverns of Consumption",
-			short = "Hidden at Winterspring's northern coast, the Caverns of Consumption go unmarked, easily missed by those who do not know to look.",
-			full = "Hidden at Winterspring's northern coast, the Caverns of Consumption go unmarked, easily missed by those who do not know to look.\n\nTo enter is to lose one's voice: a silence settles over the cave, smothering every spell and trick carried from outside.\n\nDeeper within, past its puzzles, a sun darter hatchling nests unseen.",
-			source = "https://warcraft.wiki.gg/wiki/Caverns_of_Consumption",
 		},
 		["darkwhisper gorge"] = {
 			name = "Darkwhisper Gorge",
@@ -7259,12 +4805,6 @@ ZoneLore.Subzones = {
 			full = "Frostwhisper Gorge cuts through southern Winterspring, its ruins of the night elves scattered along its floor and ridges. Frostmaul Giants and Preservers make their home here, and among the ice above, Ice Avatars gather under Frostilicus.",
 			source = "https://warcraft.wiki.gg/wiki/Frostwhisper_Gorge",
 		},
-		["goodgrub smoking pit"] = {
-			name = "Goodgrub Smoking Pit",
-			short = "Jez Goodgrub set up his smoking pit northeast of Starfall Village, and put the meat of Winterspring's wildlife to the fire.",
-			full = "Jez Goodgrub set up his smoking pit northeast of Starfall Village, and put the meat of Winterspring's wildlife to the fire.",
-			source = "https://warcraft.wiki.gg/wiki/Goodgrub_Smoking_Pit",
-		},
 		["hidden grove"] = {
 			name = "Hidden Grove",
 			short = "The Hidden Grove lies sealed within its own ring of cliffs in northeastern Winterspring, reachable only through a single cave cut into the southeastern ridge; elsewhere the walls simply drop away, too sheer and dangerous to climb.",
@@ -7282,12 +4822,6 @@ ZoneLore.Subzones = {
 			short = "The Highborne of Kel'Theril did not rest when their city fell. Their spirits linger still upon the frozen lake and its ruined shores, tormented remnants drifting as ectoplasm.",
 			full = "The Highborne of Kel'Theril did not rest when their city fell. Their spirits linger still upon the frozen lake and its ruined shores, tormented remnants drifting as ectoplasm.\n\nWhen the elements rose against Winterspring, Princess Tempestria took shape upon these icy waters, a storm given form on a lake already thick with grief.",
 			source = "https://warcraft.wiki.gg/wiki/Lake_Kel'Theril",
-		},
-		["laughing yeti"] = {
-			name = "Laughing Yeti",
-			short = "In Everlook, the Laughing Yeti stands as the town's inn, kept by Himmik.",
-			full = "In Everlook, the Laughing Yeti stands as the town's inn, kept by Himmik. Travelers who make the round of the Kirin Tor's tavern crawl find their way here, and those who do are poured the local specialty, Sparkling Snowplum Brandy, before they move on.",
-			source = "https://warcraft.wiki.gg/wiki/Laughing_Yeti",
 		},
 		["mazthoril"] = {
 			name = "Mazthoril",
@@ -7312,12 +4846,6 @@ ZoneLore.Subzones = {
 			short = "The Ruins of Kel'Theril lie broken on the shores of the lake that bears their name, in central Winterspring, all that remains of a great city of the night elves.",
 			full = "The Ruins of Kel'Theril lie broken on the shores of the lake that bears their name, in central Winterspring, all that remains of a great city of the night elves. The Great Sundering tore the world apart and tore this place apart with it, and the Highborne who lived here did not all escape what followed. Their spirits linger still in the northern ruins, unable to rest, caught somewhere between grief and rage. One remains behind, remorseful, drawn to speak of what was lost.\n\nThey are no longer alone. High elven ghosts now walk the eastern ruins, among them Betrayed Rangers and an archmage named Maenius. To the west drift the Wretched Spectres, blood elves undone by what they became. Three kinds of elf, three ages of the same fall, haunting the same stones.",
 			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Kel'Theril",
-		},
-		["snowden chalet"] = {
-			name = "Snowden Chalet",
-			short = "The chalet stands south of Timbermaw Hold, a small camp against the snow. Donova Snowden keeps it, alongside Witch Doctor Mau'ari, and the two hold the place together amid Winterspring's cold.",
-			full = "The chalet stands south of Timbermaw Hold, a small camp against the snow. Donova Snowden keeps it, alongside Witch Doctor Mau'ari, and the two hold the place together amid Winterspring's cold.",
-			source = "https://warcraft.wiki.gg/wiki/Snowden_Chalet",
 		},
 		["starfall village"] = {
 			name = "Starfall Village",
@@ -7344,211 +4872,19 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Winterfall_Village",
 		},
 	},
-	-- Stormwind City: 39 subzones
+	-- Stormwind City: 3 subzones
 	[1453] = {
-		["canals stormwind city"] = {
-			name = "Canals (Stormwind City)",
-			short = "The waterways of Stormwind wind between every district, marble-lined and quiet. Small shops lean over the docks, and fishermen while away their hours here, content with modest catches.",
-			full = "The waterways of Stormwind wind between every district, marble-lined and quiet. Small shops lean over the docks, and fishermen while away their hours here, content with modest catches. The Stormwind Stockade stands along their course as well.\n\nIt was not always so peaceful. When the First War broke the city, the canals filled with rubble, splintered lumber, and the bodies of the dead. Only when the Alliance of Lordaeron retook the city were the waters cleared. The soldiers did not simply haul the debris away. They gathered the dead from the water by hand and buried them properly before the canals could run clean again.",
-			source = "https://warcraft.wiki.gg/wiki/Canals_(Stormwind_City)",
-		},
-		["cathedral of light"] = {
-			name = "Cathedral of Light",
-			short = "In Cathedral Square the great church of the Holy Light rises over Stormwind, elegant and quiet, its rooms built for prayer as much as for healing, its catacombs holding the honored dead of the city: priests, paladins, and war heroes laid to rest beneath the stone.",
-			full = "In Cathedral Square the great church of the Holy Light rises over Stormwind, elegant and quiet, its rooms built for prayer as much as for healing, its catacombs holding the honored dead of the city: priests, paladins, and war heroes laid to rest beneath the stone.\n\nWhen the orcs first came against Stormwind, the original building was battered nearly to ruin, yet its vast halls and catacombs sheltered dozens of refugees through the worst of the fighting. After the Second War it was the first structure raised again, sheltering survivors while the rest of the city was still rubble. Bishop Benedictus oversaw its rebuilding, guided by his mentor, Archbishop Alonsus Faol, and it was within these walls that Prince Arthas Menethil of Lordaeron knelt and rose a paladin of the Silver Hand.\n\nAfter Lordaeron's clergy was destroyed in the Third War, the Church of Light remade itself here under Benedictus, now Archbishop, and the cathedral became the spiritual heart of Stormwind and the Alliance entire.",
-			source = "https://warcraft.wiki.gg/wiki/Cathedral_of_Light",
-		},
-		["cathedral square"] = {
-			name = "Cathedral Square",
-			short = "The Cathedral of Light rises over the square that takes its name, the greatest monument to the Holy Light standing anywhere in Azeroth.",
-			full = "The Cathedral of Light rises over the square that takes its name, the greatest monument to the Holy Light standing anywhere in Azeroth. Paladins and priests study within its walls, seeking out what the faithful call the great truths behind them, and children are brought here by their teachers to be shown the center of the city's spiritual life.\n\nThe square is not only a place of quiet study. Stormwind's people gather here to talk, to trade gossip, to steal an apple from a passing cart. City Hall stands here, and the orphanage, and the wide grounds of the Stormwind City Cemetery lie just to the north, so that the square holds the city's living business and its dead in the same breath.\n\nThe square has not always been safe to cross. A dark mist once settled over the city, and the district around the cathedral became a battle line, its defenders holding the steps and grounds while the mist pressed in, and for a time no one could say whether the Light's greatest house would stand or fall. It held.",
-			source = "https://warcraft.wiki.gg/wiki/Cathedral_Square",
-		},
 		["champions hall"] = {
 			name = "Champions' Hall",
 			short = "In the south of Old Town stands the Champions' Hall, the officers' barracks of the Alliance in Stormwind City.",
 			full = "In the south of Old Town stands the Champions' Hall, the officers' barracks of the Alliance in Stormwind City.",
 			source = "https://warcraft.wiki.gg/wiki/Champions'_Hall",
 		},
-		["command center"] = {
-			name = "Command Center",
-			short = "The Command Center is the seat of Stormwind's army officers, its barracks built to house a great number of soldiers and commanders.",
-			full = "The Command Center is the seat of Stormwind's army officers, its barracks built to house a great number of soldiers and commanders. Yet the halls are quieter than their stone would suggest, for most of the city's army has been sent away to distant battlefields, leaving only a skeleton crew of hardened veterans behind.\n\nThese few remain to train the militia that must now defend the city. Ander Germaine bears the responsibility of shaping the city's warriors. Wulf Hansreim commands the hunters, teaching them the patience their craft demands. Wu Shen and Ilsa Corbin lend their own hard-won experience to readying Stormwind's untested soldiers for wars fought far from home.",
-			source = "https://warcraft.wiki.gg/wiki/Command_Center",
-		},
-		["cut throat alley"] = {
-			name = "Cut-Throat Alley",
-			short = "Cut-Throat Alley lies hidden off the Dwarven District, though none of its smoke or clamor reaches here.",
-			full = "Cut-Throat Alley lies hidden off the Dwarven District, though none of its smoke or clamor reaches here. The only way in is on foot, through a shop called the Shady Lady, on the dwarven side of the canals just south of the footbridge from Cathedral Square. No street connects the alley to the rest of the District.\n\nInside there is little: crates and barrels stacked against the walls, and a two-story house of a single bedroom, standing empty. The alley keeps its name and nothing else to explain it.",
-			source = "https://warcraft.wiki.gg/wiki/Cut-Throat_Alley",
-		},
 		["deeprun tram"] = {
 			name = "Deeprun Tram",
 			short = "The tram runs beneath the earth between Ironforge and Stormwind, its double tracks carrying two trains of three wagons apiece through a passage that dips, for one long stretch, beneath a subterranean lake.",
 			full = "The tram runs beneath the earth between Ironforge and Stormwind, its double tracks carrying two trains of three wagons apiece through a passage that dips, for one long stretch, beneath a subterranean lake. Gnomes tend it daily, and it has never once been allowed to fail its riders.\n\nIt was built in the years after the Second War, when Stormwind lay broken and the Alliance was still young and its bonds still strong. Dwarven aid was reaching the humans too slowly for King Magni Bronzebeard's liking, and he wanted besides a way to move soldiers quickly to Stormwind's defense if the need ever came. So he turned to High Tinker Gelbin Mekkatorque, Azeroth's foremost engineer, who drafted a railway to bind the two cities together beneath the earth itself.\n\nThe tram's worth was proven in its darkest hour. When Magni was turned to stone and his daughter Moira seized Ironforge, she sealed the tram shut, cutting the dwarves off from their allies. It was through that same tunnel that King Varian Wrynn later led a strike of agents into Ironforge to break the siege and free his son.",
 			source = "https://warcraft.wiki.gg/wiki/Deeprun_Tram",
-		},
-		["dwarven district"] = {
-			name = "Dwarven District",
-			short = "In the northern corner of Stormwind City stands the enclave the dwarves built for themselves after the Second War, when King Magni Bronzebeard sent his workers south to labor in the human city's rebuilding.",
-			full = "In the northern corner of Stormwind City stands the enclave the dwarves built for themselves after the Second War, when King Magni Bronzebeard sent his workers south to labor in the human city's rebuilding. They raised their forges there and never let the fires go out. A constant haze hangs over the district now, thickened by the ceaseless strokes of smiths' hammers, and the air carries the smell of hot metal from anvils where miners, blacksmiths, and engineers of Ironforge still ply their trades far from the mountain halls that raised them.\n\nThe dwarves did not come merely to build. When the mist of the Emerald Nightmare crept through Stormwind City and its terrors slipped between the streets, the district did not fall silent as much of the city did. Those who passed near it in that time heard the sounds of a fight still being fought behind the haze and hammer-din, the dwarves refusing to yield their corner of the city even as the Nightmare pressed in.",
-			source = "https://warcraft.wiki.gg/wiki/Dwarven_District",
-		},
-		["eastern earthshrine"] = {
-			name = "Eastern Earthshrine",
-			short = "In the lake northwest of Stormwind Keep, the Earthen Ring raised a ritual circle for the Alliance to use: the Eastern Earthshrine.",
-			full = "In the lake northwest of Stormwind Keep, the Earthen Ring raised a ritual circle for the Alliance to use: the Eastern Earthshrine. Across the world in Orgrimmar, the shamans set its twin for the Horde, the Western Earthshrine.",
-			source = "https://warcraft.wiki.gg/wiki/Eastern_Earthshrine",
-		},
-		["forge stormwind"] = {
-			name = "Forge (Stormwind)",
-			short = "The forge stands behind the main building of the Stormwind Embassy, a small blacksmith's shop tucked out of sight of the ambassadors and dignitaries it serves.",
-			full = "The forge stands behind the main building of the Stormwind Embassy, a small blacksmith's shop tucked out of sight of the ambassadors and dignitaries it serves.",
-			source = "https://warcraft.wiki.gg/wiki/Forge_(Stormwind)",
-		},
-		["gryphon roost"] = {
-			name = "Gryphon Roost",
-			short = "The Gryphon Roost stands just off Stormwind's Trade District, where the city's gryphons are kept and raised.",
-			full = "The Gryphon Roost stands just off Stormwind's Trade District, where the city's gryphons are kept and raised. Two Wildhammer dwarves, Tannec Stonebeak and Bralla Cloudwing, tend the beasts, alongside Dungar Longdrink, who oversees the roost's flights.",
-			source = "https://warcraft.wiki.gg/wiki/Gryphon_Roost",
-		},
-		["lions rest"] = {
-			name = "Lion's Rest",
-			short = "Lion's Rest is a quiet park in Stormwind, kept for reflection rather than passage through.",
-			full = "Lion's Rest is a quiet park in Stormwind, kept for reflection rather than passage through. Its stones remember those of the Alliance who gave their lives in its defense, and its central place is given to a king whose body was never brought home to lie beneath it.\n\nThe monument raised for King Varian Wrynn is empty. He fell far from the city he ruled, and no one could recover him to bring him back to Stormwind, so the cenotaph stands as a marker of memory rather than a grave. It is here, among the names of the fallen and the empty tribute to his father, that King Anduin Wrynn comes to speak to his people when the occasion is solemn enough to demand it. There is no crowd noise fitting for this ground, only the kind of silence that suits a king addressing grief.",
-			source = "https://warcraft.wiki.gg/wiki/Lion's_Rest",
-		},
-		["mage quarter"] = {
-			name = "Mage Quarter",
-			short = "In the southern corner of Stormwind City, past the Canals, stands the Mage Quarter, where the kingdom's mages keep their sanctum.",
-			full = "In the southern corner of Stormwind City, past the Canals, stands the Mage Quarter, where the kingdom's mages keep their sanctum. Within the Wizard's Sanctum, they study the arcane and hold themselves to a single charge: the safety of the capital and its lands. Not far off, in the Slaughtered Lamb tavern, a different order gathers in secret. Behind its common room the warlock coven of Stormwind trains its new recruits, a sanctum hidden in plain sight among the herbalists, alchemists, and tailors who keep shop through the rest of the quarter.\n\nWhen the Emerald Nightmare's mist rolled over Stormwind and swallowed the capital in shadow, it was the Mage Quarter that stayed bright. Its mages did not stop casting, spell after spell thrown up against the dark, until theirs was the only district in the city still lit.",
-			source = "https://warcraft.wiki.gg/wiki/Mage_Quarter",
-		},
-		["northern elwynn mountains"] = {
-			name = "Northern Elwynn Mountains",
-			short = "The Northern Elwynn Mountains rise north of Stormwind Harbor, between the city's outskirts and the forest beyond.",
-			full = "The Northern Elwynn Mountains rise north of Stormwind Harbor, between the city's outskirts and the forest beyond. Above the high ground hovers the Skyfire, rebuilt into an aircraft carrier, its presence the one thing that draws the eye here.",
-			source = "https://warcraft.wiki.gg/wiki/Northern_Elwynn_Mountains",
-		},
-		["old barracks"] = {
-			name = "Old Barracks",
-			short = "Behind the ruined Park stands the Old Barracks, watched over by Caretaker Folsom and the occasional passing guard. Janey Anship will not go through the Park anymore.",
-			full = "Behind the ruined Park stands the Old Barracks, watched over by Caretaker Folsom and the occasional passing guard. Janey Anship will not go through the Park anymore. \"It's been ruined,\" she says, \"we'll have to go another way today. Miserable dragon!\" No one explains further.\n\nFor all its name, the Old Barracks was never truly old, only newly raised beside a ruin far older than itself.",
-			source = "https://warcraft.wiki.gg/wiki/Old_Barracks",
-		},
-		["old town"] = {
-			name = "Old Town",
-			short = "Old Town is the oldest quarter of Stormwind, and it wears its age plainly.",
-			full = "Old Town is the oldest quarter of Stormwind, and it wears its age plainly. When the orcs razed the city during the First War, this district was spared the worst of the fires, and so when the rest of Stormwind rose again in gleaming stone, Old Town was never rebuilt to match it. It simply endured, unpolished, while the city grew grand around it. The streets here are dirtier, the air ranker, than anywhere else within the walls, and it is here that the poor of Stormwind live crowded together, alongside the beggars and thieves who have nowhere else to go.\n\nYet for all its grime, Old Town carries real weight. Within it stands the Command Center, from which Stormwind's army officers direct their forces, its grounds holding the Champions' Hall, the barracks, and the stables where soldiers drill and train. Hidden among these is the quiet headquarters of SI:7, the crown's own secretive intelligence service, answering to Spymaster Mathias Shaw, working unseen even as the poor go about their lives a few streets away.",
-			source = "https://warcraft.wiki.gg/wiki/Old_Town",
-		},
-		["olivias pond"] = {
-			name = "Olivia's Pond",
-			short = "A small pond lies in the outskirts of Stormwind City, near the fields and barns of Wollerton Stead and within sight of the Stormwind Embassy.",
-			full = "A small pond lies in the outskirts of Stormwind City, near the fields and barns of Wollerton Stead and within sight of the Stormwind Embassy. It takes its name, as far as anyone can say for certain, from Olivia Jayne, a draenei girl often seen walking along its shore.\n\nEach year the pond is restocked with crystal bass. During Love is in the Air, rosewood gondolas drift across its surface, carrying couples out over the still water.",
-			source = "https://warcraft.wiki.gg/wiki/Olivia's_Pond",
-		},
-		["park"] = {
-			name = "Park",
-			short = "The Park lies in the western corner of Stormwind, once given over to leisure for the city's people.",
-			full = "The Park lies in the western corner of Stormwind, once given over to leisure for the city's people. In time it became something else: a resting place for night elves who had journeyed far from their forests and found the stonework of Stormwind wearying to the spirit. Among the trees they raised a Moonwell at the heart of the square, and it was said to be the only place in all the Eastern Kingdoms where one could learn the druid's arts.\n\nWhen the city was attacked, the Park was caught in the ruin of it. Of those who had made their home there, only three are known to have escaped with their lives: the druid trainer Sheldras Moontree, the priestess Nara Meideros, and Argos Nightwhisper. The rest were never accounted for.\n\nWhere the Park once stood, Lion's Rest was built atop its ruins.",
-			source = "https://warcraft.wiki.gg/wiki/Park",
-		},
-		["petitioners chamber"] = {
-			name = "Petitioner's Chamber",
-			short = "The Petitioner's Chamber lies just to the right of the ramp into Stormwind Keep, the first room reached before the throne itself. Here the public waits for audience with the crown.",
-			full = "The Petitioner's Chamber lies just to the right of the ramp into Stormwind Keep, the first room reached before the throne itself. Here the public waits for audience with the crown. Caledra Dawnbreeze, Count Remington Ridgewell, and Bishop DeLavey attend those who gather to be heard.",
-			source = "https://warcraft.wiki.gg/wiki/Petitioner's_Chamber",
-		},
-		["pig and whistle tavern"] = {
-			name = "Pig and Whistle Tavern",
-			short = "In the Old Town of Stormwind stands the Pig and Whistle, a tavern where soldiers trade memories of the First and Second Wars, and where Kendor Kabonka can be found among the regulars.",
-			full = "In the Old Town of Stormwind stands the Pig and Whistle, a tavern where soldiers trade memories of the First and Second Wars, and where Kendor Kabonka can be found among the regulars.\n\nOnce the tavern's ease was broken, when Veiled Hand cultists under Althea Ebonlocke seized it during the Burning Legion's third invasion, filling it with fel braziers, until Garona Halforcen and the Shadow of the Uncrowned struck her down.",
-			source = "https://warcraft.wiki.gg/wiki/Pig_and_Whistle_Tavern",
-		},
-		["royal gallery"] = {
-			name = "Royal Gallery",
-			short = "The Royal Gallery sits past the courtyard park of Stormwind Keep, beside the Royal Library.",
-			full = "The Royal Gallery sits past the courtyard park of Stormwind Keep, beside the Royal Library. Within stand statues raised to those the kingdom honors: Mara Fordragon, King Llane, and Daelin Proudmoore, carved in stone to watch over the quiet gallery.",
-			source = "https://warcraft.wiki.gg/wiki/Royal_Gallery",
-		},
-		["royal library"] = {
-			name = "Royal Library",
-			short = "The Royal Library stands within Stormwind Keep, its shelves holding scrolls, tomes, and texts gathered from across the human kingdoms.",
-			full = "The Royal Library stands within Stormwind Keep, its shelves holding scrolls, tomes, and texts gathered from across the human kingdoms. Milton Sheaf keeps the place in order, and scholars of every allied race are free to come and study what is written there.\n\nIt was here, after the Second War, that the Book of Medivh was kept for a time. Alterac's spies came for it in secret, but they were not the only ones with designs on the tome. On the very same day, Pargath Throatsplitter and Teron Gorefiend led a raid of death knights against the castle to seize it for the Horde. What the raiders found instead was proof that Alterac's agents had already made off with the book. Rather than press their luck, the death knights withdrew before Stormwind's soldiers could answer the alarm, leaving the library disturbed but the truth of the theft laid bare for any who cared to look.",
-			source = "https://warcraft.wiki.gg/wiki/Royal_Library",
-		},
-		["si 7 stormwind city"] = {
-			name = "SI:7 (Stormwind City)",
-			short = "SI:7's headquarters in Old Town shows no grand face to the street, only a building with nothing to hide. Here Stormwind's leaders of intelligence hold their councils.",
-			full = "SI:7's headquarters in Old Town shows no grand face to the street, only a building with nothing to hide. Here Stormwind's leaders of intelligence hold their councils. Twice agents of the Uncrowned infiltrated it, hunting Detheroc's trail and Mathias Shaw himself.",
-			source = "https://warcraft.wiki.gg/wiki/SI%3A7_(Stormwind_City)",
-		},
-		["slaughtered lamb"] = {
-			name = "Slaughtered Lamb",
-			short = "The Slaughtered Lamb stands quiet in the Mage Quarter, its top floor bare save for the bartender, Jarel Moor, who warns anyone who lingers to stay away from the shadows.",
-			full = "The Slaughtered Lamb stands quiet in the Mage Quarter, its top floor bare save for the bartender, Jarel Moor, who warns anyone who lingers to stay away from the shadows. He has good reason to. Beneath the tavern floor runs a catacomb that serves as the true business of the place, a sanctum where the warlocks of Stormwind train their recruits, including students sent from Khaz Modan to learn the craft in secret.\n\nThe secret nearly broke open once. Lord Baurles K. Wishock learned what slept beneath the tavern floor and made a great show of outrage, lobbying the House of Nobles for an investigation, meaning to see the place shut down. But his crusade was never about the warlocks. He had run up debts at the Lamb he had no intention of paying, and exposing the tavern was his way of burying the ledger along with it.\n\nHe never got the chance. A poisoned drink reached him first, arranged by Zardeth of the Black Claw, and Wishock died before his campaign could gather force. The warlocks below went back to their lessons undisturbed.",
-			source = "https://warcraft.wiki.gg/wiki/Slaughtered_Lamb",
-		},
-		["stormwind city cemetery"] = {
-			name = "Stormwind City Cemetery",
-			short = "Rows of headstones lie north of Cathedral Square, where the ground meets Stormwind Lake, one tomb built in the likeness of Uther's own.",
-			full = "Rows of headstones lie north of Cathedral Square, where the ground meets Stormwind Lake, one tomb built in the likeness of Uther's own.\n\nHere rests Queen Tiffin Ellerian Wrynn, wife of King Varian Wrynn, among the dead Stormwind chose to remember.",
-			source = "https://warcraft.wiki.gg/wiki/Stormwind_City_Cemetery",
-		},
-		["stormwind city outskirts"] = {
-			name = "Stormwind City Outskirts",
-			short = "Beyond the walls of Stormwind, past the Dwarven District, the land opens into quiet farmland: a pond, a small farmhouse, fields untroubled by the city's noise at their back.",
-			full = "Beyond the walls of Stormwind, past the Dwarven District, the land opens into quiet farmland: a pond, a small farmhouse, fields untroubled by the city's noise at their back.",
-			source = "https://warcraft.wiki.gg/wiki/Stormwind_City_Outskirts",
-		},
-		["stormwind embassy"] = {
-			name = "Stormwind Embassy",
-			short = "The Stormwind Embassy serves as the meeting place of the Alliance's leadership, and as headquarters for its allied races, who keep their quarters here within the city.",
-			full = "The Stormwind Embassy serves as the meeting place of the Alliance's leadership, and as headquarters for its allied races, who keep their quarters here within the city.",
-			source = "https://warcraft.wiki.gg/wiki/Stormwind_Embassy",
-		},
-		["stormwind harbor"] = {
-			name = "Stormwind Harbor",
-			short = "The wharfs of Stormwind sit where the wall opens between Lion's Rest and Cathedral Square, tiered plateaus of stone rising from the water toward the city, each one bristling with cannon and ballista trained out to sea.",
-			full = "The wharfs of Stormwind sit where the wall opens between Lion's Rest and Cathedral Square, tiered plateaus of stone rising from the water toward the city, each one bristling with cannon and ballista trained out to sea. It is the crown of the Alliance navy, the place where its warships are laid down and its fleets gathered, and it has needed every gun it carries.\n\nIt was old even at the city's fall. When the orcs of the Horde broke through Stormwind's walls in the First War, it was to this harbor that Lord Anduin Lothar led the survivors, buying their retreat with his sword while the ships loaded for Lordaeron. Before the last hull left the dock, the fleet still moored behind them was put to the torch, so that nothing remained for the orcs to follow in.",
-			source = "https://warcraft.wiki.gg/wiki/Stormwind_Harbor",
-		},
-		["stormwind keep"] = {
-			name = "Stormwind Keep",
-			short = "Stormwind Keep crowns the city, taller and grander than it has any need to be, so that the folk below need only look up to remember what stands watch over them.",
-			full = "Stormwind Keep crowns the city, taller and grander than it has any need to be, so that the folk below need only look up to remember what stands watch over them. Its galleries arch between towers shod in blue slate, its Royal Library open to citizens who wander its gardens and halls, though behind the public rooms lie the king's own chambers, quarters for honored guests, and a small armory of rare and ancient arms.\n\nThe keep has answered treachery from within its own throne room. There, before the assembled court, Lo'Gosh named the advisor Katrana Prestor for what she truly was: the black dragon Onyxia, who had worn a human mask to bend the kingdom's leadership to her will for years unnoticed. She turned guards to dragonspawn and fought in the very hall where kings had once held audience, and Reginald Windsor died there at her claws. The amulet she had used to work her manipulations was afterward locked away within the keep's walls, so that its power might never again pass into another schemer's hands.",
-			source = "https://warcraft.wiki.gg/wiki/Stormwind_Keep",
-		},
-		["stormwind lake"] = {
-			name = "Stormwind Lake",
-			short = "The lake lies behind the Cathedral of Light, its waters bordered by parkland in the city's northeast.",
-			full = "The lake lies behind the Cathedral of Light, its waters bordered by parkland in the city's northeast. Along its northern shore stands the Stormwind City Cemetery, where the dead of the city rest within sight of the water.",
-			source = "https://warcraft.wiki.gg/wiki/Stormwind_Lake",
-		},
-		["stormwind stockade"] = {
-			name = "Stormwind Stockade",
-			short = "Beneath the canal district of Stormwind City, behind stone and iron, the Stockade holds those the kingdom cannot simply hang and forget.",
-			full = "Beneath the canal district of Stormwind City, behind stone and iron, the Stockade holds those the kingdom cannot simply hang and forget. Warden Thelwater keeps watch over petty thieves stacked beside murderers, political prisoners beside men whose names are meant to be forgotten.\n\nWhen the Stormwind Army marched to the front, the guard was thinned, and a boy of fourteen named Mac volunteered to stand watch in their place. He caught prisoners tearing the wool from their blankets to knot into scarves, a mark some gang meant to wear as a badge, and reprimanded them for it. For that he was stabbed in the back and killed, a boy left dead in a cell block built for men.\n\nWorse came later. Another revolt tore through the block, driven by prisoners under the smuggler Randolph Moloch, and by the gnoll chieftain called Hogger, whose Riverpaw pack had somehow found their way inside. Rifle Commander Coe wanted every rioter shot where he stood; Thelwater chose otherwise, and the uprising was put down without the slaughter Coe demanded. Hogger did not survive it. The guards kept his trousers afterward, a grim trophy said ever since to lift the spirits of the men who stand watch there.",
-			source = "https://warcraft.wiki.gg/wiki/Stormwind_Stockade",
-		},
-		["stormwind stockade classic"] = {
-			name = "Stormwind Stockade",
-			short = "Beneath the canal district of Stormwind City, behind stone and iron, the Stockade holds those the kingdom cannot simply hang and forget.",
-			full = "Beneath the canal district of Stormwind City, behind stone and iron, the Stockade holds those the kingdom cannot simply hang and forget. Warden Thelwater keeps watch over petty thieves stacked beside murderers, political prisoners beside men whose names are meant to be forgotten.\n\nWhen the Stormwind Army marched to the front, the guard was thinned, and a boy of fourteen named Mac volunteered to stand watch in their place. He caught prisoners tearing the wool from their blankets to knot into scarves, a mark some gang meant to wear as a badge, and reprimanded them for it. For that he was stabbed in the back and killed, a boy left dead in a cell block built for men.\n\nWorse came later. Another revolt tore through the block, driven by prisoners under the smuggler Randolph Moloch, and by the gnoll chieftain called Hogger, whose Riverpaw pack had somehow found their way inside. Rifle Commander Coe wanted every rioter shot where he stood; Thelwater chose otherwise, and the uprising was put down without the slaughter Coe demanded. Hogger did not survive it. The guards kept his trousers afterward, a grim trophy said ever since to lift the spirits of the men who stand watch there.",
-			source = "https://warcraft.wiki.gg/wiki/Stormwind_Stockade_(Classic)",
-		},
-		["trade district"] = {
-			name = "Trade District",
-			short = "Just inside Stormwind's main gate lies the Trade District, the beating commercial heart of the city, where merchants deal in cheese and flowers, in arcane reagents and cloth, in bows and guns and armor of every make.",
-			full = "Just inside Stormwind's main gate lies the Trade District, the beating commercial heart of the city, where merchants deal in cheese and flowers, in arcane reagents and cloth, in bows and guns and armor of every make. It is the first place most travelers see of Stormwind, and the busiest.\n\nThe bank stands at its southwest corner, alongside the inn and the mailbox where messages and parcels change hands, while a ramp on the eastern side climbs to where the gryphons wait to carry riders out over the city walls.\n\nIt was here, when the mist of the Emerald Nightmare crept in over Stormwind, that the Trade District went dark. The stalls and lanterns that ordinarily blazed with the business of the day were swallowed by that unnatural gloom, the district's usual clamor of trade smothered beneath the weight of the Nightmare's shadow.",
-			source = "https://warcraft.wiki.gg/wiki/Trade_District",
-		},
-		["training hall"] = {
-			name = "Training Hall",
-			short = "In the Old Town of Stormwind stands the Training Hall, a place once known as the Command Center.",
-			full = "In the Old Town of Stormwind stands the Training Hall, a place once known as the Command Center. What was raised for the direction of war has since been turned to a quieter purpose, shaping those who would take up arms rather than commanding them in the field.",
-			source = "https://warcraft.wiki.gg/wiki/Training_Hall",
 		},
 		["valley of heroes"] = {
 			name = "Valley of Heroes",
@@ -7556,116 +4892,14 @@ ZoneLore.Subzones = {
 			full = "A stone bridge crosses the narrow moat before Stormwind's gate, the first sight of the city that any traveler receives. The valley beyond is lush and green, and along its path stand five statues raised after the Second War, when Stormwind was rebuilt.\n\nThey commemorate the leadership of the Alliance Expedition that passed through the Dark Portal to seal the rift into Draenor: Kurdran Wildhammer and Archmage Khadgar on one side, Force Commander Danath Trollbane and Ranger-Captain Alleria Windrunner on the other, and at the road's end, before it splits toward the city proper, General Turalyon, who led them.\n\nSome years after the statues were raised, Alleria and Turalyon's son Arator was carried through the valley on the shoulders of a Knight of the Silver Hand, looking up at the stone face of a mother he could not remember. Alleria, far off aboard the Xenedar, sent her feelings to him through the Light. The boy looked around, smiled, and reached toward her statue. He came back to the valley again and again after that, to look at her face and know she loved him.\n\nThe valley's guards answer to General Hammond Clay, who took command after General Marcus Jonathan fell at Theramore.",
 			source = "https://warcraft.wiki.gg/wiki/Valley_of_Heroes",
 		},
-		["war room"] = {
-			name = "War Room",
-			short = "The War Room lies within Stormwind Keep, past the throne room, where the business of war is done in quiet.",
-			full = "The War Room lies within Stormwind Keep, past the throne room, where the business of war is done in quiet. Weapons line its walls, blunderbusses and swords and three great cannons, kept close as though the fighting might come to the door itself. Tables are heaped with books of strategy, and at the center stands the map table, worn under the hands of those who have leaned over it to trace the roads and borders of the kingdom.\n\nIt is a room built for planning, not display. Here the Alliance's military leaders gather to weigh their strategies away from the throne room's ceremony. The weapons on the walls are not trophies so much as reminders: this is where war is thought about before it is fought.",
-			source = "https://warcraft.wiki.gg/wiki/War_Room",
-		},
-		["winds redemption"] = {
-			name = "Wind's Redemption",
-			short = "The Wind's Redemption belongs to the Alliance navy, entrusted to the 7th Legion and captained by Grand Admiral Jes-Tereth. It is not a warship built for ordinary patrols or ordinary crews.",
-			full = "The Wind's Redemption belongs to the Alliance navy, entrusted to the 7th Legion and captained by Grand Admiral Jes-Tereth. It is not a warship built for ordinary patrols or ordinary crews. Its purpose has always been to carry those whose presence changes the outcome of a war: kings, commanders, and champions of standing.\n\nThe ship stands otherwise as it always has, a vessel of consequence, kept ready by the 7th Legion for the day it is needed to carry someone whose arrival will matter.",
-			source = "https://warcraft.wiki.gg/wiki/Wind's_Redemption",
-		},
-		["wizards sanctum"] = {
-			name = "Wizard's Sanctum",
-			short = "The mage tower stands in the Mage Quarter, its stone marked with the insignia of the Kirin Tor, who lent their hand to its remodeling though those who work within answer to Stormwind.",
-			full = "The mage tower stands in the Mage Quarter, its stone marked with the insignia of the Kirin Tor, who lent their hand to its remodeling though those who work within answer to Stormwind. Arcane golems pace its grounds, and water elementals rise at need to keep it safe.\n\nLong ago, three mages studied together beneath its roof. One of them, Morganth, turned to the dark arts. His companions urged him back from that path, but he would not be turned, and in the end he was banished from the tower he had once called home.\n\nThe mages who remain carry a quieter burden than most in the city know. Theirs is a secret war fought against an invisible world, hunting down the magical anomalies and creatures that threaten the realm before they are ever seen by common eyes.\n\nDuring the Elemental Unrest, the tower opened its portals as places of evacuation, drawing frightened citizens to safety while the mages of the city worked the same magic across Stormwind.",
-			source = "https://warcraft.wiki.gg/wiki/Wizard's_Sanctum",
-		},
-		["wollerton stead"] = {
-			name = "Wollerton Stead",
-			short = "The Wollerton Stead is a small farmhouse in the outskirts of Stormwind, where kaldorei and Gilnean refugees once sheltered.",
-			full = "The Wollerton Stead is a small farmhouse in the outskirts of Stormwind, where kaldorei and Gilnean refugees once sheltered. In its fields, Darnassian druids coaxed pumpkins from the soil by magic, while farmhands moved among the vines gathering what grew.",
-			source = "https://warcraft.wiki.gg/wiki/Wollerton_Stead",
-		},
 	},
-	-- Orgrimmar: 22 subzones
+	-- Orgrimmar: 2 subzones
 	[1454] = {
-		["barracks orgrimmar"] = {
-			name = "Barracks (Orgrimmar)",
-			short = "The Barracks stands in the Valley of Honor, a hall once known as the Hall of the Brave. It has been given over to the training of warriors, its old name set aside for the work it now serves.",
-			full = "The Barracks stands in the Valley of Honor, a hall once known as the Hall of the Brave. It has been given over to the training of warriors, its old name set aside for the work it now serves.",
-			source = "https://warcraft.wiki.gg/wiki/Barracks_(Orgrimmar)",
-		},
-		["broken tusk"] = {
-			name = "Broken Tusk",
-			short = "The Broken Tusk stands in the Valley of Strength, near Orgrimmar's general store and auction house, one among the city's several inns.",
-			full = "The Broken Tusk stands in the Valley of Strength, near Orgrimmar's general store and auction house, one among the city's several inns.\n\nHere Gamon can be found, a resident long set upon by his own people.",
-			source = "https://warcraft.wiki.gg/wiki/Broken_Tusk",
-		},
-		["cleft of shadow"] = {
-			name = "Cleft of Shadow",
-			short = "The Cleft of Shadow lies in shadow by nature and by name, a hollow beneath Orgrimmar where rogues, mages, and warlocks train, and where a rift opens below into Ragefire Chasm.",
-			full = "The Cleft of Shadow lies in shadow by nature and by name, a hollow beneath Orgrimmar where rogues, mages, and warlocks train, and where a rift opens below into Ragefire Chasm. Its Arcane Enclave holds one of the city's two portals to the Blasted Lands, the other set in the troll-built Valley of Spirits.\n\nThe warlocks who once gathered here paid for it. Many were executed, and after the fighting that followed, a stone plaque was raised at the entrance of the Cleft, naming those who died in the battle. It stands there still, plain stone for a debt the city has not forgotten.",
-			source = "https://warcraft.wiki.gg/wiki/Cleft_of_Shadow",
-		},
-		["drag"] = {
-			name = "Drag",
-			short = "The Drag runs shaded between the Valley of Strength and the Valley of Wisdom, with paths opening onto the Valley of Honor and the Cleft of Shadow.",
-			full = "The Drag runs shaded between the Valley of Strength and the Valley of Wisdom, with paths opening onto the Valley of Honor and the Cleft of Shadow. Its narrow length is given over to shopkeepers and those who teach the trades, nearly every craft finding a teacher along its stalls, save for the healing arts, taught instead at the Embassy.\n\nThe orphanage was not always here. It once stood in the Valley of Honor, until it was destroyed there, and what remained of it was rebuilt along the Drag, with a small pond made near it for the children who now call the alley home.",
-			source = "https://warcraft.wiki.gg/wiki/Drag",
-		},
-		["engineering works orgrimmar"] = {
-			name = "Engineering Works (Orgrimmar)",
-			short = "Behind the Embassy walls stands the Engineering Works, where Orgrimmar's tinkers keep their small shop.",
-			full = "Behind the Embassy walls stands the Engineering Works, where Orgrimmar's tinkers keep their small shop.",
-			source = "https://warcraft.wiki.gg/wiki/Engineering_Works_(Orgrimmar)",
-		},
-		["gates of orgrimmar"] = {
-			name = "Gates of Orgrimmar",
-			short = "The road into Orgrimmar runs from the Dranosh'ar Blockade, through open Durotar, and up to the great gate itself, where it opens onto the Valley of Strength beyond.",
-			full = "The road into Orgrimmar runs from the Dranosh'ar Blockade, through open Durotar, and up to the great gate itself, where it opens onto the Valley of Strength beyond.",
-			source = "https://warcraft.wiki.gg/wiki/Gates_of_Orgrimmar",
-		},
-		["goblin slums"] = {
-			name = "Goblin Slums",
-			short = "The Goblin Slums sit at the edge of the Valley of Spirits, oily and dirty, much as goblin quarters look everywhere the Bilgewater trade has taken root.",
-			full = "The Goblin Slums sit at the edge of the Valley of Spirits, oily and dirty, much as goblin quarters look everywhere the Bilgewater trade has taken root. The ground here once belonged wholly to the trolls, but when the goblins threw in with the Horde, the trolls drew back further into the valley to the north and left this stretch to their new allies. Boss Mida presides over it now.\n\nThe lake at the heart of the slums is given over to an oil-drilling operation, watched over by Environmental Engineer Linza, and the drilling has left the water and mud thick with pollution that runs downstream and fouls the Valley of Spirits beyond. Toads and muddy crawfish creep through the wet ground, alongside the goblins' own Robo-Chicks.\n\nOff-duty goblins lounge around the pool or stand in line at the bank waiting to withdraw their earnings. The slums remain, in the main, goblin ground - loud, greasy, and entirely their own.",
-			source = "https://warcraft.wiki.gg/wiki/Goblin_Slums",
-		},
-		["grommash hold"] = {
-			name = "Grommash Hold",
-			short = "The fortress at the heart of Orgrimmar's Valley of Strength bears the name of Grom Hellscream, the orc who broke the demon lord Mannoroth's hold over his people at the cost of his own life.",
-			full = "The fortress at the heart of Orgrimmar's Valley of Strength bears the name of Grom Hellscream, the orc who broke the demon lord Mannoroth's hold over his people at the cost of his own life. Outside its walls stands the proof: Mannoroth's skull and armor, mounted on the trunk of an ancient tree, with a plaque recalling both the orcs' victory over their demonic curse and the mistakes that led them to it in the first place.\n\nWithin, Thrall held court as Warchief. The throne room was built with thick stone walls and no windows, left deliberately cold, for Thrall preferred that those who came before him feel a little uncomfortable in his presence. At the center of the hold lies a great hide rug worked into a map of Azeroth, spread out for the Horde's leadership to pore over when planning their campaigns.",
-			source = "https://warcraft.wiki.gg/wiki/Grommash_Hold",
-		},
 		["hall of legends"] = {
 			name = "Hall of Legends",
 			short = "In the Valley of Strength, within Orgrimmar, stands the Hall of Legends, the officer's barracks of the Horde.",
 			full = "In the Valley of Strength, within Orgrimmar, stands the Hall of Legends, the officer's barracks of the Horde.\n\nAt its center is a table where four sit in council: Chieftain Earthbind of Thunder Bluff, Advisor Willington of the Undercity, Blood Guard Hini'wana of the Darkspear Trolls, and Councilor Arial D'Anastasis of Silvermoon City. Before them lie maps of Azeroth, and beside the maps rests an open book, Military Ranks of the Horde & Alliance, its pages set with the ranks and insignia by which the Horde's warriors know one another.",
 			source = "https://warcraft.wiki.gg/wiki/Hall_of_Legends",
-		},
-		["hall of the brave"] = {
-			name = "Hall of the Brave",
-			short = "In the Valley of Honor stands the Hall of the Brave, a barracks where the Horde's warrior trainers, battlemasters, and army officers gather.",
-			full = "In the Valley of Honor stands the Hall of the Brave, a barracks where the Horde's warrior trainers, battlemasters, and army officers gather. Training dummies stand scattered through its halls and yard, and it is known among the warriors simply as their guild house.\n\nSomething worth remembering happened within these walls. Eitrigg, long trusted among the Horde, was confronted here over secret meetings held with Saurfang. He did not deny it. He admitted the meetings freely, saying he had wearied of deceit, and declared his belief that Sylvanas was driven by something dark. He would draw blood for her no longer. Before those loyal to her, he announced he meant to leave the city and join Saurfang's army beyond its walls, asking them to walk out with him. They refused. Eitrigg fought and lost, and was taken captive, led out from the Hall of the Brave and handed over to Nathanos Blightcaller.",
-			source = "https://warcraft.wiki.gg/wiki/Hall_of_the_Brave",
-		},
-		["miwanas longhouse"] = {
-			name = "Miwana's Longhouse",
-			short = "In the Valley of Wisdom, Miwana keeps the longhouse that bears her name, tending to those who pass through Orgrimmar. Inside, Hiwahi Three-Feathers teaches the working of cloth.",
-			full = "In the Valley of Wisdom, Miwana keeps the longhouse that bears her name, tending to those who pass through Orgrimmar. Inside, Hiwahi Three-Feathers teaches the working of cloth. Beyond its doors, a bonfire burns where shaman gather, and nearby stands one skilled in the skinning of hides.",
-			source = "https://warcraft.wiki.gg/wiki/Miwana's_Longhouse",
-		},
-		["nip and tusk"] = {
-			name = "Nip and Tusk",
-			short = "Bebri Coifcurl keeps the barbershop known as Nip and Tusk, tending the vanity of Orgrimmar with the same steady hand she brings to any customer's tusks or mane.",
-			full = "Bebri Coifcurl keeps the barbershop known as Nip and Tusk, tending the vanity of Orgrimmar with the same steady hand she brings to any customer's tusks or mane.",
-			source = "https://warcraft.wiki.gg/wiki/Nip_and_Tusk",
-		},
-		["orgrimmar embassy"] = {
-			name = "Orgrimmar Embassy",
-			short = "The Embassy stands above the main gate of Orgrimmar, a meeting-place where the leaders of the Horde's allied peoples gather under one roof.",
-			full = "The Embassy stands above the main gate of Orgrimmar, a meeting-place where the leaders of the Horde's allied peoples gather under one roof.\n\nIt was here, in the aftermath of Varok Saurfang's rebellion, that the future of the Horde itself was decided. With lesser matters settled, Lor'themar Theron turned to the question hanging over the Horde: who would lead it, now that the Warchief's seat stood empty.\n\nMany wished Thrall to take up the mantle once more. He refused. He had given his word to Varok Saurfang that he would not become Warchief again, and he would not break it. Instead, Lor'themar offered a different answer entirely: that the Horde no longer needed a single Warchief at all, that its leadership required change. From that proposal, spoken within the Embassy's walls, the Horde Council was born.",
-			source = "https://warcraft.wiki.gg/wiki/Orgrimmar_Embassy",
-		},
-		["pathfinders den"] = {
-			name = "Pathfinder's Den",
-			short = "Within the Gates of Orgrimmar lies a chamber known as Pathfinder's Den, where the arcane portals of the city are kept.",
-			full = "Within the Gates of Orgrimmar lies a chamber known as Pathfinder's Den, where the arcane portals of the city are kept. It is the Horde's counterpart to the Wizard's Sanctum that stands in the Mage Quarter of Stormwind City, each a gateway wrought to carry travelers across vast distance in a single step.",
-			source = "https://warcraft.wiki.gg/wiki/Pathfinder's_Den",
 		},
 		["ragefire chasm"] = {
 			name = "Ragefire Chasm",
@@ -7673,80 +4907,14 @@ ZoneLore.Subzones = {
 			full = "Beneath Orgrimmar, where the rock runs hot with buried fire, the tunnels open into a chasm no city map admits to. Troggs came up first, out of the deep lava-lit passages, calling themselves the Ragefire clan. Magatha the Seer went down among them to offer peace, tauren to trogg, and got only violence for her trouble. It was plain enough after that there would be no talking to them, and plain too that left to breed and dig they could rise through the tunnels and break over the Horde itself.\n\nThey were not alone down there. A sect of the Shadow Council called the Searing Blade had already made the chasm its refuge, led by Taragaman the Hungerer, a felguard, Jergosh the Invoker, a warlock, and Bazzalan, a satyr. From that hiding place they plotted the Horde's ruin.\n\nWhat gave them cover was one of the Horde's own. Neeru Fireblade, who led the Burning Blade in secret, used the chasm as a killing ground, sending Thrall's loyal followers down to die there, testing whether the Searing Blade were worth keeping as allies or only worth spending. Thrall learned of it, and those sent to answer for it cut down the cultist leaders and cleared the troggs from the tunnels.",
 			source = "https://warcraft.wiki.gg/wiki/Ragefire_Chasm",
 		},
-		["ragefire chasm classic"] = {
-			name = "Ragefire Chasm",
-			short = "Beneath Orgrimmar, where the rock runs hot with buried fire, the tunnels open into a chasm no city map admits to. Troggs came up first, out of the deep lava-lit passages, calling themselves the Ragefire clan.",
-			full = "Beneath Orgrimmar, where the rock runs hot with buried fire, the tunnels open into a chasm no city map admits to. Troggs came up first, out of the deep lava-lit passages, calling themselves the Ragefire clan. Magatha the Seer went down among them to offer peace, tauren to trogg, and got only violence for her trouble. It was plain enough after that there would be no talking to them, and plain too that left to breed and dig they could rise through the tunnels and break over the Horde itself.\n\nThey were not alone down there. A sect of the Shadow Council called the Searing Blade had already made the chasm its refuge, led by Taragaman the Hungerer, a felguard, Jergosh the Invoker, a warlock, and Bazzalan, a satyr. From that hiding place they plotted the Horde's ruin.\n\nWhat gave them cover was one of the Horde's own. Neeru Fireblade, who led the Burning Blade in secret, used the chasm as a killing ground, sending Thrall's loyal followers down to die there, testing whether the Searing Blade were worth keeping as allies or only worth spending. Thrall learned of it, and those sent to answer for it cut down the cultist leaders and cleared the troggs from the tunnels.",
-			source = "https://warcraft.wiki.gg/wiki/Ragefire_Chasm_(Classic)",
-		},
-		["valley of honor"] = {
-			name = "Valley of Honor",
-			short = "The Valley of Honor is where Orgrimmar keeps its warriors. Here stand the trainers of war and the hunt, the smiths who forge blade and mail, and the Ring of Valor, where combat is tested openly.",
-			full = "The Valley of Honor is where Orgrimmar keeps its warriors. Here stand the trainers of war and the hunt, the smiths who forge blade and mail, and the Ring of Valor, where combat is tested openly. The Hall of the Brave gathers the warrior guild and the city's battlemasters under one roof.\n\nWhen the Scourge came against Orgrimmar during their second invasion, it was this valley they broke into. The city's champions and leaders met the undead here, among the training rings and the forges, and held the ground until it was theirs again.",
-			source = "https://warcraft.wiki.gg/wiki/Valley_of_Honor",
-		},
-		["valley of spirits"] = {
-			name = "Valley of Spirits",
-			short = "The Valley of Spirits runs long and narrow, a passage between the Valley of Strength and the Talon Gate.",
-			full = "The Valley of Spirits runs long and narrow, a passage between the Valley of Strength and the Talon Gate. Here the Darkspear trolls made their seat within Orgrimmar, raising their own halls and shrines alongside the orcish buildings already standing in the valley, which endure still, held by the orcs who first raised them. The Darkspear were given leave to build further, expanding their presence to shape the valley into a place fully their own.\n\nWhere a pool once stood ringed by two huts, the huts were torn down and the ground given to the Bilgewater Cartel, whose goblins crowded it so thickly it became known as the Goblin Slums.\n\nKor'kron guards patrol the district under enforced curfews, taking into custody any who draw their suspicion.",
-			source = "https://warcraft.wiki.gg/wiki/Valley_of_Spirits",
-		},
-		["valley of strength"] = {
-			name = "Valley of Strength",
-			short = "The Valley of Strength opens beyond the main gate of Orgrimmar, the first ground a traveler crosses upon entering the city. By day and night it is thick with activity, its shops and facilities never quiet for long.",
-			full = "The Valley of Strength opens beyond the main gate of Orgrimmar, the first ground a traveler crosses upon entering the city. By day and night it is thick with activity, its shops and facilities never quiet for long.\n\nIt was here, during the war against the Lich King, that the citizens of Orgrimmar gathered in numbers to demand an explanation of their leaders, held in check by Overlord Runthak as their unease threatened to boil over.\n\nThe valley has also seen bloodshed of its own making. When Ji Firepaw was brought here by the Kor'kron to be put to death, Horde revolutionaries rose against the guard, and the Alliance joined them, storming the valley to free Ji and the other captives held with him. The fighting turned against the Dark Shaman before it was done, the valley itself becoming the battleground for a struggle over what the Horde was willing to become.",
-			source = "https://warcraft.wiki.gg/wiki/Valley_of_Strength",
-		},
-		["valley of wisdom"] = {
-			name = "Valley of Wisdom",
-			short = "The Valley of Wisdom holds the ground where Grommash Hold once stood, before Warchief Thrall made his seat elsewhere in Orgrimmar.",
-			full = "The Valley of Wisdom holds the ground where Grommash Hold once stood, before Warchief Thrall made his seat elsewhere in Orgrimmar. What remains of that old hold can still be picked out among the huts the tauren later raised here, taking the valley for their own.\n\nA tree once stood in this place bearing the armor of the pit lord Mannoroth, kept where all could see it. Both the armor and the tree it hung upon are gone now, leaving only the telling of it.\n\nA waterfall pours down into the valley still, throwing up a cool mist that settles over the tauren dwellings and makes their hides and timber shine.",
-			source = "https://warcraft.wiki.gg/wiki/Valley_of_Wisdom",
-		},
-		["western earthshrine"] = {
-			name = "Western Earthshrine",
-			short = "High above the Valley of Wisdom, on a ridge reached by a run of bridges from the sky harbor, the Earthen Ring raised a circle of stone for the Horde.",
-			full = "High above the Valley of Wisdom, on a ridge reached by a run of bridges from the sky harbor, the Earthen Ring raised a circle of stone for the Horde. It stands apart from the noise of Orgrimmar below, a place of the elements rather than the warchief, and it mirrors a twin circle the same order built for the Alliance in Stormwind.\n\nThe circle is a threshold as much as a shrine. Its stones open onto Nordrassil, where the World Tree of Hyjal still stands scarred by fire, and onto Deepholm, the shattered elemental plane beneath the earth's crust, where a path leads to the Temple of Earth and back again. Other stones have opened, in their turn, onto the drowned reaches of Vashj'ir, onto Ramkahen in the sands of Uldum, onto the war-torn coast of the Twilight Highlands, and onto the contested ground of Tol Barad Peninsula. Some of these paths return a traveler to the ridge above the valley; others, once taken, do not.",
-			source = "https://warcraft.wiki.gg/wiki/Western_Earthshrine",
-		},
-		["wyverns tail"] = {
-			name = "Wyvern's Tail",
-			short = "In the Valley of Honor stands the Wyvern's Tail, a small inn with a second floor of rooms and beds above a main hall set with long tables for eating.",
-			full = "In the Valley of Honor stands the Wyvern's Tail, a small inn with a second floor of rooms and beds above a main hall set with long tables for eating. It was here that Ironhoof brought the injured orc Malgar, carrying him in to recover from his wounds.",
-			source = "https://warcraft.wiki.gg/wiki/Wyvern's_Tail",
-		},
 	},
-	-- Ironforge: 19 subzones
+	-- Ironforge: 2 subzones
 	[1455] = {
-		["aegrims study"] = {
-			name = "Aegrim's Study",
-			short = "In Old Ironforge lies a chamber that once belonged to Thane Aegrim Bronzebeard, of the clan that named Ironforge.",
-			full = "In Old Ironforge lies a chamber that once belonged to Thane Aegrim Bronzebeard, of the clan that named Ironforge. Ancient golem guards still stand their post there, keeping watch over dwarven corpses that never left the study where they fell.",
-			source = "https://warcraft.wiki.gg/wiki/Aegrim's_Study",
-		},
-		["cask n anvil"] = {
-			name = "Cask 'n' Anvil",
-			short = "The Cask 'n' Anvil stands empty in the Great Forge, between the Thistlefuzz Arcanery and the Ironforge Physician. No keeper calls from behind its bar, no traveler warms by its hearth.",
-			full = "The Cask 'n' Anvil stands empty in the Great Forge, between the Thistlefuzz Arcanery and the Ironforge Physician. No keeper calls from behind its bar, no traveler warms by its hearth. It waits, quiet amid the hammering around it.",
-			source = "https://warcraft.wiki.gg/wiki/Cask_'n'_Anvil",
-		},
-		["commons"] = {
-			name = "Commons",
-			short = "The Commons sits at the heart of Ironforge, where its trade has always gathered.",
-			full = "The Commons sits at the heart of Ironforge, where its trade has always gathered. Its bank, Auction House, and inn stand here, along with a scatter of shops, and of all the city's wards it is the one never still and never quiet.\n\nIt was here that the Alliance first raised its auction house, and for a time the crowd grew so thick that moving through the Commons at all was a trial. That crush has long since eased, but it remains the place in Ironforge where everyone, sooner or later, must come to trade.",
-			source = "https://warcraft.wiki.gg/wiki/Commons",
-		},
 		["deeprun tram"] = {
 			name = "Deeprun Tram",
 			short = "The tram runs beneath the earth between Ironforge and Stormwind, its double tracks carrying two trains of three wagons apiece through a passage that dips, for one long stretch, beneath a subterranean lake.",
 			full = "The tram runs beneath the earth between Ironforge and Stormwind, its double tracks carrying two trains of three wagons apiece through a passage that dips, for one long stretch, beneath a subterranean lake. Gnomes tend it daily, and it has never once been allowed to fail its riders.\n\nIt was built in the years after the Second War, when Stormwind lay broken and the Alliance was still young and its bonds still strong. Dwarven aid was reaching the humans too slowly for King Magni Bronzebeard's liking, and he wanted besides a way to move soldiers quickly to Stormwind's defense if the need ever came. So he turned to High Tinker Gelbin Mekkatorque, Azeroth's foremost engineer, who drafted a railway to bind the two cities together beneath the earth itself.\n\nThe tram's worth was proven in its darkest hour. When Magni was turned to stone and his daughter Moira seized Ironforge, she sealed the tram shut, cutting the dwarves off from their allies. It was through that same tunnel that King Varian Wrynn later led a strike of agents into Ironforge to break the siege and free his son.",
 			source = "https://warcraft.wiki.gg/wiki/Deeprun_Tram",
-		},
-		["forlorn cavern"] = {
-			name = "Forlorn Cavern",
-			short = "The Forlorn Cavern winds along the shore of Ironforge's underground lake, dark and secluded, suited to those who prefer not to be seen.",
-			full = "The Forlorn Cavern winds along the shore of Ironforge's underground lake, dark and secluded, suited to those who prefer not to be seen. Rogues and warlocks keep their trade here, the warlocks gathering within Bonegrip's Runes and Dooms. Two shops stand along the water, the Stoneblade's and the Traveling Fisherman, doing business alongside the shadier dealings the cavern is known for.\n\nIt is a place where thieves linger and dark things are whispered about, and those who walk it are wise to keep one hand near a blade.",
-			source = "https://warcraft.wiki.gg/wiki/Forlorn_Cavern",
 		},
 		["gates of ironforge"] = {
 			name = "Gates of Ironforge",
@@ -7754,104 +4922,14 @@ ZoneLore.Subzones = {
 			full = "The Gates of Ironforge rise from the stone of Dun Morogh long before a traveler reaches them, visible across the valley. The great ramp climbs to them from the south, lesser paths wind up from the Commons, but every road ends the same way: at doors built to be seen from miles off.\n\nPass through and the first thing to greet a visitor is not a dwarf but a statue, High King Modimus Anvilmar carved huge, standing eternal watch just inside the threshold.",
 			source = "https://warcraft.wiki.gg/wiki/Gates_of_Ironforge",
 		},
-		["great forge"] = {
-			name = "Great Forge",
-			short = "The Great Forge was the first stone laid beneath Ironforge Mountain, and everything the dwarves built afterward grew up around it, so that the whole city came to bear its name.",
-			full = "The Great Forge was the first stone laid beneath Ironforge Mountain, and everything the dwarves built afterward grew up around it, so that the whole city came to bear its name. It never goes cold. Day and night the foundries pour their molten slag and hammers ring on the Great Anvil at its center, and the heat and noise of it reach into every street nearby, so that to walk through Ironforge is sooner or later to walk through here. Myolor Sunderfury keeps the forge now, and the Council of Three Hammers holds its court at the High Seat that rings the chamber, so that the making of iron and the making of law sit within earshot of one another.\n\nTwice the dwarves took what the Great Forge made and sent it out as a gift, casting two bells and sending one to Lordaeron and one to Stormwind, tokens of friendship carried beyond the mountain.\n\nAnd it was here, on the Great Anvil itself, that King Magni Bronzebeard forged the blade that would be called Ashbringer.",
-			source = "https://warcraft.wiki.gg/wiki/Great_Forge",
-		},
-		["hall of arms"] = {
-			name = "Hall of Arms",
-			short = "The Hall of Arms stands in Ironforge's Military Ward, the command center of the dwarven kingdom's armed forces.",
-			full = "The Hall of Arms stands in Ironforge's Military Ward, the command center of the dwarven kingdom's armed forces. Flying machines are assembled here and launched through access ports in the roof, climbing out toward the airfield beyond the city walls. Steam tanks are also built and maintained within its halls, rolled out to serve the Alliance in the field. Supplies for the kingdom's forces are stockpiled in quantity, making the Hall as much an arsenal as a command post. Warriors and hunters train within its walls, and those who lead dwarves into battle can be found here as well, seeing to the work of readying steel and steam for war.",
-			source = "https://warcraft.wiki.gg/wiki/Hall_of_Arms",
-		},
-		["hall of explorers"] = {
-			name = "Hall of Explorers",
-			short = "The Hall of Explorers stands as one of the great districts of Ironforge, seat of the Explorers' League and the place from which every expedition sent out into the world is planned and coordinated.",
-			full = "The Hall of Explorers stands as one of the great districts of Ironforge, seat of the Explorers' League and the place from which every expedition sent out into the world is planned and coordinated. At its heart lies the Library, holding a vast collection of artifacts and tomes gathered from across the world, said to form one of the most complete museums of its kind anywhere.\n\nWhat few who wander among the display cases realize is that the Hall serves a second, quieter purpose. An unofficial arrangement binds the Explorers' League to SI:7, and it is High Explorer Muninn Magellas who tends to it personally, hiding sensitive missives in a cache tucked beneath the carpet at the Hall's entrance for agents to retrieve unseen. To the ordinary visitor the Hall of Explorers is a place of dusty relics and old maps; to those who know where to look beneath the carpet, it is something closer to a listening post.",
-			source = "https://warcraft.wiki.gg/wiki/Hall_of_Explorers",
-		},
-		["hall of mysteries"] = {
-			name = "Hall of Mysteries",
-			short = "The Hall of Mysteries stands in the Mystic Ward of Ironforge, and it does not look like the rest of the dwarven city.",
-			full = "The Hall of Mysteries stands in the Mystic Ward of Ironforge, and it does not look like the rest of the dwarven city. Where most halls ring with hammers and are filled with plate and mail, the Hall is quiet, lit blue-purple-white, its five pillars wrought in repeating gold and blue patterns holding up a ceiling far above the heads of gnomes and dwarves who move through it in soft, flowing robes rather than armor. Anduin Wrynn, walking its floor, once remarked that it did not feel quite as sacred as the Cathedral of Light in Stormwind, but that the Light was there all the same.\n\nIt is here that the Church of the Light and the Order of the Silver Hand keep their footing within Ironforge, under High Priest Rohan and Valgar Highforge. Young paladins of the Silver Hand come to study the Tome of Divinity before being sent out against the Dark Iron dwarves, once kin to Ironforge and now its enemy.",
-			source = "https://warcraft.wiki.gg/wiki/Hall_of_Mysteries",
-		},
-		["high seat"] = {
-			name = "High Seat",
-			short = "The High Seat lies at the heart of Ironforge, just off the Great Forge and the Commons, and for long years it held but a single throne.",
-			full = "The High Seat lies at the heart of Ironforge, just off the Great Forge and the Commons, and for long years it held but a single throne. There Magni Bronzebeard once ruled the dwarves alone, until the day came when he could no longer sit that seat.\n\nIn his place rose the Council of Three Hammers, and the High Seat was remade to hold it. Where one throne had stood, now stand three: one for Moira Thaurissan of the Dark Iron, one for Muradin Bronzebeard of the Bronzebeard clan, one for Falstad Wildhammer of the Wildhammer clan. Together they hear the petitions brought before them, and the chamber fills when the people come to be heard. Senator Barin Redstone and the Royal Historian Archesonus keep their place here still, serving a kingdom now governed by three hands instead of one.",
-			source = "https://warcraft.wiki.gg/wiki/High_Seat",
-		},
-		["library ironforge"] = {
-			name = "Library (Ironforge)",
-			short = "The Library fills the eastern reach of the Hall of Explorers in Ironforge, and by size alone it may be the largest single hall in the dwarven capital.",
-			full = "The Library fills the eastern reach of the Hall of Explorers in Ironforge, and by size alone it may be the largest single hall in the dwarven capital. The Explorers' League claims it as its own, for the League has given itself over to gathering knowledge and relics from across Azeroth, and it is here that members bring what they have unearthed to be catalogued and studied.\n\nShelves upon shelves hold the fruit of that labor, so vast that finding any single volume is no small task. Librarian Mae Paledust keeps watch over the sprawl, the one best suited to find any book among the rest.",
-			source = "https://warcraft.wiki.gg/wiki/Library_(Ironforge)",
-		},
-		["military ward"] = {
-			name = "Military Ward",
-			short = "The Military Ward is Ironforge's fighting heart.",
-			full = "The Military Ward is Ironforge's fighting heart. At its center stands the Hall of Arms, where warriors and hunters are trained and readied for battle, and where steam tanks and dwarven flying machines wait in their hangar against whatever threat may come. Around it, supply shops keep the ward fed and armed, sustaining the city's readiness rather than its history.",
-			source = "https://warcraft.wiki.gg/wiki/Military_Ward",
-		},
-		["mystic ward"] = {
-			name = "Mystic Ward",
-			short = "The Mystic Ward lies in the northwest of Ironforge, given over entirely to magic and its study.",
-			full = "The Mystic Ward lies in the northwest of Ironforge, given over entirely to magic and its study. Reached from the Commons, the Great Forge, and the Forlorn Cavern, it holds shops stocked with goods meant for spellcasters, and at its heart stands the Hall of Mysteries.\n\nThe hall gathers together some of the most powerful magic users in the dwarven kingdom, mages, paladins, and priests among them, who pass on their knowledge within its walls. At the center of the hall sits a pool that serves no purpose but to be looked at. Its bottom is thick with coins, thrown there by those who stood before the water and made a wish.",
-			source = "https://warcraft.wiki.gg/wiki/Mystic_Ward",
-		},
-		["old ironforge"] = {
-			name = "Old Ironforge",
-			short = "Deep below the High Seat of Ironforge, past a path that winds over open lava, lie the sealed gates of Old Ironforge, the Assembly of Thanes.",
-			full = "Deep below the High Seat of Ironforge, past a path that winds over open lava, lie the sealed gates of Old Ironforge, the Assembly of Thanes. The key to those gates was so heavy it took two dwarves and a ladder to set it in the lock.\n\nMagni Bronzebeard opened them after Brann brought him tablets of the earthen. He led Anduin Wrynn and a handful of companions down into a vast cavern roofed in diamond, where a broad platform stood ready for the working he meant to perform. There, with a scroll and a potion, Magni spoke the incantation to become one with the earth itself. Anduin called it the heart of the earth. The ritual took hold, but not as hoped: Magni was turned to solid diamond, rooted on what is now called Magni's Dais, a king frozen mid-prayer, watched over for years by his daughter Moira.\n\nHe did not wake until the Burning Legion's return drew near. Azeroth herself, who had foreseen the demons coming, freed him from the crystal, and he left to warn the Alliance himself, leaving behind only glittering shards scattered across the floor and stairs.",
-			source = "https://warcraft.wiki.gg/wiki/Old_Ironforge",
-		},
-		["stonefire tavern"] = {
-			name = "Stonefire Tavern",
-			short = "In the Commons of Ironforge, just north of the great gates, stands the Stonefire Tavern, its hearth kept by Innkeeper Firebrew and his daughter Gwenna.",
-			full = "In the Commons of Ironforge, just north of the great gates, stands the Stonefire Tavern, its hearth kept by Innkeeper Firebrew and his daughter Gwenna. It serves as one of the city's main gathering places, a warm stop for those passing through Ironforge's stone halls.",
-			source = "https://warcraft.wiki.gg/wiki/Stonefire_Tavern",
-		},
-		["thistlefuzz arcanery"] = {
-			name = "Thistlefuzz Arcanery",
-			short = "East of the Great Forge, Thistlefuzz Arcanery keeps its shelves stocked for those who bind enchantments and trace inscriptions.",
-			full = "East of the Great Forge, Thistlefuzz Arcanery keeps its shelves stocked for those who bind enchantments and trace inscriptions. Above the table on the lower floor, a Lexicon of Power hangs unsupported in the air, its pages open to no one.",
-			source = "https://warcraft.wiki.gg/wiki/Thistlefuzz_Arcanery",
-		},
-		["tinker town"] = {
-			name = "Tinker Town",
-			short = "Tinker Town is the gnomish quarter of Ironforge, built around the station where the Deeprun Tram begins its crossing.",
-			full = "Tinker Town is the gnomish quarter of Ironforge, built around the station where the Deeprun Tram begins its crossing. It exists because of a disaster: when Gnomeregan fell to the troggs, the dwarves opened their city to the gnomes who fled it, and the refugees raised Tinker Town in the district that had grown up around the tram works.\n\nMaking room for them meant displacing others. Dwarves who had lived in that ward, Skuerto among them, were turned out of their homes so the gnomes could settle there.",
-			source = "https://warcraft.wiki.gg/wiki/Tinker_Town",
-		},
-		["vault of ironforge"] = {
-			name = "Vault of Ironforge",
-			short = "The Vault of Ironforge sits in the Commons district, across from the Auction House, holding the treasure and coin of the dwarven city.",
-			full = "The Vault of Ironforge sits in the Commons district, across from the Auction House, holding the treasure and coin of the dwarven city. The Stonemantle family keeps it, with Dinita overseeing its stores, open to those who serve the Alliance.",
-			source = "https://warcraft.wiki.gg/wiki/Vault_of_Ironforge",
-		},
 	},
-	-- Thunder Bluff: 6 subzones
+	-- Thunder Bluff: 4 subzones
 	[1456] = {
-		["cat and the shaman"] = {
-			name = "Cat and the Shaman",
-			short = "In the shadow of Thunder Bluff's high rock, the Cat and the Shaman keeps its fires burning for the tribes below. Innkeeper Pala tends the hearth here, offering rest to those who climb the great mesa.",
-			full = "In the shadow of Thunder Bluff's high rock, the Cat and the Shaman keeps its fires burning for the tribes below. Innkeeper Pala tends the hearth here, offering rest to those who climb the great mesa.",
-			source = "https://warcraft.wiki.gg/wiki/Cat_and_the_Shaman",
-		},
 		["elder rise"] = {
 			name = "Elder Rise",
 			short = "Elder Rise sits east of the central bluff, home to the Cenarion Circle's druids and priests and to the Council of Elders who govern the tauren people.",
 			full = "Elder Rise sits east of the central bluff, home to the Cenarion Circle's druids and priests and to the Council of Elders who govern the tauren people. Hamuul Runetotem, Arch Druid, resides here among his order.\n\nThe hut between the two bridges once belonged to Magatha Grimtotem, leader of the Grimtotem tribe, before her exile drove her from these heights. It stands empty now, a marker of her absence.\n\nRope bridges carry the way from Elder Rise to High Rise and Middle Rise.",
 			source = "https://warcraft.wiki.gg/wiki/Elder_Rise",
-		},
-		["high rise"] = {
-			name = "High Rise",
-			short = "The High Rise crowns Thunder Bluff's central mesa, and it is here that the High Chieftain keeps his quarters. Below his home, a crude amphitheater has been worn into the stone around a bonfire, open to the sky.",
-			full = "The High Rise crowns Thunder Bluff's central mesa, and it is here that the High Chieftain keeps his quarters. Below his home, a crude amphitheater has been worn into the stone around a bonfire, open to the sky. Here, before the fire, the decisions that shape Thunder Bluff and the news that matters to it are given openly, where the whole of the tauren people can stand and witness them.\n\nUnlike the other central rises, no lift descends from the High Rise to the plains below.",
-			source = "https://warcraft.wiki.gg/wiki/High_Rise",
 		},
 		["hunter rise"] = {
 			name = "Hunter Rise",
@@ -7872,7 +4950,7 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Spirit_Rise",
 		},
 	},
-	-- Darnassus: 7 subzones
+	-- Darnassus: 5 subzones
 	[1457] = {
 		["cenarion enclave"] = {
 			name = "Cenarion Enclave",
@@ -7886,23 +4964,11 @@ ZoneLore.Subzones = {
 			full = "The Craftsmen's Terrace lies in the north of Darnassus, given over to the makers and traders who keep the city clothed, armed, and fed, with one of the city's inns open to travelers here.\n\nWithin its halls stands an embassy of the Argent Dawn, a sign of the alliance struck between the night elves and that order in its war against the undead scourge.",
 			source = "https://warcraft.wiki.gg/wiki/Craftsmen's_Terrace",
 		},
-		["howling oak"] = {
-			name = "Howling Oak",
-			short = "A great Gilnean oak stands in the north of Darnassus, grown from a seed carried out of Gilneas by the druids of the night elves.",
-			full = "A great Gilnean oak stands in the north of Darnassus, grown from a seed carried out of Gilneas by the druids of the night elves. It is a worgen tree, kin to Tal'doren in the Blackwald, and beneath its branches both worgen and night elf druids train together. The tree itself is a kind of memorial: it stands for everything the Gilnean people have endured since their kingdom fell, and for everything they have built since.\n\nWhen the Gilneans first arrived in Darnassus, King Genn Greymane came to the Howling Oak himself, and there Tyrande Whisperwind greeted him and his people in person, a welcome from one ruler to another marking the start of their exile among the night elves.",
-			source = "https://warcraft.wiki.gg/wiki/Howling_Oak",
-		},
 		["temple gardens"] = {
 			name = "Temple Gardens",
 			short = "The Temple Gardens lie at the heart of Darnassus, holding the water, walkways, and small islands around which the city is built, named for the Temple of the Moon that stands just to the south.",
 			full = "The Temple Gardens lie at the heart of Darnassus, holding the water, walkways, and small islands around which the city is built, named for the Temple of the Moon that stands just to the south. Bridges connect the gardens to the Cenarion Enclave, to the Craftsmen's, Warrior's, and Tradesmen's Terraces, and to the temple itself, so that every path through the city seems to pass this quiet center. A portal at the western edge leads down to Rut'theran Village at the foot of the World Tree.\n\nIt is a place built for stillness, water and stone beneath the long shadow of the temple, the ground a city keeps at its center so its people always have somewhere calm to return to.",
 			source = "https://warcraft.wiki.gg/wiki/Temple_Gardens",
-		},
-		["temple of the moon"] = {
-			name = "Temple of the Moon",
-			short = "The Temple of the Moon rose in Darnassus after the Battle of Mount Hyjal, its stone carried from the mainland by magic to build the greatest structure in the city and the heart of all worship of Elune.",
-			full = "The Temple of the Moon rose in Darnassus after the Battle of Mount Hyjal, its stone carried from the mainland by magic to build the greatest structure in the city and the heart of all worship of Elune. At its center stood the statue of Haidene, set within a moonwell whose waters were called the water of the goddess herself. Here the Sisterhood of Elune made its home, and here Tyrande Whisperwind ruled as High Priestess, so that the temple served as both sanctuary and seat of government.\n\nWhen the Horde set Teldrassil ablaze, the temple became the last gathering place of the fleeing. Night elves crowded toward the portals while others threw themselves into the moonwell for shelter. A burning limb of the great tree tore through the glass dome and struck Haidene's statue, shattering it; the stone head fell upon those sheltering in the pool, and the moonwell broke apart, its sacred waters running red across the grass. When Genn Greymane came to lead the priestesses to safety, three of them stayed behind, choosing instead to kneel and pray to Elune for those who could not be saved.",
-			source = "https://warcraft.wiki.gg/wiki/Temple_of_the_Moon",
 		},
 		["tradesmens terrace"] = {
 			name = "Tradesmen's Terrace",
@@ -7917,61 +4983,13 @@ ZoneLore.Subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Warrior's_Terrace",
 		},
 	},
-	-- Undercity: 9 subzones
+	-- Undercity: 1 subzones
 	[1458] = {
-		["apothecarium"] = {
-			name = "Apothecarium",
-			short = "The Apothecarium sits in the southwest corner of the Undercity, given over entirely to the Royal Apothecary Society.",
-			full = "The Apothecarium sits in the southwest corner of the Undercity, given over entirely to the Royal Apothecary Society. Master Apothecary Faranell leads the work done here, and the work is plain to see: vats and benches where the Forsaken brew their newest plagues and poisons, and where they shape their abominations for the armies above. It is where Forsaken alchemists learn their trade, and where medics such as Vellcinda Benton studied the grafting of tissue and organ, the science of stitching the dead back into something that still moves and serves.\n\nThe purpose of it all is not hidden. The Society exists to see humanity scoured from Lordaeron, and the Apothecarium is the room where that purpose is turned into poison.\n\nIt was here that the corruption at the heart of the Forsaken was finally laid bare, when Varian Wrynn led the Alliance down into the Undercity and into this very laboratory. Putress died here, among his own vats and instruments, and Varian looked upon what the apothecaries had built and was sickened by it.",
-			source = "https://warcraft.wiki.gg/wiki/Apothecarium",
-		},
-		["canals undercity"] = {
-			name = "Canals (Undercity)",
-			short = "The green river circles the four quarters of the Undercity, running its slow channel between them, binding the ruined halls together in a loop of poisoned water.",
-			full = "The green river circles the four quarters of the Undercity, running its slow channel between them, binding the ruined halls together in a loop of poisoned water.",
-			source = "https://warcraft.wiki.gg/wiki/Canals_(Undercity)",
-		},
-		["magic quarter"] = {
-			name = "Magic Quarter",
-			short = "The Magic Quarter, in the northeastern Undercity, is the Forsaken's center of arcane research. The Temple of the Damned dominates it, overshadowing all else.",
-			full = "The Magic Quarter, in the northeastern Undercity, is the Forsaken's center of arcane research. The Temple of the Damned dominates it, overshadowing all else. Here the Forsaken study magic and demonic lore, training mages, warlocks, and those who weave portals.",
-			source = "https://warcraft.wiki.gg/wiki/Magic_Quarter",
-		},
-		["rogues quarter"] = {
-			name = "Rogues' Quarter",
-			short = "In the southeastern corner of the Undercity lies the Rogues' Quarter, given over to the more shadowed members of the Forsaken.",
-			full = "In the southeastern corner of the Undercity lies the Rogues' Quarter, given over to the more shadowed members of the Forsaken. Here the rogues' guild keeps its own counsel, apart from the rest of the city, tucked among the dead stone and quiet corners where such work is best done unseen.",
-			source = "https://warcraft.wiki.gg/wiki/Rogues'_Quarter",
-		},
-		["royal quarter"] = {
-			name = "Royal Quarter",
-			short = "The throne room of the Undercity lies at the heart of the ruined cathedral, watched over by the Royal Dreadguards who once served as battlemasters for the city before the Dark Lady Sylvanas Windrunner claimed the seat for herself.",
-			full = "The throne room of the Undercity lies at the heart of the ruined cathedral, watched over by the Royal Dreadguards who once served as battlemasters for the city before the Dark Lady Sylvanas Windrunner claimed the seat for herself. She did not rule alone at first. Varimathras, a dreadlord, stood beside her here, trusted enough to share her hall.\n\nThat trust was the undoing of the chamber. Varimathras turned traitor, conspiring with Putress in the poisoning at the Wrath Gate, and when the Horde and Alliance struck back at the Undercity, it was through this very room that the war was fought to its end. Varimathras had filled the throne room with portals, calling down the Burning Legion's minions to hold it, and the bodies of dreadguards who died defending the hall were left where they fell.\n\nIn the chaos after, King Varian Wrynn led his Stormwind Elites into the throne room and turned his blade on Warchief Thrall and Sylvanas both, before Jaina Proudmoore froze him and his men where they stood and tore them away to Stormwind.",
-			source = "https://warcraft.wiki.gg/wiki/Royal_Quarter",
-		},
 		["ruins of lordaeron"] = {
 			name = "Ruins of Lordaeron",
 			short = "The palace of Lordaeron still stands above the ruin, its gardens broken, its courtyard empty of the crowds that once filled it.",
 			full = "The palace of Lordaeron still stands above the ruin, its gardens broken, its courtyard empty of the crowds that once filled it. Here Arthas Menethil returned from Northrend and slew his own father, King Terenas, before opening the gates to the Scourge and letting them put the city's people to the sword. Those who linger in the courtyard say they can still hear it: hushed voices before the killing, bells in the entryway, a cheer for the returning prince, murmurs from the throne room, and beneath it all Arthas's words after the deed was done, promising a new order risen from the ashes of the old. Those who can see beyond the veil say the citizens themselves still walk there, unaware they are dead.\n\nSylvanas Windrunner later turned on her own allies, the very forces she had fought beside to break the dreadlords holding the city, and claimed the ruin for herself. Beneath its stones now lies the Undercity, the buried capital of the Forsaken.",
 			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Lordaeron",
-		},
-		["sewers"] = {
-			name = "Sewers",
-			short = "Beneath the Ruins of Lordaeron, west of the main gate near the Scarlet Watchtower, a hidden passage drops down into the dark below Undercity, a lesser way in beside the great elevators that fall from the ruins above.",
-			full = "Beneath the Ruins of Lordaeron, west of the main gate near the Scarlet Watchtower, a hidden passage drops down into the dark below Undercity, a lesser way in beside the great elevators that fall from the ruins above.\n\nIt was through these sewers that the Alliance found its way into the city during the Battle for the Undercity, slipping past the surface defenses to strike at the Forsaken capital from below.",
-			source = "https://warcraft.wiki.gg/wiki/Sewers",
-		},
-		["trade quarter"] = {
-			name = "Trade Quarter",
-			short = "The Trade Quarter opens beneath the lifts from the Ruins of Lordaeron, the true heart of the Undercity.",
-			full = "The Trade Quarter opens beneath the lifts from the Ruins of Lordaeron, the true heart of the Undercity. The bank sits at its center, and shops climb the levels around it in tiers, with all the winding ways into the Canals and the rest of the city beginning here.\n\nIts inn offers no beds, only open wooden caskets, bare of lining, laid out for guests who no longer need warmth, only somewhere to lie still.\n\nTo stand here is to see the Forsaken plainly: commerce carried on with perfect calm in halls carved from a plague capital's bones, coffers guarded, casks empty of the living, roads in every direction leading down into the dark the city was raised upon.",
-			source = "https://warcraft.wiki.gg/wiki/Trade_Quarter",
-		},
-		["war quarter"] = {
-			name = "War Quarter",
-			short = "In the northwest corner of the Undercity lies the War Quarter, seat of Forsaken military power. Here the city's warriors and priests keep their guilds, training those who serve the Dark Lady in blade and shadowed faith.",
-			full = "In the northwest corner of the Undercity lies the War Quarter, seat of Forsaken military power. Here the city's warriors and priests keep their guilds, training those who serve the Dark Lady in blade and shadowed faith.\n\nAt its heart stands an Altar of Darkness, grim and set apart, a place built for war and little else.",
-			source = "https://warcraft.wiki.gg/wiki/War_Quarter",
 		},
 	},
 }

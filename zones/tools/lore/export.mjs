@@ -15,6 +15,7 @@
 import { readFile } from "node:fs/promises";
 
 import { ZONES_LUA, SUBZONES_LUA } from "../lib/loredata.mjs";
+import { loadEraAreas } from "../lib/era.mjs";
 import { emitZones, emitSubzones } from "./lua.mjs";
 import { isEnabled, readCurrent, writeCorpus } from "./store.mjs";
 import { close } from "../voice/db.mjs";
@@ -33,10 +34,20 @@ async function main() {
     process.exit(1);
   }
 
-  const rows = await readCurrent();
-  if (rows.length === 0) {
+  const allRows = await readCurrent();
+  if (allRows.length === 0) {
     console.error("error: lore_line is empty. Seed it with:  make lore-import");
     process.exit(1);
+  }
+
+  // The database keeps every line ever scraped, including places the wiki's
+  // categories offered that the Era client cannot report (Cataclysm and later).
+  // Those rows stay as history; the addon only ships what the client can ask for.
+  const era = await loadEraAreas();
+  const rows = allRows.filter((row) => row.kind !== "subzone" || era.keys.has(row.key));
+  const notInEra = allRows.length - rows.length;
+  if (notInEra) {
+    console.log(`leaving ${notInEra} line(s) behind: not in the Era client (build ${era.build})`);
   }
 
   const edited = rows.filter((row) => row.origin === "edited").length;

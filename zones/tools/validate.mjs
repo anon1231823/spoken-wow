@@ -15,6 +15,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ROOT, normaliseKey } from "./lib/wiki.mjs";
+import { loadEraAreas } from "./lib/era.mjs";
 import { slugFor } from "./voice/naming.mjs";
 
 const ZONES = join(ROOT, "addon/ZoneLore/Data/Zones.lua");
@@ -170,6 +171,17 @@ for (const key of subKeys) {
   const canonical = normaliseKey(key);
   if (key !== canonical) {
     note(`Subzones.lua: key "${key}" is not canonical (expected "${canonical}") -- unreachable`);
+  }
+}
+
+// Every key must be an area name the Era client can report (its own AreaTable,
+// dumped into tools/seed/era-areas.json). A key outside that list is either a
+// post-vanilla place the wiki category slipped in, or a name the client would
+// never hand to the lookup -- unreachable either way.
+const era = await loadEraAreas();
+for (const key of subKeys) {
+  if (!era.keys.has(key)) {
+    note(`Subzones.lua: "${key}" is not an area in the Era client (build ${era.build})`);
   }
 }
 
