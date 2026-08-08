@@ -19,7 +19,7 @@ import type { ResultLine } from "@/lib/search";
 type Version = {
   version: number;
   isCurrent: boolean;
-  origin: "scraped" | "edited";
+  origin: "scraped" | "edited" | "scraped-rewritten";
   full: string;
   note: string | null;
   createdAt: string;
@@ -183,7 +183,7 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
             {versions.map((version) => (
               <li key={version.version} className="flex items-baseline gap-2">
                 <span className="w-8 shrink-0 font-mono text-faint">v{version.version}</span>
-                <span className="w-16 shrink-0 text-faint">{version.origin}</span>
+                <span className="w-28 shrink-0 truncate text-faint">{version.origin}</span>
                 <span className="truncate text-muted" title={version.full}>
                   {version.note ?? version.full}
                 </span>

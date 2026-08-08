@@ -2,11 +2,12 @@
   "name": "wow-lore-tools",
   "private": true,
   "type": "module",
-  "description": "Dependencies for tools/. The scrapers and the addon build stay dependency-free; only the voiceline store needs a Postgres client.",
+  "description": "Dependencies for tools/. The scrapers and the addon build stay dependency-free; only the voiceline store needs a Postgres client and only the lore rewrite needs the Claude SDK.",
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.70.0",
     "pg": "^8.13.1"
   }
 }

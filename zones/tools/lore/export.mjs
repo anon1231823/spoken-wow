@@ -18,6 +18,10 @@ import { ZONES_LUA, SUBZONES_LUA } from "../lib/loredata.mjs";
 import { emitZones, emitSubzones } from "./lua.mjs";
 import { isEnabled, readCurrent, writeCorpus } from "./store.mjs";
 import { close } from "../voice/db.mjs";
+import { loadEnvFile } from "../lib/env.mjs";
+
+// Before anything reads DATABASE_URL.
+await loadEnvFile();
 
 const argv = process.argv.slice(2);
 const checkOnly = argv.includes("--check");

@@ -6,6 +6,8 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loreSections } from "./sections.mjs";
+
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const CACHE = join(ROOT, "tools/cache");
 
@@ -54,6 +56,12 @@ export const POST_VANILLA = [
   /\bN'Zoth\b/,
   /\bFourth War\b/,
   /\bSiege of Orgrimmar\b/,
+  // Battle for Azeroth and Shadowlands respectively. Both name events rather than
+  // expansions, so nothing above catches them, and both were reaching the corpus:
+  // eleven shipped lines described Tirisfal and Lordaeron as they stand *after* a
+  // war that has not happened in Era.
+  /\bBattle (?:for|of) Lordaeron\b/,
+  /\bthe Jailer\b/,
   /\bShadowlands\b/,
   /\bDragonflight\b/,
   /\bDragon Isles\b/,
@@ -228,43 +236,15 @@ export async function fetchFullExtract(title, opts = {}) {
   return cachedQuery(query, `${title}#full`, opts);
 }
 
-// Sections whose prose is lore rather than game data. Everything else in a wiki
-// article -- quest tables, NPC lists, "Patch changes", "References" -- is noise
-// for this purpose.
-const LORE_SECTIONS = /^(geography|description|history|lore|overview|the zone)$/i;
-
-// Split explaintext output on its "== Heading ==" lines. The lead section comes
-// back with a null heading.
-export function splitSections(plaintext) {
-  const sections = [];
-  let current = { heading: null, lines: [] };
-
-  for (const line of plaintext.split("\n")) {
-    const m = line.match(/^\s*(=+)\s*(.+?)\s*\1\s*$/);
-    if (m) {
-      sections.push(current);
-      current = { heading: m[2], lines: [] };
-    } else {
-      current.lines.push(line);
-    }
-  }
-  sections.push(current);
-
-  return sections.map((s) => ({ heading: s.heading, text: s.lines.join("\n").trim() }));
-}
+// Which headings count as lore now lives in lib/sections.mjs, shared with the
+// rewrite pipeline. Re-exported because the scrapers import it from here.
+export { splitSections, loreSections, LORE_SECTIONS } from "./sections.mjs";
 
 // Lead section plus any lore-bearing sections, capped at maxChars on a paragraph
 // boundary so the panel never gets a wall of text.
 export function buildFromSections(plaintext, { maxChars = 2200 } = {}) {
-  const sections = splitSections(plaintext);
-  const parts = [];
-
-  for (const s of sections) {
-    if (!s.text) continue;
-    if (s.heading === null || LORE_SECTIONS.test(s.heading)) {
-      parts.push(s.text);
-    }
-  }
+  const { lead, kept } = loreSections(plaintext);
+  const parts = [lead, ...kept.map((s) => s.text)].filter(Boolean);
 
   let out = "";
   for (const part of parts) {

@@ -6,7 +6,7 @@
         status remove clean voice voice-zones lookup sample db-up db-down migrate import export \
         web push push-dry pull pull-dry audio-status ssh-check pull-manifest pull-lexicon \
         db-push db-pull bootstrap deploy-scripts releases rollback logs \
-        lore-import lore-export lore-check \
+        lore-import lore-export lore-check lore-rewrite \
         release release-dry descriptions descriptions-check descriptions-published
 
 # The \# escapes are required: an unescaped # starts a make comment, even
@@ -120,6 +120,15 @@ lore-export: ## Write addon/ZoneLore/Data/*.lua from the database
 
 lore-check: ## Confirm the committed Lua matches the database
 	@node tools/lore/export.mjs --check
+
+# Unlike every other target here, this one spends money: it sends each of a zone's
+# articles to Claude. There is no free form of it -- the report *is* the model's
+# output -- so the target is the dry run, which writes dist/ and nothing else, and
+# committing the result means running the script directly with one --variant and no
+# --dry-run. Responses are cached on disk, so re-running a zone is free.
+lore-rewrite: ## Rewrite one zone's lore from the full wiki article (ZONE=1420, costs credits)
+	@test -n "$(ZONE)" || { echo "usage: make lore-rewrite ZONE=1420"; exit 1; }
+	@node tools/rewrite-lore.mjs --zone $(ZONE) --variant both --dry-run
 
 web: ## Run the voiceline explorer at localhost:3000
 	@cd web && pnpm dev

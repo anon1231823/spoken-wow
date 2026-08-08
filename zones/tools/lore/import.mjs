@@ -17,6 +17,10 @@
 // a reset -- it must never be the command that discards somebody's edits.
 
 import { readLinesFromLua, isEnabled, lineIdFor, recordScrape } from "./store.mjs";
+import { loadEnvFile } from "../lib/env.mjs";
+
+// Before anything reads DATABASE_URL.
+await loadEnvFile();
 import { close, query } from "../voice/db.mjs";
 
 const argv = process.argv.slice(2);

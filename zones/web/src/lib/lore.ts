@@ -14,7 +14,7 @@ import { makeShort } from "./tools";
 export type LoreLine = {
   lineId: string;
   version: number;
-  origin: "scraped" | "edited";
+  origin: "scraped" | "edited" | "scraped-rewritten";
   name: string;
   full: string;
   short: string;
