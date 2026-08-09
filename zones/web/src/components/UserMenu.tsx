@@ -47,10 +47,12 @@ export function UserMenu() {
           Reports
         </Link>
       )}
+      {/* External: the pronunciation editor lives in wow-voiceover, which owns the
+          dictionary both projects share. /lexicon redirects there for old bookmarks. */}
       {canConfigure(role) && (
-        <Link href="/lexicon" className="hover:text-fg">
+        <a href="https://voiceover.rusty.one/pronunciation" className="hover:text-fg">
           Pronunciation
-        </Link>
+        </a>
       )}
       {canConfigure(role) && (
         <Link href="/voice" className="hover:text-fg">

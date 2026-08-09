@@ -7,8 +7,8 @@ import { canConfigure } from "@/lib/permissions";
 
 export const metadata: Metadata = { title: "Voice" };
 
-// Admin only, and 404 rather than a redirect, matching /lexicon: the voice is global
-// config with the lexicon's blast radius -- a change alters every future generation.
+// Admin only, and 404 rather than a redirect, matching /admin: the voice is global
+// config -- a change alters every future generation.
 export default async function Page() {
   const session = await currentSession();
   if (!session || !canConfigure(session.user.role)) notFound();

@@ -87,10 +87,6 @@ export const toSpokenText = normaliseModule.toSpokenText as (
 export const loadPronunciation = normaliseModule.loadPronunciation as () => Promise<
   Record<string, string>
 >;
-export const savePronunciation = normaliseModule.savePronunciation as (
-  rules: Record<string, string>,
-) => Promise<void>;
-export const PRONUNCIATION_PATH = normaliseModule.PRONUNCIATION_PATH as string;
 
 export const textHash = namingModule.textHash as (spoken: string) => string;
 

@@ -1,18 +1,9 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
-import { LexiconEditor } from "@/components/LexiconEditor";
-import { currentSession } from "@/lib/authz";
-import { canConfigure } from "@/lib/permissions";
-
-export const metadata: Metadata = { title: "Pronunciation" };
-
-// Admin only, and 404 rather than a redirect, matching /admin. The editor would render an
-// empty table for anyone else anyway -- /api/lexicon refuses them -- and an empty table is
-// a worse answer than no page.
-export default async function Page() {
-  const session = await currentSession();
-  if (!session || !canConfigure(session.user.role)) notFound();
-
-  return <LexiconEditor />;
+// The pronunciation editor moved out. The lexicon proper always lived in
+// wow-voiceover, which owns the dictionary both projects share on one ElevenLabs
+// account; the respelling escape hatch this page carried was never used and kept a
+// second editor alive for an empty file. Old bookmarks land on the real one.
+export default function Page() {
+  redirect("https://voiceover.rusty.one/pronunciation");
 }
