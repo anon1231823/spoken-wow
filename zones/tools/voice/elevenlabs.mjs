@@ -41,17 +41,21 @@ export async function saveConfig(config) {
 // Resolves voiceName -> voiceId once and caches it into config.json. Pinning the
 // id matters: renaming the voice on the account would otherwise silently start
 // producing a different narrator halfway through a corpus.
-export async function resolveVoiceId(config, key) {
-  if (config.voiceId) return config.voiceId;
-
+export async function listVoices(key) {
   const response = await fetch(VOICES_URL, { headers: { "xi-api-key": key } });
   if (!response.ok) {
     throw new Error(
       `could not list voices (${response.status}): ${(await response.text()).slice(0, 200)}`,
     );
   }
-
   const { voices } = await response.json();
+  return voices;
+}
+
+export async function resolveVoiceId(config, key) {
+  if (config.voiceId) return config.voiceId;
+
+  const voices = await listVoices(key);
   const match = voices.find((v) => v.name === config.voiceName);
   if (!match) {
     const names = voices.map((v) => v.name).sort().join(", ");

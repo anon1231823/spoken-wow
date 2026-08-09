@@ -117,7 +117,13 @@ export type VoiceConfig = {
 };
 
 export const loadConfig = elevenModule.loadConfig as () => Promise<VoiceConfig>;
+export const saveConfig = elevenModule.saveConfig as (config: VoiceConfig) => Promise<void>;
 export const apiKey = elevenModule.apiKey as () => Promise<string>;
+
+/** Every voice on the account, as ElevenLabs returns them. */
+export const listVoices = elevenModule.listVoices as (
+  key: string,
+) => Promise<Array<{ voice_id: string; name: string; category: string }>>;
 export const resolveVoiceId = elevenModule.resolveVoiceId as (
   config: VoiceConfig,
   key: string,

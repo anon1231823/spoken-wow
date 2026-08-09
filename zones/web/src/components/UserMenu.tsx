@@ -52,6 +52,11 @@ export function UserMenu() {
           Pronunciation
         </Link>
       )}
+      {canConfigure(role) && (
+        <Link href="/voice" className="hover:text-fg">
+          Voice
+        </Link>
+      )}
       {isAdmin(role) && (
         <Link href="/admin" className="hover:text-fg">
           Users
