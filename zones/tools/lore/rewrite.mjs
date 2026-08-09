@@ -86,7 +86,7 @@ export const overBudget = (text, budget) => text.length > budget * TOLERANCE;
 // Bump on any change to SYSTEM_PROMPT or how the user turn is built. The cache key
 // includes it, so a bump invalidates every stored response rather than silently
 // serving text written under the old rules.
-const PROMPT_VERSION = 3;
+const PROMPT_VERSION = 4;
 
 const REWRITE_CACHE = join(CACHE, "rewrite");
 
@@ -107,6 +107,8 @@ RULES
    Where such a sentence contains a real fact about the world, keep the fact and drop the framing: "players can find the Scarlet Crusade quartered here" becomes "the Scarlet Crusade is quartered here".
 
 3. The world stopped before the Burning Crusade. Anything later than the fall of the Lich King's plague and the founding of the Forsaken -- the Dark Portal reopening, Outland, Northrend campaigns, the Cataclysm, and everything after -- is not part of this world. Drop it entirely rather than adjusting the tense. If a place was destroyed or changed after this point, describe it as it still stands.
+
+   The article will often state later events as plain present fact, without naming any expansion: a town described as burned, flooded, rebuilt or retaken, a bridge lying broken, refugees from a disaster, a character holding a role they only took on later. You know the history of Warcraft; use that knowledge to recognize such claims and leave them out even when the article does not label them. This is the one purpose outside knowledge may serve -- removing, never adding. If you cannot place a claim in the timeline, leave it out.
 
 4. Drop anything the article marks as non-canon or speculative, and anything from the Warcraft role-playing game books.
 
@@ -308,6 +310,29 @@ function userTurn(name, source, budget) {
   };
 }
 
+// The note-guided fix turn. Same article, same rules, but instead of writing from
+// scratch the model repairs an earlier rewrite that a lore reviewer flagged. The
+// review knows things the rewrite model does not -- which obscure names are
+// post-vanilla, which claims describe the world's later shape -- so the note does
+// the era attribution and the model only has to execute a targeted edit. Removal
+// only: the worst outcome of an over-eager fix is a shorter piece, never a new
+// invention.
+function fixTurn(name, source, budget, fix) {
+  return {
+    role: "user",
+    content:
+      `Place: ${name}\nCharacter budget: ${budget}\n\nArticle:\n\n${source}\n\n---\n\n` +
+      `Below is an earlier rewrite of this article, and a lore reviewer's note on ` +
+      `what is wrong with it. Produce a corrected version that resolves the note. ` +
+      `Work by removal and re-anchoring only: cut the flagged claims entirely; where ` +
+      `the note states the correct earlier condition of the place, you may state it ` +
+      `only if the article above supports it. Do not add new material to make up for ` +
+      `what you cut -- coming back shorter is the correct outcome. Every rule above ` +
+      `still applies.\n\n` +
+      `Earlier rewrite:\n\n${fix.current}\n\nReviewer's note: ${fix.note}`,
+  };
+}
+
 /**
  * One follow-up turn asking for a shorter version.
  *
@@ -356,9 +381,17 @@ export async function rewrite({
   model = DEFAULT_MODEL,
   refresh = false,
   vocabulary = null,
+  // { current, note } -- repair an earlier rewrite instead of writing fresh; see
+  // fixTurn. Part of the cache key: a different note is a different request.
+  fix = null,
 }) {
   const budget = targetChars(source.length);
-  const key = cacheKey({ model, variant, source, budget });
+  const key = cacheKey({
+    model,
+    variant: fix ? `${variant}-fix` : variant,
+    source: fix ? `${source} ${fix.current} ${fix.note}` : source,
+    budget,
+  });
 
   let entry = refresh ? null : await readCached(key);
   let cached = Boolean(entry);
@@ -368,7 +401,7 @@ export async function rewrite({
       model,
       max_tokens: 2000,
       system: SYSTEM_PROMPT,
-      messages: [userTurn(name, source, budget)],
+      messages: [fix ? fixTurn(name, source, budget, fix) : userTurn(name, source, budget)],
     });
 
     if (response.stop_reason === "refusal") {

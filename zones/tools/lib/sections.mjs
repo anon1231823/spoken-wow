@@ -51,6 +51,19 @@ function stripBanners(text) {
     .trim();
 }
 
+// Subsection headings that name a post-vanilla era. The wiki organises History
+// chronologically with one subsection per expansion -- Astranaar's reads
+// "World of Warcraft | Cataclysm | Mists of Pandaria | Battle for Azeroth" --
+// and folding them blindly into their parent was the single largest source of
+// wrong-era lore in the shipped corpus (dist/review-findings.md: ~237 of 360
+// non-vanilla flags trace to Cataclysm-and-later content, most of it sitting
+// under exactly these headings). Matched by containment so "The Shattering:
+// Prelude to Cataclysm" and "World of Warcraft: Legion" are caught; a plain
+// "World of Warcraft" heading means vanilla and is kept. "Exploring Azeroth"
+// is the Shadowlands-era book series.
+export const POST_VANILLA_SECTIONS =
+  /Burning Crusade|Lich King|Cataclysm|Shattering|Pandaria|Warlords of Draenor|Legion|Battle for Azeroth|Shadowlands|Dragonflight|War Within|Midnight|Exploring Azeroth|Hearthstone/i;
+
 // explaintext renders headings as "== Foo ==" lines. The lead section has no heading.
 const HEADING = /^\s*(=+)\s*(.+?)\s*\1\s*$/;
 
@@ -87,18 +100,30 @@ export function splitSections(plaintext) {
  *
  * Subsections are merged rather than judged on their own: "=== Map ===" under
  * "== Geography ==" is lore or noise according to its parent, and a subsection
- * heading in isolation ("Flight") says nothing useful.
+ * heading in isolation ("Flight") says nothing useful. The one exception is a
+ * subsection whose heading names a post-vanilla era -- that one is dropped,
+ * along with any deeper headings nested under it, and recorded in `dropped`.
  */
 export function foldSections(plaintext) {
   let lead = "";
   const sections = [];
+  const dropped = [];
+  let droppingBelow = null;
 
   for (const s of splitSections(plaintext)) {
     if (s.heading === null) {
       lead = s.text;
       continue;
     }
+    if (droppingBelow !== null && s.level > droppingBelow) continue;
+    droppingBelow = null;
+
     if (s.level > 2 && sections.length > 0) {
+      if (POST_VANILLA_SECTIONS.test(s.heading)) {
+        dropped.push(s.heading);
+        droppingBelow = s.level;
+        continue;
+      }
       const parent = sections[sections.length - 1];
       if (s.text) parent.text = parent.text ? `${parent.text}\n\n${s.text}` : s.text;
       continue;
@@ -106,17 +131,17 @@ export function foldSections(plaintext) {
     sections.push({ heading: s.heading, text: s.text });
   }
 
-  return { lead, sections };
+  return { lead, sections, dropped };
 }
 
 /** The lore-bearing sections of an article, in article order, banners removed. */
 export function loreSections(plaintext) {
-  const { lead, sections } = foldSections(plaintext);
+  const { lead, sections, dropped } = foldSections(plaintext);
   const kept = sections
     .filter((s) => s.text && LORE_SECTIONS.test(s.heading) && !NON_CANON.test(s.text))
     .map((s) => ({ heading: s.heading, text: stripBanners(s.text) }))
     .filter((s) => s.text);
-  return { lead: stripBanners(lead), kept };
+  return { lead: stripBanners(lead), kept, dropped };
 }
 
 //------------------------------------------------------------------------------
@@ -149,14 +174,16 @@ export const VARIANTS = ["a", "b"];
  *   `fallback` records which substitution was made, if any, for the report.
  */
 export function assembleSource(variant, mainPlaintext, classicLead = null) {
-  const { lead, kept } = loreSections(mainPlaintext);
+  const { lead, kept, dropped } = loreSections(mainPlaintext);
   const body = kept.map((s) => s.text).join("\n\n");
   const sections = kept.map((s) => s.heading);
+  const droppedNote = dropped.length ? `dropped era subsections: ${dropped.join(", ")}` : null;
 
   if (variant === "a") {
     const notes = [];
     if (!classicLead) notes.push("no (Classic) page -- used the main lead");
     if (!body) notes.push("no lore sections -- lead only");
+    if (droppedNote) notes.push(droppedNote);
     return {
       text: [classicLead || lead, body].filter(Boolean).join("\n\n"),
       sections,
@@ -165,8 +192,12 @@ export function assembleSource(variant, mainPlaintext, classicLead = null) {
   }
 
   if (variant === "b") {
-    if (body) return { text: body, sections, fallback: null };
-    return { text: lead, sections: [], fallback: "no lore sections -- used the main lead" };
+    if (body) return { text: body, sections, fallback: droppedNote };
+    return {
+      text: lead,
+      sections: [],
+      fallback: ["no lore sections -- used the main lead", droppedNote].filter(Boolean).join("; "),
+    };
   }
 
   throw new Error(`unknown variant ${variant}`);

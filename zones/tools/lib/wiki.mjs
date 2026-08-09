@@ -62,6 +62,27 @@ export const POST_VANILLA = [
   // war that has not happened in Era.
   /\bBattle (?:for|of) Lordaeron\b/,
   /\bthe Jailer\b/,
+  // From the 2026-08 full-corpus review (dist/review-findings.md): terms with
+  // zero legitimate vanilla uses that had leaked into shipped text. Named
+  // events, people and places rather than expansions, so nothing above caught
+  // them. Deliberately NOT here despite looking post-vanilla: "Zandalari" (the
+  // Zandalar Tribe is a vanilla Zul'Gurub faction) and soft markers like
+  // Grimtotem, Theramore, Dalaran, Sargeras -- vanilla vocabulary whose later
+  // fate is the leak; blocking the word would cut legitimate lore.
+  /\bWar of the Thorns\b/,
+  /\bBilgewater\b/,
+  /\bsaronite\b/i,
+  /\bVanessa VanCleef\b/,
+  /\bDelaryn Summermoon\b/,
+  /\bAlennah Starsong\b/,
+  /\bLorash Sunbeam\b/,
+  /\bSira Moonwarden\b/,
+  /\bPrimalists?\b/,
+  /\bTwilight Highlands\b/,
+  /\bwarfronts?\b/i,
+  /\bHorde Council\b/,
+  /\bXenedar\b/,
+  /\bFirelands\b/,
   /\bShadowlands\b/,
   /\bDragonflight\b/,
   /\bDragon Isles\b/,
