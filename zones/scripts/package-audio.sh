@@ -6,8 +6,11 @@
 #   ./scripts/package-audio.sh high            # just the 128kbps one
 #
 # Two tiers exist because this is a ~790MB download at the source bitrate, which
-# is a lot to ask for narration that is mostly listened to once per zone. 64kbps
-# mono is close to transparent for speech and roughly halves that.
+# is a lot to ask for narration that is mostly listened to once per zone. The
+# standard tier is VBR mono (lame -V6, ~50kbps effective on speech): close to
+# transparent for narration, and VBR spends the bits where the voice needs them
+# instead of padding silence to a constant rate. The pack keeps "64" in its name
+# and .toc as the nominal tier label.
 #
 # Separate from package.sh because the two addons are released on their own
 # cadences: most ZoneLore releases do not touch a single voiceline, and the audio
@@ -58,9 +61,14 @@ JOBS="${JOBS:-$( (command -v nproc >/dev/null 2>&1 && nproc) || sysctl -n hw.ncp
 # so that one is copied rather than transcoded, and it keeps the unqualified name:
 # the full-quality pack is the one a player should land on without having to
 # choose, and the smaller one advertises the trade in its own name.
-tier_folder() { case "$1" in standard) echo "ZoneLoreAudio64";; high) echo "ZoneLoreAudio";; esac; }
-tier_bitrate() { case "$1" in standard) echo "64";; high) echo "128";; esac; }
-tier_title()   { case "$1" in standard) echo "ZoneLore Audio 64";; high) echo "ZoneLore Audio";; esac; }
+#
+# tier_encoding names the ffmpeg recipe AND the cache directory, so changing the
+# recipe automatically starts a fresh cache instead of serving entries cut with
+# the old one. "copy" means no transcode.
+tier_folder()   { case "$1" in standard) echo "ZoneLoreAudio64";; high) echo "ZoneLoreAudio";; esac; }
+tier_bitrate()  { case "$1" in standard) echo "64";; high) echo "128";; esac; }
+tier_encoding() { case "$1" in standard) echo "vbr-v6";; high) echo "copy";; esac; }
+tier_title()    { case "$1" in standard) echo "ZoneLore Audio 64";; high) echo "ZoneLore Audio";; esac; }
 
 tiers=("standard" "high")
 if [[ $# -gt 0 ]]; then
@@ -107,7 +115,7 @@ esac; }
 
 # Transcoding needs ffmpeg, but only for the tiers that are not a straight copy.
 for tier in "${tiers[@]}"; do
-  if [[ "$(tier_bitrate "$tier")" != "128" ]]; then
+  if [[ "$(tier_encoding "$tier")" != "copy" ]]; then
     command -v ffmpeg >/dev/null || { echo "error: ffmpeg is required to build the $tier tier" >&2; exit 1; }
     break
   fi
@@ -118,11 +126,12 @@ mkdir -p "$DIST"
 for tier in "${tiers[@]}"; do
   folder="$(tier_folder "$tier")"
   bitrate="$(tier_bitrate "$tier")"
+  encoding="$(tier_encoding "$tier")"
   title="$(tier_title "$tier")"
   zip_path="$DIST/$folder-$version.zip"
 
   echo
-  echo "=== $tier tier -> $folder (${bitrate}kbps) ==="
+  echo "=== $tier tier -> $folder ($encoding, nominal ${bitrate}kbps) ==="
   rm -f "$zip_path"
 
   staging="$(mktemp -d)"
@@ -150,12 +159,12 @@ for tier in "${tiers[@]}"; do
     "$staging/$folder/$folder.toc"
   rm -f "$staging/$folder/$folder.toc.bak"
 
-  if [[ "$bitrate" == "128" ]]; then
+  if [[ "$encoding" == "copy" ]]; then
     # No transcode, but ~790MB of copying is still a long silence.
     echo "copying $count masters..."
     rsync -a --exclude '.DS_Store' --exclude '*.part' "$SOUNDS/" "$staging/$folder/Sounds/"
   else
-    cache="$CACHE_ROOT/$bitrate"
+    cache="$CACHE_ROOT/$encoding"
     mkdir -p "$cache"
 
     # Three passes rather than one loop, because only the middle one is expensive
@@ -181,7 +190,7 @@ for tier in "${tiers[@]}"; do
       # The count has to come from a file rather than a variable: each worker is
       # its own process, so an incremented shell variable would die with it.
       progress_file="$(mktemp)"
-      export CACHE="$cache" BITRATE="$bitrate" PROGRESS="$progress_file" TOTAL="$encoded"
+      export CACHE="$cache" PROGRESS="$progress_file" TOTAL="$encoded"
       encode_one() {
         # Via .part and mv, so an interrupted run cannot leave a truncated file
         # under a name that claims to be a complete encode of that checksum. The
@@ -189,9 +198,12 @@ for tier in "${tiers[@]}"; do
         # same cache cannot land in the other's scratch file.
         # -f mp3 is required with it: ffmpeg picks the muxer from the extension,
         # and ".part" is not one it knows.
+        # VBR (-q:a 6, ~50kbps effective on mono speech) rather than CBR: the bits
+        # follow the voice instead of padding silence to a constant rate. Nominal
+        # tier stays "64" in the pack name and .toc.
         local part="$CACHE/$2.$$.part"
         ffmpeg -nostdin -loglevel error -f mp3 -i "$1" \
-          -codec:a libmp3lame -b:a "${BITRATE}k" -ac 1 -f mp3 "$part"
+          -codec:a libmp3lame -q:a 6 -ac 1 -f mp3 "$part"
         mv "$part" "$CACHE/$2.mp3"
 
         # One byte appended per finished file; short appends to O_APPEND do not
@@ -209,14 +221,14 @@ for tier in "${tiers[@]}"; do
       }
       export -f encode_one
 
-      echo "encoding $encoded files to ${bitrate}k mono across $JOBS jobs (cache: $cache)"
+      echo "encoding $encoded files ($encoding, mono) across $JOBS jobs (cache: $cache)"
       echo "  $hits of $count already cached"
       tr '\t\n' '\0\0' <"$todo" \
         | xargs -0 -P "$JOBS" -n 2 bash -c 'encode_one "$1" "$0"'
       [[ -t 1 ]] && printf '\n'
       rm -f "$progress_file"
     else
-      echo "all $count files already cached at ${bitrate}k ($cache)"
+      echo "all $count files already cached ($encoding, $cache)"
     fi
 
     # Directories first in one pass, so placing the clips is a flat run of cp
@@ -253,5 +265,5 @@ for tier in "${tiers[@]}"; do
   files="$(unzip -Z1 "$zip_path" | grep -cv '/$')"
   size="$(du -h "$zip_path" | cut -f1)"
   echo "built $zip_path"
-  echo "  version: $version   files: $files   size: $size   bitrate: ${bitrate}k"
+  echo "  version: $version   files: $files   size: $size   encoding: $encoding"
 done
