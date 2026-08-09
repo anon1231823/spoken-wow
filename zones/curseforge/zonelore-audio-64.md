@@ -2,7 +2,7 @@
 project: 1636548
 slug: zoneloreaudio64
 name: ZoneLoreAudio64
-summary: The ZoneLore narration (64kbps)
+summary: The ZoneLore narration (smaller pack)
 categories:
   - Audio & Video
   - Miscellaneous
@@ -10,28 +10,26 @@ categories:
 license: MIT
 ---
 
-Narrated zone lore for **ZoneLore**, at 64 kbps mono. This addon is data only — it does nothing on its own.
+Narrated zone lore for **ZoneLore**, VBR mono — the smaller pack. This addon is data only — it does nothing on its own.
 
-## Beta: this is not the finished voice
+## The voice, as of 0.3.0
 
-What's in this pack is a proof of concept. Every line is recorded and the whole thing works end to end, but the voice was chosen to get all lines made at once. Delivery might be flat, audio can be bad, pronunciation can be wrong.
+Every line was re-recorded with a new narrator — picked for the tone the lore deserves rather than for getting a first pass made cheaply — and the names of NPCs and places now go through a pronunciation dictionary, so Lordaeron sounds the same in every line it appears in.
 
-Fixing that isn't a per-line edit — it's a different voice and a fresh pass over the whole script, which means generating every line again. Each one costs money to synthesise and time to listen back to, which is the reason it's taking a while: it lands in batches, as it can be paid for.
+That doesn't make it finished. With this many lines, some readings will still land flat and some names will still come out wrong. If a line reads badly, report it: there's a Feedback button on [lore.rusty.one](https://lore.rusty.one), and per-line re-rolls follow what comes in.
 
-The **lore text** these lines are read from is in beta too. It's read from warcraft.wiki.gg and trimmed automatically, so some entries run long or stop at an awkward point. Where the text gets rewritten, the narration for it gets regenerated — so a re-download now and then is expected while this settles.
-
-If a line reads badly, report it. There's a Feedback button on [lore.rusty.one](https://lore.rusty.one), and the re-record is driven by what comes in. [Supporting the project](https://buymeacoffee.com/rustykey) pays for the generation directly.
+The **lore text** was rewritten in the same release to describe the world as a vanilla character finds it. Where a line's text gets fixed, its narration is regenerated — so an occasional re-download is expected.
 
 ## Which pack to install
 
-Two packs, identical content at different bitrates:
+Two packs, the same voicelines, differing only in quality:
 
 | Pack | Bitrate | Download |
 |---|---|---|
 | **ZoneLore Audio** | 128 kbps | ~450 MB |
 | **ZoneLore Audio 64** (this one) | VBR mono | ~220 MB |
 
-This is the smaller pack. VBR mono is close to transparent for speech, so it costs less than the gap between the numbers suggests — take it if the ~450 MB of ZoneLore Audio is more than you want to spend. A higher bitrate makes the current voice clearer, not better.
+This is the smaller pack. VBR mono is close to transparent for speech, so it costs less than the gap between the numbers suggests — take it if the ~450 MB of ZoneLore Audio is more than you want to spend. A higher bitrate makes the voice clearer on good headphones, not different.
 
 Both can be installed at once — ZoneLore plays the higher-quality one, and `/zl audio` switches between them.
 
@@ -47,7 +45,7 @@ Built for **Classic Era 1.15.9**. The pack and ZoneLore work together as long as
 
 ## Support
 
-Every one of these lines — and there are a lot of them — was paid for per character, and the re-record means paying for all of them again. If the narration is worth something to you, [buy me a coffee](https://buymeacoffee.com/rustykey) — it's what funds the next batch.
+Every one of these lines — and there are a lot of them — costs money to synthesise, and every reported fix costs it again. If the narration is worth something to you, [buy me a coffee](https://buymeacoffee.com/rustykey) — it's what funds the fixes.
 
 ## Credits
 

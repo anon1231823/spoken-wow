@@ -4,9 +4,9 @@
 
 Open the map and the lore of the zone you're looking at appears beside it. Click a named subzone and you get that place's story instead. Optionally, it's read aloud.
 
-## Beta
+## The lore, as of 0.3.0
 
-**The lore text** is built by reading warcraft.wiki.gg and trimming each article down automatically. Mostly that produces something good, but some entries run long, some are thinner than the place deserves, and a few are cut at an awkward point. The filter that strips post-vanilla content is careful but not perfect. Hand-written replacements are gradually going in for the worst of them. If you hit one, the **Report** button on the entry is the fastest way to say so — it is what decides which ones get rewritten first.
+**The lore text** starts from warcraft.wiki.gg and was rewritten across the whole corpus to describe the world as a vanilla character finds it: post-vanilla world state, quest outcomes told as settled history, and game-mechanical phrasing were taken out, over several full review passes. The wiki is written for a modern reader, though, and with this many places some of it will still slip through. If an entry reads wrong — later-expansion lore, a resolved conflict your character can plainly see unresolved, a fourth-wall break — the **Report** button on the entry is the fastest way to say so; reports decide what gets fixed first.
 
 ## What it does
 
@@ -31,11 +31,9 @@ Two packs, the same voicelines — and there are a lot of them — differing onl
 
 Install ZoneLore Audio unless the download is a problem, in which case ZoneLore Audio 64 is half the size and close to transparent for speech. With both installed ZoneLore plays the higher-quality one; `/zl audio` lists what you have and switches between them.
 
-### The voice is in beta
+### The voice
 
-What's in the packs today is a **proof of concept**. Every line is recorded, but the voice is being redesigned — better delivery, consistent pronunciation, one pass over the whole script — which means generating every line again. That costs money per line and time to check, so it lands in batches rather than all at once.
-
-If a line reads badly, press **Report** while you are hearing it — the playback controls carry the button, so you don't have to go and find the entry again. The re-record follows what comes in. If you'd like it to go faster, [supporting the project](https://buymeacoffee.com/rustykey) pays for the generation directly.
+As of 0.3.0 every line is recorded with a new narrator, and NPC and place names go through a pronunciation dictionary so they sound the same everywhere they appear. With this many lines some readings will still land flat or a name will come out wrong — press **Report** while you are hearing it; the playback controls carry the button, so you don't have to go and find the entry again. Per-line fixes follow what comes in, and [supporting the project](https://buymeacoffee.com/rustykey) pays for that generation directly.
 
 ## Commands
 
@@ -61,7 +59,7 @@ ZoneLore and a sound pack work together as long as they share a major version.
 
 ## Support
 
-The narration isn't free to make — every line costs money to synthesise. If the addon is worth something to you, [buy me a coffee](https://buymeacoffee.com/rustykey); it goes straight into re-recording the voice.
+The narration isn't free to make — every line costs money to synthesise. If the addon is worth something to you, [buy me a coffee](https://buymeacoffee.com/rustykey); it goes straight into fixing reported lines.
 
 ## Credits
 
