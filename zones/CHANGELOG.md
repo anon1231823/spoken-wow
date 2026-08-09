@@ -3,6 +3,20 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 0.3.0 — 2026-08-09
+
+**A new narrator** (sound packs only)
+
+- Every line re-recorded with a new narrator voice. Same words, better readings.
+- Pronunciation fixes for Lordaeron, Scourge and Tirisfal, now applied through
+  the shared pronunciation dictionary rather than respelled text.
+- The packs now carry only places the Classic Era client can actually report:
+  497 clips for later-era areas are gone, and with them a third of the download.
+- The standard pack (ZoneLore Audio 64) is now VBR — noticeably smaller at the
+  same spoken quality.
+
+ZoneLore itself is unchanged — this pack works with any 0.x ZoneLore release.
+
 ## 0.2.3 — 2026-08-04
 
 **Narration for characters who already explored**
