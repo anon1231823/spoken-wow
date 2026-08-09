@@ -5,17 +5,22 @@ see [Compatibility](#compatibility) below.
 
 ## 0.3.0 — 2026-08-09
 
-**A new narrator** (sound packs only)
+**The vanilla rewrite, and a new narrator**
 
-- Every line re-recorded with a new narrator voice. Same words, better readings.
-- Pronunciation fixes for Lordaeron, Scourge and Tirisfal, now applied through
-  the shared pronunciation dictionary rather than respelled text.
-- The packs now carry only places the Classic Era client can actually report:
-  497 clips for later-era areas are gone, and with them a third of the download.
+- The lore was rewritten across the whole corpus to describe the world as a
+  1.12 character finds it: later-expansion world state, quest outcomes told as
+  settled history, and game-mechanical phrasing are gone, after several full
+  review passes over every line.
+- Every line re-recorded with a new narrator voice.
+- Many pronunciations improved, applied through the shared pronunciation
+  dictionary.
+- The packs now carry only places the Classic Era client can actually report;
+  clips for later-era areas are gone, and with them roughly a third of the
+  download.
 - The standard pack (ZoneLore Audio 64) is now VBR — noticeably smaller at the
   same spoken quality.
 
-ZoneLore itself is unchanged — this pack works with any 0.x ZoneLore release.
+Addon and packs both move to 0.3.0; either works with any 0.x of the other.
 
 ## 0.2.3 — 2026-08-04
 
