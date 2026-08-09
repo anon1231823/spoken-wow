@@ -242,11 +242,18 @@ jobs:
           [ "$code" = "403" ] || { echo "::error::a member got $code from /api/regenerate"; exit 1; }
           echo "members are refused a regeneration"
 
-          # The lexicon reads pronunciation.json off disk and re-derives staleness across
-          # the whole catalogue. If ZONELORE_PRONUNCIATION were wrong this 500s -- so the
-          # CI user is promoted for one request rather than the check being dropped.
+          # A quote reads the catalogue, the manifest and config.json off disk -- the
+          # pronunciation rules included, via the spoken-text derivation -- and spends
+          # nothing. If any of those paths were wrong in the bundle this 500s, so the CI
+          # user is promoted for one request rather than the check being dropped. (It
+          # replaced a /api/lexicon check when the pronunciation editor moved to
+          # wow-voiceover.)
           psql "$DATABASE_URL" -qc "update \"user\" set role = 'admin'"
-          curl -fsS -b cookies.txt "http://127.0.0.1:3999/api/lexicon" | grep -q '"totalLines"'
+          quote=$(curl -fsS -X POST "http://127.0.0.1:3999/api/regenerate" \
+            -H 'Content-Type: application/json' -H "Origin: $BETTER_AUTH_URL" \
+            -b cookies.txt -d '{"action":"quote","lineIds":["z:1411"]}')
+          echo "$quote" | grep -q '"characters"'
+          echo "an admin can quote a regeneration"
 
           # The stylesheet must resolve, or .next/static did not make it into the release.
           css=$(curl -fsS http://127.0.0.1:3999/ | grep -o '_next/static/css/[^"]*' | head -1)
