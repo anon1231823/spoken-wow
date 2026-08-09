@@ -207,7 +207,10 @@ jobs:
           # kind of quiet emptiness worth asserting against.
           total=$(curl -fsS "http://127.0.0.1:3999/api/search" \
             | python3 -c 'import sys,json; print(json.load(sys.stdin)["total"])')
-          [ "$total" -gt 1000 ] || { echo "::error::catalogue is $total lines - did the corpus ship?"; exit 1; }
+          # 800, not the old 1000: the era filter (tools/seed/era-areas.json) trimmed the
+          # corpus to 856 lines -- places the 1.x client can actually report. The guard
+          # still catches an empty or truncated corpus, which is what it exists for.
+          [ "$total" -gt 800 ] || { echo "::error::catalogue is $total lines - did the corpus ship?"; exit 1; }
           echo "catalogue: $total lines"
 
           # Filtering works, and the zone facet is derived from the corpus rather than
