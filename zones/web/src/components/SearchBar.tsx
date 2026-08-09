@@ -148,6 +148,27 @@ export function SearchBar({
           </label>
         )}
 
+        {/* Read as one range: "generated after X" and "generated before Y". Native date
+            inputs rather than the sibling's calendar popover: this app has no component
+            library to borrow one from, and the browser's picker answers the same
+            "since roughly when?" question. */}
+        <label className="flex items-center gap-1.5 text-muted" title="Take generated on or after this day">
+          <span>after</span>
+          <input
+            type="date"
+            value={filters.generatedAfter ?? ""}
+            onChange={(event) => onChange({ generatedAfter: event.target.value || undefined })}
+          />
+        </label>
+        <label className="flex items-center gap-1.5 text-muted" title="Take generated before this day">
+          <span>before</span>
+          <input
+            type="date"
+            value={filters.generatedBefore ?? ""}
+            onChange={(event) => onChange({ generatedBefore: event.target.value || undefined })}
+          />
+        </label>
+
         {active > 0 && (
           <button
             type="button"
