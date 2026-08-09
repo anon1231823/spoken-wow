@@ -17,7 +17,7 @@ Narrated zone lore for **ZoneLore**, at full 128 kbps quality. This addon is dat
 
 What's in this pack is a proof of concept. Every line is recorded and the whole thing works end to end, but the voice was chosen to get all lines made at once. Delivery might be flat, audio can be bad, pronunciation can be wrong.
 
-Fixing that isn't a per-line edit — it's a different voice and a fresh pass over the whole script, which means generating all 1000+ lines again. Each one costs money to synthesise and time to listen back to, which is the reason it's taking a while: it lands in batches, as it can be paid for.
+Fixing that isn't a per-line edit — it's a different voice and a fresh pass over the whole script, which means generating every line again. Each one costs money to synthesise and time to listen back to, which is the reason it's taking a while: it lands in batches, as it can be paid for.
 
 The **lore text** these lines are read from is in beta too. It's read from warcraft.wiki.gg and trimmed automatically, so some entries run long or stop at an awkward point. Where the text gets rewritten, the narration for it gets regenerated — so a re-download now and then is expected while this settles.
 
@@ -29,10 +29,10 @@ Two packs, identical content at different bitrates:
 
 | Pack | Bitrate | Download |
 |---|---|---|
-| **ZoneLore Audio** (this one) | 128 kbps | ~790 MB |
-| **ZoneLore Audio 64** | 64 kbps mono | ~400 MB |
+| **ZoneLore Audio** (this one) | 128 kbps | ~450 MB |
+| **ZoneLore Audio 64** | VBR mono | ~220 MB |
 
-This is the larger pack. If ~790 MB is more than you want to spend, ZoneLore Audio 64 has the same lines at 64 kbps mono for half the size — close to transparent for speech.
+This is the larger pack. If ~450 MB is more than you want to spend, ZoneLore Audio 64 has the same lines, VBR mono, at half the size — close to transparent for speech.
 
 Both can be installed at once — ZoneLore plays the higher-quality one, and `/zl audio` switches between them.
 
@@ -48,7 +48,7 @@ Built for **Classic Era 1.15.9**. The pack and ZoneLore work together as long as
 
 ## Support
 
-Every one of these 1000+ lines was paid for per character, and the re-record means paying for all of them again. If the narration is worth something to you, [buy me a coffee](https://buymeacoffee.com/rustykey) — it's what funds the next batch.
+Every one of these lines — and there are a lot of them — was paid for per character, and the re-record means paying for all of them again. If the narration is worth something to you, [buy me a coffee](https://buymeacoffee.com/rustykey) — it's what funds the next batch.
 
 ## Credits
 

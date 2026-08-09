@@ -2,7 +2,7 @@
 project: 1636521
 slug: zonelore
 name: ZoneLore
-summary: Zone lore on the world map. Open the map and read the story of the zone you're looking at, or click any subzone for its own. 49 zones, 1304 subzones, optionally narrated.
+summary: Zone lore on the world map. Open the map and read the story of the zone you're looking at, or click any subzone for its own. Every zone and subzone, optionally narrated.
 categories:
   - Miscellaneous
   - Roleplay
@@ -32,18 +32,18 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 
 The voice audio is a large download, so it ships separately. **ZoneLore works fine without one** — you read rather than listen — and falls back to a placeholder clip so the controls still behave.
 
-Two packs, same 1353 voicelines, differing only in bitrate:
+Two packs, the same voicelines — and there are a lot of them — differing only in quality:
 
 | Pack | Bitrate | Download |
 |---|---|---|
-| **ZoneLore Audio** | 128 kbps | ~790 MB |
-| **ZoneLore Audio 64** | 64 kbps mono | ~400 MB |
+| **ZoneLore Audio** | 128 kbps | ~450 MB |
+| **ZoneLore Audio 64** | VBR mono | ~220 MB |
 
 Install ZoneLore Audio unless the download is a problem, in which case ZoneLore Audio 64 is half the size and close to transparent for speech. With both installed ZoneLore plays the higher-quality one; `/zl audio` lists what you have and switches between them.
 
 ### The voice is in beta
 
-What's in the packs today is a **proof of concept**. All 1353 lines are recorded, but the voice is being redesigned — better delivery, consistent pronunciation, one pass over the whole script — which means generating every line again. That costs money per line and time to check, so it lands in batches rather than all at once.
+What's in the packs today is a **proof of concept**. Every line is recorded, but the voice is being redesigned — better delivery, consistent pronunciation, one pass over the whole script — which means generating every line again. That costs money per line and time to check, so it lands in batches rather than all at once.
 
 If a line reads badly, press **Report** while you are hearing it — the playback controls carry the button, so you don't have to go and find the entry again. The re-record follows what comes in. If you'd like it to go faster, [supporting the project](https://buymeacoffee.com/rustykey) pays for the generation directly.
 

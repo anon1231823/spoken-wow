@@ -32,8 +32,8 @@ export const BETA_TITLE = "ZoneLore is in beta";
  * wrong sentence reads as though that is all the lore there is.
  */
 export const BETA_BODY: readonly string[] = [
-  "Everything here works end to end — every Classic Era zone and subzone has lore, and all 1353 lines of it are narrated. What it is not yet is finished. This release is a proof of concept: it exists to show what the addon does, with a voice that was picked to get all of it recorded at once.",
+  "Everything here works end to end — every Classic Era zone and subzone has lore, and all of it is narrated. What it is not yet is finished. This release is a proof of concept: it exists to show what the addon does, with a voice that was picked to get all of it recorded at once.",
   "That voice is being redesigned. The delivery is flat in long descriptions, names are pronounced inconsistently between lines, and some entries read as a wall of text rather than as lore being told to you. None of that is fixable line by line — it is a different voice and a different pass over the whole script.",
   "The lore text is a work in progress too. It is built by reading warcraft.wiki.gg and trimming each article down automatically, which mostly produces something good — but some entries run long, some are thinner than the place deserves, and a few stop at an awkward point. Hand-written replacements are going in for the worst of them.",
-  "Re-recording means generating all 1353 lines again. Every one of them costs money to synthesise and time to listen back to, which is the honest reason this is taking a while rather than shipping next week. It is happening in batches, as it can be paid for.",
+  "Re-recording means generating every line again — and there are a lot of them. Every one of them costs money to synthesise and time to listen back to, which is the honest reason this is taking a while rather than shipping next week. It is happening in batches, as it can be paid for.",
 ];
