@@ -41,7 +41,7 @@ ZoneLore.Subzones = {
 		["den"] = {
 			name = "The Den",
 			short = "In the Valley of Trials, young orcs make their first camp in a cave known as the Den. Within it dwell elders who teach the young their callings, guiding the first steps of every orc who takes up arms.",
-			full = "In the Valley of Trials, young orcs make their first camp in a cave known as the Den. Within it dwell elders who teach the young their callings, guiding the first steps of every orc who takes up arms.\n\nCages line the inside of the cave, holding Northwatch scouts taken captive. Zekhan came to look upon the prisoners held there.",
+			full = "In the Valley of Trials, young orcs make their first camp in a cave known as the Den. Within it dwell elders who teach the young their callings, guiding the first steps of every orc who takes up arms.",
 			source = "https://warcraft.wiki.gg/wiki/The_Den",
 		},
 		["drygulch ravine"] = {
@@ -112,8 +112,8 @@ ZoneLore.Subzones = {
 		},
 		["rocktusk farm"] = {
 			name = "Rocktusk Farm",
-			short = "Rocktusk Farm sits just down the western road outside Orgrimmar's gates, against the Dranosh'ar Blockade. The owners work without much fear here, raising pigs whose meat feeds the Horde beyond it.",
-			full = "Rocktusk Farm sits just down the western road outside Orgrimmar's gates, against the Dranosh'ar Blockade. The owners work without much fear here, raising pigs whose meat feeds the Horde beyond it.",
+			short = "Rocktusk Farm sits just down the western road outside Orgrimmar's gates. The owners work without much fear here, raising pigs whose meat feeds the Horde.",
+			full = "Rocktusk Farm sits just down the western road outside Orgrimmar's gates. The owners work without much fear here, raising pigs whose meat feeds the Horde.",
 			source = "https://warcraft.wiki.gg/wiki/Rocktusk_Farm",
 		},
 		["scuttle coast"] = {
@@ -260,7 +260,7 @@ ZoneLore.Subzones = {
 		["thunderhorn water well"] = {
 			name = "Thunderhorn Water Well",
 			short = "The well sits in the open grass of Mulgore, along the north road between Thunder Bluff and Bloodhoof Village.",
-			full = "The well sits in the open grass of Mulgore, along the north road between Thunder Bluff and Bloodhoof Village. The Venture Company once seized it, hoping to choke off the tauren's water, but the tauren drove them out and reclaimed it.\n\nThe shaman Muln Earthfury and the Earthen Ring tried to set right a disaster that had befallen the well by calling on the elements for aid, but their pleas went unanswered, until the mysterious Shotoa succeeded where they had failed, forcing the elements to obey him.",
+			full = "The well sits in the open grass of Mulgore, along the north road between Thunder Bluff and Bloodhoof Village. The Venture Company once seized it, hoping to choke off the tauren's water, but the tauren drove them out and reclaimed it.",
 			source = "https://warcraft.wiki.gg/wiki/Thunderhorn_Water_Well",
 		},
 		["venture co mine"] = {
@@ -1013,7 +1013,7 @@ ZoneLore.Subzones = {
 		["lordamere lake"] = {
 			name = "Lordamere Lake",
 			short = "Lordamere Lake spreads beneath the shadow of kingdoms that once called its shores home.",
-			full = "Lordamere Lake spreads beneath the shadow of kingdoms that once called its shores home. Lordaeron rose on its northern edge, and it is very likely from that great city, itself named for old Lordain, that the lake took its name. Dalaran and Alterac, too, stood prosperous around its waters in the days when the Alliance of Lordaeron bound the human kingdoms together.\n\nThat age is gone, and what remains is a border. The lake now lies between the Forsaken holdings of Tirisfal Glades and Silverpine Forest and the contested Alterac Mountains, separating the dead from the living.\n\nAt its heart sits Fenris Isle. Agents of the Scourge once held its keep, harried there by the Forsaken until the worgen drove them out. Hillsbrad refugees and the leaders of Southshore later took the isle as a temporary haven, fleeing the Forsaken. In time the keep fell to the Forsaken again, under Deathstalker Hayward.\n\nEast of Fenris Isle, among the small Dawning Isles, the Vile Fin murlocs have made their claim, overrunning them entirely.",
+			full = "Lordamere Lake spreads beneath the shadow of kingdoms that once called its shores home. Lordaeron rose on its northern edge, and it is very likely from that great city, itself named for old Lordain, that the lake took its name. Dalaran and Alterac, too, stood prosperous around its waters in the days when the Alliance of Lordaeron bound the human kingdoms together.\n\nThat age is gone, and what remains is a border. The lake now lies between the Forsaken holdings of Tirisfal Glades and Silverpine Forest and the contested Alterac Mountains, separating the dead from the living.\n\nAt its heart sits Fenris Isle, its keep held by the Rot Hide gnolls under Thule Ravenclaw.\n\nEast of Fenris Isle, among the small Dawning Isles, the Vile Fin murlocs have made their claim, overrunning them entirely.",
 			source = "https://warcraft.wiki.gg/wiki/Lordamere_Lake",
 		},
 		["maldens orchard"] = {
@@ -1349,7 +1349,7 @@ ZoneLore.Subzones = {
 		["tyrs hand"] = {
 			name = "Tyr's Hand",
 			short = "Tyr's Hand is a fortified human city, one of the last holdouts of the living against the Scourge in the region.",
-			full = "Tyr's Hand is a fortified human city, one of the last holdouts of the living against the Scourge in the region. Its surroundings are in far better condition than the rest of the Plaguelands, though the trees and flora still decay.\n\nThe city is among the oldest and most revered holy sites of the Church of the Light, built almost entirely of churches, crowned by the Scarlet Basilica and the fortified abbey.\n\nWhen the Scourge came and the Eastweald became the Plaguelands, Tyr's Hand did not fall. Under Lord Valdelmar it withstood daily assault, sheltered first by the Knights of the Silver Hand and later by the Scarlet Crusade, sending supplies and reinforcements onward to other Scarlet holdings, with daily reports carried in from Stratholme by couriers who had to fight their way through the plague-thick roads.\n\nIn a battle near the city, the Crusaders wielded the artifact weapon Light's Wrath to great effect, breaking a Scourge army that outnumbered them twenty to one.",
+			full = "Tyr's Hand is a fortified human city, one of the last holdouts of the living against the Scourge in the region. Its surroundings are in far better condition than the rest of the Plaguelands, though the trees and flora still decay.\n\nThe city is among the oldest and most revered holy sites of the Church of the Light, built almost entirely of churches, crowned by the Scarlet Basilica and the fortified abbey.\n\nWhen the Scourge came and the Eastweald became the Plaguelands, Tyr's Hand did not fall. Under Lord Valdelmar it withstood daily assault, sheltered first by the Knights of the Silver Hand and later by the Scarlet Crusade, sending supplies and reinforcements onward to other Scarlet holdings, with daily reports carried in from Stratholme by couriers who had to fight their way through the plague-thick roads.",
 			source = "https://warcraft.wiki.gg/wiki/Tyr's_Hand",
 		},
 		["undercroft"] = {
@@ -1630,8 +1630,8 @@ ZoneLore.Subzones = {
 		},
 		["shaolwatha"] = {
 			name = "Shaol'watha",
-			short = "Shaol'watha was once a temple of the Vilebranch forest trolls in northeastern Hinterlands, now broken stone reclaimed by forest.",
-			full = "Shaol'watha was once a temple of the Vilebranch forest trolls in northeastern Hinterlands, now broken stone reclaimed by forest.",
+			short = "Shaol'watha is a ruin of the Vilebranch forest trolls in the northeastern Hinterlands. It was once a temple.",
+			full = "Shaol'watha is a ruin of the Vilebranch forest trolls in the northeastern Hinterlands. It was once a temple.",
 			source = "https://warcraft.wiki.gg/wiki/Shaol'watha",
 		},
 		["shindiggers camp"] = {
@@ -1706,7 +1706,7 @@ ZoneLore.Subzones = {
 		["frostmane hold"] = {
 			name = "Frostmane Hold",
 			short = "Frostmane Hold stands on the western edge of Dun Morogh's cold mountains, south of Gnomeregan, a scatter of buildings knit to a cave system driven into the mountainside.",
-			full = "Frostmane Hold stands on the western edge of Dun Morogh's cold mountains, south of Gnomeregan, a scatter of buildings knit to a cave system driven into the mountainside. It was once the base camp of the Frostmane ice trolls, who held the ground with headhunters and hideskinners guarding every approach.\n\nThe trolls who once resided here have since fallen back to Frostmane Retreat.",
+			full = "Frostmane Hold stands on the western edge of Dun Morogh's cold mountains, south of Gnomeregan, a scatter of buildings knit to a cave system driven into the mountainside. It is the base camp of the Frostmane ice trolls, who hold the ground with headhunters and hideskinners guarding every approach.",
 			source = "https://warcraft.wiki.gg/wiki/Frostmane_Hold",
 		},
 		["gates of ironforge"] = {
@@ -2045,7 +2045,7 @@ ZoneLore.Subzones = {
 		["northshire valley"] = {
 			name = "Northshire Valley",
 			short = "Northshire Valley lies closed in on every side but one, its mountains impenetrable, its only pass to the south sealed behind thick stone walls and a watched gate.",
-			full = "Northshire Valley lies closed in on every side but one, its mountains impenetrable, its only pass to the south sealed behind thick stone walls and a watched gate. A river cuts through the quiet of it, winding down toward Crystal Lake, past the abbey and the vineyard rows that give the place its air of peace.\n\nThat peace was not always so certain. During the Second War, Northshire Abbey stood as the headquarters of Cho'gall's Twilight's Hammer clan, sworn to Gul'dan's cause, and its walls sheltered orcish war-councils rather than novices and farmers.\n\nNow Marshal McBride commands the abbey's garrison and answers for the whole of Northshire's safety, though the valley is not wholly settled even under his watch. Wolves press in from Duskwood in numbers no one can account for, kobolds burrow through Echo Ridge Mine, and at the vineyard Milly Osworth watches the tree line for Defias Brotherhood thugs, fearing what they might cost her vines.",
+			full = "Northshire Valley lies closed in on every side but one, its mountains impenetrable, its only pass to the south sealed behind thick stone walls and a watched gate. A river cuts through the quiet of it, winding down toward Crystal Lake, past the abbey and the vineyard rows that give the place its air of peace.\n\nThat peace was not always so certain. During the Second War, Northshire Abbey stood as the headquarters of Cho'gall's Twilight's Hammer clan, sworn to Gul'dan's cause, and its walls sheltered orcish war-councils rather than novices and farmers.\n\nNow Marshal McBride commands the abbey's garrison and answers for the whole of Northshire's safety, though the valley is not wholly settled even under his watch. Wolves press in from Duskwood in numbers no one can account for, kobolds burrow through Echo Ridge Mine.",
 			source = "https://warcraft.wiki.gg/wiki/Northshire_Valley",
 		},
 		["northshire vineyards"] = {
@@ -2387,7 +2387,7 @@ ZoneLore.Subzones = {
 		["lakeshire"] = {
 			name = "Lakeshire",
 			short = "Lake Everstill lies still and cold beneath the Redridge peaks, and the town on its shore has bled for that ground more than once.",
-			full = "Lake Everstill lies still and cold beneath the Redridge peaks, and the town on its shore has bled for that ground more than once. When Warchief Blackhand first led orcs into these mountains, Sir Anduin Lothar and the Knights of Stormwind ambushed them on the slopes and nearly broke them, until two Shadow Council warlocks turned the battle and forced Lothar back. Blackhand returned weeks later with a greater host and took Lakeshire outright. Only after the Second War did the Alliance of Lordaeron reclaim it, Supreme Commander Turalyon overseeing the return of its scattered people",
+			full = "Lake Everstill lies still and cold beneath the Redridge peaks, and the town on its shore has bled for that ground more than once. When Warchief Blackhand first led orcs into these mountains, Sir Anduin Lothar and the Knights of Stormwind ambushed them on the slopes and nearly broke them, until two Shadow Council warlocks turned the battle and forced Lothar back. Blackhand returned weeks later with a greater host and took Lakeshire outright. Only after the Second War did the Alliance of Lordaeron reclaim it, Supreme Commander Turalyon overseeing the return of its scattered people.",
 			source = "https://warcraft.wiki.gg/wiki/Lakeshire",
 		},
 		["redridge canyons"] = {
@@ -2666,7 +2666,7 @@ ZoneLore.Subzones = {
 		["yojamba isle"] = {
 			name = "Yojamba Isle",
 			short = "On these small islands off the northwestern coast of Stranglethorn, near the border with Westfall, the Zandalar Tribe made its stand against a god gone mad.",
-			full = "On these small islands off the northwestern coast of Stranglethorn, near the border with Westfall, the Zandalar Tribe made its stand against a god gone mad.\n\nHakkar the Soulflayer had turned Zul'Gurub into a place of blood and madness, and the Zandalari knew they could not face him alone. So they came to Yojamba Isle and called on Alliance and Horde alike to set aside their war long enough to help destroy him. It was an old, proud tribe trusting outsiders with the fate of its god-touched city.\n\nAfter Hakkar's defeat, most of the Zandalari left Stranglethorn and returned home. The isle itself now belongs to the Crystal Spine Matriarch, who holds Bloodscalp berserkers, witch doctors, and shaman there, turned to stone.",
+			full = "On these small islands off the northwestern coast of Stranglethorn, near the border with Westfall, the Zandalar Tribe made its stand against a god gone mad.\n\nHakkar the Soulflayer had turned Zul'Gurub into a place of blood and madness, and the Zandalari knew they could not face him alone. So they came to Yojamba Isle and called on Alliance and Horde alike to set aside their war long enough to help destroy him. It was an old, proud tribe trusting outsiders with the fate of its god-touched city.",
 			source = "https://warcraft.wiki.gg/wiki/Yojamba_Isle",
 		},
 		["ziatajai ruins"] = {
@@ -2864,7 +2864,7 @@ ZoneLore.Subzones = {
 		["sentinel hill"] = {
 			name = "Sentinel Hill",
 			short = "Sentinel Hill stands on high ground above the farmlands of Westfall, its tower watching over cottages, forge, and mill built into the slope below.",
-			full = "Sentinel Hill stands on high ground above the farmlands of Westfall, its tower watching over cottages, forge, and mill built into the slope below.\n\nKing Varian Wrynn sent supplies, troops, and siege engines here, hoping to rebuild what was once the breadbasket of the kingdom and to give shelter to the citizens of Stormwind whose homes were destroyed. But the stronghold is not finished, and it cannot yet take in the homeless who wait around it.\n\nBoth the Riverpaw gnolls and the Defias Brotherhood have struck at the hill and the lands it holds.",
+			full = "Sentinel Hill stands on high ground above the farmlands of Westfall, its tower watching over cottages, forge, and mill built into the slope below.\n\nBoth the Riverpaw gnolls and the Defias Brotherhood have struck at the hill and the lands it holds.",
 			source = "https://warcraft.wiki.gg/wiki/Sentinel_Hill",
 		},
 		["stendels pond"] = {
@@ -3301,8 +3301,8 @@ ZoneLore.Subzones = {
 		},
 		["greenpaw village"] = {
 			name = "Greenpaw Village",
-			short = "Greenpaw Village is home to the Foulweald tribe, furbolgs led by Chief Murgut and the shaman Oakpaw. The bearmen here are corrupted, twisted kin of the Foulweald, and it is against them that battles are fought.",
-			full = "Greenpaw Village is home to the Foulweald tribe, furbolgs led by Chief Murgut and the shaman Oakpaw. The bearmen here are corrupted, twisted kin of the Foulweald, and it is against them that battles are fought.",
+			short = "Greenpaw Village is home to the Foulweald tribe, furbolgs led by Chief Murgut and the shaman Oakpaw. The bearmen here are corrupted.",
+			full = "Greenpaw Village is home to the Foulweald tribe, furbolgs led by Chief Murgut and the shaman Oakpaw. The bearmen here are corrupted.",
 			source = "https://warcraft.wiki.gg/wiki/Greenpaw_Village",
 		},
 		["howling vale"] = {
@@ -3397,8 +3397,8 @@ ZoneLore.Subzones = {
 		},
 		["silverwind refuge"] = {
 			name = "Silverwind Refuge",
-			short = "Silverwind Refuge once belonged to the night elves, held under the watch of the Sentinels and the water elementals that served alongside them.",
-			full = "Silverwind Refuge once belonged to the night elves, held under the watch of the Sentinels and the water elementals that served alongside them. Together with Astranaar, it stood as one of the major outposts of Ashenvale, and its name was once well earned: a welcoming place, its inn counted among the more comfortable to be found in the region.\n\nThe corpses of some of its earlier inhabitants still lie scattered on the ground around the outpost, left where they fell.",
+			short = "Silverwind Refuge belongs to the night elves, held under the watch of the Sentinels and the water elementals that serve alongside them.",
+			full = "Silverwind Refuge belongs to the night elves, held under the watch of the Sentinels and the water elementals that serve alongside them. Together with Astranaar, it stands as one of the major outposts of Ashenvale, and its name is well earned: a welcoming place, its inn counted among the more comfortable to be found in the region.",
 			source = "https://warcraft.wiki.gg/wiki/Silverwind_Refuge",
 		},
 		["silverwing grove"] = {
@@ -4225,8 +4225,8 @@ ZoneLore.Subzones = {
 		},
 		["southbreak shore"] = {
 			name = "Southbreak Shore",
-			short = "Southbreak Shore lies quiet along the southern edge of Tanaris, a flat stretch of beach mostly empty of life.",
-			full = "Southbreak Shore lies quiet along the southern edge of Tanaris, a flat stretch of beach mostly empty of life. Only the northern reach holds any danger, where hostile pirates have taken up position along the sand, commanded by Captain Dreadbeard, who has begun drawing aid from sea giants, though how remains unclear.\n\nDuneshore Crabs skitter through the shallows here now, where turtles and sea giants once roamed the surf before moving on.",
+			short = "Southbreak Shore lies quiet along the southern edge of Tanaris, a flat stretch of beach mostly empty of life. Turtles and sea giants roam the surf.",
+			full = "Southbreak Shore lies quiet along the southern edge of Tanaris, a flat stretch of beach mostly empty of life. Turtles and sea giants roam the surf.",
 			source = "https://warcraft.wiki.gg/wiki/Southbreak_Shore",
 		},
 		["southmoon ruins"] = {
@@ -4238,7 +4238,7 @@ ZoneLore.Subzones = {
 		["steamwheedle port"] = {
 			name = "Steamwheedle Port",
 			short = "Steamwheedle Port sits on Tanaris's eastern coast, a road running west to its mother city of Gadgetzan and a dock reaching toward Kezan.",
-			full = "Steamwheedle Port sits on Tanaris's eastern coast, a road running west to its mother city of Gadgetzan and a dock reaching toward Kezan. It belongs to the Steamwheedle Cartel, goblins who deal with all comers so long as the gold is good.\n\nThe port has thinned over the years. Some residents vanished, others were killed outright, and many took the cartel's coin to relocate to Gadgetzan instead.\n\nAmong those who stayed was Yeh'kinya, whose dealings stirred the return of Hakkar the Soulflayer.",
+			full = "Steamwheedle Port sits on Tanaris's eastern coast, a road running west to its mother city of Gadgetzan and a dock reaching toward Kezan. It belongs to the Steamwheedle Cartel, goblins who deal with all comers so long as the gold is good.\n\nAmong the port's residents is Yeh'kinya, whose dealings stirred the return of Hakkar the Soulflayer.",
 			source = "https://warcraft.wiki.gg/wiki/Steamwheedle_Port",
 		},
 		["thistleshrub valley"] = {
