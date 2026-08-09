@@ -1,9 +1,6 @@
 // Validation shared by /api/voice and /api/voice/preview, so what can be saved and
 // what can be auditioned are the same set by construction.
 
-/** The corpus narrator candidates. Race voices and ElevenLabs stock stay out. */
-export const NARRATOR = /^narrator-/;
-
 // What v3 documents as its three stability modes (Creative / Natural / Robust).
 // Anything between them is treated as the nearest mode by the model, so offering
 // a slider would be a lie.

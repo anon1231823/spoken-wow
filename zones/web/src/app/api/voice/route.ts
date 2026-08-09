@@ -9,7 +9,7 @@ import {
   measureRates,
   saveConfig,
 } from "@/lib/tools";
-import { NARRATOR, parseSettings } from "@/lib/voice";
+import { parseSettings } from "@/lib/voice";
 
 // The narrator voice and its settings, read and written.
 //
@@ -23,8 +23,10 @@ export async function GET() {
   if (denied) return denied;
 
   const [config, manifest] = await Promise.all([loadConfig(), loadManifest()]);
+  // The whole account, unfiltered: voices added from the ElevenLabs library arrive
+  // under their library names, so any name-based narrowing hides exactly the voices
+  // the page exists to try.
   const voices = (await listVoices(await apiKey()))
-    .filter((voice) => NARRATOR.test(voice.name))
     .map((voice) => ({ id: voice.voice_id, name: voice.name, category: voice.category }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -62,8 +64,8 @@ export async function POST(request: Request) {
   // purpose of making the pairing auditable.
   const voices = await listVoices(await apiKey());
   const picked = voices.find((voice) => voice.voice_id === body.voiceId);
-  if (!picked || !NARRATOR.test(picked.name)) {
-    return NextResponse.json({ error: "voiceId is not a narrator voice" }, { status: 400 });
+  if (!picked) {
+    return NextResponse.json({ error: "voiceId is not on this account" }, { status: 400 });
   }
 
   const config = await loadConfig();

@@ -19,11 +19,12 @@ generation settings, with a paid single-line preview, instead of hand-editing
 ## Server
 
 `GET /api/voice` — current config slice (`voiceName`, `voiceId`, `modelId`,
-`voiceSettings`), the account voices whose name starts with `narrator-`
-(name, id, category), and the measured credit rate for the preview estimate.
+`voiceSettings`), every voice on the account (name, id, category — unfiltered,
+because voices added from the ElevenLabs library arrive under arbitrary
+names), and the measured credit rate for the preview estimate.
 
-`POST /api/voice` — `{ voiceId, voiceSettings }`. Validates: voiceId present in
-the narrator list; `stability` ∈ {0, 0.5, 1} (Creative / Natural / Robust — all
+`POST /api/voice` — `{ voiceId, voiceSettings }`. Validates: voiceId present on
+the account; `stability` ∈ {0, 0.5, 1} (Creative / Natural / Robust — all
 v3 honours); `similarity_boost` ∈ [0, 1]; `use_speaker_boost` boolean. Writes
 config.json via `saveConfig()`, syncing `voiceName` to the picked voice's
 current name. Model, output format, dictionary pins untouched.
@@ -38,7 +39,7 @@ it. `web/src/lib/tools.ts` re-exports `saveConfig` and `listVoices`.
 
 ## UI (`VoiceSettings.tsx`, patterned on `LexiconEditor`)
 
-- Voice dropdown of narrator-* voices, current one selected.
+- Voice dropdown of the account's voices, current one selected.
 - Stability as a three-way segmented control labelled Creative / Natural /
   Robust.
 - Similarity slider 0–1, speaker-boost checkbox.
