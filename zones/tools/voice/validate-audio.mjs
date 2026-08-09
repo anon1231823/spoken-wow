@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { readdir } from "node:fs/promises";
 
 import { ROOT, readLines } from "../lib/loredata.mjs";
-import { apiKey, downloadDictionary, loadConfig } from "./elevenlabs.mjs";
+import { apiKey, downloadDictionary, loadConfig, resolveDictionary } from "./elevenlabs.mjs";
 import { parseDictionary, uncoveredSpellings } from "./lexicon.mjs";
 import { assignFiles, lineId } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
@@ -50,14 +50,16 @@ async function mp3sOnDisk(dir, prefix = "") {
  */
 async function checkDictionary(spokenTexts) {
   const config = await loadConfig().catch(() => null);
-  if (!config?.dictionaryId || !config.dictionaryVersionId) {
-    note("no pronunciation dictionary is pinned in tools/voice/config.json; coverage unchecked");
+  if (!config?.dictionaryId) {
+    note("no pronunciation dictionary is named in tools/voice/config.json; coverage unchecked");
     return;
   }
 
   let pls;
   try {
-    pls = await downloadDictionary(config, await apiKey());
+    const key = await apiKey();
+    await resolveDictionary(config, key);
+    pls = await downloadDictionary(config, key);
   } catch (err) {
     note(`pronunciation dictionary not checked: ${err.message.slice(0, 120)}`);
     return;

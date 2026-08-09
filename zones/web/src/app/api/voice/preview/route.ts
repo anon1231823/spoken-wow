@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { requireRegenerate } from "@/lib/authz";
-import { apiKey, loadConfig, loadPronunciation, synthesize, toSpokenText } from "@/lib/tools";
+import {
+  apiKey,
+  loadConfig,
+  loadPronunciation,
+  resolveDictionary,
+  synthesize,
+  toSpokenText,
+} from "@/lib/tools";
 import { parseSettings } from "@/lib/voice";
 
 // One audition, straight to the ear. Spends credits like /api/regenerate -- same
@@ -44,11 +51,10 @@ export async function POST(request: Request) {
     );
   }
 
-  // NOT passed through resolveDictionary: it writes config.json when the version pin
-  // is missing, and this ad-hoc config must never be saved. The dictionary is already
-  // pinned in config.json; buildPayload simply omits it if it ever is not.
   const config = { ...(await loadConfig()), voiceId: body.voiceId, voiceSettings: settings };
   const key = await apiKey();
+  // In-memory only: the dictionary's latest version, same as a real generation uses.
+  await resolveDictionary(config, key);
 
   try {
     const { audio, credits } = await synthesize(spoken, config, key);

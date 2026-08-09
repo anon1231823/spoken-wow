@@ -108,8 +108,12 @@ export function buildPayload(spokenText, config) {
 // Pronunciation dictionary
 //------------------------------------------------------------------------------
 
-// Turns a bare dictionary id into an id + version pair and caches it, so the id
-// is all that ever has to be typed while requests stay pinned to one version.
+// Resolves the dictionary id to its CURRENT latest version, in memory, for this
+// run. Deliberately not written back to config.json: the lexicon lives in
+// ../wow-voiceover and this project always wants its newest version, so a pin
+// would only go stale. Within one run the version stays fixed -- resolved once,
+// used for every request -- and each take records the version it was made with,
+// which is what keeps drift knowable per line after the fact.
 export async function resolveDictionary(config, key) {
   if (!config.dictionaryId || config.dictionaryVersionId) return;
 
@@ -134,11 +138,9 @@ export async function resolveDictionary(config, key) {
   }
 
   config.dictionaryVersionId = version;
-  await saveConfig(config);
-  console.log(`pinned pronunciation dictionary ${config.dictionaryId} at version ${version}`);
 }
 
-// The pinned dictionary as ElevenLabs stores it: a PLS document, one lexeme per
+// The resolved dictionary as ElevenLabs stores it: a PLS document, one lexeme per
 // rule. This is the only way to see what the shared lexicon actually contains --
 // it is edited in ../wow-voiceover, and nothing about it lives in this repo
 // beyond the id.

@@ -160,15 +160,15 @@ function normaliseName(name) {
 }
 
 // Whether a line's audio was made with a pronunciation dictionary other than the
-// one config.json now pins.
+// latest version, resolved for this run.
 //
 // This is the only way a lexicon change is visible here. The lexicon lives in
 // ../wow-voiceover and reaches this project as dictionary rules, which the model
 // applies to text this project never rewrites -- so the spoken text, and the hash
 // --stale compares, do not move when a pronunciation is fixed.
 //
-// False when no version is pinned, because "unknown" and "changed" are not the
-// same thing and only the second is worth spending credits on.
+// False when no version has been resolved, because "unknown" and "changed" are not
+// the same thing and only the second is worth spending credits on.
 export function driftsFromDictionary(record, config) {
   if (!record || !config?.dictionaryId || !config?.dictionaryVersionId) return false;
   return (
