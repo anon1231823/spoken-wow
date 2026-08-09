@@ -278,20 +278,25 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
 
   // Quote first, always. The dialog is shown against a snapshot of the ids, not
   // against the live filter: the dialog can sit open while the search box keeps being
-  // typed into, and spending on a set nobody was shown is the failure to avoid.
+  // typed into, and spending on a set nobody was shown is the failure to avoid. The
+  // snapshot covers every page the filter matches, fetched id-by-id at click time.
   const askToRegenerateAll = useCallback(() => {
-    const lineIds = (result?.lines ?? []).map((line) => line.id);
-    if (lineIds.length === 0) return;
+    if (!result || result.total === 0) return;
 
-    fetch("/api/regenerate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "quote", lineIds }),
-    })
+    fetch(`/api/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
       .then((response) => response.json())
-      .then((quote: Quote) =>
-        setPendingBatch({ label: `${quote.lines} lines on this page`, quote, lineIds }),
-      )
+      .then(({ ids }: { ids: string[] }) => {
+        if (ids.length === 0) return;
+        return fetch("/api/regenerate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "quote", lineIds: ids }),
+        })
+          .then((response) => response.json())
+          .then((quote: Quote) =>
+            setPendingBatch({ label: `all ${quote.lines} filtered lines`, quote, lineIds: ids }),
+          );
+      })
       .catch(() => {});
   }, [result]);
 
@@ -509,7 +514,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
             onClick={askToRegenerateAll}
             className="ml-auto rounded border border-border px-2 py-0.5 hover:bg-panel-hover hover:text-fg"
           >
-            Regenerate this page…
+            Regenerate {result.total.toLocaleString()} filtered…
           </button>
         )}
       </div>
