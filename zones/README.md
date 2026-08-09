@@ -71,7 +71,9 @@ addon/ZoneLoreAudio/     the sound pack, at master (128kbps) quality
   README.md              player-facing docs; the CurseForge description
 tools/
   lib/wiki.mjs           shared fetching, era filter, Lua emission
+  lib/sections.mjs       which article headings count as lore
   lib/loredata.mjs       reads the generated Lua data back into JS
+  lib/env.mjs            reads .env, so DATABASE_URL works as documented
   voice/generate.mjs     select and synthesize voicelines (ElevenLabs)
   voice/build-lookup.mjs manifest -> ZoneLoreAudio/Data/Sounds.lua
   voice/validate-audio.mjs  manifest, files and lookup table agree
@@ -81,6 +83,7 @@ tools/
   voice/manifest.json    what has been generated, when, from what text
   scrape.mjs             warcraft.wiki.gg -> Data/Zones.lua
   scrape-subzones.mjs    warcraft.wiki.gg -> Data/Subzones.lua
+  rewrite-lore.mjs       full articles -> lore prose, via Claude (costs credits)
   validate.mjs           checks the generated Lua without a Lua interpreter
   lua-syntax-check.py    block-balance check for the addon's Lua
   seed-from-dump.mjs     compares the seed against a live client map dump
@@ -89,6 +92,7 @@ tools/
   seed/overrides.json    hand-written zone lore that beats the scraped text
   lore/import.mjs        seed the lore_line table from the committed Lua
   lore/export.mjs        write the addon's Lua data files from lore_line
+  lore/rewrite.mjs       the rewrite prompt, its response cache and its checks
   lore/store.mjs         the seam between the lore table and the Lua files
 scripts/deploy.sh        install both addons into the Classic Era AddOns folder
 scripts/package.sh       build the ZoneLore zip
@@ -188,6 +192,91 @@ reference is cheaper than wrong-era geography; use `overrides.json` if one shows
 
 `tools/validate.mjs` re-checks the generated file for leaks, so a filter
 regression fails loudly rather than shipping.
+
+## Rewriting the lore: selection was never going to be enough
+
+The scrapers can only *choose* text, and choosing was not the problem. A wiki
+article is written for someone reading a website: it mentions quests, professions
+and patch numbers, it narrates every expansion at once, and its facts arrive in
+encyclopedic order rather than as a story. Reading only the lead avoided most of
+that, at the cost of the `== History ==` section — which is where the pre-WoW lore
+lives, and which 169 of 224 cached articles keep below the fold.
+
+So there is a second pipeline. `tools/rewrite-lore.mjs` reads the **whole**
+article, keeps the lore-bearing sections, and has Claude write them back as one to
+three paragraphs of in-world prose.
+
+```sh
+make lore-rewrite ZONE=1420                         # dry run, both variants, report only
+node tools/rewrite-lore.mjs --zone 1420 --variant a # write one zone to the corpus
+node tools/rewrite-lore.mjs --all --variant a       # the whole corpus
+```
+
+**This spends Claude credits, which is why it is not part of `make scrape`.** A
+scrape is a thing you run without thinking about it; a paid rewrite of 1353 lines
+is not. `--dry-run` writes only a markdown report to `dist/`, and every response is
+cached under `tools/cache/rewrite/` keyed by model, prompt version and source text —
+so re-running an unchanged zone is free, and iterating on the prompt only pays for
+what actually changed.
+
+### Section selection is deterministic; only the prose is not
+
+`tools/lib/sections.mjs` decides what the model may see, by heading: History,
+Background, Description, Overview, Geography. Everything else — NPC and mob lists,
+quests, loot, travel connections, Notes, Trivia, Speculation, "Patch changes" —
+never reaches the prompt. `In the RPG` is dropped twice over, by heading and by the
+banner sentence the wiki opens it with, because it is explicitly non-canon.
+
+Banner templates are stripped too. `explaintext` renders them as ordinary
+sentences in the middle of good prose — "This section concerns content related to
+Warcraft III", "From the World Dungeons page on the official World of Warcraft
+Community Site:" — so they survive both the heading filter and the era filter, and
+read to a model as facts about the world rather than furniture from a website.
+
+The era filter then runs over the assembled text, before the model sees it. A
+Cataclysm sentence that never reaches the prompt cannot survive the rewrite.
+
+### The length budget follows the article, not a global cap
+
+One limit for every place was the wrong instrument. Told only "under 1000
+characters", the model wrote to the limit whatever it was given: a 342-character
+stub about Nightmare Vale came back as 790 characters, and the difference was
+atmosphere it had invented, because three facts do not fill three paragraphs.
+
+Each line now gets a budget computed from its own source — roughly the length of
+the material below the cap, a hard 1000 above it, floor 250. Thin articles stay
+thin; the 19,000-character Tirisfal article gets the ceiling and the prompt's
+choosing rule decides what survives. Across Tirisfal this was the difference
+between 1.38x and 1.07x the previous corpus size, which is five hours of narration
+and 240 MB of sound pack.
+
+### What the checks catch, and what they deliberately allow
+
+Nothing throws. A bad rewrite is a line in the report, not a reason to abandon the
+other forty-five, and a flagged line is simply not written to the corpus.
+
+- **over budget** — retried once or twice with the real character count, which the
+  model cannot know in advance but cuts accurately when told
+- **post-vanilla lore** — the same `isPostVanilla` the scrapers use
+- **invented names** — capitalised words in the output that appear in no source
+
+That last check distinguishes two things it would be easy to conflate. A name
+missing from *this* article but present in a neighbour's is regional vocabulary:
+calling the undead of Tirisfal "the Forsaken" is a fair inference from an article
+that describes them without the word, and it is reported as inference rather than
+flagged. A name that appears in **no** article in the run is the failure worth
+stopping for — an early run set Venomweb Vale "deep within the Alterac Mountains",
+which is nowhere near it, because that variant's source never said where the vale
+was.
+
+### Rewritten lines are a distinct origin, so a scrape cannot undo them
+
+`lore_line.origin` gained `scraped-rewritten` in migration 0006. `recordScrape`
+promotes only over `scraped`, so re-running `node tools/scrape.mjs` leaves
+rewritten text alone; `recordRewrite` promotes over `scraped` and over an earlier
+rewrite, and is held back behind a hand edit exactly as a scrape is. The text is
+still derived from the wiki article and keeps its `source` and its CC BY-SA
+attribution.
 
 ## Subzones
 

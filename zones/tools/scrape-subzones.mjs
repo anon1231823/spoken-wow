@@ -14,10 +14,11 @@
 // than uiMapIDs, and MapUtil.FindBestAreaNameAtMouse hands back a name string.
 // See normaliseKey in lib/wiki.mjs for the canonical form.
 //
-// Places added after vanilla (Cataclysm quest hubs and the like) are kept rather
-// than filtered out: the Era client never reports an area that does not exist in
-// 1.15.9, so those rows are inert and only cost file size. What matters is that
-// the text of areas that DO exist carries no post-vanilla lore.
+// The wiki's subzone categories mix every era of the game, so candidates are
+// checked against tools/seed/era-areas.json -- the Era client's own AreaTable --
+// and anything the client cannot report is dropped before it costs a wiki
+// fetch, a rewrite call or a voice line. (These rows used to be kept as "inert",
+// which was true for the addon and false for the bills.)
 
 import { join } from "node:path";
 import {
@@ -33,6 +34,7 @@ import {
   stripClassicSuffix,
   withoutComments,
 } from "./lib/wiki.mjs";
+import { loadEraAreas } from "./lib/era.mjs";
 import { persistScrape } from "./lore/store.mjs";
 import { close } from "./voice/db.mjs";
 
@@ -103,6 +105,9 @@ async function main() {
   const classicIndex = await fetchClassicTitleIndex({ refresh: flags.refresh });
   console.log(`${classicIndex.size} Classic-specific page titles available`);
 
+  const era = await loadEraAreas();
+  console.log(`${era.keys.size} area names in the Era client (build ${era.build})`);
+
   const byZone = new Map();
   const stats = new Map();
   const problems = [];
@@ -129,11 +134,29 @@ async function main() {
     const excluded = new Set(meta.exclude || []);
     let skippedFiltered = 0;
     let skippedZoneDup = 0;
+    let skippedNotInEra = 0;
 
     const entries = new Map();
 
     for (const title of candidates) {
       if (excluded.has(title)) continue;
+
+      // Key on the bare wiki title. Aliases add extra keys for client names that
+      // do not normalise onto it. Any key the Era client cannot report is
+      // dropped, and a place with no reportable key at all is skipped before
+      // its article is even fetched.
+      const keys = new Set([normaliseKey(title)]);
+      for (const [clientName, wikiTitle] of Object.entries(aliases)) {
+        if (wikiTitle === title) keys.add(normaliseKey(clientName));
+      }
+      for (const key of keys) {
+        if (!era.keys.has(key)) keys.delete(key);
+      }
+      if (keys.size === 0) {
+        skippedNotInEra++;
+        if (flags.verbose) console.log(`    not in the Era client: ${title}`);
+        continue;
+      }
 
       // Prefer a purpose-written "(Classic)" article where one exists. The key
       // and display name always come from the bare title, so the suffix never
@@ -173,13 +196,6 @@ async function main() {
         continue;
       }
 
-      // Key on the bare wiki title. Aliases add extra keys for client names that
-      // do not normalise onto it.
-      const keys = new Set([normaliseKey(title)]);
-      for (const [clientName, wikiTitle] of Object.entries(aliases)) {
-        if (wikiTitle === title) keys.add(normaliseKey(clientName));
-      }
-
       for (const key of keys) {
         entries.set(key, {
           name: stripClassicSuffix(title),
@@ -196,6 +212,7 @@ async function main() {
     console.log(
       `  ${members.length} in category, ${candidates.length} look like places, ` +
         `${entries.size} kept` +
+        (skippedNotInEra ? `, ${skippedNotInEra} not in the Era client` : "") +
         (skippedFiltered ? `, ${skippedFiltered} empty after era filter` : "") +
         (skippedZoneDup ? `, ${skippedZoneDup} redirect to the zone` : "")
     );

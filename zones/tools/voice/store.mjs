@@ -235,6 +235,17 @@ export async function writeAudio(file, buffer) {
   return path;
 }
 
+// Retires a live clip without writing a replacement: the mp3 moves to
+// audio-history/{file}/v{n}.mp3 and the caller flips the take off in the
+// database. The undo is restoreTake, exactly as for a re-roll. Returns whether
+// there was a file to move.
+export async function archiveAudio(file) {
+  const path = join(SOUNDS_DIR, `${file}.mp3`);
+  if (!existsSync(path)) return false;
+  await archiveExisting(file, path);
+  return true;
+}
+
 // Moves the live clip to audio-history/{file}/v{n}.mp3. A rename, not a copy: the bytes
 // are about to be replaced either way, and copying 300MB during a bulk re-cut is pure
 // IO for no additional safety.

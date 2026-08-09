@@ -4,10 +4,10 @@
 // nothing -- can be exercised without an API key.
 
 import { readFile, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 import { ROOT } from "../lib/loredata.mjs";
+import { requireEnvKey } from "../lib/env.mjs";
 
 const VOICES_URL = "https://api.elevenlabs.io/v1/voices";
 const TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech";
@@ -18,28 +18,8 @@ export const CONFIG_PATH = join(ROOT, "tools/voice/config.json");
 // Credentials
 //------------------------------------------------------------------------------
 
-// A five-line .env reader rather than a dependency, matching this repo's other
-// tools, which have none. Ambient environment wins nothing: a key exported for
-// another project is exactly the mix-up ../wow-voiceover/tts_cli/env_vars.py
-// documents having been bitten by.
 export async function apiKey() {
-  const envPath = join(ROOT, ".env");
-  if (existsSync(envPath)) {
-    for (const line of (await readFile(envPath, "utf8")).split("\n")) {
-      const match = line.match(/^\s*(?:export\s+)?ELEVENLABS_API_KEY\s*=\s*(.*)$/);
-      if (match) {
-        const value = match[1].trim().replace(/^["']|["']$/g, "");
-        if (value) return value;
-      }
-    }
-  }
-  if (process.env.ELEVENLABS_API_KEY) return process.env.ELEVENLABS_API_KEY;
-
-  throw new Error(
-    "no ELEVENLABS_API_KEY.\n" +
-      `  Put it in ${envPath} as:  ELEVENLABS_API_KEY=sk_...\n` +
-      "  (.env is gitignored.)",
-  );
+  return requireEnvKey("ELEVENLABS_API_KEY", "sk_...");
 }
 
 //------------------------------------------------------------------------------

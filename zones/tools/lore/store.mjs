@@ -139,7 +139,8 @@ export async function recordScrape(entries) {
       );
       const version = Number(maxRows[0].version) + 1;
 
-      // An edited current version stays live; the scrape lands underneath it.
+      // An edited *or rewritten* current version stays live; the scrape lands
+      // underneath it. See recordRewrite for why 'scraped-rewritten' is excluded.
       const live = !current || current.origin === "scraped";
       if (!live) stats.heldBack++;
 
@@ -171,6 +172,83 @@ export async function recordScrape(entries) {
 
       stats.inserted++;
       if (live && current) stats.promoted++;
+    }
+  });
+
+  return stats;
+}
+
+/**
+ * Records what a rewrite produced.
+ *
+ * Same bargain as recordScrape, one step further along: a rewrite may take over a
+ * line that was scraped or previously rewritten, and is held back behind a hand
+ * edit. The reverse does not hold -- recordScrape promotes only over 'scraped', so
+ * a later `node tools/scrape.mjs` cannot quietly undo a rewrite by re-reading the
+ * wiki. That asymmetry is the whole reason 'scraped-rewritten' is a distinct origin
+ * rather than more rows marked 'scraped'.
+ */
+export async function recordRewrite(entries) {
+  const stats = { inserted: 0, promoted: 0, unchanged: 0, heldBack: 0 };
+
+  await transaction(async (client) => {
+    for (const entry of entries) {
+      const lineId = lineIdFor(entry);
+      const short = entry.short ?? makeShort(entry.full);
+
+      const { rows: currentRows } = await client.query(
+        `select "version", "origin", "full", "shortIsManual"
+           from "lore_line" where "lineId" = $1 and "isCurrent"`,
+        [lineId],
+      );
+      const current = currentRows[0];
+
+      if (!current) {
+        throw new Error(`refusing to rewrite ${lineId}: no such line -- scrape it first`);
+      }
+      if (current.full === entry.full) {
+        stats.unchanged++;
+        continue;
+      }
+
+      const { rows: maxRows } = await client.query(
+        `select coalesce(max("version"), 0) as "version" from "lore_line" where "lineId" = $1`,
+        [lineId],
+      );
+      const version = Number(maxRows[0].version) + 1;
+
+      const live = current.origin !== "edited";
+      if (!live) stats.heldBack++;
+
+      if (live) {
+        await client.query(
+          `update "lore_line" set "isCurrent" = false where "lineId" = $1 and "isCurrent"`,
+          [lineId],
+        );
+      }
+
+      await client.query(
+        `insert into "lore_line"
+           ("lineId", "version", "isCurrent", "origin", "mapID", "kind", "key",
+            "name", "full", "short", "shortIsManual", "source", "note")
+         values ($1, $2, $3, 'scraped-rewritten', $4, $5, $6, $7, $8, $9, false, $10, $11)`,
+        [
+          lineId,
+          version,
+          live,
+          entry.mapID,
+          entry.kind,
+          entry.key,
+          entry.name,
+          entry.full,
+          short,
+          entry.source ?? null,
+          entry.note ?? null,
+        ],
+      );
+
+      stats.inserted++;
+      if (live) stats.promoted++;
     }
   });
 

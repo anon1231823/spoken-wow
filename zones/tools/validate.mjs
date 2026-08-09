@@ -15,6 +15,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ROOT, normaliseKey } from "./lib/wiki.mjs";
+import { loadEraAreas } from "./lib/era.mjs";
 import { slugFor } from "./voice/naming.mjs";
 
 const ZONES = join(ROOT, "addon/ZoneLore/Data/Zones.lua");
@@ -35,6 +36,28 @@ const FORBIDDEN = [
   /\bBroken Isles\b/,
   /\bIcecrown Citadel\b/,
   /\bphas(?:ed|ing)\b/i,
+  // Battle for Azeroth and Shadowlands respectively, named as events rather than
+  // expansions, so nothing above caught them. Eleven shipped lines described
+  // Tirisfal and Lordaeron as they stand after a war that has not happened in Era.
+  /\bBattle (?:for|of) Lordaeron\b/,
+  /\bthe Jailer\b/,
+  // From the 2026-08 full-corpus review (dist/review-findings.md): zero
+  // legitimate vanilla uses, found leaked into shipped text. Kept in step with
+  // the same block in lib/wiki.mjs POST_VANILLA.
+  /\bWar of the Thorns\b/,
+  /\bBilgewater\b/,
+  /\bsaronite\b/i,
+  /\bVanessa VanCleef\b/,
+  /\bDelaryn Summermoon\b/,
+  /\bAlennah Starsong\b/,
+  /\bLorash Sunbeam\b/,
+  /\bSira Moonwarden\b/,
+  /\bPrimalists?\b/,
+  /\bTwilight Highlands\b/,
+  /\bwarfronts?\b/i,
+  /\bHorde Council\b/,
+  /\bXenedar\b/,
+  /\bFirelands\b/,
 ];
 
 const problems = [];
@@ -165,6 +188,17 @@ for (const key of subKeys) {
   const canonical = normaliseKey(key);
   if (key !== canonical) {
     note(`Subzones.lua: key "${key}" is not canonical (expected "${canonical}") -- unreachable`);
+  }
+}
+
+// Every key must be an area name the Era client can report (its own AreaTable,
+// dumped into tools/seed/era-areas.json). A key outside that list is either a
+// post-vanilla place the wiki category slipped in, or a name the client would
+// never hand to the lookup -- unreachable either way.
+const era = await loadEraAreas();
+for (const key of subKeys) {
+  if (!era.keys.has(key)) {
+    note(`Subzones.lua: "${key}" is not an area in the Era client (build ${era.build})`);
   }
 }
 
