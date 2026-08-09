@@ -12,6 +12,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { readdir } from "node:fs/promises";
 
+import { loadEnvFile } from "../lib/env.mjs";
 import { ROOT, readLines } from "../lib/loredata.mjs";
 import { apiKey, downloadDictionary, loadConfig, resolveDictionary } from "./elevenlabs.mjs";
 import { parseDictionary, uncoveredSpellings } from "./lexicon.mjs";
@@ -162,7 +163,9 @@ async function main() {
   process.exit(1);
 }
 
-main().catch((err) => {
-  console.error(`error: ${err.message}`);
-  process.exit(1);
-});
+loadEnvFile()
+  .then(main)
+  .catch((err) => {
+    console.error(`error: ${err.message}`);
+    process.exit(1);
+  });

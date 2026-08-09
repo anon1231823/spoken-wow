@@ -17,6 +17,7 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
+import { loadEnvFile } from "../lib/env.mjs";
 import * as db from "./db.mjs";
 import { insertTake, MANIFEST_PATH } from "./store.mjs";
 
@@ -78,7 +79,8 @@ async function readManifestFile() {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  main()
+  loadEnvFile()
+    .then(main)
     .catch((err) => {
       console.error(`error: ${err.message}`);
       process.exitCode = 1;

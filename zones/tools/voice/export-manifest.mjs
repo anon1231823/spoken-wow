@@ -20,6 +20,7 @@
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
+import { loadEnvFile } from "../lib/env.mjs";
 import * as db from "./db.mjs";
 import { loadManifest, MANIFEST_PATH } from "./store.mjs";
 
@@ -93,7 +94,11 @@ async function main() {
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  main()
+  // .env is bridged here and not at module top: the explorer imports this module, and
+  // its paths must come from the server environment, not from a file webpack resolves
+  // against the build machine.
+  loadEnvFile()
+    .then(main)
     .catch((err) => {
       console.error(`error: ${err.message}`);
       process.exitCode = 1;

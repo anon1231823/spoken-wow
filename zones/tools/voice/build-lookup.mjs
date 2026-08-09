@@ -11,6 +11,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loadEnvFile } from "../lib/env.mjs";
 import { ROOT } from "../lib/loredata.mjs";
 import { close as closeStore, loadManifest, SOUNDS_DIR } from "./store.mjs";
 
@@ -148,7 +149,9 @@ async function main() {
 // Only when run as a script: buildLookup is imported by the web app, and a module
 // that runs a CLI on import would run it there too.
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  main()
+  // .env bridged in the CLI guard only; the explorer imports this module.
+  loadEnvFile()
+    .then(main)
     .catch((err) => {
       console.error(`error: ${err.message}`);
       process.exitCode = 1;

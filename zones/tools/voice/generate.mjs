@@ -14,6 +14,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { loadEnvFile } from "../lib/env.mjs";
 import { readLines } from "../lib/loredata.mjs";
 import { assignFiles, lineId, textHash } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
@@ -522,7 +523,9 @@ async function main() {
 // validate.mjs and by tests, and a module that runs a CLI on import would run it
 // for them too.
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  main()
+  // .env bridged in the CLI guard only; the explorer imports this module.
+  loadEnvFile()
+    .then(main)
     .catch((err) => {
       console.error(`error: ${err.message}`);
       process.exitCode = 1;
