@@ -62,7 +62,7 @@ module.exports = {
       // rather than in queue tables, because this is one person on one laptop's worth of
       // work. With two workers a batch started on one would be invisible to the other, and
       // the panel's progress poll would answer "no such batch" roughly half the time.
-      // invalidateCatalogue() after a lexicon save is per-process for the same reason.
+      // invalidateCatalogue() after a lore edit is per-process for the same reason.
       //
       // The cost is a brief blip on each deploy instead of a zero-downtime rolling reload.
       // The corpus is a megabyte of Lua, not ../wow-voiceover's 15 MB of JSON, so nothing
@@ -114,9 +114,9 @@ module.exports = {
         // the droplet generated -- `make pull-manifest` fetches exactly this.
         ZONELORE_MANIFEST: `${SHARED}/manifest.json`,
 
-        // Shared because /lexicon writes it. Inside a release, every pronunciation rule
-        // added through the UI would vanish with the next deploy. activate.sh seeds this
-        // from the release on the first deploy only.
+        // Shared so a rule hand-edited on the droplet outlives a deploy; nothing in the
+        // app writes it any more. activate.sh seeds this from the release on the first
+        // deploy only.
         ZONELORE_PRONUNCIATION: `${SHARED}/pronunciation.json`,
 
         // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, and -- if you want the

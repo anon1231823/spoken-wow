@@ -19,7 +19,7 @@ the system Node for another service, bump that value to match and redeploy.
     Sounds/<mapID>/<slug>.mp3   ~700 MB, moved by `make push`, never touched by a deploy
     audio-history/<file>/v<n>.mp3  superseded takes. Loss is permanent - see below.
     manifest.json               exported from the database; `make pull-manifest`
-    pronunciation.json          written by /lexicon; `make pull-lexicon`
+    pronunciation.json          spoken-text substitutions; `make pull-lexicon`
     app.env                     DATABASE_URL, BETTER_AUTH_*, ELEVENLABS_API_KEY. Mode 600, never in git.
     ecosystem.config.js         pm2 config, outlives every release
   releases/
@@ -56,7 +56,7 @@ back to exactly the path it always had, and nothing about working locally change
 | `ZONELORE_SOUNDS` | `/srv/zonelore/shared/Sounds` | Shared. ~700 MB that a deploy must not copy and `prune.sh` must not delete. |
 | `ZONELORE_AUDIO_HISTORY` | `/srv/zonelore/shared/audio-history` | Shared. **Its loss is permanent**: version 1 of each file is the take the corpus was originally cut with, and restoring it is the undo for a re-roll that came out worse. |
 | `ZONELORE_MANIFEST` | `/srv/zonelore/shared/manifest.json` | Shared. With `DATABASE_URL` set the database is authoritative and this is a write-only export — the route by which the addon build learns what the droplet generated. |
-| `ZONELORE_PRONUNCIATION` | `/srv/zonelore/shared/pronunciation.json` | Shared, because `/lexicon` writes it. Inside a release, every rule added through the UI would vanish with the next deploy. |
+| `ZONELORE_PRONUNCIATION` | `/srv/zonelore/shared/pronunciation.json` | Shared so the live copy outlives a deploy. Nothing in the app writes it any more — the pronunciation editor moved to wow-voiceover — but rules hand-edited on the droplet must not vanish with a release. |
 
 The split is the same question each time: **does a deploy or a rollback destroy this?** The
 corpus should move with the code. The audio, the archive and the two files the app writes
@@ -216,8 +216,8 @@ nothing — secrets are per-repository.
 2. Build, then assemble `standalone` + `.next/static` + the corpus + `tools/voice/*.json` +
    `migrations/` into a release directory.
 3. **Boot that exact artifact in CI**, with the same five path overrides pm2 will set, and
-   assert the catalogue is over a thousand lines, the zone filter matches, the lexicon
-   route answers and the stylesheet resolves. This is the step that catches a missing copy
+   assert the catalogue shipped, the zone filter matches, an admin can quote a
+   regeneration and the stylesheet resolves. This is the step that catches a missing copy
    in step 2 — the failure mode is a release that serves an empty explorer rather than one
    that crashes.
 4. `rsync` it to `releases/<utc-stamp>-<sha>/`.
@@ -243,7 +243,7 @@ builds the addon, so a release goes:
 ```bash
 make pull            # the audio the droplet regenerated (--delete: read the dry run)
 make db-pull         # the takes and flags behind it
-make pull-lexicon    # any pronunciation rules added through /lexicon
+make pull-lexicon    # any pronunciation rules hand-edited on the droplet
 make lookup          # rebuild Sounds.lua from the manifest
 make validate-audio  # manifest, files on disk and lookup table agree
 git diff             # manifest.json and pronunciation.json are the reviewable part

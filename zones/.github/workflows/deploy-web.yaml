@@ -147,9 +147,10 @@ jobs:
 
           # config.json is the voice, model and output format; without it a regeneration
           # cannot be attempted at all. pronunciation.json is a seed - activate.sh copies
-          # it into shared/ on the first deploy only, because /lexicon writes it and a
-          # deploy must not overwrite rules added through the UI. manifest.json rides along
-          # as the record of what has been paid for, for anyone reading a release directory.
+          # it into shared/ on the first deploy only, so the live copy (hand-edited if
+          # ever; the in-app editor is gone) is not overwritten by a deploy. manifest.json
+          # rides along as the record of what has been paid for, for anyone reading a
+          # release directory.
           mkdir -p "$R"/tools/voice
           cp tools/voice/config.json tools/voice/pronunciation.json tools/voice/manifest.json \
              "$R"/tools/voice/

@@ -235,7 +235,7 @@ pull-manifest: ## Fetch the droplet's exported manifest.json
 	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/manifest.json tools/voice/manifest.json
 	@echo "==> fetched. Review with: git diff tools/voice/manifest.json"
 
-pull-lexicon: ## Fetch pronunciation rules added through /lexicon
+pull-lexicon: ## Fetch pronunciation rules hand-edited on the droplet
 	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/pronunciation.json tools/voice/pronunciation.json
 	@echo "==> fetched. Review with: git diff tools/voice/pronunciation.json"
 
