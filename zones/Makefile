@@ -40,16 +40,16 @@ validate: ## Sanity-check the generated Lua data files
 lint: ## Block-balance check on the addon's Lua
 	@python3 tools/lua-syntax-check.py
 
-deploy: ## Symlink the addon into the Classic Era client
+deploy: ## Symlink the addon into a client (CLIENT=era|anniversary)
 	@./scripts/deploy.sh
 
 deploy-copy: ## Copy the addon into the client instead of symlinking
 	@./scripts/deploy.sh --copy
 
-status: ## Show what is currently installed in the client
+status: ## Show what is installed in every client
 	@./scripts/deploy.sh --status
 
-remove: ## Uninstall the addon from the client
+remove: ## Uninstall the addon from every client
 	@./scripts/deploy.sh --remove
 
 clean: ## Remove build output

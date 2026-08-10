@@ -24,10 +24,16 @@ DIST="$REPO/dist"
 # game's subdomain even with a valid token.
 API="https://wow.curseforge.com/api"
 
-# The client every zip targets. Matched by name against /api/game/versions rather
-# than hardcoding the numeric ID, because that ID is not documented anywhere and
-# would be a mystery constant the first time it needs changing.
-GAME_VERSION_NAME="${GAME_VERSION_NAME:-1.15.9}"
+# The clients a zip can target. Matched by name against /api/game/versions rather
+# than hardcoding the numeric IDs, because those IDs are not documented anywhere
+# and would be mystery constants the first time they need changing.
+#
+# ANNIVERSARY is the 2.5.6 client the Anniversary realms run. Its name on
+# CurseForge is whatever /api/game/versions calls it -- if the default below is
+# not it, the exactly-one-match check further down fails loudly before anything is
+# uploaded, which is the failure mode to want.
+GAME_VERSION_ERA="${GAME_VERSION_ERA:-1.15.9}"
+GAME_VERSION_ANNIVERSARY="${GAME_VERSION_ANNIVERSARY:-2.5.6}"
 
 # CurseForge's own channel, which is not the same thing as the beta disclaimer in
 # the descriptions. Marking these "beta" would keep most addon managers from
@@ -50,6 +56,15 @@ target_zip() { case "$1" in
   zonelore) echo "ZoneLore";;
   audio)    echo "ZoneLoreAudio";;
   audio64)  echo "ZoneLoreAudio64";;
+esac; }
+# Which clients each file is offered to. Every zip built from 0.3.1 onwards carries
+# a .toc for both clients, so all three are filed against both. Files uploaded
+# before that are Era-only and stay filed as they were -- a file offered to a
+# client it cannot load on is worse than one that is simply absent there.
+target_game_versions() { case "$1" in
+  zonelore) echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
+  audio)    echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
+  audio64)  echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
 esac; }
 
 dry_run=""
@@ -84,29 +99,34 @@ api_get() {
   curl -fsSL -H "X-Api-Token: $CURSEFORGE_TOKEN" "$API/$1"
 }
 
-#-- the game version ----------------------------------------------------------
-# Resolved once and reused. An unknown name here is the failure that otherwise
-# produces a file uploaded against the wrong client, which players discover as
-# "the addon does not appear in my AddOns list".
-echo "resolving game version \"$GAME_VERSION_NAME\"..."
+#-- the game versions ---------------------------------------------------------
+# The list is fetched once; each name is resolved against it separately, and a
+# name matching anything other than exactly one version is fatal. An unknown name
+# here is the failure that otherwise produces a file uploaded against the wrong
+# client, which players discover as "the addon does not appear in my AddOns list".
 versions_json="$(api_get "game/versions")" || {
   echo "error: could not list game versions -- is the token valid?" >&2
   exit 1
 }
 
-game_version_id="$(node -e '
-  const wanted = process.argv[1];
-  const versions = JSON.parse(process.argv[2]);
-  const hits = versions.filter((v) => v.name === wanted);
-  if (hits.length !== 1) {
-    console.error(`expected exactly one game version named ${wanted}, found ${hits.length}`);
-    if (hits.length > 1) console.error(JSON.stringify(hits));
-    process.exit(1);
-  }
-  process.stdout.write(String(hits[0].id));
-' "$GAME_VERSION_NAME" "$versions_json")"
+resolve_game_version() {
+  node -e '
+    const wanted = process.argv[1];
+    const versions = JSON.parse(process.argv[2]);
+    const hits = versions.filter((v) => v.name === wanted);
+    if (hits.length !== 1) {
+      console.error(`expected exactly one game version named ${wanted}, found ${hits.length}`);
+      if (hits.length > 1) console.error(JSON.stringify(hits));
+      process.exit(1);
+    }
+    process.stdout.write(String(hits[0].id));
+  ' "$1" "$versions_json"
+}
 
-echo "  $GAME_VERSION_NAME -> id $game_version_id"
+echo "resolving game versions..."
+for name in $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY; do
+  echo "  $name -> id $(resolve_game_version "$name")"
+done
 
 #-- the changelog -------------------------------------------------------------
 # The section of CHANGELOG.md for the version being uploaded, so the release
@@ -153,22 +173,32 @@ for target in "${targets[@]}"; do
   changelog="$(changelog_for "$version")"
   size="$(du -h "$zip_path" | cut -f1)"
 
+  game_version_names="$(target_game_versions "$target")"
+  game_version_ids=""
+  for name in $game_version_names; do
+    game_version_ids="$game_version_ids $(resolve_game_version "$name")"
+  done
+
+  # One file can carry versions from more than one client. If CurseForge ever
+  # rejects the pair (Era and Anniversary are different game-version *types*),
+  # the fix is to upload the same zip once per id rather than to drop one of them.
+  #
   # Built with node rather than a heredoc: the changelog is markdown containing
   # quotes, backticks and newlines, and hand-escaping it into JSON is how a
   # release ends up with a mangled changelog nobody notices for a month.
   metadata="$(node -e '
-    const [changelog, releaseType, gameVersionId, displayName] = process.argv.slice(1);
+    const [changelog, releaseType, gameVersionIds, displayName] = process.argv.slice(1);
     process.stdout.write(JSON.stringify({
       changelog,
       changelogType: "markdown",
       displayName,
-      gameVersions: [Number(gameVersionId)],
+      gameVersions: gameVersionIds.trim().split(/\s+/).map(Number),
       releaseType,
     }));
-  ' "$changelog" "$RELEASE_TYPE" "$game_version_id" "$zip_name $version")"
+  ' "$changelog" "$RELEASE_TYPE" "$game_version_ids" "$zip_name $version")"
 
   echo "  file:     $zip_path ($size)"
-  echo "  version:  $version   release type: $RELEASE_TYPE   game version: $GAME_VERSION_NAME"
+  echo "  version:  $version   release type: $RELEASE_TYPE   game versions: $game_version_names"
   echo "  changelog: $(echo "$changelog" | head -1) ..."
 
   if [[ -n "$dry_run" ]]; then

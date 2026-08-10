@@ -3,8 +3,10 @@
 A World of Warcraft **Classic Era** addon that shows zone lore on the world map,
 with lore text built from warcraft.wiki.gg at development time.
 
-Target client: **Classic Era 1.15.9** (`## Interface: 11509`). Not built for
-retail or the Anniversary/TBC client.
+Target clients: **Classic Era 1.15.9** and the **Anniversary client, 2.5.6**
+(`## Interface: 11509, 20506`). Not built for retail. The lore covers vanilla
+Azeroth on both; Outland and the blood elf and draenei starting zones have none
+yet, so the panel is simply empty there.
 
 This repository holds three things: the addon, the sound packs it plays, and the
 tooling that produces both.
@@ -1190,11 +1192,19 @@ the version comes from the `.toc` being uploaded, the zip is whatever
 `## <version>` section of `CHANGELOG.md` — sent as markdown, so the notes on the
 site cannot drift from the ones in the repository.
 
-The game version is resolved by **name** (`1.15.9`) against
-`/api/game/versions` at upload time rather than being hardcoded as the numeric ID
-the API actually wants. That ID is undocumented, and a wrong one produces a file
-filed against the wrong client, which players experience as the addon not
-appearing in their AddOns list at all. `GAME_VERSION_NAME=` overrides it.
+Game versions are resolved by **name** (`1.15.9` for Classic Era, `2.5.6` for the
+Anniversary client) against `/api/game/versions` at upload time rather than being
+hardcoded as the numeric IDs the API actually wants. Those IDs are undocumented,
+and a wrong one produces a file filed against the wrong client, which players
+experience as the addon not appearing in their AddOns list at all. A name that
+matches anything other than exactly one version is fatal before any upload
+happens. `GAME_VERSION_ERA=` and `GAME_VERSION_ANNIVERSARY=` override them.
+
+Which clients each file is offered to is `target_game_versions()` in the script.
+The addon and the VBR pack carry a `.toc` for both clients and are filed against
+both; `ZoneLoreAudio` is filed against Era alone, because the published zip
+predates the second `.toc` and a file offered to a client it cannot load on is
+worse than one that is simply absent there.
 
 Uploads go out as CurseForge release type `release`, which is not the same claim
 as the beta disclaimer in the descriptions: marking the files `beta` would stop

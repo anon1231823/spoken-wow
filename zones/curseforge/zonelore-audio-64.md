@@ -41,7 +41,7 @@ Neither addon declares a hard dependency on the other, so install order doesn't 
 
 ## Compatibility
 
-Built for **Classic Era 1.15.9**. The pack and ZoneLore work together as long as they share a major version.
+Built for **Classic Era 1.15.9** and the **Anniversary client (2.5.6)**. The pack and ZoneLore work together as long as they share a major version.
 
 ## Support
 

@@ -1,10 +1,16 @@
 -- ZoneLore -- Core: namespace, saved variables, events, zone resolution.
--- Client target: WoW Classic Era 1.15.9 (Interface 11509).
+-- Client targets: WoW Classic Era 1.15.9 (11509) and Anniversary 2.5.6 (20506).
+-- The two share a uiMapID space, so nothing here branches on the client.
 
 local ADDON_NAME, ZoneLore = ...
 
+-- C_AddOns is the modern home of GetAddOnMetadata; the global is the older one.
+-- Reading through whichever exists costs a line and removes a whole class of
+-- load-time failure on a client this addon has not been run on.
+local GetAddOnMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+
 ZoneLore.name = ADDON_NAME
-ZoneLore.version = C_AddOns.GetAddOnMetadata(ADDON_NAME, "Version") or "dev"
+ZoneLore.version = GetAddOnMeta(ADDON_NAME, "Version") or "dev"
 
 -- Populated by Data/Zones.lua and Data/Subzones.lua (both generated). Declared
 -- here so every other file can rely on the tables existing even when a data file

@@ -152,6 +152,10 @@ for tier in "${tiers[@]}"; do
   # The .toc is the only place the tier is recorded. Data/Sounds.lua reads these
   # back through GetAddOnMetadata, which is what lets one generated file serve
   # every tier.
+  #
+  # ## Interface is deliberately NOT rewritten here: the clients a pack loads on
+  # are a property of the audio, which is identical across tiers, not of the tier.
+  # It comes through from the source .toc so both tiers can only ever agree.
   sed -i.bak \
     -e "s|^## Title:.*|## Title: $title|" \
     -e "s|^## X-ZoneLore-Quality:.*|## X-ZoneLore-Quality: $tier|" \

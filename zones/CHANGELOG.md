@@ -3,6 +3,17 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 0.3.1 — 2026-08-10
+
+**Works on the Anniversary client**
+
+- ZoneLore and the ZoneLore Audio 64 pack now load on the Anniversary client
+  (2.5.6) as well as Classic Era. Nothing about the lore changed: an Anniversary
+  character gets the same text and the same narration across vanilla Azeroth,
+  which is where the levelling happens.
+- Outland and the blood elf and draenei starting zones have no lore yet. The
+  panel is empty on those maps rather than wrong.
+
 ## 0.3.0 — 2026-08-09
 
 **The vanilla rewrite, and a new narrator**
@@ -128,8 +139,9 @@ what is installed and switches between them.
 
 ### Compatibility
 
-- Client: **Classic Era 1.15.9** (`Interface 11509`). Not built for retail or the
-  Anniversary/TBC clients.
+- Clients: **Classic Era 1.15.9** and the **Anniversary client 2.5.6**
+  (`Interface 11509, 20506`). Not built for retail. As of 0.3.1; earlier releases
+  are Era-only.
 - ZoneLore and a sound pack work together as long as they share a **major
   version**. 0.2.x ZoneLore reads any 0.x pack; a 1.x pack needs 1.x ZoneLore.
   ZoneLore says so in chat rather than going silent if it is handed a pack it

@@ -53,7 +53,9 @@ As of 0.3.0 every line is recorded with a new narrator, and NPC and place names 
 
 ## Compatibility
 
-Built for **Classic Era 1.15.9**. Not built for retail or the Anniversary/TBC clients.
+Built for **Classic Era 1.15.9** and the **Anniversary client (2.5.6)**. Not built for retail.
+
+The lore covers vanilla Azeroth, which is where an Anniversary character spends most of their levelling. Outland and the blood elf and draenei starting zones have no lore yet — the panel is empty there rather than wrong.
 
 ZoneLore and a sound pack work together as long as they share a major version.
 
