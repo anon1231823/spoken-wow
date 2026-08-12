@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { requireRegenerate } from "@/lib/authz";
+import { requireApiKey, requireRegenerate } from "@/lib/authz";
 import {
-  apiKey,
   loadConfig,
   loadPronunciation,
   resolveDictionary,
@@ -26,8 +25,11 @@ const MAX_CHARS = 1000;
 type Body = { text?: unknown; voiceId?: unknown; voiceSettings?: unknown };
 
 export async function POST(request: Request) {
-  const { denied } = await requireRegenerate();
+  const { session, denied } = await requireRegenerate();
   if (denied) return denied;
+
+  const { key, denied: noKey } = await requireApiKey(session.user.id);
+  if (noKey) return noKey;
 
   const body = (await request.json().catch(() => ({}))) as Body;
 
@@ -52,7 +54,6 @@ export async function POST(request: Request) {
   }
 
   const config = { ...(await loadConfig()), voiceId: body.voiceId, voiceSettings: settings };
-  const key = await apiKey();
   // In-memory only: the dictionary's latest version, same as a real generation uses.
   await resolveDictionary(config, key);
 

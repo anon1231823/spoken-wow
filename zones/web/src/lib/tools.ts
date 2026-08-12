@@ -114,7 +114,16 @@ export type VoiceConfig = {
 
 export const loadConfig = elevenModule.loadConfig as () => Promise<VoiceConfig>;
 export const saveConfig = elevenModule.saveConfig as (config: VoiceConfig) => Promise<void>;
-export const apiKey = elevenModule.apiKey as () => Promise<string>;
+
+// elevenlabs.mjs also exports apiKey(), which reads ELEVENLABS_API_KEY out of the
+// repo's .env. It is deliberately NOT re-exported here: in the explorer a key belongs
+// to the signed-in user, not to the machine, and every paid path takes one as an
+// argument (see lib/api-key.ts and requireApiKey in lib/authz.ts). The CLI keeps it.
+
+/** Confirms a pasted key works, and reports the plan behind it. Throws if it does not. */
+export const verifyKey = elevenModule.verifyKey as (
+  key: string,
+) => Promise<{ tier: string | null }>;
 
 /** Every voice on the account, as ElevenLabs returns them. */
 export const listVoices = elevenModule.listVoices as (

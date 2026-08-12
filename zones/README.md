@@ -950,8 +950,15 @@ anyone could enter.
 
 The roles are defined once in `web/src/lib/permissions.ts` and shared by the browser and
 the server. What the browser decides is only what to draw; `web/src/lib/authz.ts` decides
-what actually happens, and does it again on every request. Leaving `ELEVENLABS_API_KEY` out
-of the droplet's `app.env` closes off the expensive half regardless of anyone's role.
+what actually happens, and does it again on every request.
+
+**A role is only half of it: the credits are the editor's own.** The site holds no
+ElevenLabs key. Each editor sets theirs on `/profile`, where it is encrypted
+(AES-256-GCM, under the droplet's `ZONELORE_SECRET_KEY`) before it is stored and is never
+shown again — only its last four characters. Anyone without one is refused with a dialog
+saying so, before anything reaches ElevenLabs. An admin can see which accounts have a key
+and clear one, never read it. The CLI in `tools/` is unaffected and still reads
+`ELEVENLABS_API_KEY` from `.env`.
 
 The one thing worth knowing here rather than there: **`tools/` paths are overridable by
 environment variable, and on the droplet all five are overridden.** Every path under

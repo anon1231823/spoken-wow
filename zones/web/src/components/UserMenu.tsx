@@ -64,6 +64,12 @@ export function UserMenu() {
           Users
         </Link>
       )}
+      {/* The account's own page, and the only place an ElevenLabs key can be set. Shown
+          to every signed-in user, unlike the links above it: a member's profile still
+          tells them what role they have, which is the thing they are about to ask about. */}
+      <Link href="/profile" className="hover:text-fg">
+        Profile
+      </Link>
       <span className="hidden text-xs sm:inline">{session.user.email}</span>
       <span className="rounded border border-border px-1.5 text-xs uppercase">
         {role ?? "member"}

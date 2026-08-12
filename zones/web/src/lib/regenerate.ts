@@ -21,7 +21,6 @@ import {
   COOL_DOWN_MS,
   Limiter,
   afterRateLimit,
-  apiKey,
   budgetFor,
   buildLookup,
   durationOf,
@@ -186,14 +185,19 @@ async function publish() {
   await buildLookup();
 }
 
-/** One line, awaited. One click, cheap, and the archive makes it reversible. */
-export async function regenerateOne(lineId: string): Promise<Job> {
+/**
+ * One line, awaited. One click, cheap, and the archive makes it reversible.
+ *
+ * `key` is the caller's own ElevenLabs key, resolved from their session by the route.
+ * It is a parameter rather than an ambient lookup because the one thing this module
+ * should say out loud is whose money it is spending.
+ */
+export async function regenerateOne(lineId: string, key: string): Promise<Job> {
   const entries = await catalogue();
   const entry = entries.find((candidate) => candidate.id === lineId);
   if (!entry) throw new Error(`unknown lineId ${lineId}`);
 
   const config = await loadConfig();
-  const key = await apiKey();
   await resolveVoiceId(config, key);
   await resolveDictionary(config, key);
 
@@ -219,8 +223,12 @@ export async function regenerateOne(lineId: string): Promise<Job> {
  *
  * Concurrency comes from the account's plan, exactly as the CLI derives it, and a 429
  * halves it for a minute rather than retrying into a wall.
+ *
+ * The key is captured here and held for the whole run. The work already outlives the
+ * request that started it -- that is the point of it -- so re-reading it from the
+ * session mid-batch would strand a half-finished run behind a sign-out.
  */
-export async function startBatch(lineIds: string[]): Promise<Batch> {
+export async function startBatch(lineIds: string[], key: string): Promise<Batch> {
   const entries = await catalogue();
   const byId = new Map(entries.map((entry) => [entry.id, entry]));
   const selected = lineIds
@@ -248,17 +256,16 @@ export async function startBatch(lineIds: string[]): Promise<Batch> {
 
   // Deliberately not awaited: the response carries the id and the client polls. The
   // work outliving the request is the point -- closing the tab must not strand it.
-  void run(batch, selected);
+  void run(batch, selected, key);
 
   return batch;
 }
 
-async function run(batch: Batch, selected: CatalogueEntry[]) {
+async function run(batch: Batch, selected: CatalogueEntry[], key: string) {
   const jobs = new Map(batch.jobs.map((job) => [job.lineId, job]));
 
   try {
     const config = await loadConfig();
-    const key = await apiKey();
     await resolveVoiceId(config, key);
     await resolveDictionary(config, key);
 

@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { ApiKeyRequiredDialog } from "@/components/ApiKeyRequiredDialog";
+import { noApiKeyMessage } from "@/lib/no-api-key";
+
 // tools/voice/config.json's voice half, edited with its consequences shown.
 //
 // The page's real job, like the lexicon's, is to answer "what does saving commit me
@@ -49,6 +52,9 @@ export function VoiceSettings() {
   const [saved, setSaved] = useState<{ voiceId: string; settings: Settings } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The page cannot render at all without a key -- the voice list is the caller's own
+  // ElevenLabs account -- so this covers the first load as well as the two paid actions.
+  const [keyRequired, setKeyRequired] = useState<string | null>(null);
 
   const [previewText, setPreviewText] = useState(DEFAULT_PREVIEW);
   const [previewing, setPreviewing] = useState(false);
@@ -58,8 +64,21 @@ export function VoiceSettings() {
 
   useEffect(() => {
     fetch("/api/voice")
-      .then((response) => response.json())
-      .then((incoming: VoiceData & { error?: string }) => {
+      .then(async (response) => {
+        const body = (await response.json().catch(() => ({}))) as VoiceData & {
+          error?: string;
+          code?: string;
+        };
+        const needsKey = noApiKeyMessage(response.status, body);
+        if (needsKey) {
+          setKeyRequired(needsKey);
+          setError("No ElevenLabs key set — the voice list comes from your own account.");
+          return null;
+        }
+        return body;
+      })
+      .then((incoming: (VoiceData & { error?: string }) | null) => {
+        if (!incoming) return;
         if (incoming.error) {
           setError(incoming.error);
           return;
@@ -88,8 +107,21 @@ export function VoiceSettings() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ voiceId, voiceSettings: settings }),
     })
-      .then((response) => response.json())
-      .then((result: { voiceId?: string; error?: string }) => {
+      .then(async (response) => {
+        const result = (await response.json().catch(() => ({}))) as {
+          voiceId?: string;
+          error?: string;
+          code?: string;
+        };
+        const needsKey = noApiKeyMessage(response.status, result);
+        if (needsKey) {
+          setKeyRequired(needsKey);
+          return null;
+        }
+        return result;
+      })
+      .then((result: { voiceId?: string; error?: string } | null) => {
+        if (!result) return;
         if (result.error) {
           setError(result.error);
           return;
@@ -111,7 +143,15 @@ export function VoiceSettings() {
     })
       .then(async (response) => {
         if (!response.ok) {
-          const body = (await response.json().catch(() => ({}))) as { error?: string };
+          const body = (await response.json().catch(() => ({}))) as {
+            error?: string;
+            code?: string;
+          };
+          const needsKey = noApiKeyMessage(response.status, body);
+          if (needsKey) {
+            setKeyRequired(needsKey);
+            return null;
+          }
           throw new Error(body.error ?? `preview failed (${response.status})`);
         }
         const credits = response.headers.get("X-Credits");
@@ -119,6 +159,7 @@ export function VoiceSettings() {
         return response.blob();
       })
       .then((blob) => {
+        if (!blob) return;
         if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
         previewUrl.current = URL.createObjectURL(blob);
         if (audioRef.current) {
@@ -130,7 +171,16 @@ export function VoiceSettings() {
       .finally(() => setPreviewing(false));
   }, [previewText, voiceId, settings]);
 
-  if (error && !data) return <p className="mx-auto max-w-3xl px-4 py-6 text-bad">{error}</p>;
+  // The dialog rides along with the failed-to-load state: without a key there is no
+  // voice list, so this branch is exactly where a keyless admin lands.
+  if (error && !data) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-6">
+        <p className="text-bad">{error}</p>
+        <ApiKeyRequiredDialog message={keyRequired} onClose={() => setKeyRequired(null)} />
+      </div>
+    );
+  }
   if (!data) return <p className="mx-auto max-w-3xl px-4 py-6 text-faint">loading…</p>;
 
   const dirty =
@@ -266,6 +316,8 @@ export function VoiceSettings() {
         {dirty && <span className="text-xs text-warn">unsaved changes</span>}
         {!dirty && <span className="text-xs text-faint">saved</span>}
       </div>
+
+      <ApiKeyRequiredDialog message={keyRequired} onClose={() => setKeyRequired(null)} />
     </div>
   );
 }

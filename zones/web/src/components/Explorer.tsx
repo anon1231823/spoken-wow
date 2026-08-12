@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ApiKeyRequiredDialog } from "@/components/ApiKeyRequiredDialog";
 import { FeedbackDialog, type FeedbackTarget } from "@/components/FeedbackDialog";
 import { LineRow, type RowState } from "@/components/LineRow";
 import { LoreDialog } from "@/components/LoreDialog";
@@ -14,6 +15,7 @@ import { SearchBar } from "@/components/SearchBar";
 import { useSession } from "@/lib/auth-client";
 import type { LineFlag, ZoneFacet } from "@/lib/catalogue";
 import { filterParams, filtersFromParams, PAGE_SIZE, type LineFilters } from "@/lib/filters";
+import { noApiKeyMessage } from "@/lib/no-api-key";
 import * as permissions from "@/lib/permissions";
 import type { Batch, Quote } from "@/lib/regenerate";
 import type { ResultLine, SearchResult } from "@/lib/search";
@@ -78,6 +80,9 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const [pendingBatch, setPendingBatch] = useState<{ label: string; quote: Quote; lineIds: string[] } | null>(null);
   const [batch, setBatch] = useState<Batch | null>(null);
   const [batchId, setBatchId] = useState<string | null>(null);
+  // A refusal for want of a key, which is not a failure of the line and does not belong
+  // in its row: the row would say "failed" for something the corpus had no part in.
+  const [keyRequired, setKeyRequired] = useState<string | null>(null);
 
   const audio = useRef<HTMLAudioElement | null>(null);
   const searchInput = useRef<HTMLInputElement | null>(null);
@@ -249,8 +254,25 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lineIds: [line.id] }),
       })
-        .then((response) => response.json())
-        .then((data: { job?: { state: string; version?: number; error?: string }; error?: string }) => {
+        .then(async (response) => {
+          const data = (await response.json().catch(() => ({}))) as {
+            job?: { state: string; version?: number; error?: string };
+            error?: string;
+            code?: string;
+          };
+
+          // Nothing was attempted and nothing was billed, so the row goes back to how
+          // it was rather than wearing an error for a piece of missing setup.
+          const needsKey = noApiKeyMessage(response.status, data);
+          if (needsKey) {
+            setKeyRequired(needsKey);
+            setRowStates((current) => {
+              const { [line.id]: _dropped, ...rest } = current;
+              return rest;
+            });
+            return;
+          }
+
           const job = data.job;
           if (!job || job.state === "failed") {
             setRowStates((current) => ({
@@ -310,8 +332,17 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lineIds }),
     })
-      .then((response) => response.json())
-      .then((data: { batchId?: string }) => {
+      .then(async (response) => {
+        const data = (await response.json().catch(() => ({}))) as {
+          batchId?: string;
+          error?: string;
+          code?: string;
+        };
+        const needsKey = noApiKeyMessage(response.status, data);
+        if (needsKey) {
+          setKeyRequired(needsKey);
+          return;
+        }
         if (data.batchId) setBatchId(data.batchId);
       })
       .catch(() => {});
@@ -626,6 +657,8 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       />
 
       <FeedbackDialog target={reportFor} onClose={() => setReportFor(null)} />
+
+      <ApiKeyRequiredDialog message={keyRequired} onClose={() => setKeyRequired(null)} />
 
       <RegenerateDialog
         pending={pendingBatch}

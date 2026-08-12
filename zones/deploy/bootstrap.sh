@@ -136,7 +136,7 @@ Still to do, in this order:
 
        cat > ${ROOT}/shared/app.env <<'ENV'
        DATABASE_URL=postgres://${DB_USER}:${PGPW:-<the existing password>}@127.0.0.1:5432/${DB_NAME}
-       ELEVENLABS_API_KEY=sk_your_key_here
+       ZONELORE_SECRET_KEY=<paste the output of: openssl rand -base64 32>
        ENV
        chown ${DEPLOY_USER}:${DEPLOY_USER} ${ROOT}/shared/app.env
        chmod 600 ${ROOT}/shared/app.env
@@ -144,9 +144,11 @@ Still to do, in this order:
      Note 5432, not 5433 - the 5433 in .env.example is a local quirk, because
      ../wow-voiceover's docker postgres holds 5432 on the workstation.
 
-     Leave ELEVENLABS_API_KEY out if you do not want the site able to spend credits.
-     Everything except the Regenerate button works without it, and Regenerate then
-     refuses with the reason rather than failing oddly.
+     ZONELORE_SECRET_KEY seals the ElevenLabs key each editor sets on their own
+     profile; the site has no key of its own and spends nobody's credits without
+     one. The app refuses to start using it if this is unset in production, and
+     rotating it makes every stored key unreadable - each editor pastes theirs in
+     again. There is no ELEVENLABS_API_KEY here any more.
 
   2. Make sure 80/443 are reachable in your existing firewall rules, then point
      lore.rusty.one at this droplet.
