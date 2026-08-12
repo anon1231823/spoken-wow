@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireRegenerate } from "@/lib/authz";
+import { requireApiKey, requireRegenerate } from "@/lib/authz";
 import { getBatch, latestBatch, quote, regenerateOne, startBatch, stopBatch } from "@/lib/regenerate";
 
 // THE ONLY ENDPOINT THAT SPENDS MONEY.
@@ -9,6 +9,10 @@ import { getBatch, latestBatch, quote, regenerateOne, startBatch, stopBatch } fr
 // site is public, and without a check here the ElevenLabs bill is too. Guarded on GET as
 // well as POST -- the progress of a batch, including which lines failed and why, is not
 // something to hand out.
+//
+// The credits are the caller's own: the key comes from their profile, and there is no
+// fallback to the server's. An editor without one is refused with 428 before anything
+// reaches ElevenLabs.
 //
 // lineIds ride in the body, not the path, because they contain colons
 // ('s:1411:razor hill').
@@ -21,7 +25,7 @@ import { getBatch, latestBatch, quote, regenerateOne, startBatch, stopBatch } fr
 type Body = { lineIds?: unknown; action?: unknown; batchId?: unknown };
 
 export async function POST(request: Request) {
-  const { denied } = await requireRegenerate();
+  const { session, denied } = await requireRegenerate();
   if (denied) return denied;
 
   const body = (await request.json().catch(() => ({}))) as Body;
@@ -47,12 +51,19 @@ export async function POST(request: Request) {
     return NextResponse.json(await quote(lineIds as string[]));
   }
 
+  // Below this line the request costs money, so it needs the caller's own key. Above
+  // it -- quoting and stopping -- costs nothing and must keep working for someone who
+  // has not set one up, or the dialog telling them the price would be the thing that
+  // refuses them.
+  const { key, denied: noKey } = await requireApiKey(session.user.id);
+  if (noKey) return noKey;
+
   try {
     if (lineIds.length === 1) {
-      const job = await regenerateOne(lineIds[0] as string);
+      const job = await regenerateOne(lineIds[0] as string, key);
       return NextResponse.json({ job }, { status: job.state === "failed" ? 502 : 200 });
     }
-    const batch = await startBatch(lineIds as string[]);
+    const batch = await startBatch(lineIds as string[], key);
     return NextResponse.json({ batchId: batch.id, queued: batch.jobs.length });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });

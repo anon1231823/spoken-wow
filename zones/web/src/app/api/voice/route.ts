@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { requireConfigure } from "@/lib/authz";
+import { requireApiKey, requireConfigure } from "@/lib/authz";
 import {
-  apiKey,
   listVoices,
   loadConfig,
   loadManifest,
@@ -19,14 +18,19 @@ import { parseSettings } from "@/lib/voice";
 // pass, and the page says so.
 
 export async function GET() {
-  const { denied } = await requireConfigure();
+  const { session, denied } = await requireConfigure();
   if (denied) return denied;
+
+  // Reading costs nothing, but the voice list IS the caller's account, so there is
+  // nothing to render without their key.
+  const { key, denied: noKey } = await requireApiKey(session.user.id);
+  if (noKey) return noKey;
 
   const [config, manifest] = await Promise.all([loadConfig(), loadManifest()]);
   // The whole account, unfiltered: voices added from the ElevenLabs library arrive
   // under their library names, so any name-based narrowing hides exactly the voices
   // the page exists to try.
-  const voices = (await listVoices(await apiKey()))
+  const voices = (await listVoices(key))
     .map((voice) => ({ id: voice.voice_id, name: voice.name, category: voice.category }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -46,8 +50,11 @@ export async function GET() {
 type Body = { voiceId?: unknown; voiceSettings?: unknown };
 
 export async function POST(request: Request) {
-  const { denied } = await requireConfigure();
+  const { session, denied } = await requireConfigure();
   if (denied) return denied;
+
+  const { key, denied: noKey } = await requireApiKey(session.user.id);
+  if (noKey) return noKey;
 
   const body = (await request.json().catch(() => ({}))) as Body;
 
@@ -62,7 +69,12 @@ export async function POST(request: Request) {
   // Validated against the live account list, which also supplies the current name:
   // config.json pins both, and a name that drifts from the id defeats the pin's
   // purpose of making the pairing auditable.
-  const voices = await listVoices(await apiKey());
+  //
+  // The account is the saving admin's own, and the voice they pick is global. Two
+  // admins with different ElevenLabs accounts can therefore pin a voice the other
+  // cannot generate with -- which surfaces as a failed generation naming the voice,
+  // not as silence, because resolveVoiceId checks the id it was given.
+  const voices = await listVoices(key);
   const picked = voices.find((voice) => voice.voice_id === body.voiceId);
   if (!picked) {
     return NextResponse.json({ error: "voiceId is not on this account" }, { status: 400 });

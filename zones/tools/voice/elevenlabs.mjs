@@ -179,6 +179,30 @@ export async function fetchTier(key) {
   }
 }
 
+// Is this key real, and whose plan is it? Used by the explorer before it stores a
+// key someone has pasted, so a typo fails at the profile page rather than 401ing in
+// the middle of a batch -- where isFatal() correctly abandons the remaining work, and
+// a bad paste therefore costs a whole run.
+//
+// Throws where fetchTier returns null: this is a question about the key itself, and
+// "could not tell" is the wrong thing to store as "verified".
+export async function verifyKey(key) {
+  const response = await fetch("https://api.elevenlabs.io/v1/user", {
+    headers: { "xi-api-key": key },
+  });
+  if (response.status === 401 || response.status === 403) {
+    throw new Error("ElevenLabs rejected this key.");
+  }
+  if (!response.ok) {
+    throw new Error(
+      `could not verify the key (${response.status}): ${(await response.text()).slice(0, 200)}`,
+    );
+  }
+
+  const body = await response.json();
+  return { tier: body.subscription?.tier ?? null };
+}
+
 // What ElevenLabs actually charged, or null if it did not say. The rate belongs
 // to the plan rather than the request, so this is the only way to know a real
 // cost without guessing at someone's subscription.

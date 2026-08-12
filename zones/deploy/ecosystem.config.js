@@ -119,8 +119,9 @@ module.exports = {
         // deploy only.
         ZONELORE_PRONUNCIATION: `${SHARED}/pronunciation.json`,
 
-        // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, and -- if you want the
-        // Regenerate button to work -- ELEVENLABS_API_KEY.
+        // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, and ZONELORE_SECRET_KEY --
+        // the master key for the ElevenLabs credentials editors set on their own
+        // profiles. The app has no key of its own to spend with any more.
         ...readSecrets(),
       },
     },

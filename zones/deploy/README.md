@@ -20,7 +20,7 @@ the system Node for another service, bump that value to match and redeploy.
     audio-history/<file>/v<n>.mp3  superseded takes. Loss is permanent - see below.
     manifest.json               exported from the database; `make pull-manifest`
     pronunciation.json          spoken-text substitutions; `make pull-lexicon`
-    app.env                     DATABASE_URL, BETTER_AUTH_*, ELEVENLABS_API_KEY. Mode 600, never in git.
+    app.env                     DATABASE_URL, BETTER_AUTH_*, ZONELORE_SECRET_KEY. Mode 600, never in git.
     ecosystem.config.js         pm2 config, outlives every release
   releases/
     20260802-1143-a1b2c3d/      ~62 MB bundle + the lore corpus + migrations
@@ -103,7 +103,7 @@ cat > /srv/zonelore/shared/app.env <<EOF
 DATABASE_URL=postgres://zonelore:<password>@127.0.0.1:5432/zonelore
 BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 BETTER_AUTH_URL=https://lore.rusty.one
-ELEVENLABS_API_KEY=sk_your_key_here
+ZONELORE_SECRET_KEY=$(openssl rand -base64 32)
 EOF
 chown deploy:deploy /srv/zonelore/shared/app.env
 chmod 600 /srv/zonelore/shared/app.env
@@ -121,8 +121,20 @@ every state-changing request against it, so a stale or mismatched value does not
 loudly at boot: the site loads, browsing works, and every sign-in, registration and role
 change returns `403 Invalid origin`.
 
-`ELEVENLABS_API_KEY` is optional and is what decides whether the site can spend money.
-Without it everything works except the Regenerate button, which refuses with the reason.
+**`ELEVENLABS_API_KEY` no longer belongs here.** The site spends each editor's own
+credits: a key is set per account on `/profile`, sealed with `ZONELORE_SECRET_KEY` and
+stored in the `elevenlabs_key` table. An account without one is refused with `428` and a
+dialog saying where to set it, whatever its role. If the variable is still in `app.env`
+from an earlier deploy, remove it — nothing in the web app reads it, and leaving a live
+key in a file that no longer needs one is a credential lying around.
+
+**`ZONELORE_SECRET_KEY` is the master key for those stored credentials.** 32 bytes of
+base64, and the app refuses to seal or open anything without it in production. Rotating
+it does not sign anyone out — it makes every stored ElevenLabs key unreadable, and each
+editor must paste theirs in again. There is no re-encryption tool; a rotation is a
+message to the two or three people who have keys. Kept separate from
+`BETTER_AUTH_SECRET` for exactly that reason: rotating the auth secret is routine and
+recoverable, and it must not take the credentials with it.
 
 **4. Certificate first, then the vhost** — nginx will not start referencing a certificate
 that does not exist yet. Point an `A` record for `lore.rusty.one` at the droplet, then:
@@ -281,9 +293,10 @@ releases instead of bouncing between the newest two.
   location blocks. It predates the accounts and is now a blunt instrument for taking the
   whole site private — a maintenance window, say — rather than the access control it was
   standing in for. `htpasswd -c /etc/nginx/.htpasswd-zonelore <you>` to use it.
-- **Leaving `ELEVENLABS_API_KEY` out of `app.env` is still the hardest possible stop** on
-  spending. It closes the expensive path for admins too, which is occasionally what you
-  want.
+- **The hardest possible stop on spending is now per person.** Clearing someone's key on
+  `/admin` closes the expensive path for that account without touching their role;
+  clearing every key closes it site-wide, admins included. There is no server-wide key
+  left to withhold.
 - **One pm2 worker, deliberately.** Regeneration batches are in-process state on
   `globalThis`, not queue tables, so a second worker would answer "no such batch" to half
   the progress polls. The cost is a brief blip on each deploy rather than a rolling reload.
