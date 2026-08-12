@@ -19,7 +19,9 @@ import { fileURLToPath } from "node:url";
 
 import { loadEnvFile } from "../lib/env.mjs";
 import * as db from "./db.mjs";
-import { insertTake, MANIFEST_PATH } from "./store.mjs";
+import { insertTake, manifestPath } from "./store.mjs";
+
+const MANIFEST_PATH = manifestPath();
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");

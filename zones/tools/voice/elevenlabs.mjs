@@ -6,6 +6,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { BASE_LOCALE } from "../lib/locales.mjs";
 import { ROOT } from "../lib/loredata.mjs";
 import { requireEnvKey } from "../lib/env.mjs";
 
@@ -13,6 +14,19 @@ const VOICES_URL = "https://api.elevenlabs.io/v1/voices";
 const TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech";
 
 export const CONFIG_PATH = join(ROOT, "tools/voice/config.json");
+
+// A language's overrides, merged over config.json. Everything the switcher has to
+// switch at generation time lives in one file per language -- voice, model,
+// language_code, pronunciation dictionary -- because they only make sense
+// together: a German voice reading through an English phoneme dictionary is worse
+// than either half alone.
+//
+// No such file exists yet. English is config.json, and a language gets one when
+// somebody has decided which voice reads it -- which is a decision, not a default
+// this module can invent.
+export function localeConfigPath(lang) {
+  return join(ROOT, "tools/voice", `config.${lang}.json`);
+}
 
 //------------------------------------------------------------------------------
 // Credentials
@@ -26,8 +40,24 @@ export async function apiKey() {
 // Config
 //------------------------------------------------------------------------------
 
-export async function loadConfig() {
-  return JSON.parse(await readFile(CONFIG_PATH, "utf8"));
+export async function loadConfig(lang = BASE_LOCALE) {
+  const base = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
+  if (lang === BASE_LOCALE) return base;
+
+  const overrides = await readFile(localeConfigPath(lang), "utf8").catch((err) => {
+    if (err.code === "ENOENT") return null;
+    throw err;
+  });
+  if (overrides === null) {
+    throw new Error(
+      `no voice configured for ${lang}: write tools/voice/config.${lang}.json first.\n` +
+        `Generating it with the English narrator would spend credits on the wrong voice.`,
+    );
+  }
+
+  // A shallow merge, and voiceSettings is replaced rather than merged: half the
+  // English settings under a different voice is not a configuration anyone chose.
+  return { ...base, ...JSON.parse(overrides) };
 }
 
 export async function saveConfig(config) {

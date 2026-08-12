@@ -17,6 +17,7 @@ import { stat } from "node:fs/promises";
 
 import { catalogue, type CatalogueEntry } from "./catalogue";
 import { query } from "./db";
+import { BASE_LANG, type Lang } from "./lang";
 import {
   COOL_DOWN_MS,
   Limiter,
@@ -53,6 +54,9 @@ export type Job = {
 
 export type Batch = {
   id: string;
+  /** Which language is being cut. Recorded so the polling UI can say whose credits
+   *  are going where, and so a restart cannot resume a batch into another language. */
+  lang: Lang;
   startedAt: number;
   finishedAt: number | null;
   jobs: Job[];
@@ -109,11 +113,14 @@ export function stopBatch(id: string): boolean {
 // Quoting
 //------------------------------------------------------------------------------
 
-export async function quote(lineIds: string[]): Promise<Quote> {
+export async function quote(lineIds: string[], lang: Lang = BASE_LANG): Promise<Quote> {
   const [entries, manifest, config] = await Promise.all([
-    catalogue(),
-    loadManifest(),
-    loadConfig().catch(() => null),
+    catalogue(lang),
+    loadManifest(lang),
+    // A language with no voice of its own has no config file, and loadConfig throws
+    // rather than falling back to the English narrator. A quote is free, so it simply
+    // loses the measured credit rate and says so.
+    loadConfig(lang).catch(() => null),
   ]);
 
   const wanted = new Set(lineIds);
@@ -145,12 +152,13 @@ async function regenerateEntry(
   config: VoiceConfig,
   key: string,
   onRateLimit: () => void,
+  lang: Lang,
 ): Promise<{ version: number; credits: number | null }> {
   const { audio, credits } = await synthesize(entry.spoken, config, key, { onRateLimit });
 
   // Archives the take being replaced. This is what makes a bad re-roll reversible,
   // and the reason writeAudio lives in store.mjs rather than in the caller.
-  const path = await writeAudio(entry.file, audio);
+  const path = await writeAudio(entry.file, audio, lang);
 
   const version = await insertTake(
     entry.id,
@@ -172,6 +180,7 @@ async function regenerateEntry(
     // Unlike an imported take, this one knows exactly what it was made with, so a
     // version that sounds right can be reproduced after config.json has moved on.
     config.voiceSettings,
+    lang,
   );
 
   return { version, credits };
@@ -180,9 +189,9 @@ async function regenerateEntry(
 // The addon resolves every clip through Sounds.lua, so a new take that is not in it is
 // unreachable, and a stale duration resets the Play button at the wrong moment. Run
 // once per batch rather than per line: it rewrites the whole 1353-row table.
-async function publish() {
-  await exportManifest();
-  await buildLookup();
+async function publish(lang: Lang) {
+  await exportManifest({ lang });
+  await buildLookup(lang);
 }
 
 /**
@@ -192,12 +201,19 @@ async function publish() {
  * It is a parameter rather than an ambient lookup because the one thing this module
  * should say out loud is whose money it is spending.
  */
-export async function regenerateOne(lineId: string, key: string): Promise<Job> {
-  const entries = await catalogue();
+export async function regenerateOne(
+  lineId: string,
+  key: string,
+  lang: Lang = BASE_LANG,
+): Promise<Job> {
+  const entries = await catalogue(lang);
   const entry = entries.find((candidate) => candidate.id === lineId);
   if (!entry) throw new Error(`unknown lineId ${lineId}`);
 
-  const config = await loadConfig();
+  // Throws for a language with no config.<code>.json, which is the right answer to
+  // "narrate this in German": there is no German narrator until somebody picks one,
+  // and cutting it with the English voice would spend credits on a take nobody wants.
+  const config = await loadConfig(lang);
   await resolveVoiceId(config, key);
   await resolveDictionary(config, key);
 
@@ -210,8 +226,8 @@ export async function regenerateOne(lineId: string, key: string): Promise<Job> {
   };
 
   try {
-    const { version, credits } = await regenerateEntry(entry, config, key, () => {});
-    await publish();
+    const { version, credits } = await regenerateEntry(entry, config, key, () => {}, lang);
+    await publish(lang);
     return { ...job, state: "done", version, credits };
   } catch (err) {
     return { ...job, state: "failed", error: (err as Error).message };
@@ -228,8 +244,12 @@ export async function regenerateOne(lineId: string, key: string): Promise<Job> {
  * request that started it -- that is the point of it -- so re-reading it from the
  * session mid-batch would strand a half-finished run behind a sign-out.
  */
-export async function startBatch(lineIds: string[], key: string): Promise<Batch> {
-  const entries = await catalogue();
+export async function startBatch(
+  lineIds: string[],
+  key: string,
+  lang: Lang = BASE_LANG,
+): Promise<Batch> {
+  const entries = await catalogue(lang);
   const byId = new Map(entries.map((entry) => [entry.id, entry]));
   const selected = lineIds
     .map((id) => byId.get(id))
@@ -239,6 +259,7 @@ export async function startBatch(lineIds: string[], key: string): Promise<Batch>
 
   const batch: Batch = {
     id: crypto.randomUUID(),
+    lang,
     startedAt: Date.now(),
     finishedAt: null,
     stoppedBecause: null,
@@ -256,16 +277,16 @@ export async function startBatch(lineIds: string[], key: string): Promise<Batch>
 
   // Deliberately not awaited: the response carries the id and the client polls. The
   // work outliving the request is the point -- closing the tab must not strand it.
-  void run(batch, selected, key);
+  void run(batch, selected, key, lang);
 
   return batch;
 }
 
-async function run(batch: Batch, selected: CatalogueEntry[], key: string) {
+async function run(batch: Batch, selected: CatalogueEntry[], key: string, lang: Lang) {
   const jobs = new Map(batch.jobs.map((job) => [job.lineId, job]));
 
   try {
-    const config = await loadConfig();
+    const config = await loadConfig(lang);
     await resolveVoiceId(config, key);
     await resolveDictionary(config, key);
 
@@ -296,7 +317,7 @@ async function run(batch: Batch, selected: CatalogueEntry[], key: string) {
 
           job.state = "running";
           try {
-            const { version, credits } = await regenerateEntry(entry, config, key, onRateLimit);
+            const { version, credits } = await regenerateEntry(entry, config, key, onRateLimit, lang);
             job.state = "done";
             job.version = version;
             job.credits = credits;
@@ -315,7 +336,7 @@ async function run(batch: Batch, selected: CatalogueEntry[], key: string) {
 
     // Even a partly failed batch publishes: the lines that did succeed have been paid
     // for, and leaving them out of the lookup would make them unreachable in-game.
-    if (batch.jobs.some((job) => job.state === "done")) await publish();
+    if (batch.jobs.some((job) => job.state === "done")) await publish(lang);
   } catch (err) {
     batch.stoppedBecause = (err as Error).message;
   } finally {
@@ -342,8 +363,8 @@ async function run(batch: Batch, selected: CatalogueEntry[], key: string) {
  * line reading as stale after being restored to audio that matches today's text
  * exactly, which sends you to regenerate something that is already correct.
  */
-export async function restore(lineId: string, archiveVersion: number) {
-  const entries = await catalogue();
+export async function restore(lineId: string, archiveVersion: number, lang: Lang = BASE_LANG) {
+  const entries = await catalogue(lang);
   const entry = entries.find((candidate) => candidate.id === lineId);
   if (!entry) throw new Error(`unknown lineId ${lineId}`);
 
@@ -358,15 +379,16 @@ export async function restore(lineId: string, archiveVersion: number) {
   }>(
     `select "textHash", "chars", "voiceId", "modelId", "outputFormat",
             "dictionaryId", "dictionaryVersionId"
-       from "voiceline_take" where "lineId" = $1 and "version" = $2`,
-    [lineId, archiveVersion],
+       from "voiceline_take"
+      where "lineId" = $1 and "lang" = $2 and "version" = $3`,
+    [lineId, lang, archiveVersion],
   );
   const original = rows[0];
   if (!original) {
     throw new Error(`no take at version ${archiveVersion} for ${lineId}`);
   }
 
-  const path = await restoreTake(entry.file, archiveVersion);
+  const path = await restoreTake(entry.file, archiveVersion, lang);
 
   const version = await insertTake(
     lineId,
@@ -390,8 +412,9 @@ export async function restore(lineId: string, archiveVersion: number) {
     },
     "generated",
     null,
+    lang,
   );
 
-  await publish();
+  await publish(lang);
   return { lineId, version, restoredFrom: archiveVersion };
 }

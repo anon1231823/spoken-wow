@@ -6,7 +6,7 @@
         status remove clean voice voice-zones lookup sample db-up db-down migrate import export \
         web push push-dry pull pull-dry audio-status ssh-check pull-manifest pull-lexicon \
         db-push db-pull bootstrap deploy-scripts releases rollback logs \
-        lore-import lore-export lore-check lore-rewrite \
+        lore-import lore-export lore-check lore-rewrite aliases languages locale-check \
         release release-dry descriptions descriptions-check descriptions-published
 
 # The \# escapes are required: an unescaped # starts a make comment, even
@@ -23,7 +23,7 @@ help: ## Show this help
 package: check ## Build dist/ZoneLore-<version>.zip for upload
 	@./scripts/package.sh
 
-check: validate lint descriptions-check ## Run every pre-package check
+check: validate lint locale-check descriptions-check ## Run every pre-package check
 
 descriptions: ## Regenerate the addon READMEs and dist/descriptions/ from curseforge/
 	@node tools/descriptions.mjs --write
@@ -115,11 +115,13 @@ export: ## Write tools/voice/manifest.json from the database
 lore-import: ## Seed lore_line from the committed Lua data files (idempotent)
 	@node tools/lore/import.mjs
 
-lore-export: ## Write addon/ZoneLore/Data/*.lua from the database
-	@node tools/lore/export.mjs
+# LOCALE, not LANG: make inherits LANG from the shell, where it is already set to
+# something like en_US.UTF-8, and the export would be handed that as a locale code.
+lore-export: ## Write addon/ZoneLore/Data/<locale>/*.lua from the database (LOCALE=deDE)
+	@ZONELORE_LANG=$(or $(LOCALE),enUS) node tools/lore/export.mjs
 
 lore-check: ## Confirm the committed Lua matches the database
-	@node tools/lore/export.mjs --check
+	@ZONELORE_LANG=$(or $(LOCALE),enUS) node tools/lore/export.mjs --check
 
 # Unlike every other target here, this one spends money: it sends each of a zone's
 # articles to Claude. There is no free form of it -- the report *is* the model's
@@ -129,6 +131,30 @@ lore-check: ## Confirm the committed Lua matches the database
 lore-rewrite: ## Rewrite one zone's lore from the full wiki article (ZONE=1420, costs credits)
 	@test -n "$(ZONE)" || { echo "usage: make lore-rewrite ZONE=1420"; exit 1; }
 	@node tools/rewrite-lore.mjs --zone $(ZONE) --variant both --dry-run
+
+#-------------------------------------------------------------------------------
+# Languages
+#
+# A non-English client reports its own area names -- "Sengende Schlucht", not
+# "Burning Steppes" -- and the corpus is keyed by the English one in every
+# language. Without these tables such a client matches no subzone at all, which
+# is what it did for the addon's whole life before they existed. Regenerate only
+# when the pinned client build in tools/lib/db2.mjs moves.
+#-------------------------------------------------------------------------------
+
+aliases: ## Rebuild Data/<locale>/Aliases.lua from the client's AreaTable
+	@node tools/locale/build-aliases.mjs
+	@node tools/locale/build-languages.mjs
+
+languages: ## Rebuild Data/Languages.lua -- what each language covers, and whether it ships
+	@node tools/locale/build-languages.mjs
+
+# Reports coverage and confirms Languages.lua still matches it. An untranslated
+# language is not a failure; a stale Languages.lua is, because it decides which
+# languages players are offered.
+locale-check: ## Report per-language string coverage, and check Languages.lua is current
+	@node tools/locale/check-strings.mjs
+	@node tools/locale/build-languages.mjs --check
 
 web: ## Run the voiceline explorer at localhost:3000
 	@cd web && pnpm dev

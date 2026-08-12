@@ -3,6 +3,26 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 0.4.0 — 2026-08-12
+
+**Subzone lore works on non-English clients**
+
+- On a German, French, Spanish, Portuguese, Russian, Korean or Chinese client,
+  clicking a subzone showed nothing. The lore is stored under English place
+  names, and those clients report their own — so roughly nine subzones in ten
+  were unreachable for every player not running the game in English. ZoneLore
+  now translates the client's name back before looking it up, using the game's
+  own area table, and the lore appears.
+- The lore text itself is still English everywhere. What changed is that it can
+  now be found.
+- Groundwork for reading ZoneLore in another language: a language setting exists
+  in the options, and there is one language to choose. When a translation is
+  finished it appears there, together with its own narration; an unfinished one
+  is not offered at all, and a place with no lore in the language you are reading
+  shows nothing rather than falling back to English.
+- The sound packs are unchanged. A future pack declares which language it
+  narrates, and ZoneLore only plays one matching the language it is showing.
+
 ## 0.3.1 — 2026-08-10
 
 **Works on the Anniversary client**

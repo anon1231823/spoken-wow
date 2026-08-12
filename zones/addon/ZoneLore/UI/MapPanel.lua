@@ -4,6 +4,7 @@
 -- clicked (see UI/SubzoneClick.lua), with a link back to the zone.
 
 local ADDON_NAME, ZoneLore = ...
+local L = ZoneLore.L
 
 local PADDING = 16
 local INFO_LINE_HEIGHT = 16
@@ -130,7 +131,7 @@ end
 local function SetBackLink(zoneName)
 	infoLine:Enable()
 	infoLine.text:SetTextColor(0.4, 0.73, 1)
-	infoLine.text:SetText("< Back to " .. zoneName)
+	infoLine.text:SetText(L.BACK_TO_ZONE:format(zoneName))
 end
 
 --------------------------------------------------------------------------------
@@ -204,7 +205,7 @@ local function Refresh(mapID)
 		reportButton:SetTarget(foundOn, nil)
 	else
 		SetCaption("")
-		SetBody("|cff888888No lore recorded for " .. zoneName .. " yet.|r")
+		SetBody("|cff888888" .. L.NO_LORE_FOR:format(zoneName) .. "|r")
 		audioButton:SetTarget(nil, nil)
 		reportButton:SetTarget(nil, nil)
 	end

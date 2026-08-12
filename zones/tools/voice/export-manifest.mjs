@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 
 import { loadEnvFile } from "../lib/env.mjs";
 import * as db from "./db.mjs";
-import { loadManifest, MANIFEST_PATH } from "./store.mjs";
+import { LANG, loadManifest, manifestPath } from "./store.mjs";
 
 // The same serialisation writeManifestFile uses: sorted keys, two-space indent,
 // trailing newline. Duplicated deliberately rather than exported from store.mjs --
@@ -43,14 +43,15 @@ function serialise(manifest) {
  * rather than a stale copy of one. Failing here would make the addon build require
  * Postgres, which is the opposite of what this seam is for.
  */
-export async function exportManifest({ check = false } = {}) {
+export async function exportManifest({ check = false, lang = LANG } = {}) {
   if (!db.isEnabled()) {
     return { skipped: true, changed: false, count: 0 };
   }
 
-  const manifest = await loadManifest();
+  const path = manifestPath(lang);
+  const manifest = await loadManifest(lang);
   const next = serialise(manifest);
-  const current = await readFile(MANIFEST_PATH, "utf8").catch((err) => {
+  const current = await readFile(path, "utf8").catch((err) => {
     if (err.code === "ENOENT") return null;
     throw err;
   });
@@ -63,9 +64,9 @@ export async function exportManifest({ check = false } = {}) {
 
   // Temp file and rename, for the reason store.mjs gives: this is the record of
   // everything already paid for, and a crash partway through a write would destroy it.
-  const temp = `${MANIFEST_PATH}.${process.pid}.tmp`;
+  const temp = `${path}.${process.pid}.tmp`;
   await writeFile(temp, next);
-  await rename(temp, MANIFEST_PATH);
+  await rename(temp, path);
 
   return { skipped: false, changed: true, count, before };
 }
@@ -79,16 +80,16 @@ async function main() {
     return;
   }
   if (!result.changed) {
-    console.log(`${MANIFEST_PATH} is up to date (${result.count} lines).`);
+    console.log(`${manifestPath()} is up to date (${result.count} lines).`);
     return;
   }
   if (result.stale) {
-    console.error(`error: ${MANIFEST_PATH} does not match the database.`);
+    console.error(`error: ${manifestPath()} does not match the database.`);
     console.error("       run:  node tools/voice/export-manifest.mjs");
     process.exit(1);
   }
 
-  console.log(`wrote ${MANIFEST_PATH}`);
+  console.log(`wrote ${manifestPath()}`);
   console.log(`  ${result.count} lines (was ${result.before})`);
   console.log("\nnext:  node tools/voice/build-lookup.mjs");
 }

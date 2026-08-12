@@ -1,7 +1,8 @@
 import { stat } from "node:fs/promises";
 import { join } from "node:path";
 
-import { isAddressable, SOUNDS_DIR } from "@/lib/audio";
+import { isAddressable, soundsDir } from "@/lib/audio";
+import { langFromParams } from "@/lib/lang";
 import { streamOf } from "@/lib/stream";
 
 // Serves a clip, with Range support because that is what <audio> seeking requires --
@@ -12,14 +13,18 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const rel = (await params).path.join("/");
+  // A query parameter rather than a path segment: `file` is language-free by design,
+  // so every language addresses the same paths, and links already handed out keep
+  // resolving to English.
+  const lang = langFromParams(new URL(request.url).searchParams);
 
   // Membership in a set derived from the catalogue, not string inspection. See
   // addressableFiles() in lib/audio.ts.
-  if (!(await isAddressable(rel))) {
+  if (!(await isAddressable(rel, lang))) {
     return new Response("bad audio path", { status: 400 });
   }
 
-  const file = join(SOUNDS_DIR, rel);
+  const file = join(soundsDir(lang), rel);
   const info = await stat(file).catch(() => null);
   if (!info) {
     // A gap, not an error: the explorer already knows which lines have no audio and

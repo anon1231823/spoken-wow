@@ -269,7 +269,17 @@ export function LineRow({
             )}
             title={playable ? `${line.file}.mp3` : "No audio yet"}
           >
-            <span className={cn("block whitespace-pre-wrap", !current && "clamp-2")}>{line.text}</span>
+            {/* An untranslated line is empty, not English: see buildOverlaidCatalogue.
+                The word stands in for the text so the row is still clickable and still
+                says what it is, without putting prose there that nobody wrote in this
+                language. */}
+            {line.translated === false ? (
+              <span className="block text-faint italic">not translated</span>
+            ) : (
+              <span className={cn("block whitespace-pre-wrap", !current && "clamp-2")}>
+                {line.text}
+              </span>
+            )}
           </button>
         </td>
 

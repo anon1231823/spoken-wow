@@ -1,17 +1,8 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
-import { VoiceSettings } from "@/components/VoiceSettings";
-import { currentSession } from "@/lib/authz";
-import { canConfigure } from "@/lib/permissions";
+import { BASE_LANG } from "@/lib/lang";
 
-export const metadata: Metadata = { title: "Voice" };
-
-// Admin only, and 404 rather than a redirect, matching /admin: the voice is global
-// config -- a change alters every future generation.
-export default async function Page() {
-  const session = await currentSession();
-  if (!session || !canConfigure(session.user.role)) notFound();
-
-  return <VoiceSettings />;
+// See app/page.tsx: the bare path is the old address, and it meant English.
+export default function Page() {
+  redirect(`/${BASE_LANG}/voice`);
 }

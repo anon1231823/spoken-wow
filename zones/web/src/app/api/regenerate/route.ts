@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireApiKey, requireRegenerate } from "@/lib/authz";
+import { isLang, BASE_LANG, type Lang } from "@/lib/lang";
 import { getBatch, latestBatch, quote, regenerateOne, startBatch, stopBatch } from "@/lib/regenerate";
 
 // THE ONLY ENDPOINT THAT SPENDS MONEY.
@@ -22,7 +23,7 @@ import { getBatch, latestBatch, quote, regenerateOne, startBatch, stopBatch } fr
 // larger starts a batch and returns its id, because a hundred lines is a minute of
 // work that must survive the tab closing.
 
-type Body = { lineIds?: unknown; action?: unknown; batchId?: unknown };
+type Body = { lineIds?: unknown; action?: unknown; batchId?: unknown; lang?: unknown };
 
 export async function POST(request: Request) {
   const { session, denied } = await requireRegenerate();
@@ -37,6 +38,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ stopped: stopBatch(body.batchId) });
   }
 
+  // Rejected rather than defaulted, for the reason the lore route rejects it: this is
+  // the endpoint that spends money, and generating into the wrong language is a bill
+  // for audio nobody asked for.
+  const lang: Lang | null =
+    body.lang === undefined || body.lang === null
+      ? BASE_LANG
+      : isLang(body.lang)
+        ? body.lang
+        : null;
+  if (!lang) {
+    return NextResponse.json({ error: `unknown language ${String(body.lang)}` }, { status: 400 });
+  }
+
   const lineIds = body.lineIds;
   if (!Array.isArray(lineIds) || lineIds.some((id) => typeof id !== "string")) {
     return NextResponse.json({ error: "lineIds must be an array of strings" }, { status: 400 });
@@ -48,7 +62,7 @@ export async function POST(request: Request) {
   // A quote is not a generation. Asked for separately so the confirmation dialog can
   // show a cost without the act of showing it costing anything.
   if (body.action === "quote") {
-    return NextResponse.json(await quote(lineIds as string[]));
+    return NextResponse.json(await quote(lineIds as string[], lang));
   }
 
   // Below this line the request costs money, so it needs the caller's own key. Above
@@ -60,10 +74,10 @@ export async function POST(request: Request) {
 
   try {
     if (lineIds.length === 1) {
-      const job = await regenerateOne(lineIds[0] as string, key);
+      const job = await regenerateOne(lineIds[0] as string, key, lang);
       return NextResponse.json({ job }, { status: job.state === "failed" ? 502 : 200 });
     }
-    const batch = await startBatch(lineIds as string[], key);
+    const batch = await startBatch(lineIds as string[], key, lang);
     return NextResponse.json({ batchId: batch.id, queued: batch.jobs.length });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 400 });

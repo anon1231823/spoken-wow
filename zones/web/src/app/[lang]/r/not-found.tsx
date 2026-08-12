@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { HomeLink } from "@/components/HomeLink";
 
 /**
  * A /r/ address that names no line.
@@ -18,9 +18,9 @@ export default function NotFound() {
           showed you — or find the entry yourself and report it from there.
         </p>
         <p className="mt-4">
-          <Link href="/" className="text-accent hover:underline">
+          <HomeLink className="text-accent hover:underline">
             Browse every line →
-          </Link>
+          </HomeLink>
         </p>
       </div>
     </main>

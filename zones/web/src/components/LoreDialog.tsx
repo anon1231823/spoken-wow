@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 
+import { BASE_LANG, langName, type Lang } from "@/lib/lang";
 import type { ResultLine } from "@/lib/search";
 
 // Rewriting a line, and putting an earlier wording back.
@@ -19,7 +20,7 @@ import type { ResultLine } from "@/lib/search";
 type Version = {
   version: number;
   isCurrent: boolean;
-  origin: "scraped" | "edited" | "scraped-rewritten";
+  origin: "scraped" | "edited" | "scraped-rewritten" | "translated";
   full: string;
   note: string | null;
   createdAt: string;
@@ -27,12 +28,14 @@ type Version = {
 
 type Props = {
   line: ResultLine | null;
+  /** Which language is being written. English edits the lore; anything else translates it. */
+  lang?: Lang;
   onClose: () => void;
   /** Told the new text so the row can update without a reload. */
   onSaved: (line: ResultLine, full: string) => void;
 };
 
-export function LoreDialog({ line, onClose, onSaved }: Props) {
+export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) {
   const dialog = useRef<HTMLDialogElement | null>(null);
   const [text, setText] = useState("");
   const [note, setNote] = useState("");
@@ -49,6 +52,8 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
       return;
     }
 
+    // An untranslated line carries no text at all, so this is empty either way; the
+    // English to work from is shown above the box, not in it.
     setText(line.text);
     setNote("");
     setError(null);
@@ -57,7 +62,10 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
     if (!dialog.current?.open) dialog.current?.showModal();
 
     let cancelled = false;
-    fetch(`/api/lore?lineId=${encodeURIComponent(line.id)}`)
+    const params = new URLSearchParams({ lineId: line.id });
+    if (lang !== BASE_LANG) params.set("lang", lang);
+
+    fetch(`/api/lore?${params}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("could not load history"))))
       .then((data: { versions: Version[] }) => {
         if (cancelled) return;
@@ -71,7 +79,7 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [line]);
+  }, [lang, line]);
 
   const save = useCallback(async () => {
     if (!line) return;
@@ -86,6 +94,7 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
         full: text,
         note: note.trim() || null,
         expectedVersion: baseVersion,
+        lang,
       }),
     }).catch(() => null);
 
@@ -99,7 +108,7 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
 
     onSaved(line, text.trim());
     onClose();
-  }, [baseVersion, line, note, onClose, onSaved, text]);
+  }, [baseVersion, lang, line, note, onClose, onSaved, text]);
 
   const restore = useCallback(
     async (version: number) => {
@@ -110,7 +119,7 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
       const res = await fetch("/api/lore", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ lineId: line.id, version }),
+        body: JSON.stringify({ lineId: line.id, version, lang }),
       }).catch(() => null);
 
       setBusy(false);
@@ -124,7 +133,7 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
       onSaved(line, data.version.full);
       onClose();
     },
-    [line, onClose, onSaved],
+    [lang, line, onClose, onSaved],
   );
 
   if (!line) return null;
@@ -141,6 +150,20 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
       <p className="mb-3 text-xs text-faint">
         {line.zoneName} · {line.file}
       </p>
+
+      {line.english !== undefined && (
+        <div className="mb-3">
+          <div className="mb-1 text-xs tracking-wide text-muted uppercase">
+            English — {langName(lang)} translation below
+          </div>
+          {/* Read-only, and always shown when translating: the English is the source
+              text, and a translator working from memory of what the row said is how a
+              paragraph quietly loses a sentence. */}
+          <p className="max-h-40 overflow-y-auto rounded border border-border bg-bg p-2 text-sm whitespace-pre-wrap text-muted">
+            {line.english}
+          </p>
+        </div>
+      )}
 
       <textarea
         autoFocus

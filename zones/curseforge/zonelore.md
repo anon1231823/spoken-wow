@@ -26,6 +26,7 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 - **Lore window** — browse zones without opening the map, from the minimap button or `/zl window`.
 - **Narration** — a play button beside the lore, with floating pause/skip/stop controls.
 - **Autoplay** — walking into an area you've never discovered narrates it once, tracked per character. Already explored the world? A setting narrates those areas too, still once each.
+- **Works on non-English clients** — subzone lore is found by the name your client reports, so a German, French, Spanish, Portuguese, Russian, Korean or Chinese client reaches it too. The lore text itself is English for now.
 - **Report a problem** — a Report button on every entry and on the playback controls. The game can't open a browser, so it hands you a short link to that exact line; the page at the other end has the text, the audio and a form.
 
 ## Narration needs a sound pack
@@ -56,6 +57,7 @@ As of 0.3.0 every line is recorded with a new narrator, and NPC and place names 
 /zl play         read the current lore aloud
 /zl voice        toggle narration on or off
 /zl audio        list sound packs, or switch between them
+/zl lang         list languages, or switch between them
 /zl autoplay     toggle narrating areas as you discover them
 /zl minimap      show or hide the minimap button
 /zl help         the full list

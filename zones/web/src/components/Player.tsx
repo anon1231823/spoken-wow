@@ -3,6 +3,7 @@
 import { Download, Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import type { ResultLine } from "@/lib/search";
 import { cn, timecode } from "@/lib/utils";
 
@@ -21,10 +22,12 @@ type Props = {
   line: ResultLine | null;
   /** Take version, used only to bust the browser cache after a regeneration. */
   version?: number;
+  /** Which language's narration to fetch. The file path itself carries none. */
+  lang?: Lang;
   audioRef: React.RefObject<HTMLAudioElement | null>;
 };
 
-export function Player({ line, version, audioRef }: Props) {
+export function Player({ line, version, lang = BASE_LANG, audioRef }: Props) {
   const local = useRef<HTMLAudioElement | null>(null);
 
   const [playing, setPlaying] = useState(false);
@@ -80,8 +83,13 @@ export function Player({ line, version, audioRef }: Props) {
     audioRef.current = el;
   };
 
+  // `v` busts the browser cache after a regeneration; `lang` picks which language's
+  // clip is served, since one path names a different file in each.
+  const query = new URLSearchParams();
+  if (version !== undefined) query.set("v", String(version));
+  if (lang !== BASE_LANG) query.set("lang", lang);
   const src = line
-    ? `/api/audio/${line.file}.mp3${version === undefined ? "" : `?v=${version}`}`
+    ? `/api/audio/${line.file}.mp3${query.size ? `?${query}` : ""}`
     : undefined;
 
   const position = scrubbing ?? time;

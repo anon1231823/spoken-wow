@@ -4,6 +4,11 @@
 // that decides between Postgres and the files. Nothing else in tools/ talks to the
 // lore table directly.
 //
+// The writers below are English-only, and say so in SQL rather than by assumption:
+// a scrape reads the English wiki and a rewrite rewrites English prose, so both are
+// scoped to lang = 'enUS'. Unscoped, the first translated row would look to them like
+// the current version of the line and get versioned over.
+//
 // WITHOUT DATABASE_URL everything here still works, reading and writing
 // addon/ZoneLore/Data/*.lua as the scrapers always did. That is not a courtesy: the
 // addon build, validate.mjs and package-audio.sh all run on clones with no Postgres,
@@ -13,7 +18,8 @@
 import { writeFile, mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 
-import { ZONES_LUA, SUBZONES_LUA, readZones, readSubzones } from "../lib/loredata.mjs";
+import { BASE_LOCALE } from "../lib/locales.mjs";
+import { zonesLua, subzonesLua, readZones, readSubzones } from "../lib/loredata.mjs";
 import { makeShort } from "../lib/wiki.mjs";
 import { isEnabled, query, transaction } from "../voice/db.mjs";
 import { emitZones, emitSubzones } from "./lua.mjs";
@@ -26,21 +32,28 @@ export function lineIdFor(entry) {
 }
 
 /** Every line as the Lua files have it. The no-database path, and the import's seed. */
-export async function readLinesFromLua() {
-  const [zones, subzones] = await Promise.all([readZones(), readSubzones()]);
+export async function readLinesFromLua(lang = BASE_LOCALE) {
+  const [zones, subzones] = await Promise.all([readZones(lang), readSubzones(lang)]);
   return [
     ...zones.map((z) => ({ ...z, key: null, kind: "zone" })),
     ...subzones.map((s) => ({ ...s, kind: "subzone" })),
   ];
 }
 
-/** The live version of every line, from the database. */
-export async function readCurrent() {
+/**
+ * The live version of every line in one language, from the database.
+ *
+ * Always filtered, never "whatever is current": a line has one current row per
+ * language, so an unfiltered read would mix languages into a single export the
+ * moment a translated row exists.
+ */
+export async function readCurrent(lang = BASE_LOCALE) {
   const { rows } = await query(
-    `select "lineId", "version", "origin", "mapID", "kind", "key", "name", "full",
+    `select "lineId", "lang", "version", "origin", "mapID", "kind", "key", "name", "full",
             "short", "shortIsManual", "source", "editedBy", "note", "createdAt"
        from "lore_line"
-      where "isCurrent"`,
+      where "isCurrent" and "lang" = $1`,
+    [lang],
   );
   return rows;
 }
@@ -67,31 +80,33 @@ function assertComplete(entries) {
   }
 }
 
-export async function writeZonesLua(zones) {
+export async function writeZonesLua(zones, lang = BASE_LOCALE) {
   if (zones.length === 0) throw new Error("refusing to write Zones.lua: no entries");
   assertComplete(zones);
-  await mkdir(dirname(ZONES_LUA), { recursive: true });
-  await writeFile(ZONES_LUA, emitZones(zones));
+  const path = zonesLua(lang);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, emitZones(zones, lang));
   return zones.length;
 }
 
-export async function writeSubzonesLua(subzones, zoneNames) {
+export async function writeSubzonesLua(subzones, zoneNames, lang = BASE_LOCALE) {
   if (subzones.length === 0) throw new Error("refusing to write Subzones.lua: no entries");
   assertComplete(subzones);
-  await mkdir(dirname(SUBZONES_LUA), { recursive: true });
-  await writeFile(SUBZONES_LUA, emitSubzones(subzones, zoneNames));
+  const path = subzonesLua(lang);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, emitSubzones(subzones, zoneNames, lang));
   return subzones.length;
 }
 
-/** Both data files, from one corpus. The export's only writer. */
-export async function writeCorpus(entries) {
+/** Both data files for one language, from one corpus. The export's only writer. */
+export async function writeCorpus(entries, lang = BASE_LOCALE) {
   const zones = entries.filter((e) => e.kind === "zone");
   const subzones = entries.filter((e) => e.kind === "subzone");
   const zoneNames = new Map(zones.map((z) => [z.mapID, z.name]));
 
   return {
-    zones: await writeZonesLua(zones),
-    subzones: await writeSubzonesLua(subzones, zoneNames),
+    zones: await writeZonesLua(zones, lang),
+    subzones: await writeSubzonesLua(subzones, zoneNames, lang),
   };
 }
 
@@ -118,7 +133,7 @@ export async function recordScrape(entries) {
 
       const { rows: currentRows } = await client.query(
         `select "version", "origin", "full", "short", "name", "source"
-           from "lore_line" where "lineId" = $1 and "isCurrent"`,
+           from "lore_line" where "lineId" = $1 and "lang" = 'enUS' and "isCurrent"`,
         [lineId],
       );
       const current = currentRows[0];
@@ -134,7 +149,8 @@ export async function recordScrape(entries) {
       }
 
       const { rows: maxRows } = await client.query(
-        `select coalesce(max("version"), 0) as "version" from "lore_line" where "lineId" = $1`,
+        `select coalesce(max("version"), 0) as "version"
+           from "lore_line" where "lineId" = $1 and "lang" = 'enUS'`,
         [lineId],
       );
       const version = Number(maxRows[0].version) + 1;
@@ -146,7 +162,8 @@ export async function recordScrape(entries) {
 
       if (live && current) {
         await client.query(
-          `update "lore_line" set "isCurrent" = false where "lineId" = $1 and "isCurrent"`,
+          `update "lore_line" set "isCurrent" = false
+           where "lineId" = $1 and "lang" = 'enUS' and "isCurrent"`,
           [lineId],
         );
       }
@@ -198,7 +215,7 @@ export async function recordRewrite(entries) {
 
       const { rows: currentRows } = await client.query(
         `select "version", "origin", "full", "shortIsManual"
-           from "lore_line" where "lineId" = $1 and "isCurrent"`,
+           from "lore_line" where "lineId" = $1 and "lang" = 'enUS' and "isCurrent"`,
         [lineId],
       );
       const current = currentRows[0];
@@ -212,7 +229,8 @@ export async function recordRewrite(entries) {
       }
 
       const { rows: maxRows } = await client.query(
-        `select coalesce(max("version"), 0) as "version" from "lore_line" where "lineId" = $1`,
+        `select coalesce(max("version"), 0) as "version"
+           from "lore_line" where "lineId" = $1 and "lang" = 'enUS'`,
         [lineId],
       );
       const version = Number(maxRows[0].version) + 1;
@@ -222,7 +240,8 @@ export async function recordRewrite(entries) {
 
       if (live) {
         await client.query(
-          `update "lore_line" set "isCurrent" = false where "lineId" = $1 and "isCurrent"`,
+          `update "lore_line" set "isCurrent" = false
+           where "lineId" = $1 and "lang" = 'enUS' and "isCurrent"`,
           [lineId],
         );
       }

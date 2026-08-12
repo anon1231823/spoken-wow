@@ -18,7 +18,7 @@ import { apiKey, downloadDictionary, loadConfig, resolveDictionary } from "./ele
 import { parseDictionary, uncoveredSpellings } from "./lexicon.mjs";
 import { assignFiles, lineId } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
-import { loadManifest, SOUNDS_DIR } from "./store.mjs";
+import { LANG, loadManifest, soundsDir } from "./store.mjs";
 
 const LOOKUP_PATH = join(ROOT, "addon/ZoneLoreAudio/Data/Sounds.lua");
 
@@ -50,7 +50,7 @@ async function mp3sOnDisk(dir, prefix = "") {
  * /lexicon, which is not something this run can do.
  */
 async function checkDictionary(spokenTexts) {
-  const config = await loadConfig().catch(() => null);
+  const config = await loadConfig(LANG).catch(() => null);
   if (!config?.dictionaryId) {
     note("no pronunciation dictionary is named in tools/voice/config.json; coverage unchecked");
     return;
@@ -105,7 +105,7 @@ async function main() {
   }
 
   //-- manifest vs disk ------------------------------------------------------
-  const onDisk = new Set(await mp3sOnDisk(SOUNDS_DIR));
+  const onDisk = new Set(await mp3sOnDisk(soundsDir(LANG)));
   const manifestFiles = new Set(Object.values(manifest).map((r) => r.file));
 
   for (const [id, record] of Object.entries(manifest)) {

@@ -8,7 +8,11 @@
 
 local _, ZoneLore = ...
 
-ZoneLore.Zones = {
+if not ZoneLore:ShouldLoadLanguage("enUS") then
+	return
+end
+
+local zones = {
 	[947] = {
 		name = "Azeroth",
 		short = "Ten thousand years ago the Highborne of Kalimdor, drunk on the power of the Well of Eternity, answered the call of the fallen titan Sargeras and tore open a gate for the Burning Legion.",
@@ -304,3 +308,5 @@ ZoneLore.Zones = {
 		source = "https://warcraft.wiki.gg/wiki/Undercity",
 	},
 }
+
+ZoneLore:RegisterLoreData("enUS", "zones", zones)

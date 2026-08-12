@@ -2,7 +2,16 @@ import { NextResponse } from "next/server";
 
 import { requireRegenerate } from "@/lib/authz";
 import { invalidateCatalogue, isKnownLine } from "@/lib/catalogue";
+import { isLang, langFromParams, type Lang, BASE_LANG } from "@/lib/lang";
 import { LoreConflict, LoreMissing, loreHistory, restoreLore, saveLore } from "@/lib/lore";
+
+// Which language a write is for. Rejected rather than defaulted: a body naming a
+// language this build does not know is a client bug, and quietly writing it into
+// English would put a German paragraph in the English corpus.
+function langOf(body: { lang?: unknown }): Lang | null {
+  if (body.lang === undefined || body.lang === null) return BASE_LANG;
+  return isLang(body.lang) ? body.lang : null;
+}
 
 // The words themselves, read and rewritten.
 //
@@ -21,10 +30,12 @@ export async function GET(request: Request) {
   const { denied } = await requireRegenerate();
   if (denied) return denied;
 
-  const lineId = new URL(request.url).searchParams.get("lineId");
+  const params = new URL(request.url).searchParams;
+  const lineId = params.get("lineId");
   if (!lineId) return NextResponse.json({ error: "lineId is required" }, { status: 400 });
 
-  return NextResponse.json({ lineId, versions: await loreHistory(lineId) });
+  const lang = langFromParams(params);
+  return NextResponse.json({ lineId, lang, versions: await loreHistory(lineId, lang) });
 }
 
 export async function PUT(request: Request) {
@@ -37,7 +48,13 @@ export async function PUT(request: Request) {
     short?: unknown;
     note?: unknown;
     expectedVersion?: unknown;
+    lang?: unknown;
   };
+
+  const lang = langOf(body);
+  if (!lang) {
+    return NextResponse.json({ error: `unknown language ${String(body.lang)}` }, { status: 400 });
+  }
 
   if (typeof body.lineId !== "string" || body.lineId === "") {
     return NextResponse.json({ error: "lineId is required" }, { status: 400 });
@@ -72,11 +89,12 @@ export async function PUT(request: Request) {
       note: (body.note as string | null | undefined) ?? null,
       editedBy: session.user.id,
       expectedVersion: (body.expectedVersion as number | null | undefined) ?? null,
+      lang,
     });
 
     // The catalogue is memoised, and the edit has just changed what it should say.
-    invalidateCatalogue();
-    return NextResponse.json({ lineId: body.lineId, version });
+    invalidateCatalogue(lang);
+    return NextResponse.json({ lineId: body.lineId, lang, version });
   } catch (err) {
     if (err instanceof LoreConflict) {
       return NextResponse.json({ error: err.message }, { status: 409 });
@@ -95,8 +113,13 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     lineId?: unknown;
     version?: unknown;
+    lang?: unknown;
   };
 
+  const lang = langOf(body);
+  if (!lang) {
+    return NextResponse.json({ error: `unknown language ${String(body.lang)}` }, { status: 400 });
+  }
   if (typeof body.lineId !== "string" || body.lineId === "") {
     return NextResponse.json({ error: "lineId is required" }, { status: 400 });
   }
@@ -105,9 +128,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const version = await restoreLore(body.lineId, body.version as number);
-    invalidateCatalogue();
-    return NextResponse.json({ lineId: body.lineId, version });
+    const version = await restoreLore(body.lineId, body.version as number, lang);
+    invalidateCatalogue(lang);
+    return NextResponse.json({ lineId: body.lineId, lang, version });
   } catch (err) {
     if (err instanceof LoreMissing) {
       return NextResponse.json({ error: (err as Error).message }, { status: 404 });

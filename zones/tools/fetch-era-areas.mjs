@@ -25,59 +25,24 @@
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { fetchTable, PINNED_BUILD } from "./lib/db2.mjs";
 import { ROOT } from "./lib/wiki.mjs";
 
-const PINNED_BUILD = "1.15.9.69109";
 const SEED = join(ROOT, "tools/seed/era-areas.json");
 
 const argv = process.argv.slice(2);
 const build = argv.includes("--build") ? argv[argv.indexOf("--build") + 1] : PINNED_BUILD;
 
-// Just enough CSV to read wago.tools output: quoted fields may contain commas
-// and doubled quotes.
-function parseCsvLine(line) {
-  const fields = [];
-  let field = "";
-  let quoted = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (quoted) {
-      if (ch === '"' && line[i + 1] === '"') {
-        field += '"';
-        i++;
-      } else if (ch === '"') {
-        quoted = false;
-      } else {
-        field += ch;
-      }
-    } else if (ch === '"' && field === "") {
-      quoted = true;
-    } else if (ch === ",") {
-      fields.push(field);
-      field = "";
-    } else {
-      field += ch;
-    }
-  }
-  fields.push(field);
-  return fields;
-}
-
 async function main() {
-  const url = `https://wago.tools/db2/AreaTable/csv?build=${build}`;
-  console.log(`fetching ${url}`);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} -- is ${build} a real Era build?`);
-  const csv = await res.text();
-
-  const lines = csv.trim().split("\n");
-  const header = parseCsvLine(lines[0]);
-  const nameCol = header.indexOf("AreaName_lang");
-  if (nameCol < 0) throw new Error("AreaTable format changed: no AreaName_lang column");
+  console.log(`fetching AreaTable for ${build}`);
+  const rows = await fetchTable("AreaTable", { build });
+  if (rows.length && rows[0].AreaName_lang === undefined) {
+    throw new Error("AreaTable format changed: no AreaName_lang column");
+  }
 
   const names = new Set();
-  for (const line of lines.slice(1)) {
-    const name = parseCsvLine(line)[nameCol].trim();
+  for (const row of rows) {
+    const name = (row.AreaName_lang || "").trim();
     if (name) names.add(name);
   }
 

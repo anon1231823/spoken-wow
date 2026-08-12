@@ -69,16 +69,22 @@ export type TakeRecord = {
 
 export type Manifest = Record<string, TakeRecord>;
 
-export const buildCatalogue = generateModule.buildCatalogue as () => Promise<CatalogueEntry[]>;
+export const buildCatalogue = generateModule.buildCatalogue as (
+  lang?: string,
+) => Promise<CatalogueEntry[]>;
 
 export const measureRates = generateModule.measureRates as (
   manifest: Manifest,
   config: { creditRate?: number | null } | null,
 ) => { creditRate: number | null; charsPerSecond: number; measuredFrom: number };
 
-export const loadManifest = storeModule.loadManifest as () => Promise<Manifest>;
-export const SOUNDS_DIR = storeModule.SOUNDS_DIR as string;
-export const HISTORY_DIR = storeModule.HISTORY_DIR as string;
+export const loadManifest = storeModule.loadManifest as (lang?: string) => Promise<Manifest>;
+
+// Functions rather than constants, because this process serves every language at once
+// and a path resolved at import could only ever name one of them. The CLI, which runs
+// one language per process, calls them with no argument.
+export const soundsDir = storeModule.soundsDir as (lang?: string) => string;
+export const historyDir = storeModule.historyDir as (lang?: string) => string;
 
 export const toSpokenText = normaliseModule.toSpokenText as (
   text: string,
@@ -112,7 +118,7 @@ export type VoiceConfig = {
   voiceSettings: Record<string, number | boolean>;
 };
 
-export const loadConfig = elevenModule.loadConfig as () => Promise<VoiceConfig>;
+export const loadConfig = elevenModule.loadConfig as (lang?: string) => Promise<VoiceConfig>;
 export const saveConfig = elevenModule.saveConfig as (config: VoiceConfig) => Promise<void>;
 
 // elevenlabs.mjs also exports apiKey(), which reads ELEVENLABS_API_KEY out of the
@@ -168,6 +174,7 @@ export const COOL_DOWN_MS = concurrencyModule.COOL_DOWN_MS as number;
 export const writeAudio = storeModule.writeAudio as (
   file: string,
   buffer: Buffer,
+  lang?: string,
 ) => Promise<string>;
 export const durationOf = storeModule.durationOf as (path: string) => Promise<number>;
 export const insertTake = storeModule.insertTake as (
@@ -175,17 +182,21 @@ export const insertTake = storeModule.insertTake as (
   record: TakeRecord,
   origin: "imported" | "generated",
   settings?: Record<string, unknown> | null,
+  lang?: string,
 ) => Promise<number>;
 export const restoreTake = storeModule.restoreTake as (
   file: string,
   archiveVersion: number,
+  lang?: string,
 ) => Promise<string>;
 
 export const exportManifest = exportModule.exportManifest as (options?: {
   check?: boolean;
+  lang?: string;
 }) => Promise<{ skipped: boolean; changed: boolean; count: number }>;
-export const buildLookup = lookupModule.buildLookup as () => Promise<{
+export const buildLookup = lookupModule.buildLookup as (lang?: string) => Promise<{
   zones: number;
   subzones: number;
   missingFiles: number;
+  path: string;
 }>;
