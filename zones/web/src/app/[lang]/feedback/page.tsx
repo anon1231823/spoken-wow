@@ -54,10 +54,13 @@ type Row = {
 };
 
 export default async function Page({
+  params,
   searchParams,
 }: {
+  params: Promise<{ lang: string }>;
   searchParams: Promise<{ status?: string | string[] }>;
 }) {
+  const { lang } = await params;
   const session = await currentSession();
 
   // 404 rather than a redirect to /login, matching /admin and /lexicon: a member has no
@@ -117,7 +120,7 @@ export default async function Page({
         {VIEWS.map((value) => (
           <Link
             key={value}
-            href={value === "open" ? "/feedback" : `/feedback?status=${value}`}
+            href={value === "open" ? `/${lang}/feedback` : `/${lang}/feedback?status=${value}`}
             className={cn(
               "rounded border px-2 py-0.5",
               value === view

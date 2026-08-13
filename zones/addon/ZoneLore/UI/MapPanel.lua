@@ -174,8 +174,11 @@ local function Refresh(mapID)
 		SetBackLink(zoneName)
 		SetBody(selected.entry.full or selected.entry.short or "")
 		-- Audio and the report link are both keyed by the canonical form, not the
-		-- name the client reported.
-		local key = ZoneLore:NormaliseAreaKey(selected.areaName)
+		-- name the client reported. Resolve, not Normalise: on a localized client
+		-- the reported name reaches the corpus key only through the alias table,
+		-- and normalising a non-Latin name yields nil -- which would silently
+		-- retarget both buttons at the zone's lore.
+		local key = ZoneLore:ResolveAreaKey(selected.areaName)
 		audioButton:SetTarget(mapID, key)
 		reportButton:SetTarget(mapID, key)
 		return

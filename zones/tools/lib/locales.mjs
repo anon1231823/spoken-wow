@@ -45,12 +45,17 @@ export function isLocale(code) {
  * either would orphan every installation. Other languages ship one VBR tier, so
  * their folder carries no bitrate marker -- if a second tier is ever wanted for
  * a language, it needs a suffix and this rule gets an exception, not a rewrite.
+ *
+ * THE FULL LOCALE CODE, never a truncation: "es" would make esES and esMX one
+ * folder, and the collision would be silent -- take filenames are identical
+ * across languages, so one pack's files would simply replace the other's and
+ * every validator would keep passing.
  */
 export function packFolder(locale, tier = "standard") {
   if (locale === BASE_LOCALE) {
     return tier === "high" ? "ZoneLoreAudio" : "ZoneLoreAudio64";
   }
-  return "ZoneLoreAudio" + locale.slice(0, 2).toUpperCase();
+  return "ZoneLoreAudio_" + locale;
 }
 
 /** The tiers a language is packaged at. See packFolder for why English differs. */

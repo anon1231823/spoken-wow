@@ -44,11 +44,12 @@ LOCALE="${LOCALE:-enUS}"
 export ZONELORE_LANG="$LOCALE"
 
 # The masters live in the language's own pack folder; English's are the high tier
-# it already publishes. Kept in step with packFolder() in tools/lib/locales.mjs.
+# it already publishes. Kept in step with packFolder() in tools/lib/locales.mjs:
+# the full locale code, because a truncation would give esES and esMX one folder.
 if [[ "$LOCALE" == "enUS" ]]; then
   SRC="$REPO/addon/ZoneLoreAudio"
 else
-  SRC="$REPO/addon/ZoneLoreAudio$(echo "${LOCALE:0:2}" | tr '[:lower:]' '[:upper:]')"
+  SRC="$REPO/addon/ZoneLoreAudio_$LOCALE"
 fi
 TOC="$SRC/$(basename "$SRC").toc"
 SOUNDS="$SRC/Sounds"
@@ -98,7 +99,7 @@ tier_folder() {
 tier_bitrate()  { case "$1" in standard) echo "64";; high) echo "128";; esac; }
 tier_encoding() { case "$1" in standard) echo "vbr-v6";; high) echo "copy";; esac; }
 tier_title() {
-  if [[ "$LOCALE" != "enUS" ]]; then echo "ZoneLore Audio ${LOCALE:0:2}"; return; fi
+  if [[ "$LOCALE" != "enUS" ]]; then echo "ZoneLore Audio $LOCALE"; return; fi
   case "$1" in standard) echo "ZoneLore Audio 64";; high) echo "ZoneLore Audio";; esac
 }
 

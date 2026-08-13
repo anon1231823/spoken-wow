@@ -654,12 +654,10 @@ end
 local function CmdAudioPack(arg)
 	local packs = ZoneLore:GetAudioPacks()
 	if #packs == 0 then
-		-- Named, because "no sound pack" reads as "you installed nothing" while the
-		-- likelier truth is that the installed pack narrates another language.
-		ZoneLore:Print("|cffffcc00no %s sound pack installed|r", ZoneLore:GetLanguage())
-		if ZoneLore:GetLanguage() == "enUS" then
-			ZoneLore:Print("  install ZoneLoreAudio (128 kbps) or ZoneLoreAudio64 (64 kbps) alongside ZoneLore")
-		end
+		-- Any pack would do -- packs are interchangeable across languages -- so an
+		-- empty list really does mean nothing is installed.
+		ZoneLore:Print("|cffffcc00no sound pack installed|r")
+		ZoneLore:Print("  install ZoneLoreAudio (128 kbps) or ZoneLoreAudio64 (64 kbps) alongside ZoneLore")
 		return
 	end
 
@@ -723,11 +721,19 @@ local function CmdLanguage(arg)
 			return
 		end
 
+		-- Preview relaxes the readiness check inside SetLanguage, so it has to be
+		-- on before the attempt -- but it must not survive a refusal, or the one
+		-- remaining refusal (no fonts) leaves the override stuck on and every
+		-- login printing the preview warning for a switch that never happened.
+		local wasPreviewing = ZoneLore:IsPreviewingLanguage()
 		if modifier == "force" then
 			ZoneLore:SetLanguagePreview(true)
 		end
 
 		if not ZoneLore:SetLanguage(locale.code) then
+			if modifier == "force" then
+				ZoneLore:SetLanguagePreview(wasPreviewing)
+			end
 			if not ZoneLore:CanRenderLanguage(locale.code) then
 				ZoneLore:Print(
 					"|cffffcc00this client has no fonts for %s|r -- it would draw as boxes",

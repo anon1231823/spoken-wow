@@ -58,6 +58,25 @@ export function langFromParams(params: URLSearchParams): Lang {
   return isLang(value) ? value : BASE_LANG;
 }
 
+/**
+ * A page's searchParams, re-encoded for a redirect.
+ *
+ * For the legacy no-language stubs: "/feedback?status=resolved" has to land on
+ * "/enUS/feedback?status=resolved", not "/enUS/feedback" -- a redirect that drops
+ * the query silently unfilters every old bookmark and every internal link that
+ * still says the bare path.
+ */
+export function carriedQuery(params: Record<string, string | string[] | undefined>): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    for (const one of Array.isArray(value) ? value : value === undefined ? [] : [value]) {
+      query.append(key, one);
+    }
+  }
+  const encoded = query.toString();
+  return encoded ? `?${encoded}` : "";
+}
+
 export function langName(lang: Lang): string {
   return LOCALES.find((locale) => locale.code === lang)?.name ?? lang;
 }

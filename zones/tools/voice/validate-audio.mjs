@@ -18,9 +18,13 @@ import { apiKey, downloadDictionary, loadConfig, resolveDictionary } from "./ele
 import { parseDictionary, uncoveredSpellings } from "./lexicon.mjs";
 import { assignFiles, lineId } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
+import { packFolder } from "../lib/locales.mjs";
 import { LANG, loadManifest, soundsDir } from "./store.mjs";
 
-const LOOKUP_PATH = join(ROOT, "addon/ZoneLoreAudio/Data/Sounds.lua");
+// The lookup of the language being validated, not English's: a LOCALE=deDE
+// packaging run that checked the German manifest against the English lookup
+// would fail on a correct pack and pass on an empty one.
+const LOOKUP_PATH = join(ROOT, "addon", packFolder(LANG, "high"), "Data/Sounds.lua");
 
 const problems = [];
 const notes = [];

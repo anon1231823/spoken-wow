@@ -166,9 +166,20 @@ const era = await loadEraAreas();
 const corpora = new Map();
 
 for (const lang of languages) {
-  const zonesPath = join(DATA, lang, "Zones.lua");
-  const zonesSrc = await readFile(zonesPath, "utf8").catch(() => null);
-  if (zonesSrc === null) continue; // a locale directory with only Aliases.lua
+  const zonesSrc = await readFile(join(DATA, lang, "Zones.lua"), "utf8").catch(() => null);
+  const subSrc = await readFile(join(DATA, lang, "Subzones.lua"), "utf8").catch(() => null);
+
+  // Neither file: a locale directory with only Aliases.lua. Exactly one is not
+  // that -- it is an export that stopped between its two writes, and skipping it
+  // silently would report a half-corpus as fine.
+  if (zonesSrc === null && subSrc === null) continue;
+  if (zonesSrc === null || subSrc === null) {
+    note(
+      `${lang}/: has ${zonesSrc === null ? "Subzones" : "Zones"}.lua but not its pair -- ` +
+        `an interrupted export? re-run: make lore-export`,
+    );
+    continue;
+  }
 
   const zLabel = `${lang}/Zones.lua`;
   checkBraces(zonesSrc, zLabel);
@@ -191,8 +202,6 @@ for (const lang of languages) {
     note(`${zLabel}: ${zoneFields} field lines for ${zoneIDs.length} entries (expected 4 each)`);
   }
 
-  const subPath = join(DATA, lang, "Subzones.lua");
-  const subSrc = await readFile(subPath, "utf8");
   const sLabel = `${lang}/Subzones.lua`;
   checkBraces(subSrc, sLabel);
   checkHeader(subSrc, sLabel, { lang, local: "subzones", kind: "subzones" });

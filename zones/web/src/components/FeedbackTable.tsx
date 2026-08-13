@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { FeedbackStatus } from "@/components/FeedbackStatus";
 import { CATEGORY_LABEL, reporterLabel, type FeedbackReport, type Status } from "@/lib/feedback";
+import { useLang } from "@/lib/use-lang";
 import { cn } from "@/lib/utils";
 
 /**
@@ -29,6 +30,10 @@ export type FeedbackRow = FeedbackReport & {
 };
 
 export function FeedbackTable({ rows }: { rows: FeedbackRow[] }) {
+  // Line links keep the language being triaged in: a bare "/?zone=..." would hit
+  // the legacy redirect, which cannot carry the language and used to drop the
+  // query with it.
+  const { lang } = useLang();
   const [reports, setReports] = useState(rows);
 
   function changed(id: number, status: Status, resolverEmail: string | null) {
@@ -73,7 +78,7 @@ export function FeedbackTable({ rows }: { rows: FeedbackRow[] }) {
                 <span className="text-faint">— general</span>
               ) : (
                 <Link
-                  href={`/?zone=${report.mapID}&q=${encodeURIComponent(report.lineName ?? "")}`}
+                  href={`/${lang}?zone=${report.mapID}&q=${encodeURIComponent(report.lineName ?? "")}`}
                   className="hover:text-accent hover:underline"
                   title={report.zoneName ?? undefined}
                 >
