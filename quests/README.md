@@ -437,6 +437,35 @@ pull` and never through git or CI. `build` copies from there into
 `dist/AI_VoiceOverData_Vanilla/generated/sounds/`, alongside every lookup table and the
 `sound_length_table.lua` computed from exactly those mp3s.
 
+### Reports from inside the game
+
+The addon shows a **Report** button on the quest detail panel and on the sound queue frame,
+whether or not audio actually played — a silent quest is among the most useful things a player
+can tell you. Clicking it opens a copy box holding an address, because the client cannot open a
+URL or send anything anywhere; the player copies it and opens it in a browser.
+
+The address is built from what the client can see, never from what the data module resolved:
+`/r/quest/{questID}/{accept|progress|complete}`, or `/r/npc/{creatureID}` for gossip, for a
+client reporting quest id `0`, and as the fallback whenever a quest id is unavailable. That
+matters because a data module which failed to load produces no `soundData` at all, and that is
+exactly the state most worth hearing about. It also means there is no slug or hash shared
+between Lua and Python that could silently drift.
+
+The landing page resolves the address against the corpus, plays the take that is currently
+live, and hosts the form. An address that resolves to nothing still renders the form — an
+addon sending players to a page the corpus does not know about is itself a bug report.
+
+`POST /api/reports` is the only unauthenticated write in the explorer. It is defended by a
+honeypot field answered with `200` rather than `400` (an error only teaches a script to stop
+sending the field), a limit of ten reports per hour per IP counted in Postgres so it survives a
+pm2 restart, and a category checked against a closed set. The IP is the rate limiter's key and
+nothing else: never displayed, never read back. Signing in replaces any typed name.
+
+Collaborators and admins triage at `/reports`, marking each report fixed, not a problem, or
+reopening it. **A report never becomes a regeneration job.** Regenerating spends ElevenLabs
+credits, so nothing public can start one; someone reads the report, listens, and queues the
+file through the normal flow.
+
 ## Addon Install
 
 ```bash

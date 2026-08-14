@@ -59,6 +59,8 @@ Audio store and droplet plumbing are all in the `Makefile` (`make help`): `push`
 
 **Migrations are forward-only and additive.** `deploy/bin/activate.sh` migrates *before* the symlink swap, and rollback restores code without un-applying schema, so a release must run against the schema of the release after it.
 
+**A report is a claim, not a job.** The addon's Report button builds an address — `/r/quest/{id}/{accept|progress|complete}` or `/r/npc/{id}` — from what the client can see rather than from anything the data module resolved, since a module that failed to load is the failure most worth reporting. The player copies it, opens it, and fills in a form; `POST /api/reports` is the only unauthenticated write in the app, defended by a honeypot, a Postgres-backed limit of ten per hour per `x-real-ip`, and closed-set validation. `line_report` is separate from `line_issue` because one is a human's claim about audio and the other a scan's finding about text. Nothing connects a report to the regeneration queue: a job spends ElevenLabs credits, so a collaborator reads the report and queues the file by hand.
+
 **Generation settings have two layers.** `voice/generation.json` + `voice/pronunciation.json` are what the Python CLI reads and ship inside each release; the database rows edited at `/voices` override them for the web app. The lexicon has no file layer at all — it lives only in Postgres (seeded by `0008`), and the Python CLI sends no pronunciation dictionary, which is the one place the two generators diverge.
 
 `docs/superpowers/specs/` and `docs/superpowers/plans/` hold the design documents for the explorer and the queue.
