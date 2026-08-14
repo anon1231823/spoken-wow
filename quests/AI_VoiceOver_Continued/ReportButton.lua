@@ -144,19 +144,17 @@ function ReportButton:Initialize()
         end,
     }
 
-    -- Accept and Decline together span nearly the whole panel, so Report sits above Decline
-    -- rather than beside it, where the frame is empty.
-    if QuestFrameDetailPanel and QuestFrameDeclineButton then
-        local button = self:Create(QuestFrameDetailPanel)
-        button:SetPoint("BOTTOMRIGHT", QuestFrameDeclineButton, "TOPRIGHT", 0, 4)
-    end
-
-    -- The only surface present for gossip, for progress and completion text, and while audio
-    -- is playing - which is when the complaint usually occurs to someone.
-    if SoundQueueUI and SoundQueueUI.frame and SoundQueueUI.frame.container then
-        local button = self:Create(SoundQueueUI.frame.container)
+    -- The sound queue frame is the only host. It is present for gossip, for progress and
+    -- completion text, and while audio is playing - which is when the complaint occurs to
+    -- someone - whereas the quest detail panel covers only the moment a quest is offered.
+    --
+    -- Offset left of the frame's own corner because the resizer already sits exactly there and
+    -- is the handle for dragging the frame's size; covering it would trade one feature for
+    -- another.
+    if SoundQueueUI and SoundQueueUI.frame then
+        local button = self:Create(SoundQueueUI.frame)
         button:SetWidth(52)
         button:SetHeight(18)
-        button:SetPoint("BOTTOMRIGHT", SoundQueueUI.frame.container, "BOTTOMRIGHT", -4, 4)
+        button:SetPoint("BOTTOMRIGHT", SoundQueueUI.frame, "BOTTOMRIGHT", -18, 2)
     end
 end

@@ -439,10 +439,13 @@ pull` and never through git or CI. `build` copies from there into
 
 ### Reports from inside the game
 
-The addon shows a **Report** button on the quest detail panel and on the sound queue frame,
+The addon shows a **Report** button in the bottom-right corner of the sound queue frame,
 whether or not audio actually played — a silent quest is among the most useful things a player
-can tell you. Clicking it opens a copy box holding an address, because the client cannot open a
-URL or send anything anywhere; the player copies it and opens it in a browser.
+can tell you. That frame is the only one present for all of it: gossip, quest progress and
+completion text, and whatever is playing right now, which is when the complaint tends to occur
+to someone. It sits just left of the frame's corner because the resize grabber already owns
+that exact spot. Clicking it opens a copy box holding an address, because the client cannot
+open a URL or send anything anywhere; the player copies it and opens it in a browser.
 
 The address is built from what the client can see, never from what the data module resolved:
 `/r/quest/{questID}/{accept|progress|complete}`, or `/r/npc/{creatureID}` for gossip, for a
