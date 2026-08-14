@@ -9,6 +9,7 @@
     <Include file="SoundQueue.lua"/>
     <Include file="SoundQueueUI.lua"/>
     <Include file="QuestOverlayUI.lua"/>
+    <Include file="ReportButton.lua"/>
     <Include file="DataModules.lua"/>
     <Include file="VoiceOver.lua"/>
 

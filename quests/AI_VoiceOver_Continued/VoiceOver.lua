@@ -158,6 +158,12 @@ function Addon:OnInitialize()
     }
 
     SoundQueueUI:Initialize()
+    -- After the sound queue frame exists: one of the Report button's two hosts is a child of
+    -- it. Guarded because a failure to draw a button must not stop playback initializing.
+    local reportButtonReady, reportButtonError = pcall(ReportButton.Initialize, ReportButton)
+    if not reportButtonReady then
+        Debug:Record("report-button-error", tostring(reportButtonError))
+    end
     -- Discover data packs now, but load their multi-megabyte generated Lua
     -- tables after entering the world. Keeping LoadAddOn out of AceAddon's
     -- shared initialization/login stack avoids Hardcore's stricter script
