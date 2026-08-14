@@ -1,0 +1,114 @@
+/**
+ * Against a real Postgres, for the reason queue.test.ts gives: the rate limit is a time
+ * window and the value sets are check constraints, and a mock would assert neither.
+ *
+ * Needs DATABASE_URL and migrations applied:
+ *   docker compose up -d postgres && deploy/bin/migrate.sh "$PWD/web"
+ */
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+
+import { closeDb, db } from "@/lib/db";
+
+import { countRecent, createReport, listReports, reportsForLine, setStatus } from "./store";
+
+/** resolvedBy has a foreign key, so resolving needs a user that exists. */
+const RESOLVER = "test-report-resolver";
+
+/** A bucket no other run shares, so tests can count rows for one IP safely. */
+let ip: string;
+
+function submission(overrides: Partial<Parameters<typeof createReport>[0]> = {}) {
+  return {
+    lineId: `q:1:accept`,
+    target: "quest/1/accept",
+    category: "pronunciation" as const,
+    body: "Said Thrall wrong.",
+    userId: null,
+    name: null,
+    email: null,
+    ip,
+    ...overrides,
+  };
+}
+
+beforeEach(async () => {
+  ip = `test-${Math.random().toString(36).slice(2, 10)}`;
+  await db().query(
+    `insert into "user" ("id", "name", "email", "emailVerified")
+     values ($1, 'Test Resolver', $2, false)
+     on conflict ("id") do nothing`,
+    [RESOLVER, `${RESOLVER}@example.invalid`],
+  );
+});
+
+afterEach(async () => {
+  await db().query(`delete from "line_report" where "ip" like $1`, [`${ip}%`]);
+});
+
+afterAll(async () => {
+  await db().query(`delete from "user" where "id" = $1`, [RESOLVER]);
+  await closeDb();
+});
+
+describe("createReport and countRecent", () => {
+  it("counts only this IP inside the window", async () => {
+    await createReport(submission());
+    await createReport(submission({ ip: `${ip}-other` }));
+
+    expect(await countRecent(ip, 60 * 60 * 1000)).toBe(1);
+  });
+
+  it("ignores rows older than the window", async () => {
+    await createReport(submission());
+    await db().query(
+      `update "line_report" set "createdAt" = now() - interval '2 hours' where "ip" = $1`,
+      [ip],
+    );
+
+    expect(await countRecent(ip, 60 * 60 * 1000)).toBe(0);
+  });
+
+  it("stores a report that resolved to no line", async () => {
+    await createReport(submission({ lineId: null, target: "quest/999999/accept" }));
+
+    const stored = (await listReports("open")).find(
+      (report) => report.target === "quest/999999/accept",
+    );
+    expect(stored?.lineId).toBeNull();
+  });
+
+  it("hands back timestamps as strings, not Dates", async () => {
+    await createReport(submission());
+    const [report] = await reportsForLine("q:1:accept");
+
+    expect(typeof report.createdAt).toBe("string");
+  });
+});
+
+describe("setStatus", () => {
+  it("records who resolved it and when", async () => {
+    await createReport(submission());
+    const [report] = await reportsForLine("q:1:accept");
+
+    const updated = await setStatus(report.id, "fixed", RESOLVER);
+
+    expect(updated?.status).toBe("fixed");
+    expect(updated?.resolvedAt).not.toBeNull();
+    expect(updated?.resolvedBy).toBe(RESOLVER);
+  });
+
+  it("clears the resolution when reopened", async () => {
+    await createReport(submission());
+    const [report] = await reportsForLine("q:1:accept");
+
+    await setStatus(report.id, "fixed", RESOLVER);
+    const reopened = await setStatus(report.id, "open", RESOLVER);
+
+    expect(reopened?.resolvedAt).toBeNull();
+    expect(reopened?.resolvedBy).toBeNull();
+  });
+
+  it("returns null for an id that does not exist", async () => {
+    expect(await setStatus(2147483000, "fixed", RESOLVER)).toBeNull();
+  });
+});
