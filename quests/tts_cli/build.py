@@ -45,12 +45,14 @@ end
 VoiceOver.DataModules:Register("{module}", {module})
 """
 
+# No RequiredDeps on purpose: forks of the player addon (e.g. AI_VoiceOver_Continued)
+# ship under other folder names, and a dep on a disabled/absent AI_VoiceOver makes
+# LoadAddOn fail with DEP_DISABLED. LoadOnDemand plus the guard in Module.lua suffice.
 TOC_HEADER = """## Interface: 100000
 ## Title: VoiceOver Data - Vanilla
 ## Notes: Contains voiceovers for content released during the Vanilla era.|n|nIt's |cFF20FF20OK|r for this addon to appear |cFF808080"disabled"|r or |cFFFF2020"out of date"|r, it's compatible with any client and |cFFFFD200VoiceOver|r will load it even if it's disabled or out of date.
 ## Version: {version}
 ## LoadOnDemand: 1
-## RequiredDeps: AI_VoiceOver
 ## X-Part-Of: VoiceOver
 ## X-Child-Of: VoiceOver
 ## X-VoiceOver-DataModule-Version: 1
