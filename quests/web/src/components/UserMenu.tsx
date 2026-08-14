@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { signOut, useSession } from "@/lib/auth-client";
-import { canConfigureGeneration, canManageVoices, isAdmin } from "@/lib/permissions";
+import { canConfigureGeneration, canManageVoices, canRegenerate, isAdmin } from "@/lib/permissions";
 
 /**
  * The session indicator in the header.
@@ -54,6 +54,11 @@ export default function UserMenu() {
       {canConfigureGeneration(role) && (
         <Button asChild variant="ghost" size="sm">
           <Link href="/issues">Issues</Link>
+        </Button>
+      )}
+      {canRegenerate(role) && (
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/reports">Reports</Link>
         </Button>
       )}
       {isAdmin(role) && (
