@@ -444,15 +444,25 @@ python cli-main.py install --force        # dist/<module> -> the AddOns folder
 ```
 
 `install` targets `_classic_era_` by default (`--addons` for another path) and moves any
-existing install aside to `<module>.replaced` rather than deleting it. The addon itself —
-`AI_VoiceOver/` — is a separate folder in the same AddOns directory; symlink both for faster
-development:
+existing install aside to `<module>.replaced` rather than deleting it. The addon itself is a
+separate folder in the same AddOns directory; symlink both for faster development:
 
 ```bash
 export WOW_DIR=PATH_OF_YOUR_WOW_DIR
-ln -s "$PWD/AI_VoiceOver" "$WOW_DIR/_classic_era_/Interface/AddOns/AI_VoiceOver"
+ln -s "$PWD/AI_VoiceOver_Continued" "$WOW_DIR/_classic_era_/Interface/AddOns/AI_VoiceOver_Continued"
 ln -s "$PWD/dist/AI_VoiceOverData_Vanilla" "$WOW_DIR/_classic_era_/Interface/AddOns/AI_VoiceOverData_Vanilla"
 ```
+
+Use `AI_VoiceOver_Continued/` on a current client. Upstream `AI_VoiceOver/` calls
+`GetNumAddOns`, `GetAddOnMetadata` and `LoadAddOn`, which Blizzard moved to `C_AddOns` in
+10.2 and removed in 11.0.2, so on Classic Era 1.15.9 it errors while enumerating and the
+sound pack never registers. Install one player or the other, never both — two copies of the
+addon fight over the same `VoiceOverDB` and the same sound queue.
+
+The data module names no `RequiredDeps`. It used to require `AI_VoiceOver`, which made
+`LoadAddOn` fail with `DEP_DISABLED` whenever the player was a fork under another folder name
+and the original sat disabled. The module is `LoadOnDemand` and its `Module.lua` returns early
+unless `VoiceOver.DataModules` exists, so the dependency bought nothing and cost the fork.
 ## Tests
 
 ```bash

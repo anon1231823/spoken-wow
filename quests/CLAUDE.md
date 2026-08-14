@@ -6,11 +6,12 @@ Repo-wide conventions (code style, comment discipline) live in `AGENTS.md` — r
 
 ## What this repo is
 
-Three separate things share one tree:
+Four separate things share one tree:
 
 1. **`tts_cli/` + `cli-main.py`** — the Python pipeline that turns the vmangos world DB into a committed corpus, synthesizes mp3s with ElevenLabs, and builds the addon data module.
 2. **`web/`** — a Next.js explorer (deployed to a DigitalOcean droplet) for browsing the corpus, playing lines, and regenerating audio. It reads the corpus and the audio store off disk; Postgres holds only accounts, roles, voice provenance, take history, the lexicon and the regeneration queue.
 3. **`AI_VoiceOver/`** — the WoW addon (Lua), released by tag through `.github/workflows/release-player.yaml`. Largely upstream; the pipeline is what this fork develops.
+4. **`AI_VoiceOver_Continued/`** — a fork of that addon under the addon name `AI_VoiceOver_Continued`, adapting the removed global addon-management APIs to `C_AddOns` and the gossip APIs to `C_GossipInfo` so the player runs on Classic Era 1.15.9. This is the addon actually loading the sound pack today; `AI_VoiceOver/` is kept as the upstream baseline to diff against. Nothing releases it yet — the tag workflow still builds `AI_VoiceOver/` only.
 
 `README.md` is unusually detailed and is the primary prose reference — check it before inferring behaviour from code, and update it when behaviour changes.
 
