@@ -287,7 +287,7 @@ describe("dismissing finished work", () => {
     await enqueue(batch, [line(1)]);
 
     const first = await claimNext();
-    await finishJob(first!.id, 0, 10, 5);
+    await finishJob(first!.id, { version: 1, credits: 10 });
 
     const before = await snapshot(null);
     expect(before.counts.done).toBeGreaterThan(0);
@@ -301,7 +301,7 @@ describe("dismissing finished work", () => {
     // Work that finishes after the dismissal is news again.
     await enqueue(batch, [line(2)]);
     const second = await claimNext();
-    await finishJob(second!.id, 0, 10, 5);
+    await finishJob(second!.id, { version: 1, credits: 10 });
 
     expect((await snapshot(null)).counts.done).toBe(1);
   });
@@ -312,7 +312,7 @@ describe("dismissing finished work", () => {
     await enqueue(batch, [line(3)]);
 
     const done = await claimNext();
-    await finishJob(done!.id, 0, 10, 5);
+    await finishJob(done!.id, { version: 1, credits: 10 });
     await enqueue(batch, [line(4)]);
 
     // Dismissing the finished job must leave the pending one - and the Stop button - alone.
