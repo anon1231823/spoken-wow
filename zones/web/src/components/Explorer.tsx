@@ -584,7 +584,10 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           <colgroup>
             <col className="w-36" />
             <col className="w-44" />
-            <col className={canReview ? "w-40" : "w-28"} />
+            {/* Reviewers get five controls plus a label ("text changed" is the widest)
+                plus a take counter, all on one non-wrapping line; narrower than this
+                the label runs into the Lore column. */}
+            <col className={canReview ? "w-56" : "w-28"} />
             <col />
             <col className="w-16" />
             {canRegenerate && <col className="w-28" />}
