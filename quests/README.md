@@ -445,6 +445,28 @@ pull` and never through git or CI. `build` copies from there into
 `dist/AI_VoiceOverData_Vanilla/generated/sounds/`, alongside every lookup table and the
 `sound_length_table.lua` computed from exactly those mp3s.
 
+### Stage directions and the narrator
+
+Blizzard writes stage directions inside the NPC's own quest text — `<Advisor Belgrum opens the
+note and begins to read.>` — and having the dwarf read that aloud in character is worse than
+silence. The web app hands those to a separate voice, `narrator-male`, and ElevenLabs returns
+the NPC's speech and the narration as a single file through its text-to-dialogue endpoint.
+
+The same brackets also hold sounds the NPC makes: `<hic>`, `<cough>`, `<sigh>`, `<mutters>`.
+**Capitalisation is what tells them apart**, and it separates all 90 bracketed spans in the
+corpus with no exceptions — a direction names someone, a sound is a bare lowercase word. Do not
+also require a closing full stop; that misclassifies `Motega shrugs his shoulder`. Sounds are
+left alone, so those seven lines stay unvoiceable rather than having a narrator say "hic";
+voicing them properly means `eleven_v3` audio tags and has not been tried yet.
+
+Because voiceability is recomputed from the effective text rather than read from the corpus,
+this unblocked 55 previously silent lines without regenerating the corpus. **Nothing is
+generated in bulk.** Tick **has narration** in the explorer to find these lines, listen, and
+regenerate the ones worth fixing through the usual controls.
+
+This is the second place the two generators diverge: `tts_cli` knows none of it and still
+refuses every one of those lines, exactly as it sends no pronunciation dictionary.
+
 ### Reports from inside the game
 
 The addon shows a **Report** button in the bottom-right corner of the sound queue frame,

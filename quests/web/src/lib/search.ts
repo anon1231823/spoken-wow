@@ -132,6 +132,8 @@ export type ResultLine = CorpusLine & {
    * direction makes a line voiceable without moving it.
    */
   voiceable: boolean;
+  /** Carries a capitalised <stage direction>, so it regenerates as two-voice dialogue. */
+  narration: boolean;
 };
 
 export type SearchResult = {
@@ -391,6 +393,7 @@ export function search(
       issue: context.issues.get(line.lineId) ?? null,
       override,
       voiceable: isVoiceable(line, override ?? line.text),
+      narration: hasNarration(override ?? line.text),
     };
   });
 

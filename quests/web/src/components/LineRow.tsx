@@ -220,6 +220,14 @@ export default function LineRow({
                   text changed
                 </span>
               )}
+              {line.narration && (
+                <span
+                  className="text-sky-300"
+                  title="A narrator reads this line's stage directions"
+                >
+                  narration
+                </span>
+              )}
               {line.override && !stale && (
                 <span className="text-muted-foreground" title="This line's spoken text was rewritten">
                   rewritten

@@ -10,6 +10,7 @@
  * slot name safe to use as a path segment. Same reasoning as isSafeAudioPath in range.ts.
  */
 import { loadCorpus } from "@/lib/corpus";
+import { hasNarration, NARRATOR_VOICE } from "@/lib/generation/narration";
 
 export type VoiceSlot = {
   /** e.g. "orc-male-shady" — the ElevenLabs voice name this project resolves by. */
@@ -40,9 +41,33 @@ export function voiceSlots(): VoiceSlot[] {
     npcs.get(line.voice)!.add(line.npcId);
   }
 
-  return [...lines]
-    .map(([name, lineCount]) => ({ name, lineCount, npcCount: npcs.get(name)!.size }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const derived = [...lines].map(([name, lineCount]) => ({
+    name,
+    lineCount,
+    npcCount: npcs.get(name)!.size,
+  }));
+
+  return [...derived, narratorSlot()].sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * The narrator, which no corpus line names.
+ *
+ * Every other slot is derived from the corpus so an added race cannot leave this page missing
+ * a voice. The narrator has no line of its own - it reads the stage directions inside other
+ * NPCs' lines - so it has to be stated. It belongs in the list all the same: the generator
+ * depends on it, and a voice you cannot see on /voices is a voice you cannot manage samples
+ * for or notice the absence of.
+ *
+ * Being a constant rather than user input, it does not weaken isVoiceSlot as a whitelist.
+ */
+function narratorSlot(): VoiceSlot {
+  const narrated = loadCorpus().lines.filter((line) => hasNarration(line.text));
+  return {
+    name: NARRATOR_VOICE,
+    lineCount: narrated.length,
+    npcCount: new Set(narrated.map((line) => line.npcId)).size,
+  };
 }
 
 const cacheKey = Symbol.for("wow-voiceover.slots");
