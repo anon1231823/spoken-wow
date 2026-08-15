@@ -63,21 +63,27 @@ clean: ## Remove build output
 # the bare ones are all dry runs. See README "Generating voicelines".
 #-------------------------------------------------------------------------------
 
-voice: ## Dry run over every voiceline (costs nothing)
-	@node tools/voice/generate.mjs --all
+# Every voice target takes LOCALE=deDE and defaults to English, the same way the lore
+# targets do (see the LOCALE note there): pinned here rather than inherited, so a
+# ZONELORE_LANG left in the shell from an earlier run cannot quietly point a dry run,
+# an import or a lookup rebuild at another language's files.
+VOICE_LANG = ZONELORE_LANG=$(or $(LOCALE),enUS)
+
+voice: ## Dry run over every voiceline (costs nothing; LOCALE=deDE for another language)
+	@$(VOICE_LANG) node tools/voice/generate.mjs --all
 
 voice-zones: ## Dry run over the 49 zone lines (costs nothing)
-	@node tools/voice/generate.mjs --all --zones-only
+	@$(VOICE_LANG) node tools/voice/generate.mjs --all --zones-only
 
 sample: ## Generate two sample lines to audio-samples/ (SPENDS CREDITS)
-	@node tools/voice/generate.mjs --sample
+	@$(VOICE_LANG) node tools/voice/generate.mjs --sample
 
 lookup: ## Rebuild the addon's audio lookup table (exports the manifest first)
-	@node tools/voice/export-manifest.mjs
-	@node tools/voice/build-lookup.mjs
+	@$(VOICE_LANG) node tools/voice/export-manifest.mjs
+	@$(VOICE_LANG) node tools/voice/build-lookup.mjs
 
 validate-audio: ## Check manifest, files on disk and lookup table agree
-	@node tools/voice/validate-audio.mjs
+	@$(VOICE_LANG) node tools/voice/validate-audio.mjs
 
 #-------------------------------------------------------------------------------
 # The explorer's database
@@ -96,11 +102,11 @@ db-down: ## Stop it, keeping the data
 migrate: ## Apply any pending migrations
 	@./scripts/migrate.sh
 
-import: ## Seed the database from tools/voice/manifest.json (idempotent)
-	@node tools/voice/import-manifest.mjs
+import: ## Seed the database from tools/voice/manifest[.<locale>].json (idempotent; LOCALE=deDE)
+	@$(VOICE_LANG) node tools/voice/import-manifest.mjs
 
-export: ## Write tools/voice/manifest.json from the database
-	@node tools/voice/export-manifest.mjs
+export: ## Write tools/voice/manifest[.<locale>].json from the database (LOCALE=deDE)
+	@$(VOICE_LANG) node tools/voice/export-manifest.mjs
 
 #-------------------------------------------------------------------------------
 # The lore corpus
