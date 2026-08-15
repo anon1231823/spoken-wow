@@ -14,7 +14,7 @@
 import type { Corpus, CorpusLine } from "./corpus";
 import { npcKey } from "./corpus";
 import { audioRelPath } from "./audio";
-import { hasNarration } from "./generation/narration";
+import { hasNarration, restoresOnlyNarration } from "./generation/narration";
 import type { NpcType, Source } from "./line-fields";
 import { categoryGroup, type LineIssues, type Severity } from "./issues/issues";
 import type { LineOverride } from "./issues/override";
@@ -134,6 +134,11 @@ export type ResultLine = CorpusLine & {
   voiceable: boolean;
   /** Carries a capitalised <stage direction>, so it regenerates as two-voice dialogue. */
   narration: boolean;
+  /**
+   * The override only puts stage directions back and changed no words, so this is not a
+   * rewrite anyone should be asked to review.
+   */
+  narrationRestored: boolean;
 };
 
 export type SearchResult = {
@@ -353,7 +358,14 @@ export function matchingLines(
   // An unknown id matches nothing rather than everything: "show me this finding's lines" has
   // no honest answer for a finding that is not there, and the whole corpus is the wrong one.
   if (finding) lines = lines.filter((line) => findingLines?.has(line.lineId) ?? false);
-  if (overridden) lines = lines.filter((line) => overrides.has(audioRelPath(line)));
+  // A restoration is not a rewrite: it puts a stripped stage direction back and changes no
+  // words, so it does not belong in a list of lines someone rewrote by hand.
+  if (overridden) {
+    lines = lines.filter((line) => {
+      const override = overrides.get(audioRelPath(line))?.text;
+      return override !== undefined && !restoresOnlyNarration(override, line.text);
+    });
+  }
 
   // A file with no record counts as generated infinitely long ago, so it passes every
   // "before" and fails every "after". An unparseable bound is dropped rather than matching
@@ -401,6 +413,7 @@ export function search(
       override,
       voiceable: isVoiceable(line, override ?? line.text),
       narration: hasNarration(override ?? line.text),
+      narrationRestored: override !== null && restoresOnlyNarration(override, line.text),
     };
   });
 

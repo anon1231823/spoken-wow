@@ -53,3 +53,20 @@ export function segments(text: string): Segment[] {
 export function hasNarration(text: string): boolean {
   return segments(text).some((segment) => segment.speaker === "narrator");
 }
+
+/**
+ * Whether an override only puts stage directions back, changing no words.
+ *
+ * The pipeline stripped 314 directions before synthesis and they were restored as overrides,
+ * which made every one of those lines look hand-rewritten. They are not: the text is
+ * Blizzard's own, with a sentence the pipeline had deleted put back. Someone reviewing
+ * rewrites wants the lines a human made a judgement about - "adventurerama", the war-effort
+ * tallies, the line that is the single letter "x" - not these.
+ *
+ * Derived rather than recorded, so it needs no column and cannot drift: edit the words of a
+ * restored line and it becomes a rewrite, and starts saying so.
+ */
+export function restoresOnlyNarration(overrideText: string, corpusText: string): boolean {
+  return overrideText.replace(/<[A-Z][^<>]*>/g, "").replace(/\s+/g, " ").trim() ===
+    corpusText.replace(/\s+/g, " ").trim();
+}

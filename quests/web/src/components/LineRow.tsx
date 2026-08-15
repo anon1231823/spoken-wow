@@ -228,7 +228,7 @@ export default function LineRow({
                   narration
                 </span>
               )}
-              {line.override && !stale && (
+              {line.override && !line.narrationRestored && !stale && (
                 <span className="text-muted-foreground" title="This line's spoken text was rewritten">
                   rewritten
                 </span>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { hasNarration, segments } from "./narration";
+import { hasNarration, restoresOnlyNarration, segments } from "./narration";
 
 describe("segments", () => {
   it("splits speech from a trailing direction", () => {
@@ -72,5 +72,27 @@ describe("hasNarration", () => {
     expect(hasNarration("Hello there")).toBe(false);
     expect(hasNarration("What < is this")).toBe(false);
     expect(hasNarration("Ye're brave... <cough>...")).toBe(false);
+  });
+});
+
+describe("restoresOnlyNarration", () => {
+  const corpus = "A crystal fragment.";
+
+  it("is true when only a direction was put back", () => {
+    expect(restoresOnlyNarration("<He turns it over.>\n\nA crystal fragment.", corpus)).toBe(true);
+  });
+
+  it("is false when a word changed as well", () => {
+    expect(restoresOnlyNarration("<He turns it over.>\n\nA crystal shard.", corpus)).toBe(false);
+  });
+
+  it("is false for an ordinary rewrite with no direction at all", () => {
+    // The rewrites worth reviewing: a $ token turned into words, "adventurerama", the line
+    // that is the single letter "x".
+    expect(restoresOnlyNarration("Plenty of leather.", corpus)).toBe(false);
+  });
+
+  it("ignores whitespace, which the strip leaves behind unevenly", () => {
+    expect(restoresOnlyNarration("<He turns it over.>   A crystal   fragment.", corpus)).toBe(true);
   });
 });
