@@ -21,7 +21,10 @@ see [Compatibility](#compatibility) below.
   is not offered at all, and a place with no lore in the language you are reading
   shows nothing rather than falling back to English.
 - The sound packs are unchanged. A future pack declares which language it
-  narrates, and ZoneLore only plays one matching the language it is showing.
+  narrates; with several installed, ZoneLore prefers the one matching the language
+  it is showing and lets you pick another in the options.
+- The Report button's address now says which language you were reading, so a
+  report lands beside the line it is about.
 
 ## 0.3.1 — 2026-08-10
 

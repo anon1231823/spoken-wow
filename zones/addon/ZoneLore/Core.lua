@@ -238,10 +238,16 @@ end
 --
 -- The game cannot open a URL or send anything anywhere, so the only way a player
 -- can report a bad line is to copy an address and open it themselves. The site
--- resolves /r/{mapID}/{slug} back to a line by matching that path against the
--- audio file paths it already assigns, which is why the slug is built the same
--- way here as slugFor does in tools/voice/naming.mjs -- and why "zone", the file
--- name a zone's own line gets, doubles as the slug for it.
+-- resolves /{lang}/r/{mapID}/{slug} back to a line by matching that path against
+-- the audio file paths it already assigns, which is why the slug is built the
+-- same way here as slugFor does in tools/voice/naming.mjs -- and why "zone", the
+-- file name a zone's own line gets, doubles as the slug for it.
+--
+-- The language in the address is the one being READ, not the client's locale: a
+-- report is about the text and narration on screen, and the site files it under
+-- that language so the people who can act on it see it beside the line it is
+-- about. Builds up to 0.3.1 sent /r/... with no language; the site still takes that
+-- and treats it as English, which is what it meant when it was written.
 --
 -- tools/validate.mjs fails the build if these two ever drift, or if two subzones
 -- in one zone come to share a slug: the JS side has a hash fallback for that
@@ -262,7 +268,7 @@ function ZoneLore:ReportURL(mapID, areaKey)
 			slug = "zone"
 		end
 	end
-	return ("%s/r/%d/%s"):format(self.SITE_URL, mapID, slug)
+	return ("%s/%s/r/%d/%s"):format(self.SITE_URL, self:GetLanguage(), mapID, slug)
 end
 
 -- Returns the lore entry and the key that was looked up. The key is returned

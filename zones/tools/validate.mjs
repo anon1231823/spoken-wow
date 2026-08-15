@@ -392,7 +392,7 @@ for (const lang of languages) {
 //------------------------------------------------------------------------------
 // Report URL slugs
 //
-// ZoneLore:ReportURL builds lore.rusty.one/r/{mapID}/{slug} in Lua, and the site
+// ZoneLore:ReportURL builds lore.rusty.one/{lang}/r/{mapID}/{slug} in Lua, and the site
 // resolves that path back to a line by looking it up among the file paths
 // naming.mjs assigns. That only works while every slug is derivable from the key
 // alone: assignFiles has a hash fallback for collisions, and the addon has no way
