@@ -18,7 +18,7 @@ import { apiKey, downloadDictionary, loadConfig, resolveDictionary } from "./ele
 import { parseDictionary, uncoveredSpellings } from "./lexicon.mjs";
 import { assignFiles, lineId } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
-import { packFolder } from "../lib/locales.mjs";
+import { localeInfo, packFolder } from "../lib/locales.mjs";
 import { LANG, loadManifest, soundsDir } from "./store.mjs";
 
 // The lookup of the language being validated, not English's: a LOCALE=deDE
@@ -54,9 +54,16 @@ async function mp3sOnDisk(dir, prefix = "") {
  * /lexicon, which is not something this run can do.
  */
 async function checkDictionary(spokenTexts) {
+  // The coverage check matches dictionary graphemes with Latin word boundaries and
+  // case folding (lexicon.mjs), which says nothing about Cyrillic or CJK text. Skipped
+  // rather than reported as gaps, until there is a translation to build a check on.
+  if (localeInfo(LANG)?.script !== "latin") {
+    note(`${LANG} is not Latin-script; the dictionary coverage check is Latin-only and was skipped`);
+    return;
+  }
   const config = await loadConfig(LANG).catch(() => null);
   if (!config?.dictionaryId) {
-    note("no pronunciation dictionary is named in tools/voice/config.json; coverage unchecked");
+    note(`no pronunciation dictionary is named for ${LANG}; coverage unchecked`);
     return;
   }
 

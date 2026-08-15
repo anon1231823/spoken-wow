@@ -1203,6 +1203,15 @@ make db-pull          # the takes and flags behind it
 make lookup           # rebuild Sounds.lua from the manifest
 ```
 
+One language per transfer: every target above takes `LOCALE=deDE` and defaults to
+English. English keeps the droplet paths it always had (`shared/Sounds`,
+`shared/manifest.json`); another language lives beside them under its pack folder
+(`shared/ZoneLoreAudio_deDE`) and a suffixed manifest, which is what `store.mjs`
+derives on the droplet, so `make pull LOCALE=deDE` lands the masters in
+`addon/ZoneLoreAudio_deDE/Sounds/` — where `make lookup LOCALE=deDE` and
+`make package-audio LOCALE=deDE` expect them. `audio-history/` holds every language
+under one tree and moves whole.
+
 Both `push` and `pull` use `--delete` and both show a dry run and ask first: the
 droplet is a second copy, not a backup, and since regeneration happens through the web
 UI it is usually the *newer* side.

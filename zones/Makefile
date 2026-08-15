@@ -209,7 +209,22 @@ RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(comman
 # -e is not optional: without it rsync spawns a plain ssh that cannot authenticate.
 RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)"
 
-REMOTE_SOUNDS  := $(DROPLET):$(REMOTE_ROOT)/shared/Sounds/
+# One language per transfer, LOCALE=deDE, defaulting to English. The paths mirror
+# soundsDir()/manifestPath() in tools/voice/store.mjs: English keeps the names the
+# droplet already has (shared/Sounds, shared/manifest.json), and another language
+# lives beside them under its pack folder and a suffixed manifest. audio-history/
+# nests every language under one tree, so it moves whole regardless of LOCALE.
+LANG_CODE := $(or $(LOCALE),enUS)
+ifeq ($(LANG_CODE),enUS)
+LOCAL_SOUNDS  := addon/ZoneLoreAudio/Sounds/
+REMOTE_SOUNDS_DIR := Sounds
+MANIFEST_FILE := manifest.json
+else
+LOCAL_SOUNDS  := addon/ZoneLoreAudio_$(LANG_CODE)/Sounds/
+REMOTE_SOUNDS_DIR := ZoneLoreAudio_$(LANG_CODE)
+MANIFEST_FILE := manifest.$(LANG_CODE).json
+endif
+REMOTE_SOUNDS  := $(DROPLET):$(REMOTE_ROOT)/shared/$(REMOTE_SOUNDS_DIR)/
 REMOTE_HISTORY := $(DROPLET):$(REMOTE_ROOT)/shared/audio-history/
 
 # Fail with an explanation rather than an rsync usage dump or a bare publickey refusal.
@@ -229,58 +244,61 @@ ssh-check: ## Confirm the droplet is reachable and set up
 	$(preflight)
 	@$(SSH) $(DROPLET) 'echo "ok: $$(hostname)"; ls -d $(REMOTE_ROOT)/bin $(REMOTE_ROOT)/shared 2>/dev/null || echo "missing tree - run: make bootstrap"'
 
-push-dry: ## Preview what `make push` would send to the droplet
+push-dry: ## Preview what `make push` would send to the droplet (LOCALE=deDE)
 	$(preflight)
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run addon/ZoneLoreAudio/Sounds/ $(REMOTE_SOUNDS)
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(LOCAL_SOUNDS) $(REMOTE_SOUNDS)
 
 # --delete propagates local deletions, and the droplet is where regeneration happens
 # through the UI, so it can be the newer side. `make pull` first if in doubt: this is a
 # second copy of the audio, not a backup.
-push: ## Send the audio store to the droplet (DESTRUCTIVE: --delete)
+push: ## Send one language's audio store to the droplet (DESTRUCTIVE: --delete; LOCALE=deDE)
 	$(preflight)
-	@echo "==> dry run (local -> $(DROPLET))"
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run addon/ZoneLoreAudio/Sounds/ $(REMOTE_SOUNDS) | tail -20
+	@echo "==> dry run ($(LANG_CODE): local -> $(DROPLET))"
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(LOCAL_SOUNDS) $(REMOTE_SOUNDS) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	@$(RSYNC) $(RSYNC_OPTS) addon/ZoneLoreAudio/Sounds/ $(REMOTE_SOUNDS)
+	@$(RSYNC) $(RSYNC_OPTS) $(LOCAL_SOUNDS) $(REMOTE_SOUNDS)
 	@[ -d audio-history ] && $(RSYNC) $(RSYNC_OPTS) audio-history/ $(REMOTE_HISTORY) || true
 	@echo "==> pushed"
 
-pull-dry: ## Preview what `make pull` would change locally
+pull-dry: ## Preview what `make pull` would change locally (LOCALE=deDE)
 	$(preflight)
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE_SOUNDS) addon/ZoneLoreAudio/Sounds/
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE_SOUNDS) $(LOCAL_SOUNDS)
 
-pull: ## Fetch the audio store from the droplet (DESTRUCTIVE: --delete)
+pull: ## Fetch one language's audio store from the droplet (DESTRUCTIVE: --delete; LOCALE=deDE)
 	$(preflight)
-	@echo "==> dry run ($(DROPLET) -> local)"
+	@echo "==> dry run ($(LANG_CODE): $(DROPLET) -> local)"
 	@echo "    --delete will REMOVE local files the droplet does not have."
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE_SOUNDS) addon/ZoneLoreAudio/Sounds/ | tail -20
+	@mkdir -p $(LOCAL_SOUNDS)
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE_SOUNDS) $(LOCAL_SOUNDS) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	@$(RSYNC) $(RSYNC_OPTS) $(REMOTE_SOUNDS) addon/ZoneLoreAudio/Sounds/
+	@$(RSYNC) $(RSYNC_OPTS) $(REMOTE_SOUNDS) $(LOCAL_SOUNDS)
 	@[ -d audio-history ] && $(RSYNC) $(RSYNC_OPTS) $(REMOTE_HISTORY) audio-history/ || true
-	@echo "==> pulled. Rebuild the lookup table with:  make db-pull && make lookup"
+	@echo "==> pulled. Rebuild the lookup table with:  make db-pull && make lookup LOCALE=$(LANG_CODE)"
+	@echo "    then package it with:  make package-audio LOCALE=$(LANG_CODE)"
 
 # The two files the droplet writes that git wants back. The manifest is an export of the
 # droplet's database, so `make db-pull` is the better route for it; this is the one that
 # works when you only want the file. pronunciation.json is authored through /lexicon and
 # has no other home but git.
-pull-manifest: ## Fetch the droplet's exported manifest.json
-	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/manifest.json tools/voice/manifest.json
-	@echo "==> fetched. Review with: git diff tools/voice/manifest.json"
+pull-manifest: ## Fetch the droplet's exported manifest[.<locale>].json (LOCALE=deDE)
+	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/$(MANIFEST_FILE) tools/voice/$(MANIFEST_FILE)
+	@echo "==> fetched. Review with: git diff tools/voice/$(MANIFEST_FILE)"
 
 pull-lexicon: ## Fetch pronunciation rules hand-edited on the droplet
 	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/pronunciation.json tools/voice/pronunciation.json
 	@echo "==> fetched. Review with: git diff tools/voice/pronunciation.json"
 
-audio-status: ## What is on disk locally and on the droplet
+audio-status: ## What is on disk locally and on the droplet (LOCALE=deDE)
+	@echo "$(LANG_CODE)"
 	@printf 'local     live      %5s mp3  %s\n' \
-		"$$(find addon/ZoneLoreAudio/Sounds -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
-		"$$(du -sh addon/ZoneLoreAudio/Sounds 2>/dev/null | cut -f1)"
+		"$$(find $(LOCAL_SOUNDS) -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
+		"$$(du -sh $(LOCAL_SOUNDS) 2>/dev/null | cut -f1)"
 	@printf 'local     archived  %5s mp3  %s\n' \
 		"$$(find audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
 		"$$(du -sh audio-history 2>/dev/null | cut -f1)"
 	@$(SSH) $(DROPLET) 'printf "droplet   live      %5s mp3  %s\n" \
-		"$$(find $(REMOTE_ROOT)/shared/Sounds -name "*.mp3" 2>/dev/null | wc -l | tr -d " ")" \
-		"$$(du -sh $(REMOTE_ROOT)/shared/Sounds 2>/dev/null | cut -f1)"; \
+		"$$(find $(REMOTE_ROOT)/shared/$(REMOTE_SOUNDS_DIR) -name "*.mp3" 2>/dev/null | wc -l | tr -d " ")" \
+		"$$(du -sh $(REMOTE_ROOT)/shared/$(REMOTE_SOUNDS_DIR) 2>/dev/null | cut -f1)"; \
 	  printf "droplet   archived  %5s mp3  %s\n" \
 		"$$(find $(REMOTE_ROOT)/shared/audio-history -name "*.mp3" 2>/dev/null | wc -l | tr -d " ")" \
 		"$$(du -sh $(REMOTE_ROOT)/shared/audio-history 2>/dev/null | cut -f1)"' 2>/dev/null \
@@ -312,10 +330,10 @@ UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
 db-push: ## Copy the local takes, flags and lore into the droplet's database (REPLACES them)
 	@echo "local:"
 	@docker compose exec -T postgres psql -U zonelore -d zonelore \
-		-c 'select (select count(*) from "voiceline_take") as takes, (select count(*) from "line_flag") as flags'
+		-c 'select l."lang", (select count(*) from "voiceline_take" t where t."lang" = l."lang") as takes, (select count(*) from "line_flag" f where f."lang" = l."lang") as flags from (select "lang" from "voiceline_take" union select "lang" from "line_flag") l order by 1'
 	@echo "droplet:"
 	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" \
-		-c "select (select count(*) from \"voiceline_take\") as takes, (select count(*) from \"line_flag\") as flags"'
+		-c "select l.\"lang\", (select count(*) from \"voiceline_take\" t where t.\"lang\" = l.\"lang\") as takes, (select count(*) from \"line_flag\" f where f.\"lang\" = l.\"lang\") as flags from (select \"lang\" from \"voiceline_take\" union select \"lang\" from \"line_flag\") l order by 1"'
 	@printf 'Replace the droplet contents with the local ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@( echo 'begin;'; \
 	   echo 'truncate "voiceline_take", "line_flag", "lore_line";'; \
