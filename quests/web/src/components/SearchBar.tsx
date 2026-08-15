@@ -193,6 +193,16 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
         </div>
         <div className="flex items-center gap-2 whitespace-nowrap">
           <Checkbox
+            id="outdated-only"
+            checked={filters.outdated ?? false}
+            onCheckedChange={(value) => onFilters({ outdated: value === true })}
+          />
+          <Label htmlFor="outdated-only" className="text-muted-foreground text-sm">
+            audio outdated
+          </Label>
+        </div>
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Checkbox
             id="narration-only"
             checked={filters.narration ?? false}
             onCheckedChange={(value) => onFilters({ narration: value === true })}

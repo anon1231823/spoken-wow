@@ -23,17 +23,24 @@ import { readOverrides } from "./overrides";
 /**
  * Of these files, the ones whose live take was made from different text.
  *
- * Takes the files rather than reading them all, because the caller has a page of results and
- * the answer for the other 17,000 lines is not wanted.
+ * Takes the files rather than reading them all, because the caller usually has a page of
+ * results and the answer for the other 17,000 lines is not wanted. Omitting them asks the
+ * question of every take instead, which is what the "audio outdated" filter needs: a page's
+ * worth of answers cannot narrow a search. That costs one query and a sha-256 per take, so it
+ * is fetched only for the searches that read it, like the generation dates.
  */
-export async function staleFiles(files: string[]): Promise<Set<string>> {
-  if (files.length === 0) return new Set();
+export async function staleFiles(files?: string[]): Promise<Set<string>> {
+  if (files?.length === 0) return new Set();
 
-  const { rows } = await db().query<{ file: string; spokenHash: string | null }>(
-    `select "file", "spokenHash" from "voiceline_version"
-      where "isCurrent" and "file" = any($1::text[])`,
-    [files],
-  );
+  const { rows } = files
+    ? await db().query<{ file: string; spokenHash: string | null }>(
+        `select "file", "spokenHash" from "voiceline_version"
+          where "isCurrent" and "file" = any($1::text[])`,
+        [files],
+      )
+    : await db().query<{ file: string; spokenHash: string | null }>(
+        `select "file", "spokenHash" from "voiceline_version" where "isCurrent"`,
+      );
 
   const overrides = await readOverrides();
   const lines = fileIndex();

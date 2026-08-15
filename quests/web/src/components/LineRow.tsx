@@ -216,8 +216,11 @@ export default function LineRow({
               {/* Stale before missing: "no audio" and "the audio is old" cannot both be
                   true, and a rewrite is the more actionable of the two. */}
               {stale && (
-                <span className="text-amber-300" title="This audio was made from text that has since changed">
-                  text changed
+                <span
+                  className="text-amber-300"
+                  title="This audio was made from text that has since changed"
+                >
+                  audio outdated
                 </span>
               )}
               {line.narration && (

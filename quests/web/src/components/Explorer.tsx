@@ -83,6 +83,7 @@ function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.issueCategory) params.set("issue", filters.issueCategory);
   if (filters.finding) params.set("finding", String(filters.finding));
   if (filters.overridden) params.set("overridden", "1");
+  if (filters.outdated) params.set("outdated", "1");
   if (filters.generatedBefore) params.set("before", filters.generatedBefore);
   if (filters.generatedAfter) params.set("after", filters.generatedAfter);
   return params;
@@ -121,6 +122,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       issueCategory: params.get("issue") ?? undefined,
       finding: Number(params.get("finding")) || undefined,
       overridden: params.get("overridden") === "1",
+      outdated: params.get("outdated") === "1",
       generatedBefore: params.get("before") ?? undefined,
       generatedAfter: params.get("after") ?? undefined,
     }),
@@ -223,6 +225,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
         ...("issueCategory" in next ? { issue: next.issueCategory } : {}),
         ...("finding" in next ? { finding: next.finding } : {}),
         ...("overridden" in next ? { overridden: next.overridden ? "1" : undefined } : {}),
+        ...("outdated" in next ? { outdated: next.outdated ? "1" : undefined } : {}),
         ...("generatedBefore" in next ? { before: next.generatedBefore } : {}),
         ...("generatedAfter" in next ? { after: next.generatedAfter } : {}),
       });

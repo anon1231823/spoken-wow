@@ -11,14 +11,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { storeIndex } from "@/lib/audio";
 import { loadCorpus } from "@/lib/corpus";
 import { searchContext } from "@/lib/issues/context";
-import { filtersFromParams, needsDates } from "@/lib/search-request";
+import { filtersFromParams, needsDates, needsStale } from "@/lib/search-request";
 import { batchJobs, matchingLines } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const filters = filtersFromParams(request.nextUrl.searchParams);
-  const context = await searchContext(filters.finding, needsDates(filters));
+  const context = await searchContext(filters.finding, needsDates(filters), needsStale(filters));
   const lines = matchingLines(loadCorpus(), storeIndex(), filters, context);
   // The same overrides the estimate is built from, so the quote prices the text that will
   // actually be sent rather than the text the corpus happens to hold.

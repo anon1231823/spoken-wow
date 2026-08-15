@@ -12,6 +12,7 @@
  * reads the override itself, and there a failure *should* be fatal.
  */
 import { generatedAt } from "../generation/versions";
+import { staleFiles } from "./staleness";
 import type { SearchContext } from "../search";
 import { NO_CONTEXT } from "../search";
 import { readOverrides } from "./overrides";
@@ -22,16 +23,29 @@ import { findingLines, issuesByLine } from "./store";
  *   route stays one call, and only when asked: it is a lookup nobody pays for by default.
  * @param dated whether a generation-date bound is in force. The dates are one query over the
  *   whole table, so they are fetched only for the searches that read them.
+ * @param outdated whether the audio-outdated filter is in force. Same bargain: one query and a
+ *   sha-256 per take, paid for only by the searches that ask.
  */
-export async function searchContext(finding?: number, dated = false): Promise<SearchContext> {
+export async function searchContext(
+  finding?: number,
+  dated = false,
+  outdated = false,
+): Promise<SearchContext> {
   try {
-    const [issues, overrides, lines, dates] = await Promise.all([
+    const [issues, overrides, lines, dates, stale] = await Promise.all([
       issuesByLine(),
       readOverrides(),
       finding ? findingLines(finding) : null,
       dated ? generatedAt() : null,
+      outdated ? staleFiles() : null,
     ]);
-    return { issues, overrides, findingLines: lines, generatedAt: dates ?? undefined };
+    return {
+      issues,
+      overrides,
+      findingLines: lines,
+      generatedAt: dates ?? undefined,
+      stale: stale ?? undefined,
+    };
   } catch (error) {
     console.warn("[issues] search context unavailable, serving unmarked results:", error);
     return NO_CONTEXT;

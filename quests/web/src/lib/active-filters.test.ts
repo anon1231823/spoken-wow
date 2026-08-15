@@ -31,6 +31,11 @@ describe("counting what is in force", () => {
     expect(activeFilterCount({ missingOnly: true, overridden: true })).toBe(2);
   });
 
+  it("counts audio outdated, which narrows", () => {
+    expect(activeFilterCount({ outdated: true })).toBe(1);
+    expect(activeFilterCount({ outdated: false })).toBe(0);
+  });
+
   it("counts narration, which narrows", () => {
     expect(activeFilterCount({ narration: true })).toBe(1);
     expect(activeFilterCount({ narration: false })).toBe(0);

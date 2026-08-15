@@ -70,6 +70,8 @@ export type LineFilters = {
   finding?: number;
   /** Lines whose spoken text has been rewritten by hand. */
   overridden?: boolean;
+  /** Lines whose audio was made from text that has since changed. */
+  outdated?: boolean;
   /**
    * Bounds on when the live take was generated, as "YYYY-MM-DD". Both include the whole of
    * the day they name, which is what picking a day off a calendar means.
@@ -108,6 +110,11 @@ export type SearchContext = {
   findingLines?: Set<string> | null;
   /** When each file's live take was generated, epoch ms. Absent means no record. */
   generatedAt?: Map<string, number>;
+  /**
+   * Files whose live take was made from different text than would be sent today. Absent
+   * means nobody asked, not that every take is current.
+   */
+  stale?: Set<string>;
 };
 
 export const NO_CONTEXT: SearchContext = { issues: new Map(), overrides: new Map() };
@@ -322,10 +329,11 @@ export function matchingLines(
     issueCategory,
     finding,
     overridden,
+    outdated = false,
     generatedBefore,
     generatedAfter,
   }: LineFilters = {},
-  { issues: found, overrides, findingLines, generatedAt }: SearchContext = NO_CONTEXT,
+  { issues: found, overrides, findingLines, generatedAt, stale }: SearchContext = NO_CONTEXT,
 ): CorpusLine[] {
   const query = q.trim();
 
@@ -358,6 +366,9 @@ export function matchingLines(
   // An unknown id matches nothing rather than everything: "show me this finding's lines" has
   // no honest answer for a finding that is not there, and the whole corpus is the wrong one.
   if (finding) lines = lines.filter((line) => findingLines?.has(line.lineId) ?? false);
+  // Absent `stale` means nobody asked for it, so nothing matches rather than everything: the
+  // honest answer to "which audio is out of date?" without the data is none, not all.
+  if (outdated) lines = lines.filter((line) => stale?.has(audioRelPath(line)) ?? false);
   // A restoration is not a rewrite: it puts a stripped stage direction back and changes no
   // words, so it does not belong in a list of lines someone rewrote by hand.
   if (overridden) {

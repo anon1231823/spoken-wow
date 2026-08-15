@@ -338,6 +338,20 @@ describe("overrides", () => {
     overrides: new Map([[file, { file, lineId: "", text, updatedAt: "", updatedBy: null }]]),
   });
 
+  it("narrows to audio the current text would no longer produce", () => {
+    const file = "quests/123-complete.mp3";
+    const context = { ...rewrite(file, "anything"), stale: new Set([file]) };
+
+    const found = matchingLines(corpus, store, { outdated: true }, context);
+    expect(found.map((l) => l.lineId)).toEqual(["q:123:complete"]);
+  });
+
+  it("matches nothing when staleness was never fetched, rather than everything", () => {
+    // The filter costs a query and a hash per take, so it is fetched only when asked for. An
+    // absent answer must not read as "every take is out of date".
+    expect(matchingLines(corpus, store, { outdated: true })).toEqual([]);
+  });
+
   it("finds a line whose stage direction an override restored", () => {
     // The pipeline stripped 314 directions before synthesis and they were restored as
     // overrides, so the corpus text has no brackets at all. A narration filter reading
