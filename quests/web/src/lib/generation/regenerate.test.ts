@@ -29,8 +29,10 @@ const SOLO = "q:5:accept";
 const SHARED = "q:109:accept";
 /** Progress text, which the generator never voices. */
 const NEVER_VOICED = "q:6:progress";
-/** A whole line of stage direction, so the corpus gave up on it: "<Sirra begins translating…>". */
+/** A whole line of stage direction: "<Sirra begins translating…>". The narrator reads it. */
 const STAGE_DIRECTION = "q:251:complete";
+/** A $ token the game expands and we do not, so only an override can rescue it. */
+const TEMPLATE_TOKEN = "q:8514:accept:m";
 
 const MP3 = Buffer.from("ID3generated-audio");
 
@@ -96,7 +98,7 @@ function fileFor(lineId: string): string {
  * to assert on, and it must not be the thing that clears it permanently. So the fixtures'
  * rows are lifted out before each test and put back after.
  */
-const FIXTURE_LINES = [SOLO, SHARED, NEVER_VOICED, STAGE_DIRECTION];
+const FIXTURE_LINES = [SOLO, SHARED, NEVER_VOICED, STAGE_DIRECTION, TEMPLATE_TOKEN];
 let displaced: Record<string, unknown>[] = [];
 
 async function fixtureFiles(): Promise<string[]> {
@@ -312,6 +314,7 @@ describe("a line whose spoken text has been rewritten", () => {
     await clearOverride(fileFor(SOLO));
     await clearOverride(fileFor(STAGE_DIRECTION));
     await clearOverride(fileFor(NEVER_VOICED));
+    await clearOverride(fileFor(TEMPLATE_TOKEN));
   });
 
   it("speaks the rewrite rather than what the corpus says", async () => {
@@ -329,21 +332,31 @@ describe("a line whose spoken text has been rewritten", () => {
     expect(result.characters).toBe("Say this instead.".length);
   });
 
-  it("voices a line the corpus had given up on, once the stage direction is gone", async () => {
+  it("voices a line the corpus had given up on, once the template token is gone", async () => {
     const { options } = stub();
 
-    // Untouched, it is nothing but "<Sirra begins translating the note...>".
-    const before = await regenerateLine(STAGE_DIRECTION, "user", options);
+    // Untouched, it holds a $ token the game expands and we do not.
+    const before = await regenerateLine(TEMPLATE_TOKEN, "user", options);
     expect(before.ok).toBe(false);
     if (before.ok) return;
     expect(before.failure.message).toContain("rewrite it");
 
-    await writeOverride(fileFor(STAGE_DIRECTION), STAGE_DIRECTION, "Sirra begins translating.", null);
-    const after = await regenerate(STAGE_DIRECTION, options);
+    await writeOverride(fileFor(TEMPLATE_TOKEN), TEMPLATE_TOKEN, "Plenty of leather.", null);
+    const after = await regenerate(TEMPLATE_TOKEN, options);
 
     expect(after.ok).toBe(true);
     if (!after.ok) return;
-    expect(after.spokenText).toBe("Sirra begins translating.");
+    expect(after.spokenText).toBe("Plenty of leather.");
+  });
+
+  it("no longer refuses a line that is nothing but a stage direction", async () => {
+    // It used to need an override to say anything at all. The narrator reads it now, so the
+    // gate lets it through untouched - the dialogue request itself arrives in a later task.
+    const { options } = stub();
+
+    const result = await regenerate(STAGE_DIRECTION, options);
+
+    expect(result.ok).toBe(true);
   });
 
   it("still refuses progress text, which no rewrite can make voiceable", async () => {

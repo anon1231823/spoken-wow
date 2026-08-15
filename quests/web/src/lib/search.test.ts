@@ -164,10 +164,12 @@ describe("gaps", () => {
     expect(isGap(progress, store)).toBe(false);
   });
 
-  it("missingOnly returns only generatable lines with no audio", () => {
+  it("missingOnly returns only voiceable lines with no audio", () => {
     const lines = all({ missingOnly: true });
     expect(lines.length).toBeGreaterThan(0);
-    expect(lines.every((l) => l.generatable && !l.hasAudio)).toBe(true);
+    // `voiceable`, not the corpus's `generatable`: the latter was baked in before a stage
+    // direction could be narrated, so it now says no to lines this app will happily voice.
+    expect(lines.every((l) => l.voiceable && !l.hasAudio)).toBe(true);
   });
 });
 
@@ -333,7 +335,11 @@ describe("overrides", () => {
   });
 
   it("makes an invalid-chars line voiceable once the characters are gone", () => {
-    const broken = corpus.lines.find((l) => l.skipReason === "invalid-chars")!;
+    // A $ token rather than a stage direction: directions are voiceable on their own now, so
+    // only a template token still needs an override to rescue it.
+    const broken = corpus.lines.find(
+      (l) => l.skipReason === "invalid-chars" && l.text.includes("$"),
+    )!;
     const file = `${broken.source === "gossip" ? "gossip" : "quests"}/${broken.fileName}.mp3`;
     const context = rewrite(file, "Thrall grunts.");
 
