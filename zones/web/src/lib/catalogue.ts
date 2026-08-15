@@ -6,7 +6,9 @@
 import "server-only";
 
 import {
+  areaName,
   buildCatalogue,
+  loadAreaNames,
   loadPronunciation,
   textHash,
   toSpokenText,
@@ -121,11 +123,12 @@ async function buildOverlaidCatalogue(lang: Lang): Promise<CatalogueEntry[]> {
   // scraper's business, and a language that could add or drop a line would be a corpus
   // rather than a translation. So the English catalogue supplies the shape, and the
   // translated rows are laid over the text.
-  const [entries, translatedFrom, overrides, rules] = await Promise.all([
+  const [entries, translatedFrom, overrides, rules, names] = await Promise.all([
     englishLua(),
     lang === BASE_LANG ? Promise.resolve(null) : currentLore(BASE_LANG),
     currentLore(lang),
     loadPronunciation(),
+    loadAreaNames(),
   ]);
 
   // English edits show through under a translation too: they are what the translator is
@@ -137,24 +140,23 @@ async function buildOverlaidCatalogue(lang: Lang): Promise<CatalogueEntry[]> {
   // work to do per line even when nothing is translated yet.
   if (lang === BASE_LANG && overrides.size === 0) return entries;
 
-  // A zone's name comes from its own line ("z:{mapID}"), and every line in the zone
-  // carries it as zoneName -- the dropdown, the Zone column and the report page's
-  // heading all read that. So a translated zone line renames the zone for its
-  // subzones too. A zone whose line is not translated keeps the English name: it is a
-  // label, not lore, and a blank label would make the list unreadable rather than
-  // honest.
+  // Place names are the client's, not the translator's (tools/lib/area-names.mjs):
+  // every row's name, and the zone name every row carries for the dropdown and the
+  // Zone column, is what a client in this language shows on its map -- translated
+  // line or not. English falls through where the client has no other name.
   const zoneNames = new Map<number, string>();
   for (const entry of entries) {
     if (entry.kind !== "zone") continue;
-    const row = overrides.get(entry.id) ?? english.get(entry.id);
-    if (row) zoneNames.set(entry.mapID, row.name);
+    const englishName = english.get(entry.id)?.name ?? entry.name;
+    zoneNames.set(entry.mapID, areaName(names, lang, entry, englishName));
   }
 
   return entries.map((entry) => {
     const englishRow = english.get(entry.id);
     const source = {
       ...entry,
-      ...(englishRow ? { name: englishRow.name, full: englishRow.full } : {}),
+      ...(englishRow ? { full: englishRow.full } : {}),
+      name: areaName(names, lang, entry, englishRow?.name ?? entry.name),
       zoneName: zoneNames.get(entry.mapID) ?? entry.zoneName,
     };
 
@@ -186,7 +188,6 @@ async function buildOverlaidCatalogue(lang: Lang): Promise<CatalogueEntry[]> {
     const spoken = toSpokenText(row.full, rules);
     return {
       ...source,
-      name: row.name,
       full: row.full,
       spoken,
       hash: textHash(spoken),

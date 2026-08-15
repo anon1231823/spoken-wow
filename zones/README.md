@@ -427,9 +427,7 @@ an honest empty state that prose from another language does not improve on.
 ### Translations arrive as a spreadsheet
 
 Nothing here translates. A language's lore is written by people, either one line at a
-time in the explorer's edit dialog under that language — which, when translating, also
-takes the place's name in that language, since a zone's name is its own line's name
-and every row in the zone shows it — or in bulk through a sheet:
+time in the explorer's edit dialog under that language, or in bulk through a sheet:
 
 ```sh
 make lore-sheet LOCALE=deDE                          # dist/lore-deDE.csv, English beside the blanks
@@ -439,9 +437,9 @@ make lore-export LOCALE=deDE && make languages       # into the addon; readiness
 ```
 
 The sheet lists every line the Era client can report — `lineId`, where it is, the
-English name and text — and three columns to fill: `name` (the place name in that
-language; blank keeps the English one), `full` (blank means not translated, skipped)
-and an optional `short` for the hover preview. Whatever is already translated comes
+place's name as that language's client shows it, and the English text — and two
+columns to fill: `full` (blank means not translated, skipped) and an optional `short`
+for the hover preview. Whatever is already translated comes
 back filled in, so the sheet is also the review copy, and re-uploading it unchanged
 records nothing.
 
@@ -452,6 +450,15 @@ underneath it as a kept, non-live version. So a stale sheet can never overwrite 
 correction, and the upload is safe to repeat. Structure and the wiki `source` come
 from the English row — a translation is a derivative of that text and carries its
 attribution — and it never adds or removes a line.
+
+**Place names are never translated here.** The client already names every zone and
+subzone in its own language, and `make aliases` writes those names out of `AreaTable`
+into `tools/seed/area-names.json` alongside the alias tables (`tools/lib/area-names.mjs`
+reads it). The explorer names places from that table in whatever language is being
+read, translated line or not; a translated row is stored under the same name, so an
+exported `Subzones.lua` lists places as the client does. A place whose name the client
+leaves in English — Italian Classic, or a name that is the same in both — reads in
+English, which is what that client shows on its map.
 
 ### The explorer's language switch is in the header
 

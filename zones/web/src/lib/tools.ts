@@ -27,6 +27,7 @@ import * as concurrencyModule from "../../../tools/voice/concurrency.mjs";
 import * as exportModule from "../../../tools/voice/export-manifest.mjs";
 import * as lookupModule from "../../../tools/voice/build-lookup.mjs";
 import * as wikiModule from "../../../tools/lib/wiki.mjs";
+import * as areaNamesModule from "../../../tools/lib/area-names.mjs";
 
 /** One voiceable entry: a zone, or a subzone of one. Mirrors buildCatalogue(). */
 export type CatalogueEntry = {
@@ -100,6 +101,16 @@ export const textHash = namingModule.textHash as (spoken: string) => string;
 // rather than reimplemented here, so a line edited in the explorer and a line scraped
 // from the wiki get the same summary from the same prose.
 export const makeShort = wikiModule.makeShort as (full: string, limit?: number) => string;
+
+/** What each locale's client calls every place: see tools/lib/area-names.mjs. */
+export type AreaNames = Record<string, Map<string, string>>;
+export const loadAreaNames = areaNamesModule.loadAreaNames as () => Promise<AreaNames>;
+export const areaName = areaNamesModule.areaName as (
+  names: AreaNames,
+  lang: string,
+  entry: { kind: string; key: string | null; name: string },
+  englishName?: string,
+) => string;
 
 //------------------------------------------------------------------------------
 // Generation

@@ -19,13 +19,19 @@
 //
 // Some locales have no Era translation and their table comes out empty. That is
 // a real answer -- Italian Classic runs on English area names -- not a failure.
+//
+// The same join also writes tools/seed/area-names.json: for every corpus key,
+// zones included, the name each locale's client shows. That is the reverse of an
+// alias -- key to name rather than name to key -- and it is what the explorer and
+// the exports name places with in another language (see lib/area-names.mjs).
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { fetchTable, PINNED_BUILD } from "../lib/db2.mjs";
 import { BASE_LOCALE, LOCALES } from "../lib/locales.mjs";
-import { readSubzones } from "../lib/loredata.mjs";
+import { readSubzones, readZones } from "../lib/loredata.mjs";
+import { AREA_NAMES_PATH } from "../lib/area-names.mjs";
 import { luaString, normaliseKey, ROOT } from "../lib/wiki.mjs";
 
 const argv = process.argv.slice(2);
@@ -65,6 +71,12 @@ async function main() {
   // in every player's memory for no lookup that can ever succeed.
   const subzones = await readSubzones();
   const wanted = new Set(subzones.map((s) => s.key));
+  // Zones too, for the names file only: the alias tables resolve subzone names the
+  // client reports, and a zone is found by its map id, not its name.
+  const zones = await readZones();
+  const zoneKeys = new Set(zones.map((z) => normaliseKey(z.name)));
+  const named = new Set([...wanted, ...zoneKeys]);
+  const namesByLocale = {};
 
   console.log(`fetching AreaTable for ${build}`);
   const english = await fetchTable("AreaTable", { build });
@@ -80,13 +92,21 @@ async function main() {
     // resolved from the name alone, so neither reading is stored: a wrong alias
     // shows the wrong lore, which is worse than the miss it replaces.
     const ambiguous = new Set();
+    // Key -> localized name. Several AreaTable rows can share one English name
+    // (a zone and its like-named area, an instance entrance); the first localized
+    // name wins, and a later different one is left -- they are the same place with
+    // the same name in practice, and a disagreement is a data curiosity, not a
+    // second name for the explorer to pick between.
+    const names = {};
 
     for (const row of rows) {
       const localized = (row.AreaName_lang || "").trim();
       const englishName = englishById.get(row.ID);
-      if (!localized || !englishName || localized === englishName) continue;
+      if (!localized || !englishName) continue;
 
       const key = normaliseKey(englishName);
+      if (named.has(key) && localized !== englishName && !(key in names)) names[key] = localized;
+      if (localized === englishName) continue;
       if (!wanted.has(key)) continue;
 
       const existing = aliases.get(localized);
@@ -101,6 +121,7 @@ async function main() {
     const dir = join(ROOT, "addon/ZoneLore/Data", locale.code);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "Aliases.lua"), emitAliases(locale.code, aliases, build));
+    namesByLocale[locale.code] = Object.fromEntries(Object.entries(names).sort());
 
     // Coverage counts corpus keys reached, not alias rows: several client names
     // can share one key, and counting rows reports more than 100% coverage.
@@ -114,6 +135,25 @@ async function main() {
       `${locale.code}: ${covered} of ${wanted.size} subzone keys (${pct}%) via ${aliases.size} names${note}`,
     );
   }
+
+  await writeFile(
+    AREA_NAMES_PATH,
+    JSON.stringify(
+      {
+        _comment: [
+          "What each locale's client calls every place in the corpus, keyed by the",
+          "corpus key (a subzone's normalised English name, or a zone's). Built by",
+          `tools/locale/build-aliases.mjs from AreaTable at build ${build}; keys whose`,
+          "name is the same as English are left out. Read by tools/lib/area-names.mjs.",
+        ],
+        build,
+        names: namesByLocale,
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  console.log(`wrote ${AREA_NAMES_PATH}`);
 }
 
 main().catch((err) => {

@@ -22,6 +22,7 @@ import { dirname } from "node:path";
 import { BASE_LOCALE } from "../lib/locales.mjs";
 import { zonesLua, subzonesLua, readZones, readSubzones } from "../lib/loredata.mjs";
 import { makeShort } from "../lib/wiki.mjs";
+import { areaName, loadAreaNames } from "../lib/area-names.mjs";
 import { isEnabled, query, transaction } from "../voice/db.mjs";
 import { emitZones, emitSubzones } from "./lua.mjs";
 
@@ -287,13 +288,15 @@ export async function recordRewrite(entries) {
  *
  * Structure -- mapID, kind, key, source -- comes from the English row: a translation
  * never decides which lines exist, and it inherits the wiki attribution because it
- * is a derivative of that text.
+ * is a derivative of that text. The name is the client's for that language
+ * (lib/area-names.mjs), not the sheet's: nobody translates place names here.
  *
- * @param entries [{ lineId, name, full, short? }] -- `short` blank means derive it.
+ * @param entries [{ lineId, full, short? }] -- `short` blank means derive it.
  */
 export async function recordTranslations(entries, lang) {
   if (lang === BASE_LOCALE) throw new Error("recordTranslations is for languages other than English");
   const stats = { inserted: 0, promoted: 0, unchanged: 0, heldBack: 0, unknown: [] };
+  const names = await loadAreaNames();
 
   await transaction(async (client) => {
     for (const entry of entries) {
@@ -315,7 +318,7 @@ export async function recordTranslations(entries, lang) {
       );
       const current = currentRows[0];
 
-      const name = entry.name || current?.name || english.name;
+      const name = areaName(names, lang, english);
       const shortIsManual = Boolean(entry.short);
       const short = shortIsManual ? entry.short : makeShort(entry.full);
 

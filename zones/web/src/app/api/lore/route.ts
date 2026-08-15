@@ -38,7 +38,6 @@ export async function PUT(request: Request) {
     lineId?: unknown;
     full?: unknown;
     short?: unknown;
-    name?: unknown;
     note?: unknown;
     expectedVersion?: unknown;
     lang?: unknown;
@@ -61,9 +60,6 @@ export async function PUT(request: Request) {
   if (body.note !== undefined && body.note !== null && typeof body.note !== "string") {
     return NextResponse.json({ error: "note must be a string or null" }, { status: 400 });
   }
-  if (body.name !== undefined && body.name !== null && typeof body.name !== "string") {
-    return NextResponse.json({ error: "name must be a string or null" }, { status: 400 });
-  }
   if (
     body.expectedVersion !== undefined &&
     body.expectedVersion !== null &&
@@ -82,7 +78,6 @@ export async function PUT(request: Request) {
       lineId: body.lineId,
       full: body.full,
       short: (body.short as string | null | undefined) ?? null,
-      name: (body.name as string | null | undefined) ?? null,
       note: (body.note as string | null | undefined) ?? null,
       editedBy: session.user.id,
       expectedVersion: (body.expectedVersion as number | null | undefined) ?? null,

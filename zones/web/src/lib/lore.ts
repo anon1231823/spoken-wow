@@ -9,7 +9,7 @@ import "server-only";
 
 import { query, pool } from "./db";
 import { BASE_LANG, type Lang } from "./lang";
-import { makeShort } from "./tools";
+import { areaName, loadAreaNames, makeShort } from "./tools";
 
 /** The live text of one line. */
 export type LoreLine = {
@@ -99,13 +99,6 @@ export async function saveLore(args: {
   lineId: string;
   full: string;
   short?: string | null;
-  /**
-   * The place name in this language. Only for a translation: the English name is
-   * the corpus's, and the key every lookup and slug derives from stays whatever it
-   * is either way. Blank or absent keeps the name the row already has -- English's,
-   * for a first translation.
-   */
-  name?: string | null;
   note?: string | null;
   editedBy: string;
   expectedVersion?: number | null;
@@ -158,7 +151,22 @@ export async function saveLore(args: {
 
     const full = args.full.trim();
     if (!full) throw new Error("the text cannot be empty");
-    const name = (lang !== BASE_LANG && args.name?.trim()) || current.name;
+    // A translated row is named as the client names the place in that language
+    // (tools/lib/area-names.mjs); nobody types a place name. English keeps its own.
+    // The lookup needs the English name -- a zone's key is derived from it -- and a
+    // row already translated no longer carries that, so it is read from English's row.
+    let name = current.name;
+    if (lang !== BASE_LANG) {
+      let englishName = current.name;
+      if (!translating) {
+        const { rows } = await client.query<{ name: string }>(
+          `select "name" from "lore_line" where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
+          [args.lineId, BASE_LANG],
+        );
+        englishName = rows[0]?.name ?? current.name;
+      }
+      name = areaName(await loadAreaNames(), lang, { ...current, name: englishName });
+    }
 
     // A save that changes nothing must not spend a version number: the history is a
     // record of what the text has been, not of who opened the dialog. A translation

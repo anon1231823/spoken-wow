@@ -16,14 +16,16 @@
 // Columns:
 //   lineId        the line's key -- do not edit; the upload matches on it
 //   zone, place   where it is, in English, for orientation
-//   english_name  the English place name as the lore shows it
+//   name          the place as the client calls it in this language -- for
+//                 reference only; place names come from the client's own area
+//                 table, and the upload ignores this column
 //   english       the English text being translated from
-//   name          the place name in this language (blank: keep the English name)
 //   full          the translated text (blank: line not translated, skipped on upload)
 //   short         optional; the hover-preview summary. Blank: derived from `full`.
 
 import { writeFile } from "node:fs/promises";
 
+import { areaName, loadAreaNames } from "../lib/area-names.mjs";
 import { toCsv } from "../lib/csv.mjs";
 import { loadEnvFile } from "../lib/env.mjs";
 import { loadEraAreas } from "../lib/era.mjs";
@@ -33,7 +35,7 @@ import { isEnabled, readCurrent } from "./store.mjs";
 
 await loadEnvFile();
 
-export const SHEET_COLUMNS = ["lineId", "zone", "place", "english_name", "english", "name", "full", "short"];
+export const SHEET_COLUMNS = ["lineId", "zone", "place", "name", "english", "full", "short"];
 
 const lang = process.env.ZONELORE_LANG || BASE_LOCALE;
 const out = process.argv[2];
@@ -54,10 +56,11 @@ async function main() {
     process.exit(1);
   }
 
-  const [english, translated, era] = await Promise.all([
+  const [english, translated, era, names] = await Promise.all([
     readCurrent(BASE_LOCALE),
     readCurrent(lang),
     loadEraAreas(),
+    loadAreaNames(),
   ]);
   if (english.length === 0) {
     console.error("error: lore_line has no English rows. Seed it with:  make lore-import");
@@ -81,9 +84,8 @@ async function main() {
         lineId: row.lineId,
         zone: zoneNames.get(row.mapID) ?? String(row.mapID),
         place: row.kind === "zone" ? "(zone)" : row.name,
-        english_name: row.name,
+        name: areaName(names, lang, row),
         english: row.full,
-        name: done?.name ?? "",
         full: done?.full ?? "",
         short: done?.shortIsManual ? done.short : "",
       };

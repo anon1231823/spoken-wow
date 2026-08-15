@@ -71,12 +71,7 @@ async function main() {
       blank++;
       continue;
     }
-    entries.push({
-      lineId,
-      full,
-      name: (row.name ?? "").trim(),
-      short: (row.short ?? "").trim(),
-    });
+    entries.push({ lineId, full, short: (row.short ?? "").trim() });
   }
 
   console.log(`${file}: ${rows.length} rows, ${entries.length} translated, ${blank} still blank`);
@@ -95,7 +90,7 @@ async function main() {
       }
       const row = live.get(entry.lineId);
       if (!row) tally.new++;
-      else if (row.full === entry.full && (!entry.name || row.name === entry.name) && (!entry.short || row.short === entry.short)) tally.unchanged++;
+      else if (row.full === entry.full && (!entry.short || row.short === entry.short)) tally.unchanged++;
       else if (row.origin === "edited") tally.heldBack++;
       else tally.changed++;
     }

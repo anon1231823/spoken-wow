@@ -31,18 +31,13 @@ type Props = {
   /** Which language is being written. English edits the lore; anything else translates it. */
   lang?: Lang;
   onClose: () => void;
-  /** Told the new text and name so the row can update without a reload. */
-  onSaved: (line: ResultLine, full: string, name: string) => void;
+  /** Told the new text so the row can update without a reload. */
+  onSaved: (line: ResultLine, full: string) => void;
 };
 
 export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) {
   const dialog = useRef<HTMLDialogElement | null>(null);
-  // `english` is only carried when the row is read in another language.
-  const translating = line?.english !== undefined;
   const [text, setText] = useState("");
-  // The place name in the language being written. Only offered when translating: the
-  // English name is the corpus's own, and every lookup key and slug derives from it.
-  const [name, setName] = useState("");
   const [note, setNote] = useState("");
   const [versions, setVersions] = useState<Version[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -60,9 +55,6 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
     // An untranslated line carries no text at all, so this is empty either way; the
     // English to work from is shown above the box, not in it.
     setText(line.text);
-    // An untranslated line carries the English name; that is what a translator starts
-    // from and, if they leave it, what the language keeps.
-    setName(line.name);
     setNote("");
     setError(null);
     setVersions(null);
@@ -100,7 +92,6 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
       body: JSON.stringify({
         lineId: line.id,
         full: text,
-        name: translating ? name.trim() || null : null,
         note: note.trim() || null,
         expectedVersion: baseVersion,
         lang,
@@ -115,9 +106,9 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
       return;
     }
 
-    onSaved(line, text.trim(), translating ? name.trim() || line.name : line.name);
+    onSaved(line, text.trim());
     onClose();
-  }, [baseVersion, lang, line, name, note, onClose, onSaved, text, translating]);
+  }, [baseVersion, lang, line, note, onClose, onSaved, text]);
 
   const restore = useCallback(
     async (version: number) => {
@@ -138,8 +129,8 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
         return;
       }
 
-      const data = (await res.json()) as { version: { full: string; name: string } };
-      onSaved(line, data.version.full, data.version.name);
+      const data = (await res.json()) as { version: { full: string } };
+      onSaved(line, data.version.full);
       onClose();
     },
     [lang, line, onClose, onSaved],
@@ -147,7 +138,7 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
 
   if (!line) return null;
 
-  const changed = text.trim() !== line.text.trim() || (translating && name.trim() !== line.name);
+  const changed = text.trim() !== line.text.trim();
 
   return (
     <dialog
@@ -159,18 +150,6 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
       <p className="mb-3 text-xs text-faint">
         {line.zoneName} · {line.file}
       </p>
-
-      {translating && (
-        <label className="mb-3 block">
-          <span className="text-xs text-faint">Name in {langName(lang)}</span>
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder={line.name}
-            className="mt-1 w-full rounded border border-border bg-bg p-2 text-sm"
-          />
-        </label>
-      )}
 
       {line.english !== undefined && (
         <div className="mb-3">
