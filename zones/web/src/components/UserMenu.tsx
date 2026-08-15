@@ -110,17 +110,15 @@ export function UserMenu() {
               Reports
             </Link>
           )}
-          {/* External: the pronunciation editor lives in wow-voiceover, which owns the
-              dictionary both projects share. /lexicon redirects there for old bookmarks. */}
           {canConfigure(role) && (
-            <a
-              href="https://voiceover.rusty.one/pronunciation"
+            <Link
+              href={`/${lang}/pronunciation`}
               role="menuitem"
               className={item}
               onClick={() => setOpen(false)}
             >
               Pronunciation
-            </a>
+            </Link>
           )}
           {canConfigure(role) && (
             <Link href={`/${lang}/voice`} role="menuitem" className={item} onClick={() => setOpen(false)}>

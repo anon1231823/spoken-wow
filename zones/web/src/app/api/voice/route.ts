@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireApiKey, requireConfigure } from "@/lib/authz";
 import { langFromParams, langOfBody } from "@/lib/lang";
-import {
-  draftConfig,
-  listVoices,
-  loadManifest,
-  measureRates,
-  resolveDictionary,
-  saveConfig,
-} from "@/lib/tools";
+import { draftConfig, listVoices, loadManifest, measureRates, saveConfig } from "@/lib/tools";
 import { parseSettings } from "@/lib/voice";
 
 // One language's narrator voice and its settings, read and written.
@@ -53,7 +46,6 @@ export async function GET(request: Request) {
     voiceName: config.voiceName,
     modelId: config.modelId,
     languageCode: config.languageCode ?? null,
-    dictionaryId: config.dictionaryId ?? null,
     voiceSettings: config.voiceSettings,
     voices,
     creditRate,
@@ -61,7 +53,7 @@ export async function GET(request: Request) {
   });
 }
 
-type Body = { voiceId?: unknown; voiceSettings?: unknown; dictionaryId?: unknown; lang?: unknown };
+type Body = { voiceId?: unknown; voiceSettings?: unknown; lang?: unknown };
 
 export async function POST(request: Request) {
   const { session, denied } = await requireConfigure();
@@ -83,19 +75,6 @@ export async function POST(request: Request) {
   if (typeof body.voiceId !== "string") {
     return NextResponse.json({ error: "voiceId is required" }, { status: 400 });
   }
-  // The language's ElevenLabs pronunciation dictionary. Blank means none -- a
-  // language starts without one, and English's is never inherited (see draftConfig).
-  // Only the id is stored: the version is resolved at the start of every run, so
-  // the newest rules always apply and each take records which version it got.
-  const dictionaryId =
-    body.dictionaryId === undefined || body.dictionaryId === null
-      ? null
-      : typeof body.dictionaryId === "string"
-        ? body.dictionaryId.trim() || null
-        : undefined;
-  if (dictionaryId === undefined) {
-    return NextResponse.json({ error: "dictionaryId must be a string or null" }, { status: 400 });
-  }
 
   // Validated against the live account list, which also supplies the current name:
   // config.json pins both, and a name that drifts from the id defeats the pin's
@@ -110,16 +89,6 @@ export async function POST(request: Request) {
   if (!picked) {
     return NextResponse.json({ error: "voiceId is not on this account" }, { status: 400 });
   }
-  // Checked against the account the same way the voice is: a mistyped id would
-  // otherwise fail every generation in this language, at the first line, after the
-  // batch had been quoted and confirmed.
-  if (dictionaryId !== null) {
-    try {
-      await resolveDictionary({ dictionaryId, dictionaryVersionId: null }, key);
-    } catch (err) {
-      return NextResponse.json({ error: (err as Error).message }, { status: 400 });
-    }
-  }
 
   // draftConfig, not loadConfig: the first save for a language is exactly the case
   // where loadConfig refuses, and this save is what turns it into a configured one.
@@ -127,17 +96,12 @@ export async function POST(request: Request) {
   config.voiceId = picked.voice_id;
   config.voiceName = picked.name;
   config.voiceSettings = settings;
-  config.dictionaryId = dictionaryId;
-  // A pinned version belongs to the dictionary it was resolved from; the next run
-  // resolves the new one's.
-  if (config.dictionaryVersionId) config.dictionaryVersionId = undefined;
   await saveConfig(config, lang);
 
   return NextResponse.json({
     lang,
     configured: true,
     voiceId: config.voiceId,
-    dictionaryId: config.dictionaryId,
     voiceName: config.voiceName,
     voiceSettings: config.voiceSettings,
   });

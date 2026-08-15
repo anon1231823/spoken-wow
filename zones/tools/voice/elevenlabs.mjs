@@ -65,41 +65,40 @@ export async function readOverrides(lang) {
 /**
  * The generation config for a language, whether or not it has a narrator yet.
  *
- * For a language without a file this is English's config with the voice blanked
- * and the language's own code filled in: what the /voice page shows before the
- * first save, and what a preview speaks with the voice the page has selected. It
- * is NOT what generation runs with -- loadConfig refuses that case -- because the
- * blank voice would resolve to nothing and the English dictionary would still be
- * attached.
+ * English's config with the voice blanked, the language's own code filled in and
+ * the English dictionary dropped, then the language's own file over that. So a
+ * language without a file is what the /voice page shows before the first save and
+ * what a preview speaks with the voice the page has selected; a language whose file
+ * holds only a dictionary id (the pronunciation page can write one before anyone
+ * has picked a voice) is the same with that id filled in.
+ *
+ * `configured` means a narrator is named, not merely that the file exists -- it is
+ * what loadConfig gates generation on, and a blank voice would resolve to nothing.
  */
 export async function draftConfig(lang = BASE_LOCALE) {
   const base = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
   if (lang === BASE_LOCALE) return { config: base, configured: true };
 
+  const blank = {
+    ...base,
+    voiceName: "",
+    voiceId: undefined,
+    languageCode: elevenLabsCode(lang) ?? undefined,
+    // English's phoneme dictionary is English: applied to another language it
+    // rewrites words that happen to be spelled the same. A language gets its own
+    // on the pronunciation page.
+    dictionaryId: null,
+    dictionaryVersionId: undefined,
+  };
   // A shallow merge, and voiceSettings is replaced rather than merged: half the
   // English settings under a different voice is not a configuration anyone chose.
-  const overrides = await readOverrides(lang);
-  if (overrides !== null) return { config: { ...base, ...overrides }, configured: true };
-
-  return {
-    config: {
-      ...base,
-      voiceName: "",
-      voiceId: undefined,
-      languageCode: elevenLabsCode(lang) ?? undefined,
-      // English's phoneme dictionary is English: applied to another language it
-      // rewrites words that happen to be spelled the same. A dictionary for this
-      // language is added to its file by hand when one exists.
-      dictionaryId: null,
-      dictionaryVersionId: undefined,
-    },
-    configured: false,
-  };
+  const config = { ...blank, ...((await readOverrides(lang)) ?? {}) };
+  return { config, configured: Boolean(config.voiceId || config.voiceName) };
 }
 
 export async function loadConfig(lang = BASE_LOCALE) {
   const { config, configured } = await draftConfig(lang);
-  if (!configured || (lang !== BASE_LOCALE && !config.voiceId && !config.voiceName)) {
+  if (!configured) {
     throw new Error(
       `no voice configured for ${lang}: pick a narrator on /${lang}/voice, or write ` +
         `tools/voice/config.${lang}.json by hand.\n` +

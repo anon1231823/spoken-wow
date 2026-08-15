@@ -906,21 +906,21 @@ and gets the same names wrong, and it already has what this side never built: an
 editor, 134 curated entries, IPA phoneme rules alongside plain respellings, and a
 check that reads every upload back to see what ElevenLabs actually kept.
 
-What crosses between the two projects is **one id**, and nothing else. No shared
-database, no API call, no exported file:
+What crosses between the two projects is **one id per language**, and nothing else.
+No shared database, no API call, no exported file. English's is `dictionaryId` in
+`tools/voice/config.json`; every other language's is in its `config.<code>.json`,
+and is set on that language's **`/pronunciation`** page — which, for now, is that one
+field. A dictionary is never inherited from English: an English phoneme dictionary
+applied to German rewrites words that happen to be spelled the same, so a language
+starts with none until somebody names one, and the page checks the id against the
+account on save.
 
-```json
-"dictionaryId": "Elx0hcDze8EXW2rImeLT",
-"dictionaryVersionId": null
-```
-
-voiceover updates that dictionary in place on every save, so the id never moves.
-Give the **id alone** here. The API wants an id *and* a version, so the generator
-resolves the latest version once and writes it back into `dictionaryVersionId`.
-The version is pinned rather than left floating on purpose: naming a dictionary
-without one would let a later upload change how already-generated lines would
-sound, which is exactly what the manifest exists to make knowable. Clear both
-fields to pick up the current lexicon.
+voiceover updates a dictionary in place on every save, so the id never moves. Only
+the id is stored: the API wants an id *and* a version, so the generator resolves the
+latest version at the start of every run and uses it for the whole run — the
+newest rules always apply, and every take records which version it was spoken with,
+so drift stays knowable per line. Writing a `dictionaryVersionId` into the config
+by hand pins it and skips the per-run resolution.
 
 **A lexicon change does not mark anything stale, and that is deliberate.** The
 rules are applied by the model, not by rewriting the text, so the spoken text and
@@ -1142,7 +1142,7 @@ corpus under a GitHub runner's checkout path. So a deployed process is told inst
 | `ZONELORE_SOUNDS` | shared, so ~700MB is not copied per deploy or deleted by a prune |
 | `ZONELORE_AUDIO_HISTORY` | shared; this one's loss is permanent |
 | `ZONELORE_MANIFEST` | shared; write-only, since the database is authoritative |
-| `ZONELORE_PRONUNCIATION` | shared, because `/lexicon` writes it |
+| `ZONELORE_PRONUNCIATION` | shared, so rules hand-edited on the droplet outlive a deploy |
 
 Unset — every local run, CLI or `next dev` — each falls back to exactly the path it
 always had. Nothing about working locally changes.
@@ -1157,7 +1157,7 @@ source of corrections this project has, and before `feedback` they had nowhere t
 Two entry points, both open to anyone signed in or not: the **Feedback** button in the
 header, for anything that is about no particular line, and a small ✍ button in each row's
 State column, for a report against that line. A category is asked for up front — lore,
-audio, pronunciation, other — because it decides who looks: pronunciation is a `/lexicon`
+audio, pronunciation, other — because it decides who looks: pronunciation is a dictionary
 rule, audio is a re-roll, lore is the scraper or an override. Name and email are offered
 and optional; submitting anonymously is expected and fine. A signed-in reporter is
 identified by their account and is not asked.
