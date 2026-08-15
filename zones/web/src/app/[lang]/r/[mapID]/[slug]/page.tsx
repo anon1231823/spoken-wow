@@ -6,6 +6,7 @@ import { FeedbackForm } from "@/components/FeedbackForm";
 import { audioRelPath } from "@/lib/audio";
 import { lineByPath, loadContext } from "@/lib/catalogue";
 import { BASE_LANG, isLang } from "@/lib/lang";
+import { messages } from "@/lib/messages";
 
 /**
  * One line, and the form to complain about it.
@@ -39,12 +40,14 @@ export async function generateMetadata({
 }: {
   params: Promise<Params>;
 }): Promise<Metadata> {
-  const entry = await resolve(await params);
+  const { lang: rawLang, ...rest } = await params;
+  const lang = isLang(rawLang) ? rawLang : BASE_LANG;
+  const entry = await resolve({ lang, ...rest });
   // notFound() belongs in the page, not here; this just declines to name a title.
   if (!entry) return {};
   return {
     title: entry.name,
-    description: `Report a problem with the ZoneLore entry for ${entry.name}.`,
+    description: messages(lang)("report.description", { name: entry.name }),
   };
 }
 
@@ -53,6 +56,8 @@ export default async function Page({ params }: { params: Promise<Params> }) {
   const lang = isLang(rawLang) ? rawLang : BASE_LANG;
   const entry = await resolve({ lang, ...rest });
   if (!entry) notFound();
+  // The one player-facing page: it reads in the language of the lore on it.
+  const t = messages(lang);
 
   // The current take is the only thing here that is not derivable from committed files,
   // and it answers one question: is there narration to listen to before complaining
@@ -64,7 +69,7 @@ export default async function Page({ params }: { params: Promise<Params> }) {
       <article className="max-w-2xl">
         <h1 className="text-xl font-semibold">{entry.name}</h1>
         <p className="mt-1 text-muted">
-          {entry.kind === "subzone" ? `in ${entry.zoneName}` : "zone lore"}
+          {entry.kind === "subzone" ? t("report.inZone", { zone: entry.zoneName }) : t("report.zoneLore")}
         </p>
 
         {take ? (
@@ -83,7 +88,7 @@ export default async function Page({ params }: { params: Promise<Params> }) {
           />
         ) : (
           <p className="mt-4 text-sm text-faint">
-            This entry has no narration yet — the addon plays a placeholder for it.
+            {t("report.noNarration")}
           </p>
         )}
 
@@ -93,25 +98,22 @@ export default async function Page({ params }: { params: Promise<Params> }) {
           // No lore in this language. Said plainly rather than left as an empty gap,
           // because somebody arriving from the game is here to report a problem and
           // "there is no text yet" is the answer to the one they are about to file.
-          <p className="mt-5 text-faint italic">
-            This entry has not been translated yet.
-          </p>
+          <p className="mt-5 text-faint italic">{t("report.notTranslated")}</p>
         )}
 
         <section className="mt-8 rounded-lg border border-border bg-panel p-4">
-          <h2 className="font-medium">Report a problem</h2>
-          <p className="mt-1 mb-3 text-xs text-faint">
-            Wrong lore, a bad reading, a mispronounced name. It goes to the editors.
-          </p>
+          <h2 className="font-medium">{t("report.title")}</h2>
+          <p className="mt-1 mb-3 text-xs text-faint">{t("report.blurb")}</p>
           <FeedbackForm target={{ id: entry.id, name: entry.name, zoneName: entry.zoneName }} />
         </section>
 
         <footer className="mt-8 text-sm text-muted">
           <Link href={`/${lang}?zone=${entry.mapID}`} className="hover:text-fg">
-            Browse every line in {entry.zoneName} →
+            {t("report.browseZone", { zone: entry.zoneName })}
           </Link>
           <p className="mt-2 text-xs text-faint">
-            Lore: {entry.source ? <a href={entry.source}>warcraft.wiki.gg</a> : "warcraft.wiki.gg"}{" "}
+            {t("report.loreCredit")}{" "}
+            {entry.source ? <a href={entry.source}>warcraft.wiki.gg</a> : "warcraft.wiki.gg"}{" "}
             (CC BY-SA 4.0)
           </p>
         </footer>

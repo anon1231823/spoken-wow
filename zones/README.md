@@ -507,6 +507,14 @@ German": there is no German narrator until somebody picks one, and cutting it wi
 English voice would spend credits on a take nobody wants. A quote still works — it is
 free, and it loses only the measured credit rate.
 
+**The report page reads in its language.** The explorer is an editors' tool and its
+interface stays English, but `/{lang}/r/…` and the feedback form on it are what a
+player lands on from the addon's Report button, and they read in the language of the
+lore they show. `web/src/lib/messages.ts` holds those few dozen strings per language,
+English as reference and per-key fallback — no i18n library, because the set is that
+small and grows only when another player-facing surface appears. The non-English
+tables were machine-written and await a speaker's review.
+
 **Flags and feedback are per language too** (migration 0010). A `bad` verdict under
 `/deDE` puts the German line on the German worklist and leaves the English one alone;
 a report filed from a German page counts against the German line, and `/deDE/feedback`

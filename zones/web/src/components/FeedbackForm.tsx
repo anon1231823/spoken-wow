@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 
 import { useSession } from "@/lib/auth-client";
-import { BODY_MAX, CATEGORIES, CATEGORY_LABEL, type Category } from "@/lib/feedback";
+import { BODY_MAX, CATEGORIES, type Category } from "@/lib/feedback";
+import { messages } from "@/lib/messages";
 import type { ResultLine } from "@/lib/search";
-import { SUPPORT_REASON, SUPPORT_URL } from "@/lib/support";
+import { SUPPORT_URL } from "@/lib/support";
 import { useLang } from "@/lib/use-lang";
 
 /**
@@ -51,6 +52,8 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
   // Filed against the language on screen (migration 0010): a complaint about a German
   // line is about the German text and narration, and lands on that language's count.
   const { lang } = useLang();
+  // Player-facing, so it reads in the language of the page: see lib/messages.ts.
+  const t = messages(lang);
 
   const general = target === "general";
 
@@ -84,7 +87,7 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
     if (pending) return;
     const text = body.trim();
     if (text === "") {
-      setError("Say what is wrong with it.");
+      setError(t("form.empty"));
       return;
     }
 
@@ -107,13 +110,15 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
       });
       const data = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) {
-        setError(data.error ?? "That did not go through. Try again in a moment.");
+        // The API's own message is English (a rate-limit refusal, mostly); the
+        // generic one is the language's.
+        setError(data.error ?? t("form.failed"));
         return;
       }
       setSent(true);
       onSent?.();
     } catch {
-      setError("That did not go through. Try again in a moment.");
+      setError(t("form.failed"));
     } finally {
       setPending(false);
     }
@@ -122,13 +127,10 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
   if (sent) {
     return (
       <div>
-        <h2 className="font-medium">Thank you!</h2>
+        <h2 className="font-medium">{t("form.thanks")}</h2>
         <p className="mt-2 text-muted">
-          {general
-            ? "Your feedback is with the editors."
-            : `Your report on ${target.name} is with the editors.`}{" "}
-          There is no reply address on this, so you will not hear back unless you left
-          one.
+          {general ? t("form.sent.general") : t("form.sent.line", { name: target.name })}{" "}
+          {t("form.noReply")}
         </p>
         {/* The one moment somebody has demonstrably given us their attention on
             purpose, which is why the ask lives here and not on every page. It sits
@@ -147,9 +149,9 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
             rel="noopener noreferrer"
             className="inline-block rounded bg-accent px-3 py-1 font-medium text-bg hover:opacity-90"
           >
-            Support the project
+            {t("form.support")}
           </a>
-          <p className="mt-2 text-sm text-muted">{SUPPORT_REASON}</p>
+          <p className="mt-2 text-sm text-muted">{t("form.supportReason")}</p>
         </div>
         {doneAction && <div className="mt-4 flex justify-end">{doneAction}</div>}
       </div>
@@ -165,7 +167,7 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
       }}
     >
       <label className="block">
-        <span className="text-xs text-faint">What is the problem?</span>
+        <span className="text-xs text-faint">{t("form.category")}</span>
         <select
           autoFocus
           value={category}
@@ -174,7 +176,7 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
         >
           {CATEGORIES.map((value) => (
             <option key={value} value={value}>
-              {CATEGORY_LABEL[value]}
+              {t(`form.category.${value}`)}
             </option>
           ))}
         </select>
@@ -183,11 +185,7 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
       <textarea
         value={body}
         onChange={(event) => setBody(event.target.value)}
-        placeholder={
-          general
-            ? "What happened, and what did you expect instead?"
-            : "What is wrong with it? Quoting the sentence helps."
-        }
+        placeholder={general ? t("form.placeholder.general") : t("form.placeholder.line")}
         rows={5}
         maxLength={BODY_MAX}
         className="mt-3 w-full rounded border border-border bg-bg p-2"
@@ -203,18 +201,16 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
 
       {/* Signed in, so the account is the identity and there is nothing to ask. */}
       {session ? (
-        <p className="mt-2 text-xs text-faint">Filed as {session.user.email}.</p>
+        <p className="mt-2 text-xs text-faint">{t("form.filedAs", { email: session.user.email })}</p>
       ) : (
         <>
-          <p className="mt-3 text-xs text-faint">
-            Both optional. Leave them blank to report anonymously.
-          </p>
+          <p className="mt-3 text-xs text-faint">{t("form.optional")}</p>
           <div className="mt-1 flex gap-2">
             <input
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Name"
+              placeholder={t("form.name")}
               autoComplete="name"
               className="min-w-0 flex-1"
             />
@@ -222,7 +218,7 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
               type="text"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              placeholder="Email"
+              placeholder={t("form.email")}
               autoComplete="email"
               className="min-w-0 flex-1"
             />
@@ -252,14 +248,14 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
       )}
 
       <div className="mt-3 flex items-center justify-end gap-2">
-        <span className="mr-auto text-xs text-faint">⌘↵ to send</span>
+        <span className="mr-auto text-xs text-faint">{t("form.sendHint")}</span>
         {secondaryAction}
         <button
           type="submit"
           disabled={pending}
           className="rounded bg-accent px-3 py-1 text-bg hover:opacity-90 disabled:opacity-50"
         >
-          {pending ? "Sending…" : "Send"}
+          {pending ? t("form.sending") : t("form.send")}
         </button>
       </div>
     </form>
