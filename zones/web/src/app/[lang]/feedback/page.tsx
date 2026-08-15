@@ -7,6 +7,7 @@ import { currentSession } from "@/lib/authz";
 import { catalogue } from "@/lib/catalogue";
 import { query } from "@/lib/db";
 import type { Category, Status } from "@/lib/feedback";
+import { BASE_LANG, isLang } from "@/lib/lang";
 import { canTriageFeedback } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
@@ -33,10 +34,13 @@ function viewOf(value: string | string[] | undefined): View {
     : "open";
 }
 
+// Every view is one language's reports (migration 0010): the page under /deDE is
+// the German triage list, and a report about German narration must not surface in
+// the English one, where nobody can act on it.
 const WHERE: Record<View, string> = {
-  open: `where f."status" = 'open'`,
-  resolved: `where f."status" <> 'open'`,
-  all: ``,
+  open: `where f."lang" = $1 and f."status" = 'open'`,
+  resolved: `where f."lang" = $1 and f."status" <> 'open'`,
+  all: `where f."lang" = $1`,
 };
 
 type Row = {
@@ -60,7 +64,9 @@ export default async function Page({
   params: Promise<{ lang: string }>;
   searchParams: Promise<{ status?: string | string[] }>;
 }) {
-  const { lang } = await params;
+  const { lang: rawLang } = await params;
+  // The layout already 404s an unknown code; the guard here is what types the value.
+  const lang = isLang(rawLang) ? rawLang : BASE_LANG;
   const session = await currentSession();
 
   // 404 rather than a redirect to /login, matching /admin and /lexicon: a member has no
@@ -81,8 +87,9 @@ export default async function Page({
          ${WHERE[view]}
         order by f."createdAt" desc
         limit 500`,
+      [lang],
     ),
-    catalogue(),
+    catalogue(lang),
   ]);
 
   // lineId -> where it is, so a report can link into the explorer. Built from the

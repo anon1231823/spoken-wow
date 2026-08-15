@@ -59,6 +59,20 @@ export function langFromParams(params: URLSearchParams): Lang {
 }
 
 /**
+ * The language a JSON body names, for the write routes.
+ *
+ * Absent means English, so a client that predates the language axis keeps working;
+ * present and unknown returns null, and the route rejects the request rather than
+ * writing into a language this build does not know. Different from langFromParams,
+ * which forgives: a mistyped URL should still show something, but a write into
+ * "whatever" is a client bug that must not become a row.
+ */
+export function langOfBody(value: unknown): Lang | null {
+  if (value === undefined || value === null) return BASE_LANG;
+  return isLang(value) ? value : null;
+}
+
+/**
  * A page's searchParams, re-encoded for a redirect.
  *
  * For the legacy no-language stubs: "/feedback?status=resolved" has to land on

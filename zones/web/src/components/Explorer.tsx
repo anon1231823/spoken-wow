@@ -221,7 +221,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       fetch("/api/flags", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineId: line.id, status, note: note ?? null }),
+        body: JSON.stringify({ lineId: line.id, status, note: note ?? null, lang: langRef.current }),
       })
         .then((response) => (response.ok ? response.json() : Promise.reject(new Error("rejected"))))
         .then((data: { flag: LineFlag | null }) => {

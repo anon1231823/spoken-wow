@@ -90,18 +90,18 @@ async function main() {
     process.exit(1);
   }
 
-  // English only, threaded through the join rather than assumed by it: line_flag
-  // has no lang column, so an unscoped join returns one current row per language
-  // for each flagged line -- and every extra row is a billed model call whose
-  // result recordRewrite would then record as the current *English* version.
-  // The flags were written about the English text, and English is the corpus the
-  // rewriter repairs; a translated line follows its source, it is not "fixed".
+  // English only, on both sides of the join. Flags are per language (migration
+  // 0010) and so is the corpus, and this tool repairs English: the reviewers'
+  // notes were written about the English text, and English is what the rewriter
+  // has articles for. A translated line follows its source, it is not "fixed".
+  // Joining unscoped would pair a German flag with the English row and bill a
+  // model call to fix a text nobody complained about.
   const lang = "enUS";
   const { rows } = await db.query(
     `select f."lineId", f.note as "flagNote", f."updatedAt" as "flaggedAt", l.*
        from line_flag f
-       join lore_line l on l."lineId" = f."lineId" and l."lang" = $1 and l."isCurrent"
-      where f.status = 'bad'
+       join lore_line l on l."lineId" = f."lineId" and l."lang" = f."lang" and l."isCurrent"
+      where f.status = 'bad' and f."lang" = $1
       order by l."mapID", l."lineId"`,
     [lang],
   );

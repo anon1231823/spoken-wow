@@ -6,6 +6,7 @@ import { useSession } from "@/lib/auth-client";
 import { BODY_MAX, CATEGORIES, CATEGORY_LABEL, type Category } from "@/lib/feedback";
 import type { ResultLine } from "@/lib/search";
 import { SUPPORT_REASON, SUPPORT_URL } from "@/lib/support";
+import { useLang } from "@/lib/use-lang";
 
 /**
  * The report form itself: the fields, the POST, and the thank-you that follows it.
@@ -47,6 +48,9 @@ type Props = {
 
 export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Props) {
   const { data: session } = useSession();
+  // Filed against the language on screen (migration 0010): a complaint about a German
+  // line is about the German text and narration, and lands on that language's count.
+  const { lang } = useLang();
 
   const general = target === "general";
 
@@ -93,6 +97,7 @@ export function FeedbackForm({ target, secondaryAction, doneAction, onSent }: Pr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           lineId: general ? null : target.id,
+          lang,
           category,
           body: text,
           name,

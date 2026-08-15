@@ -494,9 +494,13 @@ German": there is no German narrator until somebody picks one, and cutting it wi
 English voice would spend credits on a take nobody wants. A quote still works — it is
 free, and it loses only the measured credit rate.
 
-Still English-only: the `/voice` settings page writes `config.json` globally, and
-`line_flag` and `feedback` are keyed by line with no language, so a report about German
-narration would badge the English line.
+**Flags and feedback are per language too** (migration 0010). A `bad` verdict under
+`/deDE` puts the German line on the German worklist and leaves the English one alone;
+a report filed from a German page counts against the German line, and `/deDE/feedback`
+is the German triage list. Both APIs take `lang` and default it to English, so links
+and forms that predate the axis still land where they always did.
+
+Still English-only: the `/voice` settings page writes `config.json` globally.
 
 ## Hover preview
 

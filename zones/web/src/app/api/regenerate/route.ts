@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireApiKey, requireRegenerate } from "@/lib/authz";
-import { isLang, BASE_LANG, type Lang } from "@/lib/lang";
+import { langOfBody } from "@/lib/lang";
 import { getBatch, latestBatch, quote, regenerateOne, startBatch, stopBatch } from "@/lib/regenerate";
 
 // THE ONLY ENDPOINT THAT SPENDS MONEY.
@@ -41,12 +41,7 @@ export async function POST(request: Request) {
   // Rejected rather than defaulted, for the reason the lore route rejects it: this is
   // the endpoint that spends money, and generating into the wrong language is a bill
   // for audio nobody asked for.
-  const lang: Lang | null =
-    body.lang === undefined || body.lang === null
-      ? BASE_LANG
-      : isLang(body.lang)
-        ? body.lang
-        : null;
+  const lang = langOfBody(body.lang);
   if (!lang) {
     return NextResponse.json({ error: `unknown language ${String(body.lang)}` }, { status: 400 });
   }

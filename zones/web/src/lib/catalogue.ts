@@ -263,8 +263,11 @@ export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext
         where t."isCurrent" and t."lang" = $1`,
       [lang],
     ),
+    // A flag is a verdict on one language's text and audio (migration 0010), so the
+    // English worklist and the German one are different lists.
     query<{ lineId: string; status: "bad" | "ok"; note: string | null; updatedAt: Date }>(
-      `select "lineId", "status", "note", "updatedAt" from "line_flag"`,
+      `select "lineId", "status", "note", "updatedAt" from "line_flag" where "lang" = $1`,
+      [lang],
     ),
     // Grouped in the database rather than counted here: the resolved rows are the ones
     // that accumulate, and there is no reason to carry them across the wire to drop them.
@@ -272,8 +275,9 @@ export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext
     query<{ lineId: string; open: number }>(
       `select "lineId", count(*)::int as "open"
          from "feedback"
-        where "status" = 'open' and "lineId" is not null
+        where "status" = 'open' and "lineId" is not null and "lang" = $1
         group by "lineId"`,
+      [lang],
     ),
   ]);
 
