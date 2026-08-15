@@ -147,8 +147,9 @@ export const resolveVoiceId = elevenModule.resolveVoiceId as (
   key: string,
   lang?: string,
 ) => Promise<string>;
+/** Fills in dictionaryVersionId from the account; throws if the id is not there. */
 export const resolveDictionary = elevenModule.resolveDictionary as (
-  config: VoiceConfig,
+  config: Pick<VoiceConfig, "dictionaryId" | "dictionaryVersionId">,
   key: string,
 ) => Promise<void>;
 export const fetchTier = elevenModule.fetchTier as (key: string) => Promise<string | null>;

@@ -494,7 +494,9 @@ merged over it, holding only what changes with the language — voice, model, `l
 pronunciation dictionary, voice settings. `/deDE/voice` reads and writes the German file,
 and the first save there is what creates it, with the language code filled in and the
 English phoneme dictionary explicitly *not* inherited (an English dictionary applied to
-German rewrites words that happen to be spelled the same). A preview works before that
+German rewrites words that happen to be spelled the same). The page also holds the
+language's ElevenLabs pronunciation dictionary id — one per language, checked against
+the account on save, its newest version resolved at the start of every run. A preview works before that
 first save, because auditioning is how the narrator gets chosen.
 
 **Regenerating in a language with no voice refuses.** `loadConfig(lang)` throws unless

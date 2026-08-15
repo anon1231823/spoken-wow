@@ -32,6 +32,8 @@ type VoiceData = {
   voiceName: string;
   modelId: string;
   languageCode: string | null;
+  /** The language's ElevenLabs pronunciation dictionary; null when it has none. */
+  dictionaryId: string | null;
   voiceSettings: Partial<Settings>;
   voices: Voice[];
   creditRate: number | null;
@@ -63,7 +65,12 @@ export function VoiceSettings() {
     similarity_boost: 0.75,
     use_speaker_boost: true,
   });
-  const [saved, setSaved] = useState<{ voiceId: string; settings: Settings } | null>(null);
+  const [dictionaryId, setDictionaryId] = useState<string>("");
+  const [saved, setSaved] = useState<{
+    voiceId: string;
+    settings: Settings;
+    dictionaryId: string;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // The page cannot render at all without a key -- the voice list is the caller's own
@@ -110,7 +117,12 @@ export function VoiceSettings() {
         setData(incoming);
         setVoiceId(incoming.voiceId ?? "");
         setSettings(current);
-        setSaved({ voiceId: incoming.voiceId ?? "", settings: current });
+        setDictionaryId(incoming.dictionaryId ?? "");
+        setSaved({
+          voiceId: incoming.voiceId ?? "",
+          settings: current,
+          dictionaryId: incoming.dictionaryId ?? "",
+        });
       })
       .catch(() => setError("could not read the voice config"));
 
@@ -124,7 +136,12 @@ export function VoiceSettings() {
     fetch("/api/voice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lang, voiceId, voiceSettings: settings }),
+      body: JSON.stringify({
+        lang,
+        voiceId,
+        voiceSettings: settings,
+        dictionaryId: dictionaryId.trim() || null,
+      }),
     })
       .then(async (response) => {
         const result = (await response.json().catch(() => ({}))) as {
@@ -146,12 +163,12 @@ export function VoiceSettings() {
           return;
         }
         setError(null);
-        setSaved({ voiceId, settings });
+        setSaved({ voiceId, settings, dictionaryId });
         setData((current) => (current ? { ...current, configured: true } : current));
       })
       .catch(() => setError("save failed"))
       .finally(() => setBusy(false));
-  }, [lang, voiceId, settings]);
+  }, [lang, voiceId, settings, dictionaryId]);
 
   const preview = useCallback(() => {
     setPreviewing(true);
@@ -205,7 +222,9 @@ export function VoiceSettings() {
 
   const dirty =
     saved !== null &&
-    (voiceId !== saved.voiceId || JSON.stringify(settings) !== JSON.stringify(saved.settings));
+    (voiceId !== saved.voiceId ||
+      dictionaryId !== saved.dictionaryId ||
+      JSON.stringify(settings) !== JSON.stringify(saved.settings));
   // Nothing to save, and nothing to preview, until a narrator is chosen: an empty voice
   // is what an unconfigured language starts with, not a selection.
   const chosen = voiceId !== "";
@@ -295,6 +314,24 @@ export function VoiceSettings() {
               setSettings({ ...settings, similarity_boost: Number(event.target.value) })
             }
           />
+        </label>
+
+        <label className="grid gap-1">
+          <span className="text-xs text-faint">Pronunciation dictionary ID</span>
+          <input
+            type="text"
+            value={dictionaryId}
+            onChange={(event) => setDictionaryId(event.target.value)}
+            placeholder="none"
+            spellCheck={false}
+            className="rounded border border-border bg-panel px-2 py-1 font-mono text-sm"
+          />
+          <span className="text-xs text-faint">
+            The ElevenLabs dictionary every {langName(lang)} line is spoken through. One per
+            language — an English dictionary applied to another language rewrites words
+            that happen to be spelled the same. Its newest version is picked up at the start
+            of each run. Blank means none.
+          </span>
         </label>
 
         <label className="flex items-center gap-2">
