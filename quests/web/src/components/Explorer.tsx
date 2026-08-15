@@ -13,6 +13,7 @@ import SearchBar from "./SearchBar";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
 import type { Facets } from "@/lib/facets";
+import { NARRATOR_VOICE } from "@/lib/generation/narration";
 import {
   fetchBatchJobs,
   fetchGenerationStatus,
@@ -361,11 +362,19 @@ export default function Explorer({ facets }: { facets: Facets }) {
    */
   const blockedReason = useCallback(
     (line: ResultLine): string | null => {
-      if (!line.generatable) {
+      // `voiceable`, not the corpus's `generatable`: that flag was baked in before a stage
+      // direction could be narrated or an override could strip a token, so it says no to 55
+      // lines the server will happily generate. Reading it here disabled the button on
+      // exactly the lines this feature exists for.
+      if (!line.voiceable) {
         return `Never voiced: ${line.skipReason}`;
       }
       if (status && !status.voices.includes(line.voice)) {
         return `No ElevenLabs voice named "${line.voice}" yet — create it on /voices`;
+      }
+      // A narrated line needs both voices, and the server refuses it for the same reason.
+      if (line.narration && status && !status.voices.includes(NARRATOR_VOICE)) {
+        return `No ElevenLabs voice named "${NARRATOR_VOICE}" yet — create it on /voices`;
       }
       return null;
     },

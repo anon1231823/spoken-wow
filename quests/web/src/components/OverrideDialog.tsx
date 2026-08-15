@@ -51,7 +51,10 @@ export default function OverrideDialog({ line, onSaved, onCancel }: Props) {
   }
 
   const dirty = draft !== (line.override ?? line.text);
-  const rescues = !line.generatable && line.skipReason !== "progress" && !hasInvalidChars(draft);
+  // Whether this rewrite is what makes the line voiceable, asked of its live state rather
+  // than the corpus's baked flag - otherwise a narrated line, which is already voiceable,
+  // would claim every edit rescued it.
+  const rescues = !line.voiceable && line.skipReason !== "progress" && !hasInvalidChars(draft);
 
   async function send(method: "PUT" | "DELETE") {
     if (!line) return;

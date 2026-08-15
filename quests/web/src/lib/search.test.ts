@@ -140,6 +140,17 @@ describe("field filters", () => {
     expect(lines.every((l) => l.npcId === 240 && l.source === "gossip")).toBe(true);
   });
 
+  it("marks narrated lines voiceable even though the corpus gave up on them", () => {
+    // The trap this pins: `generatable` is baked into the corpus and stays false for these
+    // lines forever, because voicing them needed no corpus rebuild. Anything asking "can this
+    // be generated?" must read `voiceable`. Reading the stale flag once disabled the
+    // Regenerate button on precisely the lines the narrator exists for.
+    const narrated = asShipped({ narration: true });
+    expect(narrated.length).toBeGreaterThan(0);
+    expect(narrated.some((l) => !l.generatable)).toBe(true);
+    expect(narrated.every((l) => l.voiceable || l.source === "progress")).toBe(true);
+  });
+
   it("narrows to lines a narrator would read", () => {
     const lines = asShipped({ narration: true });
     expect(lines.length).toBeGreaterThan(0);
