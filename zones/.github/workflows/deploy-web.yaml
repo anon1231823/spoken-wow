@@ -196,7 +196,6 @@ jobs:
           export ZONELORE_SOUNDS="$PWD/no-audio-in-ci"
           export ZONELORE_AUDIO_HISTORY="$PWD/no-history-in-ci"
           export ZONELORE_MANIFEST="$PWD/tools/voice/manifest.json"
-          export ZONELORE_PRONUNCIATION="$PWD/tools/voice/pronunciation.json"
 
           node web/server.js &
           pid=$!

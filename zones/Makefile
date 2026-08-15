@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy \
         status remove clean voice voice-zones lookup sample db-up db-down migrate import export \
-        web push push-dry pull pull-dry audio-status ssh-check pull-manifest pull-lexicon \
+        web push push-dry pull pull-dry audio-status ssh-check pull-manifest \
         db-push db-pull bootstrap deploy-scripts releases rollback logs \
         lore-import lore-export lore-check lore-rewrite aliases languages locale-check \
         release release-dry descriptions descriptions-check descriptions-published
@@ -276,17 +276,12 @@ pull: ## Fetch one language's audio store from the droplet (DESTRUCTIVE: --delet
 	@echo "==> pulled. Rebuild the lookup table with:  make db-pull && make lookup LOCALE=$(LANG_CODE)"
 	@echo "    then package it with:  make package-audio LOCALE=$(LANG_CODE)"
 
-# The two files the droplet writes that git wants back. The manifest is an export of the
+# The one file the droplet writes that git wants back. The manifest is an export of the
 # droplet's database, so `make db-pull` is the better route for it; this is the one that
-# works when you only want the file. pronunciation.json is authored through /lexicon and
-# has no other home but git.
+# works when you only want the file.
 pull-manifest: ## Fetch the droplet's exported manifest[.<locale>].json (LOCALE=deDE)
 	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/$(MANIFEST_FILE) tools/voice/$(MANIFEST_FILE)
 	@echo "==> fetched. Review with: git diff tools/voice/$(MANIFEST_FILE)"
-
-pull-lexicon: ## Fetch pronunciation rules hand-edited on the droplet
-	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/pronunciation.json tools/voice/pronunciation.json
-	@echo "==> fetched. Review with: git diff tools/voice/pronunciation.json"
 
 audio-status: ## What is on disk locally and on the droplet (LOCALE=deDE)
 	@echo "$(LANG_CODE)"

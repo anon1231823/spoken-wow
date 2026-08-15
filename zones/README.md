@@ -1152,7 +1152,6 @@ corpus under a GitHub runner's checkout path. So a deployed process is told inst
 | `ZONELORE_SOUNDS` | shared, so ~700MB is not copied per deploy or deleted by a prune |
 | `ZONELORE_AUDIO_HISTORY` | shared; this one's loss is permanent |
 | `ZONELORE_MANIFEST` | shared; write-only, since the database is authoritative |
-| `ZONELORE_PRONUNCIATION` | shared, so rules hand-edited on the droplet outlive a deploy |
 
 Unset — every local run, CLI or `next dev` — each falls back to exactly the path it
 always had. Nothing about working locally changes.

@@ -121,11 +121,6 @@ module.exports = {
         // the droplet generated -- `make pull-manifest` fetches exactly this.
         ZONELORE_MANIFEST: `${SHARED}/manifest.json`,
 
-        // Shared so a rule hand-edited on the droplet outlives a deploy; nothing in the
-        // app writes it any more. activate.sh seeds this from the release on the first
-        // deploy only.
-        ZONELORE_PRONUNCIATION: `${SHARED}/pronunciation.json`,
-
         // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, and ZONELORE_SECRET_KEY --
         // the master key for the ElevenLabs credentials editors set on their own
         // profiles. The app has no key of its own to spend with any more.

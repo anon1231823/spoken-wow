@@ -27,15 +27,6 @@ PM2=${PM2:-$(command -v pm2 || echo /usr/local/bin/pm2)}
 [ -f "$TARGET/addon/ZoneLore/Data/enUS/Subzones.lua" ] || { echo "activate: no Subzones.lua - the corpus did not ship" >&2; exit 1; }
 [ -f "$TARGET/tools/voice/config.json" ]            || { echo "activate: no voice config - regeneration would fail" >&2; exit 1; }
 
-# The live pronunciation.json sits in shared/ and outlives every release, so a rule
-# hand-edited on the droplet survives a deploy. Seed it from the release on the first
-# deploy only: doing it every time would overwrite those edits with what was last
-# committed.
-if [ ! -f "$ROOT/shared/pronunciation.json" ] && [ -f "$TARGET/tools/voice/pronunciation.json" ]; then
-  echo "activate: seeding shared/pronunciation.json from the release"
-  cp "$TARGET/tools/voice/pronunciation.json" "$ROOT/shared/pronunciation.json"
-fi
-
 PREVIOUS=$(readlink -f "$ROOT/current" 2>/dev/null || echo "(none)")
 echo "activate: $PREVIOUS -> $TARGET"
 

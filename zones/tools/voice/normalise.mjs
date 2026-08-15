@@ -6,16 +6,15 @@
 // bracketed spans, so this is load-bearing, and validate.mjs asserts it.
 
 import { readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const HERE = dirname(fileURLToPath(import.meta.url));
+import { ROOT } from "../lib/loredata.mjs";
 
-// Overridable for the reason ROOT is, plus one of its own: /lexicon writes this file,
-// and on the droplet it therefore has to live in shared/ rather than inside a release,
-// or every rule someone added would vanish with the next deploy. See deploy/README.md.
-export const PRONUNCIATION_PATH =
-  process.env.ZONELORE_PRONUNCIATION || join(HERE, "pronunciation.json");
+// Authored config that ships with the release, like config.json beside it: nothing
+// writes it at runtime any more (the editor moved to wow-voiceover), so it needs no
+// shared copy on the droplet and no override of its own -- it moves with ZONELORE_ROOT
+// like the corpus does. A rule is a reviewable diff in git.
+export const PRONUNCIATION_PATH = join(ROOT, "tools/voice/pronunciation.json");
 
 // IPA blocks such as "Kalimdor [ˈkælɪmdɔɹ]" are a pronunciation guide for
 // readers, not something to read out. Detected by the phonetic characters
