@@ -4,6 +4,7 @@
 -- clicked (see UI/SubzoneClick.lua), with a link back to the zone.
 
 local ADDON_NAME, ZoneLore = ...
+local L = ZoneLore.L
 
 local PADDING = 16
 local INFO_LINE_HEIGHT = 16
@@ -130,7 +131,7 @@ end
 local function SetBackLink(zoneName)
 	infoLine:Enable()
 	infoLine.text:SetTextColor(0.4, 0.73, 1)
-	infoLine.text:SetText("< Back to " .. zoneName)
+	infoLine.text:SetText(L.BACK_TO_ZONE:format(zoneName))
 end
 
 --------------------------------------------------------------------------------
@@ -173,8 +174,11 @@ local function Refresh(mapID)
 		SetBackLink(zoneName)
 		SetBody(selected.entry.full or selected.entry.short or "")
 		-- Audio and the report link are both keyed by the canonical form, not the
-		-- name the client reported.
-		local key = ZoneLore:NormaliseAreaKey(selected.areaName)
+		-- name the client reported. Resolve, not Normalise: on a localized client
+		-- the reported name reaches the corpus key only through the alias table,
+		-- and normalising a non-Latin name yields nil -- which would silently
+		-- retarget both buttons at the zone's lore.
+		local key = ZoneLore:ResolveAreaKey(selected.areaName)
 		audioButton:SetTarget(mapID, key)
 		reportButton:SetTarget(mapID, key)
 		return
@@ -204,7 +208,7 @@ local function Refresh(mapID)
 		reportButton:SetTarget(foundOn, nil)
 	else
 		SetCaption("")
-		SetBody("|cff888888No lore recorded for " .. zoneName .. " yet.|r")
+		SetBody("|cff888888" .. L.NO_LORE_FOR:format(zoneName) .. "|r")
 		audioButton:SetTarget(nil, nil)
 		reportButton:SetTarget(nil, nil)
 	end

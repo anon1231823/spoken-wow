@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { HomeLink } from "@/components/HomeLink";
+import { NotFoundText } from "@/components/NotFoundText";
 
 /**
  * A /r/ address that names no line.
@@ -9,18 +10,15 @@ import Link from "next/link";
  * and the general feedback link in the header covers the second one.
  */
 export default function NotFound() {
+  // A not-found file gets no params, so the language comes from the URL on the client.
   return (
     <main className="shell pt-8 pb-24">
       <div className="max-w-2xl">
-        <h1 className="text-xl font-semibold">No such entry</h1>
-        <p className="mt-2 text-muted">
-          That address does not name a line we know. Check it against the one the addon
-          showed you — or find the entry yourself and report it from there.
-        </p>
+        <NotFoundText />
         <p className="mt-4">
-          <Link href="/" className="text-accent hover:underline">
-            Browse every line →
-          </Link>
+          <HomeLink className="text-accent hover:underline">
+            <NotFoundText part="browse" />
+          </HomeLink>
         </p>
       </div>
     </main>

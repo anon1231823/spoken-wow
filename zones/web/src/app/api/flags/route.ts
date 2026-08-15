@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireReview } from "@/lib/authz";
 import { isKnownLine } from "@/lib/catalogue";
 import { query } from "@/lib/db";
+import { langOfBody } from "@/lib/lang";
 
 // What a person decided about a line after listening to it.
 //
@@ -12,11 +13,15 @@ import { query } from "@/lib/db";
 // status 'bad' | 'ok' sets it, null clears it back to unreviewed. Clearing has to be
 // possible: a mis-tapped `f` during a fast listening pass is otherwise permanent, and
 // an unreviewed line is a real state rather than the absence of one.
+//
+// A verdict is about one language's text and audio (migration 0010), so the body
+// names which. Absent means English, for clients that predate the language axis.
 
 type Body = {
   lineId?: unknown;
   status?: unknown;
   note?: unknown;
+  lang?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -26,7 +31,11 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Body;
 
   const { lineId, status, note } = body;
+  const lang = langOfBody(body.lang);
 
+  if (!lang) {
+    return NextResponse.json({ error: `unknown language ${String(body.lang)}` }, { status: 400 });
+  }
   if (typeof lineId !== "string" || lineId === "") {
     return NextResponse.json({ error: "lineId is required" }, { status: 400 });
   }
@@ -44,26 +53,27 @@ export async function POST(request: Request) {
   }
 
   if (status === null) {
-    await query(`delete from "line_flag" where "lineId" = $1`, [lineId]);
-    return NextResponse.json({ lineId, flag: null });
+    await query(`delete from "line_flag" where "lineId" = $1 and "lang" = $2`, [lineId, lang]);
+    return NextResponse.json({ lineId, lang, flag: null });
   }
 
   const rows = await query<{ status: "bad" | "ok"; note: string | null; updatedAt: Date }>(
-    `insert into "line_flag" ("lineId", "status", "note")
-     values ($1, $2, $3)
-     on conflict ("lineId") do update
+    `insert into "line_flag" ("lineId", "lang", "status", "note")
+     values ($1, $2, $3, $4)
+     on conflict ("lineId", "lang") do update
        set "status" = excluded."status",
            -- A note is only overwritten when one was actually sent. Tapping f on a
            -- line that already carries a written note must not silently erase it.
            "note" = coalesce(excluded."note", "line_flag"."note"),
            "updatedAt" = now()
      returning "status", "note", "updatedAt"`,
-    [lineId, status, note ?? null],
+    [lineId, lang, status, note ?? null],
   );
 
   const row = rows[0];
   return NextResponse.json({
     lineId,
+    lang,
     flag: { status: row.status, note: row.note, updatedAt: row.updatedAt.toISOString() },
   });
 }

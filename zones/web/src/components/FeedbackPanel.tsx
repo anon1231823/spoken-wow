@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { FeedbackStatus } from "@/components/FeedbackStatus";
 import { CATEGORY_LABEL, reporterLabel, type FeedbackReport } from "@/lib/feedback";
+import { useLang } from "@/lib/use-lang";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,6 +18,9 @@ import { cn } from "@/lib/utils";
 type Props = { lineId: string };
 
 export function FeedbackPanel({ lineId }: Props) {
+  // Reports are per language (migration 0010): the ones shown are about the text
+  // and narration this page is reading.
+  const { lang } = useLang();
   const [reports, setReports] = useState<FeedbackReport[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,7 +29,9 @@ export function FeedbackPanel({ lineId }: Props) {
     setReports(null);
     setError(null);
 
-    fetch(`/api/feedback?lineId=${encodeURIComponent(lineId)}`, { signal: controller.signal })
+    fetch(`/api/feedback?lineId=${encodeURIComponent(lineId)}&lang=${lang}`, {
+      signal: controller.signal,
+    })
       .then((response) =>
         response.ok ? response.json() : Promise.reject(new Error("Could not load feedback.")),
       )
@@ -35,7 +41,7 @@ export function FeedbackPanel({ lineId }: Props) {
       });
 
     return () => controller.abort();
-  }, [lineId]);
+  }, [lineId, lang]);
 
   if (error) return <p className="py-2 text-bad">{error}</p>;
   if (!reports) return <p className="py-2 text-faint">loading…</p>;

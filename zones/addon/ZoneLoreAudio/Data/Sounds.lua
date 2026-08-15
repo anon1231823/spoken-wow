@@ -977,6 +977,10 @@ pack.quality = GetAddOnMeta(ADDON_NAME, "X-ZoneLore-Quality") or "standard"
 pack.bitrate = tonumber(GetAddOnMeta(ADDON_NAME, "X-ZoneLore-Bitrate")) or 0
 pack.packVersion = GetAddOnMeta(ADDON_NAME, "Version") or "dev"
 
+-- Defaulted rather than required: the two packs published before languages
+-- existed carry no such key, and they are English.
+pack.language = GetAddOnMeta(ADDON_NAME, "X-ZoneLore-Language") or "enUS"
+
 -- Keyed by folder name so two tiers installed at once both register instead of
 -- the second silently overwriting the first. ZoneLore picks between them.
 ZoneLoreAudioPacks = ZoneLoreAudioPacks or {}

@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 
-// The pronunciation editor moved out. The lexicon proper always lived in
-// wow-voiceover, which owns the dictionary both projects share on one ElevenLabs
-// account; the respelling escape hatch this page carried was never used and kept a
-// second editor alive for an empty file. Old bookmarks land on the real one.
+import { BASE_LANG } from "@/lib/lang";
+
+// See app/page.tsx: the bare path is the old address, and it meant English. The page
+// is called pronunciation now, which is what it was always about.
 export default function Page() {
-  redirect("https://voiceover.rusty.one/pronunciation");
+  redirect(`/${BASE_LANG}/pronunciation`);
 }

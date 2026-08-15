@@ -19,13 +19,12 @@ the system Node for another service, bump that value to match and redeploy.
     Sounds/<mapID>/<slug>.mp3   ~700 MB, moved by `make push`, never touched by a deploy
     audio-history/<file>/v<n>.mp3  superseded takes. Loss is permanent - see below.
     manifest.json               exported from the database; `make pull-manifest`
-    pronunciation.json          spoken-text substitutions; `make pull-lexicon`
     app.env                     DATABASE_URL, BETTER_AUTH_*, ZONELORE_SECRET_KEY. Mode 600, never in git.
     ecosystem.config.js         pm2 config, outlives every release
   releases/
     20260802-1143-a1b2c3d/      ~62 MB bundle + the lore corpus + migrations
       web/server.js             standalone entrypoint (one level down - see below)
-      addon/ZoneLore/Data/*.lua the corpus
+      addon/ZoneLore/Data/<locale>/ the corpus, one directory per language
       tools/voice/config.json   the voice, model and output format
       migrations/
   current -> releases/...       the symlink pm2 follows. Swapping it is the deploy.
@@ -52,11 +51,10 @@ back to exactly the path it always had, and nothing about working locally change
 
 | Env var | Value on the droplet | Why there |
 |---|---|---|
-| `ZONELORE_ROOT` | `/srv/zonelore/current` | **Per release.** Resolves the lore corpus (`addon/ZoneLore/Data/*.lua`) and the voice config (`tools/voice/config.json`), so a rollback moves code and data together. |
+| `ZONELORE_ROOT` | `/srv/zonelore/current` | **Per release.** Resolves the lore corpus (`addon/ZoneLore/Data/<locale>/*.lua`), the voice config (`tools/voice/config*.json`) and the spoken-text substitutions (`tools/voice/pronunciation.json`), so a rollback moves code and data together. |
 | `ZONELORE_SOUNDS` | `/srv/zonelore/shared/Sounds` | Shared. ~700 MB that a deploy must not copy and `prune.sh` must not delete. |
 | `ZONELORE_AUDIO_HISTORY` | `/srv/zonelore/shared/audio-history` | Shared. **Its loss is permanent**: version 1 of each file is the take the corpus was originally cut with, and restoring it is the undo for a re-roll that came out worse. |
 | `ZONELORE_MANIFEST` | `/srv/zonelore/shared/manifest.json` | Shared. With `DATABASE_URL` set the database is authoritative and this is a write-only export — the route by which the addon build learns what the droplet generated. |
-| `ZONELORE_PRONUNCIATION` | `/srv/zonelore/shared/pronunciation.json` | Shared so the live copy outlives a deploy. Nothing in the app writes it any more — the pronunciation editor moved to wow-voiceover — but rules hand-edited on the droplet must not vanish with a release. |
 
 The split is the same question each time: **does a deploy or a rollback destroy this?** The
 corpus should move with the code. The audio, the archive and the two files the app writes
@@ -255,10 +253,9 @@ builds the addon, so a release goes:
 ```bash
 make pull            # the audio the droplet regenerated (--delete: read the dry run)
 make db-pull         # the takes and flags behind it
-make pull-lexicon    # any pronunciation rules hand-edited on the droplet
 make lookup          # rebuild Sounds.lua from the manifest
 make validate-audio  # manifest, files on disk and lookup table agree
-git diff             # manifest.json and pronunciation.json are the reviewable part
+git diff             # manifest.json is the reviewable part
 ```
 
 `addon/ZoneLoreAudio/Data/Sounds.lua` *is* regenerated on the droplet after each

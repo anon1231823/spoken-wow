@@ -12,14 +12,14 @@
 // It also guards the two places where Core.lua reimplements a JS function in Lua:
 // normaliseKey, and the slug half of naming.mjs that the report URLs are built from.
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ROOT, normaliseKey } from "./lib/wiki.mjs";
 import { loadEraAreas } from "./lib/era.mjs";
+import { BASE_LOCALE, CODES } from "./lib/locales.mjs";
 import { slugFor } from "./voice/naming.mjs";
 
-const ZONES = join(ROOT, "addon/ZoneLore/Data/Zones.lua");
-const SUBZONES = join(ROOT, "addon/ZoneLore/Data/Subzones.lua");
+const DATA = join(ROOT, "addon/ZoneLore/Data");
 
 // Terms that should never survive the era filter. Case-sensitive where the
 // lower-case word is legitimate vanilla lore ("the black dragonflight").
@@ -127,90 +127,272 @@ function checkBraces(src, label) {
   }
 }
 
-function checkHeader(src, label, tableName) {
+// Every generated data file opens with the vararg header and a guard, and ends by
+// handing its table to Language.lua. A file missing the guard builds its table on
+// every client at once; one missing the registration call builds it for nobody.
+function checkHeader(src, label, { lang, local, kind }) {
   if (!/^local _, ZoneLore = \.\.\.$/m.test(src)) {
     note(`${label}: missing the 'local _, ZoneLore = ...' vararg header`);
   }
-  if (!new RegExp(`^ZoneLore\\.${tableName} = \\{$`, "m").test(src)) {
-    note(`${label}: missing the 'ZoneLore.${tableName} = {' assignment`);
+  if (!src.includes(`if not ZoneLore:ShouldLoadLanguage("${lang}") then`)) {
+    note(`${label}: missing the ShouldLoadLanguage("${lang}") guard -- would load on every client`);
+  }
+  if (!new RegExp(`^local ${local} = \\{$`, "m").test(src)) {
+    note(`${label}: missing the 'local ${local} = {' table`);
+  }
+  if (!src.includes(`ZoneLore:RegisterLoreData("${lang}", "${kind}", ${local})`)) {
+    note(`${label}: missing the RegisterLoreData call -- the table would never be reachable`);
   }
 }
 
 //------------------------------------------------------------------------------
-// Zones.lua
+// Corpora
+//
+// One pair of files per translated language, under Data/<lang>/. English is the
+// reference: every other language is keyed by the same English subzone keys, so
+// a key outside English's set is a line nothing can ever look up.
 //------------------------------------------------------------------------------
 
-const zonesSrc = await readFile(ZONES, "utf8");
-checkBraces(zonesSrc, "Zones.lua");
-checkHeader(zonesSrc, "Zones.lua", "Zones");
+const languages = (await readdir(DATA, { withFileTypes: true }))
+  .filter((e) => e.isDirectory() && CODES.includes(e.name))
+  .map((e) => e.name)
+  .sort();
 
-const zoneIDs = [...zonesSrc.matchAll(/^\t\[(\d+)\] = \{$/gm)].map((m) => Number(m[1]));
-if (zoneIDs.length === 0) note("Zones.lua: no zone entries found");
-
-const seenZones = new Set();
-for (const id of zoneIDs) {
-  if (seenZones.has(id)) note(`Zones.lua: duplicate uiMapID ${id}`);
-  seenZones.add(id);
-}
-if (zoneIDs.join(",") !== [...zoneIDs].sort((a, b) => a - b).join(",")) {
-  note("Zones.lua: entries are not sorted by uiMapID (output is not deterministic)");
+if (!languages.includes(BASE_LOCALE)) {
+  note(`Data/${BASE_LOCALE}/ is missing -- English is the fallback corpus and is not optional`);
 }
 
-const zoneFields = checkStrings(zonesSrc, "Zones.lua");
-if (zoneFields !== zoneIDs.length * 4) {
-  note(`Zones.lua: ${zoneFields} field lines for ${zoneIDs.length} entries (expected 4 each)`);
-}
-
-//------------------------------------------------------------------------------
-// Subzones.lua
-//------------------------------------------------------------------------------
-
-const subSrc = await readFile(SUBZONES, "utf8");
-checkBraces(subSrc, "Subzones.lua");
-checkHeader(subSrc, "Subzones.lua", "Subzones");
-
-const subParents = [...subSrc.matchAll(/^\t\[(\d+)\] = \{$/gm)].map((m) => Number(m[1]));
-const subKeys = [...subSrc.matchAll(/^\t\t\["([^"]*)"\] = \{$/gm)].map((m) => m[1]);
-
-if (subParents.length === 0) note("Subzones.lua: no parent zones found");
-if (subKeys.length === 0) note("Subzones.lua: no subzone entries found");
-
-// Every parent zone must itself be a known zone, or the panel can never reach it.
-for (const parent of subParents) {
-  if (!seenZones.has(parent)) {
-    note(`Subzones.lua: parent uiMapID ${parent} is not present in Zones.lua`);
-  }
-}
-
-// Keys must already be in canonical form -- the addon normalises the client's
-// area name and looks it up directly, so a non-canonical key is unreachable.
-for (const key of subKeys) {
-  const canonical = normaliseKey(key);
-  if (key !== canonical) {
-    note(`Subzones.lua: key "${key}" is not canonical (expected "${canonical}") -- unreachable`);
-  }
-}
-
-// Every key must be an area name the Era client can report (its own AreaTable,
-// dumped into tools/seed/era-areas.json). A key outside that list is either a
-// post-vanilla place the wiki category slipped in, or a name the client would
-// never hand to the lookup -- unreachable either way.
 const era = await loadEraAreas();
-for (const key of subKeys) {
-  if (!era.keys.has(key)) {
-    note(`Subzones.lua: "${key}" is not an area in the Era client (build ${era.build})`);
+const corpora = new Map();
+
+for (const lang of languages) {
+  const zonesSrc = await readFile(join(DATA, lang, "Zones.lua"), "utf8").catch(() => null);
+  const subSrc = await readFile(join(DATA, lang, "Subzones.lua"), "utf8").catch(() => null);
+
+  // Neither file: a locale directory with only Aliases.lua. Exactly one is not
+  // that -- it is an export that stopped between its two writes, and skipping it
+  // silently would report a half-corpus as fine.
+  if (zonesSrc === null && subSrc === null) continue;
+  if (zonesSrc === null || subSrc === null) {
+    note(
+      `${lang}/: has ${zonesSrc === null ? "Subzones" : "Zones"}.lua but not its pair -- ` +
+        `an interrupted export? re-run: make lore-export`,
+    );
+    continue;
+  }
+
+  const zLabel = `${lang}/Zones.lua`;
+  checkBraces(zonesSrc, zLabel);
+  checkHeader(zonesSrc, zLabel, { lang, local: "zones", kind: "zones" });
+
+  const zoneIDs = [...zonesSrc.matchAll(/^\t\[(\d+)\] = \{$/gm)].map((m) => Number(m[1]));
+  if (zoneIDs.length === 0) note(`${zLabel}: no zone entries found`);
+
+  const seenZones = new Set();
+  for (const id of zoneIDs) {
+    if (seenZones.has(id)) note(`${zLabel}: duplicate uiMapID ${id}`);
+    seenZones.add(id);
+  }
+  if (zoneIDs.join(",") !== [...zoneIDs].sort((a, b) => a - b).join(",")) {
+    note(`${zLabel}: entries are not sorted by uiMapID (output is not deterministic)`);
+  }
+
+  const zoneFields = checkStrings(zonesSrc, zLabel);
+  if (zoneFields !== zoneIDs.length * 4) {
+    note(`${zLabel}: ${zoneFields} field lines for ${zoneIDs.length} entries (expected 4 each)`);
+  }
+
+  const sLabel = `${lang}/Subzones.lua`;
+  checkBraces(subSrc, sLabel);
+  checkHeader(subSrc, sLabel, { lang, local: "subzones", kind: "subzones" });
+
+  const subParents = [...subSrc.matchAll(/^\t\[(\d+)\] = \{$/gm)].map((m) => Number(m[1]));
+  const subKeys = [...subSrc.matchAll(/^\t\t\["([^"]*)"\] = \{$/gm)].map((m) => m[1]);
+
+  if (subParents.length === 0) note(`${sLabel}: no parent zones found`);
+  if (subKeys.length === 0) note(`${sLabel}: no subzone entries found`);
+
+  // Every parent zone must itself be a known zone, or the panel can never reach it.
+  for (const parent of subParents) {
+    if (!seenZones.has(parent)) {
+      note(`${sLabel}: parent uiMapID ${parent} is not present in ${lang}/Zones.lua`);
+    }
+  }
+
+  // Keys must already be in canonical form -- the addon normalises the client's
+  // area name and looks it up directly, so a non-canonical key is unreachable.
+  for (const key of subKeys) {
+    const canonical = normaliseKey(key);
+    if (key !== canonical) {
+      note(`${sLabel}: key "${key}" is not canonical (expected "${canonical}") -- unreachable`);
+    }
+  }
+
+  // Every key must be an area name the Era client can report (its own AreaTable,
+  // dumped into tools/seed/era-areas.json). A key outside that list is either a
+  // post-vanilla place the wiki category slipped in, or a name the client would
+  // never hand to the lookup -- unreachable either way.
+  for (const key of subKeys) {
+    if (!era.keys.has(key)) {
+      note(`${sLabel}: "${key}" is not an area in the Era client (build ${era.build})`);
+    }
+  }
+
+  const subFields = checkStrings(subSrc, sLabel);
+  if (subFields !== subKeys.length * 4) {
+    note(`${sLabel}: ${subFields} field lines for ${subKeys.length} entries (expected 4 each)`);
+  }
+
+  corpora.set(lang, { zonesSrc, subSrc, zoneIDs, subParents, subKeys });
+}
+
+const base = corpora.get(BASE_LOCALE);
+const baseKeys = new Set(base ? base.subKeys : []);
+const baseZones = new Set(base ? base.zoneIDs : []);
+
+for (const [lang, corpus] of corpora) {
+  if (lang === BASE_LOCALE) continue;
+  for (const key of corpus.subKeys) {
+    if (!baseKeys.has(key)) {
+      note(`${lang}/Subzones.lua: "${key}" has no English entry -- translated from what?`);
+    }
+  }
+  for (const id of corpus.zoneIDs) {
+    if (!baseZones.has(id)) {
+      note(`${lang}/Zones.lua: uiMapID ${id} has no English entry -- translated from what?`);
+    }
   }
 }
 
-const subFields = checkStrings(subSrc, "Subzones.lua");
-if (subFields !== subKeys.length * 4) {
-  note(`Subzones.lua: ${subFields} field lines for ${subKeys.length} entries (expected 4 each)`);
+//------------------------------------------------------------------------------
+// Alias tables
+//
+// A non-English client reports its own area names, which match no corpus key at
+// all until Data/<locale>/Aliases.lua turns them back into English ones. An alias
+// pointing at a key the corpus does not have is a lookup that can never succeed,
+// which is exactly the failure the aliases exist to remove.
+//------------------------------------------------------------------------------
+
+const aliasCounts = new Map();
+
+for (const lang of languages) {
+  const path = join(DATA, lang, "Aliases.lua");
+  const src = await readFile(path, "utf8").catch(() => null);
+  if (src === null) continue;
+
+  const label = `${lang}/Aliases.lua`;
+  checkBraces(src, label);
+  if (!src.includes(`if not ZoneLore:ShouldLoadAliases("${lang}") then`)) {
+    note(`${label}: missing the ShouldLoadAliases("${lang}") guard -- would load on every client`);
+  }
+  if (!src.includes(`ZoneLore:RegisterAliases("${lang}", aliases)`)) {
+    note(`${label}: missing the RegisterAliases call -- the table would never be reachable`);
+  }
+
+  const targets = [...src.matchAll(/^\t\["(?:[^"\\]|\\.)*"\] = "([^"]*)",$/gm)].map((m) => m[1]);
+  const rows = (src.match(/^\t\[".*"\] = ".*",$/gm) || []).length;
+  if (targets.length !== rows) {
+    note(`${label}: ${rows} rows but ${targets.length} parsed targets -- an alias line is malformed`);
+  }
+  for (const target of targets) {
+    if (!baseKeys.has(target)) {
+      note(`${label}: alias points at "${target}", which no English subzone uses`);
+    }
+  }
+  aliasCounts.set(lang, new Set(targets).size);
+}
+
+//------------------------------------------------------------------------------
+// Load order
+//
+// Language.lua answers "which language is being read" while the files after it
+// are loading, and it can only answer it once Data/Languages.lua has said which
+// languages are finished. Getting this backwards does not error: every player
+// silently reads English, which is also what a correct build looks like today.
+//------------------------------------------------------------------------------
+
+{
+  const toc = await readFile(join(ROOT, "addon/ZoneLore/ZoneLore.toc"), "utf8");
+  const files = toc
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.endsWith(".lua"));
+
+  const order = (name) => files.indexOf(name);
+  const languages = order("Data/Languages.lua");
+  const language = order("Language.lua");
+
+  if (languages === -1) note("ZoneLore.toc: Data/Languages.lua is not loaded");
+  if (language === -1) note("ZoneLore.toc: Language.lua is not loaded");
+  if (languages > -1 && language > -1 && languages > language) {
+    note("ZoneLore.toc: Data/Languages.lua must load before Language.lua, or no language is ever ready");
+  }
+
+  for (const file of files) {
+    if ((file.startsWith("Data/") && file !== "Data/Languages.lua") || file.startsWith("Locale/")) {
+      if (order(file) < language) {
+        note(`ZoneLore.toc: ${file} loads before Language.lua, whose guard it calls`);
+      }
+    }
+  }
+
+  // Every generated file must actually be listed, or it is a file on disk that no
+  // client ever reads -- which looks exactly like a language having no data.
+  for (const lang of languages > -1 ? CODES : []) {
+    for (const name of ["Zones.lua", "Subzones.lua", "Aliases.lua"]) {
+      const path = `Data/${lang}/${name}`;
+      const exists = await readFile(join(DATA, lang, name), "utf8").then(() => true, () => false);
+      if (exists && order(path) === -1) note(`ZoneLore.toc: ${path} exists but is not loaded`);
+    }
+    const localePath = `Locale/${lang}.lua`;
+    const localeExists = await readFile(join(ROOT, "addon/ZoneLore", localePath), "utf8").then(
+      () => true,
+      () => false,
+    );
+    if (localeExists && order(localePath) === -1) {
+      note(`ZoneLore.toc: ${localePath} exists but is not loaded`);
+    }
+  }
+}
+
+//------------------------------------------------------------------------------
+// Locale list parity
+//
+// Language.lua and lib/locales.mjs both enumerate the languages, one for the
+// addon and one for everything that generates files for it. A code in only one of
+// them is either a language nothing can be built for or a directory the addon
+// will never load.
+//------------------------------------------------------------------------------
+
+{
+  const languageLua = await readFile(join(ROOT, "addon/ZoneLore/Language.lua"), "utf8");
+  const luaCodes = [...languageLua.matchAll(/\{ code = "(\w+)"/g)].map((m) => m[1]);
+  if (luaCodes.join(",") !== CODES.join(",")) {
+    note(
+      `Language.lua LOCALES and lib/locales.mjs LOCALES have drifted:\n` +
+        `      Lua: ${luaCodes.join(" ")}\n` +
+        `      JS:  ${CODES.join(" ")}`
+    );
+  }
+
+  // The explorer keeps its own copy: the language selector is a client component, and
+  // lib/locales.mjs reaches the filesystem. A language present here and missing there
+  // is one nobody can pick; the reverse is one that cannot be built for.
+  const langTs = await readFile(join(ROOT, "web/src/lib/lang.ts"), "utf8");
+  const webCodes = [...langTs.matchAll(/\{ code: "(\w+)"/g)].map((m) => m[1]);
+  if (webCodes.join(",") !== CODES.join(",")) {
+    note(
+      `web/src/lib/lang.ts LOCALES and lib/locales.mjs LOCALES have drifted:\n` +
+        `      web: ${webCodes.join(" ")}\n` +
+        `      JS:  ${CODES.join(" ")}`
+    );
+  }
 }
 
 //------------------------------------------------------------------------------
 // Report URL slugs
 //
-// ZoneLore:ReportURL builds lore.rusty.one/r/{mapID}/{slug} in Lua, and the site
+// ZoneLore:ReportURL builds lore.rusty.one/{lang}/r/{mapID}/{slug} in Lua, and the site
 // resolves that path back to a line by looking it up among the file paths
 // naming.mjs assigns. That only works while every slug is derivable from the key
 // alone: assignFiles has a hash fallback for collisions, and the addon has no way
@@ -221,9 +403,9 @@ if (subFields !== subKeys.length * 4) {
 //------------------------------------------------------------------------------
 
 const byParent = new Map();
-{
+if (base) {
   let parent = null;
-  for (const m of subSrc.matchAll(/^\t\[(\d+)\] = \{$|^\t\t\["([^"]*)"\] = \{$/gm)) {
+  for (const m of base.subSrc.matchAll(/^\t\[(\d+)\] = \{$|^\t\t\["([^"]*)"\] = \{$/gm)) {
     if (m[1] !== undefined) {
       parent = Number(m[1]);
       byParent.set(parent, []);
@@ -286,12 +468,15 @@ if (problems.length) {
   process.exit(1);
 }
 
-console.log(
-  `OK -- Zones.lua: ${zoneIDs.length} zones ` +
-    `(${(zonesSrc.length / 1024).toFixed(1)} KB, uiMapID ${Math.min(...zoneIDs)}..${Math.max(...zoneIDs)})`
-);
-console.log(
-  `     Subzones.lua: ${subKeys.length} subzones across ${subParents.length} zones ` +
-    `(${(subSrc.length / 1024).toFixed(1)} KB), all keys canonical`
-);
-console.log("     no era leaks, report slugs unique, Lua/JS normalisation and slugging in step");
+for (const [lang, corpus] of corpora) {
+  const kb = ((corpus.zonesSrc.length + corpus.subSrc.length) / 1024).toFixed(1);
+  console.log(
+    `OK -- ${lang}: ${corpus.zoneIDs.length} zones, ${corpus.subKeys.length} subzones ` +
+      `across ${corpus.subParents.length} zones (${kb} KB), all keys canonical`
+  );
+}
+for (const [lang, covered] of aliasCounts) {
+  const pct = baseKeys.size ? ((covered / baseKeys.size) * 100).toFixed(0) : "0";
+  console.log(`     ${lang} aliases: ${covered} of ${baseKeys.size} subzone keys reachable (${pct}%)`);
+}
+console.log("     no era leaks, report slugs unique, Lua/JS normalisation, slugging and locales in step");

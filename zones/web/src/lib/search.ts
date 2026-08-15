@@ -35,6 +35,11 @@ export type ResultLine = {
   /** How many visitor reports on this line are still open. The count is public; the
    *  bodies are not -- see SearchContext.feedback. */
   feedbackOpen: number;
+  /** The English prose this line would be translated from. Absent when reading English. */
+  english?: string;
+  /** False when this language has no row for the line yet, so `text` is the English
+   *  showing through. Absent when reading English, where the question is meaningless. */
+  translated?: boolean;
 };
 
 export type SearchResult = {
@@ -70,6 +75,9 @@ export function decorate(entry: CatalogueEntry, context: SearchContext): ResultL
     take: take ?? null,
     flag: context.flags.get(entry.id) ?? null,
     feedbackOpen: context.feedback.get(entry.id) ?? 0,
+    ...(entry.english === undefined
+      ? {}
+      : { english: entry.english, translated: entry.translated ?? false }),
   };
 }
 

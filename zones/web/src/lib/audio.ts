@@ -6,9 +6,10 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 
 import { catalogue } from "./catalogue";
-import { HISTORY_DIR, SOUNDS_DIR } from "./tools";
+import { BASE_LANG, type Lang } from "./lang";
+import { historyDir, soundsDir } from "./tools";
 
-export { HISTORY_DIR, SOUNDS_DIR };
+export { historyDir, soundsDir };
 
 /** Store-relative, e.g. '1411/razor-hill.mp3'. Also the /api/audio/ route path. */
 export function audioRelPath(file: string): string {
@@ -22,24 +23,34 @@ export function audioRelPath(file: string): string {
 // Derived from naming.mjs's own file assignment, so a request can only reach a clip
 // the addon could also reach. ../wow-voiceover/web/src/lib/audio.ts:30 makes the same
 // argument.
-const globalForFiles = globalThis as unknown as { zoneloreAudioFiles?: Promise<Set<string>> };
+// Keyed by language like the catalogue it is derived from, though every language
+// addresses the same paths: `file` carries no language, because one sound pack addon
+// ships one language and the language is the folder it ships in.
+const globalForFiles = globalThis as unknown as {
+  zoneloreAudioFiles?: Map<Lang, Promise<Set<string>>>;
+};
 
-export function addressableFiles(): Promise<Set<string>> {
+export function addressableFiles(lang: Lang = BASE_LANG): Promise<Set<string>> {
   if (!globalForFiles.zoneloreAudioFiles) {
-    globalForFiles.zoneloreAudioFiles = catalogue().then(
-      (entries) => new Set(entries.map((entry) => audioRelPath(entry.file))),
+    globalForFiles.zoneloreAudioFiles = new Map();
+  }
+  const memo = globalForFiles.zoneloreAudioFiles;
+  if (!memo.has(lang)) {
+    memo.set(
+      lang,
+      catalogue(lang).then((entries) => new Set(entries.map((entry) => audioRelPath(entry.file)))),
     );
   }
-  return globalForFiles.zoneloreAudioFiles;
+  return memo.get(lang)!;
 }
 
-export async function isAddressable(relPath: string): Promise<boolean> {
-  return (await addressableFiles()).has(relPath);
+export async function isAddressable(relPath: string, lang: Lang = BASE_LANG): Promise<boolean> {
+  return (await addressableFiles(lang)).has(relPath);
 }
 
 /** Which archived takes exist for a line, newest first. Empty when none do. */
-export async function archivedVersions(file: string): Promise<number[]> {
-  const names = await readdir(join(HISTORY_DIR, file)).catch(() => [] as string[]);
+export async function archivedVersions(file: string, lang: Lang = BASE_LANG): Promise<number[]> {
+  const names = await readdir(join(historyDir(lang), file)).catch(() => [] as string[]);
   return names
     .map((name) => /^v(\d+)\.mp3$/.exec(name))
     .filter((match): match is RegExpExecArray => match !== null)

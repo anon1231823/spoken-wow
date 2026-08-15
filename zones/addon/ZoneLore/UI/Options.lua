@@ -369,6 +369,70 @@ function ZoneLore:SetupOptions()
 
 	-- Clears the button and the two-line note beneath it.
 	y = y + ROW_GAP - 46
+	MakeHeading(content, "Language", INDENT, y, "GameFontNormal")
+
+	y = y + ROW_GAP
+	-- Only finished languages are offered. A player choosing from a list has no way
+	-- to know that half a translation is missing, and would report the English that
+	-- shows through as a bug; /zl lang <code> force is how an unfinished one gets
+	-- looked at.
+	local langButton = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
+	langButton:SetPoint("TOPLEFT", INDENT + 4, y)
+	langButton:SetSize(220, 22)
+
+	local langNote = MakeNote(content, "", INDENT + 4, y - 26)
+
+	local function SyncLanguage()
+		local available = ZoneLore:GetSelectableLanguages()
+		-- The chosen language, which is not always the one on screen: a switch only
+		-- takes effect on the next load, and a button that snapped back to the old
+		-- name would read as the click having been ignored.
+		local chosen = ZoneLore:GetLanguagePreference() or ZoneLore:GetLanguage()
+		local info = ZoneLore:GetLocaleInfo(chosen)
+
+		langButton:SetText("Language: " .. (info and info.name or chosen))
+		if #available > 1 then
+			langButton:Enable()
+			if chosen ~= ZoneLore:GetLanguage() then
+				langNote:SetText("Reload to start reading it: type /reload.")
+			else
+				langNote:SetText(("%d languages available. Switching takes effect after /reload.")
+					:format(#available))
+			end
+		else
+			-- Disabled rather than hidden, for the same reason as the sound pack
+			-- above: what is being read is worth reporting even with no choice.
+			langButton:Disable()
+			langNote:SetText("The lore is only written in English so far.")
+		end
+	end
+
+	langButton:SetScript("OnClick", function()
+		local available = ZoneLore:GetSelectableLanguages()
+		if #available < 2 then
+			return
+		end
+		local current = ZoneLore:GetLanguagePreference() or ZoneLore:GetLanguage()
+		local index = 1
+		for i = 1, #available do
+			if available[i].code == current then
+				index = i
+				break
+			end
+		end
+		local chosen = available[(index % #available) + 1]
+		if ZoneLore:SetLanguage(chosen.code) then
+			-- Said before the reload rather than after: the failure to avoid is a
+			-- player switching, seeing English, and concluding it did not work.
+			ZoneLore:Print("language set to %s -- |cffffcc00/reload to apply|r", chosen.name)
+		end
+		SyncLanguage()
+	end)
+	langButton:SetScript("OnShow", SyncLanguage)
+	SyncLanguage()
+
+	-- Clears the button and its note.
+	y = y + ROW_GAP - 46
 	MakeHeading(content, "Troubleshooting", INDENT, y, "GameFontNormal")
 
 	y = y + ROW_GAP

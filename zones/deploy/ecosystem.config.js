@@ -98,10 +98,17 @@ module.exports = {
         // The split between them is what a deploy must not destroy:
 
         // Per release, so a rollback moves code and data together. Covers the lore corpus
-        // (addon/ZoneLore/Data/*.lua) and the voice config (tools/voice/config.json).
+        // (addon/ZoneLore/Data/<locale>/*.lua) and the voice config (tools/voice/config.json).
         ZONELORE_ROOT: `${ROOT}/current`,
 
         // Shared, because a deploy must not move ~700 MB and prune.sh must not delete it.
+        //
+        // THIS AND ZONELORE_MANIFEST BELOW ARE ENGLISH, AND SAY SO NOWHERE. Unset, both
+        // resolve per language from ZONELORE_LANG; set, they win outright. So running the
+        // deployed app with ZONELORE_LANG=deDE would read and write English's audio and
+        // English's manifest without complaining. Serving a second language from the
+        // droplet means making these per-language paths first -- see the explorer's half
+        // of the language work in README.md.
         ZONELORE_SOUNDS: `${SHARED}/Sounds`,
 
         // Shared, and this one's loss is permanent: version 1 of each file is the take the
@@ -113,11 +120,6 @@ module.exports = {
         // authoritative and this file is an export. It is how the addon build gets at what
         // the droplet generated -- `make pull-manifest` fetches exactly this.
         ZONELORE_MANIFEST: `${SHARED}/manifest.json`,
-
-        // Shared so a rule hand-edited on the droplet outlives a deploy; nothing in the
-        // app writes it any more. activate.sh seeds this from the release on the first
-        // deploy only.
-        ZONELORE_PRONUNCIATION: `${SHARED}/pronunciation.json`,
 
         // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, and ZONELORE_SECRET_KEY --
         // the master key for the ElevenLabs credentials editors set on their own

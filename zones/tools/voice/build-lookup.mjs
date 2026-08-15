@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// manifest.json -> addon/ZoneLoreAudio/Data/Sounds.lua
+// manifest.json -> addon/<pack folder>/Data/Sounds.lua
 //
 // Run after any generation. The addon resolves every clip through this table, so
 // audio that is not in it is unreachable, and a row pointing at a file that is not
@@ -8,14 +8,19 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadEnvFile } from "../lib/env.mjs";
+import { packFolder } from "../lib/locales.mjs";
 import { ROOT } from "../lib/loredata.mjs";
-import { close as closeStore, loadManifest, SOUNDS_DIR } from "./store.mjs";
+import { close as closeStore, LANG, loadManifest, soundsDir } from "./store.mjs";
 
-const OUT_PATH = join(ROOT, "addon/ZoneLoreAudio/Data/Sounds.lua");
+// Beside the masters, whichever language those are. The lookup describes the
+// files next to it, so the two cannot be built for different languages.
+function packDir(lang) {
+  return join(ROOT, "addon", packFolder(lang, "high"));
+}
 
 function luaString(text) {
   return `"${text.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
@@ -37,15 +42,15 @@ function luaPath(file) {
  * resolves every clip through this table, so a new take that is not in it is
  * unreachable and the old duration would reset the Play button at the wrong moment.
  */
-export async function buildLookup() {
-  const manifest = await loadManifest();
+export async function buildLookup(lang = LANG) {
+  const manifest = await loadManifest(lang);
 
   const zones = new Map();      // mapID -> row
   const subzones = new Map();   // mapID -> Map(key -> row)
   let missingFiles = 0;
 
   for (const [id, record] of Object.entries(manifest)) {
-    if (!existsSync(join(SOUNDS_DIR, `${record.file}.mp3`))) {
+    if (!existsSync(join(soundsDir(lang), `${record.file}.mp3`))) {
       console.warn(`warning: ${id} is in the manifest but ${record.file}.mp3 is not on disk`);
       missingFiles++;
       continue;
@@ -121,6 +126,10 @@ export async function buildLookup() {
     'pack.bitrate = tonumber(GetAddOnMeta(ADDON_NAME, "X-ZoneLore-Bitrate")) or 0',
     'pack.packVersion = GetAddOnMeta(ADDON_NAME, "Version") or "dev"',
     "",
+    "-- Defaulted rather than required: the two packs published before languages",
+    "-- existed carry no such key, and they are English.",
+    'pack.language = GetAddOnMeta(ADDON_NAME, "X-ZoneLore-Language") or "enUS"',
+    "",
     "-- Keyed by folder name so two tiers installed at once both register instead of",
     "-- the second silently overwriting the first. ZoneLore picks between them.",
     "ZoneLoreAudioPacks = ZoneLoreAudioPacks or {}",
@@ -132,16 +141,23 @@ export async function buildLookup() {
     "",
   );
 
-  await mkdir(join(ROOT, "addon/ZoneLoreAudio/Data"), { recursive: true });
-  await writeFile(OUT_PATH, lines.join("\n"));
+  const outPath = join(packDir(lang), "Data/Sounds.lua");
+  await mkdir(dirname(outPath), { recursive: true });
+  await writeFile(outPath, lines.join("\n"));
 
   const subzoneCount = [...subzones.values()].reduce((n, t) => n + t.size, 0);
-  return { zones: zones.size, subzones: subzoneCount, zonesWithSubzones: subzones.size, missingFiles };
+  return {
+    zones: zones.size,
+    subzones: subzoneCount,
+    zonesWithSubzones: subzones.size,
+    missingFiles,
+    path: outPath,
+  };
 }
 
 async function main() {
   const result = await buildLookup();
-  console.log(`wrote ${OUT_PATH}`);
+  console.log(`wrote ${result.path}`);
   console.log(
     `  ${result.zones} zones, ${result.subzones} subzones across ${result.zonesWithSubzones} zones`,
   );

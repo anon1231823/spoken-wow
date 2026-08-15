@@ -15,6 +15,8 @@ import { SearchBar } from "@/components/SearchBar";
 import { useSession } from "@/lib/auth-client";
 import type { LineFlag, ZoneFacet } from "@/lib/catalogue";
 import { filterParams, filtersFromParams, PAGE_SIZE, type LineFilters } from "@/lib/filters";
+import { BASE_LANG } from "@/lib/lang";
+import { useLang } from "@/lib/use-lang";
 import { noApiKeyMessage } from "@/lib/no-api-key";
 import * as permissions from "@/lib/permissions";
 import type { Batch, Quote } from "@/lib/regenerate";
@@ -48,6 +50,25 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // view someone was looking at. This is the single most useful thing ported from
   // ../wow-voiceover/web/src/components/Explorer.tsx:102.
   const filters = useMemo<LineFilters>(() => filtersFromParams(params), [params]);
+
+  // From the path (/deDE/...), read through the same hook the header switch writes
+  // with. Not a filter: a filter narrows which lines are shown, while this decides
+  // which corpus they come from, so "clear all filters" leaves it alone.
+  const { lang } = useLang();
+
+  // Every request and every audio URL carries it, except English, which is the default
+  // on both sides -- so the English explorer's requests are the ones they always were.
+  const withLang = useCallback(
+    (search: URLSearchParams) => {
+      if (lang !== BASE_LANG) search.set("lang", lang);
+      return search;
+    },
+    [lang],
+  );
+  const withLangRef = useRef(withLang);
+  withLangRef.current = withLang;
+  const langRef = useRef(lang);
+  langRef.current = lang;
   const page = Math.max(1, Number(params.get("page")) || 1);
 
   const urlQuery = filters.q ?? "";
@@ -154,7 +175,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     const controller = new AbortController();
     setLoading(true);
 
-    const search = new URLSearchParams(filterQuery);
+    const search = withLang(new URLSearchParams(filterQuery));
     if (page > 1) search.set("page", String(page));
 
     fetch(`/api/search?${search}`, { signal: controller.signal })
@@ -175,7 +196,9 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       });
 
     return () => controller.abort();
-  }, [filterQuery, page]);
+    // `lang` is in here through withLang: switching language has to refetch, and
+    // leaving it out is what made an earlier version look like the switch did nothing.
+  }, [filterQuery, page, withLang]);
 
   //----------------------------------------------------------------------------
   // Flags
@@ -198,7 +221,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       fetch("/api/flags", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineId: line.id, status, note: note ?? null }),
+        body: JSON.stringify({ lineId: line.id, status, note: note ?? null, lang: langRef.current }),
       })
         .then((response) => (response.ok ? response.json() : Promise.reject(new Error("rejected"))))
         .then((data: { flag: LineFlag | null }) => {
@@ -225,6 +248,8 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           text,
           chars: text.length,
           state: out.state === "missing" ? "missing" : "stale",
+          // A save is a translation, whatever the row said before it was fetched.
+          ...(out.translated === false ? { translated: true } : {}),
         };
       }
       return out;
@@ -237,7 +262,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   //----------------------------------------------------------------------------
 
   const refetch = useCallback(() => {
-    const search = new URLSearchParams(filterQueryRef.current);
+    const search = withLangRef.current(new URLSearchParams(filterQueryRef.current));
     if (pageRef.current > 1) search.set("page", String(pageRef.current));
     fetch(`/api/search?${search}`)
       .then((response) => response.json())
@@ -252,7 +277,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       fetch("/api/regenerate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineIds: [line.id] }),
+        body: JSON.stringify({ lineIds: [line.id], lang: langRef.current }),
       })
         .then(async (response) => {
           const data = (await response.json().catch(() => ({}))) as {
@@ -305,14 +330,14 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const askToRegenerateAll = useCallback(() => {
     if (!result || result.total === 0) return;
 
-    fetch(`/api/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
+    fetch(`/api/search?${withLangRef.current(new URLSearchParams(filterQueryRef.current))}&ids=1`)
       .then((response) => response.json())
       .then(({ ids }: { ids: string[] }) => {
         if (ids.length === 0) return;
         return fetch("/api/regenerate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "quote", lineIds: ids }),
+          body: JSON.stringify({ action: "quote", lineIds: ids, lang: langRef.current }),
         })
           .then((response) => response.json())
           .then((quote: Quote) =>
@@ -330,7 +355,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     fetch("/api/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lineIds }),
+      body: JSON.stringify({ lineIds, lang: langRef.current }),
     })
       .then(async (response) => {
         const data = (await response.json().catch(() => ({}))) as {
@@ -382,7 +407,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
 
   const restore = useCallback(
     (line: ResultLine) => {
-      fetch(`/api/restore?lineId=${encodeURIComponent(line.id)}`)
+      fetch(`/api/restore?${withLangRef.current(new URLSearchParams({ lineId: line.id }))}`)
         .then((response) => response.json())
         .then((data: { versions: number[] }) => {
           const newest = data.versions[0];
@@ -390,7 +415,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           return fetch("/api/restore", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lineId: line.id, version: newest }),
+            body: JSON.stringify({ lineId: line.id, version: newest, lang: langRef.current }),
           })
             .then((response) => response.json())
             .then((result: { version?: number }) => {
@@ -561,7 +586,10 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           <colgroup>
             <col className="w-36" />
             <col className="w-44" />
-            <col className={canReview ? "w-40" : "w-28"} />
+            {/* Reviewers get five controls plus a label ("text changed" is the widest)
+                plus a take counter, all on one non-wrapping line; narrower than this
+                the label runs into the Lore column. */}
+            <col className={canReview ? "w-56" : "w-28"} />
             <col />
             <col className="w-16" />
             {canRegenerate && <col className="w-28" />}
@@ -652,6 +680,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
 
       <LoreDialog
         line={editFor}
+        lang={lang}
         onClose={() => setEditFor(null)}
         onSaved={(line, full) => setRewritten((current) => ({ ...current, [line.id]: full }))}
       />
@@ -683,6 +712,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         <Player
           line={current}
           version={current ? (versions[current.id] ?? current.take?.version) : undefined}
+          lang={lang}
           audioRef={audio}
         />
       </div>

@@ -12,9 +12,9 @@ local GetAddOnMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadat
 ZoneLore.name = ADDON_NAME
 ZoneLore.version = GetAddOnMeta(ADDON_NAME, "Version") or "dev"
 
--- Populated by Data/Zones.lua and Data/Subzones.lua (both generated). Declared
--- here so every other file can rely on the tables existing even when a data file
--- is empty or failed to load.
+-- Populated by Data/<language>/Zones.lua and Subzones.lua (both generated),
+-- through ZoneLore:RegisterLoreData. Declared here so every other file can rely
+-- on the tables existing even when a data file is empty or failed to load.
 ZoneLore.Zones = ZoneLore.Zones or {}
 ZoneLore.Subzones = ZoneLore.Subzones or {}
 
@@ -48,11 +48,17 @@ local defaults = {
 	-- Off, so Read means "read along". Stopping discards the queue as well, which
 	-- is not something to do to a player who only wanted to see the words.
 	stopAudioOnRead = false,
+	-- Off, so a player cannot end up reading an unfinished translation without
+	-- having asked for one. See Language.lua.
+	languagePreview = false,
 	-- `playbackBarPos` is deliberately absent: nil means "below the minimap", which
 	-- is an anchor rather than a coordinate and so cannot be expressed here.
 	-- `audioPack` likewise: nil means "the best pack installed", which is a rule
 	-- rather than a folder name, and naming a default here would pin the player to
 	-- a pack they may never install. See Audio.lua.
+	-- `language` likewise: nil means "follow the client locale", which is not the
+	-- same answer as "enUS" -- a player who never chose should start reading their
+	-- own language the day it ships, and one who picked English should not.
 	debug = false,
 	-- `hide` and `minimapPos` are intentionally absent: LibDBIcon owns those keys
 	-- inside ZoneLoreDB and writes them itself. See UI/MinimapButton.lua.
@@ -85,6 +91,15 @@ local function InitConfig()
 			ZoneLoreDB[key] = value
 		end
 	end
+
+	-- `audioPack` was a folder name back when there was only one language to
+	-- choose a pack for; it is now one folder name per content language. The type
+	-- check makes this idempotent, which is why no stored schema version is needed.
+	-- The old value was necessarily an English pack, so that is where it lands.
+	if type(ZoneLoreDB.audioPack) == "string" then
+		ZoneLoreDB.audioPack = { enUS = ZoneLoreDB.audioPack }
+	end
+
 	ZoneLore.db = ZoneLoreDB
 end
 
@@ -187,15 +202,52 @@ function ZoneLore:NormaliseAreaKey(name)
 	return key
 end
 
+-- The corpus key for a name the client just reported. The corpus is keyed by
+-- English name in every language -- a place is one place regardless of what it
+-- is called -- so on a non-English client the name has to come back through the
+-- alias table generated from the client's own AreaTable first.
+--
+-- The alias table is chosen by client locale and never by content language: a
+-- German client reading English lore is still handed "Sengende Schlucht", and
+-- without this it matches nothing at all. That was the state of the addon for
+-- every non-English player before this existed.
+--
+-- The alias table is keyed by the raw client name, not a normalised one, and is
+-- consulted before normalisation for that reason: NormaliseAreaKey reduces a
+-- name to [a-z0-9 ], which leaves nothing at all of "Дун Морог". Both sides come
+-- from the client's own AreaTable, so an exact match is available and is the
+-- most precise thing on offer.
+--
+-- Falls through to the normalised name when there is no alias. That covers an
+-- English client, and every place whose name Blizzard left in English -- which
+-- is around one subzone in eight for German, and all of them for Italian.
+function ZoneLore:ResolveAreaKey(name)
+	if type(name) ~= "string" then
+		return nil
+	end
+	local aliases = self.Aliases[self.clientLocale]
+	local aliased = aliases and aliases[name]
+	if aliased then
+		return aliased
+	end
+	return self:NormaliseAreaKey(name)
+end
+
 --------------------------------------------------------------------------------
 -- Report links
 --
 -- The game cannot open a URL or send anything anywhere, so the only way a player
 -- can report a bad line is to copy an address and open it themselves. The site
--- resolves /r/{mapID}/{slug} back to a line by matching that path against the
--- audio file paths it already assigns, which is why the slug is built the same
--- way here as slugFor does in tools/voice/naming.mjs -- and why "zone", the file
--- name a zone's own line gets, doubles as the slug for it.
+-- resolves /{lang}/r/{mapID}/{slug} back to a line by matching that path against
+-- the audio file paths it already assigns, which is why the slug is built the
+-- same way here as slugFor does in tools/voice/naming.mjs -- and why "zone", the
+-- file name a zone's own line gets, doubles as the slug for it.
+--
+-- The language in the address is the one being READ, not the client's locale: a
+-- report is about the text and narration on screen, and the site files it under
+-- that language so the people who can act on it see it beside the line it is
+-- about. Builds up to 0.3.1 sent /r/... with no language; the site still takes that
+-- and treats it as English, which is what it meant when it was written.
 --
 -- tools/validate.mjs fails the build if these two ever drift, or if two subzones
 -- in one zone come to share a slug: the JS side has a hash fallback for that
@@ -216,16 +268,17 @@ function ZoneLore:ReportURL(mapID, areaKey)
 			slug = "zone"
 		end
 	end
-	return ("%s/r/%d/%s"):format(self.SITE_URL, mapID, slug)
+	return ("%s/%s/r/%d/%s"):format(self.SITE_URL, self:GetLanguage(), mapID, slug)
 end
 
 -- Returns the lore entry and the key that was looked up. The key is returned
 -- even on a miss so /zl debug can report what failed to match.
 function ZoneLore:GetSubzoneLore(parentMapID, areaName)
-	local key = self:NormaliseAreaKey(areaName)
+	local key = self:ResolveAreaKey(areaName)
 	if not key then
 		return nil, nil
 	end
+
 	local zoneTable = self.Subzones[parentMapID]
 	if not zoneTable then
 		return nil, key
@@ -388,6 +441,15 @@ events:SetScript("OnEvent", function(self, event, arg1)
 		end
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		SetupHooks()
+		-- Said every login, not once: an override you have forgotten you enabled
+		-- turns every gap in an unfinished translation into a bug report nobody
+		-- can reproduce.
+		if ZoneLore:IsPreviewingLanguage() then
+			ZoneLore:Print(
+				"|cffffcc00previewing unfinished languages|r -- reading %s. /zl lang off to stop",
+				ZoneLore:GetLanguage()
+			)
+		end
 		self:UnregisterEvent("PLAYER_ENTERING_WORLD")
 	else
 		Dispatch(ZoneLore.zoneChangedCallbacks, ZoneLore:GetPlayerMapID())
@@ -490,6 +552,20 @@ local function CmdStatus()
 		"v%s -- %d zones, %d subzones across %d zones",
 		ZoneLore.version, zoneCount, subzoneCount, subzoneZones
 	)
+	-- Both axes, always, because almost every "it shows nothing" report is one of
+	-- the two being something other than what was assumed.
+	local aliases = ZoneLore.Aliases[ZoneLore.clientLocale]
+	local aliasCount = 0
+	if aliases then
+		for _ in pairs(aliases) do
+			aliasCount = aliasCount + 1
+		end
+	end
+	ZoneLore:Print(
+		"reading %s on a %s client -- %d area name aliases",
+		ZoneLore:GetLanguage(), ZoneLore.clientLocale, aliasCount
+	)
+
 	ZoneLore:Print("player is in: %s (uiMapID %s)", tostring(ZoneLore:GetMapName(playerMap)), tostring(playerMap))
 	ZoneLore:Print("map is showing: %s (uiMapID %s)", tostring(ZoneLore:GetMapName(shownMap)), tostring(shownMap))
 
@@ -506,9 +582,14 @@ local function CmdStatus()
 	local subZone = GetSubZoneText()
 	if subZone and subZone ~= "" then
 		local subEntry, key = ZoneLore:GetSubzoneLore(playerMap, subZone)
+		local raw = ZoneLore:NormaliseAreaKey(subZone)
 		ZoneLore:Print(
-			'standing in subzone "%s" -> key "%s" -> %s',
-			subZone, tostring(key), subEntry and "lore found" or "|cffffcc00no lore|r"
+			'standing in subzone "%s" -> key "%s"%s -> %s',
+			subZone, tostring(key),
+			-- Naming the alias step only when it fired keeps the common line short
+			-- and makes a missing alias visible as the absence of this clause.
+			(key and raw and key ~= raw) and (' (aliased from "' .. raw .. '")') or "",
+			subEntry and "lore found" or "|cffffcc00no lore|r"
 		)
 	end
 
@@ -579,6 +660,8 @@ end
 local function CmdAudioPack(arg)
 	local packs = ZoneLore:GetAudioPacks()
 	if #packs == 0 then
+		-- Any pack would do -- packs are interchangeable across languages -- so an
+		-- empty list really does mean nothing is installed.
 		ZoneLore:Print("|cffffcc00no sound pack installed|r")
 		ZoneLore:Print("  install ZoneLoreAudio (128 kbps) or ZoneLoreAudio64 (64 kbps) alongside ZoneLore")
 		return
@@ -613,25 +696,97 @@ local function CmdAudioPack(arg)
 	end
 end
 
+-- `/zl lang` lists the languages that can be read; `/zl lang <code>` switches;
+-- `/zl lang <code> force` and `/zl lang off` turn the preview override on and
+-- off. The override exists so an unfinished translation can be looked at in the
+-- game rather than only in the explorer, and it is deliberately not in Options:
+-- a player who finds it by accident is a player reading half-English screens.
+local function CmdLanguage(arg)
+	local code, modifier = (arg or ""):match("^(%S*)%s*(%S*)$")
+
+	if code == "off" then
+		ZoneLore:SetLanguagePreview(false)
+		ZoneLore:Print("language preview off -- /reload to go back to a finished language")
+		return
+	end
+
+	if code and code ~= "" then
+		local locale = ZoneLore:GetLocaleInfo(code)
+		-- Matched case-insensitively against the codes, since "dede" is the same
+		-- request as "deDE" and nobody remembers Blizzard's capitalisation.
+		if not locale then
+			for i = 1, #ZoneLore.LOCALES do
+				if ZoneLore.LOCALES[i].code:lower() == code:lower() then
+					locale = ZoneLore.LOCALES[i]
+				end
+			end
+		end
+
+		if not locale then
+			ZoneLore:Print('|cffffcc00"%s" is not a WoW language code|r -- /zl lang to list', code)
+			return
+		end
+
+		-- Preview relaxes the readiness check inside SetLanguage, so it has to be
+		-- on before the attempt -- but it must not survive a refusal, or the one
+		-- remaining refusal (no fonts) leaves the override stuck on and every
+		-- login printing the preview warning for a switch that never happened.
+		local wasPreviewing = ZoneLore:IsPreviewingLanguage()
+		if modifier == "force" then
+			ZoneLore:SetLanguagePreview(true)
+		end
+
+		if not ZoneLore:SetLanguage(locale.code) then
+			if modifier == "force" then
+				ZoneLore:SetLanguagePreview(wasPreviewing)
+			end
+			if not ZoneLore:CanRenderLanguage(locale.code) then
+				ZoneLore:Print(
+					"|cffffcc00this client has no fonts for %s|r -- it would draw as boxes",
+					locale.name
+				)
+			else
+				ZoneLore:Print(
+					"|cffffcc00%s is not finished yet|r -- /zl lang %s force to preview it anyway",
+					locale.name, locale.code
+				)
+			end
+			return
+		end
+
+		ZoneLore:Print("language set to %s -- |cffffcc00/reload to apply|r", locale.name)
+		return
+	end
+
+	local selectable = ZoneLore:GetSelectableLanguages()
+	ZoneLore:Print("languages:")
+	for i = 1, #selectable do
+		local locale = selectable[i]
+		ZoneLore:Print(
+			"  %s %s -- %s",
+			locale.code == ZoneLore:GetLanguage() and "|cff66bbff*|r" or " ",
+			locale.code, locale.name
+		)
+	end
+	if ZoneLore:GetLanguagePreference() == nil then
+		ZoneLore:Print("  following the client (%s)", ZoneLore.clientLocale)
+	end
+	if #selectable > 1 then
+		ZoneLore:Print("  /zl lang <code> to switch")
+	end
+end
+
 local function CmdHelp()
-	ZoneLore:Print("commands:")
-	ZoneLore:Print("  /zl            -- status for the current zone and subzone")
-	ZoneLore:Print("  /zl options    -- open the settings panel")
-	ZoneLore:Print("  /zl window     -- open the browsable lore window")
-	ZoneLore:Print("  /zl panel      -- toggle the world map panel")
-	ZoneLore:Print("  /zl hover      -- toggle the hover preview tooltip")
-	ZoneLore:Print("  /zl play       -- read the current lore aloud")
-	ZoneLore:Print("  /zl stop       -- stop the narration")
-	ZoneLore:Print("  /zl voice      -- toggle narration on or off")
-	ZoneLore:Print("  /zl autoplay   -- toggle narrating areas as you discover them")
-	ZoneLore:Print("  /zl audio      -- list sound packs, or switch with /zl audio <name>")
-	ZoneLore:Print("  /zl discover   -- pretend to discover an area (dev)")
-	ZoneLore:Print("  /zl forget     -- forget what this character has been narrated")
-	ZoneLore:Print("  /zl bar        -- move the playback controls back below the minimap")
-	ZoneLore:Print("  /zl minimap    -- show or hide the minimap button")
-	ZoneLore:Print("  /zl debug      -- report area names on map click")
-	ZoneLore:Print("  /zl verify     -- check data against this client")
-	ZoneLore:Print("  /zl dump       -- enumerate the map tree (dev)")
+	local L = ZoneLore.L
+	ZoneLore:Print(L.CMD_HEADING)
+	for _, key in ipairs({
+		"CMD_STATUS", "CMD_OPTIONS", "CMD_WINDOW", "CMD_PANEL", "CMD_HOVER",
+		"CMD_PLAY", "CMD_STOP", "CMD_VOICE", "CMD_AUTOPLAY", "CMD_AUDIO",
+		"CMD_LANG", "CMD_DISCOVER", "CMD_FORGET", "CMD_BAR", "CMD_MINIMAP",
+		"CMD_DEBUG", "CMD_VERIFY", "CMD_DUMP",
+	}) do
+		ZoneLore:Print(L[key])
+	end
 end
 
 _G.SLASH_ZONELORE1 = "/zonelore"
@@ -682,6 +837,8 @@ SlashCmdList["ZONELORE"] = function(msg)
 		ZoneLore:Print("narration %s", enabled and "enabled" or "disabled")
 	elseif cmd == "audio" then
 		CmdAudioPack((msg or ""):match("^%s*%S+%s+(.-)%s*$"))
+	elseif cmd == "lang" or cmd == "language" then
+		CmdLanguage((msg or ""):match("^%s*%S+%s+(.-)%s*$"))
 	elseif cmd == "autoplay" then
 		local enabled = not ZoneLore:Get("autoplay")
 		ZoneLore:Set("autoplay", enabled)

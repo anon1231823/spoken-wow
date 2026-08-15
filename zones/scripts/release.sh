@@ -42,6 +42,11 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 
 # project key -> CurseForge project ID, addon folder the version is read from,
 # and the zip basename package*.sh produces.
+#
+# A language's pack is a project of its own and has to be created on CurseForge
+# by hand before it can be released. Until its id is written down here, releasing
+# it fails on the empty project id below -- which is the failure to want, because
+# the alternative is uploading a German pack over the English project.
 target_project() { case "$1" in
   zonelore) echo "1636521";;
   audio)    echo "1636532";;
@@ -157,6 +162,14 @@ for target in "${targets[@]}"; do
   project="$(target_project "$target")"
   addon="$(target_addon "$target")"
   zip_name="$(target_zip "$target")"
+
+  # Checked rather than assumed: a target added here without its project id would
+  # otherwise POST to CurseForge's /projects//upload-file and fail somewhere less
+  # legible, or worse, land on whatever project the API resolved.
+  if [[ -z "$project" ]]; then
+    echo "error: no CurseForge project id for '$target' -- create the project and add its id to target_project()" >&2
+    exit 1
+  fi
 
   toc="$REPO/addon/$addon/$addon.toc"
   version="$(sed -n 's/^## Version:[[:space:]]*//p' "$toc" | head -1 | tr -d '\r')"

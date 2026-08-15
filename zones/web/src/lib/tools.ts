@@ -27,6 +27,7 @@ import * as concurrencyModule from "../../../tools/voice/concurrency.mjs";
 import * as exportModule from "../../../tools/voice/export-manifest.mjs";
 import * as lookupModule from "../../../tools/voice/build-lookup.mjs";
 import * as wikiModule from "../../../tools/lib/wiki.mjs";
+import * as areaNamesModule from "../../../tools/lib/area-names.mjs";
 
 /** One voiceable entry: a zone, or a subzone of one. Mirrors buildCatalogue(). */
 export type CatalogueEntry = {
@@ -69,16 +70,22 @@ export type TakeRecord = {
 
 export type Manifest = Record<string, TakeRecord>;
 
-export const buildCatalogue = generateModule.buildCatalogue as () => Promise<CatalogueEntry[]>;
+export const buildCatalogue = generateModule.buildCatalogue as (
+  lang?: string,
+) => Promise<CatalogueEntry[]>;
 
 export const measureRates = generateModule.measureRates as (
   manifest: Manifest,
   config: { creditRate?: number | null } | null,
 ) => { creditRate: number | null; charsPerSecond: number; measuredFrom: number };
 
-export const loadManifest = storeModule.loadManifest as () => Promise<Manifest>;
-export const SOUNDS_DIR = storeModule.SOUNDS_DIR as string;
-export const HISTORY_DIR = storeModule.HISTORY_DIR as string;
+export const loadManifest = storeModule.loadManifest as (lang?: string) => Promise<Manifest>;
+
+// Functions rather than constants, because this process serves every language at once
+// and a path resolved at import could only ever name one of them. The CLI, which runs
+// one language per process, calls them with no argument.
+export const soundsDir = storeModule.soundsDir as (lang?: string) => string;
+export const historyDir = storeModule.historyDir as (lang?: string) => string;
 
 export const toSpokenText = normaliseModule.toSpokenText as (
   text: string,
@@ -94,6 +101,16 @@ export const textHash = namingModule.textHash as (spoken: string) => string;
 // rather than reimplemented here, so a line edited in the explorer and a line scraped
 // from the wiki get the same summary from the same prose.
 export const makeShort = wikiModule.makeShort as (full: string, limit?: number) => string;
+
+/** What each locale's client calls every place: see tools/lib/area-names.mjs. */
+export type AreaNames = Record<string, Map<string, string>>;
+export const loadAreaNames = areaNamesModule.loadAreaNames as () => Promise<AreaNames>;
+export const areaName = areaNamesModule.areaName as (
+  names: AreaNames,
+  lang: string,
+  entry: { kind: string; key: string | null; name: string },
+  englishName?: string,
+) => string;
 
 //------------------------------------------------------------------------------
 // Generation
@@ -112,8 +129,15 @@ export type VoiceConfig = {
   voiceSettings: Record<string, number | boolean>;
 };
 
-export const loadConfig = elevenModule.loadConfig as () => Promise<VoiceConfig>;
-export const saveConfig = elevenModule.saveConfig as (config: VoiceConfig) => Promise<void>;
+export const loadConfig = elevenModule.loadConfig as (lang?: string) => Promise<VoiceConfig>;
+/** The config for a language with or without a narrator yet; see elevenlabs.mjs. */
+export const draftConfig = elevenModule.draftConfig as (
+  lang?: string,
+) => Promise<{ config: VoiceConfig; configured: boolean }>;
+export const saveConfig = elevenModule.saveConfig as (
+  config: VoiceConfig,
+  lang?: string,
+) => Promise<void>;
 
 // elevenlabs.mjs also exports apiKey(), which reads ELEVENLABS_API_KEY out of the
 // repo's .env. It is deliberately NOT re-exported here: in the explorer a key belongs
@@ -132,9 +156,11 @@ export const listVoices = elevenModule.listVoices as (
 export const resolveVoiceId = elevenModule.resolveVoiceId as (
   config: VoiceConfig,
   key: string,
+  lang?: string,
 ) => Promise<string>;
+/** Fills in dictionaryVersionId from the account; throws if the id is not there. */
 export const resolveDictionary = elevenModule.resolveDictionary as (
-  config: VoiceConfig,
+  config: Pick<VoiceConfig, "dictionaryId" | "dictionaryVersionId">,
   key: string,
 ) => Promise<void>;
 export const fetchTier = elevenModule.fetchTier as (key: string) => Promise<string | null>;
@@ -168,6 +194,7 @@ export const COOL_DOWN_MS = concurrencyModule.COOL_DOWN_MS as number;
 export const writeAudio = storeModule.writeAudio as (
   file: string,
   buffer: Buffer,
+  lang?: string,
 ) => Promise<string>;
 export const durationOf = storeModule.durationOf as (path: string) => Promise<number>;
 export const insertTake = storeModule.insertTake as (
@@ -175,17 +202,21 @@ export const insertTake = storeModule.insertTake as (
   record: TakeRecord,
   origin: "imported" | "generated",
   settings?: Record<string, unknown> | null,
+  lang?: string,
 ) => Promise<number>;
 export const restoreTake = storeModule.restoreTake as (
   file: string,
   archiveVersion: number,
+  lang?: string,
 ) => Promise<string>;
 
 export const exportManifest = exportModule.exportManifest as (options?: {
   check?: boolean;
+  lang?: string;
 }) => Promise<{ skipped: boolean; changed: boolean; count: number }>;
-export const buildLookup = lookupModule.buildLookup as () => Promise<{
+export const buildLookup = lookupModule.buildLookup as (lang?: string) => Promise<{
   zones: number;
   subzones: number;
   missingFiles: number;
+  path: string;
 }>;

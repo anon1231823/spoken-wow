@@ -36,7 +36,8 @@ import {
   saveManifest,
   writeAudio,
   SAMPLES_DIR,
-  SOUNDS_DIR,
+  soundsDir,
+  LANG,
 } from "./store.mjs";
 import { afterRateLimit, budgetFor, COOL_DOWN_MS, Limiter } from "./concurrency.mjs";
 
@@ -126,7 +127,7 @@ Actions:
 //------------------------------------------------------------------------------
 
 export async function buildCatalogue() {
-  const entries = await readLines();
+  const entries = await readLines(LANG);
   const rules = await loadPronunciation();
   const files = assignFiles(entries);
 
@@ -326,9 +327,9 @@ function summarise(selected, manifest, label, config) {
 //------------------------------------------------------------------------------
 
 async function generate(selected, args) {
-  const config = await loadConfig();
+  const config = await loadConfig(LANG);
   const key = await apiKey();
-  await resolveVoiceId(config, key);
+  await resolveVoiceId(config, key, LANG);
   await resolveDictionary(config, key);
 
   const manifest = await loadManifest();
@@ -366,7 +367,7 @@ async function generate(selected, args) {
       // Audio already generated cost real money, and a re-roll is not always an
       // improvement. ../wow-voiceover/tts_cli/synthesize.py refuses for the same
       // reason.
-      if (existsSync(join(SOUNDS_DIR, `${entry.file}.mp3`)) && !args.force) {
+      if (existsSync(join(soundsDir(LANG), `${entry.file}.mp3`)) && !args.force) {
         skipped++;
         return;
       }
@@ -430,9 +431,9 @@ async function generate(selected, args) {
 // documented as unreliable below ~250 characters, and 302 of the 1353 entries are
 // shorter than that, so the short one is the honest test.
 async function sample(catalogue) {
-  const config = await loadConfig();
+  const config = await loadConfig(LANG);
   const key = await apiKey();
-  await resolveVoiceId(config, key);
+  await resolveVoiceId(config, key, LANG);
   await resolveDictionary(config, key);
 
   const long = catalogue
@@ -466,7 +467,7 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const catalogue = await buildCatalogue();
   // Loaded even for a dry run, which needs the credit rate to estimate a cost.
-  const config = await loadConfig();
+  const config = await loadConfig(LANG);
 
   // Enforced here rather than left to the model: a bracket that reaches v3 is
   // performed rather than spoken, which is silent corruption of a paid clip.

@@ -5,6 +5,7 @@ import { currentSession, requireFeedback } from "@/lib/authz";
 import { isKnownLine } from "@/lib/catalogue";
 import { query } from "@/lib/db";
 import { BODY_MAX, isCategory, type FeedbackReport } from "@/lib/feedback";
+import { langFromParams, langOfBody } from "@/lib/lang";
 
 // What a visitor said about a line, or about the project.
 //
@@ -16,6 +17,11 @@ import { BODY_MAX, isCategory, type FeedbackReport } from "@/lib/feedback";
 //
 // GET is the opposite: report BODIES are triager-only. Only the open COUNT is public, and
 // it travels with the search results rather than through here.
+//
+// Both name a language (migration 0010): a report is about the text and narration the
+// reporter had in front of them, and the count a triager sees is for the language they
+// are triaging. Absent means English, so links and forms that predate the axis still
+// file where they always did.
 
 // Ten an hour is far more than a person filing real reports will ever hit -- the reports
 // are prose about lines they have just listened to -- and low enough that a script gets
@@ -30,6 +36,7 @@ type Body = {
   email?: unknown;
   /** The honeypot. A real form never sends this with anything in it. */
   website?: unknown;
+  lang?: unknown;
 };
 
 /**
@@ -91,6 +98,11 @@ export async function POST(request: Request) {
     );
   }
 
+  const lang = langOfBody(body.lang);
+  if (!lang) {
+    return NextResponse.json({ error: `unknown language ${String(body.lang)}` }, { status: 400 });
+  }
+
   const lineId = body.lineId === undefined || body.lineId === null ? null : body.lineId;
   if (lineId !== null && typeof lineId !== "string") {
     return NextResponse.json({ error: "lineId must be a string or null" }, { status: 400 });
@@ -126,9 +138,9 @@ export async function POST(request: Request) {
   const email = userId ? null : optionalText(body.email, 320);
 
   await query(
-    `insert into "feedback" ("lineId", "category", "body", "userId", "name", "email", "ip")
-     values ($1, $2, $3, $4, $5, $6, $7)`,
-    [lineId, body.category, text, userId, name, email, ip],
+    `insert into "feedback" ("lineId", "lang", "category", "body", "userId", "name", "email", "ip")
+     values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [lineId, lang, body.category, text, userId, name, email, ip],
   );
 
   // Deliberately not the row. The submitter cannot read feedback back, so an id would be
@@ -140,7 +152,9 @@ export async function GET(request: Request) {
   const { denied } = await requireFeedback();
   if (denied) return denied;
 
-  const lineId = new URL(request.url).searchParams.get("lineId");
+  const params = new URL(request.url).searchParams;
+  const lineId = params.get("lineId");
+  const lang = langFromParams(params);
   if (!lineId) {
     return NextResponse.json({ error: "lineId is required" }, { status: 400 });
   }
@@ -165,9 +179,9 @@ export async function GET(request: Request) {
        from "feedback" f
        left join "user" reporter on reporter."id" = f."userId"
        left join "user" resolver on resolver."id" = f."resolvedBy"
-      where f."lineId" = $1
+      where f."lineId" = $1 and f."lang" = $2
       order by f."createdAt" desc`,
-    [lineId],
+    [lineId, lang],
   );
 
   // Open first regardless of age: the panel exists to answer "what is outstanding on this

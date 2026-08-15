@@ -90,12 +90,20 @@ async function main() {
     process.exit(1);
   }
 
+  // English only, on both sides of the join. Flags are per language (migration
+  // 0010) and so is the corpus, and this tool repairs English: the reviewers'
+  // notes were written about the English text, and English is what the rewriter
+  // has articles for. A translated line follows its source, it is not "fixed".
+  // Joining unscoped would pair a German flag with the English row and bill a
+  // model call to fix a text nobody complained about.
+  const lang = "enUS";
   const { rows } = await db.query(
     `select f."lineId", f.note as "flagNote", f."updatedAt" as "flaggedAt", l.*
        from line_flag f
-       join lore_line l on l."lineId" = f."lineId" and l."isCurrent"
-      where f.status = 'bad'
+       join lore_line l on l."lineId" = f."lineId" and l."lang" = f."lang" and l."isCurrent"
+      where f.status = 'bad' and f."lang" = $1
       order by l."mapID", l."lineId"`,
+    [lang],
   );
 
   // A note describes the text the reviewer read. If the line has changed since it

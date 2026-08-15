@@ -8,10 +8,15 @@
 -- every lookup falls back to the bundled placeholder, so the button is testable
 -- before any audio exists and merely sounds wrong rather than erroring.
 --
--- More than one pack can be installed at a time -- they differ only in bitrate,
--- so the same lore is available at ~400MB or ~790MB on disk. Each registers
--- itself into ZoneLoreAudioPacks under its own folder name; this file picks
--- which one to play from.
+-- More than one pack can be installed at a time -- they differ in bitrate, and
+-- now in language. Each registers itself into ZoneLoreAudioPacks under its own
+-- folder name; this file picks which one to play from.
+--
+-- Every pack has the same structure and the same keys, so any installed pack is
+-- playable regardless of the language being read: a player reading German with
+-- only the English pack installed hears English narration rather than the
+-- placeholder. When several packs are installed the player picks one; unpicked,
+-- the language being read wins, then the client's own locale.
 
 local ADDON_NAME, ZoneLore = ...
 
@@ -84,17 +89,25 @@ end
 -- rather than on every lookup.
 local warnedFormat = {}
 
--- Every installed pack this version can read, highest bitrate first. Packs are
+-- Every installed pack this version can read, best match first. Packs are
 -- registered by the data addons themselves at load time, so this is cheap enough
--- to walk on demand and always reflects what is actually loaded.
-function ZoneLore:GetAudioPacks()
+-- to walk on demand and always reflects what is loaded.
+--
+-- Every pack is listed whatever it narrates -- packs are interchangeable, and an
+-- English pack under German text beats the placeholder. Pass `lang` only to
+-- narrow the answer to one language.
+function ZoneLore:GetAudioPacks(lang)
 	local packs = {}
 	local registry = _G.ZoneLoreAudioPacks
 
 	if type(registry) == "table" then
 		for name, pack in pairs(registry) do
 			if type(pack) == "table" and pack.version == PACK_FORMAT then
-				table.insert(packs, pack)
+				-- A pack published before languages existed carries no language and
+				-- is English, which is the same default Sounds.lua applies.
+				if lang == nil or (pack.language or "enUS") == lang then
+					table.insert(packs, pack)
+				end
 			elseif type(pack) == "table" and not warnedFormat[name] then
 				warnedFormat[name] = true
 				self:Print(
@@ -110,12 +123,31 @@ function ZoneLore:GetAudioPacks()
 		legacy.addon = legacy.addon or "ZoneLoreAudio"
 		legacy.quality = legacy.quality or "standard"
 		legacy.bitrate = legacy.bitrate or 0
-		table.insert(packs, legacy)
+		legacy.language = legacy.language or "enUS"
+		if lang == nil or legacy.language == lang then
+			table.insert(packs, legacy)
+		end
 	end
 
-	-- Bitrate descending, then folder name, so the order is stable when two packs
-	-- report the same bitrate (or none at all).
+	-- Best default first: the language being read, then the client's own locale,
+	-- then bitrate descending, then folder name so the order is stable when two
+	-- packs report the same bitrate (or none at all).
+	local reading = self:GetLanguage()
+	local client = self.clientLocale
+	local function rank(pack)
+		local language = pack.language or "enUS"
+		if language == reading then
+			return 0
+		elseif language == client then
+			return 1
+		end
+		return 2
+	end
 	table.sort(packs, function(a, b)
+		local ra, rb = rank(a), rank(b)
+		if ra ~= rb then
+			return ra < rb
+		end
 		if (a.bitrate or 0) ~= (b.bitrate or 0) then
 			return (a.bitrate or 0) > (b.bitrate or 0)
 		end
@@ -125,18 +157,22 @@ function ZoneLore:GetAudioPacks()
 	return packs
 end
 
--- The pack narration plays from, or nil when none is installed.
+-- The pack narration plays from, or nil when no pack is installed at all.
 --
 -- The stored preference is a folder name rather than an index: a player who
 -- uninstalls the high-quality pack should fall back to whatever is left instead
--- of pointing at whichever pack happens to occupy that slot afterwards.
+-- of pointing at whichever pack happens to occupy that slot afterwards. It is
+-- kept per content language, so picking the English pack while reading German
+-- does not overrule the German pack once one is installed and German is no
+-- longer what is being read.
 function ZoneLore:GetActiveAudioPack()
 	local packs = self:GetAudioPacks()
 	if #packs == 0 then
 		return nil
 	end
 
-	local preferred = self:Get("audioPack")
+	local stored = self:Get("audioPack")
+	local preferred = type(stored) == "table" and stored[self:GetLanguage()] or nil
 	if type(preferred) == "string" then
 		for i = 1, #packs do
 			if packs[i].addon == preferred then
@@ -145,7 +181,9 @@ function ZoneLore:GetActiveAudioPack()
 		end
 	end
 
-	-- No preference, or the preferred pack is gone: best available wins.
+	-- No preference, or the preferred pack is gone: best available wins -- the
+	-- sort in GetAudioPacks already put the language being read first, then the
+	-- client's locale.
 	return packs[1]
 end
 
@@ -155,7 +193,12 @@ function ZoneLore:SetActiveAudioPack(name)
 	local packs = self:GetAudioPacks()
 	for i = 1, #packs do
 		if packs[i].addon == name then
-			self:Set("audioPack", name)
+			local stored = self:Get("audioPack")
+			if type(stored) ~= "table" then
+				stored = {}
+			end
+			stored[self:GetLanguage()] = name
+			self:Set("audioPack", stored)
 			self:StopLore()
 			self:NotifyAudioChanged()
 			return true
@@ -164,16 +207,23 @@ function ZoneLore:SetActiveAudioPack(name)
 	return false
 end
 
--- "High (128 kbps)" -- for the options dropdown and /zl audio.
+-- "high (128 kbps)" -- for the options dropdown and /zl audio. The language is
+-- named only when it is not the one being read, which is the case worth pointing
+-- at: a pack that is installed but will never play.
 function ZoneLore:GetAudioPackLabel(pack)
 	if not pack then
 		return "none"
 	end
 	local quality = pack.quality or "standard"
+	local label = quality
 	if pack.bitrate and pack.bitrate > 0 then
-		return ("%s (%d kbps)"):format(quality, pack.bitrate)
+		label = ("%s (%d kbps)"):format(quality, pack.bitrate)
 	end
-	return quality
+	local language = pack.language or "enUS"
+	if language ~= self:GetLanguage() then
+		label = ("%s, %s"):format(label, language)
+	end
+	return label
 end
 
 --------------------------------------------------------------------------------

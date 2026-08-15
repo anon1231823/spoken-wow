@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { catalogue, loadContext } from "@/lib/catalogue";
 import { filtersFromParams, PAGE_SIZE } from "@/lib/filters";
+import { langFromParams } from "@/lib/lang";
 import { search } from "@/lib/search";
 
 // The URL carries `page`, not `offset`, so a shared link survives a change to
@@ -9,9 +10,10 @@ import { search } from "@/lib/search";
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const filters = filtersFromParams(params);
+  const lang = langFromParams(params);
   const page = Math.max(1, Number(params.get("page")) || 1);
 
-  const [entries, context] = await Promise.all([catalogue(), loadContext()]);
+  const [entries, context] = await Promise.all([catalogue(lang), loadContext(lang)]);
 
   // "Regenerate everything filtered" needs every matching id, not a page of rows.
   // Ids only: the full corpus is ~1400 lines, and the quote endpoint re-derives

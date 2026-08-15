@@ -21,7 +21,7 @@
 import { loadEraAreas } from "../lib/era.mjs";
 import { loadEnvFile } from "../lib/env.mjs";
 import * as db from "./db.mjs";
-import { archiveAudio, loadManifest } from "./store.mjs";
+import { LANG, archiveAudio, loadManifest } from "./store.mjs";
 
 // Before anything reads DATABASE_URL.
 await loadEnvFile();
@@ -60,10 +60,14 @@ async function main() {
     return;
   }
 
+  // Scoped to the language whose manifest picked the targets: without the lang
+  // filter this would demote every language's take for these lineIds while
+  // archiving only this language's masters -- the other languages' audio would
+  // be lost with no audio-history entry to restore it from.
   await db.query(
     `update "voiceline_take" set "isCurrent" = false
-      where "isCurrent" and "lineId" = any($1)`,
-    [targets.map((t) => t.id)],
+      where "isCurrent" and "lang" = $2 and "lineId" = any($1)`,
+    [targets.map((t) => t.id), LANG],
   );
 
   let archived = 0;

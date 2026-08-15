@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-// Writes addon/ZoneLore/Data/{Zones,Subzones}.lua from lore_line.
+// Writes addon/ZoneLore/Data/<lang>/{Zones,Subzones}.lua from lore_line.
 //
 //   node tools/lore/export.mjs           # write both files
 //   node tools/lore/export.mjs --check   # fail if the files are out of date, write nothing
+//   ZONELORE_LANG=deDE node tools/lore/export.mjs   # a language other than English
 //
 // The counterpart to tools/voice/export-manifest.mjs, and there for the same reason: the
 // database is where the corpus is authored, and a file is what the addon ships. Between
@@ -14,7 +15,8 @@
 
 import { readFile } from "node:fs/promises";
 
-import { ZONES_LUA, SUBZONES_LUA } from "../lib/loredata.mjs";
+import { BASE_LOCALE, isLocale } from "../lib/locales.mjs";
+import { zonesLua, subzonesLua } from "../lib/loredata.mjs";
 import { loadEraAreas } from "../lib/era.mjs";
 import { emitZones, emitSubzones } from "./lua.mjs";
 import { isEnabled, readCurrent, writeCorpus } from "./store.mjs";
@@ -27,6 +29,12 @@ await loadEnvFile();
 const argv = process.argv.slice(2);
 const checkOnly = argv.includes("--check");
 
+const lang = process.env.ZONELORE_LANG || BASE_LOCALE;
+if (!isLocale(lang)) {
+  console.error(`error: ZONELORE_LANG=${lang} is not a WoW locale code.`);
+  process.exit(1);
+}
+
 async function main() {
   if (!isEnabled()) {
     console.error("error: DATABASE_URL is not set, so there is no corpus to export.");
@@ -34,9 +42,9 @@ async function main() {
     process.exit(1);
   }
 
-  const allRows = await readCurrent();
+  const allRows = await readCurrent(lang);
   if (allRows.length === 0) {
-    console.error("error: lore_line is empty. Seed it with:  make lore-import");
+    console.error(`error: lore_line has no ${lang} rows. Seed English with:  make lore-import`);
     process.exit(1);
   }
 
@@ -59,8 +67,8 @@ async function main() {
 
     const stale = [];
     for (const [path, wanted] of [
-      [ZONES_LUA, emitZones(zones)],
-      [SUBZONES_LUA, emitSubzones(subzones, zoneNames)],
+      [zonesLua(lang), emitZones(zones, lang)],
+      [subzonesLua(lang), emitSubzones(subzones, zoneNames, lang)],
     ]) {
       const onDisk = await readFile(path, "utf8").catch(() => null);
       if (onDisk !== wanted) stale.push(path);
@@ -74,13 +82,13 @@ async function main() {
       return;
     }
 
-    console.log(`up to date -- ${rows.length} lines, ${edited} hand-edited`);
+    console.log(`up to date -- ${lang}, ${rows.length} lines, ${edited} hand-edited`);
     return;
   }
 
-  const written = await writeCorpus(rows);
+  const written = await writeCorpus(rows, lang);
   console.log(
-    `wrote ${written.zones} zones and ${written.subzones} subzones ` +
+    `wrote ${written.zones} zones and ${written.subzones} subzones in ${lang} ` +
       `(${edited} hand-edited)`,
   );
   console.log("\nreview with:  git diff addon/ZoneLore/Data/");

@@ -4,7 +4,9 @@ import Link from "next/link";
 import { Analytics } from "@/components/Analytics";
 import { BetaBadge } from "@/components/BetaBadge";
 import { BrandMark } from "@/components/BrandMark";
+import { HomeLink } from "@/components/HomeLink";
 import { FeedbackLauncher } from "@/components/FeedbackLauncher";
+import { LangSelect } from "@/components/LangSelect";
 import { UserMenu } from "@/components/UserMenu";
 import { SUPPORT_URL } from "@/lib/support";
 
@@ -31,10 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 dialog of its own, and a button inside an anchor is neither valid nor
                 clickable in the way either one wants. */}
             <div className="flex items-center gap-2">
-              <Link href="/" className="flex items-center gap-2 font-semibold">
+              <HomeLink className="flex items-center gap-2 font-semibold">
                 <BrandMark className="h-5 w-5" />
                 ZoneLore
-              </Link>
+              </HomeLink>
               <BetaBadge />
             </div>
             {/* Outside UserMenu because it needs no role and no session -- see the
@@ -56,9 +58,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             >
               Support
             </a>
-            {/* Pronunciation moved into UserMenu, which is where the links that need a
-                role live. It is not a page a visitor can do anything with. */}
-            <UserMenu />
+            {/* Both pushed right together, by the group rather than by either one:
+                the language switch hides itself on pages that have no language, and a
+                margin living on it would take the account control's position with it.
+                They belong together anyway -- both say what mode you are in rather
+                than where you are going. */}
+            <div className="ml-auto flex items-center gap-4">
+              <LangSelect />
+              {/* Pronunciation moved into UserMenu, which is where the links that need
+                  a role live. It is not a page a visitor can do anything with. */}
+              <UserMenu />
+            </div>
           </div>
         </header>
         {children}

@@ -23,19 +23,60 @@ import { execFile } from "node:child_process";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 
+import { basename, extname } from "node:path";
+
+import { BASE_LOCALE, isLocale, packFolder } from "../lib/locales.mjs";
 import { ROOT } from "../lib/loredata.mjs";
 import * as db from "./db.mjs";
 
 const execFileAsync = promisify(execFile);
+
+// The language this process defaults to. The CLI sets it once and never passes a
+// language again -- a generation run is one language by nature. The explorer
+// ignores it and passes a language per request.
+export const LANG = process.env.ZONELORE_LANG || BASE_LOCALE;
+if (!isLocale(LANG)) {
+  throw new Error(`ZONELORE_LANG=${LANG} is not a WoW locale code`);
+}
 
 // Each of these can be overridden by an environment variable, and on the droplet each
 // one is: ZONELORE_ROOT points at the current release, and these three point *outside*
 // it. What they have in common is that the app writes them, so leaving them inside a
 // release would mean prune.sh deleting them five deploys later. See deploy/README.md.
 // Unset, which is every local run, they are exactly the repo paths they always were.
-export const MANIFEST_PATH =
-  process.env.ZONELORE_MANIFEST || join(ROOT, "tools/voice/manifest.json");
-export const SOUNDS_DIR = process.env.ZONELORE_SOUNDS || join(ROOT, "addon/ZoneLoreAudio/Sounds");
+//
+// EVERY PATH IS A FUNCTION OF THE LANGUAGE, not a constant. The CLI runs one
+// language per process and passes nothing; the explorer serves several at once
+// from a single process and passes one per request, which a module-level constant
+// resolved at import could not do.
+//
+// The environment overrides name ENGLISH's paths -- that is what they name on the
+// droplet today, where they point outside the release directory so a deploy cannot
+// move ~700 MB and prune.sh cannot delete it. Another language derives its own
+// path beside English's rather than ignoring the override, so one setting still
+// decides where audio lives.
+
+// tools/voice/manifest.json, or manifest.<lang>.json beside it. English keeps the
+// committed name: renaming a 392 KB file buys nothing and breaks every deployment
+// pointing ZONELORE_MANIFEST at it.
+export function manifestPath(lang = LANG) {
+  const base = process.env.ZONELORE_MANIFEST || join(ROOT, "tools/voice/manifest.json");
+  if (lang === BASE_LOCALE) return base;
+  const ext = extname(base);
+  return join(dirname(base), `${basename(base, ext)}.${lang}${ext}`);
+}
+
+// The masters, at full bitrate, inside the language's own pack folder. English's
+// live in ZoneLoreAudio -- its high tier -- and package-audio.sh transcodes down
+// from there.
+export function soundsDir(lang = LANG) {
+  const override = process.env.ZONELORE_SOUNDS;
+  if (override) {
+    return lang === BASE_LOCALE ? override : join(dirname(override), packFolder(lang, "high"));
+  }
+  return join(ROOT, "addon", packFolder(lang, "high"), "Sounds");
+}
+
 export const SAMPLES_DIR = join(ROOT, "audio-samples");
 
 // A sibling of Sounds/, never a subdirectory: validate-audio.mjs walks Sounds/ and
@@ -45,7 +86,15 @@ export const SAMPLES_DIR = join(ROOT, "audio-samples");
 // This is the one directory whose loss is permanent: version 1 of each file is the
 // take the corpus was originally cut with, and restoring it is the undo for a re-roll
 // that came out worse.
-export const HISTORY_DIR = process.env.ZONELORE_AUDIO_HISTORY || join(ROOT, "audio-history");
+// Superseded takes. English keeps the flat audio-history/{file}/v{n}.mp3 layout it
+// already has on disk and on the droplet; another language nests under its code,
+// which cannot collide with the numeric mapID directories beneath it. Without that
+// split two languages would share one version sequence for the same file, and a
+// restore would install whichever clip happened to be v2.
+export function historyDir(lang = LANG) {
+  const base = process.env.ZONELORE_AUDIO_HISTORY || join(ROOT, "audio-history");
+  return lang === BASE_LOCALE ? base : join(base, lang);
+}
 
 // The fields that make up a manifest record, in the order the JSON file writes them,
 // so an exported manifest diffs cleanly against the hand-written one it replaces.
@@ -70,7 +119,9 @@ const TAKE_COLUMNS = [
 // What loadManifest last returned, so saveManifest can tell which entries are new
 // takes rather than re-inserting all 1353 rows every time it is called -- and
 // generate.mjs calls it after every single line.
-let baseline = new Map();
+// Per language: the explorer can hold two manifests at once, and a shared baseline
+// would make every entry of the language not loaded last look like a new take.
+const baselines = new Map();
 
 function recordKey(record) {
   // generatedAt alone identifies a take: it is stamped fresh on every synthesis, and
@@ -78,30 +129,31 @@ function recordKey(record) {
   return record?.generatedAt ?? null;
 }
 
-function rebase(manifest) {
-  baseline = new Map(Object.entries(manifest).map(([id, r]) => [id, recordKey(r)]));
+function rebase(manifest, lang) {
+  baselines.set(lang, new Map(Object.entries(manifest).map(([id, r]) => [id, recordKey(r)])));
 }
 
-export async function loadManifest() {
-  const manifest = db.isEnabled() ? await loadFromDatabase() : await loadFromFile();
-  rebase(manifest);
+export async function loadManifest(lang = LANG) {
+  const manifest = db.isEnabled() ? await loadFromDatabase(lang) : await loadFromFile(lang);
+  rebase(manifest, lang);
   return manifest;
 }
 
-async function loadFromFile() {
+async function loadFromFile(lang) {
   try {
-    return JSON.parse(await readFile(MANIFEST_PATH, "utf8"));
+    return JSON.parse(await readFile(manifestPath(lang), "utf8"));
   } catch (err) {
     if (err.code === "ENOENT") return {};
     throw err;
   }
 }
 
-async function loadFromDatabase() {
+async function loadFromDatabase(lang) {
   const { rows } = await db.query(
     `select "lineId", ${TAKE_COLUMNS.map((c) => `"${c}"`).join(", ")}, "generatedAt"
        from "voiceline_take"
-      where "isCurrent"`,
+      where "isCurrent" and "lang" = $1`,
+    [lang],
   );
 
   const manifest = {};
@@ -127,73 +179,77 @@ async function loadFromDatabase() {
 // only ever extended, so a failed save cannot stall the ones behind it.
 let saveChain = Promise.resolve();
 
-export function saveManifest(manifest) {
+export function saveManifest(manifest, lang = LANG) {
   const mine = saveChain.then(
-    () => persist(manifest),
-    () => persist(manifest),
+    () => persist(manifest, lang),
+    () => persist(manifest, lang),
   );
   saveChain = mine.catch(() => {});
   return mine;
 }
 
-async function persist(manifest) {
+async function persist(manifest, lang) {
   if (db.isEnabled()) {
-    await saveToDatabase(manifest);
+    await saveToDatabase(manifest, lang);
   } else {
-    await writeManifestFile(manifest);
+    await writeManifestFile(manifest, lang);
   }
-  rebase(manifest);
+  rebase(manifest, lang);
 }
 
 // Sorted, so a run that adds one line produces a one-line diff rather than a
 // reshuffled file. Written beside the target and renamed: a crash partway through a
 // write would otherwise destroy the record of everything already paid for, which is
 // the one file here that cannot be regenerated.
-async function writeManifestFile(manifest) {
+async function writeManifestFile(manifest, lang) {
   const ordered = Object.fromEntries(
     Object.entries(manifest).sort(([a], [b]) => a.localeCompare(b)),
   );
-  const temp = `${MANIFEST_PATH}.${process.pid}.tmp`;
+  const path = manifestPath(lang);
+  const temp = `${path}.${process.pid}.tmp`;
+  await mkdir(dirname(path), { recursive: true });
   await writeFile(temp, JSON.stringify(ordered, null, 2) + "\n");
-  await rename(temp, MANIFEST_PATH);
+  await rename(temp, path);
 }
 
 // Only entries that changed since the last load or save become takes. Everything else
 // in the object is what loadManifest already returned, and is already a row.
-async function saveToDatabase(manifest) {
+async function saveToDatabase(manifest, lang) {
+  const baseline = baselines.get(lang) ?? new Map();
   for (const [lineId, record] of Object.entries(manifest)) {
     if (baseline.get(lineId) === recordKey(record)) continue;
-    await insertTake(lineId, record, "generated");
+    await insertTake(lineId, record, "generated", null, lang);
   }
 }
 
 // One transaction: retiring the live take and inserting its replacement must not half
 // apply, or the partial unique index would refuse every later write for this line and
 // the failure would look like a bug in the next run rather than this one.
-export async function insertTake(lineId, record, origin, settings = null) {
+export async function insertTake(lineId, record, origin, settings = null, lang = LANG) {
   return db.transaction(async (client) => {
     await client.query(
       `update "voiceline_take" set "isCurrent" = false
-        where "lineId" = $1 and "isCurrent"`,
-      [lineId],
+        where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
+      [lineId, lang],
     );
 
     // The version comes from a select over this line's own rows rather than from the
     // caller, so nothing outside this transaction has to know or guess it.
     const { rows } = await client.query(
       `insert into "voiceline_take" (
-         "lineId", "version", "isCurrent", "origin", "settings",
+         "lineId", "lang", "version", "isCurrent", "origin", "settings",
          ${TAKE_COLUMNS.map((c) => `"${c}"`).join(", ")}, "generatedAt"
        )
-       select $1,
+       select $1, $2,
               coalesce(max("version"), 0) + 1,
-              true, $2, $3::jsonb,
-              ${TAKE_COLUMNS.map((_, i) => `$${i + 4}`).join(", ")},
-              $${TAKE_COLUMNS.length + 4}::timestamptz
-         from "voiceline_take" where "lineId" = $1
+              true, $3, $4::jsonb,
+              ${TAKE_COLUMNS.map((_, i) => `$${i + 5}`).join(", ")},
+              $${TAKE_COLUMNS.length + 5}::timestamptz
+         from "voiceline_take" where "lineId" = $1 and "lang" = $2
        returning "version"`,
       [
         lineId,
+        lang,
         origin,
         settings === null ? null : JSON.stringify(settings),
         ...TAKE_COLUMNS.map((column) => record[column] ?? null),
@@ -220,10 +276,10 @@ export async function insertTake(lineId, record, origin, settings = null) {
 // `file` is store-relative and extension-less, e.g. "1411/razor-hill" -- the same
 // string the manifest, the lookup table and voiceline_take all carry. Returns the
 // absolute path written, which the caller needs for ffprobe and stat.
-export async function writeAudio(file, buffer) {
-  const path = join(SOUNDS_DIR, `${file}.mp3`);
+export async function writeAudio(file, buffer, lang = LANG) {
+  const path = join(soundsDir(lang), `${file}.mp3`);
 
-  await archiveExisting(file, path);
+  await archiveExisting(file, path, lang);
 
   await mkdir(dirname(path), { recursive: true });
   // Write beside the target and rename, so an interrupted run cannot leave a truncated
@@ -239,20 +295,20 @@ export async function writeAudio(file, buffer) {
 // audio-history/{file}/v{n}.mp3 and the caller flips the take off in the
 // database. The undo is restoreTake, exactly as for a re-roll. Returns whether
 // there was a file to move.
-export async function archiveAudio(file) {
-  const path = join(SOUNDS_DIR, `${file}.mp3`);
+export async function archiveAudio(file, lang = LANG) {
+  const path = join(soundsDir(lang), `${file}.mp3`);
   if (!existsSync(path)) return false;
-  await archiveExisting(file, path);
+  await archiveExisting(file, path, lang);
   return true;
 }
 
 // Moves the live clip to audio-history/{file}/v{n}.mp3. A rename, not a copy: the bytes
 // are about to be replaced either way, and copying 300MB during a bulk re-cut is pure
 // IO for no additional safety.
-async function archiveExisting(file, path) {
+async function archiveExisting(file, path, lang) {
   if (!existsSync(path)) return;
 
-  const dir = join(HISTORY_DIR, file);
+  const dir = join(historyDir(lang), file);
   await mkdir(dir, { recursive: true });
 
   // Numbered from what is already archived rather than from voiceline_take."version".
@@ -288,15 +344,15 @@ export async function durationOf(path) {
 
 // Puts an archived take back. No API call and no credits -- this is the undo for a
 // re-roll that came out worse, which is the whole reason takes are kept.
-export async function restoreTake(file, archiveVersion) {
-  const archived = join(HISTORY_DIR, file, `v${archiveVersion}.mp3`);
+export async function restoreTake(file, archiveVersion, lang = LANG) {
+  const archived = join(historyDir(lang), file, `v${archiveVersion}.mp3`);
   if (!existsSync(archived)) {
     throw new Error(`no archived take at ${archived}`);
   }
 
-  const path = join(SOUNDS_DIR, `${file}.mp3`);
+  const path = join(soundsDir(lang), `${file}.mp3`);
   // Archive the clip being replaced first, so a restore is itself reversible.
-  await archiveExisting(file, path);
+  await archiveExisting(file, path, lang);
   await mkdir(dirname(path), { recursive: true });
   await rename(archived, path);
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Builds the ZoneLore sound packs, one zip per quality tier.
 #
-#   ./scripts/package-audio.sh                 # both tiers
+#   ./scripts/package-audio.sh                 # both English tiers
 #   ./scripts/package-audio.sh standard        # just the 64kbps one
 #   ./scripts/package-audio.sh high            # just the 128kbps one
+#   LOCALE=deDE ./scripts/package-audio.sh     # the German pack, VBR only
 #
 # Two tiers exist because this is a ~790MB download at the source bitrate, which
 # is a lot to ask for narration that is mostly listened to once per zone. The
@@ -24,12 +25,33 @@
 # Each tier ships as its own addon folder so a player can install both and switch
 # between them in-game. They share one generated Data/Sounds.lua, which reads its
 # own folder name and tier out of the .toc at load time -- see build-lookup.mjs.
+#
+# ONE LANGUAGE PER RUN, and only English gets two tiers. A language is a tenfold
+# multiplication of everything expensive here -- generation credits, a CurseForge
+# project, a several-hundred-megabyte upload -- so a second tier for a language is
+# a decision to take when somebody asks for it, not a default. LOCALE picks the
+# language; unset means English, which is every run so far.
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SRC="$REPO/addon/ZoneLoreAudio"
-TOC="$SRC/ZoneLoreAudio.toc"
+LOCALE="${LOCALE:-enUS}"
+
+# Exported, not just used here: the validate-audio and descriptions runs below are
+# Node processes that resolve their own manifest and Sounds paths from it, and a
+# packaging run that checked English's manifest against another language's files
+# would pass by looking at neither.
+export ZONELORE_LANG="$LOCALE"
+
+# The masters live in the language's own pack folder; English's are the high tier
+# it already publishes. Kept in step with packFolder() in tools/lib/locales.mjs:
+# the full locale code, because a truncation would give esES and esMX one folder.
+if [[ "$LOCALE" == "enUS" ]]; then
+  SRC="$REPO/addon/ZoneLoreAudio"
+else
+  SRC="$REPO/addon/ZoneLoreAudio_$LOCALE"
+fi
+TOC="$SRC/$(basename "$SRC").toc"
 SOUNDS="$SRC/Sounds"
 DIST="$REPO/dist"
 
@@ -65,16 +87,37 @@ JOBS="${JOBS:-$( (command -v nproc >/dev/null 2>&1 && nproc) || sysctl -n hw.ncp
 # tier_encoding names the ffmpeg recipe AND the cache directory, so changing the
 # recipe automatically starts a fresh cache instead of serving entries cut with
 # the old one. "copy" means no transcode.
-tier_folder()   { case "$1" in standard) echo "ZoneLoreAudio64";; high) echo "ZoneLoreAudio";; esac; }
+#
+# A non-English pack ships one tier and so carries no bitrate marker in its name:
+# there is nothing to tell it apart from. If a second tier is ever wanted for a
+# language, it needs a suffix of its own -- and a rename of what is already
+# published, which is the reason not to invent one now.
+tier_folder() {
+  if [[ "$LOCALE" != "enUS" ]]; then basename "$SRC"; return; fi
+  case "$1" in standard) echo "ZoneLoreAudio64";; high) echo "ZoneLoreAudio";; esac
+}
 tier_bitrate()  { case "$1" in standard) echo "64";; high) echo "128";; esac; }
 tier_encoding() { case "$1" in standard) echo "vbr-v6";; high) echo "copy";; esac; }
-tier_title()    { case "$1" in standard) echo "ZoneLore Audio 64";; high) echo "ZoneLore Audio";; esac; }
+tier_title() {
+  if [[ "$LOCALE" != "enUS" ]]; then echo "ZoneLore Audio $LOCALE"; return; fi
+  case "$1" in standard) echo "ZoneLore Audio 64";; high) echo "ZoneLore Audio";; esac
+}
 
-tiers=("standard" "high")
+# English publishes both tiers; every other language publishes the small one only.
+if [[ "$LOCALE" == "enUS" ]]; then
+  tiers=("standard" "high")
+else
+  tiers=("standard")
+fi
+
 if [[ $# -gt 0 ]]; then
   for arg in "$@"; do
-    if [[ -z "$(tier_folder "$arg")" ]]; then
+    if [[ -z "$(tier_bitrate "$arg")" ]]; then
       echo "error: unknown tier '$arg' (expected: standard, high)" >&2
+      exit 1
+    fi
+    if [[ "$LOCALE" != "enUS" && "$arg" != "standard" ]]; then
+      echo "error: $LOCALE ships the standard tier only -- see the header of this script" >&2
       exit 1
     fi
   done
@@ -89,6 +132,13 @@ fi
 version="$(sed -n 's/^## Version:[[:space:]]*//p' "$TOC" | head -1 | tr -d '\r')"
 if [[ -z "$version" ]]; then
   echo "error: no '## Version:' line in $TOC" >&2
+  exit 1
+fi
+
+# The language is set by rewriting this line, so a .toc without it would ship a
+# pack that reports itself as English and plays under English text only.
+if ! grep -q '^## X-ZoneLore-Language:' "$TOC"; then
+  echo "error: $TOC has no '## X-ZoneLore-Language:' line to rewrite" >&2
   exit 1
 fi
 
@@ -108,10 +158,22 @@ node "$REPO/tools/voice/validate-audio.mjs"
 # Each tier ships the README for its own CurseForge page, so the description a
 # player read before downloading is the file they end up with.
 node "$REPO/tools/descriptions.mjs" --write >/dev/null
-tier_readme() { case "$1" in
-  standard) echo "$REPO/dist/descriptions/zoneloreaudio64.md";;
-  high)     echo "$REPO/dist/descriptions/zoneloreaudio.md";;
-esac; }
+# A language with no CurseForge page of its own ships the English description
+# rather than nothing: the page it was downloaded from is the honest fallback
+# until somebody writes one for it.
+tier_readme() {
+  local path
+  if [[ "$LOCALE" != "enUS" ]]; then
+    path="$REPO/dist/descriptions/$(echo "$(tier_folder "$1")" | tr '[:upper:]' '[:lower:]').md"
+    [[ -f "$path" ]] || path="$REPO/dist/descriptions/zoneloreaudio64.md"
+    echo "$path"
+    return
+  fi
+  case "$1" in
+    standard) echo "$REPO/dist/descriptions/zoneloreaudio64.md";;
+    high)     echo "$REPO/dist/descriptions/zoneloreaudio.md";;
+  esac
+}
 
 # Transcoding needs ffmpeg, but only for the tiers that are not a straight copy.
 for tier in "${tiers[@]}"; do
@@ -142,10 +204,10 @@ for tier in "${tiers[@]}"; do
   # copied into place, so the tree the client sees is identical apart from the
   # bitrate and the three .toc lines rewritten below.
   rsync -a --exclude 'Sounds/' --exclude '.DS_Store' "$SRC/" "$staging/$folder/"
-  # The .toc must be named after its folder. The high tier already is, and mv
+  # The .toc must be named after its folder. The source tier already is, and mv
   # onto itself is an error rather than a no-op.
-  if [[ "$folder" != "ZoneLoreAudio" ]]; then
-    mv "$staging/$folder/ZoneLoreAudio.toc" "$staging/$folder/$folder.toc"
+  if [[ "$folder" != "$(basename "$SRC")" ]]; then
+    mv "$staging/$folder/$(basename "$SRC").toc" "$staging/$folder/$folder.toc"
   fi
   cp "$(tier_readme "$tier")" "$staging/$folder/README.md"
 
@@ -160,6 +222,7 @@ for tier in "${tiers[@]}"; do
     -e "s|^## Title:.*|## Title: $title|" \
     -e "s|^## X-ZoneLore-Quality:.*|## X-ZoneLore-Quality: $tier|" \
     -e "s|^## X-ZoneLore-Bitrate:.*|## X-ZoneLore-Bitrate: $bitrate|" \
+    -e "s|^## X-ZoneLore-Language:.*|## X-ZoneLore-Language: $LOCALE|" \
     "$staging/$folder/$folder.toc"
   rm -f "$staging/$folder/$folder.toc.bak"
 

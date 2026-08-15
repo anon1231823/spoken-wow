@@ -10,6 +10,7 @@
 -- clutter parked next to the minimap.
 
 local ADDON_NAME, ZoneLore = ...
+local L = ZoneLore.L
 
 -- Two rows of two rather than one row of four: four buttons in a line make a
 -- widget too wide to park under the minimap. The width is set by the longest
@@ -92,13 +93,13 @@ local function Refresh()
 	end
 
 	label:SetText(ZoneLore:GetAudioLabel(mapID, areaKey))
-	pauseButton:SetText(isPaused and "Play" or "Pause")
+	pauseButton:SetText(isPaused and L.PLAY or L.PAUSE)
 	reportButton:SetTarget(mapID, areaKey)
-	readButton:SetText(ZoneLore:Get("stopAudioOnRead") and "Read instead" or "Read")
+	readButton:SetText(ZoneLore:Get("stopAudioOnRead") and L.READ_INSTEAD or L.READ)
 
 	-- With a queue waiting, the useful action is moving on to it rather than
 	-- ending everything. Stop is still there on right-click; see the tooltip.
-	stopButton:SetText(QueueLength() > 0 and "Next" or "Stop")
+	stopButton:SetText(QueueLength() > 0 and L.NEXT or L.STOP)
 
 	bar:Show()
 end
@@ -141,18 +142,18 @@ local function BuildBar()
 	pauseButton = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
 	pauseButton:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
 	pauseButton:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", PADDING - 2, ROW_TWO_Y)
-	pauseButton:SetText("Pause")
+	pauseButton:SetText(L.PAUSE)
 	pauseButton:SetScript("OnClick", function()
 		ZoneLore:TogglePauseLore()
 	end)
 	pauseButton:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 		if ZoneLore:IsPaused() then
-			GameTooltip:SetText("Play")
-			GameTooltip:AddLine("Starts this lore again from the beginning.", 1, 0.8, 0.2, true)
+			GameTooltip:SetText(L.PLAY)
+			GameTooltip:AddLine(L.PLAY_TOOLTIP, 1, 0.8, 0.2, true)
 		else
-			GameTooltip:SetText("Pause")
-			GameTooltip:AddLine("The game cannot resume a sound part-way through, so playing again starts from the beginning.", 1, 0.8, 0.2, true)
+			GameTooltip:SetText(L.PAUSE)
+			GameTooltip:AddLine(L.PAUSE_TOOLTIP, 1, 0.8, 0.2, true)
 		end
 		GameTooltip:Show()
 	end)
@@ -161,7 +162,7 @@ local function BuildBar()
 	stopButton = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
 	stopButton:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
 	stopButton:SetPoint("BOTTOMRIGHT", bar, "BOTTOMRIGHT", -(PADDING - 2), ROW_TWO_Y)
-	stopButton:SetText("Stop")
+	stopButton:SetText(L.STOP)
 	-- Right-click has to be asked for explicitly; a button registered for
 	-- LeftButton only never sees it.
 	stopButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
@@ -175,13 +176,13 @@ local function BuildBar()
 	stopButton:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 		if QueueLength() > 0 then
-			GameTooltip:SetText("Next")
-			GameTooltip:AddLine(("%d more waiting."):format(QueueLength()), 1, 0.82, 0)
-			GameTooltip:AddLine("Right-click to stop and discard the rest.", 1, 1, 1, true)
+			GameTooltip:SetText(L.NEXT)
+			GameTooltip:AddLine(L.NEXT_TOOLTIP_COUNT:format(QueueLength()), 1, 0.82, 0)
+			GameTooltip:AddLine(L.NEXT_TOOLTIP_RIGHT_CLICK, 1, 1, 1, true)
 		else
-			GameTooltip:SetText("Stop")
+			GameTooltip:SetText(L.STOP)
 		end
-		GameTooltip:AddLine("Drag these controls to move them. /zl bar resets their position.", 0.7, 0.7, 0.7, true)
+		GameTooltip:AddLine(L.BAR_DRAG_HINT, 0.7, 0.7, 0.7, true)
 		GameTooltip:Show()
 	end)
 	stopButton:SetScript("OnLeave", GameTooltip_Hide)
@@ -193,7 +194,7 @@ local function BuildBar()
 	readButton = CreateFrame("Button", nil, bar, "UIPanelButtonTemplate")
 	readButton:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
 	readButton:SetPoint("BOTTOMLEFT", bar, "BOTTOMLEFT", PADDING - 2, ROW_ONE_Y)
-	readButton:SetText("Read")
+	readButton:SetText(L.READ)
 	readButton:SetScript("OnClick", function()
 		local mapID, areaKey = ZoneLore:GetNowPlaying()
 		if not mapID then
@@ -209,14 +210,13 @@ local function BuildBar()
 	readButton:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 		if ZoneLore:Get("stopAudioOnRead") then
-			GameTooltip:SetText("Read instead")
-			GameTooltip:AddLine("Opens this lore in the window and stops the narration, "
-				.. "discarding anything queued behind it.", 1, 1, 1, true)
+			GameTooltip:SetText(L.READ_INSTEAD)
+			GameTooltip:AddLine(L.READ_INSTEAD_TOOLTIP, 1, 1, 1, true)
 		else
-			GameTooltip:SetText("Read")
-			GameTooltip:AddLine("Opens this lore in the window and keeps playing.", 1, 1, 1, true)
+			GameTooltip:SetText(L.READ)
+			GameTooltip:AddLine(L.READ_TOOLTIP, 1, 1, 1, true)
 		end
-		GameTooltip:AddLine("Which one this does is a ZoneLore setting.", 0.7, 0.7, 0.7, true)
+		GameTooltip:AddLine(L.READ_SETTING_HINT, 0.7, 0.7, 0.7, true)
 		GameTooltip:Show()
 	end)
 	readButton:SetScript("OnLeave", GameTooltip_Hide)

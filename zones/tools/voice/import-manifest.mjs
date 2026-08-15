@@ -19,7 +19,13 @@ import { fileURLToPath } from "node:url";
 
 import { loadEnvFile } from "../lib/env.mjs";
 import * as db from "./db.mjs";
-import { insertTake, MANIFEST_PATH } from "./store.mjs";
+import { LANG, insertTake, manifestPath } from "./store.mjs";
+
+// One language per run, like generate.mjs: ZONELORE_LANG picks the manifest and
+// the rows. Named explicitly at every use rather than left to the defaults, so a
+// reader can see the import is scoped -- the "already known" check in particular
+// has to be, or a second language's import would skip every line English has.
+const MANIFEST_PATH = manifestPath(LANG);
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
@@ -37,13 +43,16 @@ async function main() {
     return;
   }
 
-  const { rows } = await db.query(`select distinct "lineId" from "voiceline_take"`);
+  const { rows } = await db.query(
+    `select distinct "lineId" from "voiceline_take" where "lang" = $1`,
+    [LANG],
+  );
   const known = new Set(rows.map((row) => row.lineId));
 
   const fresh = ids.filter((id) => !known.has(id));
   const already = ids.length - fresh.length;
 
-  console.log(`${MANIFEST_PATH}`);
+  console.log(`${MANIFEST_PATH}  (${LANG})`);
   console.log(`  ${ids.length} entries, ${fresh.length} to import, ${already} already known`);
 
   if (dryRun) {
@@ -58,7 +67,7 @@ async function main() {
     // settings stays null: the manifest never recorded what voiceSettings a line was
     // made with, and inventing today's config for a clip cut weeks ago would be a
     // reproducible-looking lie.
-    await insertTake(id, manifest[id], "imported", null);
+    await insertTake(id, manifest[id], "imported", null, LANG);
     imported++;
     if (imported % 100 === 0) console.log(`  ${imported}/${fresh.length}`);
   }

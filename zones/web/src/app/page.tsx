@@ -1,18 +1,16 @@
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-import { Explorer } from "@/components/Explorer";
-import { zoneFacets } from "@/lib/catalogue";
+import { BASE_LANG, carriedQuery } from "@/lib/lang";
 
-// The zone list is derived from committed lore data that cannot change while the
-// server runs, so computing it here and passing it down beats a round trip that would
-// buy nothing but an empty dropdown on first paint.
-export default async function Page() {
-  const zones = await zoneFacets();
-
-  return (
-    // Suspense is required: Explorer calls useSearchParams().
-    <Suspense>
-      <Explorer zones={zones} />
-    </Suspense>
-  );
+// Every page that depends on the language lives under one (/enUS, /deDE, ...). The
+// bare paths stay working and send you to English: they are what every existing link
+// says -- shared URLs, the addon's Report button, anything already bookmarked -- and
+// English is what all of them meant when they were written. The query rides along,
+// so a bookmarked "/?zone=1426" still lands filtered.
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  redirect(`/${BASE_LANG}${carriedQuery(await searchParams)}`);
 }
