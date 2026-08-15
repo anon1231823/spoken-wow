@@ -46,7 +46,12 @@ export type CommitInput = {
   characters: number;
   /** From the response header; null when ElevenLabs did not report one. */
   credits: number | null;
-  settings: VoiceSettings;
+  /**
+   * The settings actually sent. A dialogue take carries only `stability`, because that is
+   * all the text-to-dialogue endpoint accepts - recording the other three would describe a
+   * take that never had them.
+   */
+  settings: VoiceSettings | Pick<VoiceSettings, "stability">;
   /**
    * The text actually sent, and the dictionary version applied to it.
    *

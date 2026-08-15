@@ -46,6 +46,8 @@ const DEFAULT_VOICES = {
   "human-male-standard": "voice-human-male-standard",
   // The shared line's six NPCs are all officials; the solo one is a standard.
   "human-male-official": "voice-human-male-official",
+  // Not a race-gender-flavor slot: it reads stage directions, and no corpus line names it.
+  "narrator-male": "voice-narrator-male",
 };
 
 function stub({ voices = DEFAULT_VOICES, speech }: StubOptions = {}) {
@@ -66,6 +68,11 @@ function stub({ voices = DEFAULT_VOICES, speech }: StubOptions = {}) {
       return Response.json([
         { model_id: "eleven_multilingual_v2", name: "Multilingual v2", can_do_text_to_speech: true },
       ]);
+    }
+    if (url.endsWith("/v1/text-to-dialogue")) {
+      return speech
+        ? speech()
+        : new Response(MP3, { status: 200, headers: { "content-type": "audio/mpeg" } });
     }
     if (url.includes("/v1/text-to-speech/")) {
       return speech
@@ -349,14 +356,48 @@ describe("a line whose spoken text has been rewritten", () => {
     expect(after.spokenText).toBe("Plenty of leather.");
   });
 
-  it("no longer refuses a line that is nothing but a stage direction", async () => {
-    // It used to need an override to say anything at all. The narrator reads it now, so the
-    // gate lets it through untouched - the dialogue request itself arrives in a later task.
-    const { options } = stub();
+  it("sends a stage direction to the narrator, as dialogue", async () => {
+    const { options, calls } = stub();
 
     const result = await regenerate(STAGE_DIRECTION, options);
-
     expect(result.ok).toBe(true);
+
+    // The dialogue endpoint, not text-to-speech: two voices, one file.
+    const dialogue = calls.find((call) => call.url.endsWith("/v1/text-to-dialogue"));
+    expect(dialogue).toBeDefined();
+    expect(calls.some((call) => call.url.includes("/v1/text-to-speech/"))).toBe(false);
+
+    const body = dialogue!.body as {
+      inputs: { text: string; voice_id: string }[];
+      settings: Record<string, unknown>;
+    };
+    // The whole line is a direction, so there is one turn and the narrator speaks it, with
+    // the brackets stripped rather than read aloud.
+    expect(body.inputs).toEqual([
+      { text: "Sirra begins translating the note...", voice_id: "voice-narrator-male" },
+    ]);
+    // Only stability: the endpoint documents nothing else, so nothing else is claimed.
+    expect(body.settings).toEqual({ stability: expect.any(Number) });
+  });
+
+  it("records the narrator against the take", async () => {
+    const { options } = stub();
+    await regenerate(STAGE_DIRECTION, options);
+
+    const { rows } = await db().query<{ narratorVoice: string | null; settings: unknown }>(
+      `select "narratorVoice", "settings" from "voiceline_version" where "file" = $1`,
+      [fileFor(STAGE_DIRECTION)],
+    );
+    expect(rows[0].narratorVoice).toBe("narrator-male");
+    expect(rows[0].settings).toEqual({ stability: expect.any(Number) });
+  });
+
+  it("leaves an ordinary line on text-to-speech", async () => {
+    const { options, calls } = stub();
+    await regenerate(SOLO, options);
+
+    expect(calls.some((call) => call.url.includes("/v1/text-to-speech/"))).toBe(true);
+    expect(calls.some((call) => call.url.endsWith("/v1/text-to-dialogue"))).toBe(false);
   });
 
   it("still refuses progress text, which no rewrite can make voiceable", async () => {

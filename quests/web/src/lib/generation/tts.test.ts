@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildPayload, textToSpeech } from "./tts";
+import {
+  buildDialoguePayload,
+  buildPayload,
+  dialogueCharacters,
+  textToDialogue,
+  textToSpeech,
+} from "./tts";
 
 const SETTINGS = {
   stability: 0.5,
@@ -237,5 +243,76 @@ describe("what a request actually cost", () => {
     const fetchImpl = stub(audioResponse("ID3bytes", "0"));
     const result = await textToSpeech(REQUEST, { ...OPTIONS, fetchImpl });
     expect(result.ok && result.credits).toBe(0);
+  });
+});
+
+const base = {
+  inputs: [
+    { text: "Excellent.", voiceId: "npc-voice" },
+    { text: "He reads.", voiceId: "narrator-voice" },
+  ],
+  modelId: "eleven_v3",
+  stability: 0.5,
+  seed: null,
+  dictionary: null,
+};
+
+describe("buildDialoguePayload", () => {
+  it("keeps the turns in order, each with its own voice", () => {
+    expect(buildDialoguePayload(base).inputs).toEqual([
+      { text: "Excellent.", voice_id: "npc-voice" },
+      { text: "He reads.", voice_id: "narrator-voice" },
+    ]);
+  });
+
+  it("sends only stability, which is all the endpoint documents", () => {
+    // Recording settings the API ignored would make a take's provenance a lie.
+    expect(buildDialoguePayload(base).settings).toEqual({ stability: 0.5 });
+  });
+
+  it("omits the seed when there is none, matching buildPayload", () => {
+    expect("seed" in buildDialoguePayload(base)).toBe(false);
+    expect(buildDialoguePayload({ ...base, seed: 7 }).seed).toBe(7);
+  });
+
+  it("carries a pronunciation dictionary with its version pinned", () => {
+    const payload = buildDialoguePayload({
+      ...base,
+      dictionary: { dictionaryId: "d1", versionId: "v1" },
+    });
+    expect(payload.pronunciation_dictionary_locators).toEqual([
+      { pronunciation_dictionary_id: "d1", version_id: "v1" },
+    ]);
+  });
+
+  it("carries the language on a model that takes one", () => {
+    expect(buildDialoguePayload(base).language_code).toBeDefined();
+    expect(buildDialoguePayload({ ...base, modelId: "eleven_multilingual_v2" }).language_code)
+      .toBeUndefined();
+  });
+});
+
+describe("dialogueCharacters", () => {
+  it("counts every turn, since the limit is across all of them", () => {
+    expect(dialogueCharacters(base)).toBe("Excellent.".length + "He reads.".length);
+  });
+});
+
+describe("textToDialogue", () => {
+  it("refuses to send more than the endpoint accepts, without calling it", async () => {
+    let called = false;
+    const result = await textToDialogue(
+      { ...base, inputs: [{ text: "x".repeat(2_001), voiceId: "npc-voice" }] },
+      {
+        apiKey: "test-key",
+        fetchImpl: (async () => {
+          called = true;
+          return new Response(null);
+        }) as unknown as typeof globalThis.fetch,
+      },
+    );
+
+    expect(result.ok).toBe(false);
+    expect(called).toBe(false);
   });
 });

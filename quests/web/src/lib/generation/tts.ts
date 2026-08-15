@@ -68,6 +68,23 @@ export type SpeechRequest = {
   dictionary?: DictionaryLocator | null;
 };
 
+/**
+ * Several voices, one file.
+ *
+ * Used when a line carries a stage direction: the NPC speaks its own words and a narrator
+ * reads the bracketed part, and ElevenLabs stitches the turns into a single mp3. Two calls
+ * concatenated would also play, but the joined file measures wrong - mutagen reads the first
+ * clip's header and stops - and sound_length_table.lua is built from that measurement.
+ */
+export type DialogueRequest = {
+  inputs: { text: string; voiceId: string }[];
+  modelId: string;
+  /** The only setting the endpoint documents. See buildDialoguePayload. */
+  stability: number;
+  seed: number | null;
+  dictionary?: DictionaryLocator | null;
+};
+
 export type SpeechResult =
   | {
       ok: true;
@@ -124,9 +141,47 @@ export function buildPayload(request: SpeechRequest): Record<string, unknown> {
   return payload;
 }
 
-export async function textToSpeech(
-  request: SpeechRequest,
-  options: ElevenLabsOptions = {},
+/**
+ * The dialogue payload.
+ *
+ * Only `stability` is sent. The endpoint's settings object documents nothing else, and
+ * similarity_boost, style and use_speaker_boost would be sent only to be ignored - which the
+ * version row would then record as though they had applied.
+ */
+export function buildDialoguePayload(request: DialogueRequest): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    inputs: request.inputs.map((input) => ({ text: input.text, voice_id: input.voiceId })),
+    model_id: request.modelId,
+    settings: { stability: request.stability },
+  };
+  if (request.seed !== null) payload.seed = request.seed;
+  if (acceptsLanguage(request.modelId)) payload.language_code = CORPUS_LANGUAGE;
+  if (request.dictionary) {
+    payload.pronunciation_dictionary_locators = [
+      {
+        pronunciation_dictionary_id: request.dictionary.dictionaryId,
+        version_id: request.dictionary.versionId,
+      },
+    ];
+  }
+  return payload;
+}
+
+/** Total characters across every turn, which is what the endpoint's limit counts. */
+export function dialogueCharacters(request: DialogueRequest): number {
+  return request.inputs.reduce((sum, input) => sum + input.text.length, 0);
+}
+
+/**
+ * One audio request, whichever endpoint it goes to.
+ *
+ * Shared so that speech and dialogue cannot drift apart on the things that matter equally to
+ * both: an error served with 200, an empty body, and where the credit count comes from.
+ */
+async function requestAudio(
+  path: string,
+  payload: Record<string, unknown>,
+  options: ElevenLabsOptions,
 ): Promise<SpeechResult> {
   const apiKey = options.apiKey ?? process.env.ELEVENLABS_API_KEY;
   if (!apiKey) return { ok: false, failure: failure("auth", "ELEVENLABS_API_KEY is not set") };
@@ -136,10 +191,10 @@ export async function textToSpeech(
 
   let response: Response;
   try {
-    response = await fetchImpl(`${baseUrl}/v1/text-to-speech/${request.voiceId}`, {
+    response = await fetchImpl(`${baseUrl}${path}`, {
       method: "POST",
       headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify(buildPayload(request)),
+      body: JSON.stringify(payload),
     });
   } catch (error) {
     // DNS, TLS, a dropped connection: not a batch-stopping condition, because the next line
@@ -176,6 +231,35 @@ export async function textToSpeech(
   }
 
   return { ok: true, audio, credits };
+}
+
+export async function textToSpeech(
+  request: SpeechRequest,
+  options: ElevenLabsOptions = {},
+): Promise<SpeechResult> {
+  return requestAudio(`/v1/text-to-speech/${request.voiceId}`, buildPayload(request), options);
+}
+
+/** The documented ceiling across all turns. Worth asserting rather than discovering. */
+const DIALOGUE_MAX_CHARACTERS = 2_000;
+
+export async function textToDialogue(
+  request: DialogueRequest,
+  options: ElevenLabsOptions = {},
+): Promise<SpeechResult> {
+  const characters = dialogueCharacters(request);
+  if (characters > DIALOGUE_MAX_CHARACTERS) {
+    // The longest affected corpus line is 515 characters, so this is a tripwire for a line
+    // that grew or an override that ran away, not a case to chunk around.
+    return {
+      ok: false,
+      failure: failure(
+        "bad-request",
+        `dialogue is ${characters} characters, over the ${DIALOGUE_MAX_CHARACTERS} the endpoint accepts`,
+      ),
+    };
+  }
+  return requestAudio("/v1/text-to-dialogue", buildDialoguePayload(request), options);
 }
 
 function message(error: unknown): string {

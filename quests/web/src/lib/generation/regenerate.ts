@@ -26,7 +26,8 @@ import { canonicalNpcId, seedFor } from "./seed";
 import { commitVersion } from "./history";
 import { currentConfig } from "./settings";
 import { generationStatus } from "./status";
-import { textToSpeech } from "./tts";
+import { NARRATOR_VOICE, segments } from "./narration";
+import { textToDialogue, textToSpeech } from "./tts";
 import { BUSY, withFileLock } from "./lock";
 import { failure, type Failure } from "./errors";
 import type { ElevenLabsOptions } from "@/lib/voices/elevenlabs";
@@ -132,17 +133,50 @@ export async function regenerateLine(
     // whichever row the button was pressed on. See canonicalNpcId.
     const seed = seedFor(canonicalNpcId(group), config.seedStrategy);
 
-    const speech = await textToSpeech(
-      {
-        voiceId,
-        text: spokenText,
-        modelId: config.modelId,
-        voiceSettings: config.voiceSettings,
-        seed,
-        dictionary,
-      },
-      options,
-    );
+    // A capitalised <stage direction> is the game narrating, not the NPC talking, so the line
+    // is spoken by two voices and ElevenLabs stitches the turns into one file. Everything
+    // below - seed, dictionary, credit accounting - is identical either way.
+    const parts = segments(spokenText);
+    const narrated = parts.some((part) => part.speaker === "narrator");
+
+    // Resolved by name from the account, because narrator-male is not a race-gender-flavor
+    // slot and so has no corpus line to read it off.
+    const narratorVoiceId = narrated ? status.voiceIds.get(NARRATOR_VOICE) : undefined;
+    if (narrated && !narratorVoiceId) {
+      return {
+        ok: false,
+        failure: failure(
+          "voice-missing",
+          `no ElevenLabs voice named "${NARRATOR_VOICE}". Create it on /voices before generating a line with stage directions.`,
+        ),
+      };
+    }
+
+    const speech = narrated
+      ? await textToDialogue(
+          {
+            inputs: parts.map((part) => ({
+              text: part.text,
+              voiceId: part.speaker === "narrator" ? narratorVoiceId! : voiceId,
+            })),
+            modelId: config.modelId,
+            stability: config.voiceSettings.stability,
+            seed,
+            dictionary,
+          },
+          options,
+        )
+      : await textToSpeech(
+          {
+            voiceId,
+            text: spokenText,
+            modelId: config.modelId,
+            voiceSettings: config.voiceSettings,
+            seed,
+            dictionary,
+          },
+          options,
+        );
     if (!speech.ok) return { ok: false, failure: speech.failure };
 
     const committed = await commitVersion({
@@ -150,14 +184,17 @@ export async function regenerateLine(
       data: speech.audio,
       lineId,
       voice: line.voice,
-      // Task 5 supplies the narrator; until then every take is single-voice.
-      narratorVoice: null,
+      narratorVoice: narrated ? NARRATOR_VOICE : null,
       voiceId,
       modelId: config.modelId,
       seed,
       characters: spokenText.length,
       credits: speech.credits,
-      settings: config.voiceSettings,
+      // What was actually sent: the dialogue endpoint takes only stability, and a row
+      // claiming the other three would describe a take that never had them.
+      settings: narrated
+        ? { stability: config.voiceSettings.stability }
+        : config.voiceSettings,
       spokenText,
       dictionaryVersion: dictionary?.versionId ?? null,
       createdBy,

@@ -57,7 +57,8 @@ export type NewVersion = {
   seed?: number | null;
   characters?: number | null;
   credits?: number | null;
-  settings?: VoiceSettings | null;
+  /** What was sent: a dialogue take carries only `stability`. */
+  settings?: VoiceSettings | Pick<VoiceSettings, "stability"> | null;
   spokenHash?: string | null;
   dictionaryVersion?: string | null;
   createdBy?: string | null;
