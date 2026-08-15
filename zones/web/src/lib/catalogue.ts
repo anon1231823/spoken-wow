@@ -126,11 +126,26 @@ async function buildOverlaidCatalogue(lang: Lang): Promise<CatalogueEntry[]> {
   // work to do per line even when nothing is translated yet.
   if (lang === BASE_LANG && overrides.size === 0) return entries;
 
+  // A zone's name comes from its own line ("z:{mapID}"), and every line in the zone
+  // carries it as zoneName -- the dropdown, the Zone column and the report page's
+  // heading all read that. So a translated zone line renames the zone for its
+  // subzones too. A zone whose line is not translated keeps the English name: it is a
+  // label, not lore, and a blank label would make the list unreadable rather than
+  // honest.
+  const zoneNames = new Map<number, string>();
+  for (const entry of entries) {
+    if (entry.kind !== "zone") continue;
+    const row = overrides.get(entry.id) ?? english.get(entry.id);
+    if (row) zoneNames.set(entry.mapID, row.name);
+  }
+
   return entries.map((entry) => {
     const englishRow = english.get(entry.id);
-    const source = englishRow
-      ? { ...entry, name: englishRow.name, full: englishRow.full }
-      : entry;
+    const source = {
+      ...entry,
+      ...(englishRow ? { name: englishRow.name, full: englishRow.full } : {}),
+      zoneName: zoneNames.get(entry.mapID) ?? entry.zoneName,
+    };
 
     const row = overrides.get(entry.id);
     if (!row) {
@@ -327,8 +342,8 @@ export async function isKnownLine(lineId: string, lang: Lang = BASE_LANG): Promi
 /** The zone dropdown's options, derived from the catalogue rather than hardcoded. */
 export type ZoneFacet = { mapID: number; name: string; lines: number };
 
-export async function zoneFacets(): Promise<ZoneFacet[]> {
-  const entries = await catalogue();
+export async function zoneFacets(lang: Lang = BASE_LANG): Promise<ZoneFacet[]> {
+  const entries = await catalogue(lang);
   const counts = new Map<number, ZoneFacet>();
 
   for (const entry of entries) {
