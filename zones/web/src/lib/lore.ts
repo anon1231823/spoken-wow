@@ -99,6 +99,13 @@ export async function saveLore(args: {
   lineId: string;
   full: string;
   short?: string | null;
+  /**
+   * The place name in this language. Only for a translation: the English name is
+   * the corpus's, and the key every lookup and slug derives from stays whatever it
+   * is either way. Blank or absent keeps the name the row already has -- English's,
+   * for a first translation.
+   */
+  name?: string | null;
   note?: string | null;
   editedBy: string;
   expectedVersion?: number | null;
@@ -151,12 +158,13 @@ export async function saveLore(args: {
 
     const full = args.full.trim();
     if (!full) throw new Error("the text cannot be empty");
+    const name = (lang !== BASE_LANG && args.name?.trim()) || current.name;
 
     // A save that changes nothing must not spend a version number: the history is a
     // record of what the text has been, not of who opened the dialog. A translation
     // that happens to match the English is still a translation -- somebody decided the
     // name stays as it is -- so this only applies within one language.
-    if (!translating && full === current.full && (args.short ?? null) === null) {
+    if (!translating && full === current.full && name === current.name && (args.short ?? null) === null) {
       await client.query("commit");
       return toVersion(current);
     }
@@ -190,7 +198,7 @@ export async function saveLore(args: {
         current.mapID,
         current.kind,
         current.key,
-        current.name,
+        name,
         full,
         short,
         shortIsManual,

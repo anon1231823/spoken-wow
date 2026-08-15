@@ -427,7 +427,9 @@ an honest empty state that prose from another language does not improve on.
 ### Translations arrive as a spreadsheet
 
 Nothing here translates. A language's lore is written by people, either one line at a
-time in the explorer's edit dialog under that language, or in bulk through a sheet:
+time in the explorer's edit dialog under that language — which, when translating, also
+takes the place's name in that language, since a zone's name is its own line's name
+and every row in the zone shows it — or in bulk through a sheet:
 
 ```sh
 make lore-sheet LOCALE=deDE                          # dist/lore-deDE.csv, English beside the blanks

@@ -88,7 +88,9 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // Text rewritten since this page was fetched, overlaid like `flagged` and for the same
   // reason: re-running the search would reorder the table under the cursor, and with
   // ?state=stale the line just edited would vanish as it was saved.
-  const [rewritten, setRewritten] = useState<Record<string, string>>({});
+  const [rewritten, setRewritten] = useState<
+    Record<string, { full: string; name: string; kind: ResultLine["kind"]; mapID: number }>
+  >({});
   const [reportFor, setReportFor] = useState<FeedbackTarget | null>(null);
   // One expansion at a time, mirroring `current`: the panel is a paragraph of prose to
   // read, and a table with six of them open is no longer a table.
@@ -242,13 +244,23 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       let out = line;
       if (line.id in flagged) out = { ...out, flag: flagged[line.id] };
       if (line.id in rewritten) {
-        const text = rewritten[line.id];
+        const { full: text, name } = rewritten[line.id];
         out = {
           ...out,
           text,
+          name,
           chars: text.length,
           state: out.state === "missing" ? "missing" : "stale",
+          // A save is a translation, whatever the row said before it was fetched.
+          ...(out.translated === false ? { translated: true } : {}),
         };
+      }
+      // A renamed zone line renames the zone for every row in it, as the catalogue
+      // will once it is refetched.
+      for (const saved of Object.values(rewritten)) {
+        if (saved.kind === "zone" && saved.mapID === line.mapID && saved.name !== out.zoneName) {
+          out = { ...out, zoneName: saved.name };
+        }
       }
       return out;
     },
@@ -680,7 +692,12 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         line={editFor}
         lang={lang}
         onClose={() => setEditFor(null)}
-        onSaved={(line, full) => setRewritten((current) => ({ ...current, [line.id]: full }))}
+        onSaved={(line, full, name) =>
+          setRewritten((current) => ({
+            ...current,
+            [line.id]: { full, name, kind: line.kind, mapID: line.mapID },
+          }))
+        }
       />
 
       <FeedbackDialog target={reportFor} onClose={() => setReportFor(null)} />
