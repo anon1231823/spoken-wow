@@ -41,6 +41,9 @@ export function filtersFromParams(params: URLSearchParams): LineFilters {
     voice: oneOf(params.get("voice"), voices),
     source: oneOf(params.get("source"), SOURCES),
     npcType: oneOf(params.get("type"), NPC_TYPES),
+    // Absent means hidden, so the default state needs no parameter and a bare URL is the
+    // useful view rather than the padded one.
+    includeProgress: params.get("progress") === "1",
     issues: issueLevel(params.get("issues")),
     // The one filter with no closed set to check against: a category comes from the scan,
     // which grows them, and the review queue links here with whichever it has. An unknown

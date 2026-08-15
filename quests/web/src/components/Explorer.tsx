@@ -76,6 +76,7 @@ function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.voice) params.set("voice", filters.voice);
   if (filters.source) params.set("source", filters.source);
   if (filters.npcType) params.set("type", filters.npcType);
+  if (filters.includeProgress) params.set("progress", "1");
   if (filters.issues) params.set("issues", String(filters.issues));
   if (filters.issueCategory) params.set("issue", filters.issueCategory);
   if (filters.finding) params.set("finding", String(filters.finding));
@@ -112,6 +113,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       voice: params.get("voice") ?? undefined,
       source: (params.get("source") as LineFilters["source"]) ?? undefined,
       npcType: (params.get("type") as LineFilters["npcType"]) ?? undefined,
+      includeProgress: params.get("progress") === "1",
       issues: issueLevelFromParam(params.get("issues")),
       issueCategory: params.get("issue") ?? undefined,
       finding: Number(params.get("finding")) || undefined,
@@ -210,6 +212,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
         ...("voice" in next ? { voice: next.voice } : {}),
         ...("source" in next ? { source: next.source } : {}),
         ...("npcType" in next ? { type: next.npcType } : {}),
+        ...("includeProgress" in next
+          ? { progress: next.includeProgress ? "1" : undefined }
+          : {}),
         ...("issues" in next ? { issues: next.issues } : {}),
         ...("issueCategory" in next ? { issue: next.issueCategory } : {}),
         ...("finding" in next ? { finding: next.finding } : {}),

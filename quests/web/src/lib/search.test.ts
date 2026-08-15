@@ -7,8 +7,18 @@ import { batchJobs, isGap, matchingLines, search } from "./search";
 const corpus = loadCorpus();
 const store = storeIndex();
 const find = (options: Parameters<typeof search>[2]) => search(corpus, store, options);
-/** The whole result rather than a page, for assertions about the match set itself. */
+/**
+ * The whole result rather than a page, for assertions about the match set itself.
+ *
+ * Every test using this is about some axis other than progress text, so it opts progress back
+ * in: leaving it out would quietly turn each count into "...excluding progress", which is a
+ * weaker fact than the one the test means to pin. The default has tests of its own below.
+ */
 const all = (options: Parameters<typeof search>[2] = {}) =>
+  find({ includeProgress: true, ...options, limit: 20_000 }).lines;
+
+/** The same, with the app's real defaults, for the tests that are about those defaults. */
+const asShipped = (options: Parameters<typeof search>[2] = {}) =>
   find({ ...options, limit: 20_000 }).lines;
 
 const npcKeys = (lines: { npcType: "creature" | "gameobject" | "item"; npcId: number }[]) =>
@@ -16,7 +26,9 @@ const npcKeys = (lines: { npcType: "creature" | "gameobject" | "item"; npcId: nu
 
 describe("search by npc", () => {
   it("finds an npc by name, case-insensitively", () => {
-    const result = find({ q: "dughan", filter: "npc", limit: 20_000 });
+    // includeProgress so the total stays a fact about how many lines Dughan has, rather
+    // than how many of them happen not to be progress text.
+    const result = find({ q: "dughan", filter: "npc", includeProgress: true, limit: 20_000 });
     expect(npcKeys(result.lines)).toEqual(["creature:240"]);
     expect(result.npcCount).toBe(1);
     expect(result.total).toBe(22);
@@ -127,6 +139,21 @@ describe("field filters", () => {
     expect(lines.length).toBeGreaterThan(0);
     expect(lines.every((l) => l.npcId === 240 && l.source === "gossip")).toBe(true);
   });
+
+  it("hides progress text unless asked for", () => {
+    // 3,093 of the corpus's 17,507 lines, and no code path will ever voice one.
+    expect(asShipped().every((l) => l.source !== "progress")).toBe(true);
+    expect(asShipped()).toHaveLength(14414);
+    expect(all()).toHaveLength(17507);
+  });
+
+  it("treats asking for the progress source as asking to see them", () => {
+    // Otherwise picking `progress` in the source filter would return nothing at all, which
+    // reads as a broken filter rather than as a default doing its job.
+    const lines = asShipped({ source: "progress" });
+    expect(lines).toHaveLength(3093);
+    expect(lines.every((l) => l.source === "progress")).toBe(true);
+  });
 });
 
 describe("gaps", () => {
@@ -154,7 +181,8 @@ describe("annotation", () => {
 
 describe("paging", () => {
   it("reports the whole match set, not the page", () => {
-    const page = find({});
+    // Against the whole corpus, so includeProgress: corpus.lineCount counts every line.
+    const page = find({ includeProgress: true });
     expect(page.lines).toHaveLength(50);
     expect(page.total).toBe(corpus.lineCount);
     expect(page.npcCount).toBeGreaterThan(2_000);
@@ -174,7 +202,7 @@ describe("paging", () => {
 
   it("ends with a short page rather than an empty one", () => {
     const last = Math.floor((corpus.lineCount - 1) / 50) * 50;
-    const page = find({ offset: last });
+    const page = find({ includeProgress: true, offset: last });
     expect(page.lines.length).toBeGreaterThan(0);
     expect(page.lines.length).toBeLessThanOrEqual(50);
     expect(find({ offset: last + 50 }).lines).toEqual([]);

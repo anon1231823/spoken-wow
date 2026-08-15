@@ -37,6 +37,17 @@ export type LineFilters = {
   source?: Source;
   npcType?: NpcType;
   /**
+   * Whether to include progress text, which is hidden unless asked for.
+   *
+   * 3,093 lines - 17.7% of the corpus - that no code path will ever voice: the generator
+   * refuses them before the request (tts_cli/tts_utils.py) and so does regeneration
+   * (lib/text-gate.ts). Showing them by default pads every search with results nobody can
+   * act on, so absent means hidden and this is how you ask for them back.
+   *
+   * Widening rather than narrowing, which is why activeFilterCount ignores it.
+   */
+  includeProgress?: boolean;
+  /**
    * "any" for a line with any open finding, or a severity meaning "this bad or worse".
    *
    * Worse-or-equal rather than exact, because the severity carried by a line is the worst of
@@ -295,6 +306,7 @@ export function matchingLines(
     voice,
     source,
     npcType,
+    includeProgress = false,
     issues,
     issueCategory,
     finding,
@@ -314,6 +326,11 @@ export function matchingLines(
   if (flavor) lines = lines.filter((line) => line.flavor === flavor);
   if (voice) lines = lines.filter((line) => line.voice === voice);
   if (source) lines = lines.filter((line) => line.source === source);
+  // After the source filter and not before it, so asking for progress explicitly still works:
+  // `source=progress` alone would otherwise return nothing at all.
+  if (!includeProgress && source !== "progress") {
+    lines = lines.filter((line) => line.source !== "progress");
+  }
   if (npcType) lines = lines.filter((line) => line.npcType === npcType);
   if (issues) lines = lines.filter((line) => issueMatch(found.get(line.lineId), issues));
   if (issueCategory) {

@@ -149,6 +149,14 @@ what the corpus cannot: accounts and roles, the take history behind each regener
 pronunciation lexicon, hand-written line overrides, the scan's findings and the regeneration
 queue. Run `import-audio` first, or every line shows as a gap.
 
+**Progress text is hidden by default.** Those 3,093 lines — 17.7% of the corpus — are never
+voiced by any code path, so leaving them in every result padded the list with rows nobody can
+act on. **Show progress text** brings them back, and `?progress=1` says the same thing in a
+URL; absence means hidden, so a bare link is the useful view. Choosing `progress` in the
+source filter also counts as asking for them, since otherwise that choice would return
+nothing. It is not counted as an active filter: it widens the results rather than narrowing
+them, and clearing filters returns it to hidden.
+
 Lines with no audio are marked. `no audio` is a real gap; `progress` and `invalid-chars`
 are lines the generator deliberately never voices.
 
