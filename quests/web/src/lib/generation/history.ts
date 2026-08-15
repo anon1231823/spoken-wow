@@ -39,6 +39,8 @@ export type CommitInput = {
   lineId: string;
   voice: string;
   voiceId: string;
+  /** The narrator that read this take's stage directions, or null for a single-voice take. */
+  narratorVoice: string | null;
   modelId: string;
   seed: number | null;
   characters: number;
@@ -142,6 +144,7 @@ export async function commitVersion(input: CommitInput): Promise<CommitResult> {
     origin: "generated",
     lineId: input.lineId,
     voice: input.voice,
+    narratorVoice: input.narratorVoice,
     bytes: input.data.byteLength,
     voiceId: input.voiceId,
     modelId: input.modelId,

@@ -40,6 +40,7 @@ function take(overrides: Partial<Parameters<typeof commitVersion>[0]> = {}) {
     data: Buffer.from("generated take"),
     lineId: "g:31ab172e1a375db1c9157d594eb608d9",
     voice: "dwarf-male",
+    narratorVoice: null,
     voiceId: "voice-abc",
     modelId: "eleven_multilingual_v2",
     seed: 1163733943,

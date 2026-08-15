@@ -49,6 +49,8 @@ export type NewVersion = {
   origin: Origin;
   lineId: string;
   voice: string;
+  /** The narrator that read this take's stage directions, or null for a single-voice take. */
+  narratorVoice?: string | null;
   bytes: number;
   voiceId?: string | null;
   modelId?: string | null;
@@ -142,8 +144,8 @@ export async function recordVersion(version: NewVersion): Promise<void> {
     `insert into "voiceline_version"
        ("file", "version", "origin", "lineId", "voice", "bytes",
         "voiceId", "modelId", "seed", "characters", "credits", "settings",
-        "spokenHash", "dictionaryVersion", "createdBy")
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+        "spokenHash", "dictionaryVersion", "createdBy", "narratorVoice")
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
     [
       version.file,
       version.version,
@@ -160,6 +162,7 @@ export async function recordVersion(version: NewVersion): Promise<void> {
       version.spokenHash ?? null,
       version.dictionaryVersion ?? null,
       version.createdBy ?? null,
+      version.narratorVoice ?? null,
     ],
   );
 }

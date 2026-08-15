@@ -150,6 +150,8 @@ export async function regenerateLine(
       data: speech.audio,
       lineId,
       voice: line.voice,
+      // Task 5 supplies the narrator; until then every take is single-voice.
+      narratorVoice: null,
       voiceId,
       modelId: config.modelId,
       seed,
