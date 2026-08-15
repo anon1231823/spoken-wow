@@ -85,9 +85,20 @@ export const EMPTY_CONTEXT: SearchContext = {
 // Keyed by language: this process serves every language, and a single memo would
 // hand whichever was asked for first to everyone who asked afterwards.
 const globalForCatalogue = globalThis as unknown as {
+  /** The English Lua, parsed once: every language's overlay starts from it. */
+  zoneloreLua?: Promise<CorpusEntry[]>;
   zoneloreCatalogue?: Map<Lang, Promise<CatalogueEntry[]>>;
   zoneloreByPath?: Map<Lang, Promise<Map<string, CatalogueEntry>>>;
 };
+
+// A megabyte of Lua and a sha1 per line, and the same input for all eleven
+// languages -- so it is read once per process, not once per language asked for.
+function englishLua(): Promise<CorpusEntry[]> {
+  if (!globalForCatalogue.zoneloreLua) {
+    globalForCatalogue.zoneloreLua = buildCatalogue(BASE_LANG);
+  }
+  return globalForCatalogue.zoneloreLua;
+}
 
 /**
  * The catalogue as the Lua files have it, with the live rows of `lore_line` laid over
@@ -111,7 +122,7 @@ async function buildOverlaidCatalogue(lang: Lang): Promise<CatalogueEntry[]> {
   // rather than a translation. So the English catalogue supplies the shape, and the
   // translated rows are laid over the text.
   const [entries, translatedFrom, overrides, rules] = await Promise.all([
-    buildCatalogue(BASE_LANG),
+    englishLua(),
     lang === BASE_LANG ? Promise.resolve(null) : currentLore(BASE_LANG),
     currentLore(lang),
     loadPronunciation(),
@@ -209,6 +220,9 @@ export function invalidateCatalogue(lang?: Lang): void {
   // them; a lore edit names its own. Dropping English also drops the translations,
   // which are built from it.
   if (lang === undefined || lang === BASE_LANG) {
+    // The Lua goes too. It only changes with a lore export, but a full drop is the
+    // moment to notice one, and it is one parse.
+    globalForCatalogue.zoneloreLua = undefined;
     globalForCatalogue.zoneloreCatalogue = undefined;
     globalForCatalogue.zoneloreByPath = undefined;
     return;
