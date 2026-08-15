@@ -3,9 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiKeyRequiredDialog } from "@/components/ApiKeyRequiredDialog";
+import { BASE_LANG, langName, type Lang } from "@/lib/lang";
 import { noApiKeyMessage } from "@/lib/no-api-key";
+import { useLang } from "@/lib/use-lang";
 
-// tools/voice/config.json's voice half, edited with its consequences shown.
+// One language's voice half of tools/voice/config*.json, edited with its consequences
+// shown. English is config.json; every other language is config.<code>.json over it,
+// and this page under /deDE/voice is where that file first comes into being.
 //
 // The page's real job, like the lexicon's, is to answer "what does saving commit me
 // to" before anything is written: a voice change does not mark a single line stale
@@ -21,9 +25,13 @@ type Settings = {
 };
 
 type VoiceData = {
+  lang: Lang;
+  /** False until a narrator has been saved for this language; generation refuses until then. */
+  configured: boolean;
   voiceId: string | null;
   voiceName: string;
   modelId: string;
+  languageCode: string | null;
   voiceSettings: Partial<Settings>;
   voices: Voice[];
   creditRate: number | null;
@@ -41,7 +49,13 @@ const DEFAULT_PREVIEW =
   "The Barrens stretch from the Stonetalon Mountains to the Great Sea, a sun-scorched " +
   "savanna where centaur warbands and quilboar thornweavers contest every waterhole.";
 
+/** The file a language's voice lives in, as the page names it. */
+function configFile(lang: Lang): string {
+  return lang === BASE_LANG ? "config.json" : `config.${lang}.json`;
+}
+
 export function VoiceSettings() {
+  const { lang } = useLang();
   const [data, setData] = useState<VoiceData | null>(null);
   const [voiceId, setVoiceId] = useState<string>("");
   const [settings, setSettings] = useState<Settings>({
@@ -63,7 +77,12 @@ export function VoiceSettings() {
   const previewUrl = useRef<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/voice")
+    // A language switch is a different file: start over rather than showing the old
+    // language's voice under the new heading until the fetch lands.
+    setData(null);
+    setError(null);
+    setSaved(null);
+    fetch(`/api/voice?lang=${lang}`)
       .then(async (response) => {
         const body = (await response.json().catch(() => ({}))) as VoiceData & {
           error?: string;
@@ -98,14 +117,14 @@ export function VoiceSettings() {
     return () => {
       if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
     };
-  }, []);
+  }, [lang]);
 
   const save = useCallback(() => {
     setBusy(true);
     fetch("/api/voice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ voiceId, voiceSettings: settings }),
+      body: JSON.stringify({ lang, voiceId, voiceSettings: settings }),
     })
       .then(async (response) => {
         const result = (await response.json().catch(() => ({}))) as {
@@ -128,10 +147,11 @@ export function VoiceSettings() {
         }
         setError(null);
         setSaved({ voiceId, settings });
+        setData((current) => (current ? { ...current, configured: true } : current));
       })
       .catch(() => setError("save failed"))
       .finally(() => setBusy(false));
-  }, [voiceId, settings]);
+  }, [lang, voiceId, settings]);
 
   const preview = useCallback(() => {
     setPreviewing(true);
@@ -139,7 +159,7 @@ export function VoiceSettings() {
     fetch("/api/voice/preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: previewText, voiceId, voiceSettings: settings }),
+      body: JSON.stringify({ lang, text: previewText, voiceId, voiceSettings: settings }),
     })
       .then(async (response) => {
         if (!response.ok) {
@@ -169,7 +189,7 @@ export function VoiceSettings() {
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setPreviewing(false));
-  }, [previewText, voiceId, settings]);
+  }, [lang, previewText, voiceId, settings]);
 
   // The dialog rides along with the failed-to-load state: without a key there is no
   // voice list, so this branch is exactly where a keyless admin lands.
@@ -186,15 +206,29 @@ export function VoiceSettings() {
   const dirty =
     saved !== null &&
     (voiceId !== saved.voiceId || JSON.stringify(settings) !== JSON.stringify(saved.settings));
+  // Nothing to save, and nothing to preview, until a narrator is chosen: an empty voice
+  // is what an unconfigured language starts with, not a selection.
+  const chosen = voiceId !== "";
   const estimate =
     data.creditRate === null ? null : Math.round(previewText.length * data.creditRate);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
-      <h1 className="mb-1 text-lg font-semibold">Voice</h1>
+      <h1 className="mb-1 text-lg font-semibold">Voice · {langName(lang)}</h1>
       <p className="mb-4 text-muted">
-        The narrator every line is generated with, from tools/voice/config.json.
+        The narrator every {langName(lang)} line is generated with, from tools/voice/
+        {configFile(lang)}
+        {data.languageCode && <> (language code {data.languageCode})</>}.
       </p>
+
+      {!data.configured && (
+        <div className="mb-6 rounded border border-accent/40 bg-accent/10 p-3 text-xs">
+          <strong className="text-accent">No narrator picked for {langName(lang)} yet.</strong>{" "}
+          Regeneration in this language refuses until one is saved here. Saving creates
+          tools/voice/{configFile(lang)}; the model, dictionary and any other override can be
+          added to that file by hand afterwards.
+        </div>
+      )}
 
       <div className="mb-6 rounded border border-warn/40 bg-warn/10 p-3 text-xs">
         <strong className="text-warn">Saving changes future generations only.</strong> A voice
@@ -213,6 +247,7 @@ export function VoiceSettings() {
             onChange={(event) => setVoiceId(event.target.value)}
             className="rounded border border-border bg-panel px-2 py-1"
           >
+            {!chosen && <option value="">— pick a narrator —</option>}
             {data.voices.map((voice) => (
               <option key={voice.id} value={voice.id}>
                 {voice.name} ({voice.category})
@@ -288,7 +323,7 @@ export function VoiceSettings() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            disabled={previewing || previewText.trim() === ""}
+            disabled={previewing || !chosen || previewText.trim() === ""}
             onClick={preview}
             className="rounded bg-warn px-3 py-1 font-medium text-bg disabled:opacity-40"
           >
@@ -307,14 +342,14 @@ export function VoiceSettings() {
       <div className="flex items-center gap-3">
         <button
           type="button"
-          disabled={!dirty || busy}
+          disabled={!dirty || !chosen || busy}
           onClick={save}
           className="rounded bg-accent px-3 py-1 font-medium text-bg disabled:opacity-40"
         >
-          {busy ? "Saving…" : "Save to config.json"}
+          {busy ? "Saving…" : `Save to ${configFile(lang)}`}
         </button>
         {dirty && <span className="text-xs text-warn">unsaved changes</span>}
-        {!dirty && <span className="text-xs text-faint">saved</span>}
+        {!dirty && data.configured && <span className="text-xs text-faint">saved</span>}
       </div>
 
       <ApiKeyRequiredDialog message={keyRequired} onClose={() => setKeyRequired(null)} />

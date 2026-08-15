@@ -329,7 +329,7 @@ function summarise(selected, manifest, label, config) {
 async function generate(selected, args) {
   const config = await loadConfig(LANG);
   const key = await apiKey();
-  await resolveVoiceId(config, key);
+  await resolveVoiceId(config, key, LANG);
   await resolveDictionary(config, key);
 
   const manifest = await loadManifest();
@@ -433,7 +433,7 @@ async function generate(selected, args) {
 async function sample(catalogue) {
   const config = await loadConfig(LANG);
   const key = await apiKey();
-  await resolveVoiceId(config, key);
+  await resolveVoiceId(config, key, LANG);
   await resolveDictionary(config, key);
 
   const long = catalogue

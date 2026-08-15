@@ -119,7 +119,14 @@ export type VoiceConfig = {
 };
 
 export const loadConfig = elevenModule.loadConfig as (lang?: string) => Promise<VoiceConfig>;
-export const saveConfig = elevenModule.saveConfig as (config: VoiceConfig) => Promise<void>;
+/** The config for a language with or without a narrator yet; see elevenlabs.mjs. */
+export const draftConfig = elevenModule.draftConfig as (
+  lang?: string,
+) => Promise<{ config: VoiceConfig; configured: boolean }>;
+export const saveConfig = elevenModule.saveConfig as (
+  config: VoiceConfig,
+  lang?: string,
+) => Promise<void>;
 
 // elevenlabs.mjs also exports apiKey(), which reads ELEVENLABS_API_KEY out of the
 // repo's .env. It is deliberately NOT re-exported here: in the explorer a key belongs
@@ -138,6 +145,7 @@ export const listVoices = elevenModule.listVoices as (
 export const resolveVoiceId = elevenModule.resolveVoiceId as (
   config: VoiceConfig,
   key: string,
+  lang?: string,
 ) => Promise<string>;
 export const resolveDictionary = elevenModule.resolveDictionary as (
   config: VoiceConfig,

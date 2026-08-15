@@ -214,7 +214,7 @@ export async function regenerateOne(
   // "narrate this in German": there is no German narrator until somebody picks one,
   // and cutting it with the English voice would spend credits on a take nobody wants.
   const config = await loadConfig(lang);
-  await resolveVoiceId(config, key);
+  await resolveVoiceId(config, key, lang);
   await resolveDictionary(config, key);
 
   const job: Job = {
@@ -287,7 +287,7 @@ async function run(batch: Batch, selected: CatalogueEntry[], key: string, lang: 
 
   try {
     const config = await loadConfig(lang);
-    await resolveVoiceId(config, key);
+    await resolveVoiceId(config, key, lang);
     await resolveDictionary(config, key);
 
     const tier = await fetchTier(key);

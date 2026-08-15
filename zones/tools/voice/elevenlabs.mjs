@@ -6,7 +6,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { BASE_LOCALE } from "../lib/locales.mjs";
+import { BASE_LOCALE, elevenLabsCode } from "../lib/locales.mjs";
 import { ROOT } from "../lib/loredata.mjs";
 import { requireEnvKey } from "../lib/env.mjs";
 
@@ -21,12 +21,24 @@ export const CONFIG_PATH = join(ROOT, "tools/voice/config.json");
 // together: a German voice reading through an English phoneme dictionary is worse
 // than either half alone.
 //
-// No such file exists yet. English is config.json, and a language gets one when
-// somebody has decided which voice reads it -- which is a decision, not a default
-// this module can invent.
+// English is config.json. A language gets its file the first time somebody picks
+// a narrator for it, on the /voice page under that language or by hand -- which
+// is a decision, not a default this module can invent.
 export function localeConfigPath(lang) {
   return join(ROOT, "tools/voice", `config.${lang}.json`);
 }
+
+// The keys a language's file may carry. Anything else stays English's -- the output
+// format and the credit rate belong to the plan, not the language.
+const OVERRIDE_KEYS = [
+  "voiceName",
+  "voiceId",
+  "modelId",
+  "languageCode",
+  "dictionaryId",
+  "dictionaryVersionId",
+  "voiceSettings",
+];
 
 //------------------------------------------------------------------------------
 // Credentials
@@ -40,28 +52,81 @@ export async function apiKey() {
 // Config
 //------------------------------------------------------------------------------
 
-export async function loadConfig(lang = BASE_LOCALE) {
-  const base = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
-  if (lang === BASE_LOCALE) return base;
-
-  const overrides = await readFile(localeConfigPath(lang), "utf8").catch((err) => {
+/** A language's own file, parsed, or null when nobody has picked its narrator yet. */
+export async function readOverrides(lang) {
+  if (lang === BASE_LOCALE) return null;
+  const raw = await readFile(localeConfigPath(lang), "utf8").catch((err) => {
     if (err.code === "ENOENT") return null;
     throw err;
   });
-  if (overrides === null) {
-    throw new Error(
-      `no voice configured for ${lang}: write tools/voice/config.${lang}.json first.\n` +
-        `Generating it with the English narrator would spend credits on the wrong voice.`,
-    );
-  }
+  return raw === null ? null : JSON.parse(raw);
+}
+
+/**
+ * The generation config for a language, whether or not it has a narrator yet.
+ *
+ * For a language without a file this is English's config with the voice blanked
+ * and the language's own code filled in: what the /voice page shows before the
+ * first save, and what a preview speaks with the voice the page has selected. It
+ * is NOT what generation runs with -- loadConfig refuses that case -- because the
+ * blank voice would resolve to nothing and the English dictionary would still be
+ * attached.
+ */
+export async function draftConfig(lang = BASE_LOCALE) {
+  const base = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
+  if (lang === BASE_LOCALE) return { config: base, configured: true };
 
   // A shallow merge, and voiceSettings is replaced rather than merged: half the
   // English settings under a different voice is not a configuration anyone chose.
-  return { ...base, ...JSON.parse(overrides) };
+  const overrides = await readOverrides(lang);
+  if (overrides !== null) return { config: { ...base, ...overrides }, configured: true };
+
+  return {
+    config: {
+      ...base,
+      voiceName: "",
+      voiceId: undefined,
+      languageCode: elevenLabsCode(lang) ?? undefined,
+      // English's phoneme dictionary is English: applied to another language it
+      // rewrites words that happen to be spelled the same. A dictionary for this
+      // language is added to its file by hand when one exists.
+      dictionaryId: null,
+      dictionaryVersionId: undefined,
+    },
+    configured: false,
+  };
 }
 
-export async function saveConfig(config) {
-  await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+export async function loadConfig(lang = BASE_LOCALE) {
+  const { config, configured } = await draftConfig(lang);
+  if (!configured || (lang !== BASE_LOCALE && !config.voiceId && !config.voiceName)) {
+    throw new Error(
+      `no voice configured for ${lang}: pick a narrator on /${lang}/voice, or write ` +
+        `tools/voice/config.${lang}.json by hand.\n` +
+        `Generating it with the English narrator would spend credits on the wrong voice.`,
+    );
+  }
+  return config;
+}
+
+/**
+ * Writes a language's config back.
+ *
+ * English is config.json whole. Another language writes only its own file, and only
+ * the keys that belong there (OVERRIDE_KEYS) -- the merged object handed in carries
+ * English's output format and credit rate too, and copying those into every
+ * language's file would let them drift the first time English's changed.
+ */
+export async function saveConfig(config, lang = BASE_LOCALE) {
+  if (lang === BASE_LOCALE) {
+    await writeFile(CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+    return;
+  }
+  const overrides = {};
+  for (const key of OVERRIDE_KEYS) {
+    if (config[key] !== undefined) overrides[key] = config[key];
+  }
+  await writeFile(localeConfigPath(lang), JSON.stringify(overrides, null, 2) + "\n");
 }
 
 //------------------------------------------------------------------------------
@@ -82,7 +147,7 @@ export async function listVoices(key) {
   return voices;
 }
 
-export async function resolveVoiceId(config, key) {
+export async function resolveVoiceId(config, key, lang = BASE_LOCALE) {
   if (config.voiceId) return config.voiceId;
 
   const voices = await listVoices(key);
@@ -95,7 +160,7 @@ export async function resolveVoiceId(config, key) {
   }
 
   config.voiceId = match.voice_id;
-  await saveConfig(config);
+  await saveConfig(config, lang);
   return config.voiceId;
 }
 

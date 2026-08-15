@@ -10,22 +10,23 @@ export const BASE_LOCALE = "enUS";
 // `script` is what a client's fonts must be able to draw -- the addon uses it to
 // hide a language a player's client would render as boxes.
 //
-// `elevenLabs` is the language_code sent with a synthesis request. Null means no
-// decision has been made yet, which is every language but English: a multilingual
-// model infers the language from the text when the code is absent, and guessing
-// one here would be a generation decision made by a lookup table.
+// `elevenLabs` is the language_code sent with a synthesis request: ISO 639-1, which
+// is what the multilingual models take. It names the language, not the region, so
+// both Spanishes say "es" and both Chineses say "zh" -- the voice picked for each
+// carries the accent. Sent so a short line does not leave the model to guess the
+// language from a handful of proper nouns.
 export const LOCALES = [
   { code: "enUS", name: "English", script: "latin", elevenLabs: "en" },
-  { code: "deDE", name: "German", script: "latin", elevenLabs: null },
-  { code: "esES", name: "Spanish (EU)", script: "latin", elevenLabs: null },
-  { code: "esMX", name: "Spanish (AL)", script: "latin", elevenLabs: null },
-  { code: "frFR", name: "French", script: "latin", elevenLabs: null },
-  { code: "itIT", name: "Italian", script: "latin", elevenLabs: null },
-  { code: "ptBR", name: "Portuguese", script: "latin", elevenLabs: null },
-  { code: "ruRU", name: "Russian", script: "cyrillic", elevenLabs: null },
-  { code: "koKR", name: "Korean", script: "korean", elevenLabs: null },
-  { code: "zhCN", name: "Chinese (S)", script: "simplifiedchinese", elevenLabs: null },
-  { code: "zhTW", name: "Chinese (T)", script: "traditionalchinese", elevenLabs: null },
+  { code: "deDE", name: "German", script: "latin", elevenLabs: "de" },
+  { code: "esES", name: "Spanish (EU)", script: "latin", elevenLabs: "es" },
+  { code: "esMX", name: "Spanish (AL)", script: "latin", elevenLabs: "es" },
+  { code: "frFR", name: "French", script: "latin", elevenLabs: "fr" },
+  { code: "itIT", name: "Italian", script: "latin", elevenLabs: "it" },
+  { code: "ptBR", name: "Portuguese", script: "latin", elevenLabs: "pt" },
+  { code: "ruRU", name: "Russian", script: "cyrillic", elevenLabs: "ru" },
+  { code: "koKR", name: "Korean", script: "korean", elevenLabs: "ko" },
+  { code: "zhCN", name: "Chinese (S)", script: "simplifiedchinese", elevenLabs: "zh" },
+  { code: "zhTW", name: "Chinese (T)", script: "traditionalchinese", elevenLabs: "zh" },
 ];
 
 export const CODES = LOCALES.map((l) => l.code);
@@ -36,6 +37,11 @@ export function localeInfo(code) {
 
 export function isLocale(code) {
   return CODES.includes(code);
+}
+
+/** The language_code a synthesis request for this language sends. */
+export function elevenLabsCode(locale) {
+  return localeInfo(locale)?.elevenLabs ?? null;
 }
 
 /**

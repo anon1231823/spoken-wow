@@ -488,8 +488,17 @@ language derives its own beside them, so one setting still decides where audio l
 `audio-history/` nests non-English under its code, because two languages sharing one
 version sequence for the same file would make a restore install the wrong clip.
 
+**Each language has its own narrator, picked on its own `/voice` page.** English is
+`tools/voice/config.json`; every other language is `tools/voice/config.<code>.json`
+merged over it, holding only what changes with the language — voice, model, `language_code`,
+pronunciation dictionary, voice settings. `/deDE/voice` reads and writes the German file,
+and the first save there is what creates it, with the language code filled in and the
+English phoneme dictionary explicitly *not* inherited (an English dictionary applied to
+German rewrites words that happen to be spelled the same). A preview works before that
+first save, because auditioning is how the narrator gets chosen.
+
 **Regenerating in a language with no voice refuses.** `loadConfig(lang)` throws unless
-`tools/voice/config.<code>.json` exists. That is the right answer to "narrate this in
+that file exists and names a voice. That is the right answer to "narrate this in
 German": there is no German narrator until somebody picks one, and cutting it with the
 English voice would spend credits on a take nobody wants. A quote still works — it is
 free, and it loses only the measured credit rate.
@@ -499,8 +508,6 @@ free, and it loses only the measured credit rate.
 a report filed from a German page counts against the German line, and `/deDE/feedback`
 is the German triage list. Both APIs take `lang` and default it to English, so links
 and forms that predate the axis still land where they always did.
-
-Still English-only: the `/voice` settings page writes `config.json` globally.
 
 ## Hover preview
 

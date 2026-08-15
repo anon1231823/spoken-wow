@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { requireApiKey, requireRegenerate } from "@/lib/authz";
+import { langOfBody } from "@/lib/lang";
 import {
-  loadConfig,
+  draftConfig,
   loadPronunciation,
   resolveDictionary,
   synthesize,
@@ -22,7 +23,7 @@ import { parseSettings } from "@/lib/voice";
 // prose cannot cost real money.
 const MAX_CHARS = 1000;
 
-type Body = { text?: unknown; voiceId?: unknown; voiceSettings?: unknown };
+type Body = { text?: unknown; voiceId?: unknown; voiceSettings?: unknown; lang?: unknown };
 
 export async function POST(request: Request) {
   const { session, denied } = await requireRegenerate();
@@ -33,6 +34,10 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as Body;
 
+  const lang = langOfBody(body.lang);
+  if (!lang) {
+    return NextResponse.json({ error: `unknown language ${String(body.lang)}` }, { status: 400 });
+  }
   if (typeof body.text !== "string" || body.text.trim() === "") {
     return NextResponse.json({ error: "text is required" }, { status: 400 });
   }
@@ -53,7 +58,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const config = { ...(await loadConfig()), voiceId: body.voiceId, voiceSettings: settings };
+  // The language's config as it stands, saved or not: a preview is how a narrator
+  // is chosen, so it has to work before the first save writes the file.
+  const { config: current } = await draftConfig(lang);
+  const config = { ...current, voiceId: body.voiceId, voiceSettings: settings };
   // In-memory only: the dictionary's latest version, same as a real generation uses.
   await resolveDictionary(config, key);
 
