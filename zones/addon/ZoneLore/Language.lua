@@ -81,9 +81,10 @@ local function coverage(code)
 	return nil
 end
 
--- A language is ready when a player would see no English holes in it. Computed
--- at build time rather than counted here, because the addon cannot know how many
--- lines or strings there are supposed to be.
+-- A language is ready when every lore line has a translation (and, for a
+-- non-English one, an alias table). Interface strings are not required -- they
+-- fall back to English per key. Computed at build time rather than counted
+-- here, because the addon cannot know how many lines there are supposed to be.
 function ZoneLore:IsLanguageReady(code)
 	if code == BASE then
 		return true
