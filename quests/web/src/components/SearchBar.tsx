@@ -191,6 +191,16 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
             rewritten only
           </Label>
         </div>
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Checkbox
+            id="narration-only"
+            checked={filters.narration ?? false}
+            onCheckedChange={(value) => onFilters({ narration: value === true })}
+          />
+          <Label htmlFor="narration-only" className="text-muted-foreground text-sm">
+            has narration
+          </Label>
+        </div>
         {/* Phrased as showing rather than hiding: the box is unticked by default, and an
             unticked "hide progress text" would claim the opposite of what is happening. */}
         <div className="flex items-center gap-2 whitespace-nowrap">

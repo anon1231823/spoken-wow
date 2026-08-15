@@ -41,6 +41,7 @@ export function filtersFromParams(params: URLSearchParams): LineFilters {
     voice: oneOf(params.get("voice"), voices),
     source: oneOf(params.get("source"), SOURCES),
     npcType: oneOf(params.get("type"), NPC_TYPES),
+    narration: params.get("narration") === "1",
     // Absent means hidden, so the default state needs no parameter and a bare URL is the
     // useful view rather than the padded one.
     includeProgress: params.get("progress") === "1",

@@ -140,6 +140,15 @@ describe("field filters", () => {
     expect(lines.every((l) => l.npcId === 240 && l.source === "gossip")).toBe(true);
   });
 
+  it("narrows to lines a narrator would read", () => {
+    const lines = asShipped({ narration: true });
+    expect(lines.length).toBeGreaterThan(0);
+    // Every one still carries its brackets, and none is a bare lowercase sound: <hic> is the
+    // NPC hiccuping, not the game narrating, so it is not narration.
+    expect(lines.every((l) => /<[A-Z][^<>]*>/.test(l.text))).toBe(true);
+    expect(lines.some((l) => l.text.includes("<hic>"))).toBe(false);
+  });
+
   it("hides progress text unless asked for", () => {
     // 3,093 of the corpus's 17,507 lines, and no code path will ever voice one.
     expect(asShipped().every((l) => l.source !== "progress")).toBe(true);

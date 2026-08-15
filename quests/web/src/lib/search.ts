@@ -14,6 +14,7 @@
 import type { Corpus, CorpusLine } from "./corpus";
 import { npcKey } from "./corpus";
 import { audioRelPath } from "./audio";
+import { hasNarration } from "./generation/narration";
 import type { NpcType, Source } from "./line-fields";
 import { categoryGroup, type LineIssues, type Severity } from "./issues/issues";
 import type { LineOverride } from "./issues/override";
@@ -36,6 +37,8 @@ export type LineFilters = {
   voice?: string;
   source?: Source;
   npcType?: NpcType;
+  /** Only lines carrying a capitalised <stage direction>, which a narrator reads. */
+  narration?: boolean;
   /**
    * Whether to include progress text, which is hidden unless asked for.
    *
@@ -307,6 +310,7 @@ export function matchingLines(
     source,
     npcType,
     includeProgress = false,
+    narration = false,
     issues,
     issueCategory,
     finding,
@@ -332,6 +336,7 @@ export function matchingLines(
     lines = lines.filter((line) => line.source !== "progress");
   }
   if (npcType) lines = lines.filter((line) => line.npcType === npcType);
+  if (narration) lines = lines.filter((line) => hasNarration(line.text));
   if (issues) lines = lines.filter((line) => issueMatch(found.get(line.lineId), issues));
   if (issueCategory) {
     lines = lines.filter((line) => categoryMatch(found.get(line.lineId), issueCategory));
