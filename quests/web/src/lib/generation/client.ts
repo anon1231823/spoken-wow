@@ -224,6 +224,15 @@ export async function fetchQueue(
   }
 }
 
+/** Wave away finished work up to `through`, the cursor the panel was showing. */
+export async function dismissQueue(through: string): Promise<void> {
+  await fetch("/api/regenerate/queue/dismiss", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ through }),
+  }).catch(() => {});
+}
+
 export async function stopQueue(): Promise<void> {
   await fetch("/api/regenerate/queue/stop", {
     method: "POST",

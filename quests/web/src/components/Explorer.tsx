@@ -15,6 +15,7 @@ import { useSession } from "@/lib/auth-client";
 import type { Facets } from "@/lib/facets";
 import { NARRATOR_VOICE } from "@/lib/generation/narration";
 import {
+  dismissQueue,
   fetchBatchJobs,
   fetchGenerationStatus,
   fetchQueue,
@@ -779,6 +780,11 @@ export default function Explorer({ facets }: { facets: Facets }) {
           onDismiss={() => {
             setDismissed(true);
             setQueueNote(null);
+            // Also on the server, or the panel returns on the next navigation with the same
+            // finished run. Only what the panel was showing is dismissed: `cursor` is the
+            // highest terminal job it had seen, so anything that finishes after this click
+            // still reports itself.
+            if (cursor.current) void dismissQueue(cursor.current);
           }}
         />
 

@@ -261,14 +261,43 @@ type JobAggregateRow = {
  * each list out as one column instead of one query per list - Postgres already builds those
  * lists in memory to answer the count, so asking it to hand them back costs nothing extra.
  */
+/**
+ * Wave away everything finished up to this job.
+ *
+ * Takes the id rather than reading the maximum itself, so what is dismissed is what the panel
+ * was showing when the X was pressed. A job that finished in between stays news.
+ */
+export async function dismissThrough(jobId: string, userId: string | null): Promise<void> {
+  await db().query(
+    `insert into "queue_dismissal" ("id", "throughJobId", "dismissedBy")
+     values (true, $1, $2)
+     on conflict ("id") do update
+        set "throughJobId" = greatest("queue_dismissal"."throughJobId", excluded."throughJobId"),
+            "dismissedAt" = now(),
+            "dismissedBy" = excluded."dismissedBy"`,
+    [jobId, userId],
+  );
+}
+
 export async function snapshot(since: string | null): Promise<QueueSnapshot> {
   // Live work first, then whatever finished recently: the two halves of what the panel is
   // for. Never just the age, for the reason WINDOW records.
-  const window = `("state" in ('pending', 'running') or "queuedAt" > now() - interval '${WINDOW}')`;
+  //
+  // Terminal rows are also cut off at the dismissal watermark, which rides along as a CTE
+  // rather than a second round trip: a poll costs two pooled queries and the test that pins
+  // that is protecting the pool, not tidiness. Pending and running work is never cut off - a
+  // queue still spending money must keep its panel and its Stop button, and dismissing
+  // yesterday's run cannot be allowed to hide today's.
+  const window =
+    `("state" in ('pending', 'running') or ("queuedAt" > now() - interval '${WINDOW}' ` +
+    `and "id" > (select through from dismissal)))`;
 
   const [job, latest] = await Promise.all([
     db().query<JobAggregateRow>(
-      `with job_counts as (
+      `with dismissal as (
+         select coalesce((select "throughJobId" from "queue_dismissal" where "id"), 0) as through
+       ),
+       job_counts as (
          select
            count(*) filter (where "state" = 'pending')::text as pending,
            count(*) filter (where "state" = 'running')::text as "runningCount",
@@ -290,12 +319,13 @@ export async function snapshot(since: string | null): Promise<QueueSnapshot> {
        ),
        finished_page as (
          select "id"::text as "id", "lineId", "file", "version" from "regeneration_job"
-          where "state" = 'done' and "version" is not null and "id" > coalesce($1::bigint, 0)
+          where "state" = 'done' and "version" is not null
+            and "id" > greatest(coalesce($1::bigint, 0), (select through from dismissal))
           order by "id" limit ${FINISHED_PAGE}
        ),
        terminal as (
          select max("id")::text as max from "regeneration_job"
-          where "state" in ('done', 'failed')
+          where "state" in ('done', 'failed') and "id" > (select through from dismissal)
        )
        select
          jc.*,

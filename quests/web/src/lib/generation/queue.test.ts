@@ -16,6 +16,7 @@ import type { BatchLine } from "@/lib/search";
 
 import {
   cancelPending,
+  dismissThrough,
   claimNext,
   createBatch,
   enqueue,
@@ -278,3 +279,47 @@ async function stateCounts(batchId: string): Promise<Record<string, number>> {
   );
   return Object.fromEntries(rows.map((row) => [row.state, Number(row.n)]));
 }
+
+describe("dismissing finished work", () => {
+  it("hides what was dismissed and keeps what came after", async () => {
+    const batch = await createBatch("dismiss", null);
+    batches.push(batch);
+    await enqueue(batch, [line(1)]);
+
+    const first = await claimNext();
+    await finishJob(first!.id, 0, 10, 5);
+
+    const before = await snapshot(null);
+    expect(before.counts.done).toBeGreaterThan(0);
+
+    await dismissThrough(before.cursor, null);
+
+    const after = await snapshot(null);
+    expect(after.counts.done).toBe(0);
+    expect(after.credits).toBe(0);
+
+    // Work that finishes after the dismissal is news again.
+    await enqueue(batch, [line(2)]);
+    const second = await claimNext();
+    await finishJob(second!.id, 0, 10, 5);
+
+    expect((await snapshot(null)).counts.done).toBe(1);
+  });
+
+  it("never hides work that is still running or pending", async () => {
+    const batch = await createBatch("dismiss-live", null);
+    batches.push(batch);
+    await enqueue(batch, [line(3)]);
+
+    const done = await claimNext();
+    await finishJob(done!.id, 0, 10, 5);
+    await enqueue(batch, [line(4)]);
+
+    // Dismissing the finished job must leave the pending one - and the Stop button - alone.
+    await dismissThrough((await snapshot(null)).cursor, null);
+    const after = await snapshot(null);
+
+    expect(after.counts.pending + after.counts.running).toBe(1);
+    expect(after.active).toBe(true);
+  });
+});
