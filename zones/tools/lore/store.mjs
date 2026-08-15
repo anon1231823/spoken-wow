@@ -4,10 +4,11 @@
 // that decides between Postgres and the files. Nothing else in tools/ talks to the
 // lore table directly.
 //
-// The writers below are English-only, and say so in SQL rather than by assumption:
-// a scrape reads the English wiki and a rewrite rewrites English prose, so both are
-// scoped to lang = 'enUS'. Unscoped, the first translated row would look to them like
-// the current version of the line and get versioned over.
+// recordScrape and recordRewrite are English-only, and say so in SQL rather than by
+// assumption: a scrape reads the English wiki and a rewrite rewrites English prose,
+// so both are scoped to lang = 'enUS'. Unscoped, the first translated row would look
+// to them like the current version of the line and get versioned over.
+// recordTranslations is the one writer for every other language.
 //
 // WITHOUT DATABASE_URL everything here still works, reading and writing
 // addon/ZoneLore/Data/*.lua as the scrapers always did. That is not a courtesy: the
@@ -268,6 +269,107 @@ export async function recordRewrite(entries) {
 
       stats.inserted++;
       if (live) stats.promoted++;
+    }
+  });
+
+  return stats;
+}
+
+/**
+ * Records translations uploaded for one language.
+ *
+ * Same bargain as recordRewrite, in another language: an upload may take over a
+ * line that was uploaded before, and is held back behind a hand edit made in the
+ * explorer -- a re-upload of a sheet must not be able to discard a correction
+ * somebody made by hand, or re-uploading becomes a command nobody dares run. Held
+ * back means the row is still recorded, as a non-current version underneath the
+ * edit, so nothing a translator sent is lost.
+ *
+ * Structure -- mapID, kind, key, source -- comes from the English row: a translation
+ * never decides which lines exist, and it inherits the wiki attribution because it
+ * is a derivative of that text.
+ *
+ * @param entries [{ lineId, name, full, short? }] -- `short` blank means derive it.
+ */
+export async function recordTranslations(entries, lang) {
+  if (lang === BASE_LOCALE) throw new Error("recordTranslations is for languages other than English");
+  const stats = { inserted: 0, promoted: 0, unchanged: 0, heldBack: 0, unknown: [] };
+
+  await transaction(async (client) => {
+    for (const entry of entries) {
+      const { rows: englishRows } = await client.query(
+        `select "mapID", "kind", "key", "source", "name"
+           from "lore_line" where "lineId" = $1 and "lang" = 'enUS' and "isCurrent"`,
+        [entry.lineId],
+      );
+      const english = englishRows[0];
+      if (!english) {
+        stats.unknown.push(entry.lineId);
+        continue;
+      }
+
+      const { rows: currentRows } = await client.query(
+        `select "version", "origin", "name", "full", "short", "shortIsManual"
+           from "lore_line" where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
+        [entry.lineId, lang],
+      );
+      const current = currentRows[0];
+
+      const name = entry.name || current?.name || english.name;
+      const shortIsManual = Boolean(entry.short);
+      const short = shortIsManual ? entry.short : makeShort(entry.full);
+
+      if (
+        current &&
+        current.full === entry.full &&
+        current.name === name &&
+        (!shortIsManual || current.short === short)
+      ) {
+        stats.unchanged++;
+        continue;
+      }
+
+      const { rows: maxRows } = await client.query(
+        `select coalesce(max("version"), 0) as "version"
+           from "lore_line" where "lineId" = $1 and "lang" = $2`,
+        [entry.lineId, lang],
+      );
+      const version = Number(maxRows[0].version) + 1;
+
+      const live = !current || current.origin !== "edited";
+      if (!live) stats.heldBack++;
+
+      if (live && current) {
+        await client.query(
+          `update "lore_line" set "isCurrent" = false
+           where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
+          [entry.lineId, lang],
+        );
+      }
+
+      await client.query(
+        `insert into "lore_line"
+           ("lineId", "lang", "version", "isCurrent", "origin", "mapID", "kind", "key",
+            "name", "full", "short", "shortIsManual", "source")
+         values ($1, $2, $3, $4, 'translated', $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [
+          entry.lineId,
+          lang,
+          version,
+          live,
+          english.mapID,
+          english.kind,
+          english.key,
+          name,
+          entry.full,
+          short,
+          shortIsManual,
+          english.source,
+        ],
+      );
+
+      stats.inserted++;
+      if (live && current) stats.promoted++;
     }
   });
 

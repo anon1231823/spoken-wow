@@ -6,7 +6,7 @@
         status remove clean voice voice-zones lookup sample db-up db-down migrate import export \
         web push push-dry pull pull-dry audio-status ssh-check pull-manifest \
         db-push db-pull bootstrap deploy-scripts releases rollback logs \
-        lore-import lore-export lore-check lore-rewrite aliases languages locale-check \
+        lore-import lore-export lore-check lore-sheet lore-upload lore-upload-dry lore-rewrite aliases languages locale-check \
         release release-dry descriptions descriptions-check descriptions-published
 
 # The \# escapes are required: an unescaped # starts a make comment, even
@@ -128,6 +128,19 @@ lore-export: ## Write addon/ZoneLore/Data/<locale>/*.lua from the database (LOCA
 
 lore-check: ## Confirm the committed Lua matches the database
 	@ZONELORE_LANG=$(or $(LOCALE),enUS) node tools/lore/export.mjs --check
+
+# Translations arrive as a spreadsheet, not through a model: a sheet goes out with the
+# English beside the blanks and comes back filled in. Both are free. The upload
+# follows the scraper's rules -- unchanged text records nothing, and a hand edit made
+# in the explorer is never overwritten -- so a re-upload is always safe to run.
+lore-sheet: ## Write the CSV a translator fills in (LOCALE=deDE, OUT=dist/lore-deDE.csv)
+	@ZONELORE_LANG=$(LOCALE) node tools/lore/translation-sheet.mjs $(or $(OUT),dist/lore-$(LOCALE).csv)
+
+lore-upload-dry: ## Say what uploading a filled sheet would record (LOCALE=deDE FILE=...)
+	@ZONELORE_LANG=$(LOCALE) node tools/lore/upload-translations.mjs $(FILE) --dry-run
+
+lore-upload: ## Record a filled sheet as that language's lore (LOCALE=deDE FILE=...)
+	@ZONELORE_LANG=$(LOCALE) node tools/lore/upload-translations.mjs $(FILE)
 
 # Unlike every other target here, this one spends money: it sends each of a zone's
 # articles to Claude. There is no free form of it -- the report *is* the model's

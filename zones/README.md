@@ -424,6 +424,33 @@ Interface strings are the exception and do fall back to English. A missing strin
 unlabelled button, and an English label beats an empty one; a missing line of lore has
 an honest empty state that prose from another language does not improve on.
 
+### Translations arrive as a spreadsheet
+
+Nothing here translates. A language's lore is written by people, either one line at a
+time in the explorer's edit dialog under that language, or in bulk through a sheet:
+
+```sh
+make lore-sheet LOCALE=deDE                          # dist/lore-deDE.csv, English beside the blanks
+make lore-upload-dry LOCALE=deDE FILE=dist/lore-deDE.csv   # what recording it would do
+make lore-upload LOCALE=deDE FILE=dist/lore-deDE.csv       # record it
+make lore-export LOCALE=deDE && make languages       # into the addon; readiness recount
+```
+
+The sheet lists every line the Era client can report — `lineId`, where it is, the
+English name and text — and three columns to fill: `name` (the place name in that
+language; blank keeps the English one), `full` (blank means not translated, skipped)
+and an optional `short` for the hover preview. Whatever is already translated comes
+back filled in, so the sheet is also the review copy, and re-uploading it unchanged
+records nothing.
+
+`recordTranslations` in `tools/lore/store.mjs` follows the scraper's rules: a new or
+changed text is a new `translated` version of the line in that language; a line
+somebody has since hand-edited in the explorer keeps the edit, and the upload lands
+underneath it as a kept, non-live version. So a stale sheet can never overwrite a
+correction, and the upload is safe to repeat. Structure and the wiki `source` come
+from the English row — a translation is a derivative of that text and carries its
+attribution — and it never adds or removes a line.
+
 ### The explorer's language switch is in the header
 
 The corpus is edited in the explorer, so translating is something it has to be able to
