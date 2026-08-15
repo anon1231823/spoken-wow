@@ -338,7 +338,14 @@ export function matchingLines(
     lines = lines.filter((line) => line.source !== "progress");
   }
   if (npcType) lines = lines.filter((line) => line.npcType === npcType);
-  if (narration) lines = lines.filter((line) => hasNarration(line.text));
+  // The *effective* text, matching the chip on the row and the text regeneration will send.
+  // Reading line.text instead hid every line whose direction was restored by an override -
+  // which is 314 of them, and the ones most worth finding.
+  if (narration) {
+    lines = lines.filter((line) =>
+      hasNarration(overrides.get(audioRelPath(line))?.text ?? line.text),
+    );
+  }
   if (issues) lines = lines.filter((line) => issueMatch(found.get(line.lineId), issues));
   if (issueCategory) {
     lines = lines.filter((line) => categoryMatch(found.get(line.lineId), issueCategory));

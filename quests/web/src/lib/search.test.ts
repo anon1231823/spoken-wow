@@ -338,6 +338,21 @@ describe("overrides", () => {
     overrides: new Map([[file, { file, lineId: "", text, updatedAt: "", updatedBy: null }]]),
   });
 
+  it("finds a line whose stage direction an override restored", () => {
+    // The pipeline stripped 314 directions before synthesis and they were restored as
+    // overrides, so the corpus text has no brackets at all. A narration filter reading
+    // line.text finds none of them - which is every line most worth finding.
+    const file = "quests/123-complete.mp3";
+    const context = rewrite(file, "<He turns the crystal over.>\n\nA crystal fragment.");
+    const found = matchingLines(corpus, store, { narration: true }, context);
+
+    expect(found.some((l) => l.lineId === "q:123:complete")).toBe(true);
+    // And without the override it is not narration, because the corpus text carries none.
+    expect(
+      matchingLines(corpus, store, { narration: true }).some((l) => l.lineId === "q:123:complete"),
+    ).toBe(false);
+  });
+
   it("reports the rewrite beside the corpus text rather than in place of it", () => {
     const context = rewrite("quests/123-complete.mp3", "A crystal fragment.");
     const line = search(corpus, store, { q: "123", filter: "quest", limit: 100 }, context).lines.find(
