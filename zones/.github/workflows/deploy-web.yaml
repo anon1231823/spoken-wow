@@ -115,6 +115,13 @@ jobs:
           cp -a web/migrations /tmp/release-check/migrations
           deploy/bin/migrate.sh /tmp/release-check
 
+      # The app reads its corpus from lore_line, so a migrated-but-empty database is an
+      # explorer with nothing in it. This is the same command a rebuilt droplet runs, and
+      # it inserts from the committed Lua -- which is what makes the smoke test below a
+      # real check that the corpus survived the release rather than a check on a fixture.
+      - name: Seed the corpus
+        run: node tools/lore/import.mjs
+
       - name: Build
         working-directory: web
         run: pnpm build
@@ -206,9 +213,9 @@ jobs:
             sleep 1
           done
 
-          # The corpus reached the bundle. 1353 is the whole catalogue; a release that
-          # shipped without Zones.lua would answer 0 rather than fail, which is exactly the
-          # kind of quiet emptiness worth asserting against.
+          # The corpus reached the running app, which now means the release can read
+          # lore_line: a bundle that could not would answer 0 rather than fail, which is
+          # exactly the kind of quiet emptiness worth asserting against.
           total=$(curl -fsS "http://127.0.0.1:3999/api/search" \
             | python3 -c 'import sys,json; print(json.load(sys.stdin)["total"])')
           # 800, not the old 1000: the era filter (tools/seed/era-areas.json) trimmed the
@@ -218,7 +225,7 @@ jobs:
           echo "catalogue: $total lines"
 
           # Filtering works, and the zone facet is derived from the corpus rather than
-          # hardcoded, so this also proves the Lua parsed into real zone names.
+          # hardcoded, so this also proves the rows carry real zone names.
           durotar=$(curl -fsS "http://127.0.0.1:3999/api/search?q=Durotar&field=zone" \
             | python3 -c 'import sys,json; print(json.load(sys.stdin)["total"])')
           [ "$durotar" -gt 0 ] || { echo "::error::zone filter matched nothing"; exit 1; }
