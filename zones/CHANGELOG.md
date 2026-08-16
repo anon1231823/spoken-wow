@@ -5,6 +5,9 @@ see [Compatibility](#compatibility) below.
 
 ## 0.4.2 — 2026-08-16
 
+Two fixes, both about narration playing something it should not have. 0.4.1 was
+never released; everything it fixed is in here.
+
 **Missing narration is silent instead of playing someone else's quest audio**
 
 - Any lore with no clip in your installed sound pack played a stand-in recording:
@@ -17,8 +20,6 @@ see [Compatibility](#compatibility) below.
   sound pack is missing or simply does not cover that line yet.
 - No lore text or narration changed. If you have a sound pack installed and heard
   the right clips, nothing about this release changes what you hear.
-
-## 0.4.1 — 2026-08-16
 
 **A new character is greeted by its starting zone, not by its continent**
 
@@ -34,6 +35,22 @@ see [Compatibility](#compatibility) below.
 - The login greeting waits for the game to settle rather than spending its one
   turn on the first answer it gets, so a new dwarf hears Coldridge Valley and a
   new orc hears Valley of Trials on both clients.
+
+## 0.3.2 — 2026-08-16 (sound packs)
+
+**Sixteen lines re-recorded**
+
+- Azshara's places (Bitter Reaches, Forlorn Ridge, Hetaera's Clutch, Shadowsong
+  Shrine, Storm Cliffs, Valormok), Satyrnaar, Brackenwall Village, Ametharan,
+  Bash'al'aran, the Tower of Althalaxx, Darrowmere Lake, Thorn Hill and both
+  Southfury River lines are re-recorded, mostly for pronunciation.
+- Two of them follow a lore correction as well: Zul'jin is a troll warlord rather
+  than an orc one, and Draz'Zilb is an ogre rather than a goblin.
+- Alterac Mountains is the sixteenth. It was re-recorded back on 9 August, but the
+  new clip never made it into a pack, so 0.3.1 shipped the older reading. This one
+  has it.
+- Everything else is byte-for-byte what 0.3.0 shipped. Requires ZoneLore 0.3 or
+  newer, as any 0.x pack does.
 
 ## 0.4.0 — 2026-08-12
 

@@ -1,7 +1,7 @@
 ## Interface: 11509, 20506
 ## Title: ZoneLore Audio
 ## Notes: Narrated zone lore for ZoneLore. Install alongside ZoneLore.|n|cffffcc00Beta:|r a proof-of-concept voice, being redesigned and re-generated.
-## Version: 0.3.1
+## Version: 0.3.2
 ## Author: rusty
 ## IconTexture: Interface\ICONS\INV_Misc_Book_09
 ## X-License: Audio generated with ElevenLabs from warcraft.wiki.gg lore text (CC BY-SA 4.0).
