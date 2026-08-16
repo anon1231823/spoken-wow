@@ -42,6 +42,8 @@ export type CatalogueEntry = {
   zoneName: string;
   /** The prose shown in-game. */
   full: string;
+  /** The one-line summary shown in list views. */
+  short: string;
   /** Where the lore came from. */
   source?: string;
   /** What is actually sent to ElevenLabs: brackets stripped, rules applied. */
@@ -70,9 +72,15 @@ export type TakeRecord = {
 
 export type Manifest = Record<string, TakeRecord>;
 
-export const buildCatalogue = generateModule.buildCatalogue as (
-  lang?: string,
-) => Promise<CatalogueEntry[]>;
+// buildCatalogue() is deliberately NOT re-exported. It reads the committed Lua, which is
+// an export of `lore_line` and therefore always at best as fresh as the table; the app
+// builds its catalogue from the table itself (lib/catalogue.ts). The CLI keeps it: tools/
+// must run without a database, and it consumes the artifact.
+
+/** Assigns every entry its audio path, resolving slug collisions. Returns lineId -> file. */
+export const assignFiles = namingModule.assignFiles as (
+  entries: Array<{ mapID: number; key: string | null }>,
+) => Map<string, string>;
 
 export const measureRates = generateModule.measureRates as (
   manifest: Manifest,

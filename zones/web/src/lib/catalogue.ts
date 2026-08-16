@@ -1,13 +1,21 @@
-// The lore catalogue, and the database state that decorates it.
+// The lore catalogue, built from `lore_line`.
 //
-// SERVER ONLY -- reads the filesystem through tools/voice/*.mjs. Client components
-// import types from here and nothing else; the runtime split lives in filters.ts.
+// SERVER ONLY. The database is the corpus; addon/ZoneLore/Data/<lang>/*.lua is an
+// export of it (`make lore-export`, checked by `make lore-check`), so the app reads the
+// table and never the files. Reading the Lua here would mean the explorer showed
+// whatever was last exported and committed, and -- because a line only reaches the Lua
+// through an export -- would let it list lines that cannot be saved, which is what it
+// used to do.
+//
+// Pure helpers still come from tools/: naming, normalising and hashing are the same
+// operations the CLI performs, and reimplementing them here is how the app and the
+// generated audio start disagreeing.
 
 import "server-only";
 
 import {
   areaName,
-  buildCatalogue,
+  assignFiles,
   loadAreaNames,
   loadPronunciation,
   textHash,
@@ -16,7 +24,7 @@ import {
 } from "./tools";
 import { query } from "./db";
 import { BASE_LANG, type Lang } from "./lang";
-import { currentLore } from "./lore";
+import { corpusRows, currentLore } from "./lore";
 
 /**
  * A line as the explorer shows it, which is a corpus line plus what reading it in
@@ -78,67 +86,105 @@ export const EMPTY_CONTEXT: SearchContext = {
   feedback: new Map(),
 };
 
-// Memoised on globalThis, for the reason db.ts caches its pool: `next dev`
-// re-evaluates modules on every edit, and re-reading and re-normalising 1353 lore
-// entries (a megabyte of Lua, plus a sha1 per line) on each one is a visible pause.
-// The Lua half is derived from committed files that do not change while the server runs.
-// The lore_line half does change, on every text edit -- which is why saving one calls
-// invalidateCatalogue() rather than trusting the next request to notice.
+/**
+ * The corpus is empty, so there is nothing to show.
+ *
+ * Distinguished from "no rows for this language", which is an untranslated language and
+ * perfectly normal. This one means the English table itself is unseeded or unreachable,
+ * and it is worth failing loudly on: the explorer used to fall back to the committed Lua
+ * here, which rendered a full catalogue against a database that could not save a word of
+ * it, and reported that only when somebody pressed save.
+ */
+export class CorpusEmpty extends Error {
+  constructor() {
+    super(
+      "lore_line holds no English lines -- seed it with: make lore-import " +
+        "(and check DATABASE_URL points at the database you mean)",
+    );
+    this.name = "CorpusEmpty";
+  }
+}
+
+// Memoised on globalThis, for the reason db.ts caches its pool: `next dev` re-evaluates
+// modules on every edit, and re-deriving 1353 entries -- a sha1 and a normalise pass per
+// line -- on each one is a visible pause. The rows change on every text edit, which is
+// why saving one calls invalidateCatalogue() rather than trusting the next request to
+// notice. A write from outside this process (a scrape, `make lore-import`) is not seen
+// until the server restarts.
 // Keyed by language: this process serves every language, and a single memo would
 // hand whichever was asked for first to everyone who asked afterwards.
 const globalForCatalogue = globalThis as unknown as {
-  /** The English Lua, parsed once: every language's overlay starts from it. */
-  zoneloreLua?: Promise<CorpusEntry[]>;
+  /** The English corpus, derived once: every language's overlay starts from it. */
+  zoneloreEnglish?: Promise<CorpusEntry[]>;
   zoneloreCatalogue?: Map<Lang, Promise<CatalogueEntry[]>>;
   zoneloreByPath?: Map<Lang, Promise<Map<string, CatalogueEntry>>>;
 };
 
-// A megabyte of Lua and a sha1 per line, and the same input for all eleven
-// languages -- so it is read once per process, not once per language asked for.
-function englishLua(): Promise<CorpusEntry[]> {
-  if (!globalForCatalogue.zoneloreLua) {
-    globalForCatalogue.zoneloreLua = buildCatalogue(BASE_LANG);
+/**
+ * Every English line, as a catalogue entry.
+ *
+ * The row supplies the structure and the prose; everything else is derived exactly as
+ * tools/voice/generate.mjs derives it, so a line's id, audio path and hash are the same
+ * whether the explorer or the CLI worked them out.
+ */
+async function buildEnglishCorpus(): Promise<CorpusEntry[]> {
+  const [rows, rules] = await Promise.all([corpusRows(BASE_LANG), loadPronunciation()]);
+  if (rows.length === 0) throw new CorpusEmpty();
+
+  const files = assignFiles(rows);
+  const zoneNames = new Map(
+    rows.filter((row) => row.kind === "zone").map((row) => [row.mapID, row.name]),
+  );
+
+  return rows.map((row) => {
+    const spoken = toSpokenText(row.full, rules);
+    return {
+      id: row.lineId,
+      kind: row.kind,
+      mapID: row.mapID,
+      key: row.key,
+      name: row.name,
+      zoneName: zoneNames.get(row.mapID) ?? "",
+      full: row.full,
+      short: row.short,
+      source: row.source ?? undefined,
+      spoken,
+      hash: textHash(spoken),
+      file: files.get(row.lineId)!,
+    };
+  });
+}
+
+// The same input for all eleven languages, so it is derived once per process rather
+// than once per language asked for.
+function englishCorpus(): Promise<CorpusEntry[]> {
+  if (!globalForCatalogue.zoneloreEnglish) {
+    globalForCatalogue.zoneloreEnglish = buildEnglishCorpus();
   }
-  return globalForCatalogue.zoneloreLua;
+  return globalForCatalogue.zoneloreEnglish;
 }
 
 /**
- * The catalogue as the Lua files have it, with the live rows of `lore_line` laid over
- * the top.
+ * The English corpus with one language's rows laid over the text.
  *
- * Two sources rather than one because they answer different questions. The Lua is what
- * the addon currently ships and what a clone with no database can still build from; the
- * table is what the corpus has been edited to since. Layering keeps `tools/` free of a
- * database -- buildCatalogue() is the same function the CLI runs -- while making an edit
- * visible in the explorer immediately, instead of after an export, a commit and a deploy.
+ * English is always the structural source. A translation never decides which lines
+ * exist -- that is the scraper's business, and a language that could add or drop a line
+ * would be a corpus rather than a translation.
  *
- * An overlaid line has its spoken text and hash recomputed, which is what makes the
+ * A translated line has its spoken text and hash recomputed, which is what makes the
  * staleness badge honest: rewriting the prose moves the hash away from the take's
  * textHash, and the line reads "text changed" exactly as it does after a pronunciation
  * rule is added.
  */
-async function buildOverlaidCatalogue(lang: Lang): Promise<CatalogueEntry[]> {
-  // English is always the structural source. A translation has no Lua files of its own
-  // until it is exported, and it never decides which lines exist -- that is the
-  // scraper's business, and a language that could add or drop a line would be a corpus
-  // rather than a translation. So the English catalogue supplies the shape, and the
-  // translated rows are laid over the text.
-  const [entries, translatedFrom, overrides, rules, names] = await Promise.all([
-    englishLua(),
-    lang === BASE_LANG ? Promise.resolve(null) : currentLore(BASE_LANG),
+async function buildCatalogueFor(lang: Lang): Promise<CatalogueEntry[]> {
+  const entries = await englishCorpus();
+  if (lang === BASE_LANG) return entries;
+
+  const [overrides, rules, names] = await Promise.all([
     currentLore(lang),
     loadPronunciation(),
     loadAreaNames(),
   ]);
-
-  // English edits show through under a translation too: they are what the translator is
-  // translating from, and showing the older scraped text would have them working from a
-  // line nobody ships any more.
-  const english = translatedFrom ?? overrides;
-
-  // English with no edits at all is the committed Lua exactly; every other language has
-  // work to do per line even when nothing is translated yet.
-  if (lang === BASE_LANG && overrides.size === 0) return entries;
 
   // Place names are the client's, not the translator's (tools/lib/area-names.mjs):
   // every row's name, and the zone name every row carries for the dropdown and the
@@ -147,16 +193,13 @@ async function buildOverlaidCatalogue(lang: Lang): Promise<CatalogueEntry[]> {
   const zoneNames = new Map<number, string>();
   for (const entry of entries) {
     if (entry.kind !== "zone") continue;
-    const englishName = english.get(entry.id)?.name ?? entry.name;
-    zoneNames.set(entry.mapID, areaName(names, lang, entry, englishName));
+    zoneNames.set(entry.mapID, areaName(names, lang, entry, entry.name));
   }
 
   return entries.map((entry) => {
-    const englishRow = english.get(entry.id);
     const source = {
       ...entry,
-      ...(englishRow ? { full: englishRow.full } : {}),
-      name: areaName(names, lang, entry, englishRow?.name ?? entry.name),
+      name: areaName(names, lang, entry, entry.name),
       zoneName: zoneNames.get(entry.mapID) ?? entry.zoneName,
     };
 
@@ -191,7 +234,8 @@ async function buildOverlaidCatalogue(lang: Lang): Promise<CatalogueEntry[]> {
       full: row.full,
       spoken,
       hash: textHash(spoken),
-      ...(lang === BASE_LANG ? {} : { english: source.full, translated: true }),
+      english: source.full,
+      translated: true,
     };
   });
 }
@@ -202,7 +246,7 @@ export function catalogue(lang: Lang = BASE_LANG): Promise<CatalogueEntry[]> {
   }
   const memo = globalForCatalogue.zoneloreCatalogue;
   if (!memo.has(lang)) {
-    memo.set(lang, buildOverlaidCatalogue(lang));
+    memo.set(lang, buildCatalogueFor(lang));
   }
   return memo.get(lang)!;
 }
@@ -221,9 +265,9 @@ export function invalidateCatalogue(lang?: Lang): void {
   // them; a lore edit names its own. Dropping English also drops the translations,
   // which are built from it.
   if (lang === undefined || lang === BASE_LANG) {
-    // The Lua goes too. It only changes with a lore export, but a full drop is the
-    // moment to notice one, and it is one parse.
-    globalForCatalogue.zoneloreLua = undefined;
+    // The English corpus goes too: it holds the prose every translation is laid over,
+    // and its own spoken text and hashes.
+    globalForCatalogue.zoneloreEnglish = undefined;
     globalForCatalogue.zoneloreCatalogue = undefined;
     globalForCatalogue.zoneloreByPath = undefined;
     return;
@@ -345,9 +389,9 @@ export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext
 /**
  * Whether a lineId names something that exists.
  *
- * Neither `line_flag` nor `feedback` has a foreign key -- a line is derived from committed
- * Lua, not a row -- so this is the only thing standing between a typo and a row nothing
- * will ever show or clean up. Every route that accepts a lineId from outside calls it.
+ * Neither `line_flag` nor `feedback` has a foreign key onto `lore_line`, so this is the
+ * only thing standing between a typo and a row nothing will ever show or clean up. Every
+ * route that accepts a lineId from outside calls it.
  */
 export async function isKnownLine(lineId: string, lang: Lang = BASE_LANG): Promise<boolean> {
   const entries = await catalogue(lang);
