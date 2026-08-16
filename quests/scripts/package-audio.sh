@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Build the data module from VBR copies of the audio store, and zip it.
 #
-#   make pack                    # the shipping pack: VBR, zipped, into dist/
-#   make pack VERSION=1.4.0      # the version written into the .toc
-#   ENCODE=copy make pack        # the masters, untranscoded, for a listening check
-#   JOBS=1 make pack             # serial, when a failing encode needs readable output
+#   make package-audio                 # the shipping pack: VBR, zipped, into dist/
+#   make package-audio VERSION=1.4.0   # the version written into the .toc
+#   ENCODE=copy make package-audio     # the masters, untranscoded, for a listening check
+#   JOBS=1 make package-audio          # serial, when a failing encode needs readable output
 #
 # The store is 1.6 GB of mono speech at 64 and 128 kbps CBR - 128 for everything
 # ElevenLabs has made since this pipeline existed, 64 for the pack this project

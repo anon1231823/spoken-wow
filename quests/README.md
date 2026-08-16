@@ -122,13 +122,19 @@ python cli-main.py install --force                    # into the AddOns folder
 the mp3s it just copied. The addon resolves sounds through that table rather than the
 filesystem, so building the two together is what stops a line going silent.
 
-For a module to hand to players, use `make pack` instead: it transcodes first.
+For a module to hand to players, use `make package-audio` instead: it transcodes first.
 
 ```bash
-make pack                    # VBR where it helps, build, zip -> dist/
-make pack VERSION=1.4.0      # the version written into the .toc
-ENCODE=copy make pack        # the masters untouched, to hear what is being given up
+make package                       # the player addon, one zip per client
+make package-audio                 # VBR where it helps, build, zip -> dist/
+make package-audio VERSION=1.4.0   # the version written into the pack's .toc
+ENCODE=copy make package-audio     # the masters untouched, to hear what is being given up
 ```
+
+`make package` takes its version from `## Version:` in `VoiceOverRedux.toc` and produces four
+zips, one per client, each carrying that client's `.toc` copied to the unsuffixed name the
+game actually opens. It refuses to build from an uncommitted tree — `ALLOW_DIRTY=1` overrides
+while testing.
 
 The store is 1.6 GB, and `-q:a 6` (LAME VBR, mono) takes the module to 1.3 GB. The saving is
 smaller than it looks like it should be, and deliberately: **only the 128 kbps clips are

@@ -69,8 +69,8 @@ endef
 
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
-        pull-history push-history history-status pull-ignores pack deploy-scripts \
-        rollback releases ssh-check
+        pull-history push-history history-status pull-ignores package package-audio \
+        deploy-scripts rollback releases ssh-check
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -184,17 +184,26 @@ history-status: ## Compare take count and size on both sides
 	@echo "local:  $$(find audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ') takes, $$(du -sh audio-history 2>/dev/null | cut -f1 || echo 0)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_HISTORY) -name "*.mp3" 2>/dev/null | wc -l | tr -d " ") takes, $$(du -sh $(REMOTE_HISTORY) 2>/dev/null | cut -f1)"'
 
-# --- the sound pack -------------------------------------------------------------------
+# --- packaging ------------------------------------------------------------------------
 #
-# The store ships as a data module, and at 1.6 GB of CBR mp3 that is a lot to ask of a
-# player. scripts/package-audio.sh transcodes the 128 kbps takes to VBR, leaves the
-# inherited 64 kbps pack alone because a second lossy pass would only make it worse,
-# builds the module from the result and zips it. Its header explains every choice.
+# Two zips built on their own schedules, which is why they are two targets: most changes to
+# the player touch no voiceline, and the sound pack is three orders of magnitude larger.
 #
-# VERSION goes into the .toc. ENCODE=copy skips the transcode when you want to hear the
-# masters in game, and JOBS=1 makes a failing encode readable.
+# `package` takes its version from `## Version:` in VoiceOverRedux.toc, so bumping the addon
+# and naming the zip stay one edit. It refuses to build from an uncommitted tree, because a
+# zip nobody can trace back to a commit is a zip nobody can rebuild - ALLOW_DIRTY=1 to
+# override while testing.
+#
+# `package-audio` transcodes the 128 kbps takes to VBR, leaves anything already at or below
+# 80 kbps alone (a second lossy pass would only make it worse), builds the data module from
+# the result and zips that. Its own header explains every choice; VERSION goes into the TOC,
+# ENCODE=copy skips the transcode to hear the masters in game, JOBS=1 makes a failing encode
+# readable.
 
-pack: ## Transcode, build and zip the data module into dist/ (VERSION=1.4.0)
+package: ## Zip the player addon, one per client, into dist/
+	@./scripts/package.sh
+
+package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.4.0)
 	@VERSION=$(VERSION) ENCODE=$(ENCODE) JOBS=$(JOBS) ./scripts/package-audio.sh
 
 # --- the ignore list ------------------------------------------------------------------
