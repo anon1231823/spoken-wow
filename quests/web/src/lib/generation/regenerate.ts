@@ -26,7 +26,7 @@ import { canonicalNpcId, seedFor } from "./seed";
 import { commitVersion } from "./history";
 import { currentConfig } from "./settings";
 import { generationStatus } from "./status";
-import { NARRATOR_VOICE, segments } from "./narration";
+import { audioTags, NARRATOR_VOICE, segments } from "./narration";
 import { textToDialogue, textToSpeech } from "./tts";
 import { BUSY, withFileLock } from "./lock";
 import { failure, type Failure } from "./errors";
@@ -124,7 +124,7 @@ export async function regenerateLine(
 
   const outcome = await withFileLock(file, async (): Promise<RegenerateResult> => {
     const config = await currentConfig();
-    const spokenText = applyPronunciation(source, fileDefaults().rules);
+    const spokenText = audioTags(applyPronunciation(source, fileDefaults().rules));
     // Read inside the lock and per line, not hoisted: an admin saving the lexicon mid-batch
     // should affect the lines after the save, and pinning one locator for a whole batch
     // would record a version that some of those takes were not made with.

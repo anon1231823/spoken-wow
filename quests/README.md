@@ -455,12 +455,14 @@ the NPC's speech and the narration as a single file through its text-to-dialogue
 The same brackets also hold sounds the NPC makes: `<hic>`, `<cough>`, `<sigh>`, `<mutters>`.
 **Capitalisation is what tells them apart**, and it separates all 90 bracketed spans in the
 corpus with no exceptions — a direction names someone, a sound is a bare lowercase word. Do not
-also require a closing full stop; that misclassifies `Motega shrugs his shoulder`. Sounds are
-left alone, so those seven lines stay unvoiceable rather than having a narrator say "hic";
-voicing them properly means `eleven_v3` audio tags and has not been tried yet.
+also require a closing full stop; that misclassifies `Motega shrugs his shoulder`. A sound is
+not narrated: `audioTags` rewrites it into ElevenLabs' own syntax — `<hic>` becomes `[hic]` —
+and the NPC performs it in their own voice, which `eleven_v3` (the model the database selects)
+understands and `eleven_multilingual_v2` does not. The rewrite runs on the whole line before it
+is split, so a line whose only bracket is a sound never touches the dialogue endpoint.
 
 Because voiceability is recomputed from the effective text rather than read from the corpus,
-this unblocked 55 previously silent lines without regenerating the corpus. **Nothing is
+this unblocked 62 previously silent lines without regenerating the corpus. **Nothing is
 generated in bulk.** Tick **has narration** in the explorer to find these lines, listen, and
 regenerate the ones worth fixing through the usual controls.
 

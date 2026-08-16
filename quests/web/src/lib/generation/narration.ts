@@ -31,10 +31,30 @@ export type Segment = { speaker: "npc" | "narrator"; text: string };
  * Capitalisation alone, note. Also requiring a closing full stop is tempting and wrong -
  * "Motega shrugs his shoulder" has none.
  *
- * A lowercase span is left in the NPC's text with its brackets, so the voiceability gate keeps
- * refusing the line. Those seven lines stay silent, which beats a narrator saying "hic".
+ * A lowercase span stays with the NPC and is handed to audioTags instead: the NPC performs the
+ * sound, nobody narrates the word.
  */
 const DIRECTION = /(<[A-Z][^<>]*>)/;
+
+/** A lowercase bracketed span: a sound the NPC makes, not the game narrating. */
+const SOUND = /<([a-z][^<>]*)>/g;
+
+/**
+ * The NPC's own sounds, rewritten into ElevenLabs' audio-tag syntax.
+ *
+ * Blizzard writes them in angle brackets - `<hic>`, `<cough>`, `<sigh>`, `<mutters>` - and
+ * ElevenLabs writes them in square ones. eleven_v3, the model the database selects, performs a
+ * tag rather than reading it; the angle-bracket form is not syntax to any model and would be
+ * spoken aloud or refused by the gate.
+ *
+ * Applied to the whole line before segments(), so it reaches the single-voice path too: a line
+ * whose only bracket is a sound never goes near the dialogue endpoint. Capitalised directions
+ * are left untouched for segments() to hand to the narrator, and an unbalanced bracket is left
+ * as damage for the gate to refuse.
+ */
+export function audioTags(text: string): string {
+  return text.replace(SOUND, "[$1]");
+}
 
 export function segments(text: string): Segment[] {
   const out: Segment[] = [];

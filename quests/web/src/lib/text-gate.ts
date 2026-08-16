@@ -2,8 +2,9 @@
  * Which characters make a line unvoiceable.
  *
  * This was a mirror of INVALID_CHARS in tts_cli/corpus.py and is no longer one. The character
- * list still matches, but the web app now voices a capitalised stage direction by handing it to
- * a narrator (lib/generation/narration.ts), and the Python CLI cannot. A line the CLI calls
+ * list still matches, but the web app now voices every bracketed span - a capitalised stage
+ * direction goes to a narrator, a lowercase sound becomes an ElevenLabs audio tag
+ * (lib/generation/narration.ts) - and the Python CLI can do neither. A line the CLI calls
  * unvoiceable may therefore be voiceable here. That divergence is deliberate and joins the
  * other one CLAUDE.md records: the CLI sends no pronunciation dictionary either.
  *
@@ -23,12 +24,14 @@
 export const INVALID_CHARS = "$<>";
 
 /**
- * Capitalised stage directions, which the narrator speaks rather than the NPC.
+ * A balanced bracketed span, which something voices.
  *
- * Lowercase spans are deliberately not matched: `<hic>` is a sound the NPC makes, nothing
- * voices it yet, and letting it through here would put the brackets into someone's mouth.
+ * Both kinds are handled by lib/generation/narration.ts before synthesis: a capitalised span is
+ * a stage direction the narrator speaks, and a lowercase one is a sound the NPC makes, rewritten
+ * into ElevenLabs' `[hic]` audio-tag form. Neither reaches a voice as an angle bracket, so
+ * neither is damage. An unbalanced `<` still is.
  */
-const DIRECTION = /<[A-Z][^<>]*>/g;
+const DIRECTION = /<[^<>]*>/g;
 
 export function hasInvalidChars(text: string): boolean {
   const spoken = text.replace(DIRECTION, "");

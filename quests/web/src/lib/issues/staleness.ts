@@ -17,6 +17,7 @@ import { fileIndex } from "../audio";
 import { db } from "../db";
 import { fileDefaults } from "../generation/files";
 import { spokenHash } from "../generation/history";
+import { audioTags } from "../generation/narration";
 import { applyPronunciation } from "../generation/pronunciation";
 import { readOverrides } from "./overrides";
 
@@ -52,7 +53,11 @@ export async function staleFiles(files?: string[]): Promise<Set<string>> {
     const line = lines.get(row.file);
     if (!line) continue;
     const text = overrides.get(row.file)?.text ?? line.text;
-    if (spokenHash(applyPronunciation(text, rules)) !== row.spokenHash) stale.add(row.file);
+    // Same two transforms regenerate.ts applies, in the same order: the hash is of the string
+    // that was sent, so a take of "[hic]" must be compared against "[hic]" and not "<hic>".
+    if (spokenHash(audioTags(applyPronunciation(text, rules))) !== row.spokenHash) {
+      stale.add(row.file);
+    }
   }
   return stale;
 }

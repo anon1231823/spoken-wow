@@ -1,6 +1,28 @@
 import { describe, expect, it } from "vitest";
 
-import { hasNarration, restoresOnlyNarration, segments } from "./narration";
+import { audioTags, hasNarration, restoresOnlyNarration, segments } from "./narration";
+
+describe("audioTags", () => {
+  it("turns a lowercase sound into the tag syntax ElevenLabs performs", () => {
+    expect(audioTags("Take some coin... <hic>... some new armor")).toBe(
+      "Take some coin... [hic]... some new armor",
+    );
+  });
+
+  it("converts every sound in a line", () => {
+    expect(audioTags("Ye're brave... <cough>... fer me. <cough>")).toBe(
+      "Ye're brave... [cough]... fer me. [cough]",
+    );
+  });
+
+  it("leaves a capitalised direction alone, because the narrator reads it", () => {
+    expect(audioTags("Hm. <cough> <He turns away.>")).toBe("Hm. [cough] <He turns away.>");
+  });
+
+  it("leaves an unbalanced bracket alone rather than guessing", () => {
+    expect(audioTags("What < is this")).toBe("What < is this");
+  });
+});
 
 describe("segments", () => {
   it("splits speech from a trailing direction", () => {
@@ -37,10 +59,10 @@ describe("segments", () => {
     expect(segments("What < is this")).toEqual([{ speaker: "npc", text: "What < is this" }]);
   });
 
-  it("leaves a lowercase sound with the npc, brackets and all", () => {
+  it("leaves a lowercase sound with the npc", () => {
     // <hic> is the dwarf hiccuping, not the game narrating. Handing it to a narrator would have
-    // a second voice say "hic"; keeping the brackets means the gate still refuses the line,
-    // which is silence rather than nonsense.
+    // a second voice say "hic". audioTags has usually turned it into [hic] before this runs;
+    // either way it stays in the NPC's own turn.
     expect(segments("Take some coin... <hic>... some new armor")).toEqual([
       { speaker: "npc", text: "Take some coin... <hic>... some new armor" },
     ]);

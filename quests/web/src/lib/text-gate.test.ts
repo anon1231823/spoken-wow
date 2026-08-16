@@ -11,9 +11,12 @@ describe("hasInvalidChars", () => {
     expect(hasInvalidChars("<Thrall grunts.>")).toBe(false);
   });
 
-  it("still catches a bracket no narrator can take", () => {
-    // Lowercase is a sound the NPC makes, and unbalanced is simply damage.
-    expect(hasInvalidChars("<cough>")).toBe(true);
+  it("no longer catches a lowercase sound, which becomes an audio tag", () => {
+    expect(hasInvalidChars("<cough>")).toBe(false);
+  });
+
+  it("still catches a bracket nothing can take", () => {
+    // Unbalanced is simply damage.
     expect(hasInvalidChars("What < is this")).toBe(true);
   });
 
@@ -37,10 +40,10 @@ describe("isVoiceable", () => {
     expect(isVoiceable({ skipReason: "invalid-chars" }, "Excellent. <He reads.>")).toBe(true);
   });
 
-  it("still refuses a lowercase sound, which nothing voices yet", () => {
-    // <hic> is the NPC hiccuping. Until an audio tag handles it, silence beats a narrator
-    // reading the word.
-    expect(isVoiceable({ skipReason: "invalid-chars" }, "Ye're brave... <cough>...")).toBe(false);
+  it("voices a lowercase sound, which the NPC performs as an audio tag", () => {
+    // <hic> is the NPC hiccuping. lib/generation/narration.ts turns it into [hic], which
+    // eleven_v3 performs; the gate only has to stop counting it as damage.
+    expect(isVoiceable({ skipReason: "invalid-chars" }, "Ye're brave... <cough>...")).toBe(true);
   });
 
   it("still refuses an unbalanced bracket", () => {

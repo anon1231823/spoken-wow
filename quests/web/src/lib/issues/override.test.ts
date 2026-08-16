@@ -13,13 +13,14 @@ describe("validateOverride", () => {
   });
 
   it("refuses the characters an override exists to remove", () => {
-    expect(() => validateOverride({ ...VALID, text: "<cough> ye brave soul" })).toThrow(OverrideError);
+    expect(() => validateOverride({ ...VALID, text: "what < is this" })).toThrow(OverrideError);
     expect(() => validateOverride({ ...VALID, text: "in $2113w days" })).toThrow(/unvoiceable/);
   });
 
-  it("accepts a capitalised stage direction, which the narrator now reads", () => {
+  it("accepts either bracketed span, which the narrator and the NPC now voice", () => {
     // The gate stopped calling these damage, and an override is judged by the same gate.
     expect(() => validateOverride({ ...VALID, text: "<Thrall grunts.>" })).not.toThrow();
+    expect(() => validateOverride({ ...VALID, text: "<cough> ye brave soul" })).not.toThrow();
   });
 
   it("refuses a paste", () => {
