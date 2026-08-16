@@ -22,6 +22,12 @@ REMOTE_PM2   := pm2
 # corpus/ignored.json is committed and exported from the database by `make pull-ignores`;
 # .rsync-ignored is regenerated before every transfer and gitignored. Deriving it each time
 # rather than committing it means a stale exclusion cannot survive a decision being undone.
+# Passed straight through to scripts/package-audio.sh, which documents each one. Empty
+# means the script's own default, so `make pack` needs no arguments to do the usual thing.
+VERSION ?=
+ENCODE  ?=
+JOBS    ?=
+
 IGNORED_JSON := corpus/ignored.json
 IGNORED_LIST := .rsync-ignored
 PYTHON       ?= $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || command -v python3)
@@ -63,8 +69,8 @@ endef
 
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
-        pull-history push-history history-status pull-ignores deploy-scripts rollback \
-        releases ssh-check
+        pull-history push-history history-status pull-ignores pack deploy-scripts \
+        rollback releases ssh-check
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -177,6 +183,19 @@ push-history: ## Upload previous takes to the droplet (non-destructive)
 history-status: ## Compare take count and size on both sides
 	@echo "local:  $$(find audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ') takes, $$(du -sh audio-history 2>/dev/null | cut -f1 || echo 0)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_HISTORY) -name "*.mp3" 2>/dev/null | wc -l | tr -d " ") takes, $$(du -sh $(REMOTE_HISTORY) 2>/dev/null | cut -f1)"'
+
+# --- the sound pack -------------------------------------------------------------------
+#
+# The store ships as a data module, and at 1.6 GB of CBR mp3 that is a lot to ask of a
+# player. scripts/package-audio.sh transcodes the 128 kbps takes to VBR, leaves the
+# inherited 64 kbps pack alone because a second lossy pass would only make it worse,
+# builds the module from the result and zips it. Its header explains every choice.
+#
+# VERSION goes into the .toc. ENCODE=copy skips the transcode when you want to hear the
+# masters in game, and JOBS=1 makes a failing encode readable.
+
+pack: ## Transcode, build and zip the data module into dist/ (VERSION=1.4.0)
+	@VERSION=$(VERSION) ENCODE=$(ENCODE) JOBS=$(JOBS) ./scripts/package-audio.sh
 
 # --- the ignore list ------------------------------------------------------------------
 #

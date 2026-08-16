@@ -39,6 +39,12 @@ assets/sql/mysql-dump
 # Built data module
 /dist/
 
+# Transcoded copies of the store, keyed on the md5 of the master each came from. A cache and
+# nothing more: every entry is one ffmpeg run away from existing again, which is exactly what
+# audio-history/ is not. A sibling of the store rather than a child, so readStoreIndex and
+# `make push` cannot mistake a transcode for a voiceline.
+/audio-transcoded/
+
 generated
 tools/.lines_cache.pkl
 AI_VoiceOver/AI_VoiceOver.toc

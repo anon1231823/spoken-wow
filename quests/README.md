@@ -122,6 +122,32 @@ python cli-main.py install --force                    # into the AddOns folder
 the mp3s it just copied. The addon resolves sounds through that table rather than the
 filesystem, so building the two together is what stops a line going silent.
 
+For a module to hand to players, use `make pack` instead: it transcodes first.
+
+```bash
+make pack                    # VBR where it helps, build, zip -> dist/
+make pack VERSION=1.4.0      # the version written into the .toc
+ENCODE=copy make pack        # the masters untouched, to hear what is being given up
+```
+
+The store is 1.6 GB, and `-q:a 6` (LAME VBR, mono) takes the module to 1.3 GB. The saving is
+smaller than it looks like it should be, and deliberately: **only the 128 kbps clips are
+transcoded.** 7,164 of 9,969 files are the 64 kbps pack this project inherited, and `-q:a 6`
+lands around 65 kbps on this speech — a second lossy pass over them would produce files no
+smaller and audibly worse. The test is a bitrate rather than a list, so a re-generated line
+starts being transcoded the day it replaces an inherited one. `tools/plan_transcode.py` is
+where that decision is made and explained; a clip whose encode still comes out larger keeps
+its master.
+
+Transcodes are cached in `audio-transcoded/`, keyed on the **md5 of the master**, so a
+re-generated line misses the cache and everything else is reused. Keying on mtime would be
+wrong: `make pull` copies the droplet's timestamps, so a freshly pulled take can be older
+than the entry it should replace. The masters in `audio/` are never touched, which is what
+makes raising the shipped quality later a re-run rather than a second purchase.
+
+Durations stay honest for free: `build` computes the length table from the mp3s it just
+copied, and mutagen reads the Xing header a VBR file carries.
+
 `install` moves any existing install aside to `<module>.replaced` rather than deleting it.
 
 ### Browsing the corpus
