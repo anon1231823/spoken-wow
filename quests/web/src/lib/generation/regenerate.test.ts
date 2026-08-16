@@ -31,8 +31,15 @@ const SHARED = "q:109:accept";
 const NEVER_VOICED = "q:6:progress";
 /** A whole line of stage direction: "<Sirra begins translating…>". The narrator reads it. */
 const STAGE_DIRECTION = "q:251:complete";
-/** A $ token the game expands and we do not, so only an override can rescue it. */
-const TEMPLATE_TOKEN = "q:8514:accept:m";
+/**
+ * A bracket Blizzard left behind - "Well done, Adventurer>." - so only an override rescues it.
+ *
+ * Not one of the $2113w war-effort lines, which read the same way here but are ignored
+ * outright by migration 0017: those are refused for being ignored, before the gate is asked.
+ */
+const TEMPLATE_TOKEN = "q:7124:complete";
+/** One of those war-effort lines, seeded as ignored. */
+const IGNORED = "q:8514:accept:m";
 
 const MP3 = Buffer.from("ID3generated-audio");
 
@@ -46,6 +53,8 @@ const DEFAULT_VOICES = {
   "human-male-standard": "voice-human-male-standard",
   // The shared line's six NPCs are all officials; the solo one is a standard.
   "human-male-official": "voice-human-male-official",
+  // The line holding a stray bracket, which an override rescues.
+  "orc-female-warrior": "voice-orc-female-warrior",
   // Not a race-gender-flavor slot: it reads stage directions, and no corpus line names it.
   "narrator-male": "voice-narrator-male",
 };
@@ -348,12 +357,24 @@ describe("a line whose spoken text has been rewritten", () => {
     if (before.ok) return;
     expect(before.failure.message).toContain("rewrite it");
 
-    await writeOverride(fileFor(TEMPLATE_TOKEN), TEMPLATE_TOKEN, "Plenty of leather.", null);
+    await writeOverride(fileFor(TEMPLATE_TOKEN), TEMPLATE_TOKEN, "Well done, adventurer.", null);
     const after = await regenerate(TEMPLATE_TOKEN, options);
 
     expect(after.ok).toBe(true);
     if (!after.ok) return;
-    expect(after.spokenText).toBe("Plenty of leather.");
+    expect(after.spokenText).toBe("Well done, adventurer.");
+  });
+
+  it("refuses an ignored line, and says which decision refused it", async () => {
+    const { options, calls } = stub();
+
+    const result = await regenerateLine(IGNORED, "user", options);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.failure.message).toContain("war-effort tally");
+    // Refused before the account is asked anything, so an ignored line costs no request.
+    expect(calls).toEqual([]);
   });
 
   it("sends a stage direction to the narrator, as dialogue", async () => {

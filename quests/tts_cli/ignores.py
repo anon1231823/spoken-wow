@@ -1,0 +1,53 @@
+"""Lines this project has decided never to voice, and the files that follow from them.
+
+Some corpus lines are not worth audio and never will be. The war-effort tallies read
+"$2113w" - a world-state counter the game expands against a live server and no committed
+corpus can hold. Others are Blizzard's own debris: quest 1 is a test quest, and lines turn
+up that no player can reach. Neither is a text defect an override can fix, so neither
+belongs in the queue, the store, or the module.
+
+The decision is made in the web app and lives in Postgres, which is where a collaborator
+can make it with a reason attached. `make pull-ignores` exports it to corpus/ignored.json,
+committed beside the corpus, and this module is how the Python side and the Makefile read
+that export. The file is a snapshot: the database stays the authority, and a checkout with
+no export simply ignores nothing.
+
+A LINE IS IGNORED, A FILE IS ONLY DERIVED. 1,076 mp3s are shared by several NPCs, so a file
+may be addressed by a dead line and a live one at once. ignored_files refuses to name such a
+file: excluding it from an rsync would strand the line that still needs it.
+"""
+import json
+import os
+
+from tts_cli.naming import subfolder_from_line_id
+
+DEFAULT_IGNORED_PATH = "corpus/ignored.json"
+
+
+def load_ignored(path: str = DEFAULT_IGNORED_PATH) -> dict:
+    """The export as {lineId: reason}, or {} where there is no export to read."""
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        document = json.load(f)
+    return {entry["lineId"]: entry["reason"] for entry in document.get("ignored", [])}
+
+
+def ignored_line_ids(path: str = DEFAULT_IGNORED_PATH) -> set:
+    """Just the ids, for the callers that only ask 'is this one of them?'."""
+    return set(load_ignored(path))
+
+
+def ignored_files(corpus: dict, ignored: dict) -> list:
+    """Store-relative paths whose every corpus line is ignored, sorted.
+
+    Sorted because this feeds an rsync --exclude-from and a diff of two runs should be a
+    diff of the decisions, not of dictionary order.
+    """
+    owners = {}
+    for line in corpus["lines"]:
+        rel = f'{subfolder_from_line_id(line["lineId"])}/{line["fileName"]}.mp3'
+        owners.setdefault(rel, []).append(line["lineId"])
+
+    return sorted(rel for rel, line_ids in owners.items()
+                  if all(line_id in ignored for line_id in line_ids))

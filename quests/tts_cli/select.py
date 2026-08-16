@@ -10,14 +10,18 @@ from tts_cli.store import missing_lines
 
 
 def select_lines(corpus: dict, store_dir: str, npc=None, quest=None, voice=None,
-                 line_id=None, missing=False, area=None) -> list:
-    """Filters combine with AND. `area` is (map_id, x_range, y_range)."""
-    lines = corpus["lines"]
+                 line_id=None, missing=False, area=None, ignored=()) -> list:
+    """Filters combine with AND. `area` is (map_id, x_range, y_range).
+
+    Ignored lines are dropped before any filter, including an explicit --line-id: a line
+    somebody decided never to voice should not be selectable by naming it.
+    """
+    lines = [l for l in corpus["lines"] if l["lineId"] not in ignored]
 
     if line_id:
         lines = [l for l in lines if l["lineId"] == line_id]
     if missing:
-        wanted = {l["lineId"] for l in missing_lines(store_dir, corpus)}
+        wanted = {l["lineId"] for l in missing_lines(store_dir, corpus, ignored)}
         lines = [l for l in lines if l["lineId"] in wanted]
     if area:
         in_area = {l["lineId"] for l in lines_in_area(corpus, *area)}

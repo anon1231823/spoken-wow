@@ -211,6 +211,19 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
             has narration
           </Label>
         </div>
+        {/* Shows only the ignored lines rather than adding them to the results: they are
+            36 lines nobody will ever voice, and mixing them back in is not a view anyone
+            asked for. Reading the reasons is. */}
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Checkbox
+            id="ignored-only"
+            checked={filters.ignored ?? false}
+            onCheckedChange={(value) => onFilters({ ignored: value === true })}
+          />
+          <Label htmlFor="ignored-only" className="text-muted-foreground text-sm">
+            ignored only
+          </Label>
+        </div>
         {/* Phrased as showing rather than hiding: the box is unticked by default, and an
             unticked "hide progress text" would claim the opposite of what is happening. */}
         <div className="flex items-center gap-2 whitespace-nowrap">

@@ -395,6 +395,7 @@ be visible to the other.
 ```bash
 make pull-history    # previous takes; v0 of each is unreproducible, so back this up
 make history-status
+make pull-ignores    # the ignore list, database -> corpus/ignored.json (commit the result)
 ```
 
 Deploys are versioned as directories under `/srv/voiceover/releases/`, with `current` a
@@ -468,6 +469,35 @@ regenerate the ones worth fixing through the usual controls.
 
 This is the second place the two generators diverge: `tts_cli` knows none of it and still
 refuses every one of those lines, exactly as it sends no pronunciation dictionary.
+
+### Lines nobody will ever voice
+
+Some lines are not worth audio and never will be. The war-effort tallies read `$2113w` — a
+world-state counter the game expands against a live server, so no committed corpus can hold
+the number and no take of the line can be right. Quest 1 is a Blizzard test quest called
+`The "Chow" Quest (123)aa`. Neither is a text defect an override could fix.
+
+**Ignoring is per line and carries a reason.** An admin ticks it on the row; the decision goes
+to `line_ignore` in Postgres, keyed on the corpus's `lineId` — not the file, because 1,076
+mp3s are addressed by more than one line, and a dead line can share a file with a live one.
+An ignored line disappears from searches unless **ignored only** is ticked, is refused by
+regeneration before a request is spent, and is left out of the addon's lookup tables so no
+entry resolves to a sound that will never exist.
+
+The Python CLI and the rsync targets have no database, so the list is exported:
+
+```bash
+make pull-ignores    # database -> corpus/ignored.json; commit it
+```
+
+That file is what `tts_cli/ignores.py` reads. `push`, `pull` and their dry runs derive
+`.rsync-ignored` from it before every transfer and pass it to `--exclude-from`, which also
+stops `--delete` removing what it excludes — audio made before the decision is left where it
+is rather than destroyed. `make build` leaves both the audio and the lookup entries out of the
+module. **A file is only excluded when every line addressing it is ignored**, so ignoring one
+gendered variant of a shared gossip line strands nothing.
+
+Seeded with the 35 war-effort lines and quest 1 by migration `0017`.
 
 ### Reports from inside the game
 

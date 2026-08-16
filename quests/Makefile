@@ -17,6 +17,15 @@ REMOTE_VOICES := $(REMOTE_ROOT)/shared/voices/
 REMOTE_HISTORY := $(REMOTE_ROOT)/shared/audio-history/
 REMOTE_PM2   := pm2
 
+# The ignore list and the rsync exclusion file derived from it.
+#
+# corpus/ignored.json is committed and exported from the database by `make pull-ignores`;
+# .rsync-ignored is regenerated before every transfer and gitignored. Deriving it each time
+# rather than committing it means a stale exclusion cannot survive a decision being undone.
+IGNORED_JSON := corpus/ignored.json
+IGNORED_LIST := .rsync-ignored
+PYTHON       ?= $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || command -v python3)
+
 # macOS ships openrsync as /usr/bin/rsync, which reports itself as "2.6.9 compatible" and
 # rejects --info. Prefer a real rsync 3.x anywhere on PATH.
 RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(command -v rsync); do \
@@ -32,10 +41,18 @@ SSH        := ssh -i $(DEPLOY_KEY) -o IdentitiesOnly=yes
 # No -z: mp3 is already compressed, so it is pure CPU for ~0 gain.
 # --delete keeps the two stores in exact correspondence, which is what makes the "missing
 # audio" badges in the UI trustworthy - see isGap() in web/src/lib/search.ts.
-RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)"
+#
+# --exclude-from keeps the lines nobody will ever voice out of both directions. It also stops
+# --delete removing what it excludes, on either side: an ignored line's audio is left where it
+# already is rather than destroyed, because ignoring is a decision about a line and not a
+# licence to throw away a take. See tts_cli/ignores.py.
+RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)" \
+	--exclude-from=$(IGNORED_LIST)
 
 # Fail with an explanation rather than an rsync usage dump or a silent no-op reload.
 define preflight
+	@$(PYTHON) cli-main.py ignored-files --ignored $(IGNORED_JSON) > $(IGNORED_LIST) \
+	  || { echo "could not derive $(IGNORED_LIST) from $(IGNORED_JSON)"; exit 1; }
 	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. macOS ships openrsync, which lacks --info."; \
 	                        echo "Install one:  brew install rsync"; exit 1; }
 	@case "$(DROPLET)" in root@*) \
@@ -46,7 +63,8 @@ endef
 
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
-        pull-history push-history history-status deploy-scripts rollback releases ssh-check
+        pull-history push-history history-status pull-ignores deploy-scripts rollback \
+        releases ssh-check
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -159,6 +177,27 @@ push-history: ## Upload previous takes to the droplet (non-destructive)
 history-status: ## Compare take count and size on both sides
 	@echo "local:  $$(find audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ') takes, $$(du -sh audio-history 2>/dev/null | cut -f1 || echo 0)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_HISTORY) -name "*.mp3" 2>/dev/null | wc -l | tr -d " ") takes, $$(du -sh $(REMOTE_HISTORY) 2>/dev/null | cut -f1)"'
+
+# --- the ignore list ------------------------------------------------------------------
+#
+# Lines this project has decided never to voice: the war-effort tallies, whose $$2113w is a
+# counter the game expands against a live server, and Blizzard's own debris. The decision is
+# made in the web app and lives in Postgres, where it carries a reason and an author. This
+# brings it back as a committed file, which is the only form the Python CLI and rsync can
+# read - neither has a database.
+#
+# One direction only. Editing the file by hand would put it out of step with the table the
+# app reads, and the app is what everyone looks at.
+
+pull-ignores: ## Export the ignore list from the droplet into corpus/ignored.json
+	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; \
+	  psql "$$DATABASE_URL" -At -f -' < deploy/sql/export_ignores.sql > $(IGNORED_JSON).tmp
+	@# A truncated or failed export must not replace a good list: an empty file here would
+	@# silently un-ignore every line the next time anyone pushed or built.
+	@$(PYTHON) -c "import json,sys; json.load(open(sys.argv[1]))['ignored']" $(IGNORED_JSON).tmp \
+	  || { rm -f $(IGNORED_JSON).tmp; echo "export was not a list; kept $(IGNORED_JSON)"; exit 1; }
+	@mv $(IGNORED_JSON).tmp $(IGNORED_JSON)
+	@echo "==> wrote $(IGNORED_JSON). Commit it: the CLI and the rsync targets read the file, not the database."
 
 audio-status: ## Compare file count and size on both sides
 	@echo "local:  $$(find audio -name '*.mp3' | wc -l | tr -d ' ') files, $$(du -sh audio | cut -f1)"

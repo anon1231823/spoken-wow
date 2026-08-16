@@ -1,6 +1,12 @@
 "use client";
 
-import { ChevronDownIcon, MessageSquareIcon, PencilIcon, PlayIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  EyeOffIcon,
+  MessageSquareIcon,
+  PencilIcon,
+  PlayIcon,
+} from "lucide-react";
 import { useState } from "react";
 
 import IssueChip from "./IssueChip";
@@ -75,6 +81,8 @@ type Props = {
   stale: boolean;
   onPlay: (line: ResultLine) => void;
   onEditText: (line: ResultLine) => void;
+  /** Open the ignore dialog, or null for anyone not allowed to make that decision. */
+  onIgnore: ((line: ResultLine) => void) | null;
   onRegenerate: (line: ResultLine) => void;
   onRestored: (file: string, version: number) => void;
   /** Narrow the search to this line's NPC, or to its quest. */
@@ -92,6 +100,7 @@ export default function LineRow({
   stale,
   onPlay,
   onEditText,
+  onIgnore,
   onRegenerate,
   onRestored,
   onNarrowToNpc,
@@ -223,6 +232,13 @@ export default function LineRow({
                   audio outdated
                 </span>
               )}
+              {/* First of the chips: it is the reason the row is on screen at all, since a
+                  search only shows these when they were asked for. */}
+              {line.ignored && (
+                <span className="text-muted-foreground" title={line.ignored}>
+                  ignored
+                </span>
+              )}
               {line.narration && (
                 <span
                   className="text-sky-300"
@@ -278,6 +294,17 @@ export default function LineRow({
             >
               <PencilIcon className={cn("size-3.5", line.override && "text-amber-300")} />
             </Button>
+            {onIgnore && (
+              <Button
+                variant="ghost"
+                size="icon"
+                title={line.ignored ? `Ignored: ${line.ignored}` : "Never voice this line"}
+                aria-label={`Ignore ${line.npcName}'s line`}
+                onClick={() => onIgnore(line)}
+              >
+                <EyeOffIcon className={cn("size-3.5", line.ignored && "text-amber-300")} />
+              </Button>
+            )}
             {/* Only shown once there is something to go back to, so an untouched line keeps
                 a single control rather than two. */}
             {takes > 0 && (

@@ -524,3 +524,62 @@ describe("filtering by when the live take was generated", () => {
     );
   });
 });
+
+/**
+ * Ignored lines: the war-effort tallies and Blizzard's test quest. Passed in as context for
+ * the reason findings are - the decision lives in Postgres, and these run without one.
+ */
+describe("ignored lines", () => {
+  const ignoring = (lineId: string, reason = "war-effort tally") => ({
+    issues: new Map(),
+    overrides: new Map(),
+    ignores: new Map([
+      [lineId, { lineId, reason, createdAt: "2026-08-16T00:00:00.000Z", createdBy: null }],
+    ]),
+  });
+
+  const TALLY = "q:8516:accept";
+
+  it("hides an ignored line from an ordinary search", () => {
+    const has = (lines: { lineId: string }[]) => lines.some((l) => l.lineId === TALLY);
+    // Quest 8516 has an untouched complete line too, which must stay: this hides one line,
+    // not a quest.
+    expect(has(matchingLines(corpus, store, { q: "8516", filter: "quest" }, ignoring(TALLY)))).toBe(
+      false,
+    );
+    expect(has(matchingLines(corpus, store, { q: "8516", filter: "quest" }))).toBe(true);
+  });
+
+  it("shows only the ignored lines when asked for them", () => {
+    const found = matchingLines(corpus, store, { ignored: true }, ignoring(TALLY));
+    expect(found.map((l) => l.lineId)).toEqual([TALLY]);
+  });
+
+  it("hides them from progress and gap searches too, not just plain ones", () => {
+    // The filter runs first on purpose: a line nobody will voice is not an answer to "what
+    // is missing?" either, and counting it there is what makes a gap list unactionable.
+    const context = ignoring(TALLY);
+    const gaps = matchingLines(corpus, store, { missingOnly: true, includeProgress: true }, context);
+    expect(gaps.some((l) => l.lineId === TALLY)).toBe(false);
+  });
+
+  it("carries the reason onto the row, so the chip can say why", () => {
+    const found = search(corpus, store, { ignored: true, limit: 5 }, ignoring(TALLY, "counter"));
+    expect(found.lines[0].ignored).toBe("counter");
+  });
+
+  it("leaves every other line unignored rather than undefined", () => {
+    const found = search(corpus, store, { q: "dughan", filter: "npc", limit: 5 }, ignoring(TALLY));
+    expect(found.lines.every((l) => l.ignored === null)).toBe(true);
+  });
+
+  it("shows everything when the database could not be reached", () => {
+    // NO_CONTEXT has no ignores at all, which must read as "unknown, show them" rather than
+    // "nothing is ignored, hide nothing" - the explorer is meant to survive an outage.
+    expect(
+      matchingLines(corpus, store, { q: "8516", filter: "quest" }).some(
+        (l) => l.lineId === TALLY,
+      ),
+    ).toBe(true);
+  });
+});

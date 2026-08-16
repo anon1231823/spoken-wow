@@ -107,3 +107,14 @@ def test_missing_source_directory_is_an_error(tmp_path):
         assert "nope" in str(exc)
     else:
         raise AssertionError("expected FileNotFoundError")
+
+
+def test_missing_lines_skips_ignored_lines(tmp_path):
+    # An ignored line has no audio and never will; reporting it as a gap would ask the
+    # question again on every import.
+    store = str(tmp_path / "audio")
+    import_audio(_source(tmp_path, []), store, CORPUS)
+
+    missing = missing_lines(store, CORPUS, {"g:abc123"})
+
+    assert {l["lineId"] for l in missing} == {"q:5:accept", "q:9:accept"}

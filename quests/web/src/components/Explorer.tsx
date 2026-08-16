@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import LineRow from "./LineRow";
 import Pagination from "./Pagination";
 import Player from "./Player";
+import IgnoreDialog from "./IgnoreDialog";
 import OverrideDialog from "./OverrideDialog";
 import RegenerateDialog from "./RegenerateDialog";
 import RegenerationPanel from "./RegenerationPanel";
@@ -28,7 +29,7 @@ import {
   type QueueSnapshot,
 } from "@/lib/generation/client";
 import { estimate as estimateBatch, LIST_RATE, type Estimate } from "@/lib/generation/billing";
-import { canRegenerate } from "@/lib/permissions";
+import { canConfigureGeneration, canRegenerate } from "@/lib/permissions";
 import { isVoiceable } from "@/lib/text-gate";
 import type { Filter, LineFilters, ResultLine, SearchResult } from "@/lib/search";
 import { type Pending, receive, target, write } from "@/lib/url-echo";
@@ -84,6 +85,7 @@ function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.issueCategory) params.set("issue", filters.issueCategory);
   if (filters.finding) params.set("finding", String(filters.finding));
   if (filters.overridden) params.set("overridden", "1");
+  if (filters.ignored) params.set("ignored", "1");
   if (filters.outdated) params.set("outdated", "1");
   if (filters.generatedBefore) params.set("before", filters.generatedBefore);
   if (filters.generatedAfter) params.set("after", filters.generatedAfter);
@@ -98,6 +100,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
   // Read once here and drilled down, rather than a hook per row: a page renders fifty
   // LineRows and the answer is the same for all of them.
   const showRegenerate = canRegenerate(session?.user.role);
+  // Ignoring hides a line from everyone and takes it out of the module, which is the reach
+  // the generation settings have rather than the reach a rewrite has. Same gate as the API.
+  const canConfigure = canConfigureGeneration(session?.user.role);
 
   // The URL is the source of truth for a search, so a result is linkable and survives a
   // reload; `query` is the uncommitted keystroke state in front of it.
@@ -123,6 +128,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       issueCategory: params.get("issue") ?? undefined,
       finding: Number(params.get("finding")) || undefined,
       overridden: params.get("overridden") === "1",
+      ignored: params.get("ignored") === "1",
       outdated: params.get("outdated") === "1",
       generatedBefore: params.get("before") ?? undefined,
       generatedAfter: params.get("after") ?? undefined,
@@ -147,6 +153,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const [stale, setStale] = useState<Set<string>>(new Set());
   // The line whose spoken text is being rewritten, or null.
   const [editing, setEditing] = useState<ResultLine | null>(null);
+  const [ignoring, setIgnoring] = useState<ResultLine | null>(null);
   const [pendingBatch, setPendingBatch] = useState<{
     label: string;
     /**
@@ -227,6 +234,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
         ...("finding" in next ? { finding: next.finding } : {}),
         ...("overridden" in next ? { overridden: next.overridden ? "1" : undefined } : {}),
         ...("outdated" in next ? { outdated: next.outdated ? "1" : undefined } : {}),
+        ...("ignored" in next ? { ignored: next.ignored ? "1" : undefined } : {}),
         ...("generatedBefore" in next ? { before: next.generatedBefore } : {}),
         ...("generatedAfter" in next ? { after: next.generatedAfter } : {}),
       });
@@ -347,6 +355,27 @@ export default function Explorer({ facets }: { facets: Facets }) {
   }, []);
 
   /**
+   * Adopt an ignore decision without a reload.
+   *
+   * The row stays where it is rather than vanishing: a search is a snapshot, and having the
+   * line disappear from under the person who just ignored it hides the chip that says what
+   * they did. It is gone on the next search, which is when the filter is asked again.
+   */
+  const handleIgnoreSaved = useCallback((lineId: string, reason: string | null) => {
+    setIgnoring(null);
+    setResult((current) =>
+      current
+        ? {
+            ...current,
+            lines: current.lines.map((line) =>
+              line.lineId === lineId ? { ...line, ignored: reason } : line,
+            ),
+          }
+        : current,
+    );
+  }, []);
+
+  /**
    * Adopt a restored take.
    *
    * The same bookkeeping a fresh generation does - the version bumps the audio URL so the
@@ -370,6 +399,11 @@ export default function Explorer({ facets }: { facets: Facets }) {
       // direction could be narrated or an override could strip a token, so it says no to 55
       // lines the server will happily generate. Reading it here disabled the button on
       // exactly the lines this feature exists for.
+      // Before voiceability: an ignored line is a decision rather than a defect, and saying
+      // "never voiced: invalid-chars" about one would name the wrong reason.
+      if (line.ignored) {
+        return `Ignored: ${line.ignored}`;
+      }
       if (!line.voiceable) {
         return `Never voiced: ${line.skipReason}`;
       }
@@ -732,6 +766,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 stale={stale.has(line.audioPath)}
                 onPlay={play}
                 onEditText={setEditing}
+                onIgnore={canConfigure ? setIgnoring : null}
                 onRegenerate={regenerateLine}
                 onRestored={handleRestored}
                 onNarrowToNpc={narrowToNpc}
@@ -761,6 +796,12 @@ export default function Explorer({ facets }: { facets: Facets }) {
         line={editing}
         onSaved={handleOverrideSaved}
         onCancel={() => setEditing(null)}
+      />
+
+      <IgnoreDialog
+        line={ignoring}
+        onSaved={handleIgnoreSaved}
+        onCancel={() => setIgnoring(null)}
       />
 
       <RegenerateDialog

@@ -72,3 +72,9 @@ def test_estimate_counts_files_not_lines():
 
 def test_estimate_lists_required_voices():
     assert estimate(CORPUS["lines"])["voices"] == ["dwarf-male", "human-male"]
+
+
+def test_an_ignored_line_is_never_selected():
+    # Not even by naming it: --line-id q:5:accept on an ignored line selects nothing.
+    assert select_lines(CORPUS, "audio", npc="288", ignored={"q:5:accept"}) == []
+    assert select_lines(CORPUS, "audio", line_id="q:5:accept", ignored={"q:5:accept"}) == []

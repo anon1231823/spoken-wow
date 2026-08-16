@@ -63,3 +63,6 @@ web/tsconfig.tsbuildinfo
 
 # deploy
 deploy/bootstrap.sh
+
+# Derived before every rsync from corpus/ignored.json; see the Makefile.
+.rsync-ignored

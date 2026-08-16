@@ -52,6 +52,9 @@ export function filtersFromParams(params: URLSearchParams): LineFilters {
     issueCategory: params.get("issue") || undefined,
     finding: Number(params.get("finding")) || undefined,
     overridden: params.get("overridden") === "1",
+    // Absent means hidden, like progress text: the useful default view is the corpus minus
+    // the lines nobody will ever voice.
+    ignored: params.get("ignored") === "1",
     outdated: params.get("outdated") === "1",
     // Kept as the raw day. dayStart is what decides whether it is a date, so there is one
     // definition of that rather than one here and another in the filter.

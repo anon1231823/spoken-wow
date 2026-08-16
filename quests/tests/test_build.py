@@ -183,3 +183,25 @@ def test_install_requires_a_built_module(tmp_path):
     from tts_cli.build import install_module
     with pytest.raises(FileNotFoundError):
         install_module(str(tmp_path / "nope"), str(tmp_path))
+
+
+def test_an_ignored_line_gets_no_lookup_entry():
+    # A line nobody will ever voice must not be findable: the addon cannot tell an entry
+    # whose sound was never made from a lookup that is simply broken.
+    tables = {name: data for name, (_, data)
+              in build_tables(CORPUS, {"g:abc123", "g:abc123:m", "q:9:accept"}).items()}
+
+    assert tables["npc_gossip_file_lookups"].get(68, {}) == {}
+    assert 9 not in tables["questlog_object_lookups"]
+
+
+def test_a_gendered_twin_keeps_the_entry_its_own_line_still_needs():
+    # g:abc123 and g:abc123:m are two lines over one gossip text, and the lookup is keyed on
+    # the text. Ignoring one of them must leave the other findable.
+    tables = {name: data for name, (_, data) in build_tables(CORPUS, {"g:abc123"}).items()}
+
+    assert tables["npc_gossip_file_lookups"][68]["Move along, 'citizen'."] == "abc123"
+
+
+def test_ignoring_nothing_leaves_every_table_as_it_was():
+    assert build_tables(CORPUS, ()) == build_tables(CORPUS)

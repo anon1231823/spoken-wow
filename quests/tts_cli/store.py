@@ -62,22 +62,30 @@ def unmatched_files(directory: str, corpus: dict) -> list:
     return [rel for rel in _walk(directory) if rel not in owners]
 
 
-def missing_lines(store_dir: str, corpus: dict) -> list:
+def missing_lines(store_dir: str, corpus: dict, ignored=()) -> list:
     """Generatable corpus lines with no audio in the store - the real gaps.
 
     Lines the generator never voices (progress text, unresolved template tokens) are not
-    gaps and are excluded.
+    gaps and are excluded. Neither are ignored lines: a line somebody decided never to voice
+    is a closed question, and counting it as missing would reopen it on every report.
     """
     present = set(_walk(store_dir))
     return [
         line for line in corpus["lines"]
         if line["generatable"]
+        and line["lineId"] not in ignored
         and f'{subfolder_from_line_id(line["lineId"])}/{line["fileName"]}.mp3' not in present
     ]
 
 
-def import_audio(source_dir: str, store_dir: str, corpus: dict, progress: bool = False) -> dict:
-    """Copy existing audio into the store, keeping only what the corpus can address."""
+def import_audio(source_dir: str, store_dir: str, corpus: dict, progress: bool = False,
+                 ignored=()) -> dict:
+    """Copy existing audio into the store, keeping only what the corpus can address.
+
+    Ignored lines narrow the report's missing count only. An mp3 that already exists is
+    still adopted: importing is how audio nobody can reproduce gets into the store, and
+    deciding not to voice a line is not a reason to drop the take that already exists.
+    """
     if not os.path.isdir(source_dir):
         raise FileNotFoundError(f"no audio source directory at {source_dir}")
 
@@ -106,5 +114,5 @@ def import_audio(source_dir: str, store_dir: str, corpus: dict, progress: bool =
         "adopted": adopted,
         "alreadyPresent": already,
         "unmatched": unmatched,
-        "missing": len(missing_lines(store_dir, corpus)),
+        "missing": len(missing_lines(store_dir, corpus, ignored)),
     }

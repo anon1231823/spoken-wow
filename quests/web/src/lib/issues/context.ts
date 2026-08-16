@@ -15,6 +15,7 @@ import { generatedAt } from "../generation/versions";
 import { staleFiles } from "./staleness";
 import type { SearchContext } from "../search";
 import { NO_CONTEXT } from "../search";
+import { readIgnores } from "./ignores";
 import { readOverrides } from "./overrides";
 import { findingLines, issuesByLine } from "./store";
 
@@ -32,9 +33,10 @@ export async function searchContext(
   outdated = false,
 ): Promise<SearchContext> {
   try {
-    const [issues, overrides, lines, dates, stale] = await Promise.all([
+    const [issues, overrides, ignores, lines, dates, stale] = await Promise.all([
       issuesByLine(),
       readOverrides(),
+      readIgnores(),
       finding ? findingLines(finding) : null,
       dated ? generatedAt() : null,
       outdated ? staleFiles() : null,
@@ -42,6 +44,7 @@ export async function searchContext(
     return {
       issues,
       overrides,
+      ignores,
       findingLines: lines,
       generatedAt: dates ?? undefined,
       stale: stale ?? undefined,

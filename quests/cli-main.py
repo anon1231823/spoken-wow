@@ -17,6 +17,7 @@ from tts_cli.build import (DEFAULT_ADDONS_DIR, DEFAULT_DIST_DIR,
                            DEFAULT_MODULE_NAME, build_module, install_module)
 from tts_cli.corpus import DEFAULT_CORPUS_PATH, load_corpus
 from tts_cli.env_vars import ELEVENLABS_API_KEY
+from tts_cli.ignores import DEFAULT_IGNORED_PATH, ignored_files, load_ignored
 from tts_cli.select import estimate, select_lines, unique_by_file
 from tts_cli.store import DEFAULT_SOURCE_DIR, DEFAULT_STORE_DIR, import_audio
 from tts_cli.synthesize import synthesize_line
@@ -43,6 +44,7 @@ imp.add_argument("--source", default=DEFAULT_SOURCE_DIR,
                  help="Sound pack to import from (default: the _classic_era_ install).")
 imp.add_argument("--store", default=DEFAULT_STORE_DIR)
 imp.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
+imp.add_argument("--ignored", default=DEFAULT_IGNORED_PATH)
 
 syn = subparsers.add_parser(
     "synthesize",
@@ -61,6 +63,7 @@ syn.add_argument("--dry-run", action="store_true",
                  help="Report what would be generated and what it would cost")
 syn.add_argument("--store", default=DEFAULT_STORE_DIR)
 syn.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
+syn.add_argument("--ignored", default=DEFAULT_IGNORED_PATH)
 
 bld = subparsers.add_parser(
     "build",
@@ -70,6 +73,7 @@ bld.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
 bld.add_argument("--dist", default=DEFAULT_DIST_DIR)
 bld.add_argument("--module", default=DEFAULT_MODULE_NAME)
 bld.add_argument("--version", default="0.1")
+bld.add_argument("--ignored", default=DEFAULT_IGNORED_PATH)
 
 ins = subparsers.add_parser(
     "install", help="Copy the built module into a WoW AddOns folder.")
@@ -78,6 +82,12 @@ ins.add_argument("--dist", default=DEFAULT_DIST_DIR)
 ins.add_argument("--module", default=DEFAULT_MODULE_NAME)
 ins.add_argument("--force", action="store_true",
                  help="Replace an existing install, moving it aside first")
+
+ign = subparsers.add_parser(
+    "ignored-files",
+    help="Print store-relative mp3s whose every corpus line is ignored (rsync exclusions).")
+ign.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
+ign.add_argument("--ignored", default=DEFAULT_IGNORED_PATH)
 
 subparsers.add_parser(
     "gen_lookup_tables",
@@ -100,7 +110,8 @@ elif args.mode == "extract":
           f"and spawns for {len(corpus['spawns'])} NPCs to {args.out}")
 
 elif args.mode == "import-audio":
-    report = import_audio(args.source, args.store, load_corpus(args.corpus), progress=True)
+    report = import_audio(args.source, args.store, load_corpus(args.corpus), progress=True,
+                          ignored=load_ignored(args.ignored))
     print(f"\nadopted        {report['adopted']}")
     print(f"already stored {report['alreadyPresent']}")
     print(f"unmatched      {len(report['unmatched'])}  (no corpus line; not imported)")
@@ -112,11 +123,12 @@ elif args.mode == "import-audio":
 
 elif args.mode == "synthesize":
     corpus = load_corpus(args.corpus)
+    ignored = load_ignored(args.ignored)
     area = (int(args.area[0]), (args.area[1], args.area[2]), (args.area[3], args.area[4])) \
         if args.area else None
     selected = select_lines(corpus, args.store, npc=args.npc, quest=args.quest,
                             voice=args.voice, line_id=args.line_id,
-                            missing=args.missing, area=area)
+                            missing=args.missing, area=area, ignored=ignored)
     targets = unique_by_file([l for l in selected if l["generatable"]])
     if args.limit:
         targets = targets[:args.limit]
@@ -162,11 +174,18 @@ elif args.mode == "synthesize":
 
 elif args.mode == "build":
     report = build_module(load_corpus(args.corpus), args.store, args.dist,
-                          args.module, args.version, progress=True)
+                          args.module, args.version, progress=True,
+                          ignored=load_ignored(args.ignored))
     print(f"\nbuilt {report['moduleDir']}")
     print(f"  audio files {report['audioFiles']}")
     for name, rows in sorted(report["tableRows"].items()):
         print(f"  {name:<32} {rows:>6} entries")
+
+elif args.mode == "ignored-files":
+    # One path per line and nothing else: this is read by `make push`/`make pull` as an
+    # rsync --exclude-from file, which takes one pattern per line.
+    for rel in ignored_files(load_corpus(args.corpus), load_ignored(args.ignored)):
+        print(rel)
 
 elif args.mode == "install":
     import os as _os

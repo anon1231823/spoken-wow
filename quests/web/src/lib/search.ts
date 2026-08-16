@@ -17,6 +17,7 @@ import { audioRelPath } from "./audio";
 import { hasNarration, restoresOnlyNarration } from "./generation/narration";
 import type { NpcType, Source } from "./line-fields";
 import { categoryGroup, type LineIssues, type Severity } from "./issues/issues";
+import type { LineIgnore } from "./issues/ignores";
 import type { LineOverride } from "./issues/override";
 import { isVoiceable } from "./text-gate";
 
@@ -70,6 +71,15 @@ export type LineFilters = {
   finding?: number;
   /** Lines whose spoken text has been rewritten by hand. */
   overridden?: boolean;
+  /**
+   * Show only the lines somebody decided never to voice, which are hidden by default.
+   *
+   * The war-effort tallies and Blizzard's test quest: 36 lines that will never have audio,
+   * and which pad every search for a gap with results nobody can act on. Hidden rather than
+   * deleted because the decision is reversible and the reason is worth reading, so this is
+   * how you go and read it.
+   */
+  ignored?: boolean;
   /** Lines whose audio was made from text that has since changed. */
   outdated?: boolean;
   /**
@@ -115,6 +125,12 @@ export type SearchContext = {
    * means nobody asked, not that every take is current.
    */
   stale?: Set<string>;
+  /**
+   * Lines nobody will voice, with the reason. Absent means the database could not be
+   * reached, which shows them rather than hiding them: an outage should not silently narrow
+   * the corpus, and a visible extra row is the safer way to be wrong.
+   */
+  ignores?: Map<string, LineIgnore>;
 };
 
 export const NO_CONTEXT: SearchContext = { issues: new Map(), overrides: new Map() };
@@ -146,6 +162,8 @@ export type ResultLine = CorpusLine & {
    * rewrite anyone should be asked to review.
    */
   narrationRestored: boolean;
+  /** Why this line will never be voiced, or null. Set only when the row is one of them. */
+  ignored: string | null;
 };
 
 export type SearchResult = {
@@ -330,14 +348,30 @@ export function matchingLines(
     finding,
     overridden,
     outdated = false,
+    ignored = false,
     generatedBefore,
     generatedAfter,
   }: LineFilters = {},
-  { issues: found, overrides, findingLines, generatedAt, stale }: SearchContext = NO_CONTEXT,
+  {
+    issues: found,
+    overrides,
+    findingLines,
+    generatedAt,
+    stale,
+    ignores,
+  }: SearchContext = NO_CONTEXT,
 ): CorpusLine[] {
   const query = q.trim();
 
   let lines = corpus.lines;
+  // First, and whichever way round: a line nobody will voice is not an answer to any other
+  // question either, so every count and every "regenerate everything matching" is computed
+  // over a corpus without them unless they are what was asked for.
+  if (ignores?.size) {
+    lines = ignored
+      ? lines.filter((line) => ignores.has(line.lineId))
+      : lines.filter((line) => !ignores.has(line.lineId));
+  }
   if (query) lines = lines.filter((line) => matches(line, query, filter));
   if (missingOnly) lines = lines.filter((line) => isGap(line, store, overrides));
   if (race) lines = lines.filter((line) => line.race === race);
@@ -425,6 +459,7 @@ export function search(
       voiceable: isVoiceable(line, override ?? line.text),
       narration: hasNarration(override ?? line.text),
       narrationRestored: override !== null && restoresOnlyNarration(override, line.text),
+      ignored: context.ignores?.get(line.lineId)?.reason ?? null,
     };
   });
 

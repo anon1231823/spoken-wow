@@ -16,6 +16,7 @@
  */
 import { audioRelPath } from "@/lib/audio";
 import { lineIndex, type CorpusLine } from "@/lib/corpus";
+import { readIgnores } from "@/lib/issues/ignores";
 import { readOverrides } from "@/lib/issues/overrides";
 import { INVALID_CHARS, isVoiceable } from "@/lib/text-gate";
 
@@ -78,6 +79,22 @@ export async function regenerateLine(
 
   const line = group[0];
   const file = audioRelPath(line);
+
+  // Before the voiceability gate and before any credit is spent: an ignored line is a
+  // decision, not a defect, so no override can rescue it and there is nothing to weigh up.
+  // A queued job can outlive the decision, which is exactly why this is checked here rather
+  // than only where the queue is filled.
+  const ignore = (await readIgnores()).get(lineId);
+  if (ignore) {
+    return {
+      ok: false,
+      failure: {
+        ...failure("bad-request", `${lineId} is ignored: ${ignore.reason}`),
+        status: 409,
+        fatal: false,
+      },
+    };
+  }
 
   // Read per line rather than hoisted over a batch, for the reason the dictionary locator is
   // read inside the lock below: someone rewriting a line mid-batch should affect the lines

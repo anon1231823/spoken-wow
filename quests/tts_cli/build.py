@@ -13,6 +13,7 @@ import shutil
 from slpp import slpp as lua
 from tqdm import tqdm
 
+from tts_cli.ignores import ignored_files
 from tts_cli.length_table import write_sound_length_table_lua
 from tts_cli.naming import gossip_hash_from_line_id, subfolder_from_line_id
 from tts_cli.store import stored_files
@@ -106,8 +107,13 @@ def prune_quest_id_table(quest_id_table: dict) -> dict:
     return pruned
 
 
-def build_tables(corpus: dict) -> dict:
-    """Every lookup table, as {output filename: (lua table name, data)}."""
+def build_tables(corpus: dict, ignored=()) -> dict:
+    """Every lookup table, as {output filename: (lua table name, data)}.
+
+    Ignored lines are left out entirely, the way progress text is below: an entry pointing
+    at a sound that will never be produced resolves to silence, and the addon has no way to
+    tell that apart from a broken lookup.
+    """
     gossip_by_id = {"creature": {}, "gameobject": {}}
     gossip_by_name = {"creature": {}, "gameobject": {}}
     questlog = {"creature": {}, "gameobject": {}, "item": {}}
@@ -115,6 +121,9 @@ def build_tables(corpus: dict) -> dict:
     quest_ids = {}
 
     for line in corpus["lines"]:
+        if line["lineId"] in ignored:
+            continue
+
         kind = line["npcType"]
         names.setdefault(kind, {})[line["npcId"]] = line["npcName"]
 
@@ -174,8 +183,13 @@ def module_toc(module_name: str, generated_files: list, version: str = "0.1") ->
 
 def build_module(corpus: dict, store_dir: str, dist_dir: str = DEFAULT_DIST_DIR,
                  module_name: str = DEFAULT_MODULE_NAME, version: str = "0.1",
-                 progress: bool = False) -> dict:
-    """Assemble the data module. Returns a report."""
+                 progress: bool = False, ignored=()) -> dict:
+    """Assemble the data module. Returns a report.
+
+    An ignored line's audio is left behind as well as its lookup entry, so a take made
+    before the decision - or one imported from the old sound pack - does not ship anyway.
+    Only a file whose every line is ignored is skipped; see tts_cli/ignores.py.
+    """
     module_dir = os.path.join(dist_dir, module_name)
     generated_dir = os.path.join(module_dir, "generated")
     sounds_dir = os.path.join(generated_dir, "sounds")
@@ -183,12 +197,13 @@ def build_module(corpus: dict, store_dir: str, dist_dir: str = DEFAULT_DIST_DIR,
     for sub in ("quests", "gossip"):
         os.makedirs(os.path.join(sounds_dir, sub), exist_ok=True)
 
-    audio = stored_files(store_dir)
+    skip = set(ignored_files(corpus, ignored)) if ignored else set()
+    audio = [rel for rel in stored_files(store_dir) if rel not in skip]
     iterator = tqdm(audio, unit="file", desc="Copying audio") if progress else audio
     for rel in iterator:
         shutil.copy2(os.path.join(store_dir, rel), os.path.join(sounds_dir, rel))
 
-    tables = build_tables(corpus)
+    tables = build_tables(corpus, ignored)
     written = []
     for filename, (table_name, data) in sorted(tables.items()):
         write_lua_table(os.path.join(generated_dir, filename + ".lua"),
