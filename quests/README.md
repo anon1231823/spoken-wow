@@ -131,10 +131,16 @@ make package-audio VERSION=1.4.0   # the version written into the pack's .toc
 ENCODE=copy make package-audio     # the masters untouched, to hear what is being given up
 ```
 
-`make package` takes its version from `## Version:` in `VoiceOverRedux.toc` and produces four
-zips, one per client, each carrying that client's `.toc` copied to the unsuffixed name the
-game actually opens. It refuses to build from an uncommitted tree — `ALLOW_DIRTY=1` overrides
-while testing.
+`make package` takes its version from `## Version:` in `VoiceOverRedux.toc` and produces one
+zip. It refuses to build from an uncommitted tree — `ALLOW_DIRTY=1` overrides while testing.
+
+**One zip, because the addon targets Blizzard's clients only.** Those pick a `.toc` by flavor
+suffix — `_Vanilla`, `_TBC`, `_Wrath`, `_Mainline` — so a single archive serves Classic Era
+through retail and the client chooses. It used to be four: the 1.12, 2.4.3 and 3.3.5 private
+server clients predate suffix support, read `VoiceOverRedux.toc` and nothing else, and each
+wanted a different file under that one name — three zips that could never be merged. They also
+needed their own vendored Ace3, which is why `1.12/`, `2.4.3/` and `3.3.5/` existed and were
+most of the addon's size. Dropping those clients took the zip matrix and 1 MB with them.
 
 The store is 1.6 GB, and `-q:a 6` (LAME VBR, mono) takes the module to 1.3 GB. The saving is
 smaller than it looks like it should be, and deliberately: **only the 128 kbps clips are

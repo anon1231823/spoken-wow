@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-# Builds the player addon's distributable zips, one per client.
+# Builds the player addon's distributable zip.
 #
-#   ./scripts/package.sh                 # dist/VoiceOverRedux-WoW_<client>-<version>.zip
+#   ./scripts/package.sh                 # dist/VoiceOverRedux-<version>.zip
 #   ALLOW_DIRTY=1 ./scripts/package.sh   # build from an uncommitted tree
 #
-# Four zips rather than one, because a WoW client loads <Folder>.toc and nothing else: each
-# zip carries exactly one .toc, copied from the variant for that client. Shipping all eight
-# variants in one zip would work on modern clients, which pick by suffix, and silently load
-# the wrong file list on 1.12, which does not.
+# ONE ZIP, because the addon targets Blizzard's clients only. Those pick their .toc by flavor
+# suffix - _Vanilla, _TBC, _Wrath, _Mainline - so a single archive serves Classic Era through
+# retail and the client decides. This used to be four zips: the 1.12, 2.4.3 and 3.3.5 private
+# server clients predate suffix support, read VoiceOverRedux.toc and nothing else, and each
+# wanted a different file under that one name. Dropping them dropped the zip matrix with them.
 #
 # The version comes from `## Version:` in the .toc, so bumping the addon and naming the zip
-# stay one edit rather than two. Same rule as ../wow-lore/scripts/package.sh, which this is
-# modelled on; the differences are the four clients and the audio living elsewhere.
+# stay one edit rather than two. Modelled on ../wow-lore/scripts/package.sh, and now the same
+# shape as it - the audio is the only thing that lives elsewhere.
 #
 # Addon hosts unpack the zip straight into Interface/AddOns, so its root must contain the
 # VoiceOverRedux/ folder itself - hence the `cd` before zipping.
@@ -25,15 +26,6 @@ NAME="${NAME:-VoiceOverRedux}"
 SRC="$REPO/$NAME"
 TOC="$SRC/$NAME.toc"
 DIST="${DIST:-$REPO/dist}"
-
-# client label -> the .toc variant it loads. The label lands in the zip name, where it is
-# what a player picks between.
-CLIENTS=(
-  "1.12:1.12"
-  "2.4.3:2.4.3"
-  "3.3.5:3.3.5"
-  "BlizzClassic:Mainline"
-)
 
 [ -f "$TOC" ] || { echo "error: $TOC not found" >&2; exit 1; }
 
@@ -63,37 +55,18 @@ if [ ${#missing[@]} -gt 0 ]; then
 fi
 
 mkdir -p "$DIST"
-staging="$(mktemp -d)"
-trap 'rm -rf "$staging"' EXIT
+zip_path="$DIST/$NAME-$version.zip"
+rm -f "$zip_path"
 
-for pair in "${CLIENTS[@]}"; do
-  client="${pair%%:*}"
-  variant="${pair##*:}"
-  source_toc="$SRC/${NAME}_${variant}.toc"
-  [ -f "$source_toc" ] || { echo "error: no $source_toc for client $client" >&2; exit 1; }
+# Addon hosts unpack into Interface/AddOns, so the archive root must be the folder itself.
+# -X drops the extra macOS attributes that otherwise ride along.
+(cd "$REPO" && zip -r -q -X "$zip_path" "$NAME" \
+  -x '*.DS_Store' '*/.git/*' '*.bak' '*.orig')
 
-  folder="$staging/$client/$NAME"
-  mkdir -p "$folder"
-  # -a and not -r: the addon carries no symlinks today, and copying one as a link would
-  # produce a zip that unpacks into nothing on someone else's machine.
-  (cd "$SRC" && tar -cf - --exclude '.DS_Store' --exclude '*.bak' --exclude '*.orig' .) \
-    | (cd "$folder" && tar -xf -)
+files="$(unzip -Z1 "$zip_path" | grep -cv '/$')"
 
-  # The unsuffixed name is what every client actually opens; the variants ride along
-  # harmlessly, and dropping them would make the zips differ from the tree they came from.
-  cp "$source_toc" "$folder/$NAME.toc"
-
-  zip_path="$DIST/$NAME-WoW_$client-$version.zip"
-  rm -f "$zip_path"
-  # -X drops the extra macOS attributes that otherwise ride along.
-  (cd "$staging/$client" && zip -r -q -X "$zip_path" "$NAME" \
-    -x '*.DS_Store' '*/.git/*' '*.bak' '*.orig')
-
-  files="$(unzip -Z1 "$zip_path" | grep -cv '/$')"
-  echo "built $(basename "$zip_path")   files: $files   size: $(du -h "$zip_path" | cut -f1)"
-done
-
+echo "built $zip_path"
+echo "  version: $version   files: $files   size: $(du -h "$zip_path" | cut -f1)"
 echo
-echo "version $version, from $NAME.toc"
 echo "sanity check the layout (the root must be $NAME/):"
-echo "  unzip -l $DIST/$NAME-WoW_1.12-$version.zip | head"
+echo "  unzip -l $zip_path | head"
