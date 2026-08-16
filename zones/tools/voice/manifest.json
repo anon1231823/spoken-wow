@@ -298,14 +298,14 @@
     "textHash": "8bdcc6e8c85001a4ec728a14b75b9b75aedee51f",
     "chars": 676,
     "credits": 413,
-    "durationSec": 55.171,
-    "bytes": 883191,
+    "durationSec": 54.361,
+    "bytes": 870235,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:53:47.329Z"
+    "dictionaryVersionId": "PUAhRqVJM9d3KXsnIQ6z",
+    "generatedAt": "2026-08-16T14:51:06.271Z"
   },
   "s:1411:spirit rock": {
     "file": "1411/spirit-rock",
@@ -998,14 +998,14 @@
     "textHash": "9500c8c7ef60397d301fa56d0a3d6a0a7f4cedec",
     "chars": 729,
     "credits": 445,
-    "durationSec": 56.033,
-    "bytes": 896984,
+    "durationSec": 52.349,
+    "bytes": 838052,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T17:03:18.691Z"
+    "dictionaryVersionId": "PUAhRqVJM9d3KXsnIQ6z",
+    "generatedAt": "2026-08-16T14:52:19.508Z"
   },
   "s:1413:stagnant oasis": {
     "file": "1413/stagnant-oasis",
@@ -1025,15 +1025,15 @@
     "file": "1413/thorn-hill",
     "textHash": "2aafb5875437b079d680e15ada74502e332d1541",
     "chars": 276,
-    "credits": 168,
-    "durationSec": 18.678,
-    "bytes": 299302,
+    "credits": 169,
+    "durationSec": 17.319,
+    "bytes": 277568,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T17:03:07.598Z"
+    "dictionaryVersionId": "6xk9FHjUEYnkzR2bkcxc",
+    "generatedAt": "2026-08-16T14:55:59.818Z"
   },
   "s:1413:tidus stair": {
     "file": "1413/tidus-stair",
@@ -2493,17 +2493,17 @@
   },
   "s:1422:darrowmere lake": {
     "file": "1422/darrowmere-lake",
-    "textHash": "58fc169a8f96eb7276ecccf8f0b844288a01d54b",
-    "chars": 934,
-    "credits": 565,
-    "durationSec": 65.724,
-    "bytes": 1052047,
+    "textHash": "9235edf529d44d6bfba1adc057add5a44ef8a5bb",
+    "chars": 936,
+    "credits": 566,
+    "durationSec": 64.758,
+    "bytes": 1036582,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T17:05:41.326Z"
+    "dictionaryVersionId": "6xk9FHjUEYnkzR2bkcxc",
+    "generatedAt": "2026-08-16T15:58:02.860Z"
   },
   "s:1422:felstone field": {
     "file": "1422/felstone-field",
@@ -7088,14 +7088,14 @@
     "textHash": "1306e5096343bfd768731e7d4c5f5b7b959a5ffa",
     "chars": 1017,
     "credits": 616,
-    "durationSec": 77.322,
-    "bytes": 1237621,
+    "durationSec": 72.281,
+    "bytes": 1156955,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:51:34.719Z"
+    "dictionaryVersionId": "PUAhRqVJM9d3KXsnIQ6z",
+    "generatedAt": "2026-08-16T14:49:38.835Z"
   },
   "s:1439:auberdine": {
     "file": "1439/auberdine",
@@ -7116,14 +7116,14 @@
     "textHash": "3359e86e8ff08e4fdbf874b371bb3d0c5854758c",
     "chars": 997,
     "credits": 604,
-    "durationSec": 78.028,
-    "bytes": 1248906,
+    "durationSec": 80.196,
+    "bytes": 1283596,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:51:34.878Z"
+    "dictionaryVersionId": "PUAhRqVJM9d3KXsnIQ6z",
+    "generatedAt": "2026-08-16T14:50:05.615Z"
   },
   "s:1439:blackwood den": {
     "file": "1439/blackwood-den",
@@ -7256,14 +7256,14 @@
     "textHash": "fed7f0f87da669ac198b5d057fd712d3c5598a55",
     "chars": 749,
     "credits": 455,
-    "durationSec": 52.271,
-    "bytes": 836798,
+    "durationSec": 56.999,
+    "bytes": 912448,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:51:41.790Z"
+    "dictionaryVersionId": "PUAhRqVJM9d3KXsnIQ6z",
+    "generatedAt": "2026-08-16T14:50:54.110Z"
   },
   "s:1439:twilight vale": {
     "file": "1439/twilight-vale",
@@ -7661,15 +7661,15 @@
     "file": "1440/satyrnaar",
     "textHash": "036a1c34e0d6dfc87ae6908110a84a29908f9ce6",
     "chars": 615,
-    "credits": 376,
-    "durationSec": 45.401,
-    "bytes": 726875,
+    "credits": 380,
+    "durationSec": 44.434,
+    "bytes": 711410,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:49:41.841Z"
+    "dictionaryVersionId": "TcRVjNEgAICKBowzvGKU",
+    "generatedAt": "2026-08-16T14:24:24.838Z"
   },
   "s:1440:shady nook": {
     "file": "1440/shady-nook",
@@ -9129,17 +9129,17 @@
   },
   "s:1445:brackenwall village": {
     "file": "1445/brackenwall-village",
-    "textHash": "d43f19f06744ef707e7b3bc700abc5bd4f9c106b",
-    "chars": 807,
-    "credits": 489,
-    "durationSec": 61.074,
-    "bytes": 977650,
+    "textHash": "bcdc3ede17f9b940b7718e49756a9d9e24fdd685",
+    "chars": 805,
+    "credits": 488,
+    "durationSec": 58.514,
+    "bytes": 936690,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:54:35.093Z"
+    "dictionaryVersionId": "6xk9FHjUEYnkzR2bkcxc",
+    "generatedAt": "2026-08-16T15:54:03.965Z"
   },
   "s:1445:darkmist cavern": {
     "file": "1445/darkmist-cavern",
@@ -9762,28 +9762,28 @@
     "textHash": "e5f479fbe6970142352580c7c17116ee51747045",
     "chars": 209,
     "credits": 127,
-    "durationSec": 15.151,
-    "bytes": 242878,
+    "durationSec": 14.211,
+    "bytes": 227831,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:49:54.683Z"
+    "dictionaryVersionId": "PUAhRqVJM9d3KXsnIQ6z",
+    "generatedAt": "2026-08-16T14:47:01.890Z"
   },
   "s:1447:forlorn ridge": {
     "file": "1447/forlorn-ridge",
     "textHash": "770d8918862285be92310720560d93744d08926a",
     "chars": 255,
     "credits": 155,
-    "durationSec": 17.868,
-    "bytes": 286346,
+    "durationSec": 18.364,
+    "bytes": 294287,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:49:59.158Z"
+    "dictionaryVersionId": "PUAhRqVJM9d3KXsnIQ6z",
+    "generatedAt": "2026-08-16T14:46:43.134Z"
   },
   "s:1447:haldarr encampment": {
     "file": "1447/haldarr-encampment",
@@ -9804,14 +9804,14 @@
     "textHash": "3b176f34813f605ea2b3cca9234d25dcbff8e174",
     "chars": 90,
     "credits": 55,
-    "durationSec": 7.811,
-    "bytes": 125431,
+    "durationSec": 7.471,
+    "bytes": 119998,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:49:57.905Z"
+    "dictionaryVersionId": "TcRVjNEgAICKBowzvGKU",
+    "generatedAt": "2026-08-16T14:28:44.121Z"
   },
   "s:1447:jagged reef": {
     "file": "1447/jagged-reef",
@@ -9930,14 +9930,14 @@
     "textHash": "4e237c34b66170da1b5c5aea0a60906802244466",
     "chars": 506,
     "credits": 307,
-    "durationSec": 37.956,
-    "bytes": 607756,
+    "durationSec": 37.407,
+    "bytes": 598979,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:50:18.902Z"
+    "dictionaryVersionId": "PUAhRqVJM9d3KXsnIQ6z",
+    "generatedAt": "2026-08-16T14:46:22.712Z"
   },
   "s:1447:shattered strand": {
     "file": "1447/shattered-strand",
@@ -9986,14 +9986,14 @@
     "textHash": "5f1e1cf7cd6323709b250e6710ce0ff35ac3f130",
     "chars": 200,
     "credits": 122,
-    "durationSec": 14.524,
-    "bytes": 232847,
+    "durationSec": 15.073,
+    "bytes": 241624,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:50:14.850Z"
+    "dictionaryVersionId": "PUAhRqVJM9d3KXsnIQ6z",
+    "generatedAt": "2026-08-16T14:48:10.282Z"
   },
   "s:1447:talrendis point": {
     "file": "1447/talrendis-point",
@@ -10084,14 +10084,14 @@
     "textHash": "bf198c421a9ea812ce84b06d1ba02340271b2998",
     "chars": 710,
     "credits": 430,
-    "durationSec": 52.271,
-    "bytes": 836798,
+    "durationSec": 51.958,
+    "bytes": 831782,
     "voiceId": "ggodpz28jXGN11DlccGk",
     "modelId": "eleven_v3",
     "outputFormat": "mp3_44100_128",
     "dictionaryId": "Elx0hcDze8EXW2rImeLT",
-    "dictionaryVersionId": "ChaiSYKomLhEsnqpPSkx",
-    "generatedAt": "2026-08-09T16:50:36.289Z"
+    "dictionaryVersionId": "PUAhRqVJM9d3KXsnIQ6z",
+    "generatedAt": "2026-08-16T14:49:06.114Z"
   },
   "s:1448:bloodvenom falls": {
     "file": "1448/bloodvenom-falls",
