@@ -31,7 +31,7 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 
 ## Narration needs a sound pack
 
-The voice audio is a large download, so it ships separately. **ZoneLore works fine without one** — you read rather than listen — and falls back to a placeholder clip so the controls still behave.
+The voice audio is a large download, so it ships separately. **ZoneLore works fine without one** — you read rather than listen. Without a pack the Play button simply doesn't appear, and nothing is narrated.
 
 Two packs, the same voicelines — and there are a lot of them — differing only in quality:
 

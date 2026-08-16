@@ -601,7 +601,7 @@ local function CmdStatus()
 	if pack then
 		ZoneLore:Print("sound pack: %s -- %s", pack.addon, ZoneLore:GetAudioPackLabel(pack))
 	else
-		ZoneLore:Print("|cffffcc00no sound pack installed|r -- narration uses the placeholder clip")
+		ZoneLore:Print("|cffffcc00no sound pack installed|r -- install ZoneLoreAudio to hear the lore")
 	end
 
 	if ZoneLore:Get("debug") then
@@ -645,12 +645,9 @@ local function CmdPlay()
 		return
 	end
 
+	-- Nothing to report when PlayLore returned false above: it has already said why.
 	local what = key or ZoneLore:GetMapName(mapID) or tostring(mapID)
-	if ZoneLore:HasRealAudio(mapID, key) then
-		ZoneLore:Print("playing lore for %s", what)
-	else
-		ZoneLore:Print("playing |cffffcc00placeholder|r audio for %s -- no voiceover recorded yet", what)
-	end
+	ZoneLore:Print("playing lore for %s", what)
 end
 
 -- `/zl audio` lists installed sound packs; `/zl audio <folder>` switches to one.

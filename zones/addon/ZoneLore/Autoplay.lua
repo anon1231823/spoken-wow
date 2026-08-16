@@ -231,6 +231,16 @@ local function Enqueue(mapID, areaKey)
 		return false
 	end
 
+	-- An entry the installed pack cannot narrate never enters the queue. PlayLore
+	-- would refuse it anyway, but silently queueing it would spend one of three slots
+	-- on nothing and make the Next button count clips that will not play.
+	if not ZoneLore:HasAudio(mapID, areaKey) then
+		if ZoneLore:Get("debug") then
+			ZoneLore:Print("autoplay: no clip for %s/%s -- not queued", tostring(mapID), tostring(areaKey))
+		end
+		return false
+	end
+
 	-- The login greeting below and a real discovery message can name the same
 	-- area, and an area on a zone border can be announced twice. Narrating it
 	-- twice in a row is worse than missing it.

@@ -21,6 +21,6 @@
 ## X-ZoneLore-Language: enUS
 
 # Defines the ZoneLoreAudioPacks registry entry that ZoneLore reads. No dependency
-# is declared in either direction: ZoneLore falls back to a placeholder when no
-# pack is present, and a pack is inert without it.
+# is declared in either direction: ZoneLore reads its lore without narrating when
+# no pack is present, and a pack is inert without it.
 Data/Sounds.lua

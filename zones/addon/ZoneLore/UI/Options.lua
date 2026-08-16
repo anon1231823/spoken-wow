@@ -222,7 +222,7 @@ function ZoneLore:SetupOptions()
 	y = y + ROW_GAP
 	MakeCheckbox(content, "voiceEnabled", "Show the Play button on lore descriptions",
 		"Reads the lore aloud. Needs the ZoneLoreAudio companion addon; without it "
-			.. "the button plays a placeholder.",
+			.. "the button does not appear.",
 		INDENT, y, function()
 			ZoneLore:StopLore()
 			ZoneLore:NotifyAudioChanged()
@@ -330,8 +330,8 @@ function ZoneLore:SetupOptions()
 		if #packs == 0 then
 			packButton:SetText("No sound pack installed")
 			packButton:Disable()
-			packNote:SetText("Narration plays a placeholder clip. Install ZoneLoreAudio "
-				.. "or ZoneLoreAudio64 for the real voiceover.")
+			packNote:SetText("Nothing is narrated. Install ZoneLoreAudio or "
+				.. "ZoneLoreAudio64 to hear the lore read aloud.")
 			return
 		end
 

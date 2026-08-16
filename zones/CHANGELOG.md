@@ -3,6 +3,21 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 0.4.2 — 2026-08-16
+
+**Missing narration is silent instead of playing someone else's quest audio**
+
+- Any lore with no clip in your installed sound pack played a stand-in recording:
+  a quest line about the League of Arathor. With no sound pack installed that was
+  every entry, so the narration in Elwynn Forest, Dun Morogh, Felwood, Red Cloud
+  Mesa and elsewhere was the same unrelated clip, and it sounded like the lore
+  itself was wrong. It was not — the text was right, the audio was a placeholder.
+- Nothing stands in any more. Where there is no recording the Play button does not
+  appear and autoplay stays quiet, and asking for it directly says whether the
+  sound pack is missing or simply does not cover that line yet.
+- No lore text or narration changed. If you have a sound pack installed and heard
+  the right clips, nothing about this release changes what you hear.
+
 ## 0.4.1 — 2026-08-16
 
 **A new character is greeted by its starting zone, not by its continent**

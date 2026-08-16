@@ -75,8 +75,8 @@ case "$mode" in
       done
     done
 
-    # The count is the quickest answer to "why is it still playing the
-    # placeholder", which is otherwise indistinguishable from a broken lookup.
+    # The count is the quickest answer to "why is there no narration", which is
+    # otherwise indistinguishable from a broken lookup.
     sounds="$REPO/addon/ZoneLoreAudio/Sounds"
     if [[ -d "$sounds" ]]; then
       count="$(find "$sounds" -name '*.mp3' | wc -l | tr -d ' ')"

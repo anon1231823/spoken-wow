@@ -58,7 +58,6 @@ addon/ZoneLore/          the addon itself (this is what WoW loads)
   Data/enUS/Zones.lua    GENERATED -- do not edit by hand
   Data/enUS/Subzones.lua GENERATED -- do not edit by hand
   Data/<locale>/Aliases.lua  GENERATED -- localized area name -> English key
-  Sounds/placeholder.mp3 stand-in played when there is no real voiceover
   UI/TextView.lua        shared scrolling wrapped-text widget
   UI/AudioButton.lua     the Play/Stop button shown on a description
   UI/MapPanel.lua        the world map side panel
@@ -633,19 +632,18 @@ preferring the subzone over the zone when the subzone has lore of its own.
 
 Audio ships in **separate sound-pack addons**, all of them optional. ZoneLore
 looks up a clip in whichever pack is active — see "Sound packs are
-self-describing" — and falls back to `Sounds/placeholder.mp3` when there is no
-entry, so the button works before any voiceover exists and a missing pack sounds
-wrong rather than erroring. `/zl play` says which of the two it played, and
-`/zl audio` reports which packs are installed.
+self-describing" — and where there is no clip there is no sound: the Play button
+does not appear, autoplay does not queue the entry, and asking for it by hand says
+whether the pack is missing or merely does not cover that line. `/zl audio`
+reports which packs are installed.
 
-The placeholder is a 40-second quest line borrowed from `../wow-voiceover`'s audio
-store. It is deliberately one of the longest lines there: a short clip finishes
-before there is time to click anything, and the controls that appear during
-playback would be untestable.
-
-Its duration is hardcoded in `Audio.lua` as `PLACEHOLDER_DURATION`, because the
-client cannot report how long a sound file is. Swap the file and that number has
-to change with it.
+**Nothing stands in for missing audio.** A placeholder clip used to — a quest line
+borrowed from `../wow-voiceover`, returned for every uncovered entry, which on a
+client with no pack installed is every entry there is. Players heard unrelated
+quest audio about the League of Arathor over Elwynn Forest, Dun Morogh and Felwood,
+and reported the lore as wrong. Silence is honest about what is missing; a
+convincing substitute is not. If the playback controls ever need exercising without
+a pack again, that is a debug flag, not a file every player ships.
 
 ### The beta disclaimer, and the files that carry it
 
