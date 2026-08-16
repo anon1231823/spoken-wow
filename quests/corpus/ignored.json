@@ -129,6 +129,10 @@
             "reason": "Blizzard test quest 1, unreachable in game"
         },
         {
+            "lineId": "q:3646:accept",
+            "reason": "No text"
+        },
+        {
             "lineId": "q:8514:accept:f",
             "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
         },
@@ -146,5 +150,5 @@
         }
     ],
     "version": 1,
-    "exportedAt": "2026-08-16T12:12:24Z"
+    "exportedAt": "2026-08-16T21:34:07Z"
 }
