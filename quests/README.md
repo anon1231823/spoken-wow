@@ -499,6 +499,31 @@ gendered variant of a shared gossip line strands nothing.
 
 Seeded with the 35 war-effort lines and quest 1 by migration `0017`.
 
+#### Quests no player can reach
+
+The extraction applies no patch filter, so the corpus is a superset of the game: vmangos gates
+every table it loads a quest through on the patch the server runs, and the dump holds content
+1.12 never serves. Two ways to find that out, deliberately independent:
+
+```bash
+python3 tools/scan_unreachable_quests.py          # the vmangos world DB, needs MySQL up
+```
+
+It asks the three questions the core asks — is there a `quest_template` row at this patch, is
+there a questgiver relation in range, does any of those questgivers spawn — and prints the
+corpus lines hanging off each quest that fails one. Nine findings today, three of them certain.
+The rules are in `tts_cli/reachability.py` and tested against fixtures, so they can be read
+without standing the database up.
+
+`docs/unreachable-quest-candidates.md` is the second source: Questie's hand-curated blacklist,
+filtered to the entries that actually claim a quest is missing rather than merely hidden from
+its map.
+
+**Both are reports, and neither acts.** A `no-spawn` finding is a lead, not a verdict — the
+Alterac Valley questgivers are spawned by the battleground's scripts and appear in no table, so
+the scan flags quests a player really can do. Read the quest, then ignore it in the explorer
+where the decision carries a reason.
+
 ### Reports from inside the game
 
 The addon shows a **Report** button in the bottom-right corner of the sound queue frame,

@@ -545,3 +545,64 @@ FROM ALL_DATA
     df = pd.DataFrame(data, columns=columns)
 
     return df
+
+
+def query_quest_reachability(patch: int = 10):
+    """What the world DB says about how each quest could be reached, unfiltered by patch.
+
+    Deliberately raw: every quest_template patch row, every questgiver relation with its
+    patch range, and the entities with at least one spawn valid at `patch`. Deciding what
+    that means is tts_cli/reachability.py, so the rules can be tested without MySQL.
+
+    `patch` is only used for the spawn query, where the alternative is shipping every spawn
+    point's patch range to Python for the sake of a boolean.
+
+    The relation tables are the same five the extraction reads, so a quest reachable here
+    is one the corpus could hold: creature and gameobject questgivers on both sides of a
+    quest, plus item_template.start_quest, which has no patch column of its own.
+    """
+    db = make_connection()
+    definitions, relations, spawned = {}, {}, set()
+
+    with db.cursor() as cursor:
+        cursor.execute("SELECT entry, patch FROM quest_template")
+        for quest, quest_patch in cursor.fetchall():
+            definitions.setdefault(quest, []).append(quest_patch)
+
+        for table, kind in (
+            ("creature_questrelation", "creature"),
+            ("creature_involvedrelation", "creature"),
+            ("gameobject_questrelation", "gameobject"),
+            ("gameobject_involvedrelation", "gameobject"),
+        ):
+            cursor.execute(f"SELECT quest, id, patch_min, patch_max FROM {table}")
+            for quest, entity_id, patch_min, patch_max in cursor.fetchall():
+                relations.setdefault(quest, []).append({
+                    "type": kind, "id": entity_id,
+                    "patch_min": patch_min, "patch_max": patch_max,
+                })
+
+        # No patch columns on item_template.start_quest, so the item is treated as always
+        # available - which is what vmangos does with it too.
+        cursor.execute("SELECT start_quest, entry FROM item_template WHERE start_quest")
+        for quest, item_id in cursor.fetchall():
+            relations.setdefault(quest, []).append({
+                "type": "item", "id": item_id, "patch_min": 0, "patch_max": 10,
+            })
+
+        for table, kind in (("creature", "creature"), ("gameobject", "gameobject")):
+            cursor.execute(
+                f"SELECT DISTINCT id FROM {table} WHERE %s BETWEEN patch_min AND patch_max",
+                (patch,))
+            spawned.update((kind, row[0]) for row in cursor.fetchall())
+
+    db.close()
+
+    return {
+        quest: {
+            "definition_patches": patches,
+            "relations": relations.get(quest, []),
+            "spawned": spawned,
+        }
+        for quest, patches in definitions.items()
+    }
