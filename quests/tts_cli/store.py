@@ -15,6 +15,9 @@ from tqdm import tqdm
 from tts_cli.naming import subfolder_from_line_id
 
 DEFAULT_STORE_DIR = "audio"
+# The pack this project imported its inherited audio from, which is upstream's and keeps
+# upstream's name: import-audio reads what is already installed, and what was installed in
+# 2024 is not called VoiceOverReduxAudio.
 DEFAULT_SOURCE_DIR = ("/Applications/World of Warcraft/_classic_era_/Interface/AddOns"
                       "/AI_VoiceOverData_Vanilla/generated/sounds")
 SUBFOLDERS = ("quests", "gossip")

@@ -3,14 +3,17 @@ setfenv(1, VoiceOver)
 ---@class Addon : AceAddon, AceAddon-3.0, AceEvent-3.0, AceTimer-3.0
 ---@field db VoiceOverConfig|AceDBObject-3.0
 local AceAddon = LibStub("AceAddon-3.0")
-local originalAddon = AceAddon:GetAddon("VoiceOver", true)
-if originalAddon and originalAddon.Disable then
-    -- Loading both players used to cause a duplicate AceAddon error and two
-    -- event handlers. Disable the old player for this session; its folder is
-    -- also disabled below for the next login.
-    originalAddon:Disable()
+-- Every AceAddon name a player of this lineage has registered under: upstream's, and this
+-- fork's own before the rename. Loading two used to cause a duplicate AceAddon error and two
+-- event handlers, so each is disabled for this session; the folders are disabled for the next
+-- login further down, where the same list appears as folder names.
+for _, name in ipairs({ "VoiceOver", "VoiceOverContinued" }) do
+    local supersededAddon = AceAddon:GetAddon(name, true)
+    if supersededAddon and supersededAddon.Disable then
+        supersededAddon:Disable()
+    end
 end
-Addon = AceAddon:NewAddon("VoiceOverContinued", "AceEvent-3.0", "AceTimer-3.0")
+Addon = AceAddon:NewAddon("VoiceOverRedux", "AceEvent-3.0", "AceTimer-3.0")
 
 Addon.OnAddonLoad = {}
 local AUTO_POLL_INTERVAL = 0.1
@@ -60,7 +63,7 @@ function Addon:ShowMissingDataModulePopup()
     local details = next(loadDetails) and ("|n|nDetected but not loaded:|n" .. table.concat(loadDetails, "|n")) or ""
     StaticPopupDialogs["VOICEOVER_NO_REGISTERED_DATA_MODULES"] =
     {
-        text = [[VoiceOver Continued|n|nNo usable sound packs were loaded.|n|nKeep "AI_VoiceOverData_Vanilla" installed beside this addon. Run "/vo diagnostics" for details.]] .. details,
+        text = [[VoiceOver Redux|n|nNo usable sound packs were loaded.|n|nKeep a sound pack installed beside this addon - "VoiceOverReduxAudio", or the older "AI_VoiceOverData_Vanilla". Run "/vo diagnostics" for details.]] .. details,
         button1 = OKAY,
         timeout = 0,
         whileDead = 1,
@@ -457,21 +460,33 @@ function Addon:OnInitialize()
         Debug:Record("event-bridge-ready", "Stabilized quest watcher and deferred greeting bridge are registered")
     end
 
-    if GetAddOnInfo("AI_VoiceOver") then
-        DisableAddOn("AI_VoiceOver")
-        if not self.db.profile.SeenContinuedDuplicateDialog then
-            StaticPopupDialogs["VOICEOVER_CONTINUED_DUPLICATE_ADDON"] =
-            {
-                text = [[VoiceOver Continued|n|nThe original "AI_VoiceOver" player was also enabled. It has been disabled for the next login, and its event handler was stopped for this session.|n|nKeep "AI_VoiceOverData_Vanilla" enabled; that is the sound pack. You can delete or leave the old player disabled, then /reload.]],
-                button1 = OKAY,
-                timeout = 0,
-                whileDead = 1,
-                OnAccept = function()
-                    self.db.profile.SeenContinuedDuplicateDialog = true
-                end,
-            }
-            StaticPopup_Show("VOICEOVER_CONTINUED_DUPLICATE_ADDON")
+    -- Every player this addon has ever been called, oldest first. Two players handle the same
+    -- events and both queue the same line, so exactly one may be enabled - and a rename does
+    -- not uninstall anything, which makes the fork's own former name as much of a duplicate
+    -- as upstream's. A name is only ever added here, never removed.
+    local SUPERSEDED_PLAYERS = { "AI_VoiceOver", "AI_VoiceOver_Continued" }
+
+    local disabled = {}
+    for _, addon in ipairs(SUPERSEDED_PLAYERS) do
+        if GetAddOnInfo(addon) then
+            DisableAddOn(addon)
+            table.insert(disabled, format('"%s"', addon))
         end
+    end
+
+    if next(disabled) and not self.db.profile.SeenDuplicatePlayerDialog then
+        StaticPopupDialogs["VOICEOVER_REDUX_DUPLICATE_ADDON"] =
+        {
+            text = format([[VoiceOver Redux|n|n%s was also enabled. It has been disabled for the next login, and its event handler was stopped for this session.|n|nKeep your sound pack enabled - "VoiceOverReduxAudio" or the older "AI_VoiceOverData_Vanilla", either works. You can delete or leave the old player disabled, then /reload.]],
+                table.concat(disabled, " and ")),
+            button1 = OKAY,
+            timeout = 0,
+            whileDead = 1,
+            OnAccept = function()
+                self.db.profile.SeenDuplicatePlayerDialog = true
+            end,
+        }
+        StaticPopup_Show("VOICEOVER_REDUX_DUPLICATE_ADDON")
     end
 
     local function MakeAbandonQuestHook(field, getFieldData)

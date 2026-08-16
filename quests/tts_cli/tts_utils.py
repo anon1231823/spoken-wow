@@ -14,7 +14,7 @@ from tts_cli.utils import get_first_n_words, get_last_n_words, replace_dollar_bs
 from slpp import slpp as lua
 
 # TODO: make module name a cli arg when we do other expansions
-MODULE_NAME = 'AI_VoiceOverData_Vanilla'
+MODULE_NAME = 'VoiceOverReduxAudio'
 OUTPUT_FOLDER = MODULE_NAME + '/generated'
 SOUND_OUTPUT_FOLDER =  OUTPUT_FOLDER + '/sounds'
 DATAMODULE_TABLE_GUARD_CLAUSE = 'if not VoiceOver or not VoiceOver.DataModules then return end'

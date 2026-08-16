@@ -69,9 +69,9 @@ local GeneralTab =
                     set = function(info, value)
                         Addon.db.profile.MinimapButton.LibDBIcon.hide = not value
                         if value then
-                            LibStub("LibDBIcon-1.0"):Show("VoiceOverContinued")
+                            LibStub("LibDBIcon-1.0"):Show("VoiceOverRedux")
                         else
-                            LibStub("LibDBIcon-1.0"):Hide("VoiceOverContinued")
+                            LibStub("LibDBIcon-1.0"):Hide("VoiceOverRedux")
                         end
                     end,
                 },
@@ -82,9 +82,9 @@ local GeneralTab =
                     get = function(info) return Addon.db.profile.MinimapButton.LibDBIcon.lock end,
                     set = function(info, value)
                         if value then
-                            LibStub("LibDBIcon-1.0"):Lock("VoiceOverContinued")
+                            LibStub("LibDBIcon-1.0"):Lock("VoiceOverRedux")
                         else
-                            LibStub("LibDBIcon-1.0"):Unlock("VoiceOverContinued")
+                            LibStub("LibDBIcon-1.0"):Unlock("VoiceOverRedux")
                         end
                     end,
                 },
@@ -515,7 +515,7 @@ local SlashCommands = {
             desc = "Print client, API, and sound-pack loading status",
             dropdownHidden = true,
             func = function(info)
-                print(format("|cFF00CCFFVoiceOver Continued %s|r - client %s, interface %d",
+                print(format("|cFF00CCFFVoiceOver Redux %s|r - client %s, interface %d",
                     AddonVersion, Version.Client or "unknown", Version.Interface or 0))
                 print("AddOn API: " .. (C_AddOns and "C_AddOns compatibility layer" or "legacy globals"))
 
@@ -709,15 +709,15 @@ function Options:Initialize()
         AceConfig = Addon
     end
     RunOptionalStep("AceConfig slash registration", function()
-        AceConfig:RegisterOptionsTable("VoiceOverContinued", self.table, "vo")
+        AceConfig:RegisterOptionsTable("VoiceOverRedux", self.table, "vo")
     end)
     RunOptionalStep("Blizzard settings categories", function()
-        AceConfigDialog:AddToBlizOptions("VoiceOverContinued", "VoiceOver Continued")
+        AceConfigDialog:AddToBlizOptions("VoiceOverRedux", "VoiceOver Redux")
         for key, tab in Utils:Ordered(Options.table.args, SortAceConfigOptions) do
             if not tab.hidden and not tab.dialogHidden then
-                AceConfigDialog:AddToBlizOptions("VoiceOverContinued",
+                AceConfigDialog:AddToBlizOptions("VoiceOverRedux",
                     type(tab.name) == "function" and tab.name() or tab.name,
-                    "VoiceOverContinued", key)
+                    "VoiceOverRedux", key)
             end
         end
     end)
@@ -728,7 +728,7 @@ function Options:Initialize()
     RunOptionalStep("AceGUI options frame", function()
         self.frame = AceGUI:Create("Frame")
         --AceConfigDialog:SetDefaultSize("VoiceOver", 640, 780) -- Let it be auto-sized
-        AceConfigDialog:Open("VoiceOverContinued", self.frame)
+        AceConfigDialog:Open("VoiceOverRedux", self.frame)
         self.frame:SetLayout("Fill")
         self.frame:Hide()
 
@@ -750,6 +750,6 @@ function Options:OpenConfigWindow()
     else
         PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
         self.frame:Show()
-        AceConfigDialog:Open("VoiceOverContinued", self.frame)
+        AceConfigDialog:Open("VoiceOverRedux", self.frame)
     end
 end

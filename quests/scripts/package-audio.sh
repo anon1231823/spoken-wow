@@ -37,7 +37,7 @@ cd "$REPO"
 
 STORE="${STORE:-audio}"
 DIST="${DIST:-dist}"
-MODULE="${MODULE:-AI_VoiceOverData_Vanilla}"
+MODULE="${MODULE:-VoiceOverReduxAudio}"
 VERSION="${VERSION:-0.1}"
 ENCODE="${ENCODE:-vbr-v6}"
 ZIP="${ZIP:-1}"

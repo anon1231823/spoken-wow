@@ -20,11 +20,15 @@ from tts_cli.store import stored_files
 from tts_cli.utils import (get_first_n_words, get_last_n_words,
                            replace_dollar_bs_with_space)
 
-DEFAULT_MODULE_NAME = "AI_VoiceOverData_Vanilla"
+DEFAULT_MODULE_NAME = "VoiceOverReduxAudio"
 DEFAULT_DIST_DIR = "dist"
 DEFAULT_ADDONS_DIR = ("/Applications/World of Warcraft/_classic_era_"
                       "/Interface/AddOns")
 GUARD = "if not VoiceOver or not VoiceOver.DataModules then return end"
+
+#: X-Part-Of is a label the client groups addons under and must read the same in the player's
+#: own TOCs, spaces and all. X-Child-Of is a folder name and must not: it names the directory
+#: the pack belongs to. Two keys that look alike and are not.
 
 #: How many leading and trailing words the addon fuzzy-matches quest text on. Must stay
 #: in step with DataModules:GetQuestID in AI_VoiceOver/DataModules.lua.
@@ -46,16 +50,18 @@ end
 VoiceOver.DataModules:Register("{module}", {module})
 """
 
-# No RequiredDeps on purpose: forks of the player addon (e.g. AI_VoiceOver_Continued)
-# ship under other folder names, and a dep on a disabled/absent AI_VoiceOver makes
-# LoadAddOn fail with DEP_DISABLED. LoadOnDemand plus the guard in Module.lua suffice.
+# No RequiredDeps on purpose: a player of this lineage ships under three folder names by
+# now - AI_VoiceOver, AI_VoiceOver_Continued, VoiceOverRedux - and a dep on a disabled or
+# absent one makes LoadAddOn fail with DEP_DISABLED. LoadOnDemand plus the guard in
+# Module.lua suffice, and the player finds a pack by its X-VoiceOver-DataModule-Version key
+# rather than by name (DataModules:EnumerateAddons), so a renamed pack needs nothing else.
 TOC_HEADER = """## Interface: 100000
-## Title: VoiceOver Data - Vanilla
-## Notes: Contains voiceovers for content released during the Vanilla era.|n|nIt's |cFF20FF20OK|r for this addon to appear |cFF808080"disabled"|r or |cFFFF2020"out of date"|r, it's compatible with any client and |cFFFFD200VoiceOver|r will load it even if it's disabled or out of date.
+## Title: VoiceOver Redux Audio
+## Notes: Contains voiceovers for content released during the Vanilla era.|n|nIt's |cFF20FF20OK|r for this addon to appear |cFF808080"disabled"|r or |cFFFF2020"out of date"|r, it's compatible with any client and |cFFFFD200VoiceOver Redux|r will load it even if it's disabled or out of date.
 ## Version: {version}
 ## LoadOnDemand: 1
-## X-Part-Of: VoiceOver
-## X-Child-Of: VoiceOver
+## X-Part-Of: VoiceOver Redux
+## X-Child-Of: VoiceOverRedux
 ## X-VoiceOver-DataModule-Version: 1
 ## X-VoiceOver-DataModule-Priority: 100
 ## X-VoiceOver-DataModule-Maps: 0, 1, 30, 33, 43, 47, 48, 70, 90, 109, 129, 189, 209, 229, 230, 289, 309, 329, 349, 369, 389, 429, 469, 509, 531, 533

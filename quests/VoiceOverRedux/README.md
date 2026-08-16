@@ -1,4 +1,4 @@
-# AI VoiceOver Continued
+# AI VoiceOver Redux
 
 This is a separate repaired player addon based on AI VoiceOver 1.4.3. It reuses the existing `AI_VoiceOverData_Vanilla` sound pack; no audio data is duplicated.
 
@@ -40,13 +40,13 @@ Modern Classic clients also use `C_GossipInfo`. The original compatibility code 
 Place these two folders directly under the game's `Interface/AddOns` directory:
 
 ```text
-AI_VoiceOver_Continued
+VoiceOverRedux
 AI_VoiceOverData_Vanilla
 ```
 
 Disable the old **AI VoiceOver** player (`AI_VoiceOver`). Do not disable or rename **AI VoiceOverData Vanilla**. The new player preserves the existing `VoiceOverDB` settings.
 
-At the character screen, enable **VoiceOver Continued**. Log in and run:
+At the character screen, enable **VoiceOver Redux**. Log in and run:
 
 ```text
 /vo diagnostics

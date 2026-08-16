@@ -63,11 +63,11 @@ DataModules =
     ---@type AvailableDataModule[]
     availableModules = {
         {
-            AddonName = "AI_VoiceOverData_Vanilla",
-            Title = "VoiceOver Data - Vanilla",
+            AddonName = "VoiceOverReduxAudio",
+            Title = "VoiceOver Redux Audio",
             ContentVersion = "0.1",
             RelevantAboveVersion = 0,
-            URL = "https://www.curseforge.com/wow/addons/voiceover-sounds-vanilla",
+            URL = "https://www.curseforge.com/wow/addons/voiceover-redux-audio",
         },
     },
 }

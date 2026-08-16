@@ -1,9 +1,9 @@
 ## Interface: 30403
-## Title: VoiceOver Continued
+## Title: VoiceOver Redux
 ## Notes: Restores quest and gossip voiceovers on supported Classic clients.
 ## Version: 1.6.1
 ## SavedVariables: VoiceOverDB
-## X-Part-Of: VoiceOver Continued
+## X-Part-Of: VoiceOver Redux
 ## X-VoiceOver-Player: 1
 
 embeds.xml

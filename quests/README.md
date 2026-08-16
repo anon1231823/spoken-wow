@@ -19,7 +19,7 @@ Five stages, and only the first needs a database:
 | `extract` | vmangos world DB | `corpus/corpus.json.gz` | a maintainer, when vmangos ships a new dump |
 | `import-audio` | an existing sound pack | `audio/` | once, to adopt audio you already have |
 | `synthesize` | corpus + voice config | mp3s in `audio/` | anyone producing lines |
-| `build` | corpus + `audio/` | `dist/AI_VoiceOverData_Vanilla/` | anyone cutting a release |
+| `build` | corpus + `audio/` | `dist/VoiceOverReduxAudio/` | anyone cutting a release |
 | `install` | the built module | WoW AddOns folder | to try it in game |
 
 The corpus is **committed** — 17,507 lines, 2 MB gzipped — so producing audio needs no
@@ -114,7 +114,7 @@ elwynn = lines_in_area(corpus, map_id=0, x_range=(-9900, -9000), y_range=(-600, 
 python cli-main.py import-audio                       # adopt an existing pack, once
 python cli-main.py synthesize --npc 240 --dry-run     # what would be made, and its cost
 python cli-main.py synthesize --npc 240               # make it
-python cli-main.py build                              # dist/AI_VoiceOverData_Vanilla/
+python cli-main.py build                              # dist/VoiceOverReduxAudio/
 python cli-main.py install --force                    # into the AddOns folder
 ```
 
@@ -469,7 +469,7 @@ The following language codes are supported:
 `synthesize` writes into the audio store at `audio/{quests,gossip}/`, which is gitignored and
 is the project's most expensive asset — it moves between machines with `make push` / `make
 pull` and never through git or CI. `build` copies from there into
-`dist/AI_VoiceOverData_Vanilla/generated/sounds/`, alongside every lookup table and the
+`dist/VoiceOverReduxAudio/generated/sounds/`, alongside every lookup table and the
 `sound_length_table.lua` computed from exactly those mp3s.
 
 ### Stage directions and the narrator
@@ -601,19 +601,28 @@ separate folder in the same AddOns directory; symlink both for faster developmen
 
 ```bash
 export WOW_DIR=PATH_OF_YOUR_WOW_DIR
-ln -s "$PWD/AI_VoiceOver_Continued" "$WOW_DIR/_classic_era_/Interface/AddOns/AI_VoiceOver_Continued"
-ln -s "$PWD/dist/AI_VoiceOverData_Vanilla" "$WOW_DIR/_classic_era_/Interface/AddOns/AI_VoiceOverData_Vanilla"
+ln -s "$PWD/VoiceOverRedux" "$WOW_DIR/_classic_era_/Interface/AddOns/VoiceOverRedux"
+ln -s "$PWD/dist/VoiceOverReduxAudio" "$WOW_DIR/_classic_era_/Interface/AddOns/VoiceOverReduxAudio"
 ```
 
-Use `AI_VoiceOver_Continued/` on a current client. Upstream `AI_VoiceOver/` calls
+Use `VoiceOverRedux/` on a current client. Upstream `AI_VoiceOver/` calls
 `GetNumAddOns`, `GetAddOnMetadata` and `LoadAddOn`, which Blizzard moved to `C_AddOns` in
 10.2 and removed in 11.0.2, so on Classic Era 1.15.9 it errors while enumerating and the
-sound pack never registers. Install one player or the other, never both — two copies of the
-addon fight over the same `VoiceOverDB` and the same sound queue.
+sound pack never registers. Install one player, never two — two copies fight over the same
+`VoiceOverDB` and the same sound queue. `VoiceOverRedux` disables any it finds, by AceAddon
+name for the session and by folder for the next login, and that list names both `AI_VoiceOver`
+and this project's own former folder `AI_VoiceOver_Continued`: a rename uninstalls nothing.
+
+**The rename.** The player was `AI_VoiceOver_Continued` and the pack `AI_VoiceOverData_Vanilla`
+until this project had diverged far enough from upstream that carrying its name was
+misleading. They are now `VoiceOverRedux` and `VoiceOverReduxAudio`. An old pack still works —
+the player finds packs by the `X-VoiceOver-DataModule-Version` key in the TOC, not by name
+(`DataModules:EnumerateAddons`) — but settings do not survive, because `SavedVariables` live in
+`WTF/…/SavedVariables/<folder>.lua` and the folder is the identity.
 
 The data module names no `RequiredDeps`. It used to require `AI_VoiceOver`, which made
 `LoadAddOn` fail with `DEP_DISABLED` whenever the player was a fork under another folder name
-and the original sat disabled. The module is `LoadOnDemand` and its `Module.lua` returns early
+and the original sat disabled — three folder names into this lineage, that is the normal case. The module is `LoadOnDemand` and its `Module.lua` returns early
 unless `VoiceOver.DataModules` exists, so the dependency bought nothing and cost the fork.
 ## Tests
 

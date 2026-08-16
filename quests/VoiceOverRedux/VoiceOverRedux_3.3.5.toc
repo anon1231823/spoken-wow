@@ -1,9 +1,9 @@
 ## Interface: 30300
-## Title: VoiceOver Continued
+## Title: VoiceOver Redux
 ## Notes: Adds voiceovers to NPCs.
 ## Version: 1.6.1
 ## SavedVariables: VoiceOverDB
-## X-Part-Of: VoiceOver Continued
+## X-Part-Of: VoiceOver Redux
 ## X-VoiceOver-Player: 1
 
 3.3.5\embeds.xml

@@ -62,15 +62,15 @@ function SoundQueueUI:InitDisplay()
     -- Create a background gradient behind the queue container
     self.frame.background = self.frame:CreateTexture(nil, "BACKGROUND")
     self.frame.background:SetPoint("RIGHT")
-    self.frame.background:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\BackgroundGradient]])
+    self.frame.background:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\BackgroundGradient]])
 
     -- Create a button to resize the main frame
     self.frame.resizer = CreateFrame("Button", nil, self.frame)
     self.frame.resizer:SetPoint("BOTTOMRIGHT")
     self.frame.resizer:SetSize(16, 16)
-    self.frame.resizer:SetNormalTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\SizeGrabber-Up]])
-    self.frame.resizer:SetPushedTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\SizeGrabber-Down]])
-    self.frame.resizer:SetHighlightTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\SizeGrabber-Highlight]])
+    self.frame.resizer:SetNormalTexture([[Interface\AddOns\VoiceOverRedux\Textures\SizeGrabber-Up]])
+    self.frame.resizer:SetPushedTexture([[Interface\AddOns\VoiceOverRedux\Textures\SizeGrabber-Down]])
+    self.frame.resizer:SetHighlightTexture([[Interface\AddOns\VoiceOverRedux\Textures\SizeGrabber-Highlight]])
     self.frame.resizer:HookScript("OnEnter", function() SetCursor([[Interface\Cursor\UI-Cursor-SizeRight]]) end)
     self.frame.resizer:HookScript("OnLeave", function() SetCursor(nil) end)
     self.frame.resizer:HookScript("OnMouseDown", function()
@@ -110,7 +110,7 @@ function SoundQueueUI:InitDisplay()
     self.frame.container.stopGossip:SetSize(32, 32)
     self.frame.container.stopGossip:SetPoint("BOTTOMLEFT", self.frame.container.name, "RIGHT", SKIP_GOSSIP_BUTTON_OFFSET, 0)
     function self.frame.container.stopGossip:SetGossipCount(gossipCount)
-        local texture = gossipCount > 1 and [[Interface\AddOns\AI_VoiceOver_Continued\Textures\StopGossipMore]] or [[Interface\AddOns\AI_VoiceOver_Continued\Textures\StopGossip]]
+        local texture = gossipCount > 1 and [[Interface\AddOns\VoiceOverRedux\Textures\StopGossipMore]] or [[Interface\AddOns\VoiceOverRedux\Textures\StopGossip]]
         self:SetShown(gossipCount > 0)
         self:EnableMouse(SoundQueue:CanBePaused() or gossipCount > 1)
         self:SetHighlightTexture(texture, "ADD")
@@ -162,7 +162,7 @@ function SoundQueueUI:InitPortraitLine()
     self.frame.portraitLine = self.frame:CreateTexture(nil, "BORDER")
     self.frame.portraitLine:SetPoint("TOPLEFT", -PORTRAIT_LINE_WIDTH / 2 + 2, PORTRAIT_BORDER_OUTSET)
     self.frame.portraitLine:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMLEFT", PORTRAIT_LINE_WIDTH / 2 + 2, -PORTRAIT_BORDER_OUTSET)
-    self.frame.portraitLine:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\PortraitFrameAtlas]])
+    self.frame.portraitLine:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\PortraitFrameAtlas]])
     self.frame.portraitLine:SetTexCoord(456 / PORTRAIT_ATLAS_SIZE, 512 / PORTRAIT_ATLAS_SIZE, 0, PORTRAIT_ATLAS_BORDER_SIZE / PORTRAIT_ATLAS_SIZE)
 
     -- Create a play/pause button on the vertical line that will be visible if the player turned the portrait off
@@ -170,16 +170,16 @@ function SoundQueueUI:InitPortraitLine()
     self.frame.miniPause:SetSize(26, 26)
     --self.frame.miniPause:SetPoint("CENTER", self.frame.container.name, "LEFT", -20 + 2, 0) -- Use this to make the button be placed next to NPC name instead of always centered
     self.frame.miniPause:SetPoint("CENTER", self.frame.container, "LEFT", -20 + 2, 0)
-    self.frame.miniPause:SetNormalTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\PortraitFrameAtlas]])
+    self.frame.miniPause:SetNormalTexture([[Interface\AddOns\VoiceOverRedux\Textures\PortraitFrameAtlas]])
     self.frame.miniPause:GetNormalTexture():ClearAllPoints()
     self.frame.miniPause:GetNormalTexture():SetPoint("CENTER")
     self.frame.miniPause:GetNormalTexture():SetSize(14, 14)
-    self.frame.miniPause:SetPushedTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\PortraitFrameAtlas]])
+    self.frame.miniPause:SetPushedTexture([[Interface\AddOns\VoiceOverRedux\Textures\PortraitFrameAtlas]])
     self.frame.miniPause:GetPushedTexture():ClearAllPoints()
     self.frame.miniPause:GetPushedTexture():SetPoint("CENTER")
     self.frame.miniPause:GetPushedTexture():SetSize(12, 12)
     self.frame.miniPause.background = self.frame.miniPause:CreateTexture(nil, "BACKGROUND")
-    self.frame.miniPause.background:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\SettingsButton]])
+    self.frame.miniPause.background:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\SettingsButton]])
     self.frame.miniPause.background:SetPoint("CENTER")
     self.frame.miniPause.background:SetSize(32, 32)
     function self.frame.miniPause:Update()
@@ -347,7 +347,7 @@ function SoundQueueUI:InitPortrait()
     -- Create a background behind the model
     self.frame.portrait.background = self.frame.portrait:CreateTexture(nil, "BACKGROUND")
     self.frame.portrait.background:SetAllPoints()
-    self.frame.portrait.background:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\PortraitFrameBackground]])
+    self.frame.portrait.background:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\PortraitFrameBackground]])
 
     -- Create a 3D model
     self.frame.portrait.model = CreateFrame("DressUpModel", nil, self.frame.portrait)
@@ -356,7 +356,7 @@ function SoundQueueUI:InitPortrait()
     -- Create a book icon replacement when the 3D portrait is unavailable
     self.frame.portrait.book = self.frame.portrait:CreateTexture(nil, "ARTWORK")
     self.frame.portrait.book:SetAllPoints()
-    self.frame.portrait.book:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\Book]])
+    self.frame.portrait.book:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\Book]])
     self.frame.portrait.book:SetTexCoord(8 / 256, 248 / 256, 8 / 256, 248 / 256)
     self.frame.portrait.book:Hide()
 
@@ -366,13 +366,13 @@ function SoundQueueUI:InitPortrait()
     self.frame.portrait.pause:SetAllPoints()
     self.frame.portrait.pause.background = self.frame.portrait.pause:CreateTexture(nil, "BACKGROUND")
     self.frame.portrait.pause.background:SetAllPoints()
-    self.frame.portrait.pause.background:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\PortraitFrameBackground]])
+    self.frame.portrait.pause.background:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\PortraitFrameBackground]])
     self.frame.portrait.pause.background:SetAlpha(0.75)
-    self.frame.portrait.pause:SetNormalTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\PortraitFrameAtlas]])
+    self.frame.portrait.pause:SetNormalTexture([[Interface\AddOns\VoiceOverRedux\Textures\PortraitFrameAtlas]])
     self.frame.portrait.pause:GetNormalTexture():ClearAllPoints()
     self.frame.portrait.pause:GetNormalTexture():SetPoint("CENTER")
     self.frame.portrait.pause:GetNormalTexture():SetSize(32, 32)
-    self.frame.portrait.pause:SetPushedTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\PortraitFrameAtlas]])
+    self.frame.portrait.pause:SetPushedTexture([[Interface\AddOns\VoiceOverRedux\Textures\PortraitFrameAtlas]])
     self.frame.portrait.pause:GetPushedTexture():ClearAllPoints()
     self.frame.portrait.pause:GetPushedTexture():SetPoint("CENTER")
     self.frame.portrait.pause:GetPushedTexture():SetSize(28, 28)
@@ -413,7 +413,7 @@ function SoundQueueUI:InitPortrait()
     self.frame.portrait.border.texture:SetSize(PORTRAIT_BORDER_SIZE, PORTRAIT_BORDER_SIZE)
     self.frame.portrait.border.texture:SetPoint("TOPLEFT", -PORTRAIT_BORDER_OUTSET, PORTRAIT_BORDER_OUTSET)
     self.frame.portrait.border.texture:SetPoint("BOTTOMRIGHT", PORTRAIT_BORDER_OUTSET, -PORTRAIT_BORDER_OUTSET)
-    self.frame.portrait.border.texture:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\PortraitFrameAtlas]])
+    self.frame.portrait.border.texture:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\PortraitFrameAtlas]])
     self.frame.portrait.border.texture:SetTexCoord(0, PORTRAIT_ATLAS_BORDER_SIZE / PORTRAIT_ATLAS_SIZE, 0, PORTRAIT_ATLAS_BORDER_SIZE / PORTRAIT_ATLAS_SIZE)
 end
 
@@ -422,18 +422,18 @@ function SoundQueueUI:InitMover()
     self.frame.mover = CreateFrame("Button", nil, self.frame.portrait.border)
     self.frame.mover:SetSize(26, 26)
     self.frame.mover:SetPoint("CENTER", self.frame.portrait.border, "BOTTOMLEFT", 5, 6)
-    self.frame.mover:SetNormalTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\PortraitFrameAtlas]])
+    self.frame.mover:SetNormalTexture([[Interface\AddOns\VoiceOverRedux\Textures\PortraitFrameAtlas]])
     self.frame.mover:GetNormalTexture():SetTexCoord(462 / PORTRAIT_ATLAS_SIZE, 512 / PORTRAIT_ATLAS_SIZE, 462 / PORTRAIT_ATLAS_SIZE, 512 / PORTRAIT_ATLAS_SIZE)
     self.frame.mover:GetNormalTexture():ClearAllPoints()
     self.frame.mover:GetNormalTexture():SetPoint("CENTER")
     self.frame.mover:GetNormalTexture():SetSize(16, 16)
-    self.frame.mover:SetPushedTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\PortraitFrameAtlas]])
+    self.frame.mover:SetPushedTexture([[Interface\AddOns\VoiceOverRedux\Textures\PortraitFrameAtlas]])
     self.frame.mover:GetPushedTexture():SetTexCoord(462 / PORTRAIT_ATLAS_SIZE, 512 / PORTRAIT_ATLAS_SIZE, 462 / PORTRAIT_ATLAS_SIZE, 512 / PORTRAIT_ATLAS_SIZE)
     self.frame.mover:GetPushedTexture():ClearAllPoints()
     self.frame.mover:GetPushedTexture():SetPoint("CENTER")
     self.frame.mover:GetPushedTexture():SetSize(14, 14)
     self.frame.mover.background = self.frame.mover:CreateTexture(nil, "BACKGROUND")
-    self.frame.mover.background:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\SettingsButton]])
+    self.frame.mover.background:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\SettingsButton]])
     self.frame.mover.background:SetPoint("CENTER")
     self.frame.mover.background:SetSize(32, 32)
     self.frame.mover:HookScript("OnEnter", function(self)
@@ -465,10 +465,10 @@ function SoundQueueUI:InitMinimapButton()
         { "MiddleButton", "Middle Click" },
         { "RightButton", "Right Click" },
     }
-    local object = LibDataBroker:NewDataObject("VoiceOverContinued", {
+    local object = LibDataBroker:NewDataObject("VoiceOverRedux", {
         type = "launcher",
         text = "VoiceOver",
-        icon = [[Interface\AddOns\AI_VoiceOver_Continued\Textures\MinimapButton]],
+        icon = [[Interface\AddOns\VoiceOverRedux\Textures\MinimapButton]],
 
         OnClick = function(self, button)
             local command = Addon.db.profile.MinimapButton.Commands[button]
@@ -496,7 +496,7 @@ function SoundQueueUI:InitMinimapButton()
             tooltip:Show()
         end,
     })
-    LibDBIcon:Register("VoiceOverContinued", object, Addon.db.profile.MinimapButton.LibDBIcon)
+    LibDBIcon:Register("VoiceOverRedux", object, Addon.db.profile.MinimapButton.LibDBIcon)
 end
 
 function SoundQueueUI:RefreshConfig()
@@ -539,7 +539,7 @@ function SoundQueueUI:RefreshConfig()
     self.frame:SetScale(Addon.db.profile.SoundQueueUI.FrameScale)
 
     self:UpdateSoundQueueDisplay()
-    LibDBIcon:Refresh("VoiceOverContinued", Addon.db.profile.MinimapButton.LibDBIcon)
+    LibDBIcon:Refresh("VoiceOverRedux", Addon.db.profile.MinimapButton.LibDBIcon)
 end
 
 function SoundQueueUI:CreateButton(i)
@@ -603,7 +603,7 @@ function SoundQueueUI:CreateButton(i)
             self:SetAlpha(1)
             self.textWidget:SetTextColor(r, g, b)
             self.textWidget:SetShadowColor(0, 0, 0, 1)
-            self.iconWidget:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\SoundQueueBulletDelete]])
+            self.iconWidget:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\SoundQueueBulletDelete]])
             self.iconWidget:SetSize(14, 14)
         else
             if isBeingPlayed then
@@ -611,20 +611,20 @@ function SoundQueueUI:CreateButton(i)
                 if Enums.SoundEvent:IsQuestEvent(event) then
                     self.textWidget:SetTextColor(245 / 255, 204 / 255, 24 / 255)
                     if event == Enums.SoundEvent.QuestAccept then
-                        self.iconWidget:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\SoundQueueBulletAccept]])
+                        self.iconWidget:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\SoundQueueBulletAccept]])
                     elseif event == Enums.SoundEvent.QuestProgress then
-                        self.iconWidget:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\SoundQueueBulletProgress]])
+                        self.iconWidget:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\SoundQueueBulletProgress]])
                     elseif event == Enums.SoundEvent.QuestComplete then
-                        self.iconWidget:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\SoundQueueBulletComplete]])
+                        self.iconWidget:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\SoundQueueBulletComplete]])
                     end
                 elseif Enums.SoundEvent:IsGossipEvent(event) then
                     self.textWidget:SetTextColor(1, 1, 1)
-                    self.iconWidget:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\SoundQueueBulletGossip]])
+                    self.iconWidget:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\SoundQueueBulletGossip]])
                 end
                 self.iconWidget:SetSize(14, 14)
             else
                 self.textWidget:SetTextColor(123 / 255, 147 / 255, 167 / 255)
-                self.iconWidget:SetTexture([[Interface\AddOns\AI_VoiceOver_Continued\Textures\SoundQueueBulletQueue]])
+                self.iconWidget:SetTexture([[Interface\AddOns\VoiceOverRedux\Textures\SoundQueueBulletQueue]])
                 self.iconWidget:SetSize(22, 22)
             end
         end

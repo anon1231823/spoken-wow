@@ -129,11 +129,20 @@ def test_quest_search_text_replaces_line_break_tokens():
 
 
 def test_toc_lists_every_generated_file():
-    toc = module_toc("AI_VoiceOverData_Vanilla", ["a.lua", "b.lua"])
+    toc = module_toc("VoiceOverReduxAudio", ["a.lua", "b.lua"])
     assert "generated\\a.lua" in toc
     assert "generated\\b.lua" in toc
     assert "Module.lua" in toc
     assert "X-VoiceOver-DataModule-Version: 1" in toc
+
+
+def test_toc_names_the_player_as_a_label_and_as_a_folder():
+    # X-Part-Of is the grouping label and must match the player's own TOCs, spaces and all;
+    # X-Child-Of is a directory name and must not. Two keys a rename can silently swap.
+    toc = module_toc("VoiceOverReduxAudio", [])
+
+    assert "## X-Part-Of: VoiceOver Redux\n" in toc
+    assert "## X-Child-Of: VoiceOverRedux\n" in toc
 
 
 def test_install_refuses_to_replace_without_force(tmp_path):
