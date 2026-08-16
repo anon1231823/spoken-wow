@@ -1,9 +1,9 @@
 // The lore corpus as the explorer sees it: the live text of every line, its history,
 // and the one write that changes it.
 //
-// SERVER ONLY. catalogue.ts layers what this returns over the text read from the Lua
-// files, so an edit is visible in the explorer the moment it is saved rather than after
-// the next export and restart.
+// SERVER ONLY. catalogue.ts builds the explorer's catalogue from what this returns, so
+// an edit is visible the moment it is saved. The Lua files under addon/ZoneLore/Data are
+// an export of this table, never an input to it.
 
 import "server-only";
 
@@ -44,12 +44,43 @@ const COLUMNS = `"lineId", "version", "isCurrent", "origin", "name", "full", "sh
 // German row's live flag and insert its replacement as English, leaving German with no
 // current text at all.
 
+/** A line's structure alongside its text: what the catalogue is built from. */
+export type CorpusRow = {
+  lineId: string;
+  mapID: number;
+  kind: "zone" | "subzone";
+  key: string | null;
+  name: string;
+  full: string;
+  short: string;
+  source: string | null;
+};
+
+/**
+ * Every line of one language, in the order the Lua export writes them.
+ *
+ * The order is load-bearing rather than cosmetic. `assignFiles` resolves a slug
+ * collision in favour of whichever entry it reaches first, so a catalogue built in a
+ * different order than the export could hand the same line a different audio path --
+ * and the addon resolves a clip by path. Zones before subzones, each by mapID, then by
+ * key in code-unit order, is what tools/lore/lua.mjs emits; `collate "C"` is what makes
+ * Postgres agree with JavaScript's `<` on the keys.
+ */
+export async function corpusRows(lang: Lang = BASE_LANG): Promise<CorpusRow[]> {
+  return query<CorpusRow>(
+    `select "lineId", "mapID", "kind", "key", "name", "full", "short", "source"
+       from "lore_line"
+      where "isCurrent" and "lang" = $1
+      order by ("kind" = 'subzone'), "mapID", "key" collate "C"`,
+    [lang],
+  );
+}
+
 /**
  * The live version of every line, keyed by lineId.
  *
- * Returns an empty map when the table has not been seeded, which is what makes this
- * safe to layer unconditionally: before `make lore-import` runs, the explorer shows
- * exactly what the Lua files say, as it always did.
+ * Empty for a language nobody has translated yet, which is not an error: the catalogue
+ * reads it that way and reports those lines as untranslated.
  */
 export async function currentLore(lang: Lang = BASE_LANG): Promise<Map<string, LoreLine>> {
   const rows = await query<Row>(
