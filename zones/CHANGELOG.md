@@ -3,6 +3,23 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 0.4.1 — 2026-08-16
+
+**A new character is greeted by its starting zone, not by its continent**
+
+- Logging in a freshly created character narrated "Eastern Kingdoms" or
+  "Kalimdor" instead of the valley it woke up in, on the Anniversary client. The
+  world is still loading at that moment and the client answers "which map are you
+  on?" with the continent, which ZoneLore took at its word.
+- On Classic Era the same moment produced the opposite result: nothing was
+  narrated at all, and the character was marked as already greeted, so it never
+  got a second chance.
+- Continents are never narrated automatically now. Their lore is still there to
+  read on the map, and still plays on request.
+- The login greeting waits for the game to settle rather than spending its one
+  turn on the first answer it gets, so a new dwarf hears Coldridge Valley and a
+  new orc hears Valley of Trials on both clients.
+
 ## 0.4.0 — 2026-08-12
 
 **Subzone lore works on non-English clients**

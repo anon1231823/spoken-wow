@@ -181,6 +181,35 @@ function ZoneLore:AutoplayQueueLength()
 	return #pending
 end
 
+-- A continent is never autoplayed.
+--
+-- "Eastern Kingdoms" and "Kalimdor" are lore in their own right and the map panel and
+-- /zl play will read them on request, but they are not somewhere a character arrives:
+-- every player who ever logs in is standing on one, so autoplaying them means every new
+-- character is greeted with the history of a landmass rather than with the valley it
+-- woke up in. They reach the queue by accident anyway -- GetLoreWithFallback climbs the
+-- parent chain, so any map without lore of its own eventually resolves to its continent,
+-- and a player's map resolves to exactly that for the first moments after login.
+--
+-- Guarded here rather than at each caller because all three autoplay routes -- the login
+-- greeting, a discovery, and the already-explored sweep -- share this queue and all three
+-- resolve their map the same way.
+local CONTINENT_MAP_TYPE = (Enum and Enum.UIMapType and Enum.UIMapType.Continent) or 2
+
+local function IsAutoplayableMap(mapID)
+	if not mapID then
+		return false
+	end
+	local info = C_Map.GetMapInfo(mapID)
+	-- An unknown map type is allowed through: this is a filter against three specific
+	-- maps, and refusing everything it cannot classify would silence the feature on a
+	-- client whose map table this addon has not seen.
+	if not info or not info.mapType then
+		return true
+	end
+	return info.mapType > CONTINENT_MAP_TYPE
+end
+
 local function IsQueued(mapID, areaKey)
 	for i = 1, #pending do
 		if pending[i].mapID == mapID and pending[i].areaKey == areaKey then
@@ -190,12 +219,23 @@ local function IsQueued(mapID, areaKey)
 	return false
 end
 
+-- Returns whether the entry was queued, which the login greeting needs: a greeting that
+-- resolved nothing must not count as having greeted.
 local function Enqueue(mapID, areaKey)
+	-- A subzone of a continent is not a thing, so the guard applies to the zone-level
+	-- entries only -- but those are the ones that carry the continent lore.
+	if not areaKey and not IsAutoplayableMap(mapID) then
+		if ZoneLore:Get("debug") then
+			ZoneLore:Print("autoplay: %s is a continent -- not queued", tostring(ZoneLore:GetMapName(mapID)))
+		end
+		return false
+	end
+
 	-- The login greeting below and a real discovery message can name the same
 	-- area, and an area on a zone border can be announced twice. Narrating it
 	-- twice in a row is worse than missing it.
 	if IsQueued(mapID, areaKey) or ZoneLore:IsPlayingLore(mapID, areaKey) then
-		return
+		return false
 	end
 
 	table.insert(pending, { mapID = mapID, areaKey = areaKey })
@@ -209,6 +249,7 @@ local function Enqueue(mapID, areaKey)
 	-- should say (Stop becomes Next) without changing what is playing, so the
 	-- notification Drain would have sent never happens on its own.
 	ZoneLore:NotifyAudioChanged()
+	return true
 end
 
 --------------------------------------------------------------------------------
@@ -332,38 +373,71 @@ end
 
 local LOGIN_SEED_DELAY = 2
 
-local function SeedLoginArea()
+-- A brand-new character is the worst case for asking the client where it is: the world
+-- is still loading, the intro cinematic is up, and GetBestMapForUnit answers with the
+-- continent -- which is how a dwarf who should hear Coldridge Valley was greeted with
+-- the history of the Eastern Kingdoms instead. So the greeting retries rather than
+-- spending its one turn on whatever the first answer happened to be.
+local LOGIN_SEED_ATTEMPTS = 8
+
+-- Whether the greeting is settled: it queued something, or there is nothing it will ever
+-- queue. False means "ask again shortly".
+local function SeedLoginArea(attempt)
 	local db = CharDB()
+	local debugOn = ZoneLore:Get("debug")
+
 	if db.greeted then
-		return
+		return true
 	end
 	if not ZoneLore:Get("autoplay") or not ZoneLore:IsVoiceEnabled() then
-		-- Deliberately before the flag is set, so turning autoplay on later still
+		-- Deliberately without setting the flag, so turning autoplay on later still
 		-- greets on the next login rather than having silently used up its turn.
-		return
+		if debugOn then
+			ZoneLore:Print("greeting: autoplay %s, voice %s -- nothing to do",
+				ZoneLore:Get("autoplay") and "on" or "off",
+				ZoneLore:IsVoiceEnabled() and "on" or "off")
+		end
+		return true
 	end
 
-	local _, mapID = ZoneLore:GetLoreWithFallback(ZoneLore:GetPlayerMapID())
+	-- Every step of the resolution, because a greeting that says nothing is
+	-- indistinguishable from a greeting that never ran -- and reproducing either costs a
+	-- fresh character.
+	local playerMap = ZoneLore:GetPlayerMapID()
+	local _, mapID = ZoneLore:GetLoreWithFallback(playerMap)
+	if debugOn then
+		ZoneLore:Print("greeting %d: player map %s (%s), resolved %s (%s), subzone \"%s\"",
+			attempt or 0, tostring(playerMap), tostring(ZoneLore:GetMapName(playerMap)),
+			tostring(mapID), tostring(mapID and ZoneLore:GetMapName(mapID)),
+			tostring(GetSubZoneText()))
+	end
 	if not mapID then
-		return
+		return false
 	end
-
-	db.greeted = true
 
 	-- The subzone is the more specific answer, the same preference /zl play and the
 	-- lore window both apply.
 	local subZone = GetSubZoneText()
 	if subZone and subZone ~= "" and ZoneLore:Get("autoplaySubzones") then
 		local entry, key = ZoneLore:GetSubzoneLore(mapID, subZone)
-		if entry and key then
-			Enqueue(mapID, key)
-			return
+		if entry and key and Enqueue(mapID, key) then
+			db.greeted = true
+			return true
 		end
 	end
 
-	if ZoneLore:GetLore(mapID) then
-		Enqueue(mapID, nil)
+	if ZoneLore:GetLore(mapID) and Enqueue(mapID, nil) then
+		db.greeted = true
+		return true
 	end
+
+	-- Nothing queued: either the map has not settled yet, or it settled on a continent.
+	-- Both are worth another look, and the flag stays unset so a later login still
+	-- greets if this one never resolves.
+	if debugOn then
+		ZoneLore:Print("greeting %d: nothing queued for map %s -- retrying", attempt or 0, tostring(mapID))
+	end
+	return false
 end
 
 -- Everything this character is remembered for: the greeting it has had, and the
@@ -491,16 +565,24 @@ function ZoneLore:SetupAutoplay()
 	self.autoplayFrame = frame
 
 	-- Delayed because GetSubZoneText is not reliably populated the instant the
-	-- world finishes loading. The cinematic needs no handling of its own: the
-	-- greeting queues immediately and CanPlayNow holds it until the intro ends.
-	C_Timer.After(LOGIN_SEED_DELAY, function()
-		SeedLoginArea()
+	-- world finishes loading, and repeated because on a new character the map is not
+	-- either. The cinematic needs no handling of its own: the greeting queues as soon
+	-- as it can and CanPlayNow holds it until the intro ends.
+	local attempts = 0
+	local seed
+	seed = function()
+		attempts = attempts + 1
+		local settled = SeedLoginArea(attempts)
 		-- Logging in is not a zone change, so without this a player who logs out
 		-- and back in somewhere unheard stands there in silence until they walk
 		-- into the next subzone. The greeting runs first and Enqueue refuses a
 		-- duplicate, so the spawn area cannot end up queued by both.
 		NarrateUnheard()
-	end)
+		if not settled and attempts < LOGIN_SEED_ATTEMPTS then
+			C_Timer.After(LOGIN_SEED_DELAY, seed)
+		end
+	end
+	C_Timer.After(LOGIN_SEED_DELAY, seed)
 end
 
 -- Reports whether the client defined the strings this feature is built on, so a
