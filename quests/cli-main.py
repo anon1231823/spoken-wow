@@ -72,7 +72,7 @@ bld.add_argument("--store", default=DEFAULT_STORE_DIR)
 bld.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
 bld.add_argument("--dist", default=DEFAULT_DIST_DIR)
 bld.add_argument("--module", default=DEFAULT_MODULE_NAME)
-bld.add_argument("--version", default="0.1")
+bld.add_argument("--version", default="1.0.0")
 bld.add_argument("--ignored", default=DEFAULT_IGNORED_PATH)
 
 ins = subparsers.add_parser(

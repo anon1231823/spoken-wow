@@ -38,7 +38,7 @@ cd "$REPO"
 STORE="${STORE:-audio}"
 DIST="${DIST:-dist}"
 MODULE="${MODULE:-VoiceOverReduxAudio}"
-VERSION="${VERSION:-0.1}"
+VERSION="${VERSION:-1.0.0}"
 ENCODE="${ENCODE:-vbr-v6}"
 ZIP="${ZIP:-1}"
 # kbps above which a clip is worth transcoding. See tools/plan_transcode.py.

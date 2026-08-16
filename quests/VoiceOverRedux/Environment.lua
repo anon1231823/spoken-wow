@@ -21,6 +21,6 @@ local previousEnvironment = rawget(_G, "VoiceOver")
 VoiceOver = setmetatable({
     _G = _G,
     AddonFolder = "VoiceOverRedux",
-    AddonVersion = "1.6.1",
+    AddonVersion = "1.0.0",
     PreviousEnvironment = previousEnvironment,
 }, { __index = _G })
