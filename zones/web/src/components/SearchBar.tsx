@@ -25,6 +25,8 @@ type Props = {
   query: string;
   inputRef: React.RefObject<HTMLInputElement | null>;
   onQueryChange: (value: string) => void;
+  /** Enter, meaning "search now" rather than waiting out the debounce. */
+  onQuerySubmit: () => void;
   onChange: (next: Partial<LineFilters>) => void;
   onClearAll: () => void;
 };
@@ -36,6 +38,7 @@ export function SearchBar({
   query,
   inputRef,
   onQueryChange,
+  onQuerySubmit,
   onChange,
   onClearAll,
 }: Props) {
@@ -50,6 +53,13 @@ export function SearchBar({
           value={query}
           placeholder="Search lore, names, zones…   ( / )"
           onChange={(event) => onQueryChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            // Nothing here is inside a <form>, so this is not a submit being prevented:
+            // it stops the browser's own "search" behaviour on a type=search input.
+            event.preventDefault();
+            onQuerySubmit();
+          }}
           className="min-w-64 flex-1"
         />
 

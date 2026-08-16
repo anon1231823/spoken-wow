@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ApiKeyRequiredDialog } from "@/components/ApiKeyRequiredDialog";
@@ -23,11 +23,14 @@ import type { Batch, Quote } from "@/lib/regenerate";
 import type { ResultLine, SearchResult } from "@/lib/search";
 import * as echo from "@/lib/url-echo";
 
-const DEBOUNCE_MS = 200;
+// Long enough to hold a whole typed word: the timer restarts on every keystroke, so this
+// is the pause after the last one, not a rate limit. Anyone who wants results before it
+// elapses presses Enter, which fires the search immediately.
+const DEBOUNCE_MS = 500;
 const POLL_MS = 1_000;
 
 export function Explorer({ zones }: { zones: ZoneFacet[] }) {
-  const router = useRouter();
+  const pathname = usePathname();
   const params = useSearchParams();
 
   // What this visitor may do, which is what the rest of this component draws from.
@@ -112,6 +115,25 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // URL
   //----------------------------------------------------------------------------
 
+  // history.replaceState, not router.replace, and the current path rather than "/".
+  //
+  // Both halves of that were a page load per keystroke. The bare path is a redirect
+  // route -- src/app/page.tsx sends it to /enUS -- so "/?q=..." cost a round trip, a
+  // redirect and a re-render of the page's zoneFacets() on every debounce, and on
+  // /deDE it threw the language away as well. router.replace() would still re-render
+  // the server component for the query change alone.
+  //
+  // Nothing on this screen needs the server for a filter change: the rows come from
+  // /api/search below, and Next re-renders useSearchParams() from a native history
+  // call, so `filters` still rebuilds from the URL and the URL still carries the view.
+  const replaceQuery = useCallback(
+    (search: URLSearchParams) => {
+      const query = search.toString();
+      window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname],
+  );
+
   const updateUrl = useCallback(
     (next: Record<string, string | number | undefined>) => {
       const merged = new URLSearchParams(params.toString());
@@ -122,23 +144,33 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       // Any change other than paging returns to page 1: staying on page 7 of a result
       // set that just became three pages long shows nothing and looks like a bug.
       if (!("page" in next)) merged.delete("page");
-      router.replace(`/?${merged}`, { scroll: false });
+      replaceQuery(merged);
     },
-    [params, router],
+    [params, replaceQuery],
   );
 
   // Held in a ref so a filter change mid-word does not restart the keystroke timer.
   const updateUrlRef = useRef(updateUrl);
   updateUrlRef.current = updateUrl;
 
+  const commitQuery = useCallback((value: string) => {
+    pending.current = echo.write(pending.current, value);
+    updateUrlRef.current({ q: value });
+  }, []);
+
+  // A debounce, not a throttle: the timer is cleared and restarted by every keystroke,
+  // so a search runs DEBOUNCE_MS after typing stops rather than at a fixed cadence
+  // through it.
   useEffect(() => {
     if (query === urlQuery) return;
-    const timer = setTimeout(() => {
-      pending.current = echo.write(pending.current, query);
-      updateUrlRef.current({ q: query });
-    }, DEBOUNCE_MS);
+    const timer = setTimeout(() => commitQuery(query), DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [query, urlQuery]);
+  }, [commitQuery, query, urlQuery]);
+
+  // Enter skips the wait. The effect above then sees query === urlQuery and stands down.
+  const submitQuery = useCallback(() => {
+    if (query !== urlQuery) commitQuery(query);
+  }, [commitQuery, query, urlQuery]);
 
   // The URL catching up, or changing underneath us (back button, a pasted link).
   useEffect(() => {
@@ -150,10 +182,9 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const updateFilters = useCallback(
     (next: Partial<LineFilters>) => {
       const merged = { ...filters, ...next };
-      const search = filterParams(merged);
-      router.replace(search.size ? `/?${search}` : "/", { scroll: false });
+      replaceQuery(filterParams(merged));
     },
-    [filters, router],
+    [filters, replaceQuery],
   );
 
   //----------------------------------------------------------------------------
@@ -543,8 +574,9 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         query={query}
         inputRef={searchInput}
         onQueryChange={setQuery}
+        onQuerySubmit={submitQuery}
         onChange={updateFilters}
-        onClearAll={() => router.replace("/", { scroll: false })}
+        onClearAll={() => replaceQuery(new URLSearchParams())}
       />
 
       <div className="shell flex items-center gap-4 py-2 text-muted">
