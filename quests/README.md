@@ -506,12 +506,19 @@ every table it loads a quest through on the patch the server runs, and the dump 
 1.12 never serves. Two ways to find that out, deliberately independent:
 
 ```bash
-python3 tools/scan_unreachable_quests.py          # the vmangos world DB, needs MySQL up
+python3 tools/scan_unreachable_quests.py            # the vmangos world DB, needs MySQL up
+python3 tools/scan_unreachable_quests.py --gossip   # and the NPCs whose gossip nobody hears
 ```
 
 It asks the three questions the core asks — is there a `quest_template` row at this patch, is
 there a questgiver relation in range, does any of those questgivers spawn — and prints the
 corpus lines hanging off each quest that fails one. Nine findings today, three of them certain.
+
+`--gossip` asks the speaker instead of the quest, since gossip belongs to whoever is standing
+there: 47 NPCs and 88 lines, every one of them `likely` rather than certain. Read that section
+sceptically — it is Finkle Einhorn, who appears out of the Beast's corpse, the Darrowshire
+spirits, the AV commanders and the Felwood cleansed plants. Script-spawned entities are in no
+spawn table, and this cannot tell them from content that is genuinely gone.
 The rules are in `tts_cli/reachability.py` and tested against fixtures, so they can be read
 without standing the database up.
 

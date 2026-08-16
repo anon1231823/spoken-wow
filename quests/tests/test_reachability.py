@@ -1,5 +1,6 @@
-from tts_cli.reachability import (NO_DEFINITION, NO_QUESTGIVER, NO_SPAWN,
-                                  classify_quest, findings)
+from tts_cli.reachability import (NO_DEFINITION, NO_QUESTGIVER, NO_SPAWN, NO_TEMPLATE,
+                                  NPC_NO_SPAWN, classify_npc, classify_quest, findings,
+                                  npc_findings)
 
 
 def facts(definition=(0,), relations=(), spawned=()):
@@ -98,3 +99,61 @@ def test_a_quest_the_dump_does_not_mention_is_skipped():
 def test_gossip_lines_are_not_quests_and_are_left_alone():
     found = findings(CORPUS, {5: facts(definition=(11,))})
     assert all("g:abc123" not in f["lineIds"] for f in found)
+
+GOSSIP_CORPUS = {
+    "lines": [
+        {"lineId": "g:abc", "source": "gossip", "npcType": "creature", "npcId": 68,
+         "npcName": "Stormwind City Guard", "questId": None, "questTitle": None},
+        {"lineId": "g:abc:m", "source": "gossip", "npcType": "creature", "npcId": 68,
+         "npcName": "Stormwind City Guard", "questId": None, "questTitle": None},
+        {"lineId": "g:obj", "source": "gossip", "npcType": "gameobject", "npcId": 68,
+         "npcName": "Wanted Poster", "questId": None, "questTitle": None},
+        {"lineId": "q:5:accept", "source": "accept", "npcType": "creature", "npcId": 288,
+         "npcName": "Jitters", "questId": 5, "questTitle": "Growling Gut"},
+    ],
+}
+
+
+def test_a_spawned_npc_can_be_talked_to():
+    assert classify_npc({"template_patches": [0], "spawns": True}) is None
+
+
+def test_a_template_added_after_this_patch_does_not_load():
+    assert classify_npc({"template_patches": [11], "spawns": True}) == NO_TEMPLATE
+
+
+def test_an_npc_standing_nowhere_says_nothing():
+    assert classify_npc({"template_patches": [0], "spawns": False}) == NPC_NO_SPAWN
+
+
+def test_an_unversioned_template_is_not_read_as_a_missing_one():
+    # Gameobject templates carry no patch column, so an empty list means "not asked".
+    assert classify_npc({"template_patches": [], "spawns": True}) is None
+    assert classify_npc({"template_patches": [], "spawns": False}) == NPC_NO_SPAWN
+
+
+def test_npc_findings_gather_every_gossip_line_of_one_speaker():
+    found = npc_findings(GOSSIP_CORPUS, {
+        ("creature", 68): {"template_patches": [0], "spawns": False},
+    })
+
+    assert [f["npcId"] for f in found] == [68]
+    assert found[0]["lineIds"] == ["g:abc", "g:abc:m"]
+    assert found[0]["confidence"] == "likely"
+
+
+def test_npc_findings_leave_quest_lines_to_the_quest_report():
+    # An NPC that does not spawn cannot hand out a quest either; reporting q:5:accept here
+    # as well would double-count the same silence.
+    found = npc_findings(GOSSIP_CORPUS, {
+        ("creature", 288): {"template_patches": [0], "spawns": False},
+    })
+    assert found == []
+
+
+def test_npc_findings_keep_the_two_id_spaces_apart():
+    found = npc_findings(GOSSIP_CORPUS, {
+        ("gameobject", 68): {"template_patches": [], "spawns": False},
+        ("creature", 68): {"template_patches": [0], "spawns": True},
+    })
+    assert [(f["npcType"], f["lineIds"]) for f in found] == [("gameobject", ["g:obj"])]

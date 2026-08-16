@@ -606,3 +606,41 @@ def query_quest_reachability(patch: int = 10):
         }
         for quest, patches in definitions.items()
     }
+
+
+def query_npc_reachability(patch: int = 10):
+    """What the world DB says about whether each speaking entity is in the world.
+
+    Keyed on (type, id) because creature and gameobject ids are separate spaces - the same
+    reason spawn_key exists in tts_cli/corpus.py. Only creature_template is versioned by
+    patch; a gameobject's template is not, so its patch list comes back empty and
+    reachability.classify_npc reads that as "not asked" rather than "no template".
+
+    Every entity in the tables, not only the speaking ones: which of them the corpus voices
+    is a question about the corpus, and answering it here would mean passing it in.
+    """
+    db = make_connection()
+    facts = {}
+
+    with db.cursor() as cursor:
+        cursor.execute("SELECT entry, patch FROM creature_template")
+        for entry, entry_patch in cursor.fetchall():
+            key = ("creature", entry)
+            facts.setdefault(key, {"template_patches": [], "spawns": False})
+            facts[key]["template_patches"].append(entry_patch)
+
+        cursor.execute("SELECT entry FROM gameobject_template")
+        for (entry,) in cursor.fetchall():
+            facts.setdefault(("gameobject", entry), {"template_patches": [], "spawns": False})
+
+        for table, kind in (("creature", "creature"), ("gameobject", "gameobject")):
+            cursor.execute(
+                f"SELECT DISTINCT id FROM {table} WHERE %s BETWEEN patch_min AND patch_max",
+                (patch,))
+            for (entity_id,) in cursor.fetchall():
+                key = (kind, entity_id)
+                facts.setdefault(key, {"template_patches": [], "spawns": False})
+                facts[key]["spawns"] = True
+
+    db.close()
+    return facts

@@ -48,10 +48,18 @@ CONFIDENCE = {
     NO_SPAWN: "likely",
 }
 
+#: An NPC's own two, for the gossip half. Gossip hangs off the speaker rather than a quest.
+NO_TEMPLATE = "no-template"
+NPC_NO_SPAWN = "npc-no-spawn"
+
+CONFIDENCE.update({NO_TEMPLATE: "certain", NPC_NO_SPAWN: "likely"})
+
 EXPLANATION = {
     NO_DEFINITION: "quest_template has no row at or below patch {patch}",
     NO_QUESTGIVER: "every questgiver relation is outside patch {patch}",
     NO_SPAWN: "no questgiver spawns at patch {patch}",
+    NO_TEMPLATE: "the template has no row at or below patch {patch}",
+    NPC_NO_SPAWN: "spawns nowhere at patch {patch}",
 }
 
 
@@ -118,3 +126,62 @@ def findings(corpus: dict, facts_by_quest: dict, patch: int = DEFAULT_PATCH) -> 
         })
 
     return sorted(found, key=lambda f: (order.index(f["reason"]), f["questId"]))
+
+
+def classify_npc(facts: dict, patch: int = DEFAULT_PATCH) -> str | None:
+    """Why this NPC's gossip is unreachable at `patch`, or None.
+
+    `facts` is the entity's own two answers:
+
+        template_patches  every `creature_template.patch` value it has. Empty for a
+                          gameobject, whose template is not versioned - absence there means
+                          "not asked", not "no template".
+        spawns            whether it has a spawn point valid at `patch`
+
+    Gossip is spoken by whoever is standing there, so an NPC that stands nowhere says
+    nothing, however complete its text. Same "likely" as the quest spawn gate and for the
+    same reason: a scripted or summoned NPC is in no spawn table either.
+    """
+    patches = facts.get("template_patches")
+    if patches and not any(p <= patch for p in patches):
+        return NO_TEMPLATE
+    return None if facts.get("spawns") else NPC_NO_SPAWN
+
+
+def npc_findings(corpus: dict, facts_by_npc: dict, patch: int = DEFAULT_PATCH) -> list:
+    """One finding per NPC whose gossip nobody can hear, worst first then by id.
+
+    Gossip only. A quest line is reported through its quest, which is the stronger claim -
+    an NPC that does not spawn cannot hand out a quest either, and saying so twice would
+    make the report look like twice the problem.
+    """
+    lines_by_npc = {}
+    names = {}
+    for line in corpus["lines"]:
+        if line["source"] != "gossip":
+            continue
+        key = (line["npcType"], line["npcId"])
+        lines_by_npc.setdefault(key, []).append(line["lineId"])
+        names.setdefault(key, line["npcName"])
+
+    order = (NO_TEMPLATE, NPC_NO_SPAWN)
+    found = []
+    for key, line_ids in lines_by_npc.items():
+        facts = facts_by_npc.get(key)
+        if facts is None:
+            continue
+        reason = classify_npc(facts, patch)
+        if not reason:
+            continue
+        npc_type, npc_id = key
+        found.append({
+            "npcType": npc_type,
+            "npcId": npc_id,
+            "npcName": names[key],
+            "reason": reason,
+            "confidence": CONFIDENCE[reason],
+            "explanation": EXPLANATION[reason].format(patch=patch),
+            "lineIds": sorted(set(line_ids)),
+        })
+
+    return sorted(found, key=lambda f: (order.index(f["reason"]), f["npcType"], f["npcId"]))

@@ -114,6 +114,13 @@ known blind spot of the spawn gate, not a bug in the scan.
 
 Also worth noting: Questie hides 236 in Era for its own reasons, which is a third agreement.
 
+`--gossip` adds 47 NPCs and 88 gossip lines, all of them `likely`, and none is listed here on
+purpose: the ones spot-checked are script-spawned rather than missing — Finkle Einhorn appears
+out of the Beast's corpse, Vaelan is summoned in Blackwing Lair, the Darrowshire spirits belong
+to an event, Ysida Harmon to Alterac Valley, and the Cleansed Songflower objects to Felwood's
+plant transformations. Run it yourself if you want the list; it needs a person who knows the
+content, not a filter.
+
 ## What is not on this list
 
 Quest 7124 `You captured a mine!` holds a stray `>` from a botched `$N` token and is reachable -
