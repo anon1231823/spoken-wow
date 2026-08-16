@@ -5,8 +5,8 @@
 -- whatever was running.
 --
 -- Audio ships in separate sound-pack addons, all of them optional: without one
--- every lookup falls back to the bundled placeholder, so the button is testable
--- before any audio exists and merely sounds wrong rather than erroring.
+-- there is nothing to play, so the Play button does not appear and autoplay stays
+-- quiet.
 --
 -- More than one pack can be installed at a time -- they differ in bitrate, and
 -- now in language. Each registers itself into ZoneLoreAudioPacks under its own
@@ -14,24 +14,28 @@
 --
 -- Every pack has the same structure and the same keys, so any installed pack is
 -- playable regardless of the language being read: a player reading German with
--- only the English pack installed hears English narration rather than the
--- placeholder. When several packs are installed the player picks one; unpicked,
+-- only the English pack installed hears English narration rather than nothing.
+-- When several packs are installed the player picks one; unpicked,
 -- the language being read wins, then the client's own locale.
 
 local ADDON_NAME, ZoneLore = ...
 
-local PLACEHOLDER = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Sounds\\placeholder.mp3"
+-- THERE IS NO STAND-IN CLIP. A line with no audio in the installed pack plays
+-- nothing and says why.
+--
+-- There used to be one: Sounds/placeholder.mp3, a quest line borrowed from
+-- ../wow-voiceover so the playback controls could be exercised before any real
+-- narration existed. It was returned for every entry the pack did not cover, which
+-- on a client with no pack installed is every entry there is -- so players heard a
+-- stranger's quest audio about the League of Arathor over Elwynn Forest, Dun Morogh,
+-- Felwood and Red Cloud Mesa, and reported it as the lore being wrong. They were
+-- right: substituting unrelated audio is worse than silence, because silence is
+-- honest about what is missing and this was not.
 
 -- The pack table shape this version knows how to read. A pack declaring anything
 -- else is ignored with a warning: refusing to read it is recoverable, guessing at
 -- an unknown layout plays silence and reports nothing.
 local PACK_FORMAT = 1
-
--- Measured from the file. Hardcoded because the client cannot report a sound's
--- length, and without a duration the "clip finished" path -- the button resetting
--- itself, the floating controls disappearing -- cannot be exercised at all until
--- real audio exists. Update this if the placeholder is ever swapped.
-local PLACEHOLDER_DURATION = 40.124
 
 -- PlaySoundFile only accepts these. An unknown name makes the call fail outright,
 -- so a saved variable carrying a stale channel falls back rather than going silent.
@@ -94,7 +98,7 @@ local warnedFormat = {}
 -- to walk on demand and always reflects what is loaded.
 --
 -- Every pack is listed whatever it narrates -- packs are interchangeable, and an
--- English pack under German text beats the placeholder. Pass `lang` only to
+-- English pack under German text beats silence. Pass `lang` only to
 -- narrow the answer to one language.
 function ZoneLore:GetAudioPacks(lang)
 	local packs = {}
@@ -266,20 +270,22 @@ function ZoneLore:GetAudioClip(mapID, areaKey)
 		end
 	end
 
-	return PLACEHOLDER, PLACEHOLDER_DURATION
+	return nil, nil
 end
 
 function ZoneLore:HasAudio(mapID, areaKey)
-	local path = self:GetAudioClip(mapID, areaKey)
-	return path ~= nil
+	return self:GetAudioClip(mapID, areaKey) ~= nil
 end
 
--- True when the audio addon is installed and carries a real clip for this entry,
--- as opposed to the placeholder. Reported by /zl play so a silent-looking result
--- can be told apart from a missing soundpack.
-function ZoneLore:HasRealAudio(mapID, areaKey)
-	local path = self:GetAudioClip(mapID, areaKey)
-	return path ~= nil and path ~= PLACEHOLDER
+-- Why there is no clip, phrased for the player. Distinguishes "you have no sound
+-- pack" from "your pack does not cover this line": the first is a download, the
+-- second is nothing they can do, and telling them apart is the whole point of
+-- saying anything at all.
+function ZoneLore:DescribeMissingAudio()
+	if #self:GetAudioPacks() == 0 then
+		return "no sound pack installed -- get ZoneLore Audio to hear the lore read aloud"
+	end
+	return "no narration for this entry in the installed sound pack yet"
 end
 
 --------------------------------------------------------------------------------
@@ -416,6 +422,11 @@ function ZoneLore:PlayLore(mapID, areaKey)
 	-- buttons and the floating controls would otherwise keep showing the old clip.
 	local path, duration = self:GetAudioClip(mapID, areaKey)
 	if not path then
+		-- Said out loud, because this is the case players used to experience as
+		-- "the narration is about the wrong zone". Autoplay never reaches here --
+		-- it refuses to queue an entry with no clip -- so this only speaks when
+		-- somebody asked for this line by clicking Play or typing /zl play.
+		self:Print("|cffffcc00%s|r", self:DescribeMissingAudio())
 		ZoneLore:NotifyAudioChanged()
 		return false
 	end

@@ -73,9 +73,6 @@ function ZoneLore:CreateAudioButton(parent)
 			GameTooltip:SetText("Stop the narration")
 		else
 			GameTooltip:SetText("Read this lore aloud")
-			if self.mapID and not ZoneLore:HasRealAudio(self.mapID, self.areaKey) then
-				GameTooltip:AddLine("No voiceover for this entry yet -- playing a placeholder.", 1, 0.8, 0.2, true)
-			end
 		end
 		GameTooltip:Show()
 	end)
