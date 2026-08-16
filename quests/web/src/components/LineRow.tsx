@@ -16,6 +16,7 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import type { LineState } from "./Explorer";
 import type { ResultLine } from "@/lib/search";
+import { wowheadEntityUrl, wowheadQuestUrl } from "@/lib/wowhead";
 
 /**
  * Why a line has no audio, or null when it does.
@@ -90,6 +91,27 @@ type Props = {
   onNarrowToQuest: (line: ResultLine) => void;
 };
 
+/**
+ * The way out to Wowhead, small enough to sit inside the id line.
+ *
+ * stopPropagation because the row's own click handler toggles it open; the handler already
+ * ignores clicks on an anchor, and this keeps that true if the markup around it changes.
+ */
+function WowheadLink({ href }: { href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(event) => event.stopPropagation()}
+      title="Look this up on Wowhead Classic"
+      className="hover:text-foreground underline underline-offset-2"
+    >
+      wh
+    </a>
+  );
+}
+
 export default function LineRow({
   line,
   current,
@@ -145,7 +167,7 @@ export default function LineRow({
           {line.npcName}
         </button>
         <span className="text-muted-foreground block truncate text-xs">
-          {line.npcType} {line.npcId}
+          {line.npcType} {line.npcId} <WowheadLink href={wowheadEntityUrl(line.npcType, line.npcId)} />
         </span>
       </td>
 
@@ -162,7 +184,7 @@ export default function LineRow({
               {line.questTitle ?? `quest ${line.questId}`}
             </button>
             <span className="text-muted-foreground block truncate text-xs">
-              quest {line.questId}
+              quest {line.questId} <WowheadLink href={wowheadQuestUrl(line.questId)} />
             </span>
           </>
         )}
