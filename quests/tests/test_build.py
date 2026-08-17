@@ -136,11 +136,13 @@ def test_toc_lists_every_generated_file():
     assert "X-VoiceOver-DataModule-Version: 1" in toc
 
 
-def test_toc_names_the_player_as_a_label_and_as_a_folder():
-    # X-Part-Of is the grouping label and must match the player's own TOCs, spaces and all;
-    # X-Child-Of is a directory name and must not. Two keys a rename can silently swap.
+def test_toc_nests_the_pack_under_the_player():
+    # Group is the one the client reads (11.1.0+), and its value is the main addon's *name*,
+    # so it is the folder and not the title. X-Part-Of carries the title for addon managers,
+    # and X-Child-Of a folder again. Three keys a rename can silently swap between.
     toc = module_toc("VoiceOverReduxAudio", [])
 
+    assert "## Group: VoiceOverRedux\n" in toc
     assert "## X-Part-Of: VoiceOver Redux\n" in toc
     assert "## X-Child-Of: VoiceOverRedux\n" in toc
 

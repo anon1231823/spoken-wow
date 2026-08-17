@@ -26,9 +26,11 @@ DEFAULT_ADDONS_DIR = ("/Applications/World of Warcraft/_classic_era_"
                       "/Interface/AddOns")
 GUARD = "if not VoiceOver or not VoiceOver.DataModules then return end"
 
-#: X-Part-Of is a label the client groups addons under and must read the same in the player's
-#: own TOCs, spaces and all. X-Child-Of is a folder name and must not: it names the directory
-#: the pack belongs to. Two keys that look alike and are not.
+#: Group is what actually nests this under the player in the AddOns list - added in 11.1.0,
+#: and its value is the main addon's *name*, so it is the folder name and not the title.
+#: X-Part-Of and X-Child-Of are custom X- fields the client does not read at all; they are
+#: kept because addon managers do, and because upstream shipped them. Three keys that look
+#: interchangeable, one of which does the work.
 
 #: How many leading and trailing words the addon fuzzy-matches quest text on. Must stay
 #: in step with DataModules:GetQuestID in AI_VoiceOver/DataModules.lua.
@@ -60,6 +62,7 @@ TOC_HEADER = """## Interface: 100000
 ## Notes: Contains voiceovers for content released during the Vanilla era.|n|nIt's |cFF20FF20OK|r for this addon to appear |cFF808080"disabled"|r or |cFFFF2020"out of date"|r, it's compatible with any client and |cFFFFD200VoiceOver Redux|r will load it even if it's disabled or out of date.
 ## Version: {version}
 ## LoadOnDemand: 1
+## Group: VoiceOverRedux
 ## X-Part-Of: VoiceOver Redux
 ## X-Child-Of: VoiceOverRedux
 ## X-VoiceOver-DataModule-Version: 1

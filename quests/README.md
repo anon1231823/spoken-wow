@@ -632,6 +632,12 @@ the player finds packs by the `X-VoiceOver-DataModule-Version` key in the TOC, n
 (`DataModules:EnumerateAddons`) — but settings do not survive, because `SavedVariables` live in
 `WTF/…/SavedVariables/<folder>.lua` and the folder is the identity.
 
+**The pack is nested under the player in the AddOns list** by `## Group: VoiceOverRedux` in
+both TOCs — the value is the main addon's *name*, so it is the folder rather than the title.
+That tag arrived in 11.1.0; the `X-Part-Of` and `X-Child-Of` lines beside it are custom `X-`
+fields the client never reads, kept because addon managers do and because upstream shipped
+them.
+
 The data module names no `RequiredDeps`. It used to require `AI_VoiceOver`, which made
 `LoadAddOn` fail with `DEP_DISABLED` whenever the player was a fork under another folder name
 and the original sat disabled — three folder names into this lineage, that is the normal case. The module is `LoadOnDemand` and its `Module.lua` returns early
