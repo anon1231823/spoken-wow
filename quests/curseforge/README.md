@@ -6,16 +6,18 @@ Markdown mode — paste the file into it.
 | File | Project | id | Slug |
 | --- | --- | --- | --- |
 | `player.md` | VoiceOver Redux | 1655859 | `voiceover-redux` |
-| `audio-all.md` | VoiceOver Redux Audio | 1655867 | `voiceover-redux-audio` |
-| `audio-alliance.md` | VoiceOver Redux: Alliance | 1658236 | `voiceover-redux-alliance` |
+| `audio-all.md` | VoiceOver Redux Audio: All | 1655867 | `voiceover-redux-audio` |
+| `audio-alliance.md` | VoiceOver Redux Audio: Alliance | 1658236 | `voiceover-redux-audio-alliance` |
 | `audio-horde.md` | VoiceOver Redux Audio: Horde | 1658237 | `voiceover-redux-audio-horde` |
 | `audio-shared.md` | VoiceOver Redux Audio: Shared Quests | 1658239 | `voiceover-redux-audio-shared-quests` |
 | `audio-gossip.md` | VoiceOver Redux Audio: Gossip | 1658235 | `voiceover-redux-audio-gossip` |
 
-The slugs are what the pages and the addon link to, so they are copied from the live projects
-rather than guessed - three of the six differ from the obvious guess. `scripts/release.sh`
-carries the same ids, and `VoiceOverRedux/DataModules.lua` the same URLs; a slug that changes
-has to change in all three.
+The slugs are what the pages and the addon link to, so they are read off the live projects
+rather than guessed - Shared Quests is not the slug its name suggests, and Alliance was
+something else again before it was renamed. `scripts/release.sh` carries the same ids, and
+`VoiceOverRedux/DataModules.lua` the same URLs, so a slug that changes has to change in all
+three. The project names are the addons' `## Title` too - `tts_cli/factions.py:PACK_TITLES` -
+so a player sees the same name in the AddOns list as on the site.
 
 **These are pasted by hand and the site is the live copy.** There is no API for descriptions —
 `scripts/release.sh` uploads files and nothing else, deliberately, because a script that

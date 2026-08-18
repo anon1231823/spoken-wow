@@ -16,7 +16,7 @@ Main changes:
 | Pack | Holds |
 | --- | --- |
 | [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | everything below |
-| [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-alliance) | Alliance-only quests |
+| [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance) | Alliance-only quests |
 | [Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde) | Horde-only quests |
 | [Shared](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests) | quests both factions can take |
 | [Gossip](https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip) | NPC gossip chatter |
