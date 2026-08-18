@@ -17,6 +17,12 @@ complete pack is too big to upload. It is a few kilobytes declaring the other fo
 dependencies, which `scripts/release.sh` sends as part of the upload metadata - relations are
 per file, so they need no web-UI step and cannot drift from the file that shipped.
 
+**A dependency has to be an approved project.** A newly created project sits at status "New"
+until moderation clears it, and until then an upload naming it in `relations` is rejected with
+errorCode 1018 ("does not exist, is not accessible"). So the meta addon is the last thing to
+release: the four packs upload happily while their projects are pending, and `audio-all` goes
+out once they are approved.
+
 The slugs are what the pages and the addon link to, so they are read off the live projects
 rather than guessed - Shared Quests is not the slug its name suggests, and Alliance was
 something else again before it was renamed. `scripts/release.sh` carries the same ids, and

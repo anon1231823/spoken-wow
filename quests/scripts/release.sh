@@ -322,6 +322,15 @@ upload_target() {
     # be rediscovered, since the split packs exist precisely because of this limit.
     [[ "$status" = 413 ]] && \
       echo "       $size is over CurseForge's upload limit. Ship the split packs instead." >&2
+    # 1018 is a relation naming a project CurseForge will not resolve. The usual cause is not
+    # a wrong slug but an unapproved one: a project sits at status "New" until moderation
+    # clears it, and until then nothing may depend on it. Re-run this target afterwards - the
+    # packs themselves upload fine in the meantime, they are only the dependencies.
+    if [[ "$response" == *1018* ]]; then
+      echo "       A dependency is not resolvable yet. New projects cannot be depended on" >&2
+      echo "       until moderation approves them - check authors.curseforge.com/#/projects" >&2
+      echo "       and re-run: ./scripts/release.sh $target" >&2
+    fi
     return 1
   fi
 
