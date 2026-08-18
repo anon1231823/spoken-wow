@@ -2,22 +2,22 @@ Voiced dialogue for the quests only a Horde character can take.
 
 **You need two more addons for this to do anything:**
 
-1. **VoiceOver Redux** — the player. Without it no pack plays.
-2. **VoiceOver Redux Audio (Shared)** — the quests both factions can take, including everything in the neutral hubs like Booty Bay and Gadgetzan. Without it a Horde character hears only part of their quests.
+1. **[VoiceOver Redux](https://www.curseforge.com/wow/addons/voiceover-redux)** — the player. Without it no pack plays.
+2. **[VoiceOver Redux Audio (Shared)](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests)** — the quests both factions can take, including everything in the neutral hubs like Booty Bay and Gadgetzan. Without it a Horde character hears only part of their quests.
 
 ## The packs
 
 | Pack | Holds | |
 | --- | --- | --- |
-| All | everything below | |
-| Alliance | Alliance-only quests | |
+| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | everything below | |
+| [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-alliance) | Alliance-only quests | |
 | **Horde** | Horde-only quests | **this pack** |
-| Shared | quests both factions can take | |
-| Gossip | NPC gossip chatter | |
+| [Shared](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests) | quests both factions can take | |
+| [Gossip](https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip) | NPC gossip chatter | |
 
 Gossip — the chatter NPCs give you when you talk to them without a quest — is optional on top.
 
-If you would rather have one install and not think about it, take **All** instead. It holds every pack's audio, so installing it *and* these is a wasted second copy.
+If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/voiceover-redux-audio)** instead. It holds every pack's audio, so installing it *and* these is a wasted second copy.
 
 ## Why the pack is split
 

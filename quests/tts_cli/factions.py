@@ -43,7 +43,7 @@ PACK_SUFFIXES = {
 #: What the AddOns list shows. The folder names differ by a suffix nobody reads, so this is
 #: what a player actually tells the packs apart by.
 PACK_TITLES = {
-    "all": "VoiceOver Redux Audio (Complete)",
+    "all": "VoiceOver Redux Audio (All)",
     "alliance": "VoiceOver Redux Audio (Alliance)",
     "horde": "VoiceOver Redux Audio (Horde)",
     "shared": "VoiceOver Redux Audio (Shared quests)",

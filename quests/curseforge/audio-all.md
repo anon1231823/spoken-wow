@@ -1,16 +1,16 @@
 Every voice line this project has made, in one install: quest dialogue for both factions and NPC gossip chatter.
 
-**This is audio only.** Install VoiceOver Redux alongside it — that addon is the player, this is the voice lines, and neither does anything alone.
+**This is audio only.** Install [VoiceOver Redux](https://www.curseforge.com/wow/addons/voiceover-redux) alongside it — that addon is the player, this is the voice lines, and neither does anything alone.
 
 ## The packs
 
 | Pack | Holds | |
 | --- | --- | --- |
 | **All** | everything below | **this pack** |
-| Alliance | Alliance-only quests | |
-| Horde | Horde-only quests | |
-| Shared | quests both factions can take | |
-| Gossip | NPC gossip chatter | |
+| [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-alliance) | Alliance-only quests | |
+| [Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde) | Horde-only quests | |
+| [Shared](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests) | quests both factions can take | |
+| [Gossip](https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip) | NPC gossip chatter | |
 
 Take this one if you would rather not think about it. If you would rather not download dialogue your character can never hear, take the split packs instead: an Alliance player wants Alliance + Shared, a Horde player Horde + Shared, and Gossip on top if they want NPC chatter.
 

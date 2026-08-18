@@ -57,10 +57,10 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 target_project() { case "$1" in
   player)         echo "1655859";;
   audio-all)      echo "1655867";;
-  audio-alliance) echo "";;
-  audio-horde)    echo "";;
-  audio-shared)   echo "";;
-  audio-gossip)   echo "";;
+  audio-alliance) echo "1658236";;
+  audio-horde)    echo "1658237";;
+  audio-shared)   echo "1658239";;
+  audio-gossip)   echo "1658235";;
 esac; }
 
 # The addon folder each target ships, which is also the basename package*.sh gives its zip.

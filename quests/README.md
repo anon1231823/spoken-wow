@@ -184,7 +184,7 @@ character cannot reach. So the store is transcoded once and built into five pack
 
 | Pack | Folder | Zip |
 | --- | --- | --- |
-| Complete | `VoiceOverReduxAudioAll` | 576 MB |
+| All | `VoiceOverReduxAudioAll` | 576 MB |
 | Alliance quests | `VoiceOverReduxAudioAlliance` | 161 MB |
 | Horde quests | `VoiceOverReduxAudioHorde` | 160 MB |
 | Shared quests | `VoiceOverReduxAudioShared` | 144 MB |

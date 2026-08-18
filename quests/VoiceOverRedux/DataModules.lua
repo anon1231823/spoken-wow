@@ -69,7 +69,7 @@ DataModules =
     availableModules = {
         {
             AddonName = "VoiceOverReduxAudioAll",
-            Title = "VoiceOver Redux Audio (Complete)",
+            Title = "VoiceOver Redux Audio (All)",
             ContentVersion = "1.2.0",
             RelevantAboveVersion = 0,
             URL = "https://www.curseforge.com/wow/addons/voiceover-redux-audio",
@@ -79,7 +79,7 @@ DataModules =
             Title = "VoiceOver Redux Audio (Alliance)",
             ContentVersion = "1.2.0",
             RelevantAboveVersion = 0,
-            URL = "https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance",
+            URL = "https://www.curseforge.com/wow/addons/voiceover-redux-alliance",
         },
         {
             AddonName = "VoiceOverReduxAudioHorde",
@@ -93,7 +93,7 @@ DataModules =
             Title = "VoiceOver Redux Audio (Shared quests)",
             ContentVersion = "1.2.0",
             RelevantAboveVersion = 0,
-            URL = "https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared",
+            URL = "https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests",
         },
         {
             AddonName = "VoiceOverReduxAudioGossip",

@@ -15,11 +15,11 @@ Main changes:
 
 | Pack | Holds |
 | --- | --- |
-| All | everything below |
-| Alliance | Alliance-only quests |
-| Horde | Horde-only quests |
-| Shared | quests both factions can take |
-| Gossip | NPC gossip chatter |
+| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | everything below |
+| [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-alliance) | Alliance-only quests |
+| [Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde) | Horde-only quests |
+| [Shared](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests) | quests both factions can take |
+| [Gossip](https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip) | NPC gossip chatter |
 
 An Alliance player wants Alliance + Shared, a Horde player Horde + Shared, and Gossip on top if they want NPC chatter. Anyone who would rather not choose can take All instead — but installing All *and* the split packs is a wasted second copy of the same audio.
 

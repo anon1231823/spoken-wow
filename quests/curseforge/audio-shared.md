@@ -2,22 +2,22 @@ Voiced dialogue for the quests **both factions** can take. Neutral hubs like Boo
 
 **Everyone wants this pack**, and on its own it is only part of the story. Pair it with your side, and with the player:
 
-1. **VoiceOver Redux** — the player. Without it no pack plays.
-2. **VoiceOver Redux Audio (Alliance)** or **(Horde)** — whichever side your character is on.
+1. **[VoiceOver Redux](https://www.curseforge.com/wow/addons/voiceover-redux)** — the player. Without it no pack plays.
+2. **[VoiceOver Redux Audio (Alliance)](https://www.curseforge.com/wow/addons/voiceover-redux-alliance)** or **[(Horde)](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde)** — whichever side your character is on.
 
 ## The packs
 
 | Pack | Holds | |
 | --- | --- | --- |
-| All | everything below | |
-| Alliance | Alliance-only quests | |
-| Horde | Horde-only quests | |
+| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | everything below | |
+| [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-alliance) | Alliance-only quests | |
+| [Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde) | Horde-only quests | |
 | **Shared** | quests both factions can take | **this pack** |
-| Gossip | NPC gossip chatter | |
+| [Gossip](https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip) | NPC gossip chatter | |
 
 Gossip — the chatter NPCs give you when you talk to them without a quest — is optional on top.
 
-If you would rather have one install and not think about it, take **All** instead. It holds every pack's audio, so installing it *and* these is a wasted second copy.
+If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/voiceover-redux-audio)** instead. It holds every pack's audio, so installing it *and* these is a wasted second copy.
 
 ## Why the pack is split
 

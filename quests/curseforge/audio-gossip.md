@@ -4,22 +4,22 @@ Innkeepers, guards, faction quartermasters and the rest saying their piece out l
 
 **You need the player and at least one quest pack for any of this to work:**
 
-1. **VoiceOver Redux** — the player. Without it no pack plays.
-2. Your quest audio — **Alliance** or **Horde**, plus **Shared**.
+1. **[VoiceOver Redux](https://www.curseforge.com/wow/addons/voiceover-redux)** — the player. Without it no pack plays.
+2. Your quest audio — **[Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-alliance)** or **[Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde)**, plus **[Shared](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests)**.
 
 ## The packs
 
 | Pack | Holds | |
 | --- | --- | --- |
-| All | everything below | |
-| Alliance | Alliance-only quests | |
-| Horde | Horde-only quests | |
-| Shared | quests both factions can take | |
+| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | everything below | |
+| [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-alliance) | Alliance-only quests | |
+| [Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde) | Horde-only quests | |
+| [Shared](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests) | quests both factions can take | |
 | **Gossip** | NPC gossip chatter | **this pack** |
 
 Gossip is not split by faction: an NPC greets whoever walks up, so one pack serves both sides.
 
-If you would rather have one install and not think about it, take **All** instead. It already holds this audio, so installing both is a wasted second copy.
+If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/voiceover-redux-audio)** instead. It already holds this audio, so installing both is a wasted second copy.
 
 ## What this is
 
