@@ -16,7 +16,7 @@ from tqdm import tqdm
 from tts_cli.ignores import ignored_files
 from tts_cli.length_table import write_sound_length_table_lua
 from tts_cli.naming import gossip_hash_from_line_id, subfolder_from_line_id
-from tts_cli.store import stored_files
+from tts_cli.store import audio_extension, stored_files
 from tts_cli.utils import (get_first_n_words, get_last_n_words,
                            replace_dollar_bs_with_space)
 
@@ -43,9 +43,9 @@ MODULE_LUA = """if not VoiceOver or not VoiceOver.DataModules then return end
 function {module}:GetSoundPath(fileName, event)
     setfenv(1, VoiceOver)
     if Enums.SoundEvent:IsQuestEvent(event) then
-        return format([[generated\\sounds\\quests\\%s.mp3]], fileName)
+        return format([[generated\\sounds\\quests\\%s{extension}]], fileName)
     elseif Enums.SoundEvent:IsGossipEvent(event) then
-        return format([[generated\\sounds\\gossip\\%s.mp3]], fileName)
+        return format([[generated\\sounds\\gossip\\%s{extension}]], fileName)
     end
 end
 
@@ -203,11 +203,24 @@ def build_module(corpus: dict, store_dir: str, dist_dir: str = DEFAULT_DIST_DIR,
     generated_dir = os.path.join(module_dir, "generated")
     sounds_dir = os.path.join(generated_dir, "sounds")
 
+    # Cleared first, so a module holds what this build produced and nothing that a previous
+    # one did. Every file under generated/ is written from the corpus and the store, and a
+    # leftover is not merely stale: a build in a different audio format would otherwise ship
+    # both, doubling the pack with audio no lookup entry can reach.
+    if os.path.isdir(generated_dir):
+        shutil.rmtree(generated_dir)
+
     for sub in ("quests", "gossip"):
         os.makedirs(os.path.join(sounds_dir, sub), exist_ok=True)
 
-    skip = set(ignored_files(corpus, ignored)) if ignored else set()
-    audio = [rel for rel in stored_files(store_dir) if rel not in skip]
+    extension = audio_extension(store_dir)
+
+    # Compared without extensions: the ignore list is derived from the corpus and so names
+    # mp3s, while a staged store may hold the same audio transcoded to something else.
+    skip = {os.path.splitext(rel)[0] for rel in ignored_files(corpus, ignored)} \
+        if ignored else set()
+    audio = [rel for rel in stored_files(store_dir)
+             if os.path.splitext(rel)[0] not in skip]
     iterator = tqdm(audio, unit="file", desc="Copying audio") if progress else audio
     for rel in iterator:
         shutil.copy2(os.path.join(store_dir, rel), os.path.join(sounds_dir, rel))
@@ -219,18 +232,19 @@ def build_module(corpus: dict, store_dir: str, dist_dir: str = DEFAULT_DIST_DIR,
                         module_name, table_name, data)
         written.append(filename + ".lua")
 
-    # Durations come from the copied mp3s, so the table can never disagree with them.
+    # Durations come from the copied files, so the table can never disagree with them.
     write_sound_length_table_lua(module_name, sounds_dir, generated_dir)
     written.append("sound_length_table.lua")
 
     with open(os.path.join(module_dir, "Module.lua"), "w", encoding="utf-8") as f:
-        f.write(MODULE_LUA.format(module=module_name))
+        f.write(MODULE_LUA.format(module=module_name, extension=extension))
     with open(os.path.join(module_dir, module_name + ".toc"), "w", encoding="utf-8") as f:
         f.write(module_toc(module_name, sorted(written), version))
 
     return {
         "moduleDir": module_dir,
         "audioFiles": len(audio),
+        "audioFormat": extension,
         "tables": sorted(written),
         "tableRows": {name: len(data) for name, (_, data) in tables.items()},
     }

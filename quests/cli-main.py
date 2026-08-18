@@ -177,7 +177,7 @@ elif args.mode == "build":
                           args.module, args.version, progress=True,
                           ignored=load_ignored(args.ignored))
     print(f"\nbuilt {report['moduleDir']}")
-    print(f"  audio files {report['audioFiles']}")
+    print(f"  audio files {report['audioFiles']} ({report['audioFormat']})")
     for name, rows in sorted(report["tableRows"].items()):
         print(f"  {name:<32} {rows:>6} entries")
 

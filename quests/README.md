@@ -126,7 +126,8 @@ For a module to hand to players, use `make package-audio` instead: it transcodes
 
 ```bash
 make package                       # the player addon, one zip per client
-make package-audio                 # VBR where it helps, build, zip -> dist/
+make package-audio                 # transcode to ogg, build, zip -> dist/
+make package-audio-hq              # the same at full bandwidth, twice the size
 make package-audio VERSION=1.4.0   # the version written into the pack's .toc
 ENCODE=copy make package-audio     # the masters untouched, to hear what is being given up
 ```
@@ -142,23 +143,35 @@ wanted a different file under that one name — three zips that could never be m
 needed their own vendored Ace3, which is why `1.12/`, `2.4.3/` and `3.3.5/` existed and were
 most of the addon's size. Dropping those clients took the zip matrix and 1 MB with them.
 
-The store is 1.6 GB, and `-q:a 6` (LAME VBR, mono) takes the module to 1.3 GB. The saving is
-smaller than it looks like it should be, and deliberately: **only the 128 kbps clips are
-transcoded.** 7,164 of 9,969 files are the 64 kbps pack this project inherited, and `-q:a 6`
-lands around 65 kbps on this speech — a second lossy pass over them would produce files no
-smaller and audibly worse. The test is a bitrate rather than a list, so a re-generated line
-starts being transcoded the day it replaces an inherited one. `tools/plan_transcode.py` is
-where that decision is made and explained; a clip whose encode still comes out larger keeps
-its master.
+**The shipping pack is Ogg Vorbis at 22.05 kHz**, which takes 3.2 GB of masters to about
+0.6 GB. Two things earn that, and they are worth keeping apart: Vorbis is worth 1.3–1.5×
+over LAME at these rates, and speech survives the 11 kHz ceiling a 22.05 kHz downsample
+imposes. `make package-audio-hq` skips only the downsample — full-bandwidth ogg, ~1.3 GB —
+for anyone who would rather spend the bandwidth. `docs/pack-size.md` is where every encode
+was measured, along with the dead ends (deduplication, silence trimming, harder zip
+compression — all worth nothing).
 
-Transcodes are cached in `audio-transcoded/`, keyed on the **md5 of the master**, so a
-re-generated line misses the cache and everything else is reused. Keying on mtime would be
-wrong: `make pull` copies the droplet's timestamps, so a freshly pulled take can be older
-than the entry it should replace. The masters in `audio/` are never touched, which is what
-makes raising the shipped quality later a re-run rather than a second purchase.
+Homebrew's `ffmpeg` has no `libvorbis` and ffmpeg's own Vorbis encoder is worse, so `oggenc`
+from `vorbis-tools` does the encoding and ffmpeg only decodes. Both are checked before a run
+starts.
 
-Durations stay honest for free: `build` computes the length table from the mp3s it just
-copied, and mutagen reads the Xing header a VBR file carries.
+**A pack ships one format**, because `GetSoundPath` writes a single extension for every
+sound: a module built from a half-transcoded store would resolve half its lines to files that
+are not there, so `build` refuses a store holding two formats and the sound paths it writes
+follow the store it was given. For an ogg pack every clip is therefore encoded. The 80 kbps
+threshold in `tools/plan_transcode.py` only decides anything when the target is mp3 as well —
+`-q:a 6` lands around 65 kbps on this speech, so a second pass over an already-64 kbps clip
+would be no smaller and audibly worse.
+
+Transcodes are cached in `audio-transcoded/<profile>/`, keyed on the **md5 of the master**, so
+a re-generated line misses the cache and everything else is reused, and the two profiles never
+read each other's entries. Keying on mtime would be wrong: `make pull` copies the droplet's
+timestamps, so a freshly pulled take can be older than the entry it should replace. The
+masters in `audio/` are never touched — they stay 128 kbps mp3 — which is what makes raising
+the shipped quality later a re-run rather than a second purchase.
+
+Durations stay honest for free: `build` computes the length table from the files it just
+copied, and mutagen reads a VBR mp3's Xing header and an Ogg page's granule position alike.
 
 `install` moves any existing install aside to `<module>.replaced` rather than deleting it.
 
@@ -482,7 +495,8 @@ The following language codes are supported:
 is the project's most expensive asset — it moves between machines with `make push` / `make
 pull` and never through git or CI. `build` copies from there into
 `dist/VoiceOverReduxAudio/generated/sounds/`, alongside every lookup table and the
-`sound_length_table.lua` computed from exactly those mp3s.
+`sound_length_table.lua` computed from exactly those files. A pack for players goes through
+`make package-audio`, which stages an ogg copy of the store first — see *Packaging*.
 
 ### Stage directions and the narrator
 

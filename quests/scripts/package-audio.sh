@@ -1,35 +1,43 @@
 #!/usr/bin/env bash
-# Build the data module from VBR copies of the audio store, and zip it.
+# Build the data module from transcoded copies of the audio store, and zip it.
 #
-#   make package-audio                 # the shipping pack: VBR, zipped, into dist/
+#   make package-audio                 # the shipping pack: Ogg Vorbis, zipped, into dist/
+#   make package-audio-hq              # the same pack at full bandwidth, twice the size
 #   make package-audio VERSION=1.4.0   # the version written into the .toc
 #   ENCODE=copy make package-audio     # the masters, untranscoded, for a listening check
 #   JOBS=1 make package-audio          # serial, when a failing encode needs readable output
 #
-# The store is 1.6 GB of mono speech at 64 and 128 kbps CBR - 128 for everything
-# ElevenLabs has made since this pipeline existed, 64 for the pack this project
-# inherited. Shipping that as-is asks a player to download well over a gigabyte for
-# audio most of them hear once per quest.
+# The store is 3.2 GB of mono speech, almost all of it 128 kbps CBR from ElevenLabs;
+# 48 files are still the 64 kbps pack this project inherited. Shipping that as-is
+# asks a player to download three gigabytes for audio most of them hear once per
+# quest. docs/pack-size.md measures every encode that was considered.
 #
-# -q:a 6 is LAME's VBR, and VBR rather than CBR because the bits follow the voice
-# instead of padding silence to a constant rate. The masters stay in audio/
-# untouched: raising the shipped quality later is a re-run of this script rather
-# than a second purchase from ElevenLabs, which bills characters and not bytes.
+# THE SHIPPING PACK IS OGG VORBIS AT 22.05 kHz. Vorbis is worth 1.3-1.5x over LAME
+# at these rates, and speech survives an 11 kHz ceiling, which together take 3.2 GB
+# to 0.6 GB - the difference between a pack people download and one they do not.
+# `ogg-q0-44k` keeps the full bandwidth for anyone who would rather have it, at
+# 1.3 GB, and it is what package-audio-hq builds. Both are VBR: the bits follow the
+# voice instead of padding silence to a constant rate.
 #
-# ONLY THE 128 kbps CLIPS ARE TRANSCODED. -q:a 6 lands around 65 kbps on this
-# speech, so putting the inherited 64 kbps pack through it would produce files no
-# smaller and audibly worse - a second lossy pass buys nothing. That is a bitrate
-# test rather than a list, so a re-generated line starts being transcoded the day
-# it replaces an inherited one. See tools/plan_transcode.py.
+# The masters stay in audio/ untouched, so raising the shipped quality later is a
+# re-run of this script rather than a second purchase from ElevenLabs, which bills
+# characters and not bytes.
+#
+# A pack ships ONE format, because the module resolves every sound through a single
+# GetSoundPath. So for an ogg profile every clip is encoded; the bitrate threshold
+# below only decides anything when the target is mp3 and the clip is already mp3,
+# where a second lossy pass over a 64 kbps file would be no smaller and audibly
+# worse. See tools/plan_transcode.py.
 #
 # Separate from `python cli-main.py build`, which copies the store as it finds it.
 # That command is still what assembles the module - this stages a transcoded store
 # and hands it over, so there is one definition of what a module contains.
 #
 # Durations come out right without doing anything: build computes
-# sound_length_table.lua from the mp3s it just copied, and mutagen reads the Xing
-# header a VBR file carries. A table built from the masters and shipped beside VBR
-# clips would drift, which is the failure this ordering avoids.
+# sound_length_table.lua from the files it just copied, and mutagen reads a VBR
+# mp3's Xing header and an Ogg page's granule position alike. A table built from
+# the masters and shipped beside transcodes would drift, which is the failure this
+# ordering avoids.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -39,9 +47,12 @@ STORE="${STORE:-audio}"
 DIST="${DIST:-dist}"
 MODULE="${MODULE:-VoiceOverReduxAudio}"
 VERSION="${VERSION:-1.0.1}"
-ENCODE="${ENCODE:-vbr-v6}"
+ENCODE="${ENCODE:-ogg-q-1-22k}"
 ZIP="${ZIP:-1}"
-# kbps above which a clip is worth transcoding. See tools/plan_transcode.py.
+# Distinguishes the zips of two profiles built from the same module name, so the HQ pack
+# does not overwrite the shipping one in dist/.
+LABEL="${LABEL:-}"
+# kbps above which an mp3 is worth re-encoding as an mp3. See tools/plan_transcode.py.
 THRESHOLD="${THRESHOLD:-80}"
 
 # Transcoded clips, kept between runs. A sibling of dist/ and of the store, for the
@@ -58,9 +69,17 @@ CACHE_ROOT="${CACHE_ROOT:-audio-transcoded}"
 PYTHON="${PYTHON:-$([ -x .venv/bin/python ] && echo .venv/bin/python || command -v python3)}"
 JOBS="${JOBS:-$( (command -v nproc >/dev/null 2>&1 && nproc) || sysctl -n hw.ncpu 2>/dev/null || echo 4 )}"
 
+# Each profile is a format, the flags that produce it, and nothing else. FORMAT is what the
+# module ends up shipping and what the plan is asked for; OGG_FLAGS is empty for the mp3
+# profiles and unused there.
+OGG_FLAGS=""
 case "$ENCODE" in
-  vbr-v6|copy) ;;
-  *) echo "error: unknown ENCODE '$ENCODE' (expected: vbr-v6, copy)" >&2; exit 1;;
+  ogg-q-1-22k) FORMAT=ogg; OGG_FLAGS="-q -1 --resample 22050";;
+  ogg-q0-44k)  FORMAT=ogg; OGG_FLAGS="-q 0";;
+  vbr-v6)      FORMAT=mp3;;
+  copy)        FORMAT=mp3;;
+  *) echo "error: unknown ENCODE '$ENCODE' (expected: ogg-q-1-22k, ogg-q0-44k, vbr-v6, copy)" >&2
+     exit 1;;
 esac
 
 [ -d "$STORE" ] || { echo "error: no audio store at $STORE" >&2; exit 1; }
@@ -68,19 +87,27 @@ if [ "$ENCODE" != copy ] && ! command -v ffmpeg >/dev/null 2>&1; then
   echo "error: ffmpeg is not on PATH. brew install ffmpeg, or run with ENCODE=copy" >&2
   exit 1
 fi
+# Homebrew's ffmpeg is built without libvorbis, and ffmpeg's own vorbis encoder is
+# experimental and worse than libvorbis at every rate. So oggenc encodes and ffmpeg only
+# decodes, which also keeps the flags here the ones every Vorbis comparison is written in.
+if [ "$FORMAT" = ogg ] && ! command -v oggenc >/dev/null 2>&1; then
+  echo "error: oggenc is not on PATH. brew install vorbis-tools" >&2
+  exit 1
+fi
 
 # --- the plan ---------------------------------------------------------------------------
 #
-# tools/plan_transcode.py decides what happens to each clip and why; see its header. Two
-# thirds of the store is the inherited 64 kbps pack, which -q:a 6 cannot beat, so those are
-# copied rather than put through a second lossy pass. Ignored lines are dropped there too,
-# before the expensive stage sees them.
+# tools/plan_transcode.py decides what happens to each clip and why; see its header. It is
+# told the target format because that is half the decision: everything becomes an ogg, while
+# an mp3 target spares whatever is already at or below the threshold. Ignored lines are
+# dropped there too, before the expensive stage sees them.
 plan="$(mktemp)"
 staging="$(mktemp -d)"
 trap 'rm -f "$plan"; rm -rf "$staging"' EXIT
 
 echo "planning..."
-"$PYTHON" tools/plan_transcode.py --store "$STORE" --threshold "$THRESHOLD" > "$plan"
+"$PYTHON" tools/plan_transcode.py --store "$STORE" --format "$FORMAT" \
+  --threshold "$THRESHOLD" > "$plan"
 count="$(wc -l <"$plan" | tr -d ' ')"
 
 # Directories first in one pass, so placing the clips below is a flat run of cp rather
@@ -99,7 +126,7 @@ else
   todo="$(mktemp)"
   awk -F'\t' '$3 == "encode" {print $1 "\t" $4}' "$plan" | sort -u -k1,1 \
     | while IFS=$'\t' read -r key rel; do
-        [ -f "$cache/$key.mp3" ] || printf '%s\t%s\n' "$key" "$STORE/$rel"
+        [ -f "$cache/$key.$FORMAT" ] || printf '%s\t%s\n' "$key" "$STORE/$rel"
       done > "$todo"
 
   wanted="$(awk -F'\t' '$3 == "encode"' "$plan" | wc -l | tr -d ' ')"
@@ -111,7 +138,8 @@ else
     # count comes from a file rather than a variable: each worker is its own process, so
     # an incremented shell variable would die with it.
     progress="$(mktemp)"
-    export CACHE="$cache" PROGRESS="$progress" TOTAL="$encoded"
+    export CACHE="$cache" PROGRESS="$progress" TOTAL="$encoded" \
+           FORMAT="$FORMAT" OGG_FLAGS="$OGG_FLAGS"
     encode_one() {
       # Via .part and mv, so an interrupted run cannot leave a truncated file under a
       # name claiming to be a complete encode of that checksum. The pid is in there too,
@@ -119,9 +147,16 @@ else
       # required with it: ffmpeg picks the muxer from the extension, and ".part" is not
       # one it knows.
       local part="$CACHE/$2.$$.part"
-      ffmpeg -nostdin -loglevel error -f mp3 -i "$1" \
-        -codec:a libmp3lame -q:a 6 -ac 1 -f mp3 "$part"
-      mv "$part" "$CACHE/$2.mp3"
+      if [ "$FORMAT" = ogg ]; then
+        # Unquoted on purpose: OGG_FLAGS is several arguments, set by this script and
+        # nothing else.
+        ffmpeg -nostdin -loglevel error -f mp3 -i "$1" -ac 1 -f wav - \
+          | oggenc -Q $OGG_FLAGS -o "$part" -
+      else
+        ffmpeg -nostdin -loglevel error -f mp3 -i "$1" \
+          -codec:a libmp3lame -q:a 6 -ac 1 -f mp3 "$part"
+      fi
+      mv "$part" "$CACHE/$2.$FORMAT"
 
       # One byte per finished file; short appends to O_APPEND do not interleave, so the
       # size is the count.
@@ -141,17 +176,23 @@ else
     echo "all $wanted encodable files already cached ($ENCODE, $cache)"
   fi
 
-  # Placement, and the one judgement left to make here: an encode that came out no smaller
-  # than its master is a second lossy pass for nothing, so the master wins. plan_transcode
-  # keeps that rare by reading bitrates, but bitrate is an average and some clips will
-  # still land the wrong way round.
+  # Placement, and the one judgement left to make here: for an mp3 pack, an encode that came
+  # out no smaller than its master is a second lossy pass for nothing, so the master wins.
+  # plan_transcode keeps that rare by reading bitrates, but bitrate is an average and some
+  # clips will still land the wrong way round.
+  #
+  # For an ogg pack that judgement is not available: a module ships one format, so falling
+  # back to the master would strand that line on a path GetSoundPath does not write. A clip
+  # that encodes larger than its master ships larger.
   kept=0
   while IFS=$'\t' read -r key kbps action rel; do
-    if [ "$action" = encode ] \
-       && [ "$(wc -c <"$cache/$key.mp3")" -lt "$(wc -c <"$STORE/$rel")" ]; then
-      cp "$cache/$key.mp3" "$staging/$rel"
+    if [ "$action" != encode ]; then
+      cp "$STORE/$rel" "$staging/$rel"
+    elif [ "$FORMAT" != mp3 ] \
+         || [ "$(wc -c <"$cache/$key.$FORMAT")" -lt "$(wc -c <"$STORE/$rel")" ]; then
+      cp "$cache/$key.$FORMAT" "$staging/${rel%.mp3}.$FORMAT"
     else
-      [ "$action" = encode ] && kept=$((kept + 1))
+      kept=$((kept + 1))
       cp "$STORE/$rel" "$staging/$rel"
     fi
   done <"$plan"
@@ -164,8 +205,8 @@ else
     rm -f "$cache/$stale"
     pruned=$((pruned + 1))
   done < <(comm -23 \
-    <(find "$cache" -name '*.mp3' -exec basename {} \; | sort) \
-    <(awk -F'\t' '$3 == "encode" {print $1 ".mp3"}' "$plan" | sort -u) || true)
+    <(find "$cache" -name "*.$FORMAT" -exec basename {} \; | sort) \
+    <(awk -F'\t' -v ext=".$FORMAT" '$3 == "encode" {print $1 ext}' "$plan" | sort -u) || true)
 
   echo "  $hits reused, $encoded encoded, $kept masters kept as smaller, $pruned superseded entries dropped"
   rm -f "$todo"
@@ -185,7 +226,11 @@ echo "  module size: $(du -sh "$module_dir" | cut -f1)  (store: $(du -sh "$STORE
 if [ "$ZIP" = 1 ]; then
   # Absolute before the subshell cds into DIST, and derived from DIST itself so an
   # absolute DIST (a scratch directory in a test run) is not glued onto the repo root.
-  zip_path="$(cd "$DIST" && pwd)/$MODULE-$VERSION.zip"
+  #
+  # LABEL is what keeps two profiles apart. The module folder is named the same either way -
+  # the packs are alternatives and a player installs one - so only the zip carries it, and
+  # building the HQ pack after the shipping one leaves both zips and the HQ module in dist/.
+  zip_path="$(cd "$DIST" && pwd)/$MODULE$LABEL-$VERSION.zip"
   rm -f "$zip_path"
   echo "zipping $(basename "$zip_path")..."
   (cd "$DIST" && zip -r -q -X "$zip_path" "$MODULE" -x '*.DS_Store' '*.part')

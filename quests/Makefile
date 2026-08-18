@@ -70,7 +70,7 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
         pull-history push-history history-status pull-ignores package package-audio \
-        deploy-scripts rollback releases ssh-check
+        package-audio-hq deploy-scripts rollback releases ssh-check
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -194,17 +194,24 @@ history-status: ## Compare take count and size on both sides
 # zip nobody can trace back to a commit is a zip nobody can rebuild - ALLOW_DIRTY=1 to
 # override while testing.
 #
-# `package-audio` transcodes the 128 kbps takes to VBR, leaves anything already at or below
-# 80 kbps alone (a second lossy pass would only make it worse), builds the data module from
-# the result and zips that. Its own header explains every choice; VERSION goes into the TOC,
-# ENCODE=copy skips the transcode to hear the masters in game, JOBS=1 makes a failing encode
-# readable.
+# `package-audio` transcodes the store to Ogg Vorbis at 22.05 kHz, builds the data module
+# from the result and zips that - 3.2 GB of masters become a 0.6 GB pack. Its own header
+# explains every choice; VERSION goes into the TOC, ENCODE=copy skips the transcode to hear
+# the masters in game, JOBS=1 makes a failing encode readable.
+#
+# `package-audio-hq` is the same pack without the downsample: full 44.1 kHz, 1.3 GB, for
+# anyone who would rather spend the bandwidth. Only the zip name distinguishes them, so
+# building one after the other leaves both zips and the second one's module in dist/.
+# docs/pack-size.md is where the two encodes were measured against everything else.
 
 package: ## Zip the player addon, one per client, into dist/
 	@./scripts/package.sh
 
 package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.4.0)
 	@VERSION=$(VERSION) ENCODE=$(ENCODE) JOBS=$(JOBS) ./scripts/package-audio.sh
+
+package-audio-hq: ## The same pack at full bandwidth, twice the size
+	@VERSION=$(VERSION) ENCODE=ogg-q0-44k LABEL=-hq JOBS=$(JOBS) ./scripts/package-audio.sh
 
 # --- the ignore list ------------------------------------------------------------------
 #

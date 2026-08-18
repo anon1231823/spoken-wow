@@ -1,23 +1,28 @@
 import os
-import mutagen.mp3
+
+import mutagen
+
+from tts_cli.store import AUDIO_EXTENSIONS
 
 DATAMODULE_TABLE_GUARD_CLAUSE = 'if not VoiceOver or not VoiceOver.DataModules then return end'
 
 def write_sound_length_table_lua(module_name: str, sound_folder_path: str, output_folder_path: str):
 
-    mp3_files = []
+    sound_files = []
 
     for root, dirs, files in os.walk(sound_folder_path):
         for f in files:
-            if f.endswith(".mp3"):
-                mp3_files.append(os.path.join(root, f))
+            if f.endswith(AUDIO_EXTENSIONS):
+                sound_files.append(os.path.join(root, f))
 
-    # Create a Lua table mapping the name of the sound to its length in seconds
+    # Create a Lua table mapping the name of the sound to its length in seconds.
+    # mutagen.File sniffs the container, so mp3 and ogg are both read without a branch here;
+    # a VBR mp3's Xing header and an Ogg page's granule position are both exact.
     soundDict = {}
-    for mp3_file in mp3_files:
-        audio = mutagen.mp3.MP3(mp3_file)
+    for sound_file in sound_files:
+        audio = mutagen.File(sound_file)
         length = audio.info.length
-        soundDict[os.path.splitext(os.path.basename(mp3_file))[0]] = length
+        soundDict[os.path.splitext(os.path.basename(sound_file))[0]] = length
 
     # Write the dictionary to the output file in Lua table format
     with open(output_folder_path + '/sound_length_table.lua', "w") as f:

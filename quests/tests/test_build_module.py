@@ -1,0 +1,124 @@
+"""Building a module over a staged store, which may hold mp3 or ogg.
+
+The store on disk is always mp3; scripts/package-audio.sh stages a transcoded copy and
+hands that to `build --store`, and that copy is ogg for the packs this project ships. So
+the module's sound paths have to follow the files rather than assume an extension.
+"""
+import os
+import shutil
+
+import pytest
+
+from tts_cli.build import build_module
+
+FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
+
+CORPUS = {
+    "lines": [
+        {"lineId": "q:5:accept", "source": "accept", "questId": 5,
+         "questTitle": "Growling Gut", "npcId": 288, "npcName": "Jitters",
+         "npcType": "creature", "fileName": "5-accept",
+         "originalText": "Find my pack.", "generatable": True},
+        {"lineId": "g:abc123", "source": "gossip", "questId": None, "questTitle": None,
+         "npcId": 68, "npcName": "Stormwind City Guard", "npcType": "creature",
+         "fileName": "abc123", "originalText": "Move along.", "generatable": True},
+    ],
+}
+
+
+def _store(tmp_path, *files):
+    """A staged store holding the named files, each a copy of a fixture tone."""
+    root = tmp_path / "store"
+    for rel in files:
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        extension = os.path.splitext(rel)[1]
+        shutil.copy(os.path.join(FIXTURES, "tone" + extension), target)
+    for sub in ("quests", "gossip"):
+        (root / sub).mkdir(parents=True, exist_ok=True)
+    return str(root)
+
+
+def _module_lua(tmp_path):
+    with open(tmp_path / "dist" / "Mod" / "Module.lua", encoding="utf-8") as f:
+        return f.read()
+
+
+def _sound_length_table(tmp_path):
+    path = tmp_path / "dist" / "Mod" / "generated" / "sound_length_table.lua"
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def test_sound_paths_follow_an_ogg_store(tmp_path):
+    store = _store(tmp_path, "quests/5-accept.ogg", "gossip/abc123.ogg")
+
+    build_module(CORPUS, store, str(tmp_path / "dist"), "Mod")
+
+    assert "quests\\%s.ogg" in _module_lua(tmp_path)
+    assert "gossip\\%s.ogg" in _module_lua(tmp_path)
+
+
+def test_sound_paths_follow_an_mp3_store(tmp_path):
+    store = _store(tmp_path, "quests/5-accept.mp3", "gossip/abc123.mp3")
+
+    build_module(CORPUS, store, str(tmp_path / "dist"), "Mod")
+
+    assert "quests\\%s.mp3" in _module_lua(tmp_path)
+
+
+def test_a_store_of_two_formats_is_refused(tmp_path):
+    # GetSoundPath writes one extension for every sound, so a module built from a half
+    # transcoded store would resolve half its lines to a file that is not there.
+    store = _store(tmp_path, "quests/5-accept.ogg", "gossip/abc123.mp3")
+
+    with pytest.raises(ValueError):
+        build_module(CORPUS, store, str(tmp_path / "dist"), "Mod")
+
+
+def test_an_empty_store_still_builds(tmp_path):
+    """The lookup tables are worth building on their own; `build` is also how they are
+    regenerated without touching audio."""
+    store = _store(tmp_path)
+
+    build_module(CORPUS, store, str(tmp_path / "dist"), "Mod")
+
+    assert "quests\\%s.mp3" in _module_lua(tmp_path)
+
+
+def test_ignored_audio_is_left_out_of_an_ogg_store(tmp_path):
+    # The ignore list is derived from the corpus and names mp3s, because the store is mp3.
+    # Matching it against a staged ogg copy by name alone would ship the file anyway.
+    store = _store(tmp_path, "quests/5-accept.ogg", "gossip/abc123.ogg")
+
+    report = build_module(CORPUS, store, str(tmp_path / "dist"), "Mod",
+                          ignored={"g:abc123": "war effort tally"})
+
+    sounds = tmp_path / "dist" / "Mod" / "generated" / "sounds"
+    assert not (sounds / "gossip" / "abc123.ogg").exists()
+    assert (sounds / "quests" / "5-accept.ogg").exists()
+    assert report["audioFiles"] == 1
+
+
+def test_a_rebuild_does_not_keep_the_last_build_s_audio(tmp_path):
+    # Building into a directory that already holds a module has to leave what this build
+    # produced and nothing else. Otherwise switching format ships both: the mp3s the last
+    # build copied sit beside the oggs this one did, and the pack is twice the size for
+    # audio no lookup entry can reach.
+    build_module(CORPUS, _store(tmp_path, "quests/5-accept.mp3", "gossip/abc123.mp3"),
+                 str(tmp_path / "dist"), "Mod")
+
+    shutil.rmtree(tmp_path / "store")
+    build_module(CORPUS, _store(tmp_path, "quests/5-accept.ogg", "gossip/abc123.ogg"),
+                 str(tmp_path / "dist"), "Mod")
+
+    sounds = tmp_path / "dist" / "Mod" / "generated" / "sounds"
+    assert sorted(p.name for p in sounds.glob("*/*")) == ["5-accept.ogg", "abc123.ogg"]
+
+
+def test_the_length_table_measures_ogg(tmp_path):
+    store = _store(tmp_path, "quests/5-accept.ogg")
+
+    build_module(CORPUS, store, str(tmp_path / "dist"), "Mod")
+
+    assert '["5-accept"] = 0.3' in _sound_length_table(tmp_path)
