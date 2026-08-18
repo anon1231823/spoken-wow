@@ -65,7 +65,7 @@ DataModules =
         {
             AddonName = "VoiceOverReduxAudio",
             Title = "VoiceOver Redux Audio",
-            ContentVersion = "1.0.0",
+            ContentVersion = "1.0.1",
             RelevantAboveVersion = 0,
             URL = "https://www.curseforge.com/wow/addons/voiceover-redux-audio",
         },

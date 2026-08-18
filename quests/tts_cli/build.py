@@ -183,7 +183,7 @@ def write_lua_table(path: str, module_name: str, table_name: str, data) -> None:
         f.write("\n")
 
 
-def module_toc(module_name: str, generated_files: list, version: str = "1.0.0") -> str:
+def module_toc(module_name: str, generated_files: list, version: str = "1.0.1") -> str:
     """The TOC, listing exactly the files this build produced."""
     lines = [TOC_HEADER.format(version=version)]
     lines.extend(f"generated\\{name}" for name in generated_files)
@@ -191,7 +191,7 @@ def module_toc(module_name: str, generated_files: list, version: str = "1.0.0") 
 
 
 def build_module(corpus: dict, store_dir: str, dist_dir: str = DEFAULT_DIST_DIR,
-                 module_name: str = DEFAULT_MODULE_NAME, version: str = "1.0.0",
+                 module_name: str = DEFAULT_MODULE_NAME, version: str = "1.0.1",
                  progress: bool = False, ignored=()) -> dict:
     """Assemble the data module. Returns a report.
 

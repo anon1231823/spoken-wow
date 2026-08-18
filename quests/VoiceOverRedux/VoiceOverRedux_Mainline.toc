@@ -1,7 +1,7 @@
 ## Interface: 100007
 ## Title: VoiceOver Redux
 ## Notes: Restores quest and gossip voiceovers on supported clients.
-## Version: 1.0.0
+## Version: 1.0.1
 ## SavedVariables: VoiceOverDB
 ## Group: VoiceOverRedux
 ## X-Part-Of: VoiceOver Redux
