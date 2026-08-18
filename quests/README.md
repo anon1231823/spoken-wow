@@ -175,6 +175,40 @@ copied, and mutagen reads a VBR mp3's Xing header and an Ogg page's granule posi
 
 `install` moves any existing install aside to `<module>.replaced` rather than deleting it.
 
+### Releasing to CurseForge
+
+```bash
+make release-dry          # resolve clients, print every file and note, send nothing
+make release              # upload both zips
+./scripts/release.sh audio   # or just one of them
+```
+
+`scripts/release.sh` uploads what is **already in `dist/`** — it builds nothing, so the zip
+that goes out is the one you tested. Two projects:
+[voiceover-redux](https://www.curseforge.com/wow/addons/voiceover-redux) (`1655859`) and
+[voiceover-redux-audio](https://www.curseforge.com/wow/addons/voiceover-redux-audio)
+(`1655867`). It needs `CURSEFORGE_TOKEN` in `.env` — an *author* token from
+[authors-old.curseforge.com](https://authors-old.curseforge.com/account/api-tokens), tied to
+the account rather than a project, so one covers both.
+
+The two are versioned independently, and each finds its version somewhere different for a
+reason. The player is committed files with a `.toc`, so its version is read there. The pack
+has no committed `.toc` at all — `build` generates one — so its version is read back out of
+the module in `dist/`, which means releasing a pack nobody built fails instead of uploading a
+stale zip that happens to still be lying around. `CHANGELOG.md` holds one section per version
+and each target looks up its own.
+
+Files are offered to **Era (1.15.9) and the 2.5.6 Anniversary client** only. The zip carries
+`_Wrath` and `_Mainline` TOCs too, but nothing here has been run on those clients, and a file
+offered to a client it misbehaves on is worse than one that is simply absent there. Client
+names are resolved against `/api/game/versions` and a name matching anything but exactly one
+version is fatal, because the alternative failure is a file filed against the wrong client —
+which players meet as "the addon does not appear in my list".
+
+Uploading a file cannot change the page around it: descriptions, relations and project
+settings live in the web UI, and a script that rewrote them each release would be one that
+could quietly undo an edit made there. The HQ pack has no project and is not released.
+
 ### Browsing the corpus
 
 Nothing in a filename identifies an NPC — quest audio is `{questID}-{accept|complete}.mp3`

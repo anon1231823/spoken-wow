@@ -41,6 +41,8 @@ pnpm build
 
 Several web tests (`history.test.ts`, `queue.test.ts`, anything touching versions) run against a **real Postgres** — the invariants they protect live in schema constraints. `DATABASE_URL` comes from a real env var or `.env.local` (see `web/vitest.config.ts`); apply migrations with `deploy/bin/migrate.sh "$PWD/web"`, the same script the droplet uses. `fileParallelism` is off because queue claiming is global.
 
+Releases go to CurseForge through `scripts/release.sh` (`make release-dry` / `make release`): it uploads what is already in `dist/` and never builds, needs `CURSEFORGE_TOKEN` in `.env`, and files against Era 1.15.9 and the 2.5.6 Anniversary client only. Project ids live in `target_project()` - player `1655859`, pack `1655867`. The player's version comes from its committed `.toc`, the pack's from the module last built in `dist/` (it has no committed TOC), and each looks up its own section in `CHANGELOG.md`.
+
 Audio store and droplet plumbing are all in the `Makefile` (`make help`): `push`/`pull` for `audio/`, `pull-voices`/`pull-history` for the irreplaceable directories, `releases`/`rollback`/`ssh-check` for the droplet. Every target is heavily commented with the failure it exists to prevent — read the comment before changing one.
 
 ## Architecture

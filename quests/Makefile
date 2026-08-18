@@ -70,7 +70,7 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
         pull-history push-history history-status pull-ignores package package-audio \
-        package-audio-hq deploy-scripts rollback releases ssh-check
+        package-audio-hq release release-dry deploy-scripts rollback releases ssh-check
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -212,6 +212,18 @@ package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.
 
 package-audio-hq: ## The same pack at full bandwidth, twice the size
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k LABEL=-hq JOBS=$(JOBS) ./scripts/package-audio.sh
+
+# `release` uploads whatever is already in dist/ to CurseForge - it builds nothing, so the
+# zip it sends is the one you tested. The player's version comes from its .toc and the pack's
+# from the module last built, and each looks its own section up in CHANGELOG.md. Needs
+# CURSEFORGE_TOKEN in .env. Always worth a release-dry first: it resolves the game versions
+# and prints every file and note without sending anything.
+
+release-dry: ## Show what `make release` would upload to CurseForge
+	@./scripts/release.sh --dry-run
+
+release: ## Upload the built zips to CurseForge (needs CURSEFORGE_TOKEN)
+	@./scripts/release.sh
 
 # --- the ignore list ------------------------------------------------------------------
 #
