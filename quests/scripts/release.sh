@@ -2,9 +2,14 @@
 # Uploads built zips to CurseForge through the author API.
 #
 #   ./scripts/release.sh --dry-run    # say what would be sent, send nothing
-#   ./scripts/release.sh              # both projects
+#   ./scripts/release.sh              # every project
 #   ./scripts/release.sh player       # just the player addon
-#   ./scripts/release.sh audio        # just the sound pack
+#   ./scripts/release.sh audio-horde  # just one sound pack
+#
+# The sound pack ships in five pieces (see tts_cli/factions.py), and each is a CurseForge
+# project of its own rather than another file on one project: an addon manager installs the
+# newest file for a project, so two packs under one project would silently move a player from
+# the one they chose to whichever was uploaded last.
 #
 # Needs CURSEFORGE_TOKEN in the environment or in .env. Generate one at
 # https://authors-old.curseforge.com/account/api-tokens -- it is an author token tied to your
@@ -45,44 +50,62 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 # The HQ pack (make package-audio-hq) is deliberately absent: it has no project of its own,
 # and uploading it to the audio project would put two files of different quality under one
 # name with nothing on the Files tab to tell a player which is which.
+#
+# A pack whose project does not exist yet has no id, and the run fails on it rather than
+# uploading a Horde pack over the Alliance project. Create the project on CurseForge, then
+# write its id in here.
 target_project() { case "$1" in
-  player) echo "1655859";;
-  audio)  echo "1655867";;
+  player)         echo "1655859";;
+  audio-all)      echo "1655867";;
+  audio-alliance) echo "";;
+  audio-horde)    echo "";;
+  audio-shared)   echo "";;
+  audio-gossip)   echo "";;
 esac; }
 
-# Where each target's version comes from, which is not the same question for the two.
-#
-# The player is a directory of committed files with a .toc in it, so its version is read
-# there and package.sh names the zip from the same line.
-#
-# The pack has no committed .toc at all: build generates one, and package-audio.sh passes the
-# version in. So the version of the pack is whatever was last built, read back out of the
-# built module - which also means releasing a pack nobody built fails here rather than
-# uploading a stale zip that happens to still be in dist/.
-target_version() { case "$1" in
-  player) sed -n 's/^## Version:[[:space:]]*//p' "$REPO/VoiceOverRedux/VoiceOverRedux.toc" \
-            | head -1 | tr -d '\r';;
-  audio)  sed -n 's/^## Version:[[:space:]]*//p' \
-            "$DIST/VoiceOverReduxAudio/VoiceOverReduxAudio.toc" 2>/dev/null \
-            | head -1 | tr -d '\r';;
-esac; }
-
+# The addon folder each target ships, which is also the basename package*.sh gives its zip.
 target_zip_name() { case "$1" in
-  player) echo "VoiceOverRedux";;
-  audio)  echo "VoiceOverReduxAudio";;
+  player)         echo "VoiceOverRedux";;
+  audio-all)      echo "VoiceOverReduxAudioAll";;
+  audio-alliance) echo "VoiceOverReduxAudioAlliance";;
+  audio-horde)    echo "VoiceOverReduxAudioHorde";;
+  audio-shared)   echo "VoiceOverReduxAudioShared";;
+  audio-gossip)   echo "VoiceOverReduxAudioGossip";;
 esac; }
+
+# Where a version comes from, which is not the same question for the player and a pack.
+#
+# The player is a directory of committed files with a .toc in it, so its version is read there
+# and package.sh names the zip from the same line.
+#
+# A pack has no committed .toc at all: build generates one and package-audio.sh passes the
+# version in. So a pack's version is whatever was last built, read back out of the built
+# module - which also means releasing a pack nobody built fails here rather than uploading a
+# stale zip that happens to still be in dist/.
+target_version() {
+  local name; name="$(target_zip_name "$1")"
+  if [ "$1" = player ]; then
+    sed -n 's/^## Version:[[:space:]]*//p' "$REPO/VoiceOverRedux/VoiceOverRedux.toc" \
+      | head -1 | tr -d '\r'
+  else
+    sed -n 's/^## Version:[[:space:]]*//p' "$DIST/$name/$name.toc" 2>/dev/null \
+      | head -1 | tr -d '\r'
+  fi
+}
+
+ALL_TARGETS="player audio-all audio-alliance audio-horde audio-shared audio-gossip"
 
 dry_run=""
 targets=()
 for arg in "$@"; do
   case "$arg" in
     --dry-run|-n) dry_run=1;;
-    player|audio) targets+=("$arg");;
-    *) echo "error: unknown argument '$arg' (expected: player, audio, --dry-run)" >&2; exit 1;;
+    player|audio-all|audio-alliance|audio-horde|audio-shared|audio-gossip) targets+=("$arg");;
+    *) echo "error: unknown argument '$arg' (expected: $ALL_TARGETS, --dry-run)" >&2; exit 1;;
   esac
 done
 if (( ${#targets[@]} == 0 )); then
-  targets=("player" "audio")
+  read -r -a targets <<<"$ALL_TARGETS"
 fi
 
 command -v curl >/dev/null || { echo "error: curl is required" >&2; exit 1; }
@@ -140,17 +163,27 @@ done
 # the notes in the repository cannot drift apart. Per version rather than the whole file: a
 # player opening the Files tab wants to know what changed in this one.
 #
-# The two projects are versioned independently - the pack moves when the audio is rebuilt,
-# the player when its Lua changes - so a section is looked up by version string alone and
-# each target finds its own.
+# The player and the packs are versioned independently - the packs move when the audio is
+# rebuilt, the player when its Lua changes - so each target looks up its own section.
+#
+# A heading is `## <version> — player` or `## <version> — sound pack(s)`, and the kind is half
+# the key: the player and the packs number themselves independently and have already collided
+# once on 1.1.0. Matching on the version alone would have sent the player's notes out with a
+# sound pack.
 changelog_for() {
   node -e '
     const { readFileSync } = require("fs");
-    const [path, version] = process.argv.slice(1);
+    const [path, version, kind] = process.argv.slice(1);
     const lines = readFileSync(path, "utf8").split("\n");
-    const start = lines.findIndex((l) => l.startsWith(`## ${version}`));
+    const matches = (l) => l.startsWith(`## ${version}`) &&
+      (kind === "player" ? /player/i.test(l) : /pack/i.test(l));
+    const start = lines.findIndex(matches);
     if (start === -1) {
-      console.error(`no "## ${version}" section in CHANGELOG.md`);
+      console.error(`no "## ${version} ... ${kind}" section in CHANGELOG.md`);
+      process.exit(1);
+    }
+    if (lines.findIndex((l, i) => i > start && matches(l)) !== -1) {
+      console.error(`two "## ${version} ... ${kind}" sections in CHANGELOG.md`);
       process.exit(1);
     }
     let end = lines.length;
@@ -158,7 +191,7 @@ changelog_for() {
       if (lines[i].startsWith("## ")) { end = i; break; }
     }
     process.stdout.write(lines.slice(start, end).join("\n").trim());
-  ' "$REPO/CHANGELOG.md" "$1"
+  ' "$REPO/CHANGELOG.md" "$1" "$2"
 }
 
 #-- upload --------------------------------------------------------------------------------
@@ -168,13 +201,14 @@ for target in "${targets[@]}"; do
   version="$(target_version "$target")"
 
   if [[ -z "$project" ]]; then
-    echo "error: no CurseForge project id for '$target' -- add it to target_project()" >&2
+    echo "error: no CurseForge project id for '$target' -- create the project and write its" >&2
+    echo "       id into target_project() in this script." >&2
     exit 1
   fi
   if [[ -z "$version" ]]; then
     echo "error: no version for '$target'." >&2
-    [[ "$target" = audio ]] && \
-      echo "       The pack's version comes from the built module; run make package-audio." >&2
+    [[ "$target" != player ]] && \
+      echo "       A pack's version comes from the built module; run make package-audio." >&2
     exit 1
   fi
 
@@ -188,7 +222,8 @@ for target in "${targets[@]}"; do
     exit 1
   fi
 
-  changelog="$(changelog_for "$version")"
+  kind=player; [ "$target" = player ] || kind=pack
+  changelog="$(changelog_for "$version" "$kind")"
   size="$(du -h "$zip_path" | cut -f1)"
 
   # Built with node rather than a heredoc: the changelog is markdown holding quotes,

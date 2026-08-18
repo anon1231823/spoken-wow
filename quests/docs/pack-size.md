@@ -62,6 +62,19 @@ Samples for an A/B — five voices, every encode above, named `0` (master) throu
 — are reproduced by the commands at the end of this file.
 
 
+## And then it shipped in five pieces
+
+Encoding was not the end of it: CurseForge answered the 564 MB upload with a Cloudflare `413`
+before the API saw it, so the pack now ships as five addons — Complete 576 MB, Alliance
+161 MB, Horde 160 MB, Shared 144 MB, Gossip 144 MB. The four split packs partition the
+complete one exactly, and a player installing their side plus Shared lands near 300 MB.
+
+That makes the size question two questions. This file is about how many bytes a *line* costs,
+and the split is about how many lines a *player* needs; both were worth doing, and the second
+does not retire the first. README's *The pack ships in five pieces* has the mechanics, and
+`tools/export_factions.py` has the derivation of which side a quest is on.
+
+
 ## What was ruled out
 
 - **Deduplication.** Zero. All 11,191 files are byte-distinct; the ~1,076 clips shared between

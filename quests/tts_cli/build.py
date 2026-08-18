@@ -57,8 +57,10 @@ VoiceOver.DataModules:Register("{module}", {module})
 # absent one makes LoadAddOn fail with DEP_DISABLED. LoadOnDemand plus the guard in
 # Module.lua suffice, and the player finds a pack by its X-VoiceOver-DataModule-Version key
 # rather than by name (DataModules:EnumerateAddons), so a renamed pack needs nothing else.
+DEFAULT_TITLE = "VoiceOver Redux Audio"
+
 TOC_HEADER = """## Interface: 100000
-## Title: VoiceOver Redux Audio
+## Title: {title}
 ## Notes: Contains voiceovers for content released during the Vanilla era.|n|nIt's |cFF20FF20OK|r for this addon to appear |cFF808080"disabled"|r or |cFFFF2020"out of date"|r, it's compatible with any client and |cFFFFD200VoiceOver Redux|r will load it even if it's disabled or out of date.
 ## Version: {version}
 ## LoadOnDemand: 1
@@ -183,21 +185,34 @@ def write_lua_table(path: str, module_name: str, table_name: str, data) -> None:
         f.write("\n")
 
 
-def module_toc(module_name: str, generated_files: list, version: str = "1.0.1") -> str:
-    """The TOC, listing exactly the files this build produced."""
-    lines = [TOC_HEADER.format(version=version)]
+def module_toc(module_name: str, generated_files: list, version: str = "1.0.1",
+               title: str = DEFAULT_TITLE) -> str:
+    """The TOC, listing exactly the files this build produced.
+
+    The title is what tells the packs apart in the AddOns list, where five of them can sit at
+    once and their folder names differ only by a suffix.
+    """
+    lines = [TOC_HEADER.format(version=version, title=title)]
     lines.extend(f"generated\\{name}" for name in generated_files)
     return "\n".join(lines) + "\n"
 
 
 def build_module(corpus: dict, store_dir: str, dist_dir: str = DEFAULT_DIST_DIR,
                  module_name: str = DEFAULT_MODULE_NAME, version: str = "1.0.1",
-                 progress: bool = False, ignored=()) -> dict:
+                 progress: bool = False, ignored=(), include=None,
+                 title: str = DEFAULT_TITLE) -> dict:
     """Assemble the data module. Returns a report.
 
     An ignored line's audio is left behind as well as its lookup entry, so a take made
     before the decision - or one imported from the old sound pack - does not ship anyway.
     Only a file whose every line is ignored is skipped; see tts_cli/ignores.py.
+
+    `include` is a set of store-relative stems ('quests/5-accept', no extension) and makes
+    this one pack of several: the store is staged once and built into a pack per side of the
+    war. None means everything in the store. The lookup tables are not narrowed with it -
+    they map text to ids and hashes rather than to files, they are the same in every pack,
+    and an entry whose audio is in a pack the player did not install simply finds no length
+    and stays quiet. See tts_cli/factions.py.
     """
     module_dir = os.path.join(dist_dir, module_name)
     generated_dir = os.path.join(module_dir, "generated")
@@ -220,7 +235,8 @@ def build_module(corpus: dict, store_dir: str, dist_dir: str = DEFAULT_DIST_DIR,
     skip = {os.path.splitext(rel)[0] for rel in ignored_files(corpus, ignored)} \
         if ignored else set()
     audio = [rel for rel in stored_files(store_dir)
-             if os.path.splitext(rel)[0] not in skip]
+             if os.path.splitext(rel)[0] not in skip
+             and (include is None or os.path.splitext(rel)[0] in include)]
     iterator = tqdm(audio, unit="file", desc="Copying audio") if progress else audio
     for rel in iterator:
         shutil.copy2(os.path.join(store_dir, rel), os.path.join(sounds_dir, rel))
@@ -239,7 +255,7 @@ def build_module(corpus: dict, store_dir: str, dist_dir: str = DEFAULT_DIST_DIR,
     with open(os.path.join(module_dir, "Module.lua"), "w", encoding="utf-8") as f:
         f.write(MODULE_LUA.format(module=module_name, extension=extension))
     with open(os.path.join(module_dir, module_name + ".toc"), "w", encoding="utf-8") as f:
-        f.write(module_toc(module_name, sorted(written), version))
+        f.write(module_toc(module_name, sorted(written), version, title))
 
     return {
         "moduleDir": module_dir,

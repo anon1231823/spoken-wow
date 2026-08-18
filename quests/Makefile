@@ -70,7 +70,8 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
         pull-history push-history history-status pull-ignores package package-audio \
-        package-audio-hq release release-dry deploy-scripts rollback releases ssh-check
+        package-audio-hq factions release release-dry deploy-scripts rollback releases \
+        ssh-check
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -194,10 +195,12 @@ history-status: ## Compare take count and size on both sides
 # zip nobody can trace back to a commit is a zip nobody can rebuild - ALLOW_DIRTY=1 to
 # override while testing.
 #
-# `package-audio` transcodes the store to Ogg Vorbis at 22.05 kHz, builds the data module
-# from the result and zips that - 3.2 GB of masters become a 0.6 GB pack. Its own header
-# explains every choice; VERSION goes into the TOC, ENCODE=copy skips the transcode to hear
-# the masters in game, JOBS=1 makes a failing encode readable.
+# `package-audio` transcodes the store to Ogg Vorbis at 22.05 kHz and builds it into five
+# packs - Alliance, Horde, the quests both sides share, gossip, and one holding everything -
+# zipping each. 3.2 GB of masters become 157 + 155 + 144 + 145 MB, or 601 MB together. Its own
+# header explains every choice; VERSION goes into each TOC, PACKS=all builds only the complete
+# one, ENCODE=copy skips the transcode to hear the masters in game, JOBS=1 makes a failing
+# encode readable.
 #
 # `package-audio-hq` is the same pack without the downsample: full 44.1 kHz, 1.3 GB, for
 # anyone who would rather spend the bandwidth. Only the zip name distinguishes them, so
@@ -218,6 +221,14 @@ package-audio-hq: ## The same pack at full bandwidth, twice the size
 # from the module last built, and each looks its own section up in CHANGELOG.md. Needs
 # CURSEFORGE_TOKEN in .env. Always worth a release-dry first: it resolves the game versions
 # and prints every file and note without sending anything.
+
+# The faction split the packs are cut along. Needs the vmangos world DB up
+# (`docker compose up -d mysql`), which is the only thing in this repo that does - the export
+# is committed so that building a pack never needs a database. tools/export_factions.py
+# explains how a quest gets a side.
+
+factions: ## Re-export corpus/factions.json from the world DB (needs MySQL)
+	@$(PYTHON) tools/export_factions.py
 
 release-dry: ## Show what `make release` would upload to CurseForge
 	@./scripts/release.sh --dry-run

@@ -6,6 +6,29 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 1.2.0 — sound packs
+
+**The pack is now five packs, and you only need two of them.**
+
+- Install the pack for your side and the shared one, and you get every quest line your
+  character can reach: about 300 MB instead of 600. Gossip — the ambient chatter NPCs say when
+  you talk to them without a quest — is a third, optional pack of 144 MB.
+- Anyone who would rather have one install can still take the complete pack, unchanged in
+  content at 576 MB.
+- Nothing was re-recorded. The audio in the split packs is byte-for-byte what 1.1.0 shipped,
+  and the four split packs together hold exactly what the complete pack holds — 11,189 clips,
+  no overlap, nothing missing.
+- Which side a quest belongs to comes from the questgiver: an NPC hostile to the Horde and not
+  to the Alliance hands out Alliance quests. Neutral hubs like Booty Bay and Gadgetzan land in
+  the shared pack, so their quests play for both sides.
+- **The folder names changed**, so this does not update the old pack in place — delete
+  `VoiceOverReduxAudio` after installing the new ones, or it keeps serving the audio it has.
+
+## 1.1.0 — player
+
+- Knows about all five sound packs, and offers them only to a player who has none installed
+  rather than nagging about the four they deliberately skipped.
+
 ## 1.1.0 — sound pack
 
 The pack is now Ogg Vorbis instead of MP3: **564 MB, down from 1.5 GB**, for the same 11,189

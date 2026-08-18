@@ -126,9 +126,10 @@ For a module to hand to players, use `make package-audio` instead: it transcodes
 
 ```bash
 make package                       # the player addon, one zip per client
-make package-audio                 # transcode to ogg, build, zip -> dist/
+make package-audio                 # transcode to ogg, build five packs, zip each -> dist/
 make package-audio-hq              # the same at full bandwidth, twice the size
-make package-audio VERSION=1.4.0   # the version written into the pack's .toc
+make package-audio PACKS=all       # only the complete pack, when trying an encode change
+make package-audio VERSION=1.4.0   # the version written into each pack's .toc
 ENCODE=copy make package-audio     # the masters untouched, to hear what is being given up
 ```
 
@@ -175,6 +176,43 @@ copied, and mutagen reads a VBR mp3's Xing header and an Ogg page's granule posi
 
 `install` moves any existing install aside to `<module>.replaced` rather than deleting it.
 
+### The pack ships in five pieces
+
+600 MB is more than CurseForge accepts in one upload — a 564 MB zip comes back `413` from
+Cloudflare before CurseForge ever sees it — and more than a player wants for lines their
+character cannot reach. So the store is transcoded once and built into five packs:
+
+| Pack | Folder | Zip |
+| --- | --- | --- |
+| Complete | `VoiceOverReduxAudioAll` | 576 MB |
+| Alliance quests | `VoiceOverReduxAudioAlliance` | 161 MB |
+| Horde quests | `VoiceOverReduxAudioHorde` | 160 MB |
+| Shared quests | `VoiceOverReduxAudioShared` | 144 MB |
+| Gossip | `VoiceOverReduxAudioGossip` | 144 MB |
+
+The four split packs partition the complete one exactly — 2,644 + 2,251 + 2,552 + 3,742 =
+11,189 files, no overlap and nothing dropped. A player installs their side plus Shared, adds
+Gossip if they want ambient chatter, and lands around 300–450 MB instead of 600.
+
+**Each pack is an addon folder and a CurseForge project of its own**, never two files on one
+project: addon managers install the newest file for a project, so a second file would silently
+move a player from the pack they chose to whichever was uploaded last. The player needs no
+change to read them — `DataModules:PrepareSound` walks every registered module and takes the
+first whose `SoundLengthLookupByFileName` has the file, which is how upstream shipped a pack
+per expansion. Every pack carries the full lookup tables (3.5 MB); they map text to ids and
+hashes rather than to files, so an entry whose audio lives in a pack you did not install finds
+no length and stays quiet.
+
+**Which side a quest is on comes from `corpus/factions.json`**, exported by
+`make factions` from the world DB and committed beside the corpus, so building a pack never
+needs a database. `tools/export_factions.py` explains the derivation, and the short version is
+that `quest_template.RequiredRaces` is nearly useless — vanilla sets it on race and class
+starting chains and little else — while the questgiver's faction template is decisive: a giver
+hostile to Horde and not to Alliance is an Alliance questgiver. That classifies 1,419 Alliance
+and 1,230 Horde quests and leaves the neutral hubs shared, which is the case a naive split
+gets wrong. A quest with givers on both sides, or none, is shared: being generous costs a
+player megabytes, being strict costs them a line that never plays.
+
 ### Releasing to CurseForge
 
 ```bash
@@ -184,19 +222,23 @@ make release              # upload both zips
 ```
 
 `scripts/release.sh` uploads what is **already in `dist/`** — it builds nothing, so the zip
-that goes out is the one you tested. Two projects:
-[voiceover-redux](https://www.curseforge.com/wow/addons/voiceover-redux) (`1655859`) and
-[voiceover-redux-audio](https://www.curseforge.com/wow/addons/voiceover-redux-audio)
-(`1655867`). It needs `CURSEFORGE_TOKEN` in `.env` — an *author* token from
+that goes out is the one you tested. Six projects, one per target: `player`
+([voiceover-redux](https://www.curseforge.com/wow/addons/voiceover-redux), `1655859`),
+`audio-all`
+([voiceover-redux-audio](https://www.curseforge.com/wow/addons/voiceover-redux-audio),
+`1655867`), and `audio-alliance` / `audio-horde` / `audio-shared` / `audio-gossip`, whose
+projects have to be created before their ids can go into `target_project()`. A target with no
+id fails the run rather than uploading a Horde pack over the Alliance project. It needs
+`CURSEFORGE_TOKEN` in `.env` — an *author* token from
 [authors-old.curseforge.com](https://authors-old.curseforge.com/account/api-tokens), tied to
 the account rather than a project, so one covers both.
 
-The two are versioned independently, and each finds its version somewhere different for a
-reason. The player is committed files with a `.toc`, so its version is read there. The pack
-has no committed `.toc` at all — `build` generates one — so its version is read back out of
-the module in `dist/`, which means releasing a pack nobody built fails instead of uploading a
-stale zip that happens to still be lying around. `CHANGELOG.md` holds one section per version
-and each target looks up its own.
+The player and the packs are versioned independently, and each finds its version somewhere
+different for a reason. The player is committed files with a `.toc`, so its version is read
+there. A pack has no committed `.toc` at all — `build` generates one — so its version is read
+back out of its module in `dist/`, which means releasing a pack nobody built fails instead of
+uploading a stale zip that happens to still be lying around. `CHANGELOG.md` holds one section
+per version and each target looks up its own.
 
 Files are offered to **Era (1.15.9) and the 2.5.6 Anniversary client** only. The zip carries
 `_Wrath` and `_Mainline` TOCs too, but nothing here has been run on those clients, and a file

@@ -61,13 +61,46 @@ DataModules =
 
     --- Stores modules known to exist to present the player with information on how to download or update them
     ---@type AvailableDataModule[]
+    -- The sound pack ships in five pieces, so this is a menu rather than a single answer: a
+    -- player picks their side plus the shared quests, or takes the complete pack. Only shown
+    -- to somebody who has no pack at all - see EnumerateAddons, where having one silences the
+    -- other four, since suggesting the Horde pack to an Alliance player who already installed
+    -- theirs is noise.
     availableModules = {
         {
-            AddonName = "VoiceOverReduxAudio",
-            Title = "VoiceOver Redux Audio",
-            ContentVersion = "1.0.1",
+            AddonName = "VoiceOverReduxAudioAll",
+            Title = "VoiceOver Redux Audio (Complete)",
+            ContentVersion = "1.2.0",
             RelevantAboveVersion = 0,
             URL = "https://www.curseforge.com/wow/addons/voiceover-redux-audio",
+        },
+        {
+            AddonName = "VoiceOverReduxAudioAlliance",
+            Title = "VoiceOver Redux Audio (Alliance)",
+            ContentVersion = "1.2.0",
+            RelevantAboveVersion = 0,
+            URL = "https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance",
+        },
+        {
+            AddonName = "VoiceOverReduxAudioHorde",
+            Title = "VoiceOver Redux Audio (Horde)",
+            ContentVersion = "1.2.0",
+            RelevantAboveVersion = 0,
+            URL = "https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde",
+        },
+        {
+            AddonName = "VoiceOverReduxAudioShared",
+            Title = "VoiceOver Redux Audio (Shared quests)",
+            ContentVersion = "1.2.0",
+            RelevantAboveVersion = 0,
+            URL = "https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared",
+        },
+        {
+            AddonName = "VoiceOverReduxAudioGossip",
+            Title = "VoiceOver Redux Audio (Gossip)",
+            ContentVersion = "1.2.0",
+            RelevantAboveVersion = 0,
+            URL = "https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip",
         },
     },
 }
@@ -178,13 +211,19 @@ function DataModules:EnumerateAddons(loadModules)
         Options:AddDataModule(module, order)
     end
 
+    -- A player with no pack at all is offered every one of them and picks; a player who has
+    -- one is offered only updates to what they installed. Before the pack was split there was
+    -- a single entry and "you do not have it" was the whole question, but now four of the five
+    -- are absent from any sensible install, and advertising those is nagging.
+    local hasAnyPack = next(self.presentModules) ~= nil
+
     for order, module in self:GetAvailableModules() do
         local min = module.RelevantAboveVersion
         local max = module.RelevantBelowVersion
         if (not min or Version.Interface >= min) and (not max or Version.Interface < max) then
             local present = self.presentModules[module.AddonName]
             local update = present and present.ContentVersion ~= module.ContentVersion
-            if not present or update then
+            if (not present and not hasAnyPack) or update then
                 Options:AddAvailableDataModule(module, order, update)
             end
         end

@@ -46,7 +46,10 @@ cd "$REPO"
 STORE="${STORE:-audio}"
 DIST="${DIST:-dist}"
 MODULE="${MODULE:-VoiceOverReduxAudio}"
-VERSION="${VERSION:-1.0.1}"
+VERSION="${VERSION:-1.2.0}"
+# Which packs to build; each becomes MODULE plus the suffix tts_cli/factions.py gives it.
+# PACKS=all builds only the complete one, which is the fast way to try an encode change.
+PACKS="${PACKS:-all alliance horde shared gossip}"
 ENCODE="${ENCODE:-ogg-q-1-22k}"
 ZIP="${ZIP:-1}"
 # Distinguishes the zips of two profiles built from the same module name, so the HQ pack
@@ -212,27 +215,39 @@ else
   rm -f "$todo"
 fi
 
-# --- the module ------------------------------------------------------------------------
+# --- the modules -----------------------------------------------------------------------
+#
+# ONE STAGED STORE, SEVERAL PACKS. 600 MB is more than CurseForge takes in one upload and more
+# than a player wants for lines their character cannot reach, so the store is transcoded once
+# and built into a pack per side of the war, one for the quests both sides share, one for
+# gossip, and one holding everything. Each is an addon folder of its own - a second file on
+# one project would let an addon manager move a player from the pack they chose to whichever
+# was uploaded last. tts_cli/factions.py holds the split and explains it.
 #
 # --store, so this is the same build everyone runs, over a store whose clips happen to be
-# smaller. The lookup tables, the TOC and the length table are all built by that command
-# and are not this script's business.
-"$PYTHON" cli-main.py build --store "$staging" --dist "$DIST" --module "$MODULE" \
-  --version "$VERSION"
+# smaller. The lookup tables, the TOC and the length table are all built by that command and
+# are not this script's business.
+for pack in $PACKS; do
+  suffix="$("$PYTHON" -c "from tts_cli.factions import PACK_SUFFIXES; print(PACK_SUFFIXES['$pack'])")"
+  module="$MODULE$suffix"
 
-module_dir="$DIST/$MODULE"
-echo "  module size: $(du -sh "$module_dir" | cut -f1)  (store: $(du -sh "$STORE" | cut -f1))"
+  echo
+  echo "building $module ($pack)"
+  "$PYTHON" cli-main.py build --store "$staging" --dist "$DIST" --module "$module" \
+    --version "$VERSION" --pack "$pack"
 
-if [ "$ZIP" = 1 ]; then
-  # Absolute before the subshell cds into DIST, and derived from DIST itself so an
-  # absolute DIST (a scratch directory in a test run) is not glued onto the repo root.
+  echo "  module size: $(du -sh "$DIST/$module" | cut -f1)  (store: $(du -sh "$STORE" | cut -f1))"
+
+  [ "$ZIP" = 1 ] || continue
+
+  # Absolute before the subshell cds into DIST, and derived from DIST itself so an absolute
+  # DIST (a scratch directory in a test run) is not glued onto the repo root.
   #
-  # LABEL is what keeps two profiles apart. The module folder is named the same either way -
-  # the packs are alternatives and a player installs one - so only the zip carries it, and
-  # building the HQ pack after the shipping one leaves both zips and the HQ module in dist/.
-  zip_path="$(cd "$DIST" && pwd)/$MODULE$LABEL-$VERSION.zip"
+  # LABEL is what keeps the encode profiles apart, since both build the same folder names -
+  # they are alternatives and a player installs one, so only the zip carries it.
+  zip_path="$(cd "$DIST" && pwd)/$module$LABEL-$VERSION.zip"
   rm -f "$zip_path"
-  echo "zipping $(basename "$zip_path")..."
-  (cd "$DIST" && zip -r -q -X "$zip_path" "$MODULE" -x '*.DS_Store' '*.part')
-  echo "==> $zip_path ($(du -h "$zip_path" | cut -f1))"
-fi
+  echo "  zipping $(basename "$zip_path")..."
+  (cd "$DIST" && zip -r -q -X "$zip_path" "$module" -x '*.DS_Store' '*.part')
+  echo "  ==> $zip_path ($(du -h "$zip_path" | cut -f1))"
+done

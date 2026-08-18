@@ -116,6 +116,42 @@ def test_a_rebuild_does_not_keep_the_last_build_s_audio(tmp_path):
     assert sorted(p.name for p in sounds.glob("*/*")) == ["5-accept.ogg", "abc123.ogg"]
 
 
+def test_a_pack_ships_only_the_audio_it_was_given(tmp_path):
+    # The store is staged once and built into several packs, each a subset of it. A pack that
+    # copied the whole staging directory would be the 600 MB pack under another name.
+    store = _store(tmp_path, "quests/5-accept.ogg", "gossip/abc123.ogg")
+
+    report = build_module(CORPUS, store, str(tmp_path / "dist"), "Mod",
+                          include={"quests/5-accept"})
+
+    sounds = tmp_path / "dist" / "Mod" / "generated" / "sounds"
+    assert (sounds / "quests" / "5-accept.ogg").exists()
+    assert not (sounds / "gossip" / "abc123.ogg").exists()
+    assert report["audioFiles"] == 1
+
+
+def test_a_pack_still_drops_ignored_audio(tmp_path):
+    store = _store(tmp_path, "quests/5-accept.ogg", "gossip/abc123.ogg")
+
+    report = build_module(CORPUS, store, str(tmp_path / "dist"), "Mod",
+                          include={"quests/5-accept", "gossip/abc123"},
+                          ignored={"g:abc123": "war effort tally"})
+
+    assert report["audioFiles"] == 1
+
+
+def test_the_toc_title_says_which_pack_this_is(tmp_path):
+    # Five packs sit in the AddOns list at once and are told apart by their titles; the folder
+    # names differ only by a suffix nobody reads.
+    store = _store(tmp_path, "quests/5-accept.ogg")
+
+    build_module(CORPUS, store, str(tmp_path / "dist"), "Mod",
+                 title="VoiceOver Redux Audio (Horde)")
+
+    with open(tmp_path / "dist" / "Mod" / "Mod.toc", encoding="utf-8") as f:
+        assert "## Title: VoiceOver Redux Audio (Horde)\n" in f.read()
+
+
 def test_the_length_table_measures_ogg(tmp_path):
     store = _store(tmp_path, "quests/5-accept.ogg")
 

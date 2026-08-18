@@ -17,6 +17,8 @@ from tts_cli.build import (DEFAULT_ADDONS_DIR, DEFAULT_DIST_DIR,
                            DEFAULT_MODULE_NAME, build_module, install_module)
 from tts_cli.corpus import DEFAULT_CORPUS_PATH, load_corpus
 from tts_cli.env_vars import ELEVENLABS_API_KEY
+from tts_cli.factions import (DEFAULT_FACTIONS_PATH, PACK_TITLES, PACKS, load_sides,
+                              pack_stems)
 from tts_cli.ignores import DEFAULT_IGNORED_PATH, ignored_files, load_ignored
 from tts_cli.select import estimate, select_lines, unique_by_file
 from tts_cli.store import DEFAULT_SOURCE_DIR, DEFAULT_STORE_DIR, import_audio
@@ -74,6 +76,11 @@ bld.add_argument("--dist", default=DEFAULT_DIST_DIR)
 bld.add_argument("--module", default=DEFAULT_MODULE_NAME)
 bld.add_argument("--version", default="1.0.1")
 bld.add_argument("--ignored", default=DEFAULT_IGNORED_PATH)
+bld.add_argument("--pack", default="all", choices=PACKS,
+                 help="which slice of the audio to ship (default: all)")
+bld.add_argument("--factions", default=DEFAULT_FACTIONS_PATH)
+bld.add_argument("--module-title", default=None,
+                 help="TOC title; defaults to one naming the pack")
 
 ins = subparsers.add_parser(
     "install", help="Copy the built module into a WoW AddOns folder.")
@@ -173,11 +180,17 @@ elif args.mode == "synthesize":
     print(f"\nsynthesized {done}, failed {failed}")
 
 elif args.mode == "build":
-    report = build_module(load_corpus(args.corpus), args.store, args.dist,
+    corpus = load_corpus(args.corpus)
+    # None for the whole store rather than the 'all' stem set, so a store file the corpus
+    # cannot address still ships in the complete pack the way it always has.
+    include = None if args.pack == "all" else \
+        pack_stems(corpus, load_sides(args.factions), args.pack)
+    report = build_module(corpus, args.store, args.dist,
                           args.module, args.version, progress=True,
-                          ignored=load_ignored(args.ignored))
+                          ignored=load_ignored(args.ignored), include=include,
+                          title=args.module_title or PACK_TITLES[args.pack])
     print(f"\nbuilt {report['moduleDir']}")
-    print(f"  audio files {report['audioFiles']} ({report['audioFormat']})")
+    print(f"  audio files {report['audioFiles']} ({report['audioFormat']}, pack: {args.pack})")
     for name, rows in sorted(report["tableRows"].items()):
         print(f"  {name:<32} {rows:>6} entries")
 
