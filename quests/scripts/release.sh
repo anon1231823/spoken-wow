@@ -195,35 +195,50 @@ changelog_for() {
 }
 
 #-- upload --------------------------------------------------------------------------------
-for target in "${targets[@]}"; do
+#
+# ONE TARGET'S FAILURE DOES NOT STOP THE REST. There are six of them now and they fail
+# independently: the complete pack is over CurseForge's upload ceiling while the four split
+# packs are well under it, so exiting on the first error meant one 413 held back five uploads
+# that would have gone through. Failures are collected and reported at the end, and the script
+# still exits non-zero, so a release that half-worked cannot be mistaken for one that worked.
+#
+# The errors before the token check stay fatal: no token and no game versions are conditions
+# under which no target could succeed.
+failed=()
+uploaded=()
+
+upload_target() {
+  local target="$1"
+  local project zip_name version zip_path kind changelog size metadata response status file_id
+
   project="$(target_project "$target")"
   zip_name="$(target_zip_name "$target")"
   version="$(target_version "$target")"
 
+  echo
+  echo "=== $target -> project ${project:-<none>} ==="
+
   if [[ -z "$project" ]]; then
     echo "error: no CurseForge project id for '$target' -- create the project and write its" >&2
     echo "       id into target_project() in this script." >&2
-    exit 1
+    return 1
   fi
   if [[ -z "$version" ]]; then
     echo "error: no version for '$target'." >&2
     [[ "$target" != player ]] && \
       echo "       A pack's version comes from the built module; run make package-audio." >&2
-    exit 1
+    return 1
   fi
 
   zip_path="$DIST/$zip_name-$version.zip"
 
-  echo
-  echo "=== $target -> project $project ==="
-
   if [[ ! -f "$zip_path" ]]; then
     echo "error: $zip_path does not exist -- run make package / make package-audio first" >&2
-    exit 1
+    return 1
   fi
 
   kind=player; [ "$target" = player ] || kind=pack
-  changelog="$(changelog_for "$version" "$kind")"
+  changelog="$(changelog_for "$version" "$kind")" || return 1
   size="$(du -h "$zip_path" | cut -f1)"
 
   # Built with node rather than a heredoc: the changelog is markdown holding quotes,
@@ -247,7 +262,7 @@ for target in "${targets[@]}"; do
 
   if [[ -n "$dry_run" ]]; then
     echo "  dry run -- not uploading"
-    continue
+    return 0
   fi
 
   # --progress-bar because the pack is hundreds of megabytes and a silent curl for several
@@ -266,7 +281,7 @@ for target in "${targets[@]}"; do
     -F "file=@$zip_path" \
     "$API/projects/$project/upload-file")" || {
       echo "error: could not reach CurseForge for $target" >&2
-      exit 1
+      return 1
     }
 
   status="${response##*$'\n'}"
@@ -275,12 +290,33 @@ for target in "${targets[@]}"; do
   if [[ "$status" != 2* ]]; then
     echo "error: upload failed for $target -- HTTP $status" >&2
     echo "$response" >&2
-    exit 1
+    # 413 is Cloudflare rejecting the body before CurseForge sees it, and no retry helps: the
+    # file is simply too big for the endpoint. Worth saying so here rather than leaving it to
+    # be rediscovered, since the split packs exist precisely because of this limit.
+    [[ "$status" = 413 ]] && \
+      echo "       $size is over CurseForge's upload limit. Ship the split packs instead." >&2
+    return 1
   fi
 
   file_id="$(node -e 'process.stdout.write(String(JSON.parse(process.argv[1]).id ?? "?"))' "$response")"
   echo "  uploaded -- file id $file_id"
+}
+
+for target in "${targets[@]}"; do
+  if upload_target "$target"; then
+    uploaded+=("$target")
+  else
+    failed+=("$target")
+    echo "  skipping $target and continuing" >&2
+  fi
 done
 
 echo
-echo "done. Uploads sit in moderation before they appear publicly."
+if (( ${#uploaded[@]} > 0 )); then
+  echo "done: ${uploaded[*]}"
+  [[ -z "$dry_run" ]] && echo "Uploads sit in moderation before they appear publicly."
+fi
+if (( ${#failed[@]} > 0 )); then
+  echo "FAILED: ${failed[*]}" >&2
+  exit 1
+fi
