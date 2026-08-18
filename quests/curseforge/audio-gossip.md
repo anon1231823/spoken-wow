@@ -1,15 +1,25 @@
-Voiced NPC gossip — the chatter you get when you talk to someone without a quest to hand in. 3,742 lines, 137 MB.
+Voiced NPC gossip — the chatter you get when you talk to someone without a quest to hand in.
 
 Innkeepers, guards, faction quartermasters and the rest saying their piece out loud, in the same voices they use for quests. Purely extra: it adds nothing to a quest you were already hearing, and it costs nothing to skip.
 
 **You need the player and at least one quest pack for any of this to work:**
 
-1. [VoiceOver Redux](https://www.curseforge.com/wow/addons/voiceover-redux) — the player. Without it no pack plays.
-2. Your quest audio — [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance) or [Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde), plus [Shared](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared).
+1. **VoiceOver Redux** — the player. Without it no pack plays.
+2. Your quest audio — **Alliance** or **Horde**, plus **Shared**.
+
+## The packs
+
+| Pack | Holds | |
+| --- | --- | --- |
+| All | everything below | |
+| Alliance | Alliance-only quests | |
+| Horde | Horde-only quests | |
+| Shared | quests both factions can take | |
+| **Gossip** | NPC gossip chatter | **this pack** |
 
 Gossip is not split by faction: an NPC greets whoever walks up, so one pack serves both sides.
 
-If you would rather have one install and not think about it, take [VoiceOver Redux Audio (All)](https://www.curseforge.com/wow/addons/voiceover-redux-audio) instead — it already holds this audio, and installing both is a wasted second copy.
+If you would rather have one install and not think about it, take **All** instead. It already holds this audio, so installing both is a wasted second copy.
 
 ## What this is
 

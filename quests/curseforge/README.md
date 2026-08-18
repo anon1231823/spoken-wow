@@ -25,5 +25,10 @@ The summaries (the one-line preview, separate from the description) are:
 - **Shared** — Quest dialogue both factions can hear, voiced. Install alongside the Alliance or Horde pack. Needs the VoiceOver Redux player.
 - **Gossip** — NPC gossip chatter, voiced. Optional extra for any of the quest packs. Needs the VoiceOver Redux player.
 
-Sizes quoted in the descriptions are the 1.2.0 zips. They are worth re-checking when a pack is
-rebuilt at a different encode; nothing enforces them.
+**No sizes and no line counts in the text.** Both move every time a pack is rebuilt or a line
+re-recorded, and a number in prose nothing checks is a number that goes stale on the site while
+looking authoritative. CurseForge shows the file size on the Files tab anyway.
+
+Every page carries the same table of the five packs, with the row for that page marked. The pack
+names are plain text for now - once the four new projects exist and their slugs are known, the
+names become links to each other.

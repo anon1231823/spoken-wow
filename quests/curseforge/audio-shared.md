@@ -1,21 +1,27 @@
-Voiced dialogue for the quests **both factions** can take — 2,552 lines, 136 MB. Neutral hubs like Booty Bay, Gadgetzan, Everlook and Ratchet live here, along with every other quest whose giver talks to either side.
+Voiced dialogue for the quests **both factions** can take. Neutral hubs like Booty Bay, Gadgetzan, Everlook and Ratchet live here, along with every other quest whose giver talks to either side.
 
-**Everyone wants this pack.** On its own it is only part of the story, so pair it with your side:
+**Everyone wants this pack**, and on its own it is only part of the story. Pair it with your side, and with the player:
 
-- Alliance character → [VoiceOver Redux Audio (Alliance)](https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance)
-- Horde character → [VoiceOver Redux Audio (Horde)](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde)
+1. **VoiceOver Redux** — the player. Without it no pack plays.
+2. **VoiceOver Redux Audio (Alliance)** or **(Horde)** — whichever side your character is on.
 
-And in both cases [VoiceOver Redux](https://www.curseforge.com/wow/addons/voiceover-redux), the player — this is audio only, and no pack plays without it.
+## The packs
 
-Optional on top: [Gossip](https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip), the chatter NPCs give you when you talk to them without a quest.
+| Pack | Holds | |
+| --- | --- | --- |
+| All | everything below | |
+| Alliance | Alliance-only quests | |
+| Horde | Horde-only quests | |
+| **Shared** | quests both factions can take | **this pack** |
+| Gossip | NPC gossip chatter | |
 
-If you would rather have one install and not think about it, take [VoiceOver Redux Audio (All)](https://www.curseforge.com/wow/addons/voiceover-redux-audio) instead — it holds every pack's audio, and installing it *and* these is a wasted second copy.
+Gossip — the chatter NPCs give you when you talk to them without a quest — is optional on top.
+
+If you would rather have one install and not think about it, take **All** instead. It holds every pack's audio, so installing it *and* these is a wasted second copy.
 
 ## Why the pack is split
 
-The whole thing is 564 MB, and roughly a quarter of it is dialogue your character can never reach. A quest belongs to a side when its questgiver does — hostile to the Horde means an Alliance quest, and the other way round. A giver who talks to both sides has no faction to sort by, so those quests are here, where both packs can reach them.
-
-Your side plus this is about 284 MB, against 564 MB for the lot.
+The whole thing is a large download, and a good part of it is dialogue your character can never reach. A quest belongs to a side when its questgiver does — hostile to the Horde means an Alliance quest, and the other way round. A giver who talks to both sides has no faction to sort by, so those quests are here, where both packs can reach them.
 
 ## What this is
 
