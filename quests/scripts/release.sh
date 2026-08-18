@@ -15,9 +15,13 @@
 # https://authors-old.curseforge.com/account/api-tokens -- it is an author token tied to your
 # account rather than to a project, so one token covers both.
 #
-# This uploads files. It does not create projects, edit descriptions or set relations: those
-# are one-time settings that live in the web UI, and a script that rewrote them on every
-# release would be a script that could quietly undo an edit made there.
+# This uploads files, and declares each file's required dependencies along with it - relations
+# are part of the upload metadata rather than a project setting, so the meta addon's
+# dependencies travel with the file that needs them.
+#
+# It does not create projects or edit descriptions. There is no API for either, and a script
+# that rewrote project pages every release would be one that could quietly undo an edit made
+# in the web UI. curseforge/ holds the descriptions to paste.
 #
 # Modelled on ../wow-lore/scripts/release.sh, which does the same job for three projects.
 set -euo pipefail
@@ -64,9 +68,13 @@ target_project() { case "$1" in
 esac; }
 
 # The addon folder each target ships, which is also the basename package*.sh gives its zip.
+#
+# audio-all is the meta addon (scripts/package-meta.sh) and not the complete pack: 577 MB of
+# audio comes back 413, so that project ships a few kilobytes declaring the four packs as
+# required dependencies instead, and the manager fetches them.
 target_zip_name() { case "$1" in
   player)         echo "VoiceOverRedux";;
-  audio-all)      echo "VoiceOverReduxAudioAll";;
+  audio-all)      echo "VoiceOverReduxAudio";;
   audio-alliance) echo "VoiceOverReduxAudioAlliance";;
   audio-horde)    echo "VoiceOverReduxAudioHorde";;
   audio-shared)   echo "VoiceOverReduxAudioShared";;
@@ -92,6 +100,17 @@ target_version() {
       | head -1 | tr -d '\r'
   fi
 }
+
+# Required dependencies, declared per uploaded file. Only the meta addon has any: it holds no
+# audio, and the four packs it names are the whole point of installing it. Both the CurseForge
+# app and WowUp fetch required dependencies, so "install All" still means "get everything".
+#
+# By slug, which is why the slugs are read off the live projects rather than guessed - see
+# curseforge/README.md. A slug that no longer resolves is a dependency silently not installed.
+target_dependencies() { case "$1" in
+  audio-all) echo "voiceover-redux-audio-alliance voiceover-redux-audio-horde \
+                   voiceover-redux-audio-shared-quests voiceover-redux-audio-gossip";;
+esac; }
 
 ALL_TARGETS="player audio-all audio-alliance audio-horde audio-shared audio-gossip"
 
@@ -210,6 +229,7 @@ uploaded=()
 upload_target() {
   local target="$1"
   local project zip_name version zip_path kind changelog size metadata response status file_id
+  local dependencies
 
   project="$(target_project "$target")"
   zip_name="$(target_zip_name "$target")"
@@ -244,21 +264,28 @@ upload_target() {
   # Built with node rather than a heredoc: the changelog is markdown holding quotes,
   # backticks and newlines, and hand-escaping that into JSON is how a release ends up with a
   # mangled changelog nobody notices for a month.
+  dependencies="$(target_dependencies "$target")"
   metadata="$(node -e '
-    const [changelog, releaseType, gameVersionIds, displayName] = process.argv.slice(1);
+    const [changelog, releaseType, gameVersionIds, displayName, dependencies] =
+      process.argv.slice(1);
+    const slugs = dependencies.trim().split(/\s+/).filter(Boolean);
     process.stdout.write(JSON.stringify({
       changelog,
       changelogType: "markdown",
       displayName,
       gameVersions: gameVersionIds.trim().split(/\s+/).map(Number),
       releaseType,
+      ...(slugs.length ? {
+        relations: { projects: slugs.map((slug) => ({ slug, type: "requiredDependency" })) },
+      } : {}),
     }));
-  ' "$changelog" "$RELEASE_TYPE" "$game_version_ids" "$zip_name $version")"
+  ' "$changelog" "$RELEASE_TYPE" "$game_version_ids" "$zip_name $version" "$dependencies")"
 
   echo "  file:      $zip_path ($size)"
   echo "  version:   $version   release type: $RELEASE_TYPE"
   echo "  clients:   $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY"
   echo "  changelog: $(echo "$changelog" | head -1) ($(echo "$changelog" | wc -l | tr -d ' ') lines)"
+  [[ -n "$dependencies" ]] && echo "  requires:  $(echo $dependencies)"
 
   if [[ -n "$dry_run" ]]; then
     echo "  dry run -- not uploading"

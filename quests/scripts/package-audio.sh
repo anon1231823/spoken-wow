@@ -48,8 +48,12 @@ DIST="${DIST:-dist}"
 MODULE="${MODULE:-VoiceOverReduxAudio}"
 VERSION="${VERSION:-1.2.0}"
 # Which packs to build; each becomes MODULE plus the suffix tts_cli/factions.py gives it.
-# PACKS=all builds only the complete one, which is the fast way to try an encode change.
-PACKS="${PACKS:-all alliance horde shared gossip}"
+#
+# The four that ship. 'all' - one folder holding every line - is deliberately not among them:
+# it cannot be uploaded (577 MB is a Cloudflare 413), and on CurseForge that project ships the
+# meta addon from scripts/package-meta.sh instead. Build it with PACKS=all when you want the
+# whole thing in one folder locally, which is also the fast way to try an encode change.
+PACKS="${PACKS:-alliance horde shared gossip}"
 ENCODE="${ENCODE:-ogg-q-1-22k}"
 ZIP="${ZIP:-1}"
 # Distinguishes the zips of two profiles built from the same module name, so the HQ pack

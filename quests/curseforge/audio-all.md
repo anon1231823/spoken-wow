@@ -1,20 +1,24 @@
-Every voice line this project has made, in one install: quest dialogue for both factions and NPC gossip chatter.
+**Install this and get the lot.** It holds no audio itself — it is a few kilobytes that pulls in all four sound packs as dependencies, so your addon manager fetches them for you.
 
-**This is audio only.** Install [VoiceOver Redux](https://www.curseforge.com/wow/addons/voiceover-redux) alongside it — that addon is the player, this is the voice lines, and neither does anything alone.
+You still need the player: [VoiceOver Redux](https://www.curseforge.com/wow/addons/voiceover-redux). That addon speaks the lines, the packs are the lines, and neither does anything alone.
 
 ## The packs
 
 | Pack | Holds | |
 | --- | --- | --- |
-| **All** | everything below | **this pack** |
+| **All** | installs the four below | **this page** |
 | [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance) | Alliance-only quests | |
 | [Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde) | Horde-only quests | |
-| [Shared](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests) | quests both factions can take | |
+| [Shared Quests](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests) | quests both factions can take | |
 | [Gossip](https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip) | NPC gossip chatter | |
 
-Take this one if you would rather not think about it. If you would rather not download dialogue your character can never hear, take the split packs instead: an Alliance player wants Alliance + Shared, a Horde player Horde + Shared, and Gossip on top if they want NPC chatter.
+Most players want less than this. An Alliance character only ever hears Alliance + Shared Quests, a Horde character Horde + Shared Quests, and Gossip is optional chatter on top — so picking two packs saves a large download of dialogue your character can never reach.
 
-**Install this pack or the split ones, not both** — they hold the same audio, and running both wastes the disk on a second copy.
+**Downloading the zip by hand gets you the stub and nothing else.** Dependencies are something the CurseForge app and WowUp resolve; a manual download cannot. Install the four packs directly in that case.
+
+## Why the audio is split at all
+
+A quest belongs to a side when its questgiver does: an NPC hostile to the Horde and friendly to the Alliance hands out Alliance quests. Givers who talk to both sides — the goblins in Booty Bay and Gadgetzan, and every other neutral hub — land in Shared Quests, so their lines play for everyone.
 
 ## What this is
 
@@ -27,4 +31,4 @@ A rework of the original VoiceOver addon, which makes NPCs speak their quest tex
 - tons of pronunciation fixes
 - more natural-sounding performance
 
-The audio is Ogg Vorbis rather than MP3 as of 1.2.0, which is most of why the pack is a fraction of the size it used to be for the same lines. Nothing was re-recorded.
+The audio is Ogg Vorbis rather than MP3 as of 1.2.0, which is most of why the packs are a fraction of the size they used to be for the same lines. Nothing was re-recorded.

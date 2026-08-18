@@ -184,15 +184,25 @@ character cannot reach. So the store is transcoded once and built into five pack
 
 | Pack | Folder | Zip |
 | --- | --- | --- |
-| All | `VoiceOverReduxAudioAll` | 576 MB |
+| All (meta addon) | `VoiceOverReduxAudio` | 4 KB |
 | Alliance quests | `VoiceOverReduxAudioAlliance` | 161 MB |
 | Horde quests | `VoiceOverReduxAudioHorde` | 160 MB |
 | Shared quests | `VoiceOverReduxAudioShared` | 144 MB |
 | Gossip | `VoiceOverReduxAudioGossip` | 144 MB |
 
-The four split packs partition the complete one exactly — 2,644 + 2,251 + 2,552 + 3,742 =
-11,189 files, no overlap and nothing dropped. A player installs their side plus Shared, adds
-Gossip if they want ambient chatter, and lands around 300–450 MB instead of 600.
+The four partition the audio exactly — 2,644 + 2,251 + 2,552 + 3,742 = 11,189 files, no overlap
+and nothing dropped. A player installs their side plus Shared, adds Gossip if they want ambient
+chatter, and lands around 300 MB instead of 600.
+
+**All is a meta addon, not a pack.** One folder holding every line cannot be uploaded — 577 MB
+is a Cloudflare `413` before CurseForge sees the body, which is what forced the split — so that
+project ships a few kilobytes carrying no audio and declaring the other four as *required
+dependencies*. The CurseForge app and WowUp fetch those automatically, so "install All" still
+means "get everything", and no folder is ever owned by two projects. `scripts/package-meta.sh`
+builds it and its header explains the rest; `make package-audio PACKS=all` still builds the
+single complete folder for local use. The stub deliberately carries no
+`X-VoiceOver-DataModule-Version`: with it, the player would count the stub as an installed pack
+and stop telling somebody with no audio where to get any.
 
 **Each pack is an addon folder and a CurseForge project of its own**, never two files on one
 project: addon managers install the newest file for a project, so a second file would silently

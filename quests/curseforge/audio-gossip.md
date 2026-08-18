@@ -11,7 +11,7 @@ Innkeepers, guards, faction quartermasters and the rest saying their piece out l
 
 | Pack | Holds | |
 | --- | --- | --- |
-| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | everything below | |
+| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | installs the four below | |
 | [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance) | Alliance-only quests | |
 | [Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde) | Horde-only quests | |
 | [Shared](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests) | quests both factions can take | |
@@ -19,7 +19,7 @@ Innkeepers, guards, faction quartermasters and the rest saying their piece out l
 
 Gossip is not split by faction: an NPC greets whoever walks up, so one pack serves both sides.
 
-If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/voiceover-redux-audio)** instead. It already holds this audio, so installing both is a wasted second copy.
+If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/voiceover-redux-audio)** instead. It holds no audio itself - it just tells your addon manager to fetch all four packs, this one included.
 
 ## What this is
 

@@ -9,7 +9,7 @@ Voiced dialogue for the quests **both factions** can take. Neutral hubs like Boo
 
 | Pack | Holds | |
 | --- | --- | --- |
-| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | everything below | |
+| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | installs the four below | |
 | [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance) | Alliance-only quests | |
 | [Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde) | Horde-only quests | |
 | **Shared** | quests both factions can take | **this pack** |
@@ -17,7 +17,7 @@ Voiced dialogue for the quests **both factions** can take. Neutral hubs like Boo
 
 Gossip — the chatter NPCs give you when you talk to them without a quest — is optional on top.
 
-If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/voiceover-redux-audio)** instead. It holds every pack's audio, so installing it *and* these is a wasted second copy.
+If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/voiceover-redux-audio)** instead. It holds no audio itself - it just tells your addon manager to fetch all four packs.
 
 ## Why the pack is split
 

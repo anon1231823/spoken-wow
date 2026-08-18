@@ -70,7 +70,8 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
         pull-history push-history history-status pull-ignores package package-audio \
-        package-audio-hq factions release release-dry deploy-scripts rollback releases \
+        package-audio-hq package-meta factions release release-dry deploy-scripts \
+        rollback releases \
         ssh-check
 
 help: ## Show this help
@@ -215,6 +216,13 @@ package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.
 
 package-audio-hq: ## The same pack at full bandwidth, twice the size
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k LABEL=-hq JOBS=$(JOBS) ./scripts/package-audio.sh
+
+# The "install everything" addon, which installs nothing itself: a few kilobytes declaring the
+# four packs as CurseForge dependencies, because the complete pack is too big to upload. Its
+# header explains the rest; release.sh sends the dependency list with the file.
+
+package-meta: ## Zip the meta addon that pulls in all four packs
+	@VERSION=$(VERSION) ./scripts/package-meta.sh
 
 # `release` uploads whatever is already in dist/ to CurseForge - it builds nothing, so the
 # zip it sends is the one you tested. The player's version comes from its .toc and the pack's

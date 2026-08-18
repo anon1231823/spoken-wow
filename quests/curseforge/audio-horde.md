@@ -9,7 +9,7 @@ Voiced dialogue for the quests only a Horde character can take.
 
 | Pack | Holds | |
 | --- | --- | --- |
-| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | everything below | |
+| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | installs the four below | |
 | [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance) | Alliance-only quests | |
 | **Horde** | Horde-only quests | **this pack** |
 | [Shared](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests) | quests both factions can take | |
@@ -17,7 +17,7 @@ Voiced dialogue for the quests only a Horde character can take.
 
 Gossip — the chatter NPCs give you when you talk to them without a quest — is optional on top.
 
-If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/voiceover-redux-audio)** instead. It holds every pack's audio, so installing it *and* these is a wasted second copy.
+If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/voiceover-redux-audio)** instead. It holds no audio itself - it just tells your addon manager to fetch all four packs.
 
 ## Why the pack is split
 

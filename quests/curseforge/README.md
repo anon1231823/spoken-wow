@@ -12,6 +12,11 @@ Markdown mode — paste the file into it.
 | `audio-shared.md` | VoiceOver Redux Audio: Shared Quests | 1658239 | `voiceover-redux-audio-shared-quests` |
 | `audio-gossip.md` | VoiceOver Redux Audio: Gossip | 1658235 | `voiceover-redux-audio-gossip` |
 
+`audio-all` is the odd one: that project ships a **meta addon** rather than audio, because the
+complete pack is too big to upload. It is a few kilobytes declaring the other four as required
+dependencies, which `scripts/release.sh` sends as part of the upload metadata - relations are
+per file, so they need no web-UI step and cannot drift from the file that shipped.
+
 The slugs are what the pages and the addon link to, so they are read off the live projects
 rather than guessed - Shared Quests is not the slug its name suggests, and Alliance was
 something else again before it was renamed. `scripts/release.sh` carries the same ids, and
