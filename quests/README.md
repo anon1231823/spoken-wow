@@ -127,7 +127,7 @@ For a module to hand to players, use `make package-audio` instead: it transcodes
 ```bash
 make package                       # the player addon, one zip per client
 make package-audio                 # transcode to ogg, build five packs, zip each -> dist/
-make package-audio-hq              # the same at full bandwidth, twice the size
+make package-audio-hq              # every line in one folder, full bandwidth (~1.3 GB)
 make package-audio PACKS=all       # only the complete pack, when trying an encode change
 make package-audio VERSION=1.4.0   # the version written into each pack's .toc
 ENCODE=copy make package-audio     # the masters untouched, to hear what is being given up
@@ -147,8 +147,9 @@ most of the addon's size. Dropping those clients took the zip matrix and 1 MB wi
 **The shipping pack is Ogg Vorbis at 22.05 kHz**, which takes 3.2 GB of masters to about
 0.6 GB. Two things earn that, and they are worth keeping apart: Vorbis is worth 1.3–1.5×
 over LAME at these rates, and speech survives the 11 kHz ceiling a 22.05 kHz downsample
-imposes. `make package-audio-hq` skips only the downsample — full-bandwidth ogg, ~1.3 GB —
-for anyone who would rather spend the bandwidth. `docs/pack-size.md` is where every encode
+imposes. `make package-audio-hq` skips only the downsample — full-bandwidth ogg, ~1.3 GB, every
+line in one `VoiceOverReduxAudioHQ` folder. It is **not a CurseForge release**: it is far over
+the upload ceiling and always will be, so it exists to be distributed by hand. `docs/pack-size.md` is where every encode
 was measured, along with the dead ends (deduplication, silence trimming, harder zip
 compression — all worth nothing).
 

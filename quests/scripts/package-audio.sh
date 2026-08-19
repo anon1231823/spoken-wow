@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build the data module from transcoded copies of the audio store, and zip it.
 #
-#   make package-audio                 # the shipping pack: Ogg Vorbis, zipped, into dist/
-#   make package-audio-hq              # the same pack at full bandwidth, twice the size
+#   make package-audio                 # the four shipping packs, Ogg Vorbis, into dist/
+#   make package-audio-hq              # every line in one folder at full bandwidth
 #   make package-audio VERSION=1.4.0   # the version written into the .toc
 #   ENCODE=copy make package-audio     # the masters, untranscoded, for a listening check
 #   JOBS=1 make package-audio          # serial, when a failing encode needs readable output
@@ -56,9 +56,14 @@ VERSION="${VERSION:-1.2.1}"
 PACKS="${PACKS:-alliance horde shared gossip}"
 ENCODE="${ENCODE:-ogg-q-1-22k}"
 ZIP="${ZIP:-1}"
-# Distinguishes the zips of two profiles built from the same module name, so the HQ pack
-# does not overwrite the shipping one in dist/.
+# Distinguishes the zips of two profiles built from the same module name, so one profile's
+# build does not overwrite another's in dist/.
 LABEL="${LABEL:-}"
+# Names the addon folder outright, instead of MODULE plus the pack's suffix. Only meaningful
+# when building a single pack, and it exists for the HQ build: one folder holding every line at
+# full bandwidth, which is a thing of its own rather than a bigger copy of the All pack.
+MODULE_NAME="${MODULE_NAME:-}"
+TITLE="${TITLE:-}"
 # kbps above which an mp3 is worth re-encoding as an mp3. See tools/plan_transcode.py.
 THRESHOLD="${THRESHOLD:-80}"
 
@@ -232,13 +237,17 @@ fi
 # smaller. The lookup tables, the TOC and the length table are all built by that command and
 # are not this script's business.
 for pack in $PACKS; do
-  suffix="$("$PYTHON" -c "from tts_cli.factions import PACK_SUFFIXES; print(PACK_SUFFIXES['$pack'])")"
-  module="$MODULE$suffix"
+  if [ -n "$MODULE_NAME" ]; then
+    module="$MODULE_NAME"
+  else
+    suffix="$("$PYTHON" -c "from tts_cli.factions import PACK_SUFFIXES; print(PACK_SUFFIXES['$pack'])")"
+    module="$MODULE$suffix"
+  fi
 
   echo
   echo "building $module ($pack)"
   "$PYTHON" cli-main.py build --store "$staging" --dist "$DIST" --module "$module" \
-    --version "$VERSION" --pack "$pack"
+    --version "$VERSION" --pack "$pack" ${TITLE:+--module-title "$TITLE"}
 
   echo "  module size: $(du -sh "$DIST/$module" | cut -f1)  (store: $(du -sh "$STORE" | cut -f1))"
 

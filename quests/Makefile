@@ -214,8 +214,15 @@ package: ## Zip the player addon, one per client, into dist/
 package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.4.0)
 	@VERSION=$(VERSION) ENCODE=$(ENCODE) JOBS=$(JOBS) ./scripts/package-audio.sh
 
-package-audio-hq: ## The same pack at full bandwidth, twice the size
-	@VERSION=$(VERSION) ENCODE=ogg-q0-44k LABEL=-hq JOBS=$(JOBS) ./scripts/package-audio.sh
+# The HQ pack: every line in one folder, Ogg Vorbis at the full 44.1 kHz, ~1.3 GB. Not a
+# CurseForge release - it is over the upload ceiling and always will be - so it is built when
+# somebody wants to distribute it themselves, and it is a folder of its own rather than a
+# fatter copy of a shipping pack, so installing it beside them is possible but pointless.
+
+package-audio-hq: ## Build the full-bandwidth pack, every line in one folder (~1.3 GB)
+	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
+	  MODULE_NAME=VoiceOverReduxAudioHQ TITLE="VoiceOver Redux Audio: HQ" \
+	  JOBS=$(JOBS) ./scripts/package-audio.sh
 
 # The "install everything" addon, which installs nothing itself: a few kilobytes declaring the
 # four packs as CurseForge dependencies, because the complete pack is too big to upload. Its

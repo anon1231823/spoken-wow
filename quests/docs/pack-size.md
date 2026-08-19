@@ -11,9 +11,8 @@ not re-run the experiment.
 11,189 clips, against 1.5 GB for the mp3 pack it replaces. The rest of this file is the
 evidence behind that, and the encodes that were rejected.
 
-The sizes below are measured. **Playback has not been confirmed in a client**: Vorbis is WoW's
-own sound format, but nobody has yet loaded an ogg pack in Classic Era 1.15.9. Do that before a
-release goes out.
+The sizes below are measured, and **ogg playback is confirmed**: the split packs were loaded in
+Classic Era 1.15.9 on 2026-08-19 and play. That was the one open risk in the whole exercise.
 
 
 ## The store is no longer half inherited
@@ -65,9 +64,11 @@ Samples for an A/B — five voices, every encode above, named `0` (master) throu
 ## And then it shipped in five pieces
 
 Encoding was not the end of it: CurseForge answered the 564 MB upload with a Cloudflare `413`
-before the API saw it, so the pack now ships as five addons — Complete 576 MB, Alliance
-161 MB, Horde 160 MB, Shared 144 MB, Gossip 144 MB. The four split packs partition the
-complete one exactly, and a player installing their side plus Shared lands near 300 MB.
+before the API saw it, so the audio now ships as four addons — Alliance, Horde, Shared Quests
+and Gossip — which partition it exactly, and a player installing their side plus Shared lands
+near half of what the whole thing costs. A fifth project carries a few kilobytes declaring the
+four as dependencies, since one folder holding everything cannot be uploaded at all. The
+full-bandwidth `VoiceOverReduxAudioHQ` is built by hand for distribution outside CurseForge.
 
 That makes the size question two questions. This file is about how many bytes a *line* costs,
 and the split is about how many lines a *player* needs; both were worth doing, and the second
@@ -96,7 +97,7 @@ that produce it and nothing else:
 | Profile | Encoder flags | Built by |
 | --- | --- | --- |
 | `ogg-q-1-22k` | `oggenc -q -1 --resample 22050` | `make package-audio` |
-| `ogg-q0-44k` | `oggenc -q 0` | `make package-audio-hq` |
+| `ogg-q0-44k` | `oggenc -q 0` | `make package-audio-hq`, as one `VoiceOverReduxAudioHQ` folder |
 | `vbr-v6` | `ffmpeg -codec:a libmp3lame -q:a 6` | what shipped before this |
 | `copy` | none — the masters | `ENCODE=copy make package-audio` |
 
