@@ -59,10 +59,18 @@ VoiceOver.DataModules:Register("{module}", {module})
 # rather than by name (DataModules:EnumerateAddons), so a renamed pack needs nothing else.
 DEFAULT_TITLE = "VoiceOver Redux Audio"
 
+#: The artwork the client shows beside the addon's name in the AddOns list. Committed as a TGA
+#: rather than converted at build time, so building needs no ffmpeg; tools/make_icon.py is what
+#: made it, and its header explains the format.
+ICON_SOURCE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                           "assets", "icon", "icon.tga")
+ICON_NAME = "icon.tga"
+
 TOC_HEADER = """## Interface: 100000
 ## Title: {title}
 ## Notes: Contains voiceovers for content released during the Vanilla era.|n|nIt's |cFF20FF20OK|r for this addon to appear |cFF808080"disabled"|r or |cFFFF2020"out of date"|r, it's compatible with any client and |cFFFFD200VoiceOver Redux|r will load it even if it's disabled or out of date.
 ## Version: {version}
+## IconTexture: Interface\\AddOns\\{module}\\{icon}
 ## LoadOnDemand: 1
 ## Group: VoiceOverRedux
 ## X-Part-Of: VoiceOver Redux
@@ -192,7 +200,8 @@ def module_toc(module_name: str, generated_files: list, version: str = "1.0.1",
     The title is what tells the packs apart in the AddOns list, where five of them can sit at
     once and their folder names differ only by a suffix.
     """
-    lines = [TOC_HEADER.format(version=version, title=title)]
+    lines = [TOC_HEADER.format(version=version, title=title,
+                               module=module_name, icon=ICON_NAME)]
     lines.extend(f"generated\\{name}" for name in generated_files)
     return "\n".join(lines) + "\n"
 
@@ -251,6 +260,8 @@ def build_module(corpus: dict, store_dir: str, dist_dir: str = DEFAULT_DIST_DIR,
     # Durations come from the copied files, so the table can never disagree with them.
     write_sound_length_table_lua(module_name, sounds_dir, generated_dir)
     written.append("sound_length_table.lua")
+
+    shutil.copy2(ICON_SOURCE, os.path.join(module_dir, ICON_NAME))
 
     with open(os.path.join(module_dir, "Module.lua"), "w", encoding="utf-8") as f:
         f.write(MODULE_LUA.format(module=module_name, extension=extension))

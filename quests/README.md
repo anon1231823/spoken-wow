@@ -176,6 +176,13 @@ copied, and mutagen reads a VBR mp3's Xing header and an Ogg page's granule posi
 
 `install` moves any existing install aside to `<module>.replaced` rather than deleting it.
 
+**Icons.** Every addon here carries `assets/icon/icon.tga` and a `## IconTexture:` line naming
+its own folder, which is what the client draws beside the name in the AddOns list; without it
+each pack shows a red question mark. The file is committed as a TGA rather than converted at
+build time so that building needs no ffmpeg — `tools/make_icon.py` is what made it, and its
+header explains why ffmpeg's own targa encoder is not used (it writes RLE, and the client wants
+uncompressed).
+
 ### The pack ships in five pieces
 
 600 MB is more than CurseForge accepts in one upload — a 564 MB zip comes back `413` from

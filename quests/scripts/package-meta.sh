@@ -45,11 +45,16 @@ cat > "$module_dir/Meta.lua" <<'LUA'
 -- CurseForge dependencies; it holds no audio and no code of its own.
 LUA
 
+# The same artwork every pack carries, so the five sit together in the AddOns list instead of
+# one of them showing the client's red question mark. See tools/make_icon.py.
+cp "$REPO/assets/icon/icon.tga" "$module_dir/icon.tga"
+
 cat > "$module_dir/$NAME.toc" <<TOC
 ## Interface: 100000
 ## Title: VoiceOver Redux Audio: All
 ## Notes: Installs every VoiceOver Redux sound pack - Alliance, Horde, Shared Quests and Gossip.|n|nThis addon holds no audio itself. If your addon manager did not fetch the four packs with it, install them yourself; |cFFFFD200VoiceOver Redux|r plays whatever it finds.
 ## Version: $VERSION
+## IconTexture: Interface\\AddOns\\$NAME\\icon.tga
 ## Group: VoiceOverRedux
 ## X-Part-Of: VoiceOver Redux
 ## X-Child-Of: VoiceOverRedux

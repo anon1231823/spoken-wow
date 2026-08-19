@@ -152,6 +152,19 @@ def test_the_toc_title_says_which_pack_this_is(tmp_path):
         assert "## Title: VoiceOver Redux Audio (Horde)\n" in f.read()
 
 
+def test_the_pack_ships_an_icon_the_toc_points_at(tmp_path):
+    # Without it the AddOns list shows a red question mark against every pack. The path is
+    # absolute from Interface\AddOns, so it has to name this module's own folder.
+    store = _store(tmp_path, "quests/5-accept.ogg")
+
+    build_module(CORPUS, store, str(tmp_path / "dist"), "Mod")
+
+    module = tmp_path / "dist" / "Mod"
+    with open(module / "Mod.toc", encoding="utf-8") as f:
+        assert "## IconTexture: Interface\\AddOns\\Mod\\icon.tga\n" in f.read()
+    assert (module / "icon.tga").is_file()
+
+
 def test_the_length_table_measures_ogg(tmp_path):
     store = _store(tmp_path, "quests/5-accept.ogg")
 
