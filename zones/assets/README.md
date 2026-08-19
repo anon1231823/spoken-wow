@@ -8,8 +8,7 @@ CurseForge profile without being mistaken for each other.
 |---|---|
 | `zonelore-icon.svg` | the source. 256×256 viewBox, no external references, no fonts |
 | `zonelore-512.png` | the CurseForge project avatar for **both** addons |
-| `zonelore-64.png` | the size an in-game `## IconTexture` would want, if one is ever added |
-| `zonelore-32.png`, `zonelore-16.png` | small raster fallbacks |
+| `zonelore-64.png`, `zonelore-32.png`, `zonelore-16.png` | small raster fallbacks |
 
 The SVG is the thing to edit. Every PNG here is a render of it, so a change to the shield
 means re-exporting all four rather than touching them individually.
@@ -24,15 +23,26 @@ image at 180×180 for iOS home screens. Both must be re-copied by hand if the SV
 there are two of them and a build step to keep them in sync would be larger than the copy.
 
 **CurseForge avatars are uploaded through the website**, not shipped in the zip — so
-`scripts/package.sh` deliberately does not include this directory, and neither addon
-folder contains an image. Upload `zonelore-512.png` on the project settings page of both
+`scripts/package.sh` deliberately does not include this directory. The only image either
+addon folder carries is the addon-list icon below. Upload `zonelore-512.png` on the project settings page of both
 ZoneLore and ZoneLore Audio: they install as a pair, and two different icons would imply
 they are alternatives to each other.
 
-## Not the in-game addon list
+## The in-game addon list
 
-Both `.toc` files carry `## IconTexture: Interface\ICONS\INV_Misc_Book_09`, a stock WoW
-icon. Pointing that at this artwork instead means shipping it inside the addon as a **TGA
-or BLP** — the client does not read PNG or SVG — at a power-of-two size. That is a real
-option, not an oversight; it just costs a binary in the addon folder and a converter in
-the toolchain, for an icon shown in one list.
+Both addons ship `Textures/AddonIcon.tga` and point `## IconTexture` at it, so the shield
+appears beside their names in the client's addon list rather than the stock
+`INV_Misc_Book_09` book they used to borrow.
+
+It is a **TGA** because the client reads TGA or BLP and neither PNG nor SVG, 64×64 because
+the size must be a power of two, and committed rather than converted at build time so that
+building an addon needs no ffmpeg. `make icon` regenerates both copies from
+`zonelore-512.png`; run it when the SVG changes and its PNG renders are re-exported.
+
+The two copies are byte-identical on purpose. The addons install as a pair, and giving them
+different icons would imply they are alternatives to each other.
+
+`scripts/package-audio.sh` rewrites the path when it stages the standard tier: the texture
+lives under the folder it ships in, and `ZoneLoreAudio64` is not `ZoneLoreAudio`. A path
+pointing at an addon the player does not have installed shows no icon at all rather than
+failing loudly.

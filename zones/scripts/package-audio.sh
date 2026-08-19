@@ -218,7 +218,11 @@ for tier in "${tiers[@]}"; do
   # ## Interface is deliberately NOT rewritten here: the clients a pack loads on
   # are a property of the audio, which is identical across tiers, not of the tier.
   # It comes through from the source .toc so both tiers can only ever agree.
+  # IconTexture names the folder it lives in, and the standard tier's folder is not
+  # the source's -- an unrewritten path points at an addon the player may not have
+  # installed, which the client answers with no icon at all rather than an error.
   sed -i.bak \
+    -e "s|^## IconTexture:.*|## IconTexture: Interface\\\\AddOns\\\\$folder\\\\Textures\\\\AddonIcon.tga|" \
     -e "s|^## Title:.*|## Title: $title|" \
     -e "s|^## X-ZoneLore-Quality:.*|## X-ZoneLore-Quality: $tier|" \
     -e "s|^## X-ZoneLore-Bitrate:.*|## X-ZoneLore-Bitrate: $bitrate|" \

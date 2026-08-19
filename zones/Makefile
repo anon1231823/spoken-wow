@@ -6,7 +6,7 @@
         status remove clean voice voice-zones lookup sample db-up db-down migrate import export \
         web push push-dry pull pull-dry audio-status ssh-check pull-manifest \
         db-push db-pull bootstrap deploy-scripts releases rollback logs \
-        lore-import lore-export lore-check lore-sheet lore-upload lore-upload-dry lore-rewrite aliases languages locale-check \
+        icon lore-import lore-export lore-check lore-sheet lore-upload lore-upload-dry lore-rewrite aliases languages locale-check \
         release release-dry descriptions descriptions-check descriptions-published
 
 # The \# escapes are required: an unescaped # starts a make comment, even
@@ -36,6 +36,14 @@ descriptions-published: ## Record the current descriptions as pasted into the si
 
 validate: ## Sanity-check the generated Lua data files
 	@node tools/validate.mjs
+
+# The in-game addon list reads a TGA or BLP, never the PNG or SVG in assets/, so the
+# icon is converted and committed. Both addons carry the same shield: they install as a
+# pair, and two icons would imply they are alternatives to each other.
+icon: ## Rebuild both addons' AddonIcon.tga from assets/zonelore-512.png (needs ffmpeg)
+	@python3 tools/make-icon.py assets/zonelore-512.png addon/ZoneLore/Textures/AddonIcon.tga
+	@cp addon/ZoneLore/Textures/AddonIcon.tga addon/ZoneLoreAudio/Textures/AddonIcon.tga
+	@echo "==> copied to addon/ZoneLoreAudio/Textures/AddonIcon.tga"
 
 lint: ## Block-balance check on the addon's Lua
 	@python3 tools/lua-syntax-check.py
