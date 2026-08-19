@@ -112,7 +112,11 @@ target_dependencies() { case "$1" in
                    voiceover-redux-audio-shared-quests voiceover-redux-audio-gossip";;
 esac; }
 
-ALL_TARGETS="player audio-all audio-alliance audio-horde audio-shared audio-gossip"
+# THE META ADDON GOES LAST. It names the four packs as dependencies, and CurseForge resolves
+# those at upload time, so anything about them that has to be true - the project existing and
+# being approved, above all - is truest after they have just been uploaded. It costs nothing to
+# order it this way and it removes a class of first-release surprise.
+ALL_TARGETS="player audio-alliance audio-horde audio-shared audio-gossip audio-all"
 
 dry_run=""
 targets=()
