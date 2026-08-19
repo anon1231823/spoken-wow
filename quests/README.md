@@ -149,7 +149,10 @@ most of the addon's size. Dropping those clients took the zip matrix and 1 MB wi
 over LAME at these rates, and speech survives the 11 kHz ceiling a 22.05 kHz downsample
 imposes. `make package-audio-hq` skips only the downsample — full-bandwidth ogg, ~1.3 GB, every
 line in one `VoiceOverReduxAudioHQ` folder. It is **not a CurseForge release**: it is far over
-the upload ceiling and always will be, so it exists to be distributed by hand. `docs/pack-size.md` is where every encode
+the upload ceiling and always will be. The site hosts it instead — `make push-hq` puts a built
+zip in `shared/downloads/` on the droplet and repoints
+[`/downloads/VoiceOverReduxAudioHQ-latest.zip`](https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip),
+a symlink, so the published URL never changes. See `deploy/README.md`. `docs/pack-size.md` is where every encode
 was measured, along with the dead ends (deduplication, silence trimming, harder zip
 compression — all worth nothing).
 

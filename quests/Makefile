@@ -70,7 +70,8 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
         pull-history push-history history-status pull-ignores package package-audio \
-        package-audio-hq package-meta factions release release-dry deploy-scripts \
+        package-audio-hq package-meta push-hq downloads-status factions release \
+        release-dry deploy-scripts \
         rollback releases \
         ssh-check
 
@@ -230,6 +231,24 @@ package-audio-hq: ## Build the full-bandwidth pack, every line in one folder (~1
 
 package-meta: ## Zip the meta addon that pulls in all four packs
 	@VERSION=$(VERSION) ./scripts/package-meta.sh
+
+# The HQ pack's home, since it is too big for CurseForge: nginx serves
+# /srv/voiceover/shared/downloads/ straight off disk (see deploy/nginx-voiceover.conf), and
+# this puts a freshly built zip there.
+#
+# The version comes from the built module rather than a variable, so pushing a pack nobody
+# built fails here instead of uploading whatever zip is oldest in dist/. -latest.zip is a
+# symlink repointed after the copy: the published URL never changes, and it never points at a
+# half-transferred file because rsync writes to a temporary name and renames.
+
+REMOTE_DOWNLOADS := $(REMOTE_ROOT)/shared/downloads
+
+push-hq: ## Upload the built HQ pack to the site's downloads directory
+	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. brew install rsync"; exit 1; }
+	@v=$$(sed -n 's/^## Version:[[:space:]]*//p' dist/VoiceOverReduxAudioHQ/VoiceOverReduxAudioHQ.toc 2>/dev/null | head -1); 	[ -n "$$v" ] || { echo "No HQ module built. Run: make package-audio-hq"; exit 1; }; 	zip=dist/VoiceOverReduxAudioHQ-$$v.zip; 	[ -f "$$zip" ] || { echo "$$zip is missing. Run: make package-audio-hq"; exit 1; }; 	echo "==> $$zip -> $(DROPLET):$(REMOTE_DOWNLOADS)/"; 	$(RSYNC) -a --human-readable --info=progress2 -e "$(SSH)" "$$zip" $(DROPLET):$(REMOTE_DOWNLOADS)/; 	$(SSH) $(DROPLET) "ln -sfn VoiceOverReduxAudioHQ-$$v.zip $(REMOTE_DOWNLOADS)/VoiceOverReduxAudioHQ-latest.zip"; 	echo "==> https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip"
+
+downloads-status: ## List what the site is offering for download
+	@$(SSH) $(DROPLET) 'ls -lh $(REMOTE_DOWNLOADS)/'
 
 # `release` uploads whatever is already in dist/ to CurseForge - it builds nothing, so the
 # zip it sends is the one you tested. The player's version comes from its .toc and the pack's

@@ -276,6 +276,34 @@ psql "$(grep ^DATABASE_URL /srv/voiceover/shared/app.env | cut -d= -f2-)" \
 Every role after this one is handed out from `/admin`, which will not let an admin demote
 themselves.
 
+## Serving the HQ sound pack
+
+The HQ pack is 1.2 GB, which CurseForge will not take, so the site hosts it:
+
+```
+https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip
+```
+
+`shared/downloads/` holds the versioned zips, and `-latest.zip` is a symlink to the current
+one — so the published URL never changes and never has to be edited anywhere it was pasted.
+`make push-hq` copies a freshly built zip up and repoints the symlink afterwards, which is the
+order that matters: rsync writes to a temporary name and renames, so the link is never pointing
+at a half-transferred file.
+
+nginx serves that directory off disk (`location /downloads/` in `nginx-voiceover.conf`) rather
+than proxying to Next.js — a gigabyte through the app would occupy a worker for the length of
+every download and buy nothing. Static files also answer `Range` on their own, so an
+interrupted download resumes.
+
+**It is a directory of its own rather than `shared/` itself, deliberately.** `shared/` holds
+`app.env`: the database URL, the auth secret, and the key the stored ElevenLabs credentials are
+sealed with. Aliasing a directory that holds secrets is one permission change away from serving
+them. `downloads/` holds nothing but zips.
+
+Files there survive deploys and rollbacks for the same reason the audio store does — nothing
+under `shared/` is touched by a release. `make downloads-status` lists what is being offered;
+old versions stay until deleted by hand, which is worth doing, since the disk is 33 GB.
+
 ## Operating it
 
 ```bash
