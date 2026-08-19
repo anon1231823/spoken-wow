@@ -3,6 +3,20 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 0.4.3 — 2026-08-19
+
+**An icon in the addon list**
+
+- ZoneLore shows its own gold-shield icon beside its name in the in-game addon
+  list, in place of the stock book it borrowed before. Nothing else changed.
+
+## 0.3.3 — 2026-08-19 (sound packs)
+
+**An icon in the addon list**
+
+- Both packs show the ZoneLore shield beside their names in the in-game addon
+  list, matching the addon they belong to. The audio is byte-for-byte 0.3.2.
+
 ## 0.4.2 — 2026-08-16
 
 Two fixes, both about narration playing something it should not have. 0.4.1 was
