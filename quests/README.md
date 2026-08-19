@@ -128,6 +128,7 @@ For a module to hand to players, use `make package-audio` instead: it transcodes
 make package                       # the player addon, one zip per client
 make package-audio                 # transcode to ogg, build five packs, zip each -> dist/
 make package-audio-hq              # every line in one folder, full bandwidth (~1.3 GB)
+make package-audio-hq-split        # the four packs at full bandwidth (~300 MB each)
 make package-audio PACKS=all       # only the complete pack, when trying an encode change
 make package-audio VERSION=1.4.0   # the version written into each pack's .toc
 ENCODE=copy make package-audio     # the masters untouched, to hear what is being given up
@@ -152,7 +153,15 @@ line in one `VoiceOverReduxAudioHQ` folder. It is **not a CurseForge release**: 
 the upload ceiling and always will be. The site hosts it instead — `make push-hq` puts a built
 zip in `shared/downloads/` on the droplet and repoints
 [`/downloads/VoiceOverReduxAudioHQ-latest.zip`](https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip),
-a symlink, so the published URL never changes. See `deploy/README.md`. `docs/pack-size.md` is where every encode
+a symlink, so the published URL never changes. See `deploy/README.md`.
+
+`make package-audio-hq-split` cuts the same full-bandwidth audio the same four ways —
+`VoiceOverReduxAudioAllianceHQ` and friends, ~300 MB each. Unlike the one-folder HQ pack those
+*are* under CurseForge's ceiling, so they can have projects when there are projects to give
+them. A folder per quality rather than a second file on the standard pack's project: an addon
+manager installs a project's newest file, so sharing a name would move a player from the
+quality they picked into the other one. `NAME_SUFFIX` and `TITLE_SUFFIX` are what append `HQ`
+to a build's folder names and titles. `docs/pack-size.md` is where every encode
 was measured, along with the dead ends (deduplication, silence trimming, harder zip
 compression — all worth nothing).
 

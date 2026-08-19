@@ -70,7 +70,8 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
         pull-history push-history history-status pull-ignores package package-audio \
-        package-audio-hq package-meta push-hq downloads-status factions release \
+        package-audio-hq package-audio-hq-split package-meta push-hq downloads-status \
+        factions release \
         release-dry deploy-scripts \
         rollback releases \
         ssh-check
@@ -223,6 +224,18 @@ package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.
 package-audio-hq: ## Build the full-bandwidth pack, every line in one folder (~1.3 GB)
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
 	  MODULE_NAME=VoiceOverReduxAudioHQ TITLE="VoiceOver Redux Audio: HQ" \
+	  JOBS=$(JOBS) ./scripts/package-audio.sh
+
+# The same audio split the same four ways, at full bandwidth: VoiceOverReduxAudioAllianceHQ and
+# friends. Each lands around 300 MB, which is under CurseForge's ceiling - unlike the one-folder
+# HQ pack - so these can have projects of their own when there are projects to give them.
+#
+# A folder per quality rather than a second file on the standard pack's project: an addon
+# manager installs a project's newest file, so sharing a name would move a player from the
+# quality they picked into the other one.
+
+package-audio-hq-split: ## The four packs at full bandwidth (~300 MB each)
+	@VERSION=$(VERSION) ENCODE=ogg-q0-44k NAME_SUFFIX=HQ TITLE_SUFFIX=" HQ" \
 	  JOBS=$(JOBS) ./scripts/package-audio.sh
 
 # The "install everything" addon, which installs nothing itself: a few kilobytes declaring the

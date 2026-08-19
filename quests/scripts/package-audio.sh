@@ -64,6 +64,12 @@ LABEL="${LABEL:-}"
 # full bandwidth, which is a thing of its own rather than a bigger copy of the All pack.
 MODULE_NAME="${MODULE_NAME:-}"
 TITLE="${TITLE:-}"
+# Appended to every folder name and title instead of replacing them, which is what the HQ
+# versions of the four packs need: VoiceOverReduxAudioAllianceHQ beside VoiceOverReduxAudio-
+# Alliance. A folder of its own per quality, because two packs under one name would have an
+# addon manager updating a player from the quality they chose into the other one.
+NAME_SUFFIX="${NAME_SUFFIX:-}"
+TITLE_SUFFIX="${TITLE_SUFFIX:-}"
 # kbps above which an mp3 is worth re-encoding as an mp3. See tools/plan_transcode.py.
 THRESHOLD="${THRESHOLD:-80}"
 
@@ -237,17 +243,21 @@ fi
 # smaller. The lookup tables, the TOC and the length table are all built by that command and
 # are not this script's business.
 for pack in $PACKS; do
+  title="$TITLE"
   if [ -n "$MODULE_NAME" ]; then
     module="$MODULE_NAME"
   else
     suffix="$("$PYTHON" -c "from tts_cli.factions import PACK_SUFFIXES; print(PACK_SUFFIXES['$pack'])")"
-    module="$MODULE$suffix"
+    module="$MODULE$suffix$NAME_SUFFIX"
+    if [ -n "$TITLE_SUFFIX" ]; then
+      title="$("$PYTHON" -c "from tts_cli.factions import PACK_TITLES; print(PACK_TITLES['$pack'])")$TITLE_SUFFIX"
+    fi
   fi
 
   echo
   echo "building $module ($pack)"
   "$PYTHON" cli-main.py build --store "$staging" --dist "$DIST" --module "$module" \
-    --version "$VERSION" --pack "$pack" ${TITLE:+--module-title "$TITLE"}
+    --version "$VERSION" --pack "$pack" ${title:+--module-title "$title"}
 
   echo "  module size: $(du -sh "$DIST/$module" | cut -f1)  (store: $(du -sh "$STORE" | cut -f1))"
 
