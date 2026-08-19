@@ -72,7 +72,7 @@ endef
         pull-history push-history history-status pull-ignores package package-audio \
         package-audio-hq package-audio-hq-split package-meta package-meta-hq push-hq \
         downloads-status \
-        factions release \
+        factions release release-standard release-hq \
         release-dry deploy-scripts \
         rollback releases \
         ssh-check
@@ -288,6 +288,15 @@ release-dry: ## Show what `make release` would upload to CurseForge
 
 release: ## Upload the built zips to CurseForge (needs CURSEFORGE_TOKEN)
 	@./scripts/release.sh
+
+# One family at a time, for when only that family was rebuilt. `release` does all eleven.
+# The meta addon comes last in both, since CurseForge resolves its dependencies at upload time.
+
+release-standard: ## Upload the standard packs and their meta addon
+	@./scripts/release.sh audio-alliance audio-horde audio-shared audio-gossip audio-all
+
+release-hq: ## Upload the HQ packs and their meta addon
+	@./scripts/release.sh hq-alliance hq-horde hq-shared hq-gossip hq-all
 
 # --- the ignore list ------------------------------------------------------------------
 #
