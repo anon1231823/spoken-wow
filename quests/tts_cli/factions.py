@@ -40,15 +40,29 @@ PACK_SUFFIXES = {
     "gossip": "Gossip",
 }
 
-#: What the AddOns list shows. The folder names differ by a suffix nobody reads, so this is
-#: what a player actually tells the packs apart by.
-PACK_TITLES = {
-    "all": "VoiceOver Redux Audio: All",
-    "alliance": "VoiceOver Redux Audio: Alliance",
-    "horde": "VoiceOver Redux Audio: Horde",
-    "shared": "VoiceOver Redux Audio: Shared Quests",
-    "gossip": "VoiceOver Redux Audio: Gossip",
+#: The half of a title that names the pack. What comes before it is the family - see
+#: pack_title - because the same four packs ship at more than one quality, each family with
+#: CurseForge projects of its own.
+PACK_LABELS = {
+    "all": "All",
+    "alliance": "Alliance",
+    "horde": "Horde",
+    "shared": "Shared Quests",
+    "gossip": "Gossip",
 }
+
+#: The family every pack belongs to unless told otherwise. The HQ builds pass their own.
+DEFAULT_TITLE_FAMILY = "VoiceOver Redux Audio"
+
+
+def pack_title(pack: str, family: str = DEFAULT_TITLE_FAMILY) -> str:
+    """What the AddOns list shows, which is also what the CurseForge project is called.
+
+    The folder names differ by a suffix nobody reads, so this is what a player actually tells
+    the packs apart by - and a player running the standard Alliance pack and the HQ one wants
+    to see which is which.
+    """
+    return f"{family}: {PACK_LABELS[pack]}"
 
 
 def load_sides(path: str = DEFAULT_FACTIONS_PATH) -> dict:

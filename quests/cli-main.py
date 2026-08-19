@@ -17,8 +17,8 @@ from tts_cli.build import (DEFAULT_ADDONS_DIR, DEFAULT_DIST_DIR,
                            DEFAULT_MODULE_NAME, build_module, install_module)
 from tts_cli.corpus import DEFAULT_CORPUS_PATH, load_corpus
 from tts_cli.env_vars import ELEVENLABS_API_KEY
-from tts_cli.factions import (DEFAULT_FACTIONS_PATH, PACK_TITLES, PACKS, load_sides,
-                              pack_stems)
+from tts_cli.factions import (DEFAULT_FACTIONS_PATH, PACKS, load_sides, pack_stems,
+                              pack_title)
 from tts_cli.ignores import DEFAULT_IGNORED_PATH, ignored_files, load_ignored
 from tts_cli.select import estimate, select_lines, unique_by_file
 from tts_cli.store import DEFAULT_SOURCE_DIR, DEFAULT_STORE_DIR, import_audio
@@ -188,7 +188,7 @@ elif args.mode == "build":
     report = build_module(corpus, args.store, args.dist,
                           args.module, args.version, progress=True,
                           ignored=load_ignored(args.ignored), include=include,
-                          title=args.module_title or PACK_TITLES[args.pack])
+                          title=args.module_title or pack_title(args.pack))
     print(f"\nbuilt {report['moduleDir']}")
     print(f"  audio files {report['audioFiles']} ({report['audioFormat']}, pack: {args.pack})")
     for name, rows in sorted(report["tableRows"].items()):

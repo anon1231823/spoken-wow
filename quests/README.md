@@ -129,6 +129,7 @@ make package                       # the player addon, one zip per client
 make package-audio                 # transcode to ogg, build five packs, zip each -> dist/
 make package-audio-hq              # every line in one folder, full bandwidth (~1.3 GB)
 make package-audio-hq-split        # the four packs at full bandwidth (~300 MB each)
+make package-meta-hq               # the "install everything" addon for the HQ family
 make package-audio PACKS=all       # only the complete pack, when trying an encode change
 make package-audio VERSION=1.4.0   # the version written into each pack's .toc
 ENCODE=copy make package-audio     # the masters untouched, to hear what is being given up
@@ -155,13 +156,23 @@ zip in `shared/downloads/` on the droplet and repoints
 [`/downloads/VoiceOverReduxAudioHQ-latest.zip`](https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip),
 a symlink, so the published URL never changes. See `deploy/README.md`.
 
-`make package-audio-hq-split` cuts the same full-bandwidth audio the same four ways —
-`VoiceOverReduxAudioAllianceHQ` and friends, ~300 MB each. Unlike the one-folder HQ pack those
-*are* under CurseForge's ceiling, so they can have projects when there are projects to give
-them. A folder per quality rather than a second file on the standard pack's project: an addon
-manager installs a project's newest file, so sharing a name would move a player from the
-quality they picked into the other one. `NAME_SUFFIX` and `TITLE_SUFFIX` are what append `HQ`
-to a build's folder names and titles. `docs/pack-size.md` is where every encode
+**There are two families of packs**, the standard ones and the full-bandwidth HQ ones, each
+with five CurseForge projects of its own — four packs and a meta addon:
+
+| | Standard | HQ |
+| --- | --- | --- |
+| Folders | `VoiceOverReduxAudio…` | `VoiceOverReduxHQAudio…` |
+| Titles | `VoiceOver Redux Audio: Alliance` | `VoiceOver Redux HQ Audio: Alliance` |
+| Encode | `ogg-q-1-22k`, ~150 MB a pack | `ogg-q0-44k`, ~300 MB a pack |
+| Built by | `make package-audio` + `package-meta` | `make package-audio-hq-split` + `package-meta-hq` |
+
+`MODULE` and `TITLE_FAMILY` are what make a family: the first is the folder every pack suffix
+is appended to, the second the words before the colon in every title. A family per quality
+rather than two files on one project, because an addon manager installs a project's newest
+file and would otherwise move a player from the quality they picked into the other one.
+
+The one-folder `VoiceOverReduxAudioHQ` from `make package-audio-hq` is separate from both: it
+is 1.2 GB, cannot be uploaded anywhere, and is what the site hosts. `docs/pack-size.md` is where every encode
 was measured, along with the dead ends (deduplication, silence trimming, harder zip
 compression — all worth nothing).
 

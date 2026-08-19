@@ -33,6 +33,11 @@ NAME="${NAME:-VoiceOverReduxAudio}"
 DIST="${DIST:-$REPO/dist}"
 VERSION="${VERSION:-1.2.1}"
 ZIP="${ZIP:-1}"
+# What this stub is called and which packs it describes. There are two families - the standard
+# packs and the full-bandwidth ones - and each has a project of its own on CurseForge, so each
+# needs a stub of its own. release.sh holds the dependency list that does the actual work.
+TITLE="${TITLE:-VoiceOver Redux Audio: All}"
+VARIANT="${VARIANT:-}"
 
 module_dir="$DIST/$NAME"
 rm -rf "$module_dir"
@@ -51,8 +56,8 @@ cp "$REPO/assets/icon/icon.tga" "$module_dir/icon.tga"
 
 cat > "$module_dir/$NAME.toc" <<TOC
 ## Interface: 100000
-## Title: VoiceOver Redux Audio: All
-## Notes: Installs every VoiceOver Redux sound pack - Alliance, Horde, Shared Quests and Gossip.|n|nThis addon holds no audio itself. If your addon manager did not fetch the four packs with it, install them yourself; |cFFFFD200VoiceOver Redux|r plays whatever it finds.
+## Title: $TITLE
+## Notes: Installs every VoiceOver Redux sound pack$VARIANT - Alliance, Horde, Shared Quests and Gossip.|n|nThis addon holds no audio itself. If your addon manager did not fetch the four packs with it, install them yourself; |cFFFFD200VoiceOver Redux|r plays whatever it finds.
 ## Version: $VERSION
 ## IconTexture: Interface\\AddOns\\$NAME\\icon.tga
 ## Group: VoiceOverRedux

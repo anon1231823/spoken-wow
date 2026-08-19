@@ -70,7 +70,8 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
         pull-history push-history history-status pull-ignores package package-audio \
-        package-audio-hq package-audio-hq-split package-meta push-hq downloads-status \
+        package-audio-hq package-audio-hq-split package-meta package-meta-hq push-hq \
+        downloads-status \
         factions release \
         release-dry deploy-scripts \
         rollback releases \
@@ -235,8 +236,13 @@ package-audio-hq: ## Build the full-bandwidth pack, every line in one folder (~1
 # quality they picked into the other one.
 
 package-audio-hq-split: ## The four packs at full bandwidth (~300 MB each)
-	@VERSION=$(VERSION) ENCODE=ogg-q0-44k NAME_SUFFIX=HQ TITLE_SUFFIX=" HQ" \
-	  JOBS=$(JOBS) ./scripts/package-audio.sh
+	@VERSION=$(VERSION) ENCODE=ogg-q0-44k MODULE=VoiceOverReduxHQAudio \
+	  TITLE_FAMILY="VoiceOver Redux HQ Audio" JOBS=$(JOBS) ./scripts/package-audio.sh
+
+package-meta-hq: ## Zip the meta addon for the HQ family
+	@VERSION=$(VERSION) NAME=VoiceOverReduxHQAudio \
+	  TITLE="VoiceOver Redux HQ Audio: All" VARIANT=" at full bandwidth" \
+	  ./scripts/package-meta.sh
 
 # The "install everything" addon, which installs nothing itself: a few kilobytes declaring the
 # four packs as CurseForge dependencies, because the complete pack is too big to upload. Its

@@ -2,8 +2,8 @@ import json
 
 import pytest
 
-from tts_cli.factions import (PACK_SUFFIXES, PACK_TITLES, PACKS, load_sides,
-                              pack_of_line, pack_stems)
+from tts_cli.factions import (PACK_LABELS, PACK_SUFFIXES, PACKS, load_sides,
+                              pack_of_line, pack_stems, pack_title)
 
 CORPUS = {
     "lines": [
@@ -73,10 +73,22 @@ def test_pack_names_are_stable():
     assert PACKS == ("all", "alliance", "horde", "shared", "gossip")
 
 
-def test_every_pack_has_a_folder_suffix_and_a_title():
-    # A pack with no suffix would build over another pack's folder, and one with no title
+def test_every_pack_has_a_folder_suffix_and_a_label():
+    # A pack with no suffix would build over another pack's folder, and one with no label
     # would be indistinguishable in the AddOns list.
     assert set(PACK_SUFFIXES) == set(PACKS)
-    assert set(PACK_TITLES) == set(PACKS)
+    assert set(PACK_LABELS) == set(PACKS)
     assert len(set(PACK_SUFFIXES.values())) == len(PACKS)
-    assert len(set(PACK_TITLES.values())) == len(PACKS)
+    assert len(set(PACK_LABELS.values())) == len(PACKS)
+
+
+def test_a_title_reads_as_the_project_it_ships_to():
+    assert pack_title("alliance") == "VoiceOver Redux Audio: Alliance"
+    assert pack_title("shared") == "VoiceOver Redux Audio: Shared Quests"
+
+
+def test_a_family_names_a_whole_set_of_packs_at_once():
+    # The HQ packs are the same four cut the same way at a different quality, and their
+    # CurseForge projects are named for the family rather than per pack - so the family is a
+    # parameter and not five more constants to keep in step.
+    assert pack_title("horde", "VoiceOver Redux HQ Audio") == "VoiceOver Redux HQ Audio: Horde"

@@ -64,12 +64,13 @@ LABEL="${LABEL:-}"
 # full bandwidth, which is a thing of its own rather than a bigger copy of the All pack.
 MODULE_NAME="${MODULE_NAME:-}"
 TITLE="${TITLE:-}"
-# Appended to every folder name and title instead of replacing them, which is what the HQ
-# versions of the four packs need: VoiceOverReduxAudioAllianceHQ beside VoiceOverReduxAudio-
-# Alliance. A folder of its own per quality, because two packs under one name would have an
-# addon manager updating a player from the quality they chose into the other one.
-NAME_SUFFIX="${NAME_SUFFIX:-}"
-TITLE_SUFFIX="${TITLE_SUFFIX:-}"
+# The family a build belongs to: MODULE is the folder every pack's suffix is appended to, and
+# TITLE_FAMILY the words before the colon in every title. The HQ packs are the same four cut
+# the same way at a different quality, so they are a family of their own -
+# VoiceOverReduxHQAudioAlliance, "VoiceOver Redux HQ Audio: Alliance" - rather than a variant
+# spelled onto the end of each name. A folder per quality, because two packs under one name
+# would have an addon manager updating a player from the quality they chose into the other.
+TITLE_FAMILY="${TITLE_FAMILY:-}"
 # kbps above which an mp3 is worth re-encoding as an mp3. See tools/plan_transcode.py.
 THRESHOLD="${THRESHOLD:-80}"
 
@@ -248,9 +249,10 @@ for pack in $PACKS; do
     module="$MODULE_NAME"
   else
     suffix="$("$PYTHON" -c "from tts_cli.factions import PACK_SUFFIXES; print(PACK_SUFFIXES['$pack'])")"
-    module="$MODULE$suffix$NAME_SUFFIX"
-    if [ -n "$TITLE_SUFFIX" ]; then
-      title="$("$PYTHON" -c "from tts_cli.factions import PACK_TITLES; print(PACK_TITLES['$pack'])")$TITLE_SUFFIX"
+    module="$MODULE$suffix"
+    if [ -n "$TITLE_FAMILY" ]; then
+      title="$(TITLE_FAMILY="$TITLE_FAMILY" "$PYTHON" -c \
+        "import os; from tts_cli.factions import pack_title; print(pack_title('$pack', os.environ['TITLE_FAMILY']))")"
     fi
   fi
 
