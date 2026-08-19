@@ -46,7 +46,7 @@ cd "$REPO"
 STORE="${STORE:-audio}"
 DIST="${DIST:-dist}"
 MODULE="${MODULE:-VoiceOverReduxAudio}"
-VERSION="${VERSION:-1.2.0}"
+VERSION="${VERSION:-1.2.1}"
 # Which packs to build; each becomes MODULE plus the suffix tts_cli/factions.py gives it.
 #
 # The four that ship. 'all' - one folder holding every line - is deliberately not among them:

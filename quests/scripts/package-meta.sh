@@ -31,7 +31,7 @@ cd "$REPO"
 
 NAME="${NAME:-VoiceOverReduxAudio}"
 DIST="${DIST:-$REPO/dist}"
-VERSION="${VERSION:-1.2.0}"
+VERSION="${VERSION:-1.2.1}"
 ZIP="${ZIP:-1}"
 
 module_dir="$DIST/$NAME"

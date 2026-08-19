@@ -6,6 +6,11 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 1.2.1 — sound packs
+
+- The packs show their own artwork in the AddOns list instead of the client's red question
+  mark. No audio changed; this is 1.2.0 with an icon.
+
 ## 1.2.0 — sound packs
 
 **The pack is now five packs, and you only need two of them.**
@@ -25,6 +30,11 @@ carries that version. The heading says which.
   `VoiceOverReduxAudio` folder becomes the small "All" addon, and the packs arrive beside it.
   If you installed by hand, delete the old folder after installing the new packs, or it keeps
   serving the audio it already has.
+
+## 1.1.1 — player
+
+- Shows its own artwork in the AddOns list instead of the client's red question mark. Nothing
+  else changed.
 
 ## 1.1.0 — player
 
