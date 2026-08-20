@@ -700,6 +700,18 @@ Alterac Valley questgivers are spawned by the battleground's scripts and appear 
 the scan flags quests a player really can do. Read the quest, then ignore it in the explorer
 where the decision carries a reason.
 
+### Reporting a line
+
+Two routes, one destination. In the explorer, every row has a flag button that opens the report
+form in a dialog — no navigation, and the row already knows which line it is, so the report
+carries a `lineId` as well as an address. From the game, the addon's Report button gives the
+player an address to open, which lands on `/r/…` and shows the same form.
+
+Both write the same `target` string (`lib/reports/line-target.ts` composes it from a corpus
+line, mirroring `formatTarget`), so triage reads one list rather than two. The button is
+outside the collaborator gate on purpose: `POST /api/reports` is unauthenticated by design,
+because reporting is what a player who cannot sign in has.
+
 ### Reports from inside the game
 
 The addon shows a **Report** button in the bottom-right corner of the sound queue frame,

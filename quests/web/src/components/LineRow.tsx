@@ -3,6 +3,7 @@
 import {
   ChevronDownIcon,
   EyeOffIcon,
+  FlagIcon,
   MessageSquareIcon,
   PencilIcon,
   PlayIcon,
@@ -13,6 +14,7 @@ import IssueChip from "./IssueChip";
 import LineHistory from "./LineHistory";
 import RegenerateButton from "./RegenerateButton";
 import { Button } from "./ui/button";
+import { targetForLine } from "@/lib/reports/line-target";
 import { cn } from "@/lib/utils";
 import type { LineState } from "./Explorer";
 import type { ResultLine } from "@/lib/search";
@@ -85,6 +87,8 @@ type Props = {
   /** Open the ignore dialog, or null for anyone not allowed to make that decision. */
   onIgnore: ((line: ResultLine) => void) | null;
   onRegenerate: (line: ResultLine) => void;
+  /** Open the report dialog. Everyone gets this, signed in or not. */
+  onReport: (line: ResultLine) => void;
   onRestored: (file: string, version: number) => void;
   /** Narrow the search to this line's NPC, or to its quest. */
   onNarrowToNpc: (line: ResultLine) => void;
@@ -124,6 +128,7 @@ export default function LineRow({
   onEditText,
   onIgnore,
   onRegenerate,
+  onReport,
   onRestored,
   onNarrowToNpc,
   onNarrowToQuest,
@@ -305,8 +310,23 @@ export default function LineRow({
       </td>
 
       <td className="py-1.5 pr-1 pl-0">
-        {canRegenerate && (
-          <span className="flex items-center justify-end">
+        <span className="flex items-center justify-end">
+          {/* Outside the canRegenerate gate, deliberately: reporting is what a player who
+              cannot sign in has, and /api/reports is unauthenticated for the same reason.
+              Hidden only when the line has no address the report page could resolve. */}
+          {targetForLine(line) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Report a problem with this line"
+              aria-label={`Report ${line.npcName}'s line`}
+              onClick={() => onReport(line)}
+            >
+              <FlagIcon className="size-3.5" />
+            </Button>
+          )}
+          {canRegenerate && (
+            <>
             <Button
               variant="ghost"
               size="icon"
@@ -340,8 +360,9 @@ export default function LineRow({
               blocked={blocked}
               onClick={() => onRegenerate(line)}
             />
-          </span>
-        )}
+            </>
+          )}
+        </span>
       </td>
     </tr>
   );

@@ -7,6 +7,7 @@ import LineRow from "./LineRow";
 import Pagination from "./Pagination";
 import Player from "./Player";
 import IgnoreDialog from "./IgnoreDialog";
+import ReportDialog from "./ReportDialog";
 import OverrideDialog from "./OverrideDialog";
 import RegenerateDialog from "./RegenerateDialog";
 import RegenerationPanel from "./RegenerationPanel";
@@ -154,6 +155,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
   // The line whose spoken text is being rewritten, or null.
   const [editing, setEditing] = useState<ResultLine | null>(null);
   const [ignoring, setIgnoring] = useState<ResultLine | null>(null);
+  // Anyone can open this one, signed in or not - see ReportDialog.
+  const [reporting, setReporting] = useState<ResultLine | null>(null);
   const [pendingBatch, setPendingBatch] = useState<{
     label: string;
     /**
@@ -767,6 +770,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 onPlay={play}
                 onEditText={setEditing}
                 onIgnore={canConfigure ? setIgnoring : null}
+                onReport={setReporting}
                 onRegenerate={regenerateLine}
                 onRestored={handleRestored}
                 onNarrowToNpc={narrowToNpc}
@@ -803,6 +807,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
         onSaved={handleIgnoreSaved}
         onCancel={() => setIgnoring(null)}
       />
+
+      <ReportDialog line={reporting} onClose={() => setReporting(null)} />
 
       <RegenerateDialog
         pending={pendingBatch}
