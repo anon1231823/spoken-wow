@@ -744,7 +744,12 @@ export default function Explorer({ facets }: { facets: Facets }) {
             <col className="w-32" />
             <col className="w-28" />
             <col />
-            <col className={showRegenerate ? "w-20" : "w-0"} />
+            {/* Wide enough for what the cell actually holds, which the old w-20 was not: icon
+                buttons are 32px, and a collaborator can have five of them side by side - report,
+                edit, ignore, history, regenerate - so anything narrower pushes them left over
+                the line text. w-10 for everyone else, who has the report button and nothing
+                more; never w-0, since that button is not gated. */}
+            <col className={showRegenerate ? "w-44" : "w-10"} />
           </colgroup>
           <thead>
             <tr className="text-muted-foreground border-border border-b text-left text-xs">
