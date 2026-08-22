@@ -498,8 +498,13 @@ local SlashCommands = {
                 end
 
                 local channel = Enums.SoundChannel:GetName(Addon.db.profile.Audio.SoundChannel)
-                local willPlay, handle = PlaySoundFile(soundData.filePath, channel)
-                if willPlay then
+                -- Through Utils, not PlaySoundFile: the older clients replace Utils:PlaySound
+                -- wholesale - 2.4.3 and 3.3.5 play voiceovers on the music channel so they can
+                -- be stopped at all - and a self-test that took a route the queue never takes
+                -- would answer a question nobody asked. Same guard as SoundQueue:PlaySound,
+                -- where a legacy override returns nothing rather than a willPlay.
+                local willPlay = Utils:PlaySound(soundData)
+                if Version.IsAnyLegacy or willPlay then
                     Debug:Record("self-test-playing", format("Self-test accepted on %s: %s", channel, soundData.filePath))
                     print(format("|cFF40FF40VoiceOver test started on %s.|r You should hear a short voice line.", channel))
                 else

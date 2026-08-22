@@ -303,17 +303,26 @@ function Addon:OnInitialize()
         end
     end
 
-    local tickerInstalled, tickerOrError = pcall(self.ScheduleRepeatingTimer, self, function()
-        local succeeded, pollError = pcall(PollAutomaticQuest)
-        if not succeeded then
-            Debug:Record("auto-watcher-error", tostring(pollError))
-        end
-    end, AUTO_POLL_INTERVAL)
-    if tickerInstalled then
-        self.autoQuestTicker = tickerOrError
-        Debug:Record("auto-watcher-ready", "AceTimer GetQuestID polling is active")
+    -- The watcher cannot work on a private-server client and must not be installed there.
+    -- GetQuestID does not exist before 3.3.0, so Compatibility.lua substitutes one that
+    -- resolves a quest fuzzily from text captured by the QUEST_DETAIL/PROGRESS/COMPLETE
+    -- handlers - which the poll below is trying to decide whether to call. It would poll a
+    -- zero forever. Those clients dispatch from the events directly instead; see directEvents.
+    if Version.IsAnyLegacy then
+        Debug:Record("auto-watcher-skipped", "Legacy client: quest events dispatch directly")
     else
-        Debug:Record("auto-watcher-install-failed", tostring(tickerOrError))
+        local tickerInstalled, tickerOrError = pcall(self.ScheduleRepeatingTimer, self, function()
+            local succeeded, pollError = pcall(PollAutomaticQuest)
+            if not succeeded then
+                Debug:Record("auto-watcher-error", tostring(pollError))
+            end
+        end, AUTO_POLL_INTERVAL)
+        if tickerInstalled then
+            self.autoQuestTicker = tickerOrError
+            Debug:Record("auto-watcher-ready", "AceTimer GetQuestID polling is active")
+        else
+            Debug:Record("auto-watcher-install-failed", tostring(tickerOrError))
+        end
     end
 
     local slashInstalled, slashError = pcall(function()
@@ -332,16 +341,25 @@ function Addon:OnInitialize()
         table.insert(self.eventBridgeErrors, "AceEvent ADDON_LOADED: " .. tostring(aceError))
     end
 
-    -- Quest detail/progress/completion are intentionally absent here. On
-    -- Classic Era those synchronous events can fire before GetQuestID and the
-    -- text globals change, replaying the previous quest. The stabilized 10 Hz
-    -- watcher above is their single automatic dispatcher.
+    -- Quest detail/progress/completion are intentionally absent here on Blizzard's clients. On
+    -- Classic Era those synchronous events can fire before GetQuestID and the text globals
+    -- change, replaying the previous quest. The stabilized 10 Hz watcher above is their single
+    -- automatic dispatcher.
+    --
+    -- On a private-server client the race does not exist, the watcher does not run, and these
+    -- events are the only route to quest audio - they are also what sets the text
+    -- Compatibility.lua's GetQuestID substitute reads, so nothing resolves until one fires.
     local directEvents = {
         "QUEST_GREETING",
         "QUEST_FINISHED",
         "GOSSIP_SHOW",
         "GOSSIP_CLOSED",
     }
+    if Version.IsAnyLegacy then
+        table.insert(directEvents, "QUEST_DETAIL")
+        table.insert(directEvents, "QUEST_PROGRESS")
+        table.insert(directEvents, "QUEST_COMPLETE")
+    end
     local directEventLookup = {}
     local lastDispatch = {}
     local dispatching = {}
@@ -442,8 +460,13 @@ function Addon:OnInitialize()
 
     -- Hook the exact Blizzard dispatcher that updates the visible quest
     -- panels. This runs after Blizzard has populated GetQuestID/GetTitleText.
+    --
+    -- Blizzard's own function is what is hooked here, so the frame overrides that normalize
+    -- handler arguments on the older clients do not apply: before 3.0.2 it takes no arguments
+    -- and reads the global `event` instead.
     if QuestFrame_OnEvent and hooksecurefunc then
         local hooked, hookError = pcall(hooksecurefunc, "QuestFrame_OnEvent", function(frame, event)
+                event = event or _G.event
                 if directEventLookup[event] then
                     SignalDirectEvent(event, "QuestFrame_OnEvent hook")
                 end

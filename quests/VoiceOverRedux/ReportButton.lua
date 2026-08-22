@@ -89,12 +89,21 @@ function ReportButton:CurrentTarget()
     return self:TargetForGUID(Utils:GetNPCGUID())
 end
 
+-- The address the popup is currently showing. Held here rather than passed to
+-- StaticPopup_Show, whose `data` argument and the dialog/data handler signature both postdate
+-- the private-server clients: there the popup would open with an empty box.
+local shownLink
+
 function ReportButton:ShowLink(target)
-    StaticPopup_Show(COPY_DIALOG, nil, nil, format("%s/r/%s", SITE_URL, target))
+    shownLink = format("%s/r/%s", SITE_URL, target)
+    StaticPopup_Show(COPY_DIALOG)
 end
 
 function ReportButton:Create(parent)
-    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    -- Named, because 1.12's UIPanelButtonTemplate gives its label the name "$parentText" and an
+    -- unnamed button leaves that substitution with nothing to resolve against.
+    local name = format("VoiceOverReduxReportButton%d", getn(self.buttons) + 1)
+    local button = CreateFrame("Button", name, parent, "UIPanelButtonTemplate")
     button:SetWidth(64)
     button:SetHeight(22)
     button:SetText("Report")
@@ -123,23 +132,30 @@ function ReportButton:Initialize()
         whileDead = 1,
         hasEditBox = true,
         editBoxWidth = 260,
-        OnShow = function(dialog, data)
-            local editBox = dialog.editBox or _G[dialog:GetName() .. "EditBox"]
+        -- `dialog or this`, here and below: before 3.x a StaticPopup handler is called with no
+        -- arguments at all and the frame arrives as the global `this`.
+        OnShow = function(dialog)
+            dialog = dialog or this
+            local editBox = dialog and (dialog.editBox or _G[dialog:GetName() .. "EditBox"])
             if not editBox then
                 return
             end
-            editBox.voiceoverLink = data
-            editBox:SetText(data or "")
+            -- editBoxWidth is read by newer StaticPopup code only, so set it here as well.
+            editBox:SetWidth(260)
+            editBox.voiceoverLink = shownLink
+            editBox:SetText(shownLink or "")
             editBox:SetFocus()
             editBox:HighlightText()
         end,
         EditBoxOnTextChanged = function(editBox)
+            editBox = editBox or this
             if editBox.voiceoverLink and editBox:GetText() ~= editBox.voiceoverLink then
                 editBox:SetText(editBox.voiceoverLink)
                 editBox:HighlightText()
             end
         end,
         EditBoxOnEscapePressed = function(editBox)
+            editBox = editBox or this
             editBox:GetParent():Hide()
         end,
     }
