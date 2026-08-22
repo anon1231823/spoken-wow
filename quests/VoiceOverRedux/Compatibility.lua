@@ -559,6 +559,18 @@ if Version.IsLegacyVanilla then
     end
 
 end
+-- Patch 3.0.2 (2008-10-14): script handlers started receiving the frame and the event as
+-- arguments. Before it they read the globals `this`, `event` and `arg1`...`arg9`, so a handler
+-- written the modern way is called with nils. 1.12 gets this from the block above; 2.4.3 needs
+-- it for the same reason, and only these frames are affected - the override reaches whatever
+-- was built through this file's CreateFrame.
+if Version.IsLegacyBurningCrusade then
+    function FrameOverrides:SetScript(script, handler)
+        self:_SetScript(script, script == "OnEvent"
+            and function() handler(this, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) end
+            or  function() handler(this,        arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) end)
+    end
+end
 if Version.IsLegacyVanilla or Version.IsLegacyBurningCrusade then
 
     local modelFramePool = {}

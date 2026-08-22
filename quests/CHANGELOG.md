@@ -6,6 +6,23 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 1.2.0 — player
+
+**The 1.12, 2.4.3 and 3.3.5 private-server clients are supported again.** Each has a zip of its
+own on the [GitHub releases page](https://github.com/rusty-key/wow-voiceover/releases), carrying
+the one `.toc` that client reads and the Ace3 build it needs. Blizzard's clients keep the single
+zip they already had.
+
+- Quest voiceovers now fire on those clients. They dispatch from the quest events directly,
+  where the frame-polling reader current Classic needs cannot work.
+- The Report button opens its copy box on them too, and its address is selectable.
+- "Test Audio" plays through the same path the queue does, so on 2.4.3 and 3.3.5 it uses the
+  music channel and can be stopped, as a real voiceover can.
+- `/vo diagnostics` reports the addon's actual version instead of a stale one.
+
+The sound packs are unchanged: install the same ones, and the player loads them even where the
+client calls them out of date.
+
 ## 1.2.1 — sound packs
 
 - The packs show their own artwork in the AddOns list instead of the client's red question

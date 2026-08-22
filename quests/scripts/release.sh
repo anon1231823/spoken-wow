@@ -42,6 +42,10 @@ API="https://wow.curseforge.com/api"
 # Era and the 2.5.6 Anniversary client only. The zip carries _Wrath and _Mainline TOCs as
 # well, but nothing here has been run on those clients, and a file offered to a client it
 # misbehaves on is worse than one that is simply absent there.
+#
+# The 1.12, 2.4.3 and 3.3.5 zips package.sh also builds are deliberately not uploaded here:
+# CurseForge has no game version to file them against. They go out on the GitHub release that
+# .github/workflows/release-player.yaml publishes from a tag.
 GAME_VERSION_ERA="${GAME_VERSION_ERA:-1.15.9}"
 GAME_VERSION_ANNIVERSARY="${GAME_VERSION_ANNIVERSARY:-2.5.6}"
 

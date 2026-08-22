@@ -195,9 +195,12 @@ history-status: ## Compare take count and size on both sides
 # the player touch no voiceline, and the sound pack is three orders of magnitude larger.
 #
 # `package` takes its version from `## Version:` in VoiceOverRedux.toc, so bumping the addon
-# and naming the zip stay one edit. It refuses to build from an uncommitted tree, because a
+# and naming the zips stay one edit. It refuses to build from an uncommitted tree, because a
 # zip nobody can trace back to a commit is a zip nobody can rebuild - ALLOW_DIRTY=1 to
-# override while testing.
+# override while testing. Four zips come out: one for Blizzard's clients, which pick a .toc by
+# flavor suffix, and one apiece for 1.12, 2.4.3 and 3.3.5, which read VoiceOverRedux.toc and
+# nothing else and each need their own vendored Ace3 in it. Only the first goes to CurseForge;
+# the GitHub release workflow publishes all four.
 #
 # `package-audio` transcodes the store to Ogg Vorbis at 22.05 kHz and builds it into five
 # packs - Alliance, Horde, the quests both sides share, gossip, and one holding everything -
@@ -211,7 +214,7 @@ history-status: ## Compare take count and size on both sides
 # building one after the other leaves both zips and the second one's module in dist/.
 # docs/pack-size.md is where the two encodes were measured against everything else.
 
-package: ## Zip the player addon, one per client, into dist/
+package: ## Zip the player addon into dist/: one Blizzard zip, one per legacy client
 	@./scripts/package.sh
 
 package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.4.0)

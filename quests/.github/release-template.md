@@ -1,34 +1,49 @@
 ## Download
 
-### Players
-| Addon Version | GitHub Direct Link | Curse Link |
+### Player addon
+| Client | GitHub Direct Link | Curse Link |
 | ----- | ------------------ | ---------- |
-| Blizzard Classic (Vanilla & WotLK) | [GitHub ZIP Download]({{ github_zip_download_blizz }}) | [Curse]({{ curse_link_blizz }}) |
-| 1.12 | [GitHub ZIP Download]({{ github_zip_download_112 }}) | - |
-| 2.4.3 | [GitHub ZIP Download]({{ github_zip_download_243 }}) | - |
-| 3.3.5 | [GitHub ZIP Download]({{ github_zip_download_335 }}) | - |
+| Blizzard clients (Classic Era, Anniversary, Wrath, retail) | [GitHub ZIP Download]({{ github_zip_download_blizz }}) | [Curse]({{ curse_link_blizz }}) |
+| 1.12 (private Vanilla servers & Turtle) | [GitHub ZIP Download]({{ github_zip_download_112 }}) | - |
+| 2.4.3 (private TBC servers) | [GitHub ZIP Download]({{ github_zip_download_243 }}) | - |
+| 3.3.5 (private WotLK servers) | [GitHub ZIP Download]({{ github_zip_download_335 }}) | - |
 
-### Sound Packs
-| Sound Pack | GitHub Direct Link | Curse Link |
-| ----- | ------------------ | ---------- |
-| Vanilla Sounds | [GitHub ZIP Download]({{ github_zip_download_vanilla_sounds }}) | [Curse]({{ curse_link_vanilla_sounds }}) |
- TBC & WotLK Sounds | WIP | WIP |
+One zip serves every Blizzard client — it carries a `.toc` per flavor and the client picks.
+The three private-server clients read `VoiceOverRedux.toc` and nothing else, so each has a zip
+of its own, carrying the vendored Ace3 that client needs.
 
-**Curse is having issues with the Vanilla Sounds download** so I'm rehosting them here. The links have been updated to download from GitHub instead of Curse.
+### Sound packs
+The audio ships separately and does not change with the player. Install the pack for your side
+plus the shared one; gossip is optional.
+
+| Pack | Curse Link |
+| ----- | ---------- |
+| Alliance | [Curse]({{ curse_link_pack_alliance }}) |
+| Horde | [Curse]({{ curse_link_pack_horde }}) |
+| Shared Quests | [Curse]({{ curse_link_pack_shared }}) |
+| Gossip | [Curse]({{ curse_link_pack_gossip }}) |
+
+The packs are the same files on every client — download them from the Curse website by hand if
+your client is not one an addon manager supports. The player loads a pack whether or not the
+client marks it out of date.
 
 ## Instructions
-### Blizzard WoW (Vanilla and Wrath)
-- Install the [**Blizzard Classic Addon**]({{ curse_link_blizz }}) and [**Vanilla Sounds**]({{ curse_link_vanilla_sounds }}) using curse.
 
-### 1.12 (Private Vanilla Servers & Turtle)
-- Download the [**1.12 Addon**]({{ github_zip_download_112 }}) and [**Vanilla Sounds**]({{ github_zip_download_vanilla_sounds }}) zips and extract them to your Addons folder.
+### Blizzard clients
+- Install the [**player**]({{ curse_link_blizz }}) and the packs with your addon manager, or
+  unzip them into `Interface/AddOns`.
 
-### 2.4.3 (Private TBC Servers)
-- Download the [**2.4.3 Addon**]({{ github_zip_download_243 }}) and [**Vanilla Sounds**]({{ github_zip_download_vanilla_sounds }}) zips and extract them to your Addons folder.
+### 1.12 (private Vanilla servers & Turtle)
+- Unzip the [**1.12 player**]({{ github_zip_download_112 }}) and your packs into
+  `Interface/AddOns`.
 
-### 3.3.5 (Private WotLK Servers)
-- Download the [**3.3.5 Addon**]({{ github_zip_download_335 }}) and [**Vanilla Sounds**]({{ github_zip_download_vanilla_sounds }}) zips and extract them to your Addons folder.
+### 2.4.3 (private TBC servers)
+- Unzip the [**2.4.3 player**]({{ github_zip_download_243 }}) and your packs into
+  `Interface/AddOns`.
 
+### 3.3.5 (private WotLK servers)
+- Unzip the [**3.3.5 player**]({{ github_zip_download_335 }}) and your packs into
+  `Interface/AddOns`.
 
 ## Support This Project
 You can say thanks by donating here: {{ donation_link }}

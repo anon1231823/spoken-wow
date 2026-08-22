@@ -125,7 +125,7 @@ filesystem, so building the two together is what stops a line going silent.
 For a module to hand to players, use `make package-audio` instead: it transcodes first.
 
 ```bash
-make package                       # the player addon, one zip per client
+make package                       # the player addon: one Blizzard zip, one per legacy client
 make package-audio                 # transcode to ogg, build five packs, zip each -> dist/
 make package-audio-hq              # every line in one folder, full bandwidth (~1.3 GB)
 make package-audio-hq-split        # the four packs at full bandwidth (~300 MB each)
@@ -135,16 +135,27 @@ make package-audio VERSION=1.4.0   # the version written into each pack's .toc
 ENCODE=copy make package-audio     # the masters untouched, to hear what is being given up
 ```
 
-`make package` takes its version from `## Version:` in `VoiceOverRedux.toc` and produces one
-zip. It refuses to build from an uncommitted tree — `ALLOW_DIRTY=1` overrides while testing.
+`make package` takes its version from `## Version:` in `VoiceOverRedux.toc` and produces four
+zips. It refuses to build from an uncommitted tree — `ALLOW_DIRTY=1` overrides while testing —
+and refuses when a variant `.toc` or `Environment.lua` names a different version, which is drift
+nothing else notices until it ships.
 
-**One zip, because the addon targets Blizzard's clients only.** Those pick a `.toc` by flavor
-suffix — `_Vanilla`, `_TBC`, `_Wrath`, `_Mainline` — so a single archive serves Classic Era
-through retail and the client chooses. It used to be four: the 1.12, 2.4.3 and 3.3.5 private
-server clients predate suffix support, read `VoiceOverRedux.toc` and nothing else, and each
-wanted a different file under that one name — three zips that could never be merged. They also
-needed their own vendored Ace3, which is why `1.12/`, `2.4.3/` and `3.3.5/` existed and were
-most of the addon's size. Dropping those clients took the zip matrix and 1 MB with them.
+**One zip for Blizzard's clients, one apiece for the private-server ones.** Blizzard's clients
+pick a `.toc` by flavor suffix — `_Vanilla`, `_TBC`, `_Wrath`, `_Mainline` — so a single archive
+serves Classic Era through retail and the client chooses. The 1.12, 2.4.3 and 3.3.5 clients
+predate suffix support: each reads `VoiceOverRedux.toc` and nothing else, and each wants a
+different file under that one name, so each needs an archive of its own. Each also loads its own
+vendored Ace3 from `VoiceOverRedux/<client>/`, because the root `Libs/AceTimer-3.0` binds
+`C_Timer.After` while loading and would error there. A legacy zip therefore carries one `.toc`,
+one Ace3, and neither of the other two clients' directories.
+
+CurseForge has no game version to file those zips against, so they are published to a GitHub
+release: tag `v<version>` and `.github/workflows/release-player.yaml` checks the tag against
+`## Version:`, runs this same script, and attaches all four zips.
+
+The sound packs are the same files on every client. Their `## Interface: 100000` is deliberate,
+and `DataModules` sets `checkAddonVersion` to 0 around `LoadAddOn` so a client that considers a
+pack out of date loads it anyway.
 
 **The shipping pack is Ogg Vorbis at 22.05 kHz**, which takes 3.2 GB of masters to about
 0.6 GB. Two things earn that, and they are worth keeping apart: Vorbis is worth 1.3–1.5×
