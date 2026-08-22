@@ -23,12 +23,9 @@
 
 local ADDON_NAME, ZoneLore = ...
 
--- Two discoveries can land together when a subzone sits on a zone border. Deep
--- enough to hold those, shallow enough that nothing narrates far behind the player.
-local QUEUE_LIMIT = 3
-
-local pending = {}
-local ticker = nil
+-- The queue itself lives in SoundQueue.lua, shared with every other route to a
+-- clip. This file decides what deserves narrating and hands it over; the depth
+-- cap, the dedup and the retry after combat are the queue's business now.
 
 --------------------------------------------------------------------------------
 -- Reading the client's own discovery messages
@@ -113,72 +110,34 @@ end
 -- Queue
 --------------------------------------------------------------------------------
 
-local function StopTicker()
-	if ticker then
-		ticker:Cancel()
-		ticker = nil
-	end
-end
-
+-- Why a queued clip may not start yet. Registered onto the queue at setup, and
+-- consulted every time it tries to advance.
+--
 -- Combat is worth waiting out rather than skipping: a clip starting mid-pull
--- competes with everything the player actually needs to hear.
-local function CanPlayNow()
-	if #pending == 0 then
-		return false
+-- competes with everything the player actually needs to hear. The queue holds
+-- rather than drops, and retries once the pull or the movie ends.
+--
+-- The item is inspected, not just the moment, because none of this applies to a
+-- player who pressed Play: clicking Play mid-pull means now. Only what this file
+-- queued waits.
+local function HoldReason(item)
+	if not item.autoplay then
+		return nil
 	end
 	if not ZoneLore:Get("autoplay") or not ZoneLore:IsVoiceEnabled() then
-		return false
-	end
-	if ZoneLore:IsPlayingLore() or ZoneLore:IsPaused() then
-		return false
+		return ZoneLore.L.QUEUE_HELD_OFF
 	end
 	if UnitAffectingCombat("player") then
-		return false
+		return ZoneLore.L.QUEUE_HELD_COMBAT
 	end
 	-- A starting-zone cinematic is the one moment a new character is guaranteed to
 	-- be discovering things, so narrating over it is the likeliest collision there
-	-- is. The queue holds rather than drops: the ticker retries once it ends.
+	-- is.
 	if (CinematicFrame and CinematicFrame:IsShown())
 		or (MovieFrame and MovieFrame:IsShown()) then
-		return false
+		return ZoneLore.L.QUEUE_HELD_CINEMATIC
 	end
-	return true
-end
-
-local function Drain()
-	if not CanPlayNow() then
-		if #pending == 0 then
-			StopTicker()
-		end
-		return
-	end
-
-	local entry = table.remove(pending, 1)
-	if #pending == 0 then
-		StopTicker()
-	end
-	ZoneLore:PlayLore(entry.mapID, entry.areaKey)
-end
-
--- The audio callback covers a clip ending; the ticker covers what has no event of
--- its own, which is leaving combat.
-local function StartTicker()
-	if ticker then
-		return
-	end
-	ticker = C_Timer.NewTicker(1, Drain)
-end
-
--- Called by ZoneLore:StopLore. Stop means silence, not "skip to the next thing I
--- discovered on the way here".
-function ZoneLore:ClearAutoplayQueue()
-	wipe(pending)
-	StopTicker()
-end
-
--- Drives the Next button: the controls need to know whether anything is waiting.
-function ZoneLore:AutoplayQueueLength()
-	return #pending
+	return nil
 end
 
 -- A continent is never autoplayed.
@@ -210,15 +169,6 @@ local function IsAutoplayableMap(mapID)
 	return info.mapType > CONTINENT_MAP_TYPE
 end
 
-local function IsQueued(mapID, areaKey)
-	for i = 1, #pending do
-		if pending[i].mapID == mapID and pending[i].areaKey == areaKey then
-			return true
-		end
-	end
-	return false
-end
-
 -- Returns whether the entry was queued, which the login greeting needs: a greeting that
 -- resolved nothing must not count as having greeted.
 local function Enqueue(mapID, areaKey)
@@ -241,25 +191,19 @@ local function Enqueue(mapID, areaKey)
 		return false
 	end
 
-	-- The login greeting below and a real discovery message can name the same
-	-- area, and an area on a zone border can be announced twice. Narrating it
-	-- twice in a row is worse than missing it.
-	if IsQueued(mapID, areaKey) or ZoneLore:IsPlayingLore(mapID, areaKey) then
+	local item = ZoneLore:NewLoreSound(mapID, areaKey)
+	if not item then
 		return false
 	end
 
-	table.insert(pending, { mapID = mapID, areaKey = areaKey })
-	while #pending > QUEUE_LIMIT do
-		table.remove(pending, 1)
-	end
-	StartTicker()
-	Drain()
+	-- Marks this as something the player did not ask for, which is what the hold
+	-- above keys on and what keeps a background failure from printing.
+	item.autoplay = true
 
-	-- Queueing behind a clip that is already playing changes what the controls
-	-- should say (Stop becomes Next) without changing what is playing, so the
-	-- notification Drain would have sent never happens on its own.
-	ZoneLore:NotifyAudioChanged()
-	return true
+	-- The queue refuses a duplicate of its own accord: the login greeting and a
+	-- real discovery message can name the same area, and an area on a zone border
+	-- can be announced twice. Narrating it twice in a row is worse than missing it.
+	return ZoneLore.SoundQueue:AddSoundToQueue(item)
 end
 
 --------------------------------------------------------------------------------
@@ -570,14 +514,14 @@ function ZoneLore:SetupAutoplay()
 		end
 	end)
 
-	self:OnAudioChanged(Drain)
+	self.SoundQueue:AddGate(HoldReason)
 	self:OnZoneChanged(NarrateUnheard)
 	self.autoplayFrame = frame
 
 	-- Delayed because GetSubZoneText is not reliably populated the instant the
 	-- world finishes loading, and repeated because on a new character the map is not
 	-- either. The cinematic needs no handling of its own: the greeting queues as soon
-	-- as it can and CanPlayNow holds it until the intro ends.
+	-- as it can and the hold above keeps it there until the intro ends.
 	local attempts = 0
 	local seed
 	seed = function()

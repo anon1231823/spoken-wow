@@ -11,10 +11,10 @@
 -- strings later is a second sweep of every file.
 --
 -- Only the files listed below draw their text from here so far. The rest still
--- hold English literals; converting one is mechanical, and UI/PlaybackBar.lua is
+-- hold English literals; converting one is mechanical, and UI/SoundQueueUI.lua is
 -- the worked example.
 --
---   UI/PlaybackBar.lua   every label and tooltip
+--   UI/SoundQueueUI.lua  every label and tooltip
 --   UI/MapPanel.lua      the two sentences that were built by concatenation
 --   Core.lua             the /zl command list
 
@@ -28,21 +28,31 @@ local L = {}
 
 L.PLAY = "Play"
 L.PAUSE = "Pause"
-L.STOP = "Stop"
-L.NEXT = "Next"
 L.READ = "Read"
 L.READ_INSTEAD = "Read instead"
 
 L.PLAY_TOOLTIP = "Starts this lore again from the beginning."
 L.PAUSE_TOOLTIP =
 	"The game cannot resume a sound part-way through, so playing again starts from the beginning."
-L.NEXT_TOOLTIP_COUNT = "%1$d more waiting."
-L.NEXT_TOOLTIP_RIGHT_CLICK = "Right-click to stop and discard the rest."
-L.BAR_DRAG_HINT = "Drag these controls to move them. /zl bar resets their position."
 L.READ_TOOLTIP = "Opens this lore in the window and keeps playing."
 L.READ_INSTEAD_TOOLTIP =
 	"Opens this lore in the window and stops the narration, discarding anything queued behind it."
 L.READ_SETTING_HINT = "Which one this does is a ZoneLore setting."
+
+--------------------------------------------------------------------------------
+-- Queue
+--------------------------------------------------------------------------------
+
+L.QUEUE_TITLE = "Up next"
+L.QUEUE_COUNT = "%1$d waiting"
+L.QUEUE_REMOVE_TOOLTIP = "Click to take this out of the queue."
+L.QUEUE_DRAG_HINT = "Drag this list to move it."
+
+-- Why a discovery is queued but silent. Without these, narration waiting out a
+-- pull looks exactly like narration that failed.
+L.QUEUE_HELD_COMBAT = "Waiting for combat to end."
+L.QUEUE_HELD_CINEMATIC = "Waiting for the cinematic to end."
+L.QUEUE_HELD_OFF = "Narration is turned off."
 
 --------------------------------------------------------------------------------
 -- Map panel
@@ -72,7 +82,7 @@ L.CMD_AUDIO = "  /zl audio      -- list sound packs, or switch with /zl audio <n
 L.CMD_LANG = "  /zl lang       -- list languages, or switch with /zl lang <code>"
 L.CMD_DISCOVER = "  /zl discover   -- pretend to discover an area (dev)"
 L.CMD_FORGET = "  /zl forget     -- forget what this character has been narrated"
-L.CMD_BAR = "  /zl bar        -- move the playback controls back below the minimap"
+L.CMD_BAR = "  /zl bar        -- move the player back to the middle of the screen"
 L.CMD_MINIMAP = "  /zl minimap    -- show or hide the minimap button"
 L.CMD_DEBUG = "  /zl debug      -- report area names on map click"
 L.CMD_VERIFY = "  /zl verify     -- check data against this client"

@@ -255,25 +255,26 @@ function ZoneLore:SetupOptions()
 		INDENT + INDENT, y, nil)
 
 	y = y + ROW_GAP
-	MakeCheckbox(content, "showPlaybackBar", "Show playback controls while narrating",
-		"A small movable Pause/Stop widget below the minimap, so narration can be "
-			.. "stopped without reopening the map. It appears only while a clip is "
-			.. "playing. Drag it to move it; /zl bar puts it back.",
+	MakeCheckbox(content, "showQueueUI", "Show the player while narrating",
+		"A movable frame naming what is being read aloud and what is queued behind "
+			.. "it, with Pause, Read and Report on it. Areas held back by combat or "
+			.. "a cinematic say so. Click a queued entry to drop it; /zl bar brings "
+			.. "the frame back to the middle of the screen.",
 		INDENT, y, function()
-			if ZoneLore.RefreshPlaybackBar then
-				ZoneLore:RefreshPlaybackBar()
+			if ZoneLore.RefreshSoundQueueUI then
+				ZoneLore:RefreshSoundQueueUI()
 			end
 		end)
 
 	y = y + ROW_GAP
 	MakeCheckbox(content, "stopAudioOnRead", "Stop narrating when you open the text",
-		"The Read button on those controls opens the lore window on whatever is "
+		"The Read button on the player opens the lore window on whatever is "
 			.. "playing. Ticked, it stops the narration too -- and discards anything "
 			.. "queued behind it -- so the button reads \"Read instead\". Unticked, "
 			.. "you read along.",
 		INDENT + INDENT, y, function()
-			if ZoneLore.RefreshPlaybackBar then
-				ZoneLore:RefreshPlaybackBar()
+			if ZoneLore.RefreshSoundQueueUI then
+				ZoneLore:RefreshSoundQueueUI()
 			end
 		end)
 

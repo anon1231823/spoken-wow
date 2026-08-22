@@ -38,7 +38,10 @@ local defaults = {
 	-- Dialog so narration rides the player's dialog volume slider rather than
 	-- competing with it. See Audio.lua for the channels PlaySoundFile accepts.
 	voiceChannel = "Dialog",
-	showPlaybackBar = true,
+	-- The backlog list, which only appears when something is actually waiting --
+	-- see UI/SoundQueueUI.lua. Its own position, scale and lock live in
+	-- ZoneLoreQueueDB, where the ported code that reads them expects to find them.
+	showQueueUI = true,
 	autoplay = true,
 	autoplaySubzones = true,
 	-- Off, because it replaces the client's own record of what a character has
@@ -51,8 +54,6 @@ local defaults = {
 	-- Off, so a player cannot end up reading an unfinished translation without
 	-- having asked for one. See Language.lua.
 	languagePreview = false,
-	-- `playbackBarPos` is deliberately absent: nil means "below the minimap", which
-	-- is an anchor rather than a coordinate and so cannot be expressed here.
 	-- `audioPack` likewise: nil means "the best pack installed", which is a rule
 	-- rather than a folder name, and naming a default here would pin the player to
 	-- a pack they may never install. See Audio.lua.
@@ -416,8 +417,8 @@ local function SetupHooks()
 	if ZoneLore.SetupMinimapButton then
 		ZoneLore:SetupMinimapButton()
 	end
-	if ZoneLore.SetupPlaybackBar then
-		ZoneLore:SetupPlaybackBar()
+	if ZoneLore.SetupSoundQueueUI then
+		ZoneLore:SetupSoundQueueUI()
 	end
 	if ZoneLore.SetupAutoplay then
 		ZoneLore:SetupAutoplay()
@@ -437,6 +438,7 @@ events:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" then
 		if arg1 == ADDON_NAME then
 			InitConfig()
+			ZoneLore:InitQueueDB()
 			self:UnregisterEvent("ADDON_LOADED")
 		end
 	elseif event == "PLAYER_ENTERING_WORLD" then
@@ -595,6 +597,11 @@ local function CmdStatus()
 
 	if ZoneLore.DescribeAutoplay then
 		ZoneLore:DescribeAutoplay()
+	end
+
+	local waiting = ZoneLore:QueueLength()
+	if waiting > 0 then
+		ZoneLore:Print("queue: %d waiting", waiting)
 	end
 
 	local pack = ZoneLore:GetActiveAudioPack()
@@ -862,9 +869,9 @@ SlashCmdList["ZONELORE"] = function(msg)
 		ZoneLore:Print('simulating discovery of "%s"', tostring(areaName))
 		ZoneLore:OnAreaDiscovered(areaName)
 	elseif cmd == "bar" then
-		if ZoneLore.ResetPlaybackBarPosition then
-			ZoneLore:ResetPlaybackBarPosition()
-			ZoneLore:Print("playback controls moved back below the minimap")
+		if ZoneLore.ResetPlayerPosition then
+			ZoneLore:ResetPlayerPosition()
+			ZoneLore:Print("player moved back to the middle of the screen")
 		end
 	elseif cmd == "debug" then
 		local enabled = not ZoneLore:Get("debug")

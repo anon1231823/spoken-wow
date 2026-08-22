@@ -3,7 +3,7 @@
 ## Notes: Shows additional lore about zones on the world map and minimap.|n|cffffcc00Beta:|r the narration is a proof-of-concept voice, being redesigned.
 ## Version: 0.4.3
 ## Author: rusty
-## SavedVariables: ZoneLoreDB
+## SavedVariables: ZoneLoreDB, ZoneLoreQueueDB
 ## SavedVariablesPerCharacter: ZoneLoreCharDB
 ## LoadSavedVariablesFirst: true
 # ^ load-bearing beyond convenience: the generated data files under Data/ ask
@@ -36,7 +36,10 @@ Locale/koKR.lua
 Locale/zhCN.lua
 Locale/zhTW.lua
 Core.lua
+QueueEnv.lua
 Audio.lua
+SoundUtils.lua
+SoundQueue.lua
 Autoplay.lua
 Data/enUS/Zones.lua
 Data/enUS/Subzones.lua
@@ -60,5 +63,5 @@ UI/SubzoneClick.lua
 UI/HoverPreview.lua
 UI/LoreWindow.lua
 UI/MinimapButton.lua
-UI/PlaybackBar.lua
+UI/SoundQueueUI.lua
 UI/Options.lua
