@@ -37,24 +37,53 @@ jobs:
       - name: Build the zips
         run: ./scripts/package.sh
 
-      - name: Generate release notes
-        uses: cuchi/jinja2-action@v1.2.2
-        with:
-          template: .github/release-template.md
-          output_file: release_notes.md
-          strict: true
-          variables: |
-            github_zip_download_blizz=https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/VoiceOverRedux-${{ steps.version.outputs.version }}.zip
-            github_zip_download_112=https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/VoiceOverRedux-WoW_1.12-${{ steps.version.outputs.version }}.zip
-            github_zip_download_243=https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/VoiceOverRedux-WoW_2.4.3-${{ steps.version.outputs.version }}.zip
-            github_zip_download_335=https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/VoiceOverRedux-WoW_3.3.5-${{ steps.version.outputs.version }}.zip
-            curse_link_blizz=https://www.curseforge.com/wow/addons/voiceover-redux
-            curse_link_pack_alliance=https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance
-            curse_link_pack_horde=https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde
-            curse_link_pack_shared=https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests
-            curse_link_pack_gossip=https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip
-            donation_link=https://ko-fi.com/evanpierce
-            discord_link=https://discord.gg/VdhUmA8ZCt
+      # Rendered here rather than by cuchi/jinja2-action: that action is a Docker action, so
+      # the runner builds its image before any step of this job runs, and its Dockerfile no
+      # longer builds - which failed the whole workflow before it reached the first step.
+      # Substitution into a fixed template needs no template engine anyway, and this keeps the
+      # engine's one useful behaviour: an unfilled placeholder is an error, not empty text.
+      - name: Render the release notes
+        env:
+          DOWNLOAD: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          python3 - <<'PY'
+          import os, re, sys
+
+          download, version = os.environ["DOWNLOAD"], os.environ["VERSION"]
+          variables = {
+              "github_zip_download_blizz": f"{download}/VoiceOverRedux-{version}.zip",
+              "github_zip_download_112": f"{download}/VoiceOverRedux-WoW_1.12-{version}.zip",
+              "github_zip_download_243": f"{download}/VoiceOverRedux-WoW_2.4.3-{version}.zip",
+              "github_zip_download_335": f"{download}/VoiceOverRedux-WoW_3.3.5-{version}.zip",
+              "curse_link_blizz": "https://www.curseforge.com/wow/addons/voiceover-redux",
+              "curse_link_pack_alliance": "https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance",
+              "curse_link_pack_horde": "https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde",
+              "curse_link_pack_shared": "https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests",
+              "curse_link_pack_gossip": "https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip",
+              "donation_link": "https://ko-fi.com/evanpierce",
+              "discord_link": "https://discord.gg/VdhUmA8ZCt",
+          }
+
+          with open(".github/release-template.md", encoding="utf-8") as handle:
+              template = handle.read()
+
+          missing = []
+
+          def substitute(match):
+              name = match.group(1)
+              if name not in variables:
+                  missing.append(name)
+                  return match.group(0)
+              return variables[name]
+
+          rendered = re.sub(r"{{\s*([a-z_0-9]+)\s*}}", substitute, template)
+          if missing:
+              sys.exit(f"release-template.md uses undefined variables: {', '.join(sorted(set(missing)))}")
+
+          with open("release_notes.md", "w", encoding="utf-8") as handle:
+              handle.write(rendered)
+          PY
 
       - name: Release
         uses: softprops/action-gh-release@v1
