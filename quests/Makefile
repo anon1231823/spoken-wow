@@ -75,11 +75,21 @@ endef
         factions release release-standard release-hq \
         release-dry deploy-scripts \
         rollback releases \
-        ssh-check
+        ssh-check test-player
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
+
+# --- addon tests ----------------------------------------------------------------------
+
+# The player's quest dispatch, run against a stubbed client. LuaJIT is the interpreter
+# because it speaks the 5.1 the game does, including setfenv, which every addon file calls.
+LUA ?= $(shell command -v luajit || command -v lua5.1)
+
+test-player: ## Run the addon's quest dispatch tests (needs luajit)
+	@[ -n "$(LUA)" ] || { echo "No luajit found: brew install luajit"; exit 1; }
+	@$(LUA) tests/lua/quest_dispatch_test.lua
 
 # --- audio store ----------------------------------------------------------------------
 

@@ -801,7 +801,18 @@ unless `VoiceOver.DataModules` exists, so the dependency bought nothing and cost
 ```bash
 pip install -r requirements-dev.txt && pytest       # the pipeline
 cd web && pnpm typecheck && pnpm test               # the explorer
+make test-player                                    # the addon, needs luajit
 ```
+
+`make test-player` runs the player's quest dispatch against a stubbed client
+(`tests/lua/wow_client_stub.lua`), on LuaJIT because it speaks the same Lua 5.1 the game does.
+The stub owns the clock, so the 10 Hz watcher that decides which line a quest interaction reads
+can be stepped through a whole hand-off deterministically. It exists for one class of bug: an
+addon that replaces the quest frame — DialogueUI calls `QuestFrame:UnregisterAllEvents()` —
+leaves every Blizzard quest panel hidden, and the player used to read such an interaction as an
+offer, so turning a quest in replayed its accept line and the completion line never played at
+all. Panels still classify an interaction when they are visible; when none is, the last quest
+event the client fired decides, and `QUEST_FINISHED` clears it.
 
 The web suite runs against a **real Postgres**, because the invariants it protects — archive
 the current take before anything overwrites it, never hand the same file to two jobs — live in

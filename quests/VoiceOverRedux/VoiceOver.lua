@@ -27,6 +27,13 @@ local function IsFrameVisible(frame)
     return frame:IsShown()
 end
 
+-- The last quest event the client fired, and the only way to tell an offer from a turn-in
+-- when Blizzard's quest panels never appear. An addon that replaces the quest frame -
+-- DialogueUI calls QuestFrame:UnregisterAllEvents() - leaves every panel hidden while the
+-- player is in a dialog, so classifying by panel alone read every interaction as an offer.
+-- The client still fires the events themselves; only Blizzard's frame stopped listening.
+local lastQuestEvent
+
 local function GetVisibleQuestEvent()
     -- Completion and progress take priority over detail. IsVisible accounts
     -- for hidden parents; IsShown can remain true on an inactive child panel.
@@ -41,11 +48,20 @@ local function GetVisibleQuestEvent()
     end
 
     local questID = GetQuestID and GetQuestID()
-    if questID and questID ~= 0 then
-        -- Quest-log detail views do not use the NPC QuestFrame panels, but
-        -- GetQuestID is authoritative while they are visible.
+    if not questID or questID == 0 then
+        return
+    end
+
+    -- Quest-log detail views do not use the NPC QuestFrame panels, but GetQuestID is
+    -- authoritative while they are visible, and they only ever show the offer text.
+    if IsFrameVisible(QuestLogDetailFrame) or IsFrameVisible(QuestMapDetailsFrame) then
         return "QUEST_DETAIL"
     end
+
+    -- No panel of either kind: trust the last event instead of assuming an offer. It is
+    -- cleared by QUEST_FINISHED, so a quest ID the client keeps reporting after the dialog
+    -- closed no longer replays anything.
+    return lastQuestEvent
 end
 
 function Addon:ShowMissingDataModulePopup()
@@ -360,6 +376,23 @@ function Addon:OnInitialize()
         table.insert(directEvents, "QUEST_PROGRESS")
         table.insert(directEvents, "QUEST_COMPLETE")
     end
+    -- Recording a quest event is not the same as dispatching it: on Blizzard's clients an
+    -- event can fire before the quest globals change, which is why the watcher owns
+    -- dispatch, but the event name itself is trustworthy the moment it arrives.
+    -- QUEST_FINISHED is here to clear the record, so that a quest ID the client keeps
+    -- reporting after the dialog closed cannot be read as a fresh interaction.
+    self.questEventRecorderFrame = CreateFrame("Frame")
+    for _, event in ipairs({ "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "QUEST_FINISHED" }) do
+        pcall(self.questEventRecorderFrame.RegisterEvent, self.questEventRecorderFrame, event)
+    end
+    self.questEventRecorderFrame:SetScript("OnEvent", function(_, event)
+        if event == "QUEST_FINISHED" then
+            lastQuestEvent = nil
+        else
+            lastQuestEvent = event
+        end
+    end)
+
     local directEventLookup = {}
     local lastDispatch = {}
     local dispatching = {}

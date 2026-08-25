@@ -6,6 +6,20 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 1.2.1 — player
+
+**Turning a quest in no longer replays the quest's opening text.** Anyone running an addon that
+replaces Blizzard's quest window — DialogueUI is the common one — heard the accept line again at
+every hand-in, and never heard the completion line at all.
+
+- Such an addon detaches Blizzard's quest frame from its events and draws its own window, so
+  none of the panels the player was reading are ever shown. Every interaction then looked like a
+  quest being offered. The player now falls back to the quest event the client actually fired,
+  which says whether this is an offer, a progress check or a hand-in.
+- A quest ID the client keeps reporting after a dialog closes no longer replays anything either.
+
+No sound pack change: install the same ones.
+
 ## 1.2.0 — player
 
 **The 1.12, 2.4.3 and 3.3.5 private-server clients are supported again.** Each has a zip of its

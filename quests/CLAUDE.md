@@ -28,6 +28,12 @@ pytest tests/test_build.py::test_name    # one test
 python cli-main.py --help
 ```
 
+Addon (from repo root, needs `luajit`):
+
+```bash
+make test-player                         # quest dispatch against a stubbed client
+```
+
 Web (from `web/`):
 
 ```bash
