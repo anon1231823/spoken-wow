@@ -226,7 +226,7 @@ function M.LoadPlayer(addonDirectory)
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
 
-    for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "SoundQueue",
+    for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "SoundQueue", "EasterEggs",
         "DataModules", "VoiceOver" }) do
         dofile(addonDirectory .. file .. ".lua")
     end

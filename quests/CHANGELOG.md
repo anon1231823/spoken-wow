@@ -6,6 +6,15 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 1.3.0 — player
+
+**"OG Thrall".** A new option under Audio plays AI VoiceOver's original recording of Thrall's
+"All members of the Horde are equal in my eyes" speech in place of this project's own. The
+recording ships inside the player, so it plays whichever sound packs are installed — including
+none at all. The option is off by default.
+
+No sound pack change: install the same ones.
+
 ## 1.2.1 — player
 
 **Turning a quest in no longer replays the quest's opening text.** Anyone running an addon that

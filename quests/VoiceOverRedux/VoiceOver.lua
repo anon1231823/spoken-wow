@@ -131,6 +131,7 @@ local defaults = {
             SoundChannel = Enums.SoundChannel.Master,
             AutoToggleDialog = Version.IsLegacyVanilla or Version:IsRetailOrAboveLegacyVersion(60100),
             StopAudioOnDisengage = false,
+            OGThrall = false,
         },
         MinimapButton = {
             LibDBIcon = {}, -- Table used by LibDBIcon to store position (minimapPos), dragging lock (lock) and hidden state (hide)

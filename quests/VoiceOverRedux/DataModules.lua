@@ -540,12 +540,14 @@ function DataModules:PrepareSound(soundData)
                     soundData.fileName)
                 soundData.length = length
                 soundData.module = module
+                EasterEggs:Apply(soundData)
                 return true
             end
         end
     end
 
-    return false
+    -- No pack holds the line - but an easter egg for it ships with the player itself.
+    return EasterEggs:Apply(soundData)
 end
 
 function DataModules:AddPlayerGenderToFilename(fileName)

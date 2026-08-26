@@ -285,6 +285,18 @@ local GeneralTab =
                         Addon.db.profile.Audio.StopAudioOnDisengage = value
                     end,
                 },
+                LineBreak3 = { type = "description", name = "", order = 7 },
+                OGThrall = {
+                    type = "toggle",
+                    order = 8,
+                    width = 2,
+                    name = "OG Thrall",
+                    desc = "Plays the original AI VoiceOver recording of Thrall's \"All members of the Horde are equal in my eyes\" speech instead of this addon's.",
+                    get = function(info) return Addon.db.profile.Audio.OGThrall end,
+                    set = function(info, value)
+                        Addon.db.profile.Audio.OGThrall = value
+                    end,
+                },
             }
         },
         Debug = {

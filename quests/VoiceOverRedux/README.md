@@ -72,4 +72,10 @@ NPC greeting repetition is controlled by **NPC Greeting Playback Frequency**. Th
 - Classic Era 1.15.9: <https://warcraft.wiki.gg/wiki/Patch_1.15.9>
 - Burning Crusade 2.5.6: <https://warcraft.wiki.gg/wiki/Patch_2.5.6>
 
+## Bundled audio
+
+`Sounds/og-thrall.mp3` is AI VoiceOver's own recording of Thrall's "All members of the Horde are
+equal in my eyes" speech, taken byte for byte from the `AI_VoiceOverData_Vanilla` sound pack. The
+"OG Thrall" option under Audio plays it in place of this project's own take on that line.
+
 The upstream projects identify their code as MIT-licensed. This folder retains their original structure and credits.
