@@ -60,7 +60,7 @@ if (!isLocale(LANG)) {
 // committed name: renaming a 392 KB file buys nothing and breaks every deployment
 // pointing ZONELORE_MANIFEST at it.
 export function manifestPath(lang = LANG) {
-  const base = process.env.ZONELORE_MANIFEST || join(ROOT, "tools/voice/manifest.json");
+  const base = process.env.ZONELORE_MANIFEST || join(ROOT, "pipelines/zones/tools/voice/manifest.json");
   if (lang === BASE_LOCALE) return base;
   const ext = extname(base);
   return join(dirname(base), `${basename(base, ext)}.${lang}${ext}`);
@@ -74,10 +74,10 @@ export function soundsDir(lang = LANG) {
   if (override) {
     return lang === BASE_LOCALE ? override : join(dirname(override), packFolder(lang, "high"));
   }
-  return join(ROOT, "addon", packFolder(lang, "high"), "Sounds");
+  return join(ROOT, "addons", packFolder(lang, "high"), "Sounds");
 }
 
-export const SAMPLES_DIR = join(ROOT, "audio-samples");
+export const SAMPLES_DIR = join(ROOT, "pipelines/zones/audio-samples");
 
 // A sibling of Sounds/, never a subdirectory: validate-audio.mjs walks Sounds/ and
 // would report every archived take as an mp3 with no manifest entry. The same
@@ -92,7 +92,7 @@ export const SAMPLES_DIR = join(ROOT, "audio-samples");
 // split two languages would share one version sequence for the same file, and a
 // restore would install whichever clip happened to be v2.
 export function historyDir(lang = LANG) {
-  const base = process.env.ZONELORE_AUDIO_HISTORY || join(ROOT, "audio-history");
+  const base = process.env.ZONELORE_AUDIO_HISTORY || join(ROOT, "pipelines/zones/audio-history");
   return lang === BASE_LOCALE ? base : join(base, lang);
 }
 

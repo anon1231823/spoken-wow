@@ -27,7 +27,7 @@ import { BASE_LOCALE, LOCALES } from "../lib/locales.mjs";
 import { luaString, ROOT } from "../lib/wiki.mjs";
 import { stringCoverage } from "./check-strings.mjs";
 
-const DATA = join(ROOT, "addon/ZoneLore/Data");
+const DATA = join(ROOT, "addons/SpokenZones/Data");
 const OUT_PATH = join(DATA, "Languages.lua");
 
 // Whether a pack has been published for a language. A publishing fact, not one

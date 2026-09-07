@@ -19,7 +19,7 @@ import { join } from "node:path";
 import { BASE_LOCALE } from "./locales.mjs";
 import { normaliseKey, ROOT } from "./wiki.mjs";
 
-export const AREA_NAMES_PATH = join(ROOT, "tools/seed/area-names.json");
+export const AREA_NAMES_PATH = join(ROOT, "pipelines/zones/tools/seed/area-names.json");
 
 let loaded = null;
 

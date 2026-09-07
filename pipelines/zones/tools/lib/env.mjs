@@ -11,7 +11,7 @@ import { join } from "node:path";
 
 import { ROOT } from "./loredata.mjs";
 
-export const ENV_PATH = join(ROOT, ".env");
+export const ENV_PATH = join(ROOT, "pipelines/zones/.env");
 
 /**
  * Copy .env into process.env for keys that are not already set.

@@ -27,8 +27,8 @@ import {
 import { persistScrape } from "./lore/store.mjs";
 import { close } from "./voice/db.mjs";
 
-const SEED = join(ROOT, "tools/seed/zones.json");
-const OVERRIDES = join(ROOT, "tools/seed/overrides.json");
+const SEED = join(ROOT, "pipelines/zones/tools/seed/zones.json");
+const OVERRIDES = join(ROOT, "pipelines/zones/tools/seed/overrides.json");
 
 // Below this, a page's lead is too thin to show and the full-article section
 // fallback is tried instead.

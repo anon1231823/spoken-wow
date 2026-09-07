@@ -14,7 +14,7 @@ import { ROOT } from "../lib/loredata.mjs";
 // writes it at runtime any more (the editor moved to wow-voiceover), so it needs no
 // shared copy on the droplet and no override of its own -- it moves with ZONELORE_ROOT
 // like the corpus does. A rule is a reviewable diff in git.
-export const PRONUNCIATION_PATH = join(ROOT, "tools/voice/pronunciation.json");
+export const PRONUNCIATION_PATH = join(ROOT, "pipelines/zones/tools/voice/pronunciation.json");
 
 // IPA blocks such as "Kalimdor [ˈkælɪmdɔɹ]" are a pronunciation guide for
 // readers, not something to read out. Detected by the phonetic characters

@@ -34,7 +34,7 @@
 
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOCALE="${LOCALE:-enUS}"
 
 # Exported, not just used here: the validate-audio and descriptions runs below are
@@ -47,9 +47,9 @@ export ZONELORE_LANG="$LOCALE"
 # it already publishes. Kept in step with packFolder() in tools/lib/locales.mjs:
 # the full locale code, because a truncation would give esES and esMX one folder.
 if [[ "$LOCALE" == "enUS" ]]; then
-  SRC="$REPO/addon/ZoneLoreAudio"
+  SRC="$REPO/addons/SpokenZonesAudio"
 else
-  SRC="$REPO/addon/ZoneLoreAudio_$LOCALE"
+  SRC="$REPO/addons/SpokenZonesAudio_$LOCALE"
 fi
 TOC="$SRC/$(basename "$SRC").toc"
 SOUNDS="$SRC/Sounds"
@@ -63,7 +63,7 @@ DIST="$REPO/dist"
 # Keying on mtime would be cheaper and wrong: `make pull` copies the droplet's
 # timestamps, so a freshly pulled clip can be older than the cache entry it should
 # be replacing. Checksumming all 1353 masters costs ~2s against ~5min of ffmpeg.
-CACHE_ROOT="$REPO/audio-transcoded"
+CACHE_ROOT="$REPO/pipelines/zones/audio-transcoded"
 
 checksum() {
   if command -v md5sum >/dev/null 2>&1; then
@@ -153,11 +153,11 @@ fi
 # silence in-game rather than erroring, so check it here rather than discovering
 # it after upload.
 echo "checking the lookup table against the files..."
-node "$REPO/tools/voice/validate-audio.mjs"
+node "$REPO/pipelines/zones/tools/voice/validate-audio.mjs"
 
 # Each tier ships the README for its own CurseForge page, so the description a
 # player read before downloading is the file they end up with.
-node "$REPO/tools/descriptions.mjs" --write >/dev/null
+node "$REPO/pipelines/zones/tools/descriptions.mjs" --write >/dev/null
 # A language with no CurseForge page of its own ships the English description
 # rather than nothing: the page it was downloaded from is the honest fallback
 # until somebody writes one for it.

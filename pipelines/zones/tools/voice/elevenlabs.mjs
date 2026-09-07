@@ -13,7 +13,7 @@ import { requireEnvKey } from "../lib/env.mjs";
 const VOICES_URL = "https://api.elevenlabs.io/v1/voices";
 const TTS_URL = "https://api.elevenlabs.io/v1/text-to-speech";
 
-export const CONFIG_PATH = join(ROOT, "tools/voice/config.json");
+export const CONFIG_PATH = join(ROOT, "pipelines/zones/tools/voice/config.json");
 
 // A language's overrides, merged over config.json. Everything the switcher has to
 // switch at generation time lives in one file per language -- voice, model,
@@ -25,7 +25,7 @@ export const CONFIG_PATH = join(ROOT, "tools/voice/config.json");
 // a narrator for it, on the /voice page under that language or by hand -- which
 // is a decision, not a default this module can invent.
 export function localeConfigPath(lang) {
-  return join(ROOT, "tools/voice", `config.${lang}.json`);
+  return join(ROOT, "pipelines/zones/tools/voice", `config.${lang}.json`);
 }
 
 // The keys a language's file may carry. Anything else stays English's -- the output

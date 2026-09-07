@@ -11,8 +11,13 @@ import zipfile
 
 import pytest
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SCRIPT = os.path.join(REPO, "scripts", "package.sh")
+#: The monorepo root. This file is pipelines/quests/tests/, so four dirnames. The addon
+#: source and the packaging scripts both moved out from under the pipeline in the merge.
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+SCRIPT = os.path.join(REPO, "scripts", "quests", "package.sh")
+#: Where the addon is read from, and what it ships as. Not the same thing until the
+#: rename lands with its SavedVariables migration.
+ADDON_DIR = os.path.join(REPO, "addons", "SpokenQuests")
 NAME = "VoiceOverRedux"
 
 #: client label -> the Interface version its .toc must declare.
@@ -20,7 +25,7 @@ LEGACY_CLIENTS = {"1.12": "11200", "2.4.3": "20400", "3.3.5": "30300"}
 
 
 def toc_version():
-    path = os.path.join(REPO, NAME, f"{NAME}.toc")
+    path = os.path.join(ADDON_DIR, f"{NAME}.toc")
     with open(path, encoding="utf-8") as handle:
         for line in handle:
             if line.startswith("## Version:"):

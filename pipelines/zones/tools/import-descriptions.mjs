@@ -25,8 +25,10 @@ import { readFile, writeFile, readdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SOURCE_DIR = join(ROOT, "curseforge");
+// The monorepo root, three levels up from pipelines/zones/tools/. See
+// lib/loredata.mjs for why this reaches the repo root rather than the pipeline root.
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const SOURCE_DIR = join(ROOT, "curseforge/zones");
 
 const decodeEntities = (text) =>
   text

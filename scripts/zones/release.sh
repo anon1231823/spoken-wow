@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST="$REPO/dist"
 
 # Site-relative API, per game. WoW projects are not reachable through another
@@ -90,8 +90,8 @@ command -v node >/dev/null || { echo "error: node is required (for JSON handling
 
 # .env is the same file tools/voice reads its ElevenLabs key from, so the token
 # has one obvious home rather than living only in a shell history.
-if [[ -z "${CURSEFORGE_TOKEN:-}" && -f "$REPO/.env" ]]; then
-  CURSEFORGE_TOKEN="$(sed -n 's/^CURSEFORGE_TOKEN=//p' "$REPO/.env" | head -1 | tr -d '\r"')"
+if [[ -z "${CURSEFORGE_TOKEN:-}" && -f "$REPO/pipelines/zones/.env" ]]; then
+  CURSEFORGE_TOKEN="$(sed -n 's/^CURSEFORGE_TOKEN=//p' "$REPO/pipelines/zones/.env" | head -1 | tr -d '\r"')"
 fi
 if [[ -z "${CURSEFORGE_TOKEN:-}" ]]; then
   echo "error: CURSEFORGE_TOKEN is not set" >&2
@@ -154,7 +154,7 @@ changelog_for() {
       if (lines[i].startsWith("## ")) { end = i; break; }
     }
     process.stdout.write(lines.slice(start, end).join("\n").trim());
-  ' "$REPO/CHANGELOG.md" "$1"
+  ' "$REPO/docs/zones/CHANGELOG.md" "$1"
 }
 
 #-- upload --------------------------------------------------------------------
@@ -171,7 +171,7 @@ for target in "${targets[@]}"; do
     exit 1
   fi
 
-  toc="$REPO/addon/$addon/$addon.toc"
+  toc="$REPO/addons/$addon/$addon.toc"
   version="$(sed -n 's/^## Version:[[:space:]]*//p' "$toc" | head -1 | tr -d '\r')"
   zip_path="$DIST/$zip_name-$version.zip"
 
@@ -260,7 +260,7 @@ done
 # from what was last pasted, and say so at the moment somebody is already looking
 # at the project pages.
 echo
-stale="$(node "$REPO/tools/descriptions.mjs" --drift)"
+stale="$(node "$REPO/pipelines/zones/tools/descriptions.mjs" --drift)"
 if [[ -n "$stale" ]]; then
   echo "descriptions that differ from what was last pasted into the site:"
   echo "$stale" | while IFS=$'\t' read -r slug why; do

@@ -19,7 +19,7 @@ import { join } from "node:path";
 import { BASE_LOCALE, CODES } from "../lib/locales.mjs";
 import { ROOT } from "../lib/wiki.mjs";
 
-const LOCALE_DIR = join(ROOT, "addon/ZoneLore/Locale");
+const LOCALE_DIR = join(ROOT, "addons/SpokenZones/Locale");
 
 // The emitted files are one assignment per line, so a regex reader is enough --
 // the same bet validate.mjs makes about the data files.

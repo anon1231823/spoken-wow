@@ -18,16 +18,16 @@
 // inferred shapes are pinned to what this app relies on, so a change in tools/ shows
 // up as a type error here rather than as undefined at runtime.
 
-import * as generateModule from "../../../tools/voice/generate.mjs";
-import * as storeModule from "../../../tools/voice/store.mjs";
-import * as normaliseModule from "../../../tools/voice/normalise.mjs";
-import * as namingModule from "../../../tools/voice/naming.mjs";
-import * as elevenModule from "../../../tools/voice/elevenlabs.mjs";
-import * as concurrencyModule from "../../../tools/voice/concurrency.mjs";
-import * as exportModule from "../../../tools/voice/export-manifest.mjs";
-import * as lookupModule from "../../../tools/voice/build-lookup.mjs";
-import * as wikiModule from "../../../tools/lib/wiki.mjs";
-import * as areaNamesModule from "../../../tools/lib/area-names.mjs";
+import * as generateModule from "../../../../pipelines/zones/tools/voice/generate.mjs";
+import * as storeModule from "../../../../pipelines/zones/tools/voice/store.mjs";
+import * as normaliseModule from "../../../../pipelines/zones/tools/voice/normalise.mjs";
+import * as namingModule from "../../../../pipelines/zones/tools/voice/naming.mjs";
+import * as elevenModule from "../../../../pipelines/zones/tools/voice/elevenlabs.mjs";
+import * as concurrencyModule from "../../../../pipelines/zones/tools/voice/concurrency.mjs";
+import * as exportModule from "../../../../pipelines/zones/tools/voice/export-manifest.mjs";
+import * as lookupModule from "../../../../pipelines/zones/tools/voice/build-lookup.mjs";
+import * as wikiModule from "../../../../pipelines/zones/tools/lib/wiki.mjs";
+import * as areaNamesModule from "../../../../pipelines/zones/tools/lib/area-names.mjs";
 
 /** One voiceable entry: a zone, or a subzone of one. Mirrors buildCatalogue(). */
 export type CatalogueEntry = {

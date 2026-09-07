@@ -24,7 +24,7 @@ import { LANG, loadManifest, soundsDir } from "./store.mjs";
 // The lookup of the language being validated, not English's: a LOCALE=deDE
 // packaging run that checked the German manifest against the English lookup
 // would fail on a correct pack and pass on an empty one.
-const LOOKUP_PATH = join(ROOT, "addon", packFolder(LANG, "high"), "Data/Sounds.lua");
+const LOOKUP_PATH = join(ROOT, "addons", packFolder(LANG, "high"), "Data/Sounds.lua");
 
 const problems = [];
 const notes = [];

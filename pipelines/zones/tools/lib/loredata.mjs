@@ -13,7 +13,15 @@ import { fileURLToPath } from "node:url";
 
 import { BASE_LOCALE } from "./locales.mjs";
 
-// The repo root. Everything under tools/ derives its paths from this one constant.
+// The monorepo root. Everything under the zones pipeline derives its paths from this
+// one constant.
+//
+// Four levels up, not two: this file is pipelines/zones/tools/lib/. The constant has to
+// reach the repo root rather than the pipeline root because what it resolves is now
+// split across the tree -- the lore corpus lives in addons/SpokenZones/Data/, the voice
+// config in pipelines/zones/tools/voice/, the CurseForge descriptions in
+// curseforge/zones/ and the built zips in dist/. One root with full paths beats four
+// roots.
 //
 // The override is what makes the explorer deployable. Next bundles these modules with
 // webpack, which replaces `import.meta.url` with the *build machine's* path -- so a
@@ -26,17 +34,18 @@ import { BASE_LOCALE } from "./locales.mjs";
 // Unset -- which is every local run, CLI or `next dev` -- this behaves exactly as it
 // did before. See deploy/README.md for the full set.
 export const ROOT =
-  process.env.ZONELORE_ROOT || join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+  process.env.ZONELORE_ROOT ||
+  join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 // One corpus per language, under its own locale directory. A language with no
 // text has no directory at all rather than a pair of empty files: the addon
 // falls back to English per line, so an empty table and a missing one mean the
 // same thing to a player, and only one of them is committed weight.
 export function zonesLua(lang = BASE_LOCALE) {
-  return join(ROOT, "addon/ZoneLore/Data", lang, "Zones.lua");
+  return join(ROOT, "addons/SpokenZones/Data", lang, "Zones.lua");
 }
 
 export function subzonesLua(lang = BASE_LOCALE) {
-  return join(ROOT, "addon/ZoneLore/Data", lang, "Subzones.lua");
+  return join(ROOT, "addons/SpokenZones/Data", lang, "Subzones.lua");
 }
 
 // The emitter escapes exactly these, so the reader reverses exactly these.

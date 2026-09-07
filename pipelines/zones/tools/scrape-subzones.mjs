@@ -38,7 +38,7 @@ import { loadEraAreas } from "./lib/era.mjs";
 import { persistScrape } from "./lore/store.mjs";
 import { close } from "./voice/db.mjs";
 
-const SEED = join(ROOT, "tools/seed/subzones.json");
+const SEED = join(ROOT, "pipelines/zones/tools/seed/subzones.json");
 
 // Subzone leads are naturally shorter than zone leads, so the threshold for
 // falling back to the full article's lore sections is lower.

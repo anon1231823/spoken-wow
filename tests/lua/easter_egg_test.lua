@@ -7,7 +7,7 @@ local here = arg[0]:match("^(.*)/[^/]*$") or "."
 package.path = here .. "/?.lua;" .. package.path
 local stub = require("wow_client_stub")
 local print = stub.print
-local VO = stub.LoadPlayer(here .. "/../../VoiceOverRedux/")
+local VO = stub.LoadPlayer(here .. "/../../addons/SpokenQuests/")
 
 local failures = 0
 

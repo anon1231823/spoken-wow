@@ -26,7 +26,7 @@
 
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WOW="/Applications/World of Warcraft"
 NAMES=(ZoneLore ZoneLoreAudio)
 
@@ -77,7 +77,7 @@ case "$mode" in
 
     # The count is the quickest answer to "why is there no narration", which is
     # otherwise indistinguishable from a broken lookup.
-    sounds="$REPO/addon/ZoneLoreAudio/Sounds"
+    sounds="$REPO/addons/SpokenZonesAudio/Sounds"
     if [[ -d "$sounds" ]]; then
       count="$(find "$sounds" -name '*.mp3' | wc -l | tr -d ' ')"
       echo "voicelines      $count mp3 in $sounds"
@@ -106,7 +106,7 @@ case "$mode" in
 esac
 
 for name in "${NAMES[@]}"; do
-  src="$REPO/addon/$name"
+  src="$REPO/addons/$name"
   dest="$ADDONS/$name"
 
   if [[ ! -d "$src" ]]; then

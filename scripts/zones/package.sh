@@ -8,13 +8,20 @@
 # naming the zip stay one edit rather than two.
 #
 # Addon hosts unpack the zip straight into Interface/AddOns, so its root must
-# contain the ZoneLore/ folder itself -- hence the `cd` before zipping.
+# contain the ZoneLore/ folder itself -- hence the staging copy before zipping.
+#
+# SOURCE DIRECTORY AND SHIPPED FOLDER NAME ARE NOT THE SAME THING. The source lives
+# at addons/SpokenZones/, but what a player installs must still be called ZoneLore
+# until the rename ships with its SavedVariables migration -- an installed folder is
+# the addon's identity to the client and to LibDBIcon. ADDON says where to read from,
+# NAME says what to write.
 
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-NAME="ZoneLore"
-SRC="$REPO/addon/$NAME"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ADDON="${ADDON:-addons/SpokenZones}"
+NAME="${NAME:-ZoneLore}"
+SRC="$REPO/$ADDON"
 TOC="$SRC/$NAME.toc"
 DIST="$REPO/dist"
 
@@ -31,8 +38,8 @@ fi
 
 # A zip built from uncommitted edits cannot be traced back to a tag later.
 if [[ -z "${ALLOW_DIRTY:-}" ]] && git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then
-  if [[ -n "$(git -C "$REPO" status --porcelain -- addon)" ]]; then
-    echo "error: addon/ has uncommitted changes." >&2
+  if [[ -n "$(git -C "$REPO" status --porcelain -- "$ADDON")" ]]; then
+    echo "error: $ADDON/ has uncommitted changes." >&2
     echo "       Commit them, or re-run with ALLOW_DIRTY=1 to package anyway." >&2
     exit 1
   fi
@@ -55,8 +62,16 @@ zip_path="$DIST/$NAME-$version.zip"
 mkdir -p "$DIST"
 rm -f "$zip_path"
 
+# Staged under the installed folder name, because that is not the source directory's
+# name and the archive root has to be the former.
+staging="$(mktemp -d)"
+trap 'rm -rf "$staging"' EXIT
+mkdir -p "$staging/$NAME"
+(cd "$SRC" && tar -cf - --exclude '.DS_Store' --exclude '*.bak' --exclude '*.orig' .) \
+  | (cd "$staging/$NAME" && tar -xf -)
+
 # -X drops the extra macOS attributes that otherwise ride along.
-(cd "$REPO/addon" && zip -r -q -X "$zip_path" "$NAME" \
+(cd "$staging" && zip -r -q -X "$zip_path" "$NAME" \
   -x '*.DS_Store' '*/.git/*' '*.bak' '*.orig')
 
 files="$(unzip -Z1 "$zip_path" | grep -cv '/$')"

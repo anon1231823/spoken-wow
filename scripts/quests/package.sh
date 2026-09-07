@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Builds the player addon's distributable zips.
 #
-#   ./scripts/package.sh                 # dist/VoiceOverRedux-<version>.zip + one per legacy client
-#   ALLOW_DIRTY=1 ./scripts/package.sh   # build from an uncommitted tree
+#   ./scripts/quests/package.sh                 # dist/VoiceOverRedux-<version>.zip + one per legacy client
+#   ALLOW_DIRTY=1 ./scripts/quests/package.sh   # build from an uncommitted tree
 #
 # ONE ZIP FOR BLIZZARD'S CLIENTS, ONE APIECE FOR THE PRIVATE-SERVER ONES. Blizzard's clients
 # pick their .toc by flavor suffix - _Vanilla, _TBC, _Wrath, _Mainline - so a single archive
@@ -20,12 +20,21 @@
 # VoiceOverRedux/ folder itself - hence the `cd` before zipping.
 #
 # The sound pack is NOT here: it is 1.5 GB and rebuilt from the audio store on its own
-# schedule. See scripts/package-audio.sh, or `make package-audio`.
+# schedule. See scripts/quests/package-audio.sh, or `make quests-package-audio`.
+#
+# SOURCE DIRECTORY AND SHIPPED FOLDER NAME ARE NOT THE SAME THING. The source lives at
+# addons/SpokenQuests/, but what a player installs must still be called VoiceOverRedux
+# until the rename ships with its SavedVariables migration -- an installed folder is the
+# addon's identity to the client, to LibDBIcon and to every superseded-fork check. So
+# ADDON says where to read from and NAME says what to write, and both zips are built
+# from a staging copy: zipping in place would put the source directory's name in the
+# archive root.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ADDON="${ADDON:-addons/SpokenQuests}"
 NAME="${NAME:-VoiceOverRedux}"
-SRC="$REPO/$NAME"
+SRC="$REPO/$ADDON"
 TOC="$SRC/$NAME.toc"
 DIST="${DIST:-$REPO/dist}"
 
@@ -44,8 +53,8 @@ version="$(sed -n 's/^## Version:[[:space:]]*//p' "$TOC" | head -1 | tr -d '\r')
 
 # A zip built from uncommitted edits cannot be traced back to a commit later.
 if [ -z "${ALLOW_DIRTY:-}" ] && git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then
-  if [ -n "$(git -C "$REPO" status --porcelain -- "$NAME")" ]; then
-    echo "error: $NAME/ has uncommitted changes." >&2
+  if [ -n "$(git -C "$REPO" status --porcelain -- "$ADDON")" ]; then
+    echo "error: $ADDON/ has uncommitted changes." >&2
     echo "       Commit them, or re-run with ALLOW_DIRTY=1 to package anyway." >&2
     exit 1
   fi
@@ -90,6 +99,20 @@ mkdir -p "$DIST"
 zip_path="$DIST/$NAME-$version.zip"
 rm -f "$zip_path"
 
+staging="$(mktemp -d)"
+trap 'rm -rf "$staging"' EXIT
+
+# The archive root has to be the installed folder name, which is not the source
+# directory's name, so every zip is built from a copy laid out under it.
+stage_addon() {
+  local dest="$1/$NAME"
+  mkdir -p "$dest"
+  # -a and not -r: the addon carries no symlinks today, and copying one as a link would
+  # produce a zip that unpacks into nothing on someone else's machine.
+  (cd "$SRC" && tar -cf - --exclude '.DS_Store' --exclude '*.bak' --exclude '*.orig' .) \
+    | (cd "$dest" && tar -xf -)
+}
+
 # Addon hosts unpack into Interface/AddOns, so the archive root must be the folder itself.
 # -X drops the extra macOS attributes that otherwise ride along. The legacy client directories
 # are excluded: a Blizzard client loads none of them, and they are most of the archive.
@@ -98,15 +121,13 @@ for pair in "${CLIENTS[@]}"; do
   legacy_excludes+=("$NAME/${pair##*:}/*" "$NAME/${NAME}_${pair%%:*}.toc")
 done
 
-(cd "$REPO" && zip -r -q -X "$zip_path" "$NAME" \
+stage_addon "$staging/blizzard"
+(cd "$staging/blizzard" && zip -r -q -X "$zip_path" "$NAME" \
   -x '*.DS_Store' '*/.git/*' '*.bak' '*.orig' "${legacy_excludes[@]}")
 
 files="$(unzip -Z1 "$zip_path" | grep -cv '/$')"
 
 echo "built $(basename "$zip_path")   files: $files   size: $(du -h "$zip_path" | cut -f1)"
-
-staging="$(mktemp -d)"
-trap 'rm -rf "$staging"' EXIT
 
 for pair in "${CLIENTS[@]}"; do
   client="${pair%%:*}"
@@ -114,12 +135,8 @@ for pair in "${CLIENTS[@]}"; do
   source_toc="$SRC/${NAME}_${variant}.toc"
   [ -f "$source_toc" ] || { echo "error: no $source_toc for client $client" >&2; exit 1; }
 
+  stage_addon "$staging/$client"
   folder="$staging/$client/$NAME"
-  mkdir -p "$folder"
-  # -a and not -r: the addon carries no symlinks today, and copying one as a link would
-  # produce a zip that unpacks into nothing on someone else's machine.
-  (cd "$SRC" && tar -cf - --exclude '.DS_Store' --exclude '*.bak' --exclude '*.orig' .) \
-    | (cd "$folder" && tar -xf -)
 
   # The unsuffixed name is the only one this client opens, so the variant for it goes there.
   # Everything the other clients need is then dead weight: the suffixed .toc files, the root

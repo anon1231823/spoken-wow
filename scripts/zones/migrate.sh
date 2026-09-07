@@ -14,8 +14,8 @@
 
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MIGRATIONS="$REPO/web/migrations"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+MIGRATIONS="$REPO/apps/web-zones/migrations"
 
 # Same default the app uses. Port 5433 because ../wow-voiceover's postgres holds 5432.
 DATABASE_URL="${DATABASE_URL:-postgres://zonelore:zonelore@localhost:5433/zonelore}"

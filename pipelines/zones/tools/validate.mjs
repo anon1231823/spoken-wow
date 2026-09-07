@@ -19,7 +19,7 @@ import { loadEraAreas } from "./lib/era.mjs";
 import { BASE_LOCALE, CODES } from "./lib/locales.mjs";
 import { slugFor } from "./voice/naming.mjs";
 
-const DATA = join(ROOT, "addon/ZoneLore/Data");
+const DATA = join(ROOT, "addons/SpokenZones/Data");
 
 // Terms that should never survive the era filter. Case-sensitive where the
 // lower-case word is legitimate vanilla lore ("the black dragonflight").
@@ -312,7 +312,7 @@ for (const lang of languages) {
 //------------------------------------------------------------------------------
 
 {
-  const toc = await readFile(join(ROOT, "addon/ZoneLore/ZoneLore.toc"), "utf8");
+  const toc = await readFile(join(ROOT, "addons/SpokenZones/ZoneLore.toc"), "utf8");
   const files = toc
     .split("\n")
     .map((line) => line.trim())
@@ -345,7 +345,7 @@ for (const lang of languages) {
       if (exists && order(path) === -1) note(`ZoneLore.toc: ${path} exists but is not loaded`);
     }
     const localePath = `Locale/${lang}.lua`;
-    const localeExists = await readFile(join(ROOT, "addon/ZoneLore", localePath), "utf8").then(
+    const localeExists = await readFile(join(ROOT, "addons/SpokenZones", localePath), "utf8").then(
       () => true,
       () => false,
     );
@@ -365,7 +365,7 @@ for (const lang of languages) {
 //------------------------------------------------------------------------------
 
 {
-  const languageLua = await readFile(join(ROOT, "addon/ZoneLore/Language.lua"), "utf8");
+  const languageLua = await readFile(join(ROOT, "addons/SpokenZones/Language.lua"), "utf8");
   const luaCodes = [...languageLua.matchAll(/\{ code = "(\w+)"/g)].map((m) => m[1]);
   if (luaCodes.join(",") !== CODES.join(",")) {
     note(
@@ -378,7 +378,7 @@ for (const lang of languages) {
   // The explorer keeps its own copy: the language selector is a client component, and
   // lib/locales.mjs reaches the filesystem. A language present here and missing there
   // is one nobody can pick; the reverse is one that cannot be built for.
-  const langTs = await readFile(join(ROOT, "web/src/lib/lang.ts"), "utf8");
+  const langTs = await readFile(join(ROOT, "apps/web-zones/src/lib/lang.ts"), "utf8");
   const webCodes = [...langTs.matchAll(/\{ code: "(\w+)"/g)].map((m) => m[1]);
   if (webCodes.join(",") !== CODES.join(",")) {
     note(
@@ -435,7 +435,7 @@ for (const [parent, keys] of byParent) {
 // Lua source still performs the same steps in the same order.
 //------------------------------------------------------------------------------
 
-const coreSrc = await readFile(join(ROOT, "addon/ZoneLore/Core.lua"), "utf8");
+const coreSrc = await readFile(join(ROOT, "addons/SpokenZones/Core.lua"), "utf8");
 const expectedSteps = [
   /key = name:lower\(\)/,
   /key = key:gsub\("'", ""\)/,

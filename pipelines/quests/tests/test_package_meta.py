@@ -7,8 +7,10 @@ player holding only the stub would stop being told where to get any audio.
 import os
 import subprocess
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SCRIPT = os.path.join(REPO, "scripts", "package-meta.sh")
+#: The monorepo root. This file is pipelines/quests/tests/, so four dirnames. The addon
+#: source and the packaging scripts both moved out from under the pipeline in the merge.
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+SCRIPT = os.path.join(REPO, "scripts", "quests", "package-meta.sh")
 
 
 def build(tmp_path, version="9.9.9"):

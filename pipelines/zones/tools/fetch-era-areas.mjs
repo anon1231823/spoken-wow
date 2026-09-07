@@ -28,7 +28,7 @@ import { join } from "node:path";
 import { fetchTable, PINNED_BUILD } from "./lib/db2.mjs";
 import { ROOT } from "./lib/wiki.mjs";
 
-const SEED = join(ROOT, "tools/seed/era-areas.json");
+const SEED = join(ROOT, "pipelines/zones/tools/seed/era-areas.json");
 
 const argv = process.argv.slice(2);
 const build = argv.includes("--build") ? argv[argv.indexOf("--build") + 1] : PINNED_BUILD;

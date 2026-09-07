@@ -10,7 +10,7 @@ import { join } from "node:path";
 
 import { ROOT, normaliseKey, readJson } from "./wiki.mjs";
 
-const SEED = join(ROOT, "tools/seed/era-areas.json");
+const SEED = join(ROOT, "pipelines/zones/tools/seed/era-areas.json");
 
 /** @returns {Promise<{build: string, keys: Set<string>}>} */
 export async function loadEraAreas() {

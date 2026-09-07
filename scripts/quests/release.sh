@@ -28,7 +28,7 @@
 # Modelled on ../wow-lore/scripts/release.sh, which does the same job for three projects.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST="${DIST:-$REPO/dist}"
 
 # Site-relative API, per game. WoW projects are not reachable through another game's
@@ -109,7 +109,7 @@ esac; }
 target_version() {
   local name; name="$(target_zip_name "$1")"
   if [ "$1" = player ]; then
-    sed -n 's/^## Version:[[:space:]]*//p' "$REPO/VoiceOverRedux/VoiceOverRedux.toc" \
+    sed -n 's/^## Version:[[:space:]]*//p' "$REPO/addons/SpokenQuests/VoiceOverRedux.toc" \
       | head -1 | tr -d '\r'
   else
     sed -n 's/^## Version:[[:space:]]*//p' "$DIST/$name/$name.toc" 2>/dev/null \
@@ -156,8 +156,8 @@ command -v node >/dev/null || { echo "error: node is required (for JSON handling
 
 # .env is the same file the pipeline reads its ElevenLabs key from, so the token has one
 # obvious home rather than living only in a shell history.
-if [[ -z "${CURSEFORGE_TOKEN:-}" && -f "$REPO/.env" ]]; then
-  CURSEFORGE_TOKEN="$(sed -n 's/^CURSEFORGE_TOKEN=//p' "$REPO/.env" | head -1 | tr -d '\r"')"
+if [[ -z "${CURSEFORGE_TOKEN:-}" && -f "$REPO/pipelines/quests/.env" ]]; then
+  CURSEFORGE_TOKEN="$(sed -n 's/^CURSEFORGE_TOKEN=//p' "$REPO/pipelines/quests/.env" | head -1 | tr -d '\r"')"
 fi
 if [[ -z "${CURSEFORGE_TOKEN:-}" ]]; then
   echo "error: CURSEFORGE_TOKEN is not set" >&2
@@ -234,7 +234,7 @@ changelog_for() {
       if (lines[i].startsWith("## ")) { end = i; break; }
     }
     process.stdout.write(lines.slice(start, end).join("\n").trim());
-  ' "$REPO/CHANGELOG.md" "$1" "$2"
+  ' "$REPO/docs/quests/CHANGELOG.md" "$1" "$2"
 }
 
 #-- upload --------------------------------------------------------------------------------

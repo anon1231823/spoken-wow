@@ -7,7 +7,7 @@ categories:
   - Miscellaneous
   - Roleplay
 license: MIT
-addonReadme: addon/ZoneLore/README.md
+addonReadme: addons/SpokenZones/README.md
 ---
 
 **Zone lore on the world map, for WoW Classic Era.**

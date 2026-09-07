@@ -8,7 +8,7 @@ categories:
   - Miscellaneous
   - Roleplay
 license: MIT
-addonReadme: addon/ZoneLoreAudio/README.md
+addonReadme: addons/SpokenZonesAudio/README.md
 ---
 
 Narrated zone lore for **ZoneLore**, at full 128 kbps quality. This addon is data only — it does nothing on its own.

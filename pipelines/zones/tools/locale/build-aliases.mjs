@@ -118,7 +118,7 @@ async function main() {
       }
     }
 
-    const dir = join(ROOT, "addon/ZoneLore/Data", locale.code);
+    const dir = join(ROOT, "addons/SpokenZones/Data", locale.code);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "Aliases.lua"), emitAliases(locale.code, aliases, build));
     namesByLocale[locale.code] = Object.fromEntries(Object.entries(names).sort());

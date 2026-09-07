@@ -19,7 +19,7 @@ import { close as closeStore, LANG, loadManifest, soundsDir } from "./store.mjs"
 // Beside the masters, whichever language those are. The lookup describes the
 // files next to it, so the two cannot be built for different languages.
 function packDir(lang) {
-  return join(ROOT, "addon", packFolder(lang, "high"));
+  return join(ROOT, "addons", packFolder(lang, "high"));
 }
 
 function luaString(text) {

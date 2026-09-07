@@ -15,8 +15,10 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const SEED = join(ROOT, "tools/seed/zones.json");
+// The monorepo root, three levels up from pipelines/zones/tools/. See
+// lib/loredata.mjs for why this reaches the repo root rather than the pipeline root.
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const SEED = join(ROOT, "pipelines/zones/tools/seed/zones.json");
 const WTF = "/Applications/World of Warcraft/_classic_era_/WTF/Account";
 
 const write = process.argv.includes("--write");

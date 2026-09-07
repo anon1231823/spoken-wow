@@ -8,8 +8,10 @@ import { fileURLToPath } from "node:url";
 
 import { loreSections } from "./sections.mjs";
 
-export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-export const CACHE = join(ROOT, "tools/cache");
+// The monorepo root, four levels up from pipelines/zones/tools/lib/. See loredata.mjs
+// for why this reaches the repo root rather than the pipeline root.
+export const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+export const CACHE = join(ROOT, "pipelines/zones/tools/cache");
 
 export const API = "https://warcraft.wiki.gg/api.php";
 export const WIKI = "https://warcraft.wiki.gg/wiki/";
