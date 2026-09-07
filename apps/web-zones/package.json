@@ -1,9 +1,7 @@
 {
-  "name": "zonelore-web",
+  "name": "@spoken/web-zones",
   "private": true,
   "version": "0.1.0",
-  "//packageManager": "Read by pnpm/action-setup in .github/workflows/deploy-web.yaml, which has no version of its own to fall back on. The repo root's package.json is the tooling's and deliberately carries no package manager.",
-  "packageManager": "pnpm@10.33.2",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
