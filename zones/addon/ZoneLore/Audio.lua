@@ -1,8 +1,10 @@
 -- ZoneLore -- narrated lore playback.
 --
--- All playback state lives here; UI/AudioButton.lua is the only thing that draws
--- it. One clip plays at a time, addon-wide, so starting a new one always stops
--- whatever was running.
+-- This file knows what a lore entry sounds like -- which pack narrates it, where
+-- the file is, how long it runs -- and hands that to the queue in SoundQueue.lua,
+-- which owns playback itself. One clip plays at a time, addon-wide, so starting a
+-- new one always stops whatever was running; anything else discovered on the way
+-- waits its turn behind it.
 --
 -- Audio ships in separate sound-pack addons, all of them optional: without one
 -- there is nothing to play, so the Play button does not appear and autoplay stays
@@ -48,22 +50,15 @@ local CHANNELS = {
 }
 local DEFAULT_CHANNEL = "Dialog"
 
--- What is playing right now, or nil: { handle, mapID, areaKey, token }.
-local current = nil
-
--- What was paused, or nil: { mapID, areaKey }.
+-- Playback state lives in SoundQueue.lua, ported from AI_VoiceOver. The clip being
+-- spoken is simply the head of that queue, so there is one place to ask what is
+-- happening rather than a `current`, a `paused` shadow copy and a staleness token
+-- that have to agree with each other.
 --
--- The client can start and stop a sound file and nothing in between -- there is no
--- seek, and no way to ask how far into a clip playback has reached. So "pause" is
--- stop, and "resume" replays from the beginning. AI_VoiceOver's pause button works
--- exactly this way (SoundQueue:PauseQueue calls Utils:StopSound, ResumeQueue calls
--- PlaySound) for the same reason. The tooltip says so rather than letting the
--- player discover it.
-local paused = nil
-
--- Bumped on every play and stop. A timer that fires with a stale token belongs to
--- a clip that has already been superseded, and must not stop the current one.
-local token = 0
+-- What has not changed is that the client can start and stop a sound file and
+-- nothing in between -- there is no seek, and no way to ask how far into a clip
+-- playback has reached. So "pause" is stop, and "resume" replays from the
+-- beginning. The tooltip says so rather than letting the player discover it.
 
 -- Callbacks fired whenever playback starts or stops, so every button showing the
 -- same entry agrees on its glyph without polling.
@@ -266,11 +261,42 @@ function ZoneLore:GetAudioClip(mapID, areaKey)
 			clip = pack.zones and pack.zones[mapID]
 		end
 		if clip and clip.file then
-			return "Interface\\AddOns\\" .. pack.addon .. "\\Sounds\\" .. clip.file .. ".mp3", clip.len
+			return "Interface\\AddOns\\" .. pack.addon .. "\\Sounds\\" .. clip.file .. ".mp3",
+				clip.len, pack, clip.file
 		end
 	end
 
 	return nil, nil
+end
+
+-- A queue item for a lore entry, or nil when the installed pack cannot narrate it.
+-- One factory so that every route to a clip -- a click, a slash command, a
+-- discovery -- produces the same shape.
+function ZoneLore:NewLoreSound(mapID, areaKey)
+	local path, length, pack, fileName = self:GetAudioClip(mapID, areaKey)
+	if not path then
+		return nil
+	end
+
+	return {
+		fileName = fileName,
+		filePath = path,
+		length = length,
+		pack = pack,
+		mapID = mapID,
+		areaKey = areaKey,
+		-- Resolved once, here, rather than per frame by whatever draws the queue.
+		label = self:GetAudioLabel(mapID, areaKey),
+		-- Recorded when the clip starts rather than when it is queued, so that
+		-- every route to a clip counts and a backlog that overflows does not spend
+		-- areas on silence. Only the autoplayExplored option reads it; see
+		-- Autoplay.lua.
+		startCallback = function(item)
+			if ZoneLore.MarkHeard then
+				ZoneLore:MarkHeard(item.mapID, item.areaKey)
+			end
+		end,
+	}
 end
 
 function ZoneLore:HasAudio(mapID, areaKey)
@@ -292,30 +318,44 @@ end
 -- Playback
 --------------------------------------------------------------------------------
 
+-- Playing, as opposed to merely queued. An entry can sit at the head of the queue
+-- unstarted while a gate holds it -- waiting out a pull, say -- and a button
+-- reading "Stop" over an entry that has made no sound would stop a queue instead
+-- of a clip. `nextSoundTimer` is set only while a clip is actually speaking, so it
+-- is the liveness test rather than mere presence at the head.
 function ZoneLore:IsPlayingLore(mapID, areaKey)
-	if not current then
+	local queue = self.SoundQueue
+	if not queue:IsPlaying() then
 		return false
 	end
 	if mapID == nil then
 		return true
 	end
-	return current.mapID == mapID and current.areaKey == areaKey
+	local head = queue:GetCurrentSound()
+	return head.mapID == mapID and head.areaKey == areaKey
 end
 
 function ZoneLore:IsPaused()
-	return paused ~= nil
+	return self.SoundQueue:IsPaused() and self.SoundQueue:GetCurrentSound() ~= nil
 end
 
 -- What the floating controls are controlling: mapID, areaKey, isPaused. Nil when
 -- nothing is playing or paused, which is also what hides the controls.
 function ZoneLore:GetNowPlaying()
-	if current then
-		return current.mapID, current.areaKey, false
+	-- Deliberately not "whatever is at the head". An entry held by a gate sits
+	-- there making no sound, and controls offering Pause over silence would be
+	-- lying; the queue list is what shows a held entry. So: playing, or paused.
+	if not self:IsPlayingLore() and not self:IsPaused() then
+		return nil, nil, false
 	end
-	if paused then
-		return paused.mapID, paused.areaKey, true
-	end
-	return nil, nil, false
+	local head = self.SoundQueue:GetCurrentSound()
+	return head.mapID, head.areaKey, self.SoundQueue:IsPaused()
+end
+
+-- How many entries are waiting behind the one playing. Drives the Next button:
+-- the controls need to know whether anything is queued.
+function ZoneLore:QueueLength()
+	return self.SoundQueue:GetWaitingCount()
 end
 
 -- A readable name for an entry, for the controls to label what is playing.
@@ -331,97 +371,45 @@ function ZoneLore:GetAudioLabel(mapID, areaKey)
 	return self:GetMapName(mapID) or tostring(mapID)
 end
 
-local function ClearPlayback()
-	if current and current.handle then
-		StopSound(current.handle)
-	end
-	current = nil
-	token = token + 1
-end
-
 -- The player asking for silence, as opposed to playback being reset on the way to
--- starting something else. The distinction matters once autoplay has a queue: Stop
--- has to mean stop, not skip to the next queued area.
+-- starting something else. The distinction matters because the queue holds a
+-- backlog: Stop has to mean stop, not skip to the next discovered area.
 function ZoneLore:StopLore()
-	if self.ClearAutoplayQueue then
-		self:ClearAutoplayQueue()
-	end
-
-	if not current and not paused then
-		return
-	end
-	ClearPlayback()
-	paused = nil
-	ZoneLore:NotifyAudioChanged()
+	self.SoundQueue:RemoveAllSoundsFromQueue()
 end
 
--- Ends the current clip while leaving the queue alone, so whatever is waiting
+-- Ends the current clip while leaving the backlog alone, so whatever is waiting
 -- starts. Distinct from StopLore, which is the player asking for silence.
 function ZoneLore:SkipLore()
-	if not current and not paused then
-		return false
-	end
-	ClearPlayback()
-	paused = nil
-	-- Autoplay drains on this notification, so the next entry starts itself.
-	ZoneLore:NotifyAudioChanged()
-	return true
+	return self.SoundQueue:RemoveSoundFromQueue(self.SoundQueue:GetCurrentSound())
 end
 
--- Stops the sound and remembers the entry. Resuming replays it from the start;
--- see the note on `paused` above for why nothing better is possible.
+-- Stops the sound and leaves the entry at the head of the queue. Resuming replays
+-- it from the start; see the note at the top of this file for why nothing better
+-- is possible.
 function ZoneLore:PauseLore()
-	if not current then
-		return false
-	end
-	paused = { mapID = current.mapID, areaKey = current.areaKey }
-	ClearPlayback()
-	ZoneLore:NotifyAudioChanged()
-	return true
+	return self.SoundQueue:PauseQueue()
 end
 
 function ZoneLore:ResumeLore()
-	if not paused then
-		return false
-	end
-	-- PlayLore clears `paused` via StopLore, so read it into the call first.
-	return self:PlayLore(paused.mapID, paused.areaKey)
+	return self.SoundQueue:ResumeQueue()
 end
 
 function ZoneLore:TogglePauseLore()
-	if paused then
-		return self:ResumeLore()
-	end
-	return self:PauseLore()
+	return self.SoundQueue:TogglePauseQueue()
 end
 
--- A disabled sound channel makes PlaySoundFile return false with no other clue,
--- which otherwise looks exactly like a missing file. Master has no CVar of its own.
-local function IsChannelAudible(channel)
-	if GetCVar("Sound_EnableAllSound") == "0" then
-		return false, "all sound is disabled"
-	end
-	if channel ~= "Master" and GetCVar("Sound_Enable" .. channel) == "0" then
-		return false, ("the %s sound channel is disabled"):format(channel)
-	end
-	return true, nil
-end
-
+-- Plays this entry now, ahead of anything waiting. Pressing Play has always meant
+-- now in ZoneLore, so this front-inserts rather than appending; producers such as
+-- autoplay append instead.
 function ZoneLore:PlayLore(mapID, areaKey)
-	-- Not StopLore: starting a clip supersedes the previous one, but must not
-	-- discard the autoplay queue the way an explicit Stop does.
-	ClearPlayback()
-	paused = nil
-
 	if not self:IsVoiceEnabled() then
 		ZoneLore:NotifyAudioChanged()
 		return false
 	end
 
-	-- Every failure below still has to notify: playback was cleared above, so the
-	-- buttons and the floating controls would otherwise keep showing the old clip.
-	local path, duration = self:GetAudioClip(mapID, areaKey)
-	if not path then
+	local item = self:NewLoreSound(mapID, areaKey)
+	if not item then
 		-- Said out loud, because this is the case players used to experience as
 		-- "the narration is about the wrong zone". Autoplay never reaches here --
 		-- it refuses to queue an entry with no clip -- so this only speaks when
@@ -431,46 +419,7 @@ function ZoneLore:PlayLore(mapID, areaKey)
 		return false
 	end
 
-	local channel = self:GetVoiceChannel()
-	local audible, why = IsChannelAudible(channel)
-	if not audible then
-		self:Print("|cffffcc00cannot play lore: %s|r", why)
-		ZoneLore:NotifyAudioChanged()
-		return false
-	end
-
-	local willPlay, handle = PlaySoundFile(path, channel)
-	if not willPlay then
-		self:Print("|cffffcc00no audio for this entry|r (missing %s)", path)
-		ZoneLore:NotifyAudioChanged()
-		return false
-	end
-
-	token = token + 1
-	current = { handle = handle, mapID = mapID, areaKey = areaKey, token = token }
-
-	-- Recorded here rather than where autoplay queues things, so that every route
-	-- to a clip counts -- a discovery, a zone change, or the player clicking Play.
-	-- Only the autoplayExplored option reads it; see Autoplay.lua.
-	if self.MarkHeard then
-		self:MarkHeard(mapID, areaKey)
-	end
-
-	-- Reset the button when the clip runs out. The client fires no event for this,
-	-- so a recorded duration is the only signal; a clip of unknown length would stay
-	-- in Stop state until the player clicks it or something else interrupts.
-	if duration and duration > 0 then
-		local mine = token
-		C_Timer.After(duration + 0.25, function()
-			if current and current.token == mine then
-				current = nil
-				ZoneLore:NotifyAudioChanged()
-			end
-		end)
-	end
-
-	ZoneLore:NotifyAudioChanged()
-	return true
+	return self.SoundQueue:PlayNow(item, true)
 end
 
 -- Play if this entry is not already playing, stop if it is. What the button does.

@@ -206,7 +206,7 @@ end
 --
 -- SCAFFOLDING. Only a few files draw their text from here so far -- see
 -- Locale/enUS.lua for which -- and the rest still hold English literals. The
--- pattern to follow when converting one is in UI/PlaybackBar.lua, and the rule
+-- pattern to follow when converting one is in UI/SoundQueueUI.lua, and the rule
 -- that matters is positional format arguments (%1$s), because word order is
 -- exactly what a translator cannot fix inside a Lua concatenation.
 --------------------------------------------------------------------------------

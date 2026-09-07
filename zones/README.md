@@ -772,10 +772,10 @@ again on the next login without rolling another character.
 
 #### Queue
 
-Discoveries queue rather than interrupt, capped at 3 and dropping the oldest. The
-cap matters more with subzones on: crossing a cluster of small areas can announce
-several within a minute, and narration that has fallen minutes behind is describing
-somewhere already left.
+Discoveries queue rather than interrupt, capped at 3 waiting and dropping the
+oldest. The cap matters more with subzones on: crossing a cluster of small areas
+can announce several within a minute, and narration that has fallen minutes behind
+is describing somewhere already left.
 Combat and cinematics hold the queue rather than dropping it: the retry ticker
 plays them once the pull or the intro movie ends. A starting-zone cinematic is the
 one moment a character is guaranteed to be discovering things, so it is the
@@ -784,33 +784,85 @@ likeliest collision there is.
 **Stop clears the queue.** Stop has to mean silence, not "skip to the next place I
 discovered on the way here".
 
-### Floating playback controls
+##### One queue, ported from VoiceOverRedux
 
-While a clip is playing, a small **Pause / Stop** widget appears below the minimap
-and disappears again when the clip ends. Drag it to move it; `/zl bar` puts it back
-under the minimap; the options panel turns it off.
+There used to be two halves of a queue: `Audio.lua` held the clip that was
+playing, `Autoplay.lua` held a list of areas waiting behind it, and the two
+coordinated through a callback and a staleness token. `SoundQueue.lua` is now a
+port of `VoiceOverRedux`'s file of the same name, and there is one list — the clip
+being spoken is simply its head. Autoplay decides what deserves narrating and
+hands it over; the depth cap, the deduplication and the retry after combat belong
+to the queue.
 
-**Stop reads "Next" whenever autoplay has something queued**, and skips to it — with
-subzone discoveries on, ending the whole backlog is rarely what is wanted mid-walk.
-Stopping outright is then a **right-click**, which the tooltip says, along with how
-many entries are waiting. Without that, turning Stop into Next would have removed
-the only way to stop, since the queue is non-empty most of the time while
-exploring.
+It is a port rather than a rewrite because both addons are eventually meant to
+share one player, so that quest voiceover and zone lore cannot talk over each
+other, and an extraction from one lineage is a smaller thing than a merge of two.
+`SoundQueue.lua` and `SoundUtils.lua` are the files that would move; `Audio.lua`
+stays, because packs, languages and map areas are ZoneLore's alone. Those two run
+inside the private environment set up in `QueueEnv.lua`, keeping upstream's
+`setfenv` idiom so its fixes re-apply by diff — every deliberate departure is
+listed in each file's header.
+
+**Waiting, not queued, is what gets counted.** A player who started one clip and
+nothing else has an empty queue, not a queue of one — which is what makes "Stop
+becomes Next" and the cap of 3 mean what they say.
+
+**Combat holds only what autoplay queued.** Pressing Play during a pull has always
+meant now, so the hold takes the entry it is judging rather than only the moment:
+a clip the player asked for by name plays through combat, and a discovery waits.
+That is also why Play inserts at the front rather than appending — behind a
+backlog it would be a wait, and behind an entry held for combat it might never
+arrive at all.
+
+#### What is waiting
+
+The player names each queued area under the one being spoken, and says why
+anything is being held — "waiting for combat to end". Clicking an entry drops it.
+Before this, a held discovery was indistinguishable from a discovery that failed.
+
+### The player
+
+While anything is playing or queued, a movable frame appears: a portrait, the zone
+above the area being narrated, the backlog under that, and **Read** and **Report**
+beside it. Clicking the portrait pauses. Drag it by the handle on the portrait's
+corner; `/zl bar` brings it back to the middle of the screen; the options panel
+turns it off.
+
+It is ported from `VoiceOverRedux`, the quest-voiceover addon, and is deliberately
+the same widget down to the atlas coordinates — a player running both should not
+have to learn two players, and the two addons are meant to end up sharing one
+outright rather than merely resembling each other.
+
+**The portrait is always the book.** Redux draws a 3D model of the NPC speaking and
+falls back to a book when there is no model to draw. A zone has no speaker, so the
+fallback is the only case here, and everything the model brought with it — the
+`DressUpModel`, `SetCreature`, the animation timer, the retry-until-cached
+`OnUpdate` — went with it.
 
 It exists because the Play buttons are attached to a description, so they are only
 reachable while that description is on screen — and narration deliberately outlives
-both panels. Without this widget, closing the map would leave a clip running with
-no way to stop it short of `/zl stop`.
+both panels. Without this frame, closing the map would leave a clip running with no
+way to stop it short of `/zl stop`.
 
 **Pause restarts from the beginning.** The client can start and stop a sound file
 and nothing in between: there is no seek, and no way to ask how far into a clip
-playback has reached. `AI_VoiceOver`'s pause button has the same limitation and the
-same implementation — `SoundQueue:PauseQueue` calls `Utils:StopSound`, and
-`ResumeQueue` calls `PlaySound` from the top. The tooltip says so, rather than
-letting the player find out forty seconds in.
+playback has reached. Redux's pause button has the same limitation and the same
+implementation — `SoundQueue:PauseQueue` calls `Utils:StopSound`, and `ResumeQueue`
+calls `PlaySound` from the top. The tooltip says so, rather than letting the player
+find out forty seconds in.
 
-It is anchored to `Minimap` rather than parented to it, so a rescaled minimap
-neither drags the controls along nor changes their size.
+#### What replaced the playback bar
+
+There used to be a small Pause/Stop widget anchored below the minimap, with Stop
+relabelling itself to "Next" whenever the backlog was non-empty and right-click
+reserved for stopping outright. The player supersedes it: the backlog is now
+listed rather than counted in a tooltip, so skipping one entry is clicking that
+entry and stopping everything is `/zl stop`, and neither needs a button that means
+two things depending on state.
+
+`/zl bar` kept its name — it is what people type when a frame has ended up
+somewhere unreachable — but now recentres the player rather than reanchoring it to
+the minimap.
 
 ### One clip at a time, stopped only on purpose
 
@@ -833,7 +885,7 @@ than an afterthought.
 `PlaySoundFile` returns false both for a missing file and for a muted sound
 channel. Audio.lua checks `Sound_EnableAllSound` and `Sound_Enable<Channel>` first
 so the two are reported differently, which is the same distinction
-`AI_VoiceOver`'s `Utils:IsSoundEnabled` exists to make.
+`VoiceOverRedux`'s `Utils:IsSoundEnabled` exists to make.
 
 The sound channel is configurable and defaults to **Dialog**, so narration follows
 the Dialog volume slider instead of competing with it. The options panel cycles
@@ -1356,7 +1408,7 @@ here:     node tools/seed-from-dump.mjs           # report differences
 /zl autoplay                toggle narrating areas as you discover them
 /zl discover [area]         pretend to discover an area (dev)
 /zl forget                  replay the login greeting on next login (dev)
-/zl bar                     move the playback controls back below the minimap
+/zl bar                     move the player back to the middle of the screen
 /zl minimap                 show or hide the minimap button
 /zl debug                   report area names on map click
 /zl dump                    enumerate the map tree (dev)
@@ -1478,6 +1530,13 @@ includes, since they are embedded under `Libs/` rather than fetched.
 ## Licensing
 
 Addon code: MIT.
+
+`SoundQueue.lua`, `SoundUtils.lua`, `QueueEnv.lua`, `UI/SoundQueueUI.lua` and the
+queue widget's textures are ported from
+[VoiceOverRedux](https://github.com/rusty-key/wow-voiceover), which is released into
+the public domain under the Unlicense. Nothing in that licence requires
+attribution; the credit is here because knowing where the code came from is what
+makes re-applying its fixes possible.
 
 Zone lore text in `addon/ZoneLore/Data/Zones.lua` and `Data/Subzones.lua` is
 derived from [warcraft.wiki.gg](https://warcraft.wiki.gg) and is licensed
