@@ -189,9 +189,9 @@ jobs:
           export ZONELORE_ROOT="$PWD"
           export ZONELORE_SOUNDS="$PWD/no-audio-in-ci"
           export ZONELORE_AUDIO_HISTORY="$PWD/no-history-in-ci"
-          export ZONELORE_MANIFEST="$PWD/tools/voice/manifest.json"
+          export ZONELORE_MANIFEST="$PWD/pipelines/zones/tools/voice/manifest.json"
 
-          node web/server.js &
+          node apps/web-zones/server.js &
           pid=$!
           trap 'kill $pid 2>/dev/null || true' EXIT
 

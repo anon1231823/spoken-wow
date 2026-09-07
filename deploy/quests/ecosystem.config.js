@@ -49,7 +49,10 @@ module.exports = {
   apps: [
     {
       name: "voiceover",
-      script: "server.js", // Next.js standalone output
+      // Next.js standalone output. Two levels down, not at the top: next.config.ts traces
+      // from the monorepo root, because pnpm hoists node_modules there and a narrower
+      // tracing root leaves `next` out of the bundle entirely.
+      script: "apps/web-quests/server.js",
       cwd: "/srv/voiceover/current",
 
       // Cluster mode is what makes `pm2 reload` zero-downtime: workers are replaced one at
@@ -91,7 +94,7 @@ module.exports = {
         // from it, deliberately: an env var of their own would live here, and this file only
         // reaches the process through `make deploy-scripts` - so a deploy that shipped the
         // findings would still not be able to find them.
-        VOICEOVER_CORPUS: "/srv/voiceover/current/corpus/corpus.json.gz",
+        VOICEOVER_CORPUS: "/srv/voiceover/current/pipelines/quests/corpus/corpus.json.gz",
 
         // Clips uploaded to build voice clones, shared for the same reason the audio is: a
         // cloned ElevenLabs voice cannot be exported, so these are the only way to remake
@@ -120,7 +123,7 @@ module.exports = {
         // this the app falls back to built-in defaults and, worse, applies no pronunciation
         // rules at all - "Hm" is read aloud as the letters H and M, and the lexicon editor
         // renders with no rows at all.
-        VOICEOVER_VOICE_CONFIG: "/srv/voiceover/current/voice",
+        VOICEOVER_VOICE_CONFIG: "/srv/voiceover/current/pipelines/quests/voice",
 
         // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL and ELEVENLABS_API_KEY.
         ...readSecrets(),

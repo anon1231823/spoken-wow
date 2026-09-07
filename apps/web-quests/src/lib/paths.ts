@@ -11,7 +11,17 @@ import path from "node:path";
  * current release or shared/; a release directory has no pipelines/ in it and never
  * reaches this line.
  */
-const DATA_ROOT = path.resolve(process.cwd(), "..", "..", "pipelines", "quests");
+//
+// Assembled from a joined array rather than written as literal segments, which looks
+// gratuitous and is not. Next's file tracer statically evaluates path.resolve() when
+// every argument is a literal, resolves this to a real directory, and copies the whole
+// directory into the standalone bundle: 127 MB of Python virtualenv, the corpus twice,
+// and pipelines/quests/.env with the ElevenLabs key and the database password in it.
+// The old tracing root hid that by putting this directory out of range, and widening
+// the root -- which pnpm's hoisted node_modules forced -- exposed it. One segment kept
+// out of the literal makes the expression opaque to the tracer and identical at runtime.
+const PIPELINE_DIR = ["pipelines", "quests"].join(path.sep);
+const DATA_ROOT = path.resolve(process.cwd(), "..", "..", PIPELINE_DIR);
 
 export const CORPUS_PATH =
   process.env.VOICEOVER_CORPUS ?? path.join(DATA_ROOT, "corpus", "corpus.json.gz");

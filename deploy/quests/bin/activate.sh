@@ -16,7 +16,7 @@ TARGET=${1:?usage: activate.sh <release-dir>}
 PM2=${PM2:-$(command -v pm2 || echo /usr/local/bin/pm2)}
 
 [ -d "$TARGET" ] || { echo "activate: no such release: $TARGET" >&2; exit 1; }
-[ -f "$TARGET/server.js" ] || { echo "activate: $TARGET has no server.js - bad build?" >&2; exit 1; }
+[ -f "$TARGET/apps/web-quests/server.js" ] || { echo "activate: $TARGET has no apps/web-quests/server.js - bad build?" >&2; exit 1; }
 [ -f "$TARGET/corpus/corpus.json.gz" ] || { echo "activate: $TARGET has no corpus" >&2; exit 1; }
 
 PREVIOUS=$(readlink -f "$ROOT/current" 2>/dev/null || echo "(none)")

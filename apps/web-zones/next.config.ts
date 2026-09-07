@@ -12,9 +12,9 @@ const config: NextConfig = {
   // Those files live in pipelines/zones/, outside this app, and without this Next
   // traces dependencies from apps/web-zones/ alone and leaves them out of the build.
   //
-  // Tracing from the monorepo root rather than from the old repo root pulls a wider
-  // tree into the standalone bundle; the deploy workflow asserts a size ceiling on
-  // the assembled release so that growth cannot go unnoticed.
+  // Since the monorepo merge this is also what puts node_modules inside the tracing
+  // root: pnpm hoists them there, and the quests app -- which used to trace from its
+  // own directory -- shipped a bundle with no `next` in it until it was widened too.
   //
   // The alternative was spawning `node voice/generate.mjs` and parsing stdout,
   // which loses the error kinds and the character-cost header and reintroduces
@@ -32,6 +32,33 @@ const config: NextConfig = {
   // traces; these are already valid ESM, so they only need to not be treated as
   // browser-bundled code.
   serverExternalPackages: ["pg"],
+
+  // The same guard the quests app needs, for the same reason and with the same trap:
+  // a wide tracing root lets Next's static evaluation of a path.resolve() drag an
+  // entire sibling directory into the bundle -- there it was the Python virtualenv and
+  // a .env holding live credentials. This app does not do that today; nothing stops the
+  // next refactor from doing it.
+  //
+  // THE GLOBS ARE RELATIVE TO THIS DIRECTORY, NOT TO THE TRACING ROOT, which is not what
+  // the name suggests and fails silently when you get it wrong. Hence "../../".
+  //
+  // pipelines/zones is deliberately absent: this app imports its voice/*.mjs, and while
+  // webpack compiles them in rather than copying them, excluding the directory would
+  // make that a build-order accident rather than a decision.
+  outputFileTracingExcludes: {
+    "*": [
+      "../../pipelines/quests/**",
+      "../../addons/**",
+      "../../apps/web-quests/**",
+      "../../curseforge/**",
+      "../../deploy/**",
+      "../../dist/**",
+      "../../docs/**",
+      "../../make/**",
+      "../../scripts/**",
+      "../../tests/**",
+    ],
+  },
 };
 
 export default config;
