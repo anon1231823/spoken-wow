@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/* Dark only, deliberately. This is a tool for listening to audio for hours at a
+   stretch, it runs on one machine, and a theme toggle is a setting nobody would
+   change twice. ../wow-voiceover's layout.tsx hardcodes the same choice. */
+
+@theme {
+  --color-bg: oklch(0.17 0.008 260);
+  --color-panel: oklch(0.21 0.009 260);
+  --color-panel-hover: oklch(0.25 0.011 260);
+  --color-border: oklch(0.31 0.011 260);
+  --color-fg: oklch(0.93 0.005 260);
+  --color-muted: oklch(0.66 0.012 260);
+  --color-faint: oklch(0.48 0.012 260);
+
+  /* White, not a hue. The four state colours below carry meaning -- good, warn, bad --
+     and a blue that meant nothing in particular was competing with them for the eye.
+     Accent here means "this is the thing to press", and on a near-black page the
+     brightest thing available says that without spending a colour on it.
+
+     Above --color-fg (0.93) on purpose: a filled accent button and a paragraph of body
+     text must not be the same value, or the button stops reading as a surface. */
+  --color-accent: oklch(1 0 0);
+  --color-good: oklch(0.75 0.16 155);
+  --color-warn: oklch(0.80 0.15 85);
+  --color-bad: oklch(0.68 0.19 22);
+}
+
+html {
+  color-scheme: dark;
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+}
+
+/* Native controls, styled rather than replaced. A <select> and an <input type=range>
+   do everything the radix equivalents do here, keep full keyboard behaviour for free,
+   and are correctly ignored by the "is the user typing" check in the keyboard
+   handler -- which a <button role="combobox"> is not. */
+
+select,
+input[type="text"],
+input[type="date"],
+input[type="search"] {
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  color: var(--color-fg);
+}
+
+select:focus-visible,
+input:focus-visible,
+button:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+input[type="range"] {
+  accent-color: var(--color-accent);
+  width: 100%;
+  cursor: pointer;
+}
+
+/* The one content column, 1024px wide.
+
+   A utility rather than `mx-auto max-w-5xl px-5` repeated in six places, because three
+   of those places are bars that span the viewport -- the header, the sticky search bar,
+   and the fixed player stack -- whose backgrounds and borders must stay full-bleed while
+   their contents line up with the table. Repeating the numbers is how a sticky bar ends
+   up half a padding step out of true with the rows under it. Same width as
+   ../wow-voiceover's max-w-6xl argument, one step narrower: this table has fewer columns
+   and the lore text is the column that has to be readable. */
+@utility shell {
+  margin-inline: auto;
+  max-width: 64rem;
+  padding-inline: 1.25rem;
+}
+
+/* The table cannot wear `shell` itself. Tailwind's preflight sets
+   `border-collapse: collapse`, and a collapsed table ignores its own padding-inline --
+   so the max-width applied but the gutter silently did not, and the rows sat 12px proud
+   of the header and the search bar.
+
+   It therefore goes on a wrapper, and the outer cells give up their own px-2 to the
+   wrapper's gutter: the gutter is the column's job, not the first cell's. Everything
+   between keeps its padding, so the columns are unaffected. */
+.shell-table :is(th, td):first-child {
+  padding-inline-start: 0;
+}
+
+.shell-table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

@@ -1,0 +1,37 @@
+# Raw MediaWiki API responses. Regenerate with `node tools/scrape.mjs`.
+tools/cache/
+
+# macOS
+.DS_Store
+
+# Packaged addon zips. Rebuild with `make package`.
+dist/
+
+# Generated voicelines. Rebuild with `node tools/voice/generate.mjs`.
+addon/ZoneLoreAudio/Sounds/
+
+# Voice samples for checking the model before a bulk run.
+audio-samples/
+
+# Transcoded sound-pack clips, keyed by the checksum of the master they came from.
+# A build cache: scripts/package-audio.sh refills it, and prunes entries whose
+# master has been re-cut. Outside dist/ so `make clean` does not cost a five-minute
+# re-encode. Roughly half the size of Sounds/ per tier.
+audio-transcoded/
+
+# Superseded takes, kept so a bad re-roll is reversible. A sibling of Sounds/ and
+# not a subdirectory: validate-audio.mjs walks Sounds/ and would count these as
+# orphans. Grows without bound -- re-cutting the whole corpus adds ~700MB.
+audio-history/
+
+# ELEVENLABS_API_KEY and DATABASE_URL
+.env
+
+node_modules/
+web/.next/
+web/next-env.d.ts
+web/tsconfig.tsbuildinfo
+
+# The release directory the deploy workflow assembles. Built by CI; reproducible
+# locally by following the "Assemble release" step in .github/workflows/deploy-web.yaml.
+release/

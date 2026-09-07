@@ -1,0 +1,67 @@
+## Interface: 11509, 20506
+## Title: ZoneLore
+## Notes: Shows additional lore about zones on the world map and minimap.|n|cffffcc00Beta:|r the narration is a proof-of-concept voice, being redesigned.
+## Version: 0.4.3
+## Author: rusty
+## SavedVariables: ZoneLoreDB, ZoneLoreQueueDB
+## SavedVariablesPerCharacter: ZoneLoreCharDB
+## LoadSavedVariablesFirst: true
+# ^ load-bearing beyond convenience: the generated data files under Data/ ask
+# Language.lua which language to build a table for, and it can only answer that
+# early because ZoneLoreDB is already populated. Without this line every player
+# silently reads English.
+## OptionalDeps: ZoneLoreAudio, ZoneLoreAudio64
+# Not the registration mechanism -- sound packs register themselves into
+# ZoneLoreAudioPacks and Audio.lua walks that on demand, so this list is load
+# order only and does not need an entry per language pack.
+## IconTexture: Interface\AddOns\ZoneLore\Textures\AddonIcon.tga
+## X-License: Addon code MIT. Zone lore text from warcraft.wiki.gg, CC BY-SA 4.0.
+## X-Credits: Lore text sourced from warcraft.wiki.gg contributors (CC BY-SA 4.0).
+
+embeds.xml
+
+# Data/Languages.lua first: it is what Language.lua reads to decide which
+# language is being read, and everything after that guards itself on the answer.
+Data/Languages.lua
+Language.lua
+Locale/enUS.lua
+Locale/deDE.lua
+Locale/esES.lua
+Locale/esMX.lua
+Locale/frFR.lua
+Locale/itIT.lua
+Locale/ptBR.lua
+Locale/ruRU.lua
+Locale/koKR.lua
+Locale/zhCN.lua
+Locale/zhTW.lua
+Core.lua
+QueueEnv.lua
+Audio.lua
+SoundUtils.lua
+SoundQueue.lua
+Autoplay.lua
+Data/enUS/Zones.lua
+Data/enUS/Subzones.lua
+Data/deDE/Aliases.lua
+Data/esES/Aliases.lua
+Data/esMX/Aliases.lua
+Data/frFR/Aliases.lua
+Data/itIT/Aliases.lua
+Data/ptBR/Aliases.lua
+Data/ruRU/Aliases.lua
+Data/koKR/Aliases.lua
+Data/zhCN/Aliases.lua
+Data/zhTW/Aliases.lua
+UI/TextView.lua
+UI/Scroller.lua
+UI/CopyLink.lua
+UI/AudioButton.lua
+UI/ReportButton.lua
+UI/MapPanel.lua
+UI/SubzoneClick.lua
+UI/HoverPreview.lua
+UI/LoreWindow.lua
+UI/MinimapButton.lua
+UI/SoundQueueUI.lua
+UI/Options.lua

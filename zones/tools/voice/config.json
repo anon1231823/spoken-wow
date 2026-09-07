@@ -1,0 +1,22 @@
+{
+  "voiceName": "narrator-male",
+  "voiceId": "ggodpz28jXGN11DlccGk",
+  "modelId": "eleven_v3",
+  "languageCode": "en",
+  "outputFormat": "mp3_44100_128",
+  "dictionaryId": "Elx0hcDze8EXW2rImeLT",
+  "creditRate": 0.607,
+  "voiceSettings": {
+    "stability": 0.5,
+    "similarity_boost": 0.75,
+    "use_speaker_boost": true
+  },
+  "_notes": {
+    "voiceId": "Resolved from voiceName via GET /v1/voices on first use and cached here, so every later run is one fewer request and is pinned to the voice that was actually used.",
+    "languageCode": "The corpus is English, so every request says so. Without it a multilingual model infers the language from the text, and a short entry gives it almost nothing to go on. Sent only for models that accept it.",
+    "outputFormat": "ElevenLabs bills characters, not bytes -- output format does not change the price. So this generates at the highest the plan allows and scripts/package-audio.sh transcodes down if the download is too large. Generating small to save money would save nothing and make a later quality bump a second purchase.",
+    "dictionaryId": "An ElevenLabs pronunciation dictionary to apply. The generator resolves its latest version at the start of every run and uses that for the whole run -- the lexicon is edited in ../wow-voiceover and this project always wants its newest version. Each take records the version it was made with, so drift stays knowable per line. Setting dictionaryVersionId here would act as a pin and skip the per-run resolution. Phoneme rules are honoured by eleven_v3 and eleven_flash_v2 only, which is one more reason this project is on v3.",
+    "creditRate": "Credits per character. ElevenLabs bills round(characters x rate) and the rate belongs to the plan, not the request. Measured at 0.607 over the first 44 generated lines on this account with eleven_v3 -- an earlier 0.55 taken from the sibling project understated the bill by 10%. Only a fallback: once the manifest holds generated lines the estimate is measured from those instead, and the character-cost response header is always authoritative.",
+    "stability": "v3 exposes this as Creative (0.0) / Natural (0.5) / Robust (1.0). Natural, because Creative hallucinates across an unattended run of 1353 clips and Robust gives up the expressiveness v3 was chosen for."
+  }
+}
