@@ -19,7 +19,7 @@ REMOTE_PM2   := pm2
 
 # The ignore list and the rsync exclusion file derived from it.
 #
-# corpus/ignored.json is committed and exported from the database by `make pull-ignores`;
+# pipelines/quests/corpus/ignored.json is committed and exported from the database by `make pull-ignores`;
 # .rsync-ignored is regenerated before every transfer and gitignored. Deriving it each time
 # rather than committing it means a stale exclusion cannot survive a decision being undone.
 # Passed straight through to scripts/package-audio.sh, which documents each one. Empty
@@ -28,7 +28,7 @@ VERSION ?=
 ENCODE  ?=
 JOBS    ?=
 
-IGNORED_JSON := corpus/ignored.json
+IGNORED_JSON := pipelines/quests/corpus/ignored.json
 IGNORED_LIST := .rsync-ignored
 PYTHON       ?= $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || command -v python3)
 
@@ -46,7 +46,7 @@ SSH        := ssh -i $(DEPLOY_KEY) -o IdentitiesOnly=yes
 
 # No -z: mp3 is already compressed, so it is pure CPU for ~0 gain.
 # --delete keeps the two stores in exact correspondence, which is what makes the "missing
-# audio" badges in the UI trustworthy - see isGap() in web/src/lib/search.ts.
+# audio" badges in the UI trustworthy - see isGap() in apps/web-quests/src/lib/search.ts.
 #
 # --exclude-from keeps the lines nobody will ever voice out of both directions. It also stops
 # --delete removing what it excludes, on either side: an ignored line's audio is left where it
@@ -75,7 +75,7 @@ endef
         factions release release-standard release-hq \
         release-dry deploy-scripts \
         rollback releases \
-        ssh-check test-player
+        ssh-check
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -85,22 +85,18 @@ help: ## Show this help
 
 # The player's quest dispatch, run against a stubbed client. LuaJIT is the interpreter
 # because it speaks the 5.1 the game does, including setfenv, which every addon file calls.
-LUA ?= $(shell command -v luajit || command -v lua5.1)
-
-test-player: ## Run the addon's Lua tests (needs luajit)
-	@[ -n "$(LUA)" ] || { echo "No luajit found: brew install luajit"; exit 1; }
-	@$(LUA) tests/lua/quest_dispatch_test.lua
-	@$(LUA) tests/lua/easter_egg_test.lua
+# test-player moved to the root Makefile: tests/lua/ is shared by every addon now,
+# not just this one.
 
 # --- audio store ----------------------------------------------------------------------
 
 push-dry: ## Preview what `make push` would change on the droplet
 	$(preflight)
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run audio/ $(DROPLET):$(REMOTE_AUDIO)
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO)
 
 pull-dry: ## Preview what `make pull` would change locally
 	$(preflight)
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) audio/
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) pipelines/quests/audio/
 
 # Which local files would overwrite something NEWER on the droplet.
 #
@@ -114,8 +110,8 @@ pull-dry: ## Preview what `make pull` would change locally
 # and the guard passes every time while looking like it ran.
 define freshness
 	@a=$$(mktemp); b=$$(mktemp); \
-	$(RSYNC) $(RSYNC_OPTS) -i --dry-run    audio/ $(DROPLET):$(REMOTE_AUDIO) | grep '^>f' | awk '{print $$2}' | sort > $$a; \
-	$(RSYNC) $(RSYNC_OPTS) -i -u --dry-run audio/ $(DROPLET):$(REMOTE_AUDIO) | grep '^>f' | awk '{print $$2}' | sort > $$b; \
+	$(RSYNC) $(RSYNC_OPTS) -i --dry-run    pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO) | grep '^>f' | awk '{print $$2}' | sort > $$a; \
+	$(RSYNC) $(RSYNC_OPTS) -i -u --dry-run pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO) | grep '^>f' | awk '{print $$2}' | sort > $$b; \
 	newer=$$(comm -23 $$a $$b); rm -f $$a $$b; \
 	if [ -n "$$newer" ]; then \
 	  echo; echo "REFUSING: the droplet has newer audio for these files:"; \
@@ -128,25 +124,25 @@ define freshness
 	fi
 endef
 
-push: ## Upload audio/ to the droplet (refuses to clobber newer droplet takes)
+push: ## Upload pipelines/quests/audio/ to the droplet (refuses to clobber newer droplet takes)
 	$(preflight)
 	$(freshness)
 	@echo "==> dry run (local -> $(DROPLET))"
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run audio/ $(DROPLET):$(REMOTE_AUDIO) | tail -20
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	$(RSYNC) $(RSYNC_OPTS) audio/ $(DROPLET):$(REMOTE_AUDIO)
+	$(RSYNC) $(RSYNC_OPTS) pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO)
 	@# No pm2 reload: storeIndex() re-reads whenever either subfolder's mtime moves, which
 	@# a push always changes. It had to reload while the memo was permanent - see the
-	@# freshness note in web/src/lib/audio.ts.
+	@# freshness note in apps/web-quests/src/lib/audio.ts.
 	@echo "==> pushed"
 
-pull: ## Download the droplet's audio store into audio/ (DESTRUCTIVE: --delete)
+pull: ## Download the droplet's audio store into pipelines/quests/audio/ (DESTRUCTIVE: --delete)
 	$(preflight)
 	@echo "==> dry run ($(DROPLET) -> local)"
 	@echo "    --delete will REMOVE local files the droplet does not have."
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) audio/ | tail -20
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) pipelines/quests/audio/ | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	$(RSYNC) $(RSYNC_OPTS) $(DROPLET):$(REMOTE_AUDIO) audio/
+	$(RSYNC) $(RSYNC_OPTS) $(DROPLET):$(REMOTE_AUDIO) pipelines/quests/audio/
 	@echo "==> pulled"
 
 # --- voice clips ----------------------------------------------------------------------
@@ -162,18 +158,18 @@ pull: ## Download the droplet's audio store into audio/ (DESTRUCTIVE: --delete)
 pull-voices: ## Fetch voice clips from the droplet (non-destructive)
 	$(preflight)
 	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
-		$(DROPLET):$(REMOTE_VOICES) voice/samples/
-	@echo "==> pulled into voice/samples/"
+		$(DROPLET):$(REMOTE_VOICES) pipelines/quests/voice/samples/
+	@echo "==> pulled into pipelines/quests/voice/samples/"
 
 push-voices: ## Upload voice clips to the droplet (non-destructive)
 	$(preflight)
-	@[ -d voice/samples ] || { echo "no voice/samples/ to push"; exit 1; }
+	@[ -d pipelines/quests/voice/samples ] || { echo "no pipelines/quests/voice/samples/ to push"; exit 1; }
 	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
-		voice/samples/ $(DROPLET):$(REMOTE_VOICES)
+		pipelines/quests/voice/samples/ $(DROPLET):$(REMOTE_VOICES)
 	@echo "==> pushed"
 
 voices-status: ## Compare clip count and size on both sides
-	@echo "local:  $$(find voice/samples -type f 2>/dev/null | wc -l | tr -d ' ') clips, $$(du -sh voice/samples 2>/dev/null | cut -f1 || echo 0)"
+	@echo "local:  $$(find pipelines/quests/voice/samples -type f 2>/dev/null | wc -l | tr -d ' ') clips, $$(du -sh pipelines/quests/voice/samples 2>/dev/null | cut -f1 || echo 0)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_VOICES) -type f 2>/dev/null | wc -l | tr -d " ") clips, $$(du -sh $(REMOTE_VOICES) 2>/dev/null | cut -f1)"'
 
 # --- take history --------------------------------------------------------------------
@@ -186,18 +182,18 @@ voices-status: ## Compare clip count and size on both sides
 pull-history: ## Fetch previous takes from the droplet (non-destructive)
 	$(preflight)
 	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
-		$(DROPLET):$(REMOTE_HISTORY) audio-history/
-	@echo "==> pulled into audio-history/"
+		$(DROPLET):$(REMOTE_HISTORY) pipelines/quests/audio-history/
+	@echo "==> pulled into pipelines/quests/audio-history/"
 
 push-history: ## Upload previous takes to the droplet (non-destructive)
 	$(preflight)
-	@[ -d audio-history ] || { echo "no audio-history/ to push"; exit 1; }
+	@[ -d pipelines/quests/audio-history ] || { echo "no pipelines/quests/audio-history/ to push"; exit 1; }
 	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
-		audio-history/ $(DROPLET):$(REMOTE_HISTORY)
+		pipelines/quests/audio-history/ $(DROPLET):$(REMOTE_HISTORY)
 	@echo "==> pushed"
 
 history-status: ## Compare take count and size on both sides
-	@echo "local:  $$(find audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ') takes, $$(du -sh audio-history 2>/dev/null | cut -f1 || echo 0)"
+	@echo "local:  $$(find pipelines/quests/audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ') takes, $$(du -sh pipelines/quests/audio-history 2>/dev/null | cut -f1 || echo 0)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_HISTORY) -name "*.mp3" 2>/dev/null | wc -l | tr -d " ") takes, $$(du -sh $(REMOTE_HISTORY) 2>/dev/null | cut -f1)"'
 
 # --- packaging ------------------------------------------------------------------------
@@ -226,10 +222,10 @@ history-status: ## Compare take count and size on both sides
 # docs/pack-size.md is where the two encodes were measured against everything else.
 
 package: ## Zip the player addon into dist/: one Blizzard zip, one per legacy client
-	@./scripts/package.sh
+	@./scripts/quests/package.sh
 
 package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.4.0)
-	@VERSION=$(VERSION) ENCODE=$(ENCODE) JOBS=$(JOBS) ./scripts/package-audio.sh
+	@VERSION=$(VERSION) ENCODE=$(ENCODE) JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
 # The HQ pack: every line in one folder, Ogg Vorbis at the full 44.1 kHz, ~1.3 GB. Not a
 # CurseForge release - it is over the upload ceiling and always will be - so it is built when
@@ -239,7 +235,7 @@ package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.
 package-audio-hq: ## Build the full-bandwidth pack, every line in one folder (~1.3 GB)
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
 	  MODULE_NAME=VoiceOverReduxAudioHQ TITLE="VoiceOver Redux Audio: HQ" \
-	  JOBS=$(JOBS) ./scripts/package-audio.sh
+	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
 # The same audio split the same four ways, at full bandwidth: VoiceOverReduxAudioAllianceHQ and
 # friends. Each lands around 300 MB, which is under CurseForge's ceiling - unlike the one-folder
@@ -251,22 +247,22 @@ package-audio-hq: ## Build the full-bandwidth pack, every line in one folder (~1
 
 package-audio-hq-split: ## The four packs at full bandwidth (~300 MB each)
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k MODULE=VoiceOverReduxHQAudio \
-	  TITLE_FAMILY="VoiceOver Redux HQ Audio" JOBS=$(JOBS) ./scripts/package-audio.sh
+	  TITLE_FAMILY="VoiceOver Redux HQ Audio" JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
 package-meta-hq: ## Zip the meta addon for the HQ family
 	@VERSION=$(VERSION) NAME=VoiceOverReduxHQAudio \
 	  TITLE="VoiceOver Redux HQ Audio: All" VARIANT=" at full bandwidth" \
-	  ./scripts/package-meta.sh
+	  ./scripts/quests/package-meta.sh
 
 # The "install everything" addon, which installs nothing itself: a few kilobytes declaring the
 # four packs as CurseForge dependencies, because the complete pack is too big to upload. Its
 # header explains the rest; release.sh sends the dependency list with the file.
 
 package-meta: ## Zip the meta addon that pulls in all four packs
-	@VERSION=$(VERSION) ./scripts/package-meta.sh
+	@VERSION=$(VERSION) ./scripts/quests/package-meta.sh
 
 # The HQ pack's home, since it is too big for CurseForge: nginx serves
-# /srv/voiceover/shared/downloads/ straight off disk (see deploy/nginx-voiceover.conf), and
+# /srv/voiceover/shared/downloads/ straight off disk (see deploy/quests/nginx-voiceover.conf), and
 # this puts a freshly built zip there.
 #
 # The version comes from the built module rather than a variable, so pushing a pack nobody
@@ -291,26 +287,26 @@ downloads-status: ## List what the site is offering for download
 
 # The faction split the packs are cut along. Needs the vmangos world DB up
 # (`docker compose up -d mysql`), which is the only thing in this repo that does - the export
-# is committed so that building a pack never needs a database. tools/export_factions.py
+# is committed so that building a pack never needs a database. pipelines/quests/tools/export_factions.py
 # explains how a quest gets a side.
 
-factions: ## Re-export corpus/factions.json from the world DB (needs MySQL)
-	@$(PYTHON) tools/export_factions.py
+factions: ## Re-export pipelines/quests/corpus/factions.json from the world DB (needs MySQL)
+	@$(PYTHON) pipelines/quests/tools/export_factions.py
 
 release-dry: ## Show what `make release` would upload to CurseForge
-	@./scripts/release.sh --dry-run
+	@./scripts/quests/release.sh --dry-run
 
 release: ## Upload the built zips to CurseForge (needs CURSEFORGE_TOKEN)
-	@./scripts/release.sh
+	@./scripts/quests/release.sh
 
 # One family at a time, for when only that family was rebuilt. `release` does all eleven.
 # The meta addon comes last in both, since CurseForge resolves its dependencies at upload time.
 
 release-standard: ## Upload the standard packs and their meta addon
-	@./scripts/release.sh audio-alliance audio-horde audio-shared audio-gossip audio-all
+	@./scripts/quests/release.sh audio-alliance audio-horde audio-shared audio-gossip audio-all
 
 release-hq: ## Upload the HQ packs and their meta addon
-	@./scripts/release.sh hq-alliance hq-horde hq-shared hq-gossip hq-all
+	@./scripts/quests/release.sh hq-alliance hq-horde hq-shared hq-gossip hq-all
 
 # --- the ignore list ------------------------------------------------------------------
 #
@@ -323,9 +319,9 @@ release-hq: ## Upload the HQ packs and their meta addon
 # One direction only. Editing the file by hand would put it out of step with the table the
 # app reads, and the app is what everyone looks at.
 
-pull-ignores: ## Export the ignore list from the droplet into corpus/ignored.json
+pull-ignores: ## Export the ignore list from the droplet into pipelines/quests/corpus/ignored.json
 	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; \
-	  psql "$$DATABASE_URL" -At -f -' < deploy/sql/export_ignores.sql > $(IGNORED_JSON).tmp
+	  psql "$$DATABASE_URL" -At -f -' < deploy/quests/sql/export_ignores.sql > $(IGNORED_JSON).tmp
 	@# A truncated or failed export must not replace a good list: an empty file here would
 	@# silently un-ignore every line the next time anyone pushed or built.
 	@$(PYTHON) -c "import json,sys; json.load(open(sys.argv[1]))['ignored']" $(IGNORED_JSON).tmp \
@@ -354,9 +350,9 @@ ssh-check: ## Test the CI deploy key against the droplet, as CI authenticates
 		     echo "  chown deploy:deploy /home/deploy/.ssh/authorized_keys"; \
 		     echo "  chmod 600 /home/deploy/.ssh/authorized_keys"; exit 1; }
 
-deploy-scripts: ## Install deploy/bin + ecosystem.config.js on the droplet
-	$(RSYNC) -a -e "$(SSH)" deploy/bin/ $(DROPLET):$(REMOTE_ROOT)/bin/
-	$(RSYNC) -a -e "$(SSH)" deploy/ecosystem.config.js $(DROPLET):$(REMOTE_ROOT)/shared/
+deploy-scripts: ## Install deploy/quests/bin + ecosystem.config.js on the droplet
+	$(RSYNC) -a -e "$(SSH)" deploy/quests/bin/ $(DROPLET):$(REMOTE_ROOT)/bin/
+	$(RSYNC) -a -e "$(SSH)" deploy/quests/ecosystem.config.js $(DROPLET):$(REMOTE_ROOT)/shared/
 	$(SSH) $(DROPLET) 'chmod +x $(REMOTE_ROOT)/bin/*.sh'
 	@echo "==> installed"
 

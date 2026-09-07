@@ -1,4 +1,4 @@
-# Entry points for the scripts under scripts/ and tools/.
+# Entry points for the scripts under scripts/zones/ and pipelines/zones/tools/.
 # Everything here is a thin wrapper -- the scripts remain runnable on their own.
 
 .DEFAULT_GOAL := help
@@ -11,7 +11,7 @@
 
 # The \# escapes are required: an unescaped # starts a make comment, even
 # inside a $(shell ...) call.
-VERSION := $(shell sed -n 's/^\#\# Version:[[:space:]]*//p' addon/ZoneLore/ZoneLore.toc | head -1)
+VERSION := $(shell sed -n 's/^\#\# Version:[[:space:]]*//p' addons/SpokenZones/ZoneLore.toc | head -1)
 ZIP := dist/ZoneLore-$(VERSION).zip
 
 help: ## Show this help
@@ -21,44 +21,44 @@ help: ## Show this help
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
 package: check ## Build dist/ZoneLore-<version>.zip for upload
-	@./scripts/package.sh
+	@./scripts/zones/package.sh
 
 check: validate lint locale-check descriptions-check ## Run every pre-package check
 
-descriptions: ## Regenerate the addon READMEs and dist/descriptions/ from curseforge/
-	@node tools/descriptions.mjs --write
+descriptions: ## Regenerate the addon READMEs and dist/descriptions/ from curseforge/zones/
+	@node pipelines/zones/tools/descriptions.mjs --write
 
-descriptions-check: ## Confirm the addon READMEs match curseforge/
-	@node tools/descriptions.mjs
+descriptions-check: ## Confirm the addon READMEs match curseforge/zones/
+	@node pipelines/zones/tools/descriptions.mjs
 
 descriptions-published: ## Record the current descriptions as pasted into the site
-	@node tools/descriptions.mjs --published
+	@node pipelines/zones/tools/descriptions.mjs --published
 
 validate: ## Sanity-check the generated Lua data files
-	@node tools/validate.mjs
+	@node pipelines/zones/tools/validate.mjs
 
-# The in-game addon list reads a TGA or BLP, never the PNG or SVG in assets/, so the
+# The in-game addon list reads a TGA or BLP, never the PNG or SVG in pipelines/zones/assets/, so the
 # icon is converted and committed. Both addons carry the same shield: they install as a
 # pair, and two icons would imply they are alternatives to each other.
-icon: ## Rebuild both addons' AddonIcon.tga from assets/zonelore-512.png (needs ffmpeg)
-	@python3 tools/make-icon.py assets/zonelore-512.png addon/ZoneLore/Textures/AddonIcon.tga
-	@cp addon/ZoneLore/Textures/AddonIcon.tga addon/ZoneLoreAudio/Textures/AddonIcon.tga
-	@echo "==> copied to addon/ZoneLoreAudio/Textures/AddonIcon.tga"
+icon: ## Rebuild both addons' AddonIcon.tga from pipelines/zones/assets/zonelore-512.png (needs ffmpeg)
+	@python3 pipelines/zones/tools/make-icon.py pipelines/zones/assets/zonelore-512.png addons/SpokenZones/Textures/AddonIcon.tga
+	@cp addons/SpokenZones/Textures/AddonIcon.tga addons/SpokenZonesAudio/Textures/AddonIcon.tga
+	@echo "==> copied to addons/SpokenZonesAudio/Textures/AddonIcon.tga"
 
 lint: ## Block-balance check on the addon's Lua
-	@python3 tools/lua-syntax-check.py
+	@python3 pipelines/zones/tools/lua-syntax-check.py
 
 deploy: ## Symlink the addon into a client (CLIENT=era|anniversary)
-	@./scripts/deploy.sh
+	@./scripts/zones/deploy.sh
 
 deploy-copy: ## Copy the addon into the client instead of symlinking
-	@./scripts/deploy.sh --copy
+	@./scripts/zones/deploy.sh --copy
 
 status: ## Show what is installed in every client
-	@./scripts/deploy.sh --status
+	@./scripts/zones/deploy.sh --status
 
 remove: ## Uninstall the addon from every client
-	@./scripts/deploy.sh --remove
+	@./scripts/zones/deploy.sh --remove
 
 clean: ## Remove build output
 	@rm -rf dist
@@ -78,43 +78,43 @@ clean: ## Remove build output
 VOICE_LANG = ZONELORE_LANG=$(or $(LOCALE),enUS)
 
 voice: ## Dry run over every voiceline (costs nothing; LOCALE=deDE for another language)
-	@$(VOICE_LANG) node tools/voice/generate.mjs --all
+	@$(VOICE_LANG) node pipelines/zones/tools/voice/generate.mjs --all
 
 voice-zones: ## Dry run over the 49 zone lines (costs nothing)
-	@$(VOICE_LANG) node tools/voice/generate.mjs --all --zones-only
+	@$(VOICE_LANG) node pipelines/zones/tools/voice/generate.mjs --all --zones-only
 
-sample: ## Generate two sample lines to audio-samples/ (SPENDS CREDITS)
-	@$(VOICE_LANG) node tools/voice/generate.mjs --sample
+sample: ## Generate two sample lines to pipelines/zones/audio-samples/ (SPENDS CREDITS)
+	@$(VOICE_LANG) node pipelines/zones/tools/voice/generate.mjs --sample
 
 lookup: ## Rebuild the addon's audio lookup table (exports the manifest first)
-	@$(VOICE_LANG) node tools/voice/export-manifest.mjs
-	@$(VOICE_LANG) node tools/voice/build-lookup.mjs
+	@$(VOICE_LANG) node pipelines/zones/tools/voice/export-manifest.mjs
+	@$(VOICE_LANG) node pipelines/zones/tools/voice/build-lookup.mjs
 
 validate-audio: ## Check manifest, files on disk and lookup table agree
-	@$(VOICE_LANG) node tools/voice/validate-audio.mjs
+	@$(VOICE_LANG) node pipelines/zones/tools/voice/validate-audio.mjs
 
 #-------------------------------------------------------------------------------
 # The explorer's database
 #
 # Optional to the addon build: with DATABASE_URL unset every target above still
-# works against tools/voice/manifest.json. See README "The voiceline explorer".
+# works against pipelines/zones/tools/voice/manifest.json. See README "The voiceline explorer".
 #-------------------------------------------------------------------------------
 
 db-up: ## Start Postgres for the explorer (port 5433)
 	@docker compose up -d
-	@./scripts/migrate.sh
+	@./scripts/zones/migrate.sh
 
 db-down: ## Stop it, keeping the data
 	@docker compose stop
 
 migrate: ## Apply any pending migrations
-	@./scripts/migrate.sh
+	@./scripts/zones/migrate.sh
 
-import: ## Seed the database from tools/voice/manifest[.<locale>].json (idempotent; LOCALE=deDE)
-	@$(VOICE_LANG) node tools/voice/import-manifest.mjs
+import: ## Seed the database from pipelines/zones/tools/voice/manifest[.<locale>].json (idempotent; LOCALE=deDE)
+	@$(VOICE_LANG) node pipelines/zones/tools/voice/import-manifest.mjs
 
-export: ## Write tools/voice/manifest[.<locale>].json from the database (LOCALE=deDE)
-	@$(VOICE_LANG) node tools/voice/export-manifest.mjs
+export: ## Write pipelines/zones/tools/voice/manifest[.<locale>].json from the database (LOCALE=deDE)
+	@$(VOICE_LANG) node pipelines/zones/tools/voice/export-manifest.mjs
 
 #-------------------------------------------------------------------------------
 # The lore corpus
@@ -127,28 +127,28 @@ export: ## Write tools/voice/manifest[.<locale>].json from the database (LOCALE=
 #-------------------------------------------------------------------------------
 
 lore-import: ## Seed lore_line from the committed Lua data files (idempotent)
-	@node tools/lore/import.mjs
+	@node pipelines/zones/tools/lore/import.mjs
 
 # LOCALE, not LANG: make inherits LANG from the shell, where it is already set to
 # something like en_US.UTF-8, and the export would be handed that as a locale code.
-lore-export: ## Write addon/ZoneLore/Data/<locale>/*.lua from the database (LOCALE=deDE)
-	@ZONELORE_LANG=$(or $(LOCALE),enUS) node tools/lore/export.mjs
+lore-export: ## Write addons/SpokenZones/Data/<locale>/*.lua from the database (LOCALE=deDE)
+	@ZONELORE_LANG=$(or $(LOCALE),enUS) node pipelines/zones/tools/lore/export.mjs
 
 lore-check: ## Confirm the committed Lua matches the database
-	@ZONELORE_LANG=$(or $(LOCALE),enUS) node tools/lore/export.mjs --check
+	@ZONELORE_LANG=$(or $(LOCALE),enUS) node pipelines/zones/tools/lore/export.mjs --check
 
 # Translations arrive as a spreadsheet, not through a model: a sheet goes out with the
 # English beside the blanks and comes back filled in. Both are free. The upload
 # follows the scraper's rules -- unchanged text records nothing, and a hand edit made
 # in the explorer is never overwritten -- so a re-upload is always safe to run.
 lore-sheet: ## Write the CSV a translator fills in (LOCALE=deDE, OUT=dist/lore-deDE.csv)
-	@ZONELORE_LANG=$(LOCALE) node tools/lore/translation-sheet.mjs $(or $(OUT),dist/lore-$(LOCALE).csv)
+	@ZONELORE_LANG=$(LOCALE) node pipelines/zones/tools/lore/translation-sheet.mjs $(or $(OUT),dist/lore-$(LOCALE).csv)
 
 lore-upload-dry: ## Say what uploading a filled sheet would record (LOCALE=deDE FILE=...)
-	@ZONELORE_LANG=$(LOCALE) node tools/lore/upload-translations.mjs $(FILE) --dry-run
+	@ZONELORE_LANG=$(LOCALE) node pipelines/zones/tools/lore/upload-translations.mjs $(FILE) --dry-run
 
 lore-upload: ## Record a filled sheet as that language's lore (LOCALE=deDE FILE=...)
-	@ZONELORE_LANG=$(LOCALE) node tools/lore/upload-translations.mjs $(FILE)
+	@ZONELORE_LANG=$(LOCALE) node pipelines/zones/tools/lore/upload-translations.mjs $(FILE)
 
 # Unlike every other target here, this one spends money: it sends each of a zone's
 # articles to Claude. There is no free form of it -- the report *is* the model's
@@ -157,7 +157,7 @@ lore-upload: ## Record a filled sheet as that language's lore (LOCALE=deDE FILE=
 # --dry-run. Responses are cached on disk, so re-running a zone is free.
 lore-rewrite: ## Rewrite one zone's lore from the full wiki article (ZONE=1420, costs credits)
 	@test -n "$(ZONE)" || { echo "usage: make lore-rewrite ZONE=1420"; exit 1; }
-	@node tools/rewrite-lore.mjs --zone $(ZONE) --variant both --dry-run
+	@node pipelines/zones/tools/rewrite-lore.mjs --zone $(ZONE) --variant both --dry-run
 
 #-------------------------------------------------------------------------------
 # Languages
@@ -166,22 +166,22 @@ lore-rewrite: ## Rewrite one zone's lore from the full wiki article (ZONE=1420, 
 # "Burning Steppes" -- and the corpus is keyed by the English one in every
 # language. Without these tables such a client matches no subzone at all, which
 # is what it did for the addon's whole life before they existed. Regenerate only
-# when the pinned client build in tools/lib/db2.mjs moves.
+# when the pinned client build in pipelines/zones/tools/lib/db2.mjs moves.
 #-------------------------------------------------------------------------------
 
 aliases: ## Rebuild Data/<locale>/Aliases.lua from the client's AreaTable
-	@node tools/locale/build-aliases.mjs
-	@node tools/locale/build-languages.mjs
+	@node pipelines/zones/tools/locale/build-aliases.mjs
+	@node pipelines/zones/tools/locale/build-languages.mjs
 
 languages: ## Rebuild Data/Languages.lua -- what each language covers, and whether it ships
-	@node tools/locale/build-languages.mjs
+	@node pipelines/zones/tools/locale/build-languages.mjs
 
 # Reports coverage and confirms Languages.lua still matches it. An untranslated
 # language is not a failure; a stale Languages.lua is, because it decides which
 # languages players are offered.
 locale-check: ## Report per-language string coverage, and check Languages.lua is current
-	@node tools/locale/check-strings.mjs
-	@node tools/locale/build-languages.mjs --check
+	@node pipelines/zones/tools/locale/check-strings.mjs
+	@node pipelines/zones/tools/locale/build-languages.mjs --check
 
 web: ## Run the voiceline explorer at localhost:3000
 	@cd web && pnpm dev
@@ -191,10 +191,10 @@ web: ## Run the voiceline explorer at localhost:3000
 #
 # The explorer runs at https://lore.rusty.one, deployed by GitHub Actions on every
 # push to master. Everything here is the half CI does not do: the audio store, the
-# database contents, and installing the scripts CI calls. See deploy/README.md.
+# database contents, and installing the scripts CI calls. See deploy/zones/README.md.
 #
 #   make bootstrap         once, as root: user, /srv tree, database
-#   make deploy-scripts    after that, and after editing deploy/bin/*
+#   make deploy-scripts    after that, and after editing deploy/zones/bin/*
 #   make push              ~700MB of mp3s, the first time and after a local bulk run
 #   make db-push           seed the droplet's database from the local one
 #   make releases          what is deployed
@@ -231,17 +231,17 @@ RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(comman
 RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)"
 
 # One language per transfer, LOCALE=deDE, defaulting to English. The paths mirror
-# soundsDir()/manifestPath() in tools/voice/store.mjs: English keeps the names the
+# soundsDir()/manifestPath() in pipelines/zones/tools/voice/store.mjs: English keeps the names the
 # droplet already has (shared/Sounds, shared/manifest.json), and another language
-# lives beside them under its pack folder and a suffixed manifest. audio-history/
+# lives beside them under its pack folder and a suffixed manifest. pipelines/zones/audio-history/
 # nests every language under one tree, so it moves whole regardless of LOCALE.
 LANG_CODE := $(or $(LOCALE),enUS)
 ifeq ($(LANG_CODE),enUS)
-LOCAL_SOUNDS  := addon/ZoneLoreAudio/Sounds/
+LOCAL_SOUNDS  := addons/SpokenZonesAudio/Sounds/
 REMOTE_SOUNDS_DIR := Sounds
 MANIFEST_FILE := manifest.json
 else
-LOCAL_SOUNDS  := addon/ZoneLoreAudio_$(LANG_CODE)/Sounds/
+LOCAL_SOUNDS  := addons/SpokenZonesAudio_$(LANG_CODE)/Sounds/
 REMOTE_SOUNDS_DIR := ZoneLoreAudio_$(LANG_CODE)
 MANIFEST_FILE := manifest.$(LANG_CODE).json
 endif
@@ -278,7 +278,7 @@ push: ## Send one language's audio store to the droplet (DESTRUCTIVE: --delete; 
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(LOCAL_SOUNDS) $(REMOTE_SOUNDS) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@$(RSYNC) $(RSYNC_OPTS) $(LOCAL_SOUNDS) $(REMOTE_SOUNDS)
-	@[ -d audio-history ] && $(RSYNC) $(RSYNC_OPTS) audio-history/ $(REMOTE_HISTORY) || true
+	@[ -d pipelines/zones/audio-history ] && $(RSYNC) $(RSYNC_OPTS) pipelines/zones/audio-history/ $(REMOTE_HISTORY) || true
 	@echo "==> pushed"
 
 pull-dry: ## Preview what `make pull` would change locally (LOCALE=deDE)
@@ -293,7 +293,7 @@ pull: ## Fetch one language's audio store from the droplet (DESTRUCTIVE: --delet
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE_SOUNDS) $(LOCAL_SOUNDS) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@$(RSYNC) $(RSYNC_OPTS) $(REMOTE_SOUNDS) $(LOCAL_SOUNDS)
-	@[ -d audio-history ] && $(RSYNC) $(RSYNC_OPTS) $(REMOTE_HISTORY) audio-history/ || true
+	@[ -d pipelines/zones/audio-history ] && $(RSYNC) $(RSYNC_OPTS) $(REMOTE_HISTORY) pipelines/zones/audio-history/ || true
 	@echo "==> pulled. Rebuild the lookup table with:  make db-pull && make lookup LOCALE=$(LANG_CODE)"
 	@echo "    then package it with:  make package-audio LOCALE=$(LANG_CODE)"
 
@@ -301,8 +301,8 @@ pull: ## Fetch one language's audio store from the droplet (DESTRUCTIVE: --delet
 # droplet's database, so `make db-pull` is the better route for it; this is the one that
 # works when you only want the file.
 pull-manifest: ## Fetch the droplet's exported manifest[.<locale>].json (LOCALE=deDE)
-	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/$(MANIFEST_FILE) tools/voice/$(MANIFEST_FILE)
-	@echo "==> fetched. Review with: git diff tools/voice/$(MANIFEST_FILE)"
+	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/$(MANIFEST_FILE) pipelines/zones/tools/voice/$(MANIFEST_FILE)
+	@echo "==> fetched. Review with: git diff pipelines/zones/tools/voice/$(MANIFEST_FILE)"
 
 audio-status: ## What is on disk locally and on the droplet (LOCALE=deDE)
 	@echo "$(LANG_CODE)"
@@ -310,8 +310,8 @@ audio-status: ## What is on disk locally and on the droplet (LOCALE=deDE)
 		"$$(find $(LOCAL_SOUNDS) -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
 		"$$(du -sh $(LOCAL_SOUNDS) 2>/dev/null | cut -f1)"
 	@printf 'local     archived  %5s mp3  %s\n' \
-		"$$(find audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
-		"$$(du -sh audio-history 2>/dev/null | cut -f1)"
+		"$$(find pipelines/zones/audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
+		"$$(du -sh pipelines/zones/audio-history 2>/dev/null | cut -f1)"
 	@$(SSH) $(DROPLET) 'printf "droplet   live      %5s mp3  %s\n" \
 		"$$(find $(REMOTE_ROOT)/shared/$(REMOTE_SOUNDS_DIR) -name "*.mp3" 2>/dev/null | wc -l | tr -d " ")" \
 		"$$(du -sh $(REMOTE_ROOT)/shared/$(REMOTE_SOUNDS_DIR) 2>/dev/null | cut -f1)"; \
@@ -386,13 +386,13 @@ DROPLET_HOST := $(word 2,$(subst @, ,$(DROPLET)))
 ROOT_SSH_OPTS ?=
 
 bootstrap: ## One-time droplet setup, as root (idempotent)
-	@echo "==> copying deploy/bootstrap.sh to root@$(DROPLET_HOST)"
-	@$(RSYNC) -a -e "ssh $(ROOT_SSH_OPTS)" deploy/bootstrap.sh root@$(DROPLET_HOST):/tmp/zonelore-bootstrap.sh
+	@echo "==> copying deploy/zones/bootstrap.sh to root@$(DROPLET_HOST)"
+	@$(RSYNC) -a -e "ssh $(ROOT_SSH_OPTS)" deploy/zones/bootstrap.sh root@$(DROPLET_HOST):/tmp/zonelore-bootstrap.sh
 	@ssh $(ROOT_SSH_OPTS) root@$(DROPLET_HOST) 'bash /tmp/zonelore-bootstrap.sh; rm -f /tmp/zonelore-bootstrap.sh'
 
-deploy-scripts: ## Install deploy/bin + ecosystem.config.js on the droplet
-	@$(RSYNC) -a -e "$(SSH)" deploy/bin/ $(DROPLET):$(REMOTE_ROOT)/bin/
-	@$(RSYNC) -a -e "$(SSH)" deploy/ecosystem.config.js $(DROPLET):$(REMOTE_ROOT)/shared/
+deploy-scripts: ## Install deploy/zones/bin + ecosystem.config.js on the droplet
+	@$(RSYNC) -a -e "$(SSH)" deploy/zones/bin/ $(DROPLET):$(REMOTE_ROOT)/bin/
+	@$(RSYNC) -a -e "$(SSH)" deploy/zones/ecosystem.config.js $(DROPLET):$(REMOTE_ROOT)/shared/
 	@$(SSH) $(DROPLET) 'chmod +x $(REMOTE_ROOT)/bin/*.sh'
 	@echo "==> installed"
 
@@ -406,10 +406,10 @@ logs: ## Tail the droplet's application log
 	@$(SSH) $(DROPLET) 'pm2 logs zonelore --lines 100'
 
 package-audio: validate-audio ## Build both sound-pack zips (standard + high)
-	@./scripts/package-audio.sh
+	@./scripts/zones/package-audio.sh
 
 release-dry: ## Show what `make release` would upload to CurseForge
-	@./scripts/release.sh --dry-run
+	@./scripts/zones/release.sh --dry-run
 
 release: ## Upload the built zips to CurseForge (needs CURSEFORGE_TOKEN)
-	@./scripts/release.sh
+	@./scripts/zones/release.sh
