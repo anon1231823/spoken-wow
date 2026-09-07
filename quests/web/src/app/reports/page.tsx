@@ -1,0 +1,43 @@
+import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
+
+import ReportTable from "@/components/ReportTable";
+import { auth } from "@/lib/auth";
+import { canRegenerate } from "@/lib/permissions";
+import { isStatus, type Status } from "@/lib/reports/reports";
+import { listReports } from "@/lib/reports/store";
+
+export const metadata: Metadata = { title: "Reports · VoiceOver Explorer" };
+
+// What strangers filed and what people did about it; nothing here can be cached between views.
+export const dynamic = "force-dynamic";
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  // 404 rather than a redirect, matching /issues and /voices: a member has no business
+  // learning the page exists, and these rows hold prose written by strangers.
+  if (!session || !canRegenerate(session.user.role)) notFound();
+
+  const view = (await searchParams).view;
+  const status: Status | "all" = isStatus(view) ? view : view === "all" ? "all" : "open";
+  const reports = await listReports(status);
+
+  return (
+    <main className="mx-auto max-w-6xl px-5 pt-6 pb-24">
+      <h1 className="text-xl font-semibold">Reports</h1>
+      <p className="text-muted-foreground mt-1 mb-5 text-sm">
+        What players filed from inside the game. A report is a claim, not a verdict: read it,
+        listen to the line, and if it is right, queue the file for regeneration the usual way.
+        Nothing here starts a job on its own.
+      </p>
+
+      <ReportTable initial={reports} view={status} />
+    </main>
+  );
+}

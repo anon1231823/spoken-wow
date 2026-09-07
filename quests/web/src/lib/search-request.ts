@@ -1,0 +1,74 @@
+/**
+ * Reading filters off a query string.
+ *
+ * Shared by /api/search and /api/search/lines so a page and the batch it offers to
+ * regenerate can never disagree about what "matching" means.
+ *
+ * Unknown values are dropped rather than rejected: every one of these comes from a closed
+ * set (lib/facets.ts, and the unions in lib/search.ts), so anything else is a stale link or
+ * a hand-edited URL, and answering it with the unfiltered corpus is both safe and more
+ * useful than a 400.
+ */
+import { facets } from "./facets";
+import type { Severity } from "./issues/issues";
+import { NPC_TYPES, SOURCES } from "./line-fields";
+import type { Filter, LineFilters } from "./search";
+
+const FILTERS: Filter[] = ["any", "npc", "quest", "text"];
+const ISSUE_LEVELS = ["any", "1", "2", "3"] as const;
+
+function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T | undefined {
+  return value && (allowed as readonly string[]).includes(value) ? (value as T) : undefined;
+}
+
+/** "any", or a severity meaning "this bad or worse". */
+function issueLevel(value: string | null): LineFilters["issues"] {
+  const level = oneOf(value, ISSUE_LEVELS);
+  if (!level) return undefined;
+  return level === "any" ? "any" : (Number(level) as Severity);
+}
+
+export function filtersFromParams(params: URLSearchParams): LineFilters {
+  const { races, genders, flavors, voices } = facets();
+
+  return {
+    q: params.get("q") ?? "",
+    filter: oneOf(params.get("filter"), FILTERS) ?? "any",
+    missingOnly: params.get("missing") === "1",
+    race: oneOf(params.get("race"), races),
+    gender: oneOf(params.get("gender"), genders),
+    flavor: oneOf(params.get("flavor"), flavors),
+    voice: oneOf(params.get("voice"), voices),
+    source: oneOf(params.get("source"), SOURCES),
+    npcType: oneOf(params.get("type"), NPC_TYPES),
+    narration: params.get("narration") === "1",
+    // Absent means hidden, so the default state needs no parameter and a bare URL is the
+    // useful view rather than the padded one.
+    includeProgress: params.get("progress") === "1",
+    issues: issueLevel(params.get("issues")),
+    // The one filter with no closed set to check against: a category comes from the scan,
+    // which grows them, and the review queue links here with whichever it has. An unknown
+    // one matches nothing, which is the honest answer to "show me lines with this finding".
+    issueCategory: params.get("issue") || undefined,
+    finding: Number(params.get("finding")) || undefined,
+    overridden: params.get("overridden") === "1",
+    // Absent means hidden, like progress text: the useful default view is the corpus minus
+    // the lines nobody will ever voice.
+    ignored: params.get("ignored") === "1",
+    outdated: params.get("outdated") === "1",
+    // Kept as the raw day. dayStart is what decides whether it is a date, so there is one
+    // definition of that rather than one here and another in the filter.
+    generatedBefore: params.get("before") || undefined,
+    generatedAfter: params.get("after") || undefined,
+  };
+}
+
+/** Whether a search needs generation dates fetched for it. See searchContext. */
+export function needsDates(filters: LineFilters): boolean {
+  return Boolean(filters.generatedBefore || filters.generatedAfter);
+}
+
+/** Whether staleness has to be answered for the whole corpus, which is a query and a hash per take. */
+export function needsStale(filters: LineFilters): boolean {
+  return Boolean(filters.outdated);
+}

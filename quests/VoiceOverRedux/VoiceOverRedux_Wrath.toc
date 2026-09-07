@@ -1,0 +1,12 @@
+## Interface: 30403
+## Title: VoiceOver Redux
+## Notes: Restores quest and gossip voiceovers on supported Classic clients.
+## Version: 1.3.0
+## IconTexture: Interface\AddOns\VoiceOverRedux\icon.tga
+## SavedVariables: VoiceOverDB
+## Group: VoiceOverRedux
+## X-Part-Of: VoiceOver Redux
+## X-VoiceOver-Player: 1
+
+embeds.xml
+addon.xml

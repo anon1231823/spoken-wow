@@ -1,0 +1,8 @@
+# Everyday path: read the committed corpus, synthesize audio, build the data module.
+# Pure Python only - no compiled extensions and no database client, so this is all a
+# server needs in order to produce voicelines.
+mutagen==1.46.0
+python-dotenv==1.0.0
+requests==2.28.2
+SLPP==1.2.3
+tqdm==4.65.0

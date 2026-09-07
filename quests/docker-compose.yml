@@ -1,0 +1,31 @@
+version: '3.9'
+services:
+  # The vmangos world DB, read offline by the Python pipeline to build the corpus. The
+  # website never touches it.
+  mysql:
+    image: mysql:8
+    container_name: mysql-server
+    environment:
+      MYSQL_ROOT_PASSWORD: wow
+    volumes:
+      - wowdb-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  # The website's own database: accounts and roles, take history, the pronunciation lexicon,
+  # line overrides, the scan's findings and the regeneration queue. The corpus and the audio
+  # store are still read off disk, and the corpus is never written.
+  postgres:
+    image: postgres:16
+    container_name: voiceover-postgres
+    environment:
+      POSTGRES_USER: voiceover
+      POSTGRES_PASSWORD: voiceover
+      POSTGRES_DB: voiceover
+    volumes:
+      - voiceover-pg:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+volumes:
+  wowdb-data:
+  voiceover-pg:

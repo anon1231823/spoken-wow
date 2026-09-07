@@ -1,0 +1,154 @@
+{
+    "ignored": [
+        {
+            "lineId": "g:07d34a9ac2efe08e14fcc7808a928e9b",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:1b0ce06896ec82f2b8d9de5f2bdfcecb",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:23e117cdf828f64a8f7832003c53ad13",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:263b5382493c8292898a68606c67c3c9",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:44b41addd3f8437df6055fc58b0a56d6",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:530a831c03043cceba408219672180c6",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:558293036bc20ba9ec357e7955395f89",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:5c6ee7053a94c92a28eaa92bf7f821d5",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:600752944f2ed7a5f2e5c2e398845f1c",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:698eb8f32440c4b3e71e2db100213268:f",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:698eb8f32440c4b3e71e2db100213268:m",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:6a21e863d9f49ec0041bd59ac1f3f839",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:6c50ab0ff636941be77f3f70ca2b8823",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:6fc4d0924029489ffd0a60e0ee958c21",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:80b3888d40c7eca0d3c8b8f9d61f3ac7",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:81234ee743d3102e90bf455d5a474ae2",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:8ca2008a454762fd014b24e00bac0365",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:8caa274c49387b4edd0ba33ed966f6b7",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:a262f229e20203f5b92f45814fe50213",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:a47ee7bcd6b3b8125ec6007fb1bbd6b9",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:ac1fc16d38645b54c1f8b2109349f841",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:c2a83d587c94ee4ec39e5ad2da461816",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:c87aec42c0c1d25bbb47559200796d1d",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:cb739c796aa3b55fa68a388c2a9df332",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:e5b3d0a093a4c464534cd95408b3c863:f",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:e5b3d0a093a4c464534cd95408b3c863:m",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:ed6188bded57a0cd48b72762e07b5202:f",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:ed6188bded57a0cd48b72762e07b5202:m",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:f66cbdf5f4c0994a74f1f4bca30e6850",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:f6c0c1ea475d9aa33d7c2f43bb8f2ba6",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "g:f7a0177f1d58938bf2f5b7ff9fe23301",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "q:1:accept",
+            "reason": "Blizzard test quest 1, unreachable in game"
+        },
+        {
+            "lineId": "q:3646:accept",
+            "reason": "No text"
+        },
+        {
+            "lineId": "q:8514:accept:f",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "q:8514:accept:m",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "q:8516:accept",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        },
+        {
+            "lineId": "q:8521:accept",
+            "reason": "war-effort tally: $NNNNw expands against a live server counter no corpus can hold"
+        }
+    ],
+    "version": 1,
+    "exportedAt": "2026-08-16T21:34:07Z"
+}

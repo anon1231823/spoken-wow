@@ -1,0 +1,10 @@
+## Interface: 11200
+## Title: VoiceOver Redux
+## Notes: Restores quest and gossip voiceovers on 1.12 servers.
+## Version: 1.3.0
+## SavedVariables: VoiceOverDB
+## X-Part-Of: VoiceOver Redux
+## X-VoiceOver-Player: 1
+
+1.12\embeds.xml
+addon.xml

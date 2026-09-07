@@ -1,0 +1,74 @@
+__pycache__
+datagrip
+.venv
+.env
+.env*.local
+.vscode/settings.json
+.DS_Store
+
+# vmangos dumps, needed only to refresh the corpus
+sql-data
+sql/db_dump
+assets/sql/db_dump
+assets/sql/mysql-dump
+
+# The audio store: ~1.1 GB of generated mp3s. Not committable, but this is the most
+# expensive artifact the project owns - back it up.
+# Anchored: an unanchored "audio/" also swallowed web/src/app/api/audio/.
+/audio/
+
+# Clips uploaded to build voice clones. Like the audio store: not committable, but losing
+# them means a voice can never be remade, so back them up.
+/voice/samples/
+
+# Previous takes of regenerated lines. A sibling of the store rather than a directory inside
+# it, so readStoreIndex and `make push` cannot mistake an old take for a store file. Version 0
+# of each is audio that predates this project's ability to reproduce it - back it up too.
+/audio-history/
+
+# Rendered pronunciation previews. Unlike the two above this one is safe to lose: every file
+# is rebuildable by spending credits again, and nothing refers to one. Keeping it out of git
+# for the ordinary reason - it is mp3s.
+/audio-previews/
+
+# Blizzard's own NPC barks and the script that pulls them. Local reference material for
+# tuning voices, not part of what this project ships.
+/tools/fetch_npc_lines.py
+/voice/npc-lines/
+
+# Built data module
+/dist/
+
+# Transcoded copies of the store, keyed on the md5 of the master each came from. A cache and
+# nothing more: every entry is one ffmpeg run away from existing again, which is exactly what
+# audio-history/ is not. A sibling of the store rather than a child, so readStoreIndex and
+# `make push` cannot mistake a transcode for a voiceline.
+/audio-transcoded/
+
+generated
+tools/.lines_cache.pkl
+AI_VoiceOver/AI_VoiceOver.toc
+RELEASE
+
+# Planning artifacts from the superpowers skills: useful locally, noise in review
+docs/superpowers/
+
+# The hiccup scan's output. One command rebuilds it from a corpus that is committed, and it
+# exists to be filled in while reviewing - a committed copy would conflict with every
+# reviewer's own.
+docs/corpus-hiccups.csv
+
+# Design notes for work not committed to. Local thinking, not project documentation.
+/specs/
+
+# Web explorer
+web/node_modules/
+web/.next/
+web/next-env.d.ts
+web/tsconfig.tsbuildinfo
+
+# deploy
+deploy/bootstrap.sh
+
+# Derived before every rsync from corpus/ignored.json; see the Makefile.
+.rsync-ignored

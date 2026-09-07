@@ -1,0 +1,278 @@
+#!/usr/bin/env bash
+# Build the data module from transcoded copies of the audio store, and zip it.
+#
+#   make package-audio                 # the four shipping packs, Ogg Vorbis, into dist/
+#   make package-audio-hq              # every line in one folder at full bandwidth
+#   make package-audio VERSION=1.4.0   # the version written into the .toc
+#   ENCODE=copy make package-audio     # the masters, untranscoded, for a listening check
+#   JOBS=1 make package-audio          # serial, when a failing encode needs readable output
+#
+# The store is 3.2 GB of mono speech, almost all of it 128 kbps CBR from ElevenLabs;
+# 48 files are still the 64 kbps pack this project inherited. Shipping that as-is
+# asks a player to download three gigabytes for audio most of them hear once per
+# quest. docs/pack-size.md measures every encode that was considered.
+#
+# THE SHIPPING PACK IS OGG VORBIS AT 22.05 kHz. Vorbis is worth 1.3-1.5x over LAME
+# at these rates, and speech survives an 11 kHz ceiling, which together take 3.2 GB
+# to 0.6 GB - the difference between a pack people download and one they do not.
+# `ogg-q0-44k` keeps the full bandwidth for anyone who would rather have it, at
+# 1.3 GB, and it is what package-audio-hq builds. Both are VBR: the bits follow the
+# voice instead of padding silence to a constant rate.
+#
+# The masters stay in audio/ untouched, so raising the shipped quality later is a
+# re-run of this script rather than a second purchase from ElevenLabs, which bills
+# characters and not bytes.
+#
+# A pack ships ONE format, because the module resolves every sound through a single
+# GetSoundPath. So for an ogg profile every clip is encoded; the bitrate threshold
+# below only decides anything when the target is mp3 and the clip is already mp3,
+# where a second lossy pass over a 64 kbps file would be no smaller and audibly
+# worse. See tools/plan_transcode.py.
+#
+# Separate from `python cli-main.py build`, which copies the store as it finds it.
+# That command is still what assembles the module - this stages a transcoded store
+# and hands it over, so there is one definition of what a module contains.
+#
+# Durations come out right without doing anything: build computes
+# sound_length_table.lua from the files it just copied, and mutagen reads a VBR
+# mp3's Xing header and an Ogg page's granule position alike. A table built from
+# the masters and shipped beside transcodes would drift, which is the failure this
+# ordering avoids.
+set -euo pipefail
+
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO"
+
+STORE="${STORE:-audio}"
+DIST="${DIST:-dist}"
+MODULE="${MODULE:-VoiceOverReduxAudio}"
+VERSION="${VERSION:-1.2.1}"
+# Which packs to build; each becomes MODULE plus the suffix tts_cli/factions.py gives it.
+#
+# The four that ship. 'all' - one folder holding every line - is deliberately not among them:
+# it cannot be uploaded (577 MB is a Cloudflare 413), and on CurseForge that project ships the
+# meta addon from scripts/package-meta.sh instead. Build it with PACKS=all when you want the
+# whole thing in one folder locally, which is also the fast way to try an encode change.
+PACKS="${PACKS:-alliance horde shared gossip}"
+ENCODE="${ENCODE:-ogg-q-1-22k}"
+ZIP="${ZIP:-1}"
+# Distinguishes the zips of two profiles built from the same module name, so one profile's
+# build does not overwrite another's in dist/.
+LABEL="${LABEL:-}"
+# Names the addon folder outright, instead of MODULE plus the pack's suffix. Only meaningful
+# when building a single pack, and it exists for the HQ build: one folder holding every line at
+# full bandwidth, which is a thing of its own rather than a bigger copy of the All pack.
+MODULE_NAME="${MODULE_NAME:-}"
+TITLE="${TITLE:-}"
+# The family a build belongs to: MODULE is the folder every pack's suffix is appended to, and
+# TITLE_FAMILY the words before the colon in every title. The HQ packs are the same four cut
+# the same way at a different quality, so they are a family of their own -
+# VoiceOverReduxHQAudioAlliance, "VoiceOver Redux HQ Audio: Alliance" - rather than a variant
+# spelled onto the end of each name. A folder per quality, because two packs under one name
+# would have an addon manager updating a player from the quality they chose into the other.
+TITLE_FAMILY="${TITLE_FAMILY:-}"
+# kbps above which an mp3 is worth re-encoding as an mp3. See tools/plan_transcode.py.
+THRESHOLD="${THRESHOLD:-80}"
+
+# Transcoded clips, kept between runs. A sibling of dist/ and of the store, for the
+# reason web/src/lib/paths.ts gives about audio-history: anything living under
+# audio/ would be walked as if it were a voiceline.
+#
+# CONTENT-ADDRESSED, so a cache hit cannot be stale: the entry is named for the
+# md5 of the master it came from, and a regenerated line hashes differently and
+# misses. Keying on mtime would be cheaper and wrong - `make pull` copies the
+# droplet's timestamps, so a freshly pulled take can be older than the entry it
+# ought to replace.
+CACHE_ROOT="${CACHE_ROOT:-audio-transcoded}"
+
+PYTHON="${PYTHON:-$([ -x .venv/bin/python ] && echo .venv/bin/python || command -v python3)}"
+JOBS="${JOBS:-$( (command -v nproc >/dev/null 2>&1 && nproc) || sysctl -n hw.ncpu 2>/dev/null || echo 4 )}"
+
+# Each profile is a format, the flags that produce it, and nothing else. FORMAT is what the
+# module ends up shipping and what the plan is asked for; OGG_FLAGS is empty for the mp3
+# profiles and unused there.
+OGG_FLAGS=""
+case "$ENCODE" in
+  ogg-q-1-22k) FORMAT=ogg; OGG_FLAGS="-q -1 --resample 22050";;
+  ogg-q0-44k)  FORMAT=ogg; OGG_FLAGS="-q 0";;
+  vbr-v6)      FORMAT=mp3;;
+  copy)        FORMAT=mp3;;
+  *) echo "error: unknown ENCODE '$ENCODE' (expected: ogg-q-1-22k, ogg-q0-44k, vbr-v6, copy)" >&2
+     exit 1;;
+esac
+
+[ -d "$STORE" ] || { echo "error: no audio store at $STORE" >&2; exit 1; }
+if [ "$ENCODE" != copy ] && ! command -v ffmpeg >/dev/null 2>&1; then
+  echo "error: ffmpeg is not on PATH. brew install ffmpeg, or run with ENCODE=copy" >&2
+  exit 1
+fi
+# Homebrew's ffmpeg is built without libvorbis, and ffmpeg's own vorbis encoder is
+# experimental and worse than libvorbis at every rate. So oggenc encodes and ffmpeg only
+# decodes, which also keeps the flags here the ones every Vorbis comparison is written in.
+if [ "$FORMAT" = ogg ] && ! command -v oggenc >/dev/null 2>&1; then
+  echo "error: oggenc is not on PATH. brew install vorbis-tools" >&2
+  exit 1
+fi
+
+# --- the plan ---------------------------------------------------------------------------
+#
+# tools/plan_transcode.py decides what happens to each clip and why; see its header. It is
+# told the target format because that is half the decision: everything becomes an ogg, while
+# an mp3 target spares whatever is already at or below the threshold. Ignored lines are
+# dropped there too, before the expensive stage sees them.
+plan="$(mktemp)"
+staging="$(mktemp -d)"
+trap 'rm -f "$plan"; rm -rf "$staging"' EXIT
+
+echo "planning..."
+"$PYTHON" tools/plan_transcode.py --store "$STORE" --format "$FORMAT" \
+  --threshold "$THRESHOLD" > "$plan"
+count="$(wc -l <"$plan" | tr -d ' ')"
+
+# Directories first in one pass, so placing the clips below is a flat run of cp rather
+# than thousands of mkdir processes.
+rsync -a -f'+ */' -f'- *' "$STORE/" "$staging/"
+
+if [ "$ENCODE" = copy ]; then
+  echo "copying $count masters (ENCODE=copy)..."
+  cut -f4 "$plan" | while IFS= read -r rel; do cp "$STORE/$rel" "$staging/$rel"; done
+else
+  cache="$CACHE_ROOT/$ENCODE"
+  mkdir -p "$cache"
+
+  # Deduplicated: two identical masters share a key, and two workers must not write one
+  # cache entry between them.
+  todo="$(mktemp)"
+  awk -F'\t' '$3 == "encode" {print $1 "\t" $4}' "$plan" | sort -u -k1,1 \
+    | while IFS=$'\t' read -r key rel; do
+        [ -f "$cache/$key.$FORMAT" ] || printf '%s\t%s\n' "$key" "$STORE/$rel"
+      done > "$todo"
+
+  wanted="$(awk -F'\t' '$3 == "encode"' "$plan" | wc -l | tr -d ' ')"
+  encoded="$(wc -l <"$todo" | tr -d ' ')"
+  hits=$((wanted - encoded))
+
+  if [ "$encoded" -gt 0 ]; then
+    # Minutes of ffmpeg with nothing on stdout is indistinguishable from a hang. The
+    # count comes from a file rather than a variable: each worker is its own process, so
+    # an incremented shell variable would die with it.
+    progress="$(mktemp)"
+    export CACHE="$cache" PROGRESS="$progress" TOTAL="$encoded" \
+           FORMAT="$FORMAT" OGG_FLAGS="$OGG_FLAGS"
+    encode_one() {
+      # Via .part and mv, so an interrupted run cannot leave a truncated file under a
+      # name claiming to be a complete encode of that checksum. The pid is in there too,
+      # so two copies of this script cannot land in each other's scratch file. -f mp3 is
+      # required with it: ffmpeg picks the muxer from the extension, and ".part" is not
+      # one it knows.
+      local part="$CACHE/$2.$$.part"
+      if [ "$FORMAT" = ogg ]; then
+        # Unquoted on purpose: OGG_FLAGS is several arguments, set by this script and
+        # nothing else.
+        ffmpeg -nostdin -loglevel error -f mp3 -i "$1" -ac 1 -f wav - \
+          | oggenc -Q $OGG_FLAGS -o "$part" -
+      else
+        ffmpeg -nostdin -loglevel error -f mp3 -i "$1" \
+          -codec:a libmp3lame -q:a 6 -ac 1 -f mp3 "$part"
+      fi
+      mv "$part" "$CACHE/$2.$FORMAT"
+
+      # One byte per finished file; short appends to O_APPEND do not interleave, so the
+      # size is the count.
+      printf '.' >>"$PROGRESS"
+      local n; n="$(wc -c <"$PROGRESS" | tr -d ' ')"
+      if [ -t 1 ]; then printf '\r  %5d/%-5d encoded' "$n" "$TOTAL"
+      elif [ $((n % 250)) -eq 0 ] || [ "$n" -eq "$TOTAL" ]; then echo "  $n/$TOTAL encoded"; fi
+    }
+    export -f encode_one
+
+    echo "encoding $encoded files ($ENCODE, mono) across $JOBS jobs (cache: $cache)"
+    echo "  $hits of $wanted already cached"
+    tr '\t\n' '\0\0' <"$todo" | xargs -0 -P "$JOBS" -n 2 bash -c 'encode_one "$1" "$0"'
+    [ -t 1 ] && printf '\n'
+    rm -f "$progress"
+  else
+    echo "all $wanted encodable files already cached ($ENCODE, $cache)"
+  fi
+
+  # Placement, and the one judgement left to make here: for an mp3 pack, an encode that came
+  # out no smaller than its master is a second lossy pass for nothing, so the master wins.
+  # plan_transcode keeps that rare by reading bitrates, but bitrate is an average and some
+  # clips will still land the wrong way round.
+  #
+  # For an ogg pack that judgement is not available: a module ships one format, so falling
+  # back to the master would strand that line on a path GetSoundPath does not write. A clip
+  # that encodes larger than its master ships larger.
+  kept=0
+  while IFS=$'\t' read -r key kbps action rel; do
+    if [ "$action" != encode ]; then
+      cp "$STORE/$rel" "$staging/$rel"
+    elif [ "$FORMAT" != mp3 ] \
+         || [ "$(wc -c <"$cache/$key.$FORMAT")" -lt "$(wc -c <"$STORE/$rel")" ]; then
+      cp "$cache/$key.$FORMAT" "$staging/${rel%.mp3}.$FORMAT"
+    else
+      kept=$((kept + 1))
+      cp "$STORE/$rel" "$staging/$rel"
+    fi
+  done <"$plan"
+
+  # Entries for masters since re-cut or deleted. Without this the cache keeps every
+  # superseded encode forever, which is what audio-history/ is for and this is not.
+  pruned=0
+  while IFS= read -r stale; do
+    [ -n "$stale" ] || continue
+    rm -f "$cache/$stale"
+    pruned=$((pruned + 1))
+  done < <(comm -23 \
+    <(find "$cache" -name "*.$FORMAT" -exec basename {} \; | sort) \
+    <(awk -F'\t' -v ext=".$FORMAT" '$3 == "encode" {print $1 ext}' "$plan" | sort -u) || true)
+
+  echo "  $hits reused, $encoded encoded, $kept masters kept as smaller, $pruned superseded entries dropped"
+  rm -f "$todo"
+fi
+
+# --- the modules -----------------------------------------------------------------------
+#
+# ONE STAGED STORE, SEVERAL PACKS. 600 MB is more than CurseForge takes in one upload and more
+# than a player wants for lines their character cannot reach, so the store is transcoded once
+# and built into a pack per side of the war, one for the quests both sides share, one for
+# gossip, and one holding everything. Each is an addon folder of its own - a second file on
+# one project would let an addon manager move a player from the pack they chose to whichever
+# was uploaded last. tts_cli/factions.py holds the split and explains it.
+#
+# --store, so this is the same build everyone runs, over a store whose clips happen to be
+# smaller. The lookup tables, the TOC and the length table are all built by that command and
+# are not this script's business.
+for pack in $PACKS; do
+  title="$TITLE"
+  if [ -n "$MODULE_NAME" ]; then
+    module="$MODULE_NAME"
+  else
+    suffix="$("$PYTHON" -c "from tts_cli.factions import PACK_SUFFIXES; print(PACK_SUFFIXES['$pack'])")"
+    module="$MODULE$suffix"
+    if [ -n "$TITLE_FAMILY" ]; then
+      title="$(TITLE_FAMILY="$TITLE_FAMILY" "$PYTHON" -c \
+        "import os; from tts_cli.factions import pack_title; print(pack_title('$pack', os.environ['TITLE_FAMILY']))")"
+    fi
+  fi
+
+  echo
+  echo "building $module ($pack)"
+  "$PYTHON" cli-main.py build --store "$staging" --dist "$DIST" --module "$module" \
+    --version "$VERSION" --pack "$pack" ${title:+--module-title "$title"}
+
+  echo "  module size: $(du -sh "$DIST/$module" | cut -f1)  (store: $(du -sh "$STORE" | cut -f1))"
+
+  [ "$ZIP" = 1 ] || continue
+
+  # Absolute before the subshell cds into DIST, and derived from DIST itself so an absolute
+  # DIST (a scratch directory in a test run) is not glued onto the repo root.
+  #
+  # LABEL is what keeps the encode profiles apart, since both build the same folder names -
+  # they are alternatives and a player installs one, so only the zip carries it.
+  zip_path="$(cd "$DIST" && pwd)/$module$LABEL-$VERSION.zip"
+  rm -f "$zip_path"
+  echo "  zipping $(basename "$zip_path")..."
+  (cd "$DIST" && zip -r -q -X "$zip_path" "$module" -x '*.DS_Store' '*.part')
+  echo "  ==> $zip_path ($(du -h "$zip_path" | cut -f1))"
+done
