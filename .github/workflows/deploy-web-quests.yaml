@@ -1,8 +1,8 @@
-name: Deploy web
+name: Deploy quests web
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     # Addon-only commits should not redeploy the explorer.
     paths:
       - "apps/web-quests/**"

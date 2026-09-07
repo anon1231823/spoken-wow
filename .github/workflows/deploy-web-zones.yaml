@@ -1,8 +1,8 @@
-name: Deploy web
+name: Deploy zones web
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     # Addon-only commits should not redeploy the explorer. The paths below are exactly
     # what ends up inside a release.
     paths:
