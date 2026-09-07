@@ -1,0 +1,107 @@
+# Shared
+.DS_Store
+.env
+.env*.local
+.vscode/settings.json
+node_modules/
+RELEASE
+
+# Packaged addon zips and the data modules built into them. Both projects'
+# Makefiles write here from the repo root; `make quests-package` and
+# `make zones-package` do not yet partition it.
+/dist/
+generated
+
+
+# Derived before every rsync from corpus/ignored.json; see make/quests.mk.
+.rsync-ignored
+
+# --- quests -------------------------------------------------------------------
+
+__pycache__
+/pipelines/quests/.venv/
+datagrip
+
+# Planning artifacts from the superpowers skills. Ignored on the quests side only:
+# the zones side commits its design specs, and docs/zones/docs/superpowers/specs/
+# is tracked.
+/docs/quests/docs/superpowers/
+
+# vmangos dumps, needed only to refresh the corpus
+/pipelines/quests/sql-data
+/pipelines/quests/assets/sql/db_dump
+/pipelines/quests/assets/sql/mysql-dump
+
+# The audio store: ~1.1 GB of generated mp3s. Not committable, but this is the most
+# expensive artifact the project owns - back it up.
+# Anchored: an unanchored "audio/" also swallowed web/src/app/api/audio/.
+/pipelines/quests/audio/
+
+# Clips uploaded to build voice clones. Like the audio store: not committable, but losing
+# them means a voice can never be remade, so back them up.
+/pipelines/quests/voice/samples/
+
+# Previous takes of regenerated lines. A sibling of the store rather than a directory inside
+# it, so readStoreIndex and `make push` cannot mistake an old take for a store file. Version 0
+# of each is audio that predates this project's ability to reproduce it - back it up too.
+/pipelines/quests/audio-history/
+
+# Rendered pronunciation previews. Unlike the two above this one is safe to lose: every file
+# is rebuildable by spending credits again, and nothing refers to one.
+/pipelines/quests/audio-previews/
+
+# Transcoded copies of the store, keyed on the md5 of the master each came from. A cache and
+# nothing more: every entry is one ffmpeg run away from existing again, which is exactly what
+# audio-history/ is not. A sibling of the store rather than a child, so readStoreIndex and
+# `make push` cannot mistake a transcode for a voiceline.
+/pipelines/quests/audio-transcoded/
+
+# Blizzard's own NPC barks and the script that pulls them. Local reference material for
+# tuning voices, not part of what this project ships.
+/pipelines/quests/tools/fetch_npc_lines.py
+/pipelines/quests/voice/npc-lines/
+
+/pipelines/quests/tools/.lines_cache.pkl
+/addons/vendor/AI_VoiceOver/AI_VoiceOver.toc
+
+# The hiccup scan's output. One command rebuilds it from a corpus that is committed, and it
+# exists to be filled in while reviewing - a committed copy would conflict with every
+# reviewer's own.
+/docs/quests/docs/corpus-hiccups.csv
+
+# Design notes for work not committed to. Local thinking, not project documentation.
+/docs/quests/specs/
+
+/deploy/quests/bootstrap.sh
+
+# --- zones --------------------------------------------------------------------
+
+# Raw MediaWiki API responses. Regenerate with `node pipelines/zones/tools/scrape.mjs`.
+/pipelines/zones/tools/cache/
+
+# Generated voicelines. Rebuild with `node pipelines/zones/tools/voice/generate.mjs`.
+/addons/SpokenZonesAudio/Sounds/
+
+# Voice samples for checking the model before a bulk run.
+/pipelines/zones/audio-samples/
+
+# Transcoded sound-pack clips, keyed by the checksum of the master they came from.
+# A build cache: scripts/zones/package-audio.sh refills it, and prunes entries whose
+# master has been re-cut. Outside dist/ so `make clean` does not cost a five-minute
+# re-encode. Roughly half the size of Sounds/ per tier.
+/pipelines/zones/audio-transcoded/
+
+# Superseded takes, kept so a bad re-roll is reversible. A sibling of Sounds/ and
+# not a subdirectory: validate-audio.mjs walks Sounds/ and would count these as
+# orphans. Grows without bound -- re-cutting the whole corpus adds ~700MB.
+/pipelines/zones/audio-history/
+
+# --- apps ---------------------------------------------------------------------
+
+/apps/*/.next/
+/apps/*/next-env.d.ts
+/apps/*/tsconfig.tsbuildinfo
+
+# The release directory the deploy workflows assemble. Built by CI; reproducible
+# locally by following the "Assemble release" step in the workflow.
+/release/
