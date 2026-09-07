@@ -63,7 +63,7 @@ The app reads three things from disk. In production all come from env vars set i
 | `VOICEOVER_VOICE_CONFIG` | `/srv/voiceover/current/voice` | per release; **must be set**, or no pronunciation rules apply, "Hm" is read as the letters H and M, and the lexicon editor shows no rows |
 | `VOICEOVER_PREVIEWS` | `/srv/voiceover/shared/audio-previews` | shared; **must be set**, or previews land inside `releases/`, where `prune.sh` counts them as a release and eventually deletes them |
 
-All five exist as overrides in `web/src/lib/paths.ts` — no app code changed for this.
+All five exist as overrides in `apps/web-quests/src/lib/paths.ts` — no app code changed for this.
 
 Five more come from `shared/app.env`, which `ecosystem.config.js` parses and merges into
 the pm2 environment. They are secrets, and that file is the only place they exist:
@@ -358,11 +358,11 @@ update "regeneration_job" set "state" = 'cancelled', "finishedAt" = now()
 This cancels pending jobs but does not stamp the batch with a reason, so the UI will show a
 stopped queue with no explanation — and running jobs are unaffected, because their characters
 are already billed at ElevenLabs. The full behaviour of `cancelPending()` in
-`web/src/lib/generation/queue.ts` is the authority; keep it in sync with changes there.
+`apps/web-quests/src/lib/generation/queue.ts` is the authority; keep it in sync with changes there.
 
 ### Why the queue starts lazily
 
-The queue is started by `ensureQueueRunning()` from `web/src/lib/generation/boot.ts`, called
+The queue is started by `ensureQueueRunning()` from `apps/web-quests/src/lib/generation/boot.ts`, called
 by the `/api/regenerate/queue` routes, rather than from a Next `instrumentation.ts` hook.
 
 `instrumentation.ts` is the natural home and was the original design. It does not work here:

@@ -21,11 +21,11 @@ PM2=${PM2:-$(command -v pm2 || echo /usr/local/bin/pm2)}
 # they are copied into the release by CI rather than traced into the bundle -- Next
 # cannot trace a readFile of a path computed at runtime, so a missing copy step in the
 # workflow shows up exactly here.
-[ -f "$TARGET/web/server.js" ]                      || { echo "activate: no web/server.js - bad build?" >&2; exit 1; }
-[ -d "$TARGET/web/.next/static" ]                   || { echo "activate: no web/.next/static - the page would render unstyled" >&2; exit 1; }
-[ -f "$TARGET/addon/ZoneLore/Data/enUS/Zones.lua" ]    || { echo "activate: no Zones.lua - the corpus did not ship" >&2; exit 1; }
-[ -f "$TARGET/addon/ZoneLore/Data/enUS/Subzones.lua" ] || { echo "activate: no Subzones.lua - the corpus did not ship" >&2; exit 1; }
-[ -f "$TARGET/tools/voice/config.json" ]            || { echo "activate: no voice config - regeneration would fail" >&2; exit 1; }
+[ -f "$TARGET/apps/web-zones/server.js" ]        || { echo "activate: no apps/web-zones/server.js - bad build?" >&2; exit 1; }
+[ -d "$TARGET/apps/web-zones/.next/static" ]     || { echo "activate: no apps/web-zones/.next/static - the page would render unstyled" >&2; exit 1; }
+[ -f "$TARGET/addons/SpokenZones/Data/enUS/Zones.lua" ]    || { echo "activate: no Zones.lua - the corpus did not ship" >&2; exit 1; }
+[ -f "$TARGET/addons/SpokenZones/Data/enUS/Subzones.lua" ] || { echo "activate: no Subzones.lua - the corpus did not ship" >&2; exit 1; }
+[ -f "$TARGET/pipelines/zones/tools/voice/config.json" ] || { echo "activate: no voice config - regeneration would fail" >&2; exit 1; }
 
 PREVIOUS=$(readlink -f "$ROOT/current" 2>/dev/null || echo "(none)")
 echo "activate: $PREVIOUS -> $TARGET"

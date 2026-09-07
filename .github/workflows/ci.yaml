@@ -1,0 +1,91 @@
+name: CI
+
+# Path-filtered so a Lua change does not wait on a Postgres service, and a corpus edit
+# does not rebuild both apps. The deploy workflows re-run the checks that gate a release;
+# this one is what a pull request sees.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  addons:
+    name: Addons (Lua)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install luajit
+        run: sudo apt-get update && sudo apt-get install -y luajit
+      # The stub client is Lua 5.1, which is what 1.12 through retail all run.
+      - run: make test-player
+
+  quests-python:
+    name: Quests pipeline (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pipelines/quests
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          # 3.11, from both ends: tts_cli uses `match` and `int | None`, which need 3.10,
+          # and requirements-extract pins pandas 1.5.3, whose last wheels are cp311.
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      # test_package.py runs scripts/quests/package.sh for real and asserts which .toc and
+      # which vendored Ace3 each client's zip carries, so it needs the whole tree.
+      - run: python -m pytest -q
+
+  web-quests:
+    name: Quests web
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+        ports: ["5432:5432"]
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @spoken/web-quests typecheck
+      # Several suites run against a real Postgres on purpose: the invariants they protect
+      # live in schema constraints, so a mocked database would stop testing them.
+      - run: deploy/quests/bin/migrate.sh "$PWD/apps/web-quests"
+      - run: pnpm --filter @spoken/web-quests test
+
+  web-zones:
+    name: Zones web and pipeline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @spoken/web-zones typecheck
+      # validate.mjs is what asserts no square bracket survives into spoken text -- the one
+      # normalisation rule that is not cosmetic, since eleven_v3 reads [...] as a tag.
+      - run: node pipelines/zones/tools/validate.mjs
+      - run: node pipelines/zones/tools/descriptions.mjs --check
+      - run: node pipelines/zones/tools/locale/check-strings.mjs

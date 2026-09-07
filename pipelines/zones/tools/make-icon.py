@@ -1,6 +1,6 @@
 """Turn the project artwork into the TGA the client shows beside an addon's name.
 
-    python3 tools/make-icon.py assets/zonelore-512.png addon/ZoneLore/Textures/AddonIcon.tga
+    python3 pipelines/zones/tools/make-icon.py pipelines/zones/assets/zonelore-512.png addons/SpokenZones/Textures/AddonIcon.tga
 
 WHY NOT JUST FFMPEG. Its targa encoder writes RLE (image type 10) and ignores
 -compression_algo raw on the versions to hand; the client wants an uncompressed image.

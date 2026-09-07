@@ -2,7 +2,7 @@
 
 The explorer runs at **https://lore.rusty.one** on a DigitalOcean droplet behind nginx,
 supervised by pm2, deployed by GitHub Actions on every push to `master` that touches
-`web/`, `tools/`, `addon/ZoneLore/Data/` or `deploy/`.
+`apps/web-zones/`, `pipelines/zones/tools/`, `addons/SpokenZones/Data/` or `deploy/`.
 
 This is the same shape as `../wow-voiceover`, on the same droplet, and deliberately beside
 it rather than tangled with it: a separate `/srv` tree, a separate database, a separate pm2
@@ -23,9 +23,9 @@ the system Node for another service, bump that value to match and redeploy.
     ecosystem.config.js         pm2 config, outlives every release
   releases/
     20260802-1143-a1b2c3d/      ~62 MB bundle + the lore corpus + migrations
-      web/server.js             standalone entrypoint (one level down - see below)
-      addon/ZoneLore/Data/<locale>/ the corpus, one directory per language
-      tools/voice/config.json   the voice, model and output format
+      apps/web-zones/server.js             standalone entrypoint (one level down - see below)
+      addons/SpokenZones/Data/<locale>/ the corpus, one directory per language
+      pipelines/zones/tools/voice/config.json   the voice, model and output format
       migrations/
   current -> releases/...       the symlink pm2 follows. Swapping it is the deploy.
   bin/{activate,migrate,rollback,prune}.sh
@@ -33,12 +33,12 @@ the system Node for another service, bump that value to match and redeploy.
 
 ## The one thing that makes this different from a normal Next.js deploy
 
-**Every path under `tools/` is derived from `ROOT` in `tools/lib/loredata.mjs`, and that
+**Every path under `pipelines/zones/tools/` is derived from `ROOT` in `pipelines/zones/tools/lib/loredata.mjs`, and that
 derivation does not survive a bundler.**
 
-The explorer imports `tools/voice/*.mjs` directly rather than shelling out to the CLI, so
+The explorer imports `pipelines/zones/tools/voice/*.mjs` directly rather than shelling out to the CLI, so
 that there is one generation path and not two — that is the whole argument in
-`web/src/lib/tools.ts`, and `next.config.ts` sets `outputFileTracingRoot` to the repo root
+`apps/web-zones/src/lib/tools.ts`, and `next.config.ts` sets `outputFileTracingRoot` to the repo root
 to allow it. The consequence is that webpack compiles those modules, and webpack replaces
 `import.meta.url` **at build time** with the build machine's own path. A bundle built in CI
 carries a literal `file:///home/runner/work/wow-lore/wow-lore/tools/lib/loredata.mjs`, so a
@@ -51,7 +51,7 @@ back to exactly the path it always had, and nothing about working locally change
 
 | Env var | Value on the droplet | Why there |
 |---|---|---|
-| `ZONELORE_ROOT` | `/srv/zonelore/current` | **Per release.** Resolves the lore corpus (`addon/ZoneLore/Data/<locale>/*.lua`), the voice config (`tools/voice/config*.json`) and the spoken-text substitutions (`tools/voice/pronunciation.json`), so a rollback moves code and data together. |
+| `ZONELORE_ROOT` | `/srv/zonelore/current` | **Per release.** Resolves the lore corpus (`addons/SpokenZones/Data/<locale>/*.lua`), the voice config (`pipelines/zones/tools/voice/config*.json`) and the spoken-text substitutions (`pipelines/zones/tools/voice/pronunciation.json`), so a rollback moves code and data together. |
 | `ZONELORE_SOUNDS` | `/srv/zonelore/shared/Sounds` | Shared. ~700 MB that a deploy must not copy and `prune.sh` must not delete. |
 | `ZONELORE_AUDIO_HISTORY` | `/srv/zonelore/shared/audio-history` | Shared. **Its loss is permanent**: version 1 of each file is the take the corpus was originally cut with, and restoring it is the undo for a re-roll that came out worse. |
 | `ZONELORE_MANIFEST` | `/srv/zonelore/shared/manifest.json` | Shared. With `DATABASE_URL` set the database is authoritative and this is a write-only export — the route by which the addon build learns what the droplet generated. |
@@ -61,7 +61,7 @@ corpus should move with the code. The audio, the archive and the two files the a
 must not.
 
 The `outputFileTracingRoot` setting has a second visible consequence: `standalone` lays the
-bundle out from the repo root, so the entrypoint is **`web/server.js`**, not `server.js` at
+bundle out from the repo root, so the entrypoint is **`apps/web-zones/server.js`**, not `server.js` at
 the top. `ecosystem.config.js` and `activate.sh` both expect that.
 
 ## Why the release is assembled by hand in CI
@@ -221,9 +221,9 @@ nothing — secrets are per-repository.
 
 ## What a deploy does
 
-1. Typecheck, `tools/validate.mjs`, and migrations against a throwaway Postgres. A red
+1. Typecheck, `pipelines/zones/tools/validate.mjs`, and migrations against a throwaway Postgres. A red
    build never reaches the droplet.
-2. Build, then assemble `standalone` + `.next/static` + the corpus + `tools/voice/*.json` +
+2. Build, then assemble `standalone` + `.next/static` + the corpus + `pipelines/zones/tools/voice/*.json` +
    `migrations/` into a release directory.
 3. **Boot that exact artifact in CI**, with the same five path overrides pm2 will set, and
    assert the catalogue shipped, the zone filter matches, an admin can quote a
@@ -258,7 +258,7 @@ make validate-audio  # manifest, files on disk and lookup table agree
 git diff             # manifest.json is the reviewable part
 ```
 
-`addon/ZoneLoreAudio/Data/Sounds.lua` *is* regenerated on the droplet after each
+`addons/SpokenZonesAudio/Data/Sounds.lua` *is* regenerated on the droplet after each
 regeneration, inside the release directory, where nothing reads it and `prune.sh` will
 eventually delete it. That is fine — it is derived from the manifest, and `make lookup`
 above is the copy that matters.
@@ -283,8 +283,8 @@ releases instead of bouncing between the newest two.
 - **The site is public to read and closed to write.** Anyone may browse, filter and listen;
   that is the point of hosting it. Everything that costs money or changes shared state —
   Regenerate, Restore, the review flags, the pronunciation rules, `/admin` — needs a role,
-  and registering grants none. See `web/src/lib/permissions.ts` for the three, and
-  `web/src/lib/authz.ts` for where each one is actually enforced. The role checks in the
+  and registering grants none. See `apps/web-zones/src/lib/permissions.ts` for the three, and
+  `apps/web-zones/src/lib/authz.ts` for where each one is actually enforced. The role checks in the
   components decide what to draw and nothing more.
 - **`nginx-lore.conf` still carries a commented-out basic-auth block** in all three
   location blocks. It predates the accounts and is now a blunt instrument for taking the

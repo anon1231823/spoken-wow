@@ -5,14 +5,14 @@ on:
     branches: [master]
     # Addon-only commits should not redeploy the explorer.
     paths:
-      - "web/**"
-      - "corpus/**"
+      - "apps/web-quests/**"
+      - "pipelines/quests/corpus/**"
       # How a line is voiced ships inside the release, so a change to one of these has to
       # produce a new one. The lexicon is the reason this is not merely tidy: it is meant to
       # be edited, and an edit that never reached a release would look like a lost commit.
-      - "voice/*.json"
-      - "deploy/**"
-      - ".github/workflows/deploy-web.yaml"
+      - "pipelines/quests/voice/*.json"
+      - "deploy/quests/**"
+      - ".github/workflows/deploy-web-quests.yaml"
   workflow_dispatch:
 
 # A deploy that only ever runs by hand is a deploy nobody runs, so the dispatch trigger
@@ -57,11 +57,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # The pnpm version comes from "packageManager" in the root package.json, which is
+      # where the action looks by default.
       - uses: pnpm/action-setup@v6
-        with:
-          # The pnpm version comes from "packageManager" in web/package.json. This repo
-          # has no root package.json, which is where the action looks by default.
-          package_json_file: web/package.json
 
       - uses: actions/setup-node@v5
         with:
@@ -69,14 +67,16 @@ jobs:
           # (currently 24), so if you upgrade it there, change it here too and redeploy.
           node-version: 24
           cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
+      # One install for the whole workspace: both apps and the zones pipeline. The zones
+      # pipeline needs its own node_modules and used to require a second, npm-managed
+      # root package to get one.
       - name: Install
-        working-directory: web
         run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        working-directory: web
+        working-directory: apps/web-quests
         run: pnpm typecheck
 
       # Applied with the same script the droplet uses, so a migration that only works
@@ -86,17 +86,17 @@ jobs:
       # real Postgres, because the ordering it protects - archive the current take before
       # anything overwrites it - is exactly what a mocked database would stop testing.
       - name: Migrate
-        run: deploy/bin/migrate.sh "$PWD/web"
+        run: deploy/quests/bin/migrate.sh "$PWD/apps/web-quests"
 
       # The gate. audio.test.ts asserts every file in the store is addressed by some
       # corpus line and range.test.ts covers Safari's bytes=0-1 probe; neither should
       # reach the droplet red.
       - name: Test
-        working-directory: web
+        working-directory: apps/web-quests
         run: pnpm test
 
       - name: Build
-        working-directory: web
+        working-directory: apps/web-quests
         run: pnpm build
 
       - name: Assemble release
@@ -107,16 +107,16 @@ jobs:
           # cp -a, never cp -r: pnpm's node_modules/next is a symlink into .pnpm/, and a
           # dereferencing copy detaches it from its siblings, so the bundle dies at boot
           # with "Cannot find module 'styled-jsx/package.json'". BSD cp -r dereferences.
-          cp -a web/.next/standalone/. "$R"/
+          cp -a apps/web-quests/.next/standalone/. "$R"/
           # standalone does not include static assets or public/; without this the page
           # renders unstyled. (This project has no public/.)
-          cp -a web/.next/static "$R"/.next/static
+          cp -a apps/web-quests/.next/static "$R"/.next/static
           # The corpus ships inside the release so a rollback moves data and code together.
           # hiccups.json.gz rides along because it is derived from exactly this corpus, and
           # a glob for the reason the voice/ line below gives: the next file beside it
           # should not depend on anyone remembering this line.
           mkdir -p "$R"/corpus
-          cp corpus/*.json.gz "$R"/corpus/
+          cp pipelines/quests/corpus/*.json.gz "$R"/corpus/
           # Same reasoning for how a line is voiced. These are also what the Python CLI
           # reads, so shipping them keeps both sides starting from the same defaults - and
           # without pronunciation.json the app applies no rules and reads "Hm" as letters.
@@ -126,10 +126,10 @@ jobs:
           # lexicon was still a file. It is not one any more: it lives in the database, seeded
           # by migration 0008, so there is nothing lexicon-shaped left to forget.
           mkdir -p "$R"/voice
-          cp voice/*.json "$R"/voice/
+          cp pipelines/quests/voice/*.json "$R"/voice/
           # Migrations ship with the release too: activate.sh runs migrate.sh against the
           # release directory, so without this a deploy has nothing to apply.
-          cp -a web/migrations "$R"/migrations
+          cp -a apps/web-quests/migrations "$R"/migrations
           test -f "$R"/server.js
           test -L "$R"/node_modules/next   # symlink survived the copy
           test -f "$R"/migrations/0001_auth.sql

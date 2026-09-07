@@ -51,14 +51,15 @@ module.exports = {
     {
       name: "zonelore",
       // Next.js standalone output. The bundle is laid out from the repo root rather than
-      // from web/, because next.config.ts sets outputFileTracingRoot there so the app can
-      // import tools/voice/*.mjs -- so server.js is one level down, not at the top.
-      script: "web/server.js",
+      // from the monorepo root, because next.config.ts sets outputFileTracingRoot there
+      // so the app can import the zones pipeline's voice/*.mjs -- so server.js is two
+      // levels down, not at the top.
+      script: "apps/web-zones/server.js",
       cwd: `${ROOT}/current`,
 
       // ONE instance, deliberately, where ../wow-voiceover runs two.
       //
-      // Regeneration batches live in a plain object on globalThis (web/src/lib/regenerate.ts)
+      // Regeneration batches live in a plain object on globalThis (apps/web-zones/src/lib/regenerate.ts)
       // rather than in queue tables, because this is one person on one laptop's worth of
       // work. With two workers a batch started on one would be invisible to the other, and
       // the panel's progress poll would answer "no such batch" roughly half the time.

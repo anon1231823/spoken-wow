@@ -1,12 +1,23 @@
-name: Release
+name: Release addons
 
-# Publishes the player addon to a GitHub release, which is the only channel the 1.12, 2.4.3
-# and 3.3.5 clients have: CurseForge offers files against Blizzard's game versions, so
-# scripts/release.sh uploads the Blizzard zip there and nothing else.
+# Publishes an addon to a GitHub release, which is the only channel the 1.12, 2.4.3 and
+# 3.3.5 clients have: CurseForge offers files against Blizzard's game versions, so
+# scripts/quests/release.sh uploads the Blizzard zip there and nothing else.
+#
+# The tag prefix picks the addon, because the two version independently and always have:
+#
+#     quests/v1.3.0   ->  addons/SpokenQuests, shipped as VoiceOverRedux
+#     zones/v0.4.3    ->  addons/SpokenZones,  shipped as ZoneLore
+#
+# `spoken/v*` joins them when the player addon exists.
+#
+# Unprefixed v*.*.* tags are deliberately not matched: seventeen of them already exist
+# from the AI_VoiceOver_Continued lineage and were imported as legacy/quests/v*.
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "quests/v*.*.*"
+      - "zones/v*.*.*"
 
 jobs:
   build:
@@ -17,6 +28,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      # Everything below is addressed through these three, so adding the player addon is
+      # one entry rather than a second copy of the job.
+      - name: Resolve the target from the tag
+        id: target
+        run: |
+          case "${GITHUB_REF_NAME%%/*}" in
+            quests) toc=addons/SpokenQuests/VoiceOverRedux.toc; script=scripts/quests/package.sh ;;
+            zones)  toc=addons/SpokenZones/ZoneLore.toc;        script=scripts/zones/package.sh  ;;
+            *)      echo "unknown tag prefix in ${GITHUB_REF_NAME}" >&2; exit 1 ;;
+          esac
+          {
+            echo "name=${GITHUB_REF_NAME%%/*}"
+            echo "toc=$toc"
+            echo "script=$script"
+          } >> "$GITHUB_OUTPUT"
+
       # The .toc is the source of the version and the tag has to agree with it. This used to
       # run the other way round - the tag was substituted into every .toc over a placeholder
       # that stopped existing - which meant a tag could name a version the tree never had.
@@ -24,8 +51,8 @@ jobs:
         id: version
         run: |
           version="$(sed -n 's/^## Version:[[:space:]]*//p' \
-            VoiceOverRedux/VoiceOverRedux.toc | head -1 | tr -d '\r')"
-          if [ "v$version" != "${{ github.ref_name }}" ]; then
+            "${{ steps.target.outputs.toc }}" | head -1 | tr -d '\r')"
+          if [ "${{ steps.target.outputs.name }}/v$version" != "${{ github.ref_name }}" ]; then
             echo "tag ${{ github.ref_name }} does not match ## Version: $version" >&2
             exit 1
           fi
@@ -35,14 +62,16 @@ jobs:
       # author builds locally: which .toc a client gets, and which vendored Ace3 rides with
       # it, are decisions that live in one place.
       - name: Build the zips
-        run: ./scripts/package.sh
+        run: ./${{ steps.target.outputs.script }}
 
       # Rendered here rather than by cuchi/jinja2-action: that action is a Docker action, so
       # the runner builds its image before any step of this job runs, and its Dockerfile no
       # longer builds - which failed the whole workflow before it reached the first step.
       # Substitution into a fixed template needs no template engine anyway, and this keeps the
       # engine's one useful behaviour: an unfilled placeholder is an error, not empty text.
+      # Only the quests addon has a template. Zones takes GitHub's generated notes.
       - name: Render the release notes
+        if: steps.target.outputs.name == 'quests'
         env:
           DOWNLOAD: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}
           VERSION: ${{ steps.version.outputs.version }}
@@ -92,6 +121,6 @@ jobs:
           draft: true
           fail_on_unmatched_files: true
           generate_release_notes: true
-          body_path: release_notes.md
+          body_path: ${{ steps.target.outputs.name == 'quests' && 'release_notes.md' || '' }}
           files: |
             dist/*.zip

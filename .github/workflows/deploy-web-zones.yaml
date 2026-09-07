@@ -6,16 +6,16 @@ on:
     # Addon-only commits should not redeploy the explorer. The paths below are exactly
     # what ends up inside a release.
     paths:
-      - "web/**"
+      - "apps/web-zones/**"
       # The lore corpus ships in the release, so a scrape that changes it has to produce a
       # new one - otherwise the explorer keeps serving yesterday's text while the addon
       # ships today's.
-      - "addon/ZoneLore/Data/**"
+      - "addons/SpokenZones/Data/**"
       # The app imports these directly rather than shelling out to the CLI, so they are
       # part of the bundle.
-      - "tools/**"
-      - "deploy/**"
-      - ".github/workflows/deploy-web.yaml"
+      - "pipelines/zones/**"
+      - "deploy/zones/**"
+      - ".github/workflows/deploy-web-zones.yaml"
   workflow_dispatch:
 
 # A deploy that only ever runs by hand is a deploy nobody runs, so the dispatch trigger
@@ -64,10 +64,6 @@ jobs:
       - uses: actions/checkout@v5
 
       - uses: pnpm/action-setup@v6
-        with:
-          # The repo root has a package.json, but it is the tooling's (one dependency, pg)
-          # and carries no "packageManager" field. The web app's is the one that does.
-          package_json_file: web/package.json
 
       - uses: actions/setup-node@v5
         with:
@@ -75,55 +71,43 @@ jobs:
           # if you upgrade it there, change it here too and redeploy.
           node-version: 24
           cache: pnpm
-          cache-dependency-path: web/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
-      # BOTH installs are required, and the root one is easy to think redundant.
-      #
-      # tools/voice/db.mjs does `import pg`, and it is resolved from where that file
-      # lives: node walks tools/voice -> tools -> the repo root, and never into
-      # web/node_modules. The root package.json is where tools/ declares that single
-      # dependency. Without this the build fails at
-      #   ../tools/voice/db.mjs  Module not found: Can't resolve 'pg'
-      # which reads like a missing web/ dependency and is not one -- web/ has pg too,
-      # and that copy is what the running server uses, because the compiled chunk
-      # resolves from web/.next/server/. Build-time and runtime look in different
-      # places, so both copies have to exist.
-      #
-      # npm, not pnpm: the root has a package-lock.json and no pnpm lockfile.
-      - name: Install tooling dependencies
-        run: npm ci
-
+      # One install for the whole workspace. pipelines/zones is a member, so pnpm puts
+      # pg in pipelines/zones/node_modules and voice/db.mjs's upward resolution finds it
+      # there -- which is what the old root package.json plus `npm ci` existed to do.
+      # apps/web-zones keeps pg in its own dependencies: build-time and runtime look in
+      # different places, and the runtime one resolves from .next/server/.
       - name: Install
-        working-directory: web
         run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        working-directory: web
+        working-directory: apps/web-zones
         run: pnpm typecheck
 
       # The addon's own checks. They cost seconds and they cover the data files that ship
       # inside the release: validate.mjs is what asserts no square bracket survives into
       # spoken text, which is the one normalisation rule that is not cosmetic.
       - name: Validate the corpus
-        run: node tools/validate.mjs
+        run: node pipelines/zones/tools/validate.mjs
 
       # Applied with the same script the droplet uses, so a migration that only works under
       # a hand-run psql fails here instead of mid-deploy.
       - name: Migrate
         run: |
           mkdir -p /tmp/release-check
-          cp -a web/migrations /tmp/release-check/migrations
-          deploy/bin/migrate.sh /tmp/release-check
+          cp -a apps/web-zones/migrations /tmp/release-check/migrations
+          deploy/zones/bin/migrate.sh /tmp/release-check
 
       # The app reads its corpus from lore_line, so a migrated-but-empty database is an
       # explorer with nothing in it. This is the same command a rebuilt droplet runs, and
       # it inserts from the committed Lua -- which is what makes the smoke test below a
       # real check that the corpus survived the release rather than a check on a fixture.
       - name: Seed the corpus
-        run: node tools/lore/import.mjs
+        run: node pipelines/zones/tools/lore/import.mjs
 
       - name: Build
-        working-directory: web
+        working-directory: apps/web-zones
         run: pnpm build
 
       - name: Assemble release
@@ -137,12 +121,13 @@ jobs:
           # with "Cannot find module 'styled-jsx/package.json'". BSD cp -r dereferences.
           #
           # next.config.ts sets outputFileTracingRoot to the repo root so the app can
-          # import tools/voice/*.mjs, which also means standalone lays the bundle out from
-          # the repo root: server.js lands at web/server.js, not at the top.
-          cp -a web/.next/standalone/. "$R"/
+          # import the zones pipeline's voice/*.mjs, which also means standalone lays the
+          # bundle out from the repo root: server.js lands at apps/web-zones/server.js,
+          # not at the top.
+          cp -a apps/web-zones/.next/standalone/. "$R"/
           # standalone does not include static assets; without this the page renders
           # unstyled. (This project has no public/.)
-          cp -a web/.next/static "$R"/web/.next/static
+          cp -a apps/web-zones/.next/static "$R"/apps/web-zones/.next/static
 
           # Everything below is read with readFile at a path computed at runtime, which
           # Next cannot trace, so none of it is in the bundle and all of it has to be
@@ -153,8 +138,8 @@ jobs:
           # language now, and naming them here would mean editing this step every time a
           # translation lands. The alias tables ride along -- they are small, and the app
           # reading the same files the addon ships is what makes them checkable here.
-          mkdir -p "$R"/addon/ZoneLore
-          cp -a addon/ZoneLore/Data "$R"/addon/ZoneLore/
+          mkdir -p "$R"/addons/SpokenZones
+          cp -a addons/SpokenZones/Data "$R"/addons/SpokenZones/
 
           # config.json is the voice, model and output format; without it a regeneration
           # cannot be attempted at all. pronunciation.json is a seed - activate.sh copies
@@ -162,20 +147,22 @@ jobs:
           # ever; the in-app editor is gone) is not overwritten by a deploy. manifest.json
           # rides along as the record of what has been paid for, for anyone reading a
           # release directory.
-          mkdir -p "$R"/tools/voice
-          cp tools/voice/config.json tools/voice/pronunciation.json tools/voice/manifest.json \
-             "$R"/tools/voice/
+          mkdir -p "$R"/pipelines/zones/tools/voice
+          cp pipelines/zones/tools/voice/config.json \
+             pipelines/zones/tools/voice/pronunciation.json \
+             pipelines/zones/tools/voice/manifest.json \
+             "$R"/pipelines/zones/tools/voice/
 
           # Migrations ship with the release too: activate.sh runs migrate.sh against the
           # release directory, so without this a deploy has nothing to apply.
-          cp -a web/migrations "$R"/migrations
+          cp -a apps/web-zones/migrations "$R"/migrations
 
-          test -f "$R"/web/server.js
-          test -L "$R"/web/node_modules/next          # symlink survived the copy
-          test -d "$R"/web/.next/static
-          test -f "$R"/addon/ZoneLore/Data/enUS/Zones.lua
-          test -f "$R"/addon/ZoneLore/Data/enUS/Subzones.lua
-          test -f "$R"/tools/voice/config.json
+          test -f "$R"/apps/web-zones/server.js
+          test -L "$R"/apps/web-zones/node_modules/next          # symlink survived the copy
+          test -d "$R"/apps/web-zones/.next/static
+          test -f "$R"/addons/SpokenZones/Data/enUS/Zones.lua
+          test -f "$R"/addons/SpokenZones/Data/enUS/Subzones.lua
+          test -f "$R"/pipelines/zones/tools/voice/config.json
           test -f "$R"/migrations/0001_voiceline_take.sql
           test -f "$R"/migrations/0002_line_flag.sql
           du -sh "$R"

@@ -127,7 +127,12 @@ def check(path):
 
 def main():
     failed = False
-    for path in sorted(glob.glob("addon/ZoneLore/**/*.lua", recursive=True)):
+    # Relative to the repo root, which is where make/zones.mk runs it from. A glob that
+    # matches nothing exits 0, so a stale path here reads as a clean check forever.
+    paths = sorted(glob.glob("addons/SpokenZones/**/*.lua", recursive=True))
+    if not paths:
+        sys.exit("lua-syntax-check: matched no files -- run me from the repo root")
+    for path in paths:
         problems = check(path)
         if problems:
             failed = True
