@@ -61,6 +61,70 @@ function Addon:InitDB()
         return
     end
     self.db = LibStub("AceDB-3.0"):New("SpokenDB", Defaults)
+    self:Migrate()
+end
+
+local SOUND_CHANNEL_NAMES = { "Master", "SFX", "Music", "Ambience", "Dialog" }
+
+-- The frame, minimap and channel settings used to live in each feature addon's own
+-- saved variables. Their tombstone folders keep those files loading after the rename,
+-- and this reads them once. The quests addon's win where both exist: it is the older
+-- addon and the one whose player this is. Nothing in the old tables is changed.
+function Addon:Migrate()
+    local global = self.db.global
+    if global.migratedFrom then
+        return
+    end
+
+    local function profileOf(sv)
+        return type(sv) == "table" and type(sv.profiles) == "table" and sv.profiles.Default or nil
+    end
+    local quests = profileOf(rawget(_G, "VoiceOverDB"))
+    local zonesQueue = profileOf(rawget(_G, "ZoneLoreQueueDB"))
+    local zones = rawget(_G, "ZoneLoreDB")
+
+    local frame = quests and quests.SoundQueueUI or zonesQueue and zonesQueue.SoundQueueUI
+    if frame then
+        for _, key in ipairs({ "LockFrame", "FrameScale", "FrameStrata", "HidePortrait", "HideFrame" }) do
+            if frame[key] ~= nil then
+                self.db.profile.Frame[key] = frame[key]
+            end
+        end
+    end
+
+    local icon = quests and quests.MinimapButton and quests.MinimapButton.LibDBIcon
+    if not icon and type(zones) == "table" and (zones.minimapPos ~= nil or zones.hide ~= nil) then
+        icon = { minimapPos = zones.minimapPos, hide = zones.hide, lock = zones.lock }
+    end
+    if icon then
+        for _, key in ipairs({ "minimapPos", "hide", "lock" }) do
+            if icon[key] ~= nil then
+                self.db.profile.Minimap.LibDBIcon[key] = icon[key]
+            end
+        end
+    end
+
+    if quests and quests.Audio then
+        local channel = quests.Audio.SoundChannel
+        if type(channel) == "number" and SOUND_CHANNEL_NAMES[channel] then
+            self.db.profile.Audio.SoundChannel = SOUND_CHANNEL_NAMES[channel]
+        end
+        local legacy = quests.LegacyWrath
+        if legacy and self.db.profile.Audio.LegacyMusicChannel and legacy.PlayOnMusicChannel then
+            for key, value in pairs(legacy.PlayOnMusicChannel) do
+                self.db.profile.Audio.LegacyMusicChannel[key] = value
+            end
+        end
+        if legacy and legacy.HDModels ~= nil and self.db.profile.Audio.LegacyHDModels ~= nil then
+            self.db.profile.Audio.LegacyHDModels = legacy.HDModels
+        end
+    end
+
+    if quests then
+        global.migratedFrom = "VoiceOverRedux"
+    elseif zonesQueue or type(zones) == "table" then
+        global.migratedFrom = "ZoneLore"
+    end
 end
 
 --- Everything that needs the world: the frame, the button, the settings, the slash

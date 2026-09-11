@@ -9,7 +9,7 @@
 | 3.3.5 (private WotLK servers) | [GitHub ZIP Download]({{ github_zip_download_335 }}) | - |
 
 One zip serves every Blizzard client — it carries a `.toc` per flavor and the client picks.
-The three private-server clients read `VoiceOverRedux.toc` and nothing else, so each has a zip
+The three private-server clients read `SpokenQuests.toc` and nothing else, so each has a zip
 of its own, carrying the vendored Ace3 that client needs.
 
 ### Sound packs

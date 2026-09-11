@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Builds the player addon's distributable zips.
 #
-#   ./scripts/quests/package.sh                 # dist/VoiceOverRedux-<version>.zip + one per legacy client
+#   ./scripts/quests/package.sh                 # dist/SpokenQuests-<version>.zip + one per legacy client
 #   ALLOW_DIRTY=1 ./scripts/quests/package.sh   # build from an uncommitted tree
 #
 # ONE ZIP FOR BLIZZARD'S CLIENTS, ONE APIECE FOR THE PRIVATE-SERVER ONES. Blizzard's clients
 # pick their .toc by flavor suffix - _Vanilla, _TBC, _Wrath, _Mainline - so a single archive
 # serves Classic Era through retail and the client decides. The 1.12, 2.4.3 and 3.3.5 clients
-# predate suffix support: each reads VoiceOverRedux.toc and nothing else, and each wants a
+# predate suffix support: each reads SpokenQuests.toc and nothing else, and each wants a
 # different file under that one name, so each needs an archive of its own. They also load a
 # vendored Ace3 of their own - the root Libs/ binds C_Timer.After at load time - which is why
 # every legacy zip carries its client's directory and none of the others.
@@ -17,24 +17,37 @@
 # differences are the legacy clients and the audio living elsewhere.
 #
 # Addon hosts unpack the zip straight into Interface/AddOns, so its root must contain the
-# VoiceOverRedux/ folder itself - hence the `cd` before zipping.
+# SpokenQuests/ folder itself - hence the staging copy before zipping.
+#
+# THE BLIZZARD ZIP ALSO CARRIES THE TOMBSTONE: a VoiceOverRedux/ folder holding one .toc and
+# no code. The client names a SavedVariables file after the addon folder, so the rename would
+# have orphaned every player's settings; the tombstone keeps VoiceOverRedux.lua loading for
+# the migration to read, and overwrites the old addon's code when a manager installs this
+# release over it. Drop it a few releases from now.
+#
+# THE LEGACY ZIPS ALSO CARRY THE SPOKEN PLAYER. Those clients have no addon manager to
+# install a dependency, so the player travels inside the zip, staged from its own tree at
+# build time -- there is no committed second copy that could drift, and the build asserts
+# the staged copy is byte-identical to addons/Spoken/ apart from the per-client pruning and
+# the .toc swap. Since it is guaranteed present, the dependency is hard there where it is
+# soft everywhere else.
 #
 # The sound pack is NOT here: it is 1.5 GB and rebuilt from the audio store on its own
 # schedule. See scripts/quests/package-audio.sh, or `make quests-package-audio`.
 #
-# SOURCE DIRECTORY AND SHIPPED FOLDER NAME ARE NOT THE SAME THING. The source lives at
-# addons/SpokenQuests/, but what a player installs must still be called VoiceOverRedux
-# until the rename ships with its SavedVariables migration -- an installed folder is the
-# addon's identity to the client, to LibDBIcon and to every superseded-fork check. So
-# ADDON says where to read from and NAME says what to write, and both zips are built
-# from a staging copy: zipping in place would put the source directory's name in the
-# archive root.
+# ADDON says where the source is read from and NAME what the installed folder is called;
+# they agree now that the rename has shipped, and stay separate because the staging copy
+# is what lets the zips be assembled from more than one tree.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ADDON="${ADDON:-addons/SpokenQuests}"
-NAME="${NAME:-VoiceOverRedux}"
+NAME="${NAME:-SpokenQuests}"
 SRC="$REPO/$ADDON"
+PLAYER_SRC="$REPO/addons/Spoken"
+PLAYER="Spoken"
+TOMBSTONE="VoiceOverRedux"
+TOMBSTONE_SRC="$REPO/addons/tombstones/$TOMBSTONE"
 TOC="$SRC/$NAME.toc"
 DIST="${DIST:-$REPO/dist}"
 
@@ -104,25 +117,35 @@ trap 'rm -rf "$staging"' EXIT
 
 # The archive root has to be the installed folder name, which is not the source
 # directory's name, so every zip is built from a copy laid out under it.
-stage_addon() {
-  local dest="$1/$NAME"
+stage_tree() { # <staging dir> <source dir> <installed folder name>
+  local dest="$1/$3"
   mkdir -p "$dest"
-  # -a and not -r: the addon carries no symlinks today, and copying one as a link would
+  # -a and not -r: the addons carry no symlinks today, and copying one as a link would
   # produce a zip that unpacks into nothing on someone else's machine.
-  (cd "$SRC" && tar -cf - --exclude '.DS_Store' --exclude '*.bak' --exclude '*.orig' .) \
+  (cd "$2" && tar -cf - --exclude '.DS_Store' --exclude '*.bak' --exclude '*.orig' .) \
     | (cd "$dest" && tar -xf -)
 }
+stage_addon() { stage_tree "$1" "$SRC" "$NAME"; }
 
 # Addon hosts unpack into Interface/AddOns, so the archive root must be the folder itself.
 # -X drops the extra macOS attributes that otherwise ride along. The legacy client directories
 # are excluded: a Blizzard client loads none of them, and they are most of the archive.
+# Same check for the player's literal, which the legacy zips carry.
+player_version="$(sed -n 's/^## Version:[[:space:]]*//p' "$PLAYER_SRC/$PLAYER.toc" | head -1 | tr -d '\r')"
+player_literal="$(sed -n 's/^[[:space:]]*AddonVersion = "\(.*\)",/\1/p' "$PLAYER_SRC/Environment.lua" | head -1)"
+[ "$player_version" = "$player_literal" ] || {
+  echo "error: Spoken's Environment.lua says $player_literal but its .toc says $player_version" >&2; exit 1; }
+
 legacy_excludes=()
 for pair in "${CLIENTS[@]}"; do
   legacy_excludes+=("$NAME/${pair##*:}/*" "$NAME/${NAME}_${pair%%:*}.toc")
 done
 
 stage_addon "$staging/blizzard"
-(cd "$staging/blizzard" && zip -r -q -X "$zip_path" "$NAME" \
+stage_tree "$staging/blizzard" "$TOMBSTONE_SRC" "$TOMBSTONE"
+[ "$(find "$staging/blizzard/$TOMBSTONE" -type f | wc -l | tr -d ' ')" = 1 ] || {
+  echo "error: the tombstone must be exactly one .toc" >&2; exit 1; }
+(cd "$staging/blizzard" && zip -r -q -X "$zip_path" "$NAME" "$TOMBSTONE" \
   -x '*.DS_Store' '*/.git/*' '*.bak' '*.orig' "${legacy_excludes[@]}")
 
 files="$(unzip -Z1 "$zip_path" | grep -cv '/$')"
@@ -148,10 +171,31 @@ for pair in "${CLIENTS[@]}"; do
   for other in "${CLIENTS[@]}"; do
     [ "${other##*:}" = "$variant" ] || rm -rf "$folder/${other##*:}"
   done
+  # The one place the dependency is hard: the player is in this zip.
+  sed -i.bak 's/^## OptionalDeps: Spoken, VoiceOverRedux$/## Dependencies: Spoken/' "$folder/$NAME.toc"
+  rm -f "$folder/$NAME.toc.bak"
+  grep -q '^## Dependencies: Spoken$' "$folder/$NAME.toc" || {
+    echo "error: could not make Spoken a hard dependency in $client's $NAME.toc" >&2; exit 1; }
+
+  # The player, pruned the same way, and proven to be its own tree.
+  stage_tree "$staging/$client" "$PLAYER_SRC" "$PLAYER"
+  player="$staging/$client/$PLAYER"
+  player_toc="$PLAYER_SRC/${PLAYER}_${variant}.toc"
+  [ -f "$player_toc" ] || { echo "error: no $player_toc for client $client" >&2; exit 1; }
+  cp "$player_toc" "$player/$PLAYER.toc"
+  rm -rf "$player/Libs" "$player/embeds.xml"
+  rm -f "$player"/${PLAYER}_*.toc
+  for other in "${CLIENTS[@]}"; do
+    [ "${other##*:}" = "$variant" ] || rm -rf "$player/${other##*:}"
+  done
+  (cd "$player" && find . -type f ! -name "$PLAYER.toc" ! -path './.DS_Store' | while read -r f; do
+    cmp -s "$f" "$PLAYER_SRC/$f" || { echo "error: bundled $f differs from addons/Spoken/$f" >&2; exit 1; }
+  done) || exit 1
+  cmp -s "$player/$PLAYER.toc" "$player_toc" || { echo "error: bundled Spoken.toc is not ${PLAYER}_${variant}.toc" >&2; exit 1; }
 
   zip_path="$DIST/$NAME-WoW_$client-$version.zip"
   rm -f "$zip_path"
-  (cd "$staging/$client" && zip -r -q -X "$zip_path" "$NAME" \
+  (cd "$staging/$client" && zip -r -q -X "$zip_path" "$NAME" "$PLAYER" \
     -x '*.DS_Store' '*/.git/*' '*.bak' '*.orig')
 
   files="$(unzip -Z1 "$zip_path" | grep -cv '/$')"

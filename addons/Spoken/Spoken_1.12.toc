@@ -6,5 +6,5 @@
 ## X-Part-Of: Spoken
 ## X-Spoken-Player: 1
 
-1.12mbeds.xml
+1.12\embeds.xml
 addon.xml

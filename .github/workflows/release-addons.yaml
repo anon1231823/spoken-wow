@@ -6,16 +6,16 @@ name: Release addons
 #
 # The tag prefix picks the addon, because the two version independently and always have:
 #
-#     quests/v1.3.0   ->  addons/SpokenQuests, shipped as VoiceOverRedux
-#     zones/v0.4.3    ->  addons/SpokenZones,  shipped as ZoneLore
-#
-# `spoken/v*` joins them when the player addon exists.
+#     spoken/v1.0.0   ->  addons/Spoken
+#     quests/v2.0.0   ->  addons/SpokenQuests
+#     zones/v1.0.0    ->  addons/SpokenZones
 #
 # Unprefixed v*.*.* tags are deliberately not matched: seventeen of them already exist
 # from the AI_VoiceOver_Continued lineage and were imported as legacy/quests/v*.
 on:
   push:
     tags:
+      - "spoken/v*.*.*"
       - "quests/v*.*.*"
       - "zones/v*.*.*"
 
@@ -34,8 +34,9 @@ jobs:
         id: target
         run: |
           case "${GITHUB_REF_NAME%%/*}" in
-            quests) toc=addons/SpokenQuests/VoiceOverRedux.toc; script=scripts/quests/package.sh ;;
-            zones)  toc=addons/SpokenZones/ZoneLore.toc;        script=scripts/zones/package.sh  ;;
+            spoken) toc=addons/Spoken/Spoken.toc;               script=scripts/spoken/package.sh ;;
+            quests) toc=addons/SpokenQuests/SpokenQuests.toc;   script=scripts/quests/package.sh ;;
+            zones)  toc=addons/SpokenZones/SpokenZones.toc;     script=scripts/zones/package.sh  ;;
             *)      echo "unknown tag prefix in ${GITHUB_REF_NAME}" >&2; exit 1 ;;
           esac
           {
@@ -69,7 +70,7 @@ jobs:
       # longer builds - which failed the whole workflow before it reached the first step.
       # Substitution into a fixed template needs no template engine anyway, and this keeps the
       # engine's one useful behaviour: an unfilled placeholder is an error, not empty text.
-      # Only the quests addon has a template. Zones takes GitHub's generated notes.
+      # Only the quests addon has a template. The player and zones take GitHub's generated notes.
       - name: Render the release notes
         if: steps.target.outputs.name == 'quests'
         env:
@@ -81,10 +82,10 @@ jobs:
 
           download, version = os.environ["DOWNLOAD"], os.environ["VERSION"]
           variables = {
-              "github_zip_download_blizz": f"{download}/VoiceOverRedux-{version}.zip",
-              "github_zip_download_112": f"{download}/VoiceOverRedux-WoW_1.12-{version}.zip",
-              "github_zip_download_243": f"{download}/VoiceOverRedux-WoW_2.4.3-{version}.zip",
-              "github_zip_download_335": f"{download}/VoiceOverRedux-WoW_3.3.5-{version}.zip",
+              "github_zip_download_blizz": f"{download}/SpokenQuests-{version}.zip",
+              "github_zip_download_112": f"{download}/SpokenQuests-WoW_1.12-{version}.zip",
+              "github_zip_download_243": f"{download}/SpokenQuests-WoW_2.4.3-{version}.zip",
+              "github_zip_download_335": f"{download}/SpokenQuests-WoW_3.3.5-{version}.zip",
               "curse_link_blizz": "https://www.curseforge.com/wow/addons/voiceover-redux",
               "curse_link_pack_alliance": "https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance",
               "curse_link_pack_horde": "https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde",

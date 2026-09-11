@@ -10,10 +10,11 @@
 # https://authors-old.curseforge.com/account/api-tokens -- it is an author token
 # tied to your account, not to a project, so the same one covers all three.
 #
-# This uploads files. It does not create projects, edit descriptions, or set
-# relations: those are one-time settings that live in the web UI, and a script
-# that rewrites them on every release is a script that can quietly undo an edit
-# made there.
+# This uploads files, and declares the addon's one required dependency -- the
+# Spoken player -- with the file; relations are upload metadata, not a project
+# setting. It does not create projects or edit descriptions: there is no API for
+# either, and a script that rewrote them every release could undo an edit made in
+# the web UI.
 
 set -euo pipefail
 
@@ -53,12 +54,12 @@ target_project() { case "$1" in
   audio64)  echo "1636548";;
 esac; }
 target_addon() { case "$1" in
-  zonelore) echo "ZoneLore";;
+  zonelore) echo "SpokenZones";;
   audio)    echo "ZoneLoreAudio";;
   audio64)  echo "ZoneLoreAudio";;   # both packs are versioned from the one tree
 esac; }
 target_zip() { case "$1" in
-  zonelore) echo "ZoneLore";;
+  zonelore) echo "SpokenZones";;
   audio)    echo "ZoneLoreAudio";;
   audio64)  echo "ZoneLoreAudio64";;
 esac; }
@@ -199,16 +200,21 @@ for target in "${targets[@]}"; do
   # Built with node rather than a heredoc: the changelog is markdown containing
   # quotes, backticks and newlines, and hand-escaping it into JSON is how a
   # release ends up with a mangled changelog nobody notices for a month.
+  # The addon requires the player; the packs require nothing. By slug, which must be an
+  # approved project or the upload fails with errorCode 1018.
+  dependencies=""; [ "$target" = zonelore ] && dependencies="spoken"
   metadata="$(node -e '
-    const [changelog, releaseType, gameVersionIds, displayName] = process.argv.slice(1);
+    const [changelog, releaseType, gameVersionIds, displayName, dependencies] = process.argv.slice(1);
+    const slugs = dependencies.trim().split(/\s+/).filter(Boolean);
     process.stdout.write(JSON.stringify({
       changelog,
       changelogType: "markdown",
       displayName,
       gameVersions: gameVersionIds.trim().split(/\s+/).map(Number),
       releaseType,
+      ...(slugs.length ? { relations: { projects: slugs.map((slug) => ({ slug, type: "requiredDependency" })) } } : {}),
     }));
-  ' "$changelog" "$RELEASE_TYPE" "$game_version_ids" "$zip_name $version")"
+  ' "$changelog" "$RELEASE_TYPE" "$game_version_ids" "$zip_name $version" "$dependencies")"
 
   echo "  file:     $zip_path ($size)"
   echo "  version:  $version   release type: $RELEASE_TYPE   game versions: $game_version_names"

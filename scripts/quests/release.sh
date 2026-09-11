@@ -64,7 +64,10 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 # A pack whose project does not exist yet has no id, and the run fails on it rather than
 # uploading a Horde pack over the Alliance project. Create the project on CurseForge, then
 # write its id in here.
+# `spoken` is the player. Its project must exist AND be approved before any other target may
+# name it as a dependency (errorCode 1018 otherwise); write its id here once it is created.
 target_project() { case "$1" in
+  spoken)         echo "${SPOKEN_PROJECT_ID:-}";;
   player)         echo "1655859";;
   audio-all)      echo "1655867";;
   audio-alliance) echo "1658236";;
@@ -84,7 +87,8 @@ esac; }
 # 577 MB of audio comes back 413, so each of those projects ships a few kilobytes declaring its
 # family's four packs as required dependencies, and the manager fetches them.
 target_zip_name() { case "$1" in
-  player)         echo "VoiceOverRedux";;
+  spoken)         echo "Spoken";;
+  player)         echo "SpokenQuests";;
   audio-all)      echo "VoiceOverReduxAudio";;
   audio-alliance) echo "VoiceOverReduxAudioAlliance";;
   audio-horde)    echo "VoiceOverReduxAudioHorde";;
@@ -109,7 +113,10 @@ esac; }
 target_version() {
   local name; name="$(target_zip_name "$1")"
   if [ "$1" = player ]; then
-    sed -n 's/^## Version:[[:space:]]*//p' "$REPO/addons/SpokenQuests/VoiceOverRedux.toc" \
+    sed -n 's/^## Version:[[:space:]]*//p' "$REPO/addons/SpokenQuests/SpokenQuests.toc" \
+      | head -1 | tr -d '\r'
+  elif [ "$1" = spoken ]; then
+    sed -n 's/^## Version:[[:space:]]*//p' "$REPO/addons/Spoken/Spoken.toc" \
       | head -1 | tr -d '\r'
   else
     sed -n 's/^## Version:[[:space:]]*//p' "$DIST/$name/$name.toc" 2>/dev/null \
@@ -124,6 +131,7 @@ target_version() {
 # By slug, which is why the slugs are read off the live projects rather than guessed - see
 # curseforge/README.md. A slug that no longer resolves is a dependency silently not installed.
 target_dependencies() { case "$1" in
+  player)    echo "spoken";;
   audio-all) echo "voiceover-redux-audio-alliance voiceover-redux-audio-horde \
                    voiceover-redux-audio-shared-quests voiceover-redux-audio-gossip";;
   hq-all)    echo "voiceover-redux-hq-audio-alliance voiceover-redux-hq-audio-horde \
@@ -134,7 +142,7 @@ esac; }
 # those at upload time, so anything about them that has to be true - the project existing and
 # being approved, above all - is truest after they have just been uploaded. It costs nothing to
 # order it this way and it removes a class of first-release surprise.
-ALL_TARGETS="player audio-alliance audio-horde audio-shared audio-gossip audio-all \
+ALL_TARGETS="spoken player audio-alliance audio-horde audio-shared audio-gossip audio-all \
              hq-alliance hq-horde hq-shared hq-gossip hq-all"
 
 dry_run=""
@@ -142,7 +150,7 @@ targets=()
 for arg in "$@"; do
   case "$arg" in
     --dry-run|-n) dry_run=1;;
-    player|audio-all|audio-alliance|audio-horde|audio-shared|audio-gossip) targets+=("$arg");;
+    spoken|player|audio-all|audio-alliance|audio-horde|audio-shared|audio-gossip) targets+=("$arg");;
     hq-all|hq-alliance|hq-horde|hq-shared|hq-gossip) targets+=("$arg");;
     *) echo "error: unknown argument '$arg' (expected: $ALL_TARGETS, --dry-run)" >&2; exit 1;;
   esac
@@ -214,12 +222,14 @@ done
 # once on 1.1.0. Matching on the version alone would have sent the player's notes out with a
 # sound pack.
 changelog_for() {
+  local file="$REPO/docs/quests/CHANGELOG.md"
+  [ "$2" = spoken ] && file="$REPO/docs/spoken/CHANGELOG.md"
   node -e '
     const { readFileSync } = require("fs");
     const [path, version, kind] = process.argv.slice(1);
     const lines = readFileSync(path, "utf8").split("\n");
     const matches = (l) => l.startsWith(`## ${version}`) &&
-      (kind === "player" ? /player/i.test(l) : /pack/i.test(l));
+      (kind === "spoken" ? true : kind === "player" ? /player/i.test(l) : /pack/i.test(l));
     const start = lines.findIndex(matches);
     if (start === -1) {
       console.error(`no "## ${version} ... ${kind}" section in CHANGELOG.md`);
@@ -234,7 +244,7 @@ changelog_for() {
       if (lines[i].startsWith("## ")) { end = i; break; }
     }
     process.stdout.write(lines.slice(start, end).join("\n").trim());
-  ' "$REPO/docs/quests/CHANGELOG.md" "$1" "$2"
+  ' "$file" "$1" "$2"
 }
 
 #-- upload --------------------------------------------------------------------------------
@@ -281,7 +291,7 @@ upload_target() {
     return 1
   fi
 
-  kind=player; [ "$target" = player ] || kind=pack
+  kind=pack; [ "$target" = player ] && kind=player; [ "$target" = spoken ] && kind=spoken
   changelog="$(changelog_for "$version" "$kind")" || return 1
   size="$(du -h "$zip_path" | cut -f1)"
 

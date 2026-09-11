@@ -312,7 +312,7 @@ for (const lang of languages) {
 //------------------------------------------------------------------------------
 
 {
-  const toc = await readFile(join(ROOT, "addons/SpokenZones/ZoneLore.toc"), "utf8");
+  const toc = await readFile(join(ROOT, "addons/SpokenZones/SpokenZones.toc"), "utf8");
   const files = toc
     .split("\n")
     .map((line) => line.trim())

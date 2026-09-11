@@ -10,17 +10,17 @@
 # Addon hosts unpack the zip straight into Interface/AddOns, so its root must
 # contain the ZoneLore/ folder itself -- hence the staging copy before zipping.
 #
-# SOURCE DIRECTORY AND SHIPPED FOLDER NAME ARE NOT THE SAME THING. The source lives
-# at addons/SpokenZones/, but what a player installs must still be called ZoneLore
-# until the rename ships with its SavedVariables migration -- an installed folder is
-# the addon's identity to the client and to LibDBIcon. ADDON says where to read from,
-# NAME says what to write.
+# The zip also carries a ZoneLore/ tombstone: one .toc and no code, which keeps the old
+# SavedVariables file loading for Migration.lua to read and overwrites the old addon's
+# code when a manager installs this release over it. See scripts/quests/package.sh.
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ADDON="${ADDON:-addons/SpokenZones}"
-NAME="${NAME:-ZoneLore}"
+NAME="${NAME:-SpokenZones}"
+TOMBSTONE="ZoneLore"
+TOMBSTONE_SRC="$REPO/addons/tombstones/$TOMBSTONE"
 SRC="$REPO/$ADDON"
 TOC="$SRC/$NAME.toc"
 DIST="$REPO/dist"
@@ -69,9 +69,11 @@ trap 'rm -rf "$staging"' EXIT
 mkdir -p "$staging/$NAME"
 (cd "$SRC" && tar -cf - --exclude '.DS_Store' --exclude '*.bak' --exclude '*.orig' .) \
   | (cd "$staging/$NAME" && tar -xf -)
+mkdir -p "$staging/$TOMBSTONE"
+cp "$TOMBSTONE_SRC/$TOMBSTONE.toc" "$staging/$TOMBSTONE/"
 
 # -X drops the extra macOS attributes that otherwise ride along.
-(cd "$staging" && zip -r -q -X "$zip_path" "$NAME" \
+(cd "$staging" && zip -r -q -X "$zip_path" "$NAME" "$TOMBSTONE" \
   -x '*.DS_Store' '*/.git/*' '*.bak' '*.orig')
 
 files="$(unzip -Z1 "$zip_path" | grep -cv '/$')"

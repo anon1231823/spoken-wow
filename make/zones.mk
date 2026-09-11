@@ -11,8 +11,8 @@
 
 # The \# escapes are required: an unescaped # starts a make comment, even
 # inside a $(shell ...) call.
-VERSION := $(shell sed -n 's/^\#\# Version:[[:space:]]*//p' addons/SpokenZones/ZoneLore.toc | head -1)
-ZIP := dist/ZoneLore-$(VERSION).zip
+VERSION := $(shell sed -n 's/^\#\# Version:[[:space:]]*//p' addons/SpokenZones/SpokenZones.toc | head -1)
+ZIP := dist/SpokenZones-$(VERSION).zip
 
 help: ## Show this help
 	@echo "ZoneLore $(VERSION)"

@@ -201,11 +201,11 @@ history-status: ## Compare take count and size on both sides
 # Two zips built on their own schedules, which is why they are two targets: most changes to
 # the player touch no voiceline, and the sound pack is three orders of magnitude larger.
 #
-# `package` takes its version from `## Version:` in VoiceOverRedux.toc, so bumping the addon
+# `package` takes its version from `## Version:` in SpokenQuests.toc, so bumping the addon
 # and naming the zips stay one edit. It refuses to build from an uncommitted tree, because a
 # zip nobody can trace back to a commit is a zip nobody can rebuild - ALLOW_DIRTY=1 to
 # override while testing. Four zips come out: one for Blizzard's clients, which pick a .toc by
-# flavor suffix, and one apiece for 1.12, 2.4.3 and 3.3.5, which read VoiceOverRedux.toc and
+# flavor suffix, and one apiece for 1.12, 2.4.3 and 3.3.5, which read SpokenQuests.toc and
 # nothing else and each need their own vendored Ace3 in it. Only the first goes to CurseForge;
 # the GitHub release workflow publishes all four.
 #
