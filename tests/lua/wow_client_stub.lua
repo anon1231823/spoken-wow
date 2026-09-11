@@ -253,12 +253,18 @@ libs["AceDB-3.0"] = {
 --- Loads exactly what its addon.xml lists, in order, then initialises the saved
 --- variables the way ADDON_LOADED would.
 function M.LoadSpoken(addonDirectory)
-    for _, file in ipairs({ "Environment", "Version", "Core", "SoundUtils", "API", "Compat" }) do
+    for _, file in ipairs({ "Environment", "Version", "Core", "SoundUtils", "Callbacks", "SoundQueue", "Sources", "API", "Compat" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     local env = _G.SpokenEnv
     env.Addon:InitDB()
     return env
+end
+
+--- Forget every scheduled timer. A test that loads a fresh player must call this, or the
+--- previous player's clip timers and retry ticker keep firing into the new one.
+function M.ResetTimers()
+    for i = #timers, 1, -1 do timers[i] = nil end
 end
 
 --- Reset every piece of sound state a test can observe.

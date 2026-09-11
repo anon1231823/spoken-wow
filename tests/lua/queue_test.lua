@@ -1,0 +1,185 @@
+-- The shared queue: one FIFO across every source, nothing interrupts, gossip yields at the
+-- door, a held head is skipped rather than blocking. Run with `make test-player`.
+local here = arg[0]:match("^(.*)/[^/]*$") or "."
+package.path = here .. "/?.lua;" .. package.path
+local stub = require("wow_client_stub")
+local H = require("queue_helpers")
+local print = stub.print
+local world = stub.world
+local SPOKEN = here .. "/../../addons/Spoken/"
+local Expect, Failures = H.Expecter(print)
+
+local env, quests, zones, Q, rec
+local function Fresh()
+    env, quests, zones = H.Fresh(stub, SPOKEN)
+    Q = env.SoundQueue
+    rec = H.Recorder(env)
+end
+
+---------------------------------------------------------------- plays, then FIFO
+Fresh()
+local a = H.Clip()
+Expect("an empty queue plays at once", quests:Enqueue(a) ~= nil, true)
+Expect("...and says so", rec:Has("CLIP_STARTED k" .. a.key:sub(2)), true)
+Expect("...IsPlaying", Q:IsPlaying(), true)
+local b = H.Clip()
+zones:Enqueue(b)
+Expect("a second clip waits", world.played[2], nil)
+Expect("...counted as waiting", Q:GetWaitingCount(), 1)
+stub.Advance(1.55)
+Expect("after length + gap the next starts, whichever source", world.played[2], b.path)
+Expect("...on that source's channel", world.playedChannels[2], "Dialog")
+
+---------------------------------------------------------------- strict admission order
+Fresh()
+local c1, c2, c3 = H.Clip(), H.Clip(), H.Clip()
+quests:Enqueue(c1); zones:Enqueue(c2); quests:Enqueue(c3)
+stub.Advance(1.55); stub.Advance(1.25)
+Expect("FIFO across sources: 1st", world.played[1], c1.path)
+Expect("FIFO across sources: 2nd", world.played[2], c2.path)
+Expect("FIFO across sources: 3rd", world.played[3], c3.path)
+
+---------------------------------------------------------------- dedup on key
+Fresh()
+local d = H.Clip({ key = "same" })
+quests:Enqueue(d)
+local ok, why = quests:Enqueue(H.Clip({ key = "same" }))
+Expect("a duplicate key is refused", ok, nil)
+Expect("...with the reason", why, "duplicate")
+Expect("...and the queue is unchanged", Q:GetQueueSize(), 1)
+
+---------------------------------------------------------------- low priority yields at the door
+Fresh()
+quests:Enqueue(H.Clip())
+local g = H.Clip({ priority = "low" })
+ok, why = quests:Enqueue(g)
+Expect("low priority is refused while a normal clip is playing", ok, nil)
+Expect("...with the reason", why, "outranked")
+Expect("...and reported", rec:Has("CLIP_DROPPED " .. g.key .. " outranked"), true)
+
+Fresh()
+local g1 = H.Clip({ priority = "low" })
+local g2 = H.Clip({ priority = "low" })
+quests:Enqueue(g1); quests:Enqueue(g2)
+Expect("low clips alone play", world.played[1], g1.path)
+local n1 = H.Clip()
+quests:Enqueue(n1)
+Expect("a normal arrival drops the WAITING low clip", rec:Has("CLIP_DROPPED " .. g2.key .. " outranked"), true)
+Expect("...but never the one speaking", Q:GetCurrentSound(), g1)
+Expect("...so the normal clip follows it", Q:GetQueue()[2], n1)
+Expect("...and the queue holds exactly those two", Q:GetQueueSize(), 2)
+
+---------------------------------------------------------------- gates hold, retry, release
+Fresh()
+local hold = "in combat"
+zones:AddGate(function(clip) return hold end)
+local z = H.Clip()
+zones:Enqueue(z)
+Expect("a held head does not start", world.played[1], nil)
+Expect("...GetCurrent still names it", Q:GetCurrentSound(), z)
+Expect("...GetNowPlaying does not", Q:GetNowPlaying(), nil)
+Expect("...and the reason is available", Q:GetHeldReason(z), "in combat")
+stub.Advance(1)
+Expect("the retry tick does not start it while held", world.played[1], nil)
+hold = nil
+stub.Advance(1)
+Expect("released, the next tick starts it", world.played[1], z.path)
+
+---------------------------------------------------------------- a held head is skipped
+Fresh()
+hold = "in combat"
+zones:AddGate(function(clip) return hold end)
+local held = H.Clip()
+local free = H.Clip()
+zones:Enqueue(held)
+quests:Enqueue(free)
+Expect("a clip behind a held head plays instead of waiting on it", world.played[1], free.path)
+Expect("...the held one is still queued", Q:GetQueueSize(), 2)
+hold = nil
+stub.Advance(1.55)
+Expect("...and plays once released and the other has finished", world.played[2], held.path)
+
+---------------------------------------------------------------- per-source queue limit
+Fresh()
+local head = H.Clip()
+zones:Enqueue(head)
+local zs = {}
+for i = 1, 5 do zs[i] = H.Clip(); zones:Enqueue(zs[i]) end
+local qx = H.Clip()
+quests:Enqueue(qx)
+Expect("the head is never trimmed", Q:GetCurrentSound(), head)
+Expect("a source's waiting clips are capped at its limit", Q:GetWaitingCount(), 4)
+Expect("...oldest first", rec:Has("CLIP_DROPPED " .. zs[1].key .. " queue-limit"), true)
+Expect("...and the second oldest", rec:Has("CLIP_DROPPED " .. zs[2].key .. " queue-limit"), true)
+Expect("...other sources are not counted", rec:Count("CLIP_DROPPED " .. qx.key), 0)
+
+---------------------------------------------------------------- per-source gap
+Fresh()
+zones:Enqueue(H.Clip()); local after1 = H.Clip(); quests:Enqueue(after1)
+stub.Advance(1.2)
+Expect("zones' 0.25 gap: not yet at 1.2s", world.played[2], nil)
+stub.Advance(0.1)
+Expect("...next at 1.25s", world.played[2], after1.path)
+Fresh()
+quests:Enqueue(H.Clip()); local after2 = H.Clip(); zones:Enqueue(after2)
+stub.Advance(1.5)
+Expect("quests' 0.55 gap: not yet at 1.5s", world.played[2], nil)
+stub.Advance(0.1)
+Expect("...next at 1.55s", world.played[2], after2.path)
+
+---------------------------------------------------------------- PlayNow: the one explicit front-insert
+Fresh()
+local speaking = H.Clip()
+quests:Enqueue(speaking)
+local waiting = H.Clip({ key = "dup" })
+quests:Enqueue(waiting)
+local now = H.Clip({ key = "dup" })
+Expect("PlayNow returns whether it is playing", zones:PlayNow(now), true)
+Expect("...front-inserted", Q:GetCurrentSound(), now)
+Expect("...the speaking clip was stopped, not finished", rec:Has("CLIP_STOPPED " .. speaking.key .. " false"), true)
+Expect("...but kept, to resume after", Q:GetQueue()[2], speaking)
+Expect("...the waiting duplicate was removed", Q:GetQueueSize(), 2)
+Q:PauseQueue()
+zones:PlayNow(H.Clip())
+Expect("PlayNow on a paused player unpauses it", Q:IsPaused(), false)
+
+---------------------------------------------------------------- StopAll per source, and for the player
+Fresh()
+local q1, z1, q2 = H.Clip(), H.Clip(), H.Clip()
+quests:Enqueue(q1); zones:Enqueue(z1); quests:Enqueue(q2)
+quests:StopAll()
+Expect("a source's StopAll removes only its clips", Q:GetQueueSize(), 1)
+Expect("...the other source's clip now plays", world.played[2], z1.path)
+Q:PauseQueue()
+env.SoundQueue:RemoveAllSoundsFromQueue()
+Expect("the player's StopAll empties the queue", Q:GetQueueSize(), 0)
+Expect("...and clears the paused flag", Q:IsPaused(), false)
+Expect("...and reports the queue empty", rec:Has("QUEUE_EMPTY"), true)
+
+---------------------------------------------------------------- pause, resume, skip
+Fresh()
+local p1, p2 = H.Clip(), H.Clip()
+quests:Enqueue(p1); quests:Enqueue(p2)
+Q:PauseQueue()
+Expect("pause stops the head", world.stopped[1], 1)
+Expect("...IsPaused", Q:IsPaused(), true)
+Expect("...GetNowPlaying still names the paused head", Q:GetNowPlaying(), p1)
+stub.Advance(5)
+Expect("nothing advances while paused", world.played[2], nil)
+Q:ResumeQueue()
+Expect("resume replays the head from the start", world.played[2], p1.path)
+Q:Skip()
+Expect("skip ends the head", Q:GetCurrentSound(), p2)
+Expect("...and starts the next", world.played[3], p2.path)
+
+---------------------------------------------------------------- a missing file
+Fresh()
+world.missing["gone.ogg"] = true
+local gone = H.Clip({ path = "gone.ogg" })
+local next_ = H.Clip()
+quests:Enqueue(gone); quests:Enqueue(next_)
+Expect("a file the client refuses is dropped", rec:Has("CLIP_DROPPED " .. gone.key .. " missing"), true)
+Expect("...and the queue moves on", world.played[1], next_.path)
+
+if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
+print("\nAll queue tests passed")

@@ -3,6 +3,9 @@
     <Include file="Version.lua"/>
     <Include file="Core.lua"/>
     <Include file="SoundUtils.lua"/>
+    <Include file="Callbacks.lua"/>
+    <Include file="SoundQueue.lua"/>
+    <Include file="Sources.lua"/>
     <Include file="API.lua"/>
 
     <Include file="Compat.lua"/>
