@@ -1,0 +1,10 @@
+## Interface: 11200
+## Title: Spoken
+## Notes: The voice player every Spoken addon speaks through, for 1.12 servers.
+## Version: 1.0.0
+## SavedVariables: SpokenDB
+## X-Part-Of: Spoken
+## X-Spoken-Player: 1
+
+1.12mbeds.xml
+addon.xml

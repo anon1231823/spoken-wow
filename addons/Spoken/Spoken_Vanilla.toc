@@ -1,0 +1,12 @@
+## Interface: 11509
+## Title: Spoken
+## Notes: The voice player every Spoken addon speaks through: one queue, one window, one minimap button.
+## Version: 1.0.0
+## IconTexture: Interface\AddOns\Spoken\icon.tga
+## SavedVariables: SpokenDB
+## Group: Spoken
+## X-Part-Of: Spoken
+## X-Spoken-Player: 1
+
+embeds.xml
+addon.xml
