@@ -53,6 +53,13 @@ local function OnTooltipShow(tooltip)
 end
 
 function ZoneLore:SetupMinimapButton()
+	-- With the Spoken player installed there is one button for every Spoken addon,
+	-- and this addon's entries on it are added in Audio.lua. A button of our own
+	-- would be the second icon the shared player exists to prevent.
+	if _G.Spoken then
+		return
+	end
+
 	local ldb = LibStub and LibStub:GetLibrary("LibDataBroker-1.1", true)
 	local dbicon = LibStub and LibStub:GetLibrary("LibDBIcon-1.0", true)
 	if not ldb or not dbicon then

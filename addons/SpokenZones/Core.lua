@@ -38,10 +38,6 @@ local defaults = {
 	-- Dialog so narration rides the player's dialog volume slider rather than
 	-- competing with it. See Audio.lua for the channels PlaySoundFile accepts.
 	voiceChannel = "Dialog",
-	-- The backlog list, which only appears when something is actually waiting --
-	-- see UI/SoundQueueUI.lua. Its own position, scale and lock live in
-	-- ZoneLoreQueueDB, where the ported code that reads them expects to find them.
-	showQueueUI = true,
 	autoplay = true,
 	autoplaySubzones = true,
 	-- Off, because it replaces the client's own record of what a character has
@@ -417,8 +413,9 @@ local function SetupHooks()
 	if ZoneLore.SetupMinimapButton then
 		ZoneLore:SetupMinimapButton()
 	end
-	if ZoneLore.SetupSoundQueueUI then
-		ZoneLore:SetupSoundQueueUI()
+	-- Before autoplay: it registers its combat hold on the source this creates.
+	if ZoneLore.SetupAudio then
+		ZoneLore:SetupAudio()
 	end
 	if ZoneLore.SetupAutoplay then
 		ZoneLore:SetupAutoplay()
@@ -438,7 +435,6 @@ events:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" then
 		if arg1 == ADDON_NAME then
 			InitConfig()
-			ZoneLore:InitQueueDB()
 			self:UnregisterEvent("ADDON_LOADED")
 		end
 	elseif event == "PLAYER_ENTERING_WORLD" then

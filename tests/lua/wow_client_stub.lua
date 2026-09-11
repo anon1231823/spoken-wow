@@ -226,6 +226,21 @@ M.modernSettings = {
 }
 _G.Settings = M.modernSettings
 M.SetClient("20506")
+
+-- What the zones addon's playback and autoplay files reach for.
+_G.DEFAULT_CHAT_FRAME = { AddMessage = function() end }
+world.inCombat = false
+function _G.UnitAffectingCombat() return world.inCombat end
+function _G.GetSubZoneText() return world.subZone or "" end
+_G.C_Map = {
+    GetMapInfo = function(id) return { mapType = 3 } end,
+    GetBestMapForUnit = function() return world.playerMapID or 1411 end,
+}
+_G.C_Timer = {
+    After = function(delay, fn) table.insert(timers, { at = world.time + delay, fn = fn }) end,
+}
+_G.ERR_ZONE_EXPLORED = "Discovered %s."
+_G.ERR_ZONE_EXPLORED_XP = "Discovered %s: %d experience gained."
 function _G.hooksecurefunc() return true end
 function _G.IsLoggedIn() return true end
 function _G.GetLocale() return "enUS" end
@@ -348,6 +363,17 @@ end
 --- previous player's clip timers and retry ticker keep firing into the new one.
 function M.ResetTimers()
     for i = #timers, 1, -1 do timers[i] = nil end
+end
+
+--- Load the zones addon's playback files the way the client would -- each chunk receives
+--- the addon name and the shared table as varargs -- against a hand-built ZoneLore table
+--- carrying the few Core.lua facts Audio.lua and Autoplay.lua read. Returns that table.
+function M.LoadZones(addonDirectory, ZoneLore)
+    for _, file in ipairs({ "Audio", "UI/ReportButton", "Autoplay" }) do
+        local chunk = assert(loadfile(addonDirectory .. file .. ".lua"))
+        chunk("ZoneLore", ZoneLore)
+    end
+    return ZoneLore
 end
 
 --- Reset every piece of sound state a test can observe.

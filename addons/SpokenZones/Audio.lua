@@ -1,10 +1,10 @@
 -- ZoneLore -- narrated lore playback.
 --
 -- This file knows what a lore entry sounds like -- which pack narrates it, where
--- the file is, how long it runs -- and hands that to the queue in SoundQueue.lua,
--- which owns playback itself. One clip plays at a time, addon-wide, so starting a
--- new one always stops whatever was running; anything else discovered on the way
--- waits its turn behind it.
+-- the file is, how long it runs -- and hands that to the Spoken player, which owns
+-- the queue, the frame and playback itself. This addon is one *source* on that
+-- player: its clips wait their turn behind whatever another Spoken addon queued,
+-- and Stop here stops lore, not a quest line that happens to be speaking.
 --
 -- Audio ships in separate sound-pack addons, all of them optional: without one
 -- there is nothing to play, so the Play button does not appear and autoplay stays
@@ -50,18 +50,19 @@ local CHANNELS = {
 }
 local DEFAULT_CHANNEL = "Dialog"
 
--- Playback state lives in SoundQueue.lua, ported from AI_VoiceOver. The clip being
--- spoken is simply the head of that queue, so there is one place to ask what is
--- happening rather than a `current`, a `paused` shadow copy and a staleness token
--- that have to agree with each other.
+-- Playback state lives in the Spoken player. The clip being spoken is the head of
+-- its queue, so there is one place to ask what is happening rather than a `current`,
+-- a `paused` shadow copy and a staleness token that have to agree with each other.
 --
 -- What has not changed is that the client can start and stop a sound file and
 -- nothing in between -- there is no seek, and no way to ask how far into a clip
 -- playback has reached. So "pause" is stop, and "resume" replays from the
--- beginning. The tooltip says so rather than letting the player discover it.
+-- beginning. The player's tooltip says so rather than letting anyone discover it.
 
 -- Callbacks fired whenever playback starts or stops, so every button showing the
--- same entry agrees on its glyph without polling.
+-- same entry agrees on its glyph without polling. Bridged from the player's own
+-- AUDIO_CHANGED in SetupAudio, so a change caused by another addon's clip -- ours
+-- finishing because theirs started -- reaches these listeners too.
 ZoneLore.audioChangedCallbacks = {}
 
 function ZoneLore:OnAudioChanged(fn)
@@ -77,6 +78,65 @@ function ZoneLore:NotifyAudioChanged()
 		if not ok then
 			ZoneLore:Print("|cffff5555error|r: %s", tostring(err))
 		end
+	end
+end
+
+--------------------------------------------------------------------------------
+-- The player
+--------------------------------------------------------------------------------
+
+local BOOK = "Interface\\AddOns\\" .. ADDON_NAME .. "\\Textures\\Book"
+local warnedNoPlayer = false
+
+-- The Spoken source this addon speaks through, or nil when the player addon is not
+-- installed. Said once, on the first thing that would have made a sound: a missing
+-- dependency that stays silent is the bug report nobody can reproduce.
+local function Source()
+	if ZoneLore.source then
+		return ZoneLore.source
+	end
+	if not warnedNoPlayer then
+		warnedNoPlayer = true
+		ZoneLore:Print("|cffffcc00the Spoken player addon is not installed|r -- lore cannot be read aloud without it")
+	end
+	return nil
+end
+
+-- Registers with the player. Runs once the world is up, after the player itself has
+-- loaded; everything here degrades to "no narration" when it has not.
+function ZoneLore:SetupAudio()
+	if self.source then
+		return
+	end
+	local Spoken = _G.Spoken
+	if not (Spoken and Spoken.IsCompatible and Spoken:IsCompatible(1)) then
+		return
+	end
+
+	self.source = Spoken:RegisterSource("zones", {
+		title = "ZoneLore",
+		addon = ADDON_NAME,
+		order = 2,
+		-- How many clips may wait behind the one speaking. Discoveries arrive in
+		-- bursts when crossing a cluster of small subzones, and narration that has
+		-- fallen minutes behind is describing somewhere the player already left.
+		queueLimit = 3,
+		-- Durations come from a generated lookup and are exact; upstream's larger gap
+		-- absorbs durations that are not.
+		interClipGap = 0.25,
+		channel = function() return ZoneLore:GetVoiceChannel() end,
+	})
+
+	Spoken:RegisterCallback("AUDIO_CHANGED", function()
+		ZoneLore:NotifyAudioChanged()
+	end)
+
+	Spoken.Minimap:AddEntry("zones", { id = "lore", text = "Open lore window", order = 1,
+		onClick = function() ZoneLore:ToggleLoreWindow() end })
+	Spoken.Minimap:AddEntry("zones", { id = "settings", text = "ZoneLore settings", order = 2,
+		onClick = function() ZoneLore:OpenOptions() end })
+	if Spoken.AddSettingsLink then
+		Spoken:AddSettingsLink("ZoneLore settings", function() ZoneLore:OpenOptions() end)
 	end
 end
 
@@ -269,24 +329,74 @@ function ZoneLore:GetAudioClip(mapID, areaKey)
 	return nil, nil
 end
 
--- A queue item for a lore entry, or nil when the installed pack cannot narrate it.
+-- The buttons the player shows under a lore clip. Read opens the text; Report is
+-- this addon's own button, told which entry it now stands beside.
+local ACTIONS = {
+	{
+		id = "read",
+		text = function() return ZoneLore:Get("stopAudioOnRead") and ZoneLore.L.READ_INSTEAD or ZoneLore.L.READ end,
+		tooltip = function(tooltip)
+			if ZoneLore:Get("stopAudioOnRead") then
+				tooltip:SetText(ZoneLore.L.READ_INSTEAD)
+				tooltip:AddLine(ZoneLore.L.READ_INSTEAD_TOOLTIP, 1, 1, 1, true)
+			else
+				tooltip:SetText(ZoneLore.L.READ)
+				tooltip:AddLine(ZoneLore.L.READ_TOOLTIP, 1, 1, 1, true)
+			end
+			tooltip:AddLine(ZoneLore.L.READ_SETTING_HINT, 0.7, 0.7, 0.7, true)
+		end,
+		onClick = function(clip)
+			if not clip then
+				return
+			end
+			-- Opened before stopping: stopping hides the player, and reading the
+			-- state after that would be reading it from under our own feet.
+			ZoneLore:ShowLoreFor(clip.mapID, clip.areaKey)
+			if ZoneLore:Get("stopAudioOnRead") then
+				ZoneLore:StopLore()
+			end
+		end,
+	},
+	{
+		id = "report",
+		create = function(parent) return ZoneLore:CreateReportButton(parent) end,
+		onClipChanged = function(clip, button) button:SetTarget(clip.mapID, clip.areaKey) end,
+	},
+}
+
+-- A Spoken clip for a lore entry, or nil when the installed pack cannot narrate it.
 -- One factory so that every route to a clip -- a click, a slash command, a
 -- discovery -- produces the same shape.
+--
+-- The key is the line id the website and the generation pipeline use -- z:{mapID} or
+-- s:{mapID}:{key} -- and it is frozen: it is what the player dedups on, what a report
+-- names, and what audio-history is keyed by.
 function ZoneLore:NewLoreSound(mapID, areaKey)
 	local path, length, pack, fileName = self:GetAudioClip(mapID, areaKey)
 	if not path then
 		return nil
 	end
 
+	local label = self:GetAudioLabel(mapID, areaKey)
 	return {
-		fileName = fileName,
-		filePath = path,
+		key = areaKey and ("s:" .. mapID .. ":" .. areaKey) or ("z:" .. mapID),
+		path = path,
 		length = length,
+		fileName = fileName,
 		pack = pack,
 		mapID = mapID,
 		areaKey = areaKey,
-		-- Resolved once, here, rather than per frame by whatever draws the queue.
-		label = self:GetAudioLabel(mapID, areaKey),
+		present = {
+			-- The zone above, the area being narrated below -- which for zone-level
+			-- lore is the same name twice, and for a subzone is the pair a player
+			-- needs to place it.
+			header = self:GetMapName(mapID) or label,
+			label = label,
+			bullet = "zone",
+			-- A zone has no speaker; the book is the whole answer.
+			portrait = { kind = "texture", texture = BOOK },
+			actions = ACTIONS,
+		},
 		-- Recorded when the clip starts rather than when it is queued, so that
 		-- every route to a clip counts and a backlog that overflows does not spend
 		-- areas on silence. Only the autoplayExplored option reads it; see
@@ -297,6 +407,16 @@ function ZoneLore:NewLoreSound(mapID, areaKey)
 			end
 		end,
 	}
+end
+
+-- Appends a clip for a producer -- autoplay -- which waits its turn. Returns whether
+-- it was admitted; the player refuses duplicates and silence of its own accord.
+function ZoneLore:EnqueueLore(item)
+	local source = Source()
+	if not source or not item then
+		return false
+	end
+	return source:Enqueue(item) ~= nil
 end
 
 function ZoneLore:HasAudio(mapID, areaKey)
@@ -318,44 +438,68 @@ end
 -- Playback
 --------------------------------------------------------------------------------
 
+-- The head of the player's queue if it is one of ours, else nil.
+local function OurHead()
+	local Spoken = _G.Spoken
+	if not ZoneLore.source or not Spoken then
+		return nil
+	end
+	local head = Spoken:GetCurrent()
+	if head and head.source == ZoneLore.source then
+		return head
+	end
+	return nil
+end
+
 -- Playing, as opposed to merely queued. An entry can sit at the head of the queue
 -- unstarted while a gate holds it -- waiting out a pull, say -- and a button
 -- reading "Stop" over an entry that has made no sound would stop a queue instead
--- of a clip. `nextSoundTimer` is set only while a clip is actually speaking, so it
--- is the liveness test rather than mere presence at the head.
+-- of a clip. The player's IsPlaying is the liveness test, not presence at the head.
 function ZoneLore:IsPlayingLore(mapID, areaKey)
-	local queue = self.SoundQueue
-	if not queue:IsPlaying() then
+	local head = OurHead()
+	if not head or not _G.Spoken:IsPlaying() then
 		return false
 	end
 	if mapID == nil then
 		return true
 	end
-	local head = queue:GetCurrentSound()
 	return head.mapID == mapID and head.areaKey == areaKey
 end
 
 function ZoneLore:IsPaused()
-	return self.SoundQueue:IsPaused() and self.SoundQueue:GetCurrentSound() ~= nil
+	local head = OurHead()
+	return head ~= nil and _G.Spoken:IsPaused()
 end
 
 -- What the floating controls are controlling: mapID, areaKey, isPaused. Nil when
--- nothing is playing or paused, which is also what hides the controls.
+-- nothing of ours is playing or paused, which is also what hides the controls.
 function ZoneLore:GetNowPlaying()
 	-- Deliberately not "whatever is at the head". An entry held by a gate sits
 	-- there making no sound, and controls offering Pause over silence would be
 	-- lying; the queue list is what shows a held entry. So: playing, or paused.
-	if not self:IsPlayingLore() and not self:IsPaused() then
+	local Spoken = _G.Spoken
+	local head = Spoken and Spoken:GetNowPlaying()
+	if not head or head.source ~= self.source then
 		return nil, nil, false
 	end
-	local head = self.SoundQueue:GetCurrentSound()
-	return head.mapID, head.areaKey, self.SoundQueue:IsPaused()
+	return head.mapID, head.areaKey, Spoken:IsPaused()
 end
 
--- How many entries are waiting behind the one playing. Drives the Next button:
--- the controls need to know whether anything is queued.
+-- How many of our entries are waiting behind the one playing. Drives the Next
+-- button. Ours only: a quest line queued behind a discovery is not lore waiting.
 function ZoneLore:QueueLength()
-	return self.SoundQueue:GetWaitingCount()
+	local Spoken = _G.Spoken
+	if not self.source or not Spoken then
+		return 0
+	end
+	local waiting = 0
+	for index, clip in ipairs(Spoken:GetQueue()) do
+		local speaking = index == 1 and Spoken:IsPlaying()
+		if clip.source == self.source and not speaking then
+			waiting = waiting + 1
+		end
+	end
+	return waiting
 end
 
 -- A readable name for an entry, for the controls to label what is playing.
@@ -372,31 +516,35 @@ function ZoneLore:GetAudioLabel(mapID, areaKey)
 end
 
 -- The player asking for silence, as opposed to playback being reset on the way to
--- starting something else. The distinction matters because the queue holds a
--- backlog: Stop has to mean stop, not skip to the next discovered area.
+-- starting something else. Stop has to mean stop, not skip to the next discovered
+-- area -- and it means *lore*: another Spoken addon's clips are left alone.
 function ZoneLore:StopLore()
-	self.SoundQueue:RemoveAllSoundsFromQueue()
+	local source = ZoneLore.source
+	if source then
+		source:StopAll()
+	end
 end
 
 -- Ends the current clip while leaving the backlog alone, so whatever is waiting
 -- starts. Distinct from StopLore, which is the player asking for silence.
 function ZoneLore:SkipLore()
-	return self.SoundQueue:RemoveSoundFromQueue(self.SoundQueue:GetCurrentSound())
+	if not OurHead() then
+		return false
+	end
+	return _G.Spoken:Skip()
 end
 
--- Stops the sound and leaves the entry at the head of the queue. Resuming replays
--- it from the start; see the note at the top of this file for why nothing better
--- is possible.
+-- Pause is the player's, not this addon's: pausing lore pauses whatever is speaking.
 function ZoneLore:PauseLore()
-	return self.SoundQueue:PauseQueue()
+	return _G.Spoken and _G.Spoken:Pause() or false
 end
 
 function ZoneLore:ResumeLore()
-	return self.SoundQueue:ResumeQueue()
+	return _G.Spoken and _G.Spoken:Resume() or false
 end
 
 function ZoneLore:TogglePauseLore()
-	return self.SoundQueue:TogglePauseQueue()
+	return _G.Spoken and _G.Spoken:TogglePause() or false
 end
 
 -- Plays this entry now, ahead of anything waiting. Pressing Play has always meant
@@ -405,6 +553,11 @@ end
 function ZoneLore:PlayLore(mapID, areaKey)
 	if not self:IsVoiceEnabled() then
 		ZoneLore:NotifyAudioChanged()
+		return false
+	end
+
+	local source = Source()
+	if not source then
 		return false
 	end
 
@@ -419,7 +572,11 @@ function ZoneLore:PlayLore(mapID, areaKey)
 		return false
 	end
 
-	return self.SoundQueue:PlayNow(item, true)
+	local playing, reason = source:PlayNow(item)
+	if not playing and reason then
+		self:Print("|cffffcc00cannot play lore: %s|r", reason)
+	end
+	return playing and true or false
 end
 
 -- Play if this entry is not already playing, stop if it is. What the button does.

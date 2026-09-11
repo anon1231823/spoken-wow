@@ -4,16 +4,20 @@
 ## Version: 0.4.3
 ## Author: rusty
 ## SavedVariables: ZoneLoreDB, ZoneLoreQueueDB
+# ZoneLoreQueueDB held the ported player's own settings. The Spoken player owns those
+# now; the variable stays declared so the migration can read it once.
 ## SavedVariablesPerCharacter: ZoneLoreCharDB
 ## LoadSavedVariablesFirst: true
 # ^ load-bearing beyond convenience: the generated data files under Data/ ask
 # Language.lua which language to build a table for, and it can only answer that
 # early because ZoneLoreDB is already populated. Without this line every player
 # silently reads English.
-## OptionalDeps: ZoneLoreAudio, ZoneLoreAudio64
-# Not the registration mechanism -- sound packs register themselves into
-# ZoneLoreAudioPacks and Audio.lua walks that on demand, so this list is load
-# order only and does not need an entry per language pack.
+## OptionalDeps: Spoken, ZoneLoreAudio, ZoneLoreAudio64
+# Spoken is the player this addon speaks through. Optional here so a hand-installed
+# copy without it loads and says what is missing rather than failing to load at
+# all; addon managers install it from the CurseForge dependency. The packs are not
+# a registration mechanism either -- they register themselves into ZoneLoreAudioPacks
+# and Audio.lua walks that on demand -- so this list is load order only.
 ## IconTexture: Interface\AddOns\ZoneLore\Textures\AddonIcon.tga
 ## X-License: Addon code MIT. Zone lore text from warcraft.wiki.gg, CC BY-SA 4.0.
 ## X-Credits: Lore text sourced from warcraft.wiki.gg contributors (CC BY-SA 4.0).
@@ -36,10 +40,7 @@ Locale/koKR.lua
 Locale/zhCN.lua
 Locale/zhTW.lua
 Core.lua
-QueueEnv.lua
 Audio.lua
-SoundUtils.lua
-SoundQueue.lua
 Autoplay.lua
 Data/enUS/Zones.lua
 Data/enUS/Subzones.lua
@@ -63,5 +64,4 @@ UI/SubzoneClick.lua
 UI/HoverPreview.lua
 UI/LoreWindow.lua
 UI/MinimapButton.lua
-UI/SoundQueueUI.lua
 UI/Options.lua

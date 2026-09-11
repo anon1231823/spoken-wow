@@ -23,9 +23,10 @@
 
 local ADDON_NAME, ZoneLore = ...
 
--- The queue itself lives in SoundQueue.lua, shared with every other route to a
--- clip. This file decides what deserves narrating and hands it over; the depth
--- cap, the dedup and the retry after combat are the queue's business now.
+-- The queue itself is the Spoken player's, shared with every other route to a clip
+-- and with every other Spoken addon. This file decides what deserves narrating and
+-- hands it over; the depth cap, the dedup and the retry after combat are the
+-- player's business, configured on this addon's source in Audio.lua.
 
 --------------------------------------------------------------------------------
 -- Reading the client's own discovery messages
@@ -203,7 +204,7 @@ local function Enqueue(mapID, areaKey)
 	-- The queue refuses a duplicate of its own accord: the login greeting and a
 	-- real discovery message can name the same area, and an area on a zone border
 	-- can be announced twice. Narrating it twice in a row is worse than missing it.
-	return ZoneLore.SoundQueue:AddSoundToQueue(item)
+	return ZoneLore:EnqueueLore(item)
 end
 
 --------------------------------------------------------------------------------
@@ -514,7 +515,10 @@ function ZoneLore:SetupAutoplay()
 		end
 	end)
 
-	self.SoundQueue:AddGate(HoldReason)
+	-- The hold applies to this addon's clips only; the player asks the gate per clip.
+	if self.source then
+		self.source:AddGate(HoldReason)
+	end
 	self:OnZoneChanged(NarrateUnheard)
 	self.autoplayFrame = frame
 

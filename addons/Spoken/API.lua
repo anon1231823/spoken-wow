@@ -105,6 +105,12 @@ function Spoken:OpenSettings()
     Options:Open()
 end
 
+--- Re-read the speaking clip's presentation -- after a setting changed an action's
+--- label, say. Cheap; the frame rebuilds from the queue every time anyway.
+function Spoken:RefreshPlayer()
+    PlayerFrame:Update()
+end
+
 --- A button on the player's panel that opens a feature addon's own settings, for the
 --- addons whose panel cannot be nested.
 function Spoken:AddSettingsLink(text, onClick)
