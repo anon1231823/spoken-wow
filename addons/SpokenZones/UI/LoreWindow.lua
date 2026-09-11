@@ -99,7 +99,7 @@ end
 
 local function ShowEntry()
 	if not selection then
-		header:SetText("ZoneLore")
+		header:SetText("Spoken Zones")
 		subheader:SetText("")
 		body:SetText("|cff888888Pick a zone on the left. Zones with subzones show a count; click one to expand it.|r")
 		audioButton:SetTarget(nil, nil)
@@ -303,7 +303,7 @@ local function BuildWindow()
 
 	local title = window:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	title:SetPoint("TOP", window, "TOP", 0, -PADDING)
-	title:SetText("ZoneLore")
+	title:SetText("Spoken Zones")
 
 	local close = CreateFrame("Button", nil, window, "UIPanelCloseButton")
 	close:SetPoint("TOPRIGHT", window, "TOPRIGHT", -8, -8)

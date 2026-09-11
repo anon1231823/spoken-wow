@@ -350,9 +350,27 @@ local function DeepCopy(value)
     return copy
 end
 
+-- Enough of AceDB for migrations to be testable: an existing saved table named `name`
+-- is read the way AceDB reads it -- profiles.Default over the defaults, the first char
+-- entry over the char defaults, global as is -- and the db keeps a handle to it.
+local function Merge(base, over)
+    local out = DeepCopy(base or {})
+    for k, v in pairs(over or {}) do
+        if type(v) == "table" and type(out[k]) == "table" then out[k] = Merge(out[k], v) else out[k] = DeepCopy(v) end
+    end
+    return out
+end
 libs["AceDB-3.0"] = {
-    New = function(_, _, defaults)
-        local db = { profile = DeepCopy(defaults.profile), char = DeepCopy(defaults.char) }
+    New = function(_, name, defaults)
+        local sv = type(_G[name]) == "table" and _G[name] or {}
+        _G[name] = sv
+        sv.profiles = sv.profiles or {}
+        sv.profiles.Default = Merge(defaults.profile, sv.profiles.Default)
+        sv.char = sv.char or {}
+        local charKey = next(sv.char) or "Tester - Realm"
+        sv.char[charKey] = Merge(defaults.char, sv.char[charKey])
+        sv.global = sv.global or {}
+        local db = { profile = sv.profiles.Default, char = sv.char[charKey], global = sv.global, sv = sv }
         db.RegisterCallback = function() end
         return db
     end,
@@ -383,7 +401,7 @@ end
 function M.LoadZones(addonDirectory, ZoneLore)
     for _, file in ipairs({ "Audio", "UI/ReportButton", "Autoplay" }) do
         local chunk = assert(loadfile(addonDirectory .. file .. ".lua"))
-        chunk("ZoneLore", ZoneLore)
+        chunk("SpokenZones", ZoneLore)
     end
     return ZoneLore
 end

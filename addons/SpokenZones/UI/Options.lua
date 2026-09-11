@@ -147,7 +147,7 @@ function ZoneLore:SetupOptions()
 
 	-- Parentless, with `.name` set, is the shape the Settings API expects here.
 	panel = CreateFrame("Frame")
-	panel.name = "ZoneLore"
+	panel.name = "Spoken Zones"
 
 	-- Everything below is laid out in `content`, not in `panel`. The settings canvas
 	-- is a fixed size and neither scrolls nor clips what overflows it, so a panel
@@ -155,7 +155,7 @@ function ZoneLore:SetupOptions()
 	local scroller = ZoneLore:CreateScroller(panel)
 	local content = scroller.child
 
-	MakeHeading(content, "ZoneLore", INDENT, -16)
+	MakeHeading(content, "Spoken Zones", INDENT, -16)
 	MakeNote(
 		content,
 		"Lore for zones and subzones on the world map and minimap. Text from "
@@ -459,7 +459,7 @@ function ZoneLore:SetupOptions()
 	-- fix -- a section you cannot reach.
 	scroller:SetContentHeight(-y + 80)
 
-	category = Settings.RegisterCanvasLayoutCategory(panel, "ZoneLore")
+	category = Settings.RegisterCanvasLayoutCategory(panel, "Spoken Zones")
 	Settings.RegisterAddOnCategory(category)
 
 	ZoneLore.optionsPanel = panel
@@ -468,7 +468,7 @@ end
 
 function ZoneLore:OpenOptions()
 	if not category or not (Settings and Settings.OpenToCategory) then
-		ZoneLore:Print("open Game Menu -> Options -> AddOns -> ZoneLore")
+		ZoneLore:Print("open Game Menu -> Options -> AddOns -> Spoken Zones")
 		return
 	end
 
@@ -480,6 +480,6 @@ function ZoneLore:OpenOptions()
 		ok = pcall(Settings.OpenToCategory, category)
 	end
 	if not ok then
-		ZoneLore:Print("open Game Menu -> Options -> AddOns -> ZoneLore")
+		ZoneLore:Print("open Game Menu -> Options -> AddOns -> Spoken Zones")
 	end
 end

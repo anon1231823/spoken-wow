@@ -12,7 +12,7 @@ local QUESTS = here .. "/../../addons/SpokenQuests/"
 local SPOKEN = here .. "/../../addons/Spoken/"
 local Expect, Failures = H.Expecter(print)
 
-local BOOK = [[Interface\AddOns\VoiceOverRedux\Textures\Book]]
+local BOOK = [[Interface\AddOns\SpokenQuests\Textures\Book]]
 
 local lookup = {}
 for _, q in ipairs({ 101, 102, 103 }) do
@@ -113,7 +113,7 @@ VO.Addon.db.profile.Audio.OGThrall = true
 world.gossipText = "Greetings, traveller."
 VO.Addon:GOSSIP_SHOW()
 Expect("the easter egg swaps the path before the player sees it", Spoken:GetCurrent().path,
-    [[Interface\AddOns\VoiceOverRedux\Sounds\og-thrall.mp3]])
+    [[Interface\AddOns\SpokenQuests\Sounds\og-thrall.mp3]])
 Expect("...and the length", Spoken:GetCurrent().length, 33.802375)
 
 ---------------------------------------------------------------- the quest-log overlay
@@ -133,7 +133,7 @@ local labels = {}
 for _, entry in ipairs(env.Minimap:BuildMenu()) do table.insert(labels, entry.text) end
 Expect("the quests addon adds its entries to the one button", table.concat(labels, "|"),
     "Play/Pause|Stop|Settings|Read visible quest|VoiceOver options")
-Expect("...and registers no button of its own", stub.ldbObjects.VoiceOverRedux, nil)
+Expect("...and registers no button of its own", stub.ldbObjects.SpokenQuests, nil)
 
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
 print("\nAll quests source tests passed")

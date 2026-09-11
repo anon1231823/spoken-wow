@@ -11,7 +11,7 @@ local SPOKEN = here .. "/../../addons/Spoken/"
 local ZONES = here .. "/../../addons/SpokenZones/"
 local Expect, Failures = H.Expecter(print)
 
-local BOOK = [[Interface\AddOns\ZoneLore\Textures\Book]]
+local BOOK = [[Interface\AddOns\SpokenZones\Textures\Book]]
 
 local function NewZoneLore()
     local cfg = { voiceEnabled = true, voiceChannel = "Dialog", autoplay = true, autoplaySubzones = true,
@@ -160,8 +160,8 @@ env, Z = Boot()
 local labels = {}
 for _, entry in ipairs(env.Minimap:BuildMenu()) do table.insert(labels, entry.text) end
 Expect("the zones addon adds its entries to the one button", table.concat(labels, "|"),
-    "Play/Pause|Stop|Settings|Open lore window|ZoneLore settings")
-Expect("...and registers no button of its own", stub.ldbObjects.ZoneLore, nil)
+    "Play/Pause|Stop|Settings|Open lore window|Spoken Zones settings")
+Expect("...and registers no button of its own", stub.ldbObjects.SpokenZones, nil)
 
 ---------------------------------------------------------------- without the player
 stub.SetClient("11509"); stub.ResetSound(); stub.ResetTimers()

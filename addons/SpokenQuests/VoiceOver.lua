@@ -7,13 +7,13 @@ local AceAddon = LibStub("AceAddon-3.0")
 -- fork's own before the rename. Loading two used to cause a duplicate AceAddon error and two
 -- event handlers, so each is disabled for this session; the folders are disabled for the next
 -- login further down, where the same list appears as folder names.
-for _, name in ipairs({ "VoiceOver", "VoiceOverContinued" }) do
+for _, name in ipairs({ "VoiceOver", "VoiceOverContinued", "VoiceOverRedux" }) do
     local supersededAddon = AceAddon:GetAddon(name, true)
     if supersededAddon and supersededAddon.Disable then
         supersededAddon:Disable()
     end
 end
-Addon = AceAddon:NewAddon("VoiceOverRedux", "AceEvent-3.0", "AceTimer-3.0")
+Addon = AceAddon:NewAddon("SpokenQuests", "AceEvent-3.0", "AceTimer-3.0")
 
 Addon.OnAddonLoad = {}
 local AUTO_POLL_INTERVAL = 0.1
@@ -79,7 +79,7 @@ function Addon:ShowMissingDataModulePopup()
     local details = next(loadDetails) and ("|n|nDetected but not loaded:|n" .. table.concat(loadDetails, "|n")) or ""
     StaticPopupDialogs["VOICEOVER_NO_REGISTERED_DATA_MODULES"] =
     {
-        text = [[VoiceOver Redux|n|nNo usable sound packs were loaded.|n|nKeep a sound pack installed beside this addon - "VoiceOverReduxAudio", or the older "AI_VoiceOverData_Vanilla". Run "/vo diagnostics" for details.]] .. details,
+        text = [[Spoken Quests|n|nNo usable sound packs were loaded.|n|nKeep a sound pack installed beside this addon - "VoiceOverReduxAudio", or the older "AI_VoiceOverData_Vanilla". Run "/vo diagnostics" for details.]] .. details,
         button1 = OKAY,
         timeout = 0,
         whileDead = 1,
@@ -141,8 +141,34 @@ local selectedGossipOption
 local currentQuestSoundData
 local currentGossipSoundData
 
+-- The addon was VoiceOverRedux, and the client names a SavedVariables file after the folder:
+-- VoiceOverDB lives in VoiceOverRedux.lua, which only loads because a tombstone folder of
+-- that name still declares it. Copied once into this addon's own file, before AceDB claims
+-- it and before the tombstone is disabled for next login -- disabling first would mean the
+-- old file never loads again and nothing to copy.
+local function DeepCopy(value)
+    if type(value) ~= "table" then return value end
+    local copy = {}
+    for key, item in pairs(value) do copy[key] = DeepCopy(item) end
+    return copy
+end
+
+local function AdoptSavedVariables()
+    local old = rawget(_G, "VoiceOverDB")
+    local new = rawget(_G, "SpokenQuestsDB")
+    local adopted = type(new) == "table" and type(new.global) == "table" and new.global.migratedFrom
+    if type(old) ~= "table" or adopted then
+        return
+    end
+    new = DeepCopy(old)
+    new.global = new.global or {}
+    new.global.migratedFrom = "VoiceOverRedux"
+    _G.SpokenQuestsDB = new
+end
+
 function Addon:OnInitialize()
-    self.db = LibStub("AceDB-3.0"):New("VoiceOverDB", defaults)
+    AdoptSavedVariables()
+    self.db = LibStub("AceDB-3.0"):New("SpokenQuestsDB", defaults)
     self.db.RegisterCallback(self, "OnProfileChanged", "RefreshConfig")
     self.db.RegisterCallback(self, "OnProfileReset", "RefreshConfig")
 
@@ -499,6 +525,12 @@ function Addon:OnInitialize()
     -- not uninstall anything, which makes the fork's own former name as much of a duplicate
     -- as upstream's. A name is only ever added here, never removed.
     local SUPERSEDED_PLAYERS = { "AI_VoiceOver", "AI_VoiceOver_Continued" }
+    -- The old name is a folder that may hold the real old player (hand-installed, or a
+    -- manager that failed to replace it) rather than the tombstone. Either way it must not
+    -- run: the tombstone has no code, so disabling it costs nothing; the old player has
+    -- the same handlers as this one. Its saved variables were adopted above, this login,
+    -- and DisableAddOn takes effect only on the next.
+    table.insert(SUPERSEDED_PLAYERS, "VoiceOverRedux")
 
     local disabled = {}
     for _, addon in ipairs(SUPERSEDED_PLAYERS) do
@@ -511,7 +543,7 @@ function Addon:OnInitialize()
     if next(disabled) and not self.db.profile.SeenDuplicatePlayerDialog then
         StaticPopupDialogs["VOICEOVER_REDUX_DUPLICATE_ADDON"] =
         {
-            text = format([[VoiceOver Redux|n|n%s was also enabled. It has been disabled for the next login, and its event handler was stopped for this session.|n|nKeep your sound pack enabled - "VoiceOverReduxAudio" or the older "AI_VoiceOverData_Vanilla", either works. You can delete or leave the old player disabled, then /reload.]],
+            text = format([[Spoken Quests|n|n%s was also enabled. It has been disabled for the next login, and its event handler was stopped for this session.|n|nKeep your sound pack enabled - "VoiceOverReduxAudio" or the older "AI_VoiceOverData_Vanilla", either works. You can delete or leave the old player disabled, then /reload.]],
                 table.concat(disabled, " and ")),
             button1 = OKAY,
             timeout = 0,

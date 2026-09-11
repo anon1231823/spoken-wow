@@ -18,7 +18,7 @@
 -- This file loads before Core.lua and before anything under Data/, because the
 -- generated data files ask ShouldLoadLanguage whether to build their tables at
 -- all. That question can only be answered this early because ZoneLore.toc sets
--- LoadSavedVariablesFirst -- ZoneLoreDB is already populated when these files
+-- LoadSavedVariablesFirst -- SpokenZonesDB is already populated when these files
 -- run. Removing that .toc line does not error; it silently pins every player to
 -- English.
 
@@ -121,12 +121,12 @@ end
 -- same: a player who never chose should start reading German the day German
 -- ships, while one who explicitly picked English must keep English.
 function ZoneLore:GetLanguagePreference()
-	local pref = ZoneLoreDB and ZoneLoreDB.language
+	local pref = SpokenZonesDB and SpokenZonesDB.language
 	return type(pref) == "string" and byCode[pref] and pref or nil
 end
 
 function ZoneLore:IsPreviewingLanguage()
-	return (ZoneLoreDB and ZoneLoreDB.languagePreview) and true or false
+	return (SpokenZonesDB and SpokenZonesDB.languagePreview) and true or false
 end
 
 -- Whether a language may be selected at all. Preview mode relaxes readiness so
@@ -189,12 +189,12 @@ function ZoneLore:SetLanguage(code)
 	if code ~= nil and not self:IsLanguageSelectable(code) then
 		return false
 	end
-	ZoneLoreDB.language = code
+	SpokenZonesDB.language = code
 	return true
 end
 
 function ZoneLore:SetLanguagePreview(enabled)
-	ZoneLoreDB.languagePreview = enabled and true or false
+	SpokenZonesDB.languagePreview = enabled and true or false
 end
 
 --------------------------------------------------------------------------------

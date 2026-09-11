@@ -323,7 +323,7 @@ local SlashCommands = {
 
 ---@type AceConfigOptionsTable
 Options.table = {
-    name = "Voice Over",
+    name = "Spoken Quests",
     type = "group",
     childGroups = "tab",
     args = {
@@ -451,15 +451,15 @@ function Options:Initialize()
         AceConfig = Addon
     end
     RunOptionalStep("AceConfig slash registration", function()
-        AceConfig:RegisterOptionsTable("VoiceOverRedux", self.table, "vo")
+        AceConfig:RegisterOptionsTable("SpokenQuests", self.table, "vo")
     end)
     RunOptionalStep("Blizzard settings categories", function()
-        AceConfigDialog:AddToBlizOptions("VoiceOverRedux", "VoiceOver Redux")
+        AceConfigDialog:AddToBlizOptions("SpokenQuests", "Spoken Quests")
         for key, tab in Utils:Ordered(Options.table.args, SortAceConfigOptions) do
             if not tab.hidden and not tab.dialogHidden then
-                AceConfigDialog:AddToBlizOptions("VoiceOverRedux",
+                AceConfigDialog:AddToBlizOptions("SpokenQuests",
                     type(tab.name) == "function" and tab.name() or tab.name,
-                    "VoiceOverRedux", key)
+                    "SpokenQuests", key)
             end
         end
     end)
@@ -470,7 +470,7 @@ function Options:Initialize()
     RunOptionalStep("AceGUI options frame", function()
         self.frame = AceGUI:Create("Frame")
         --AceConfigDialog:SetDefaultSize("VoiceOver", 640, 780) -- Let it be auto-sized
-        AceConfigDialog:Open("VoiceOverRedux", self.frame)
+        AceConfigDialog:Open("SpokenQuests", self.frame)
         self.frame:SetLayout("Fill")
         self.frame:Hide()
 
@@ -492,6 +492,6 @@ function Options:OpenConfigWindow()
     else
         PlaySound(SOUNDKIT.IG_MAINMENU_OPEN)
         self.frame:Show()
-        AceConfigDialog:Open("VoiceOverRedux", self.frame)
+        AceConfigDialog:Open("SpokenQuests", self.frame)
     end
 end

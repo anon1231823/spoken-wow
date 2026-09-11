@@ -102,7 +102,7 @@ end
 function ReportButton:Create(parent)
     -- Named, because 1.12's UIPanelButtonTemplate gives its label the name "$parentText" and an
     -- unnamed button leaves that substitution with nothing to resolve against.
-    local name = format("VoiceOverReduxReportButton%d", getn(self.buttons) + 1)
+    local name = format("SpokenQuestsReportButton%d", getn(self.buttons) + 1)
     local button = CreateFrame("Button", name, parent, "UIPanelButtonTemplate")
     button:SetWidth(64)
     button:SetHeight(22)

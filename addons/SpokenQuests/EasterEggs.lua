@@ -6,7 +6,7 @@ setfenv(1, VoiceOver)
 -- somebody whose installed packs do not even hold the line.
 EasterEggs =
 {
-    ADDON_NAME = "VoiceOverRedux",
+    ADDON_NAME = "SpokenQuests",
 
     ---@type table<string, { path: string, length: number, option: string }>
     alternates =

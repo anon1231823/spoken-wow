@@ -114,7 +114,7 @@ function ZoneLore:SetupAudio()
 	end
 
 	self.source = Spoken:RegisterSource("zones", {
-		title = "ZoneLore",
+		title = "Spoken Zones",
 		addon = ADDON_NAME,
 		order = 2,
 		-- How many clips may wait behind the one speaking. Discoveries arrive in
@@ -133,10 +133,10 @@ function ZoneLore:SetupAudio()
 
 	Spoken.Minimap:AddEntry("zones", { id = "lore", text = "Open lore window", order = 1,
 		onClick = function() ZoneLore:ToggleLoreWindow() end })
-	Spoken.Minimap:AddEntry("zones", { id = "settings", text = "ZoneLore settings", order = 2,
+	Spoken.Minimap:AddEntry("zones", { id = "settings", text = "Spoken Zones settings", order = 2,
 		onClick = function() ZoneLore:OpenOptions() end })
 	if Spoken.AddSettingsLink then
-		Spoken:AddSettingsLink("ZoneLore settings", function() ZoneLore:OpenOptions() end)
+		Spoken:AddSettingsLink("Spoken Zones settings", function() ZoneLore:OpenOptions() end)
 	end
 end
 

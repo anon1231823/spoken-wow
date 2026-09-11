@@ -1,6 +1,6 @@
 -- ZoneLore -- minimap button, via LibDataBroker + LibDBIcon.
 --
--- LibDBIcon owns two keys inside ZoneLoreDB: `hide` and `minimapPos`. They are
+-- LibDBIcon owns two keys inside SpokenZonesDB: `hide` and `minimapPos`. They are
 -- deliberately not in Core.lua's defaults table, because the library writes them
 -- itself and a default would fight it -- except for seeding minimapPos once, so
 -- the button starts somewhere sensible instead of at angle 0.
@@ -23,7 +23,7 @@ local function OnTooltipShow(tooltip)
 	if not tooltip or not tooltip.AddLine then
 		return
 	end
-	tooltip:AddLine("ZoneLore")
+	tooltip:AddLine("Spoken Zones")
 
 	-- Show lore for where the player is standing, which is the whole point of a
 	-- minimap entry point.
@@ -69,22 +69,22 @@ function ZoneLore:SetupMinimapButton()
 
 	-- Seed the position once so the button does not default to angle 0, where it
 	-- can sit under other addons' buttons.
-	if ZoneLoreDB.minimapPos == nil then
-		ZoneLoreDB.minimapPos = 204
+	if SpokenZonesDB.minimapPos == nil then
+		SpokenZonesDB.minimapPos = 204
 	end
 	-- Mirror our own option onto the key LibDBIcon reads.
-	ZoneLoreDB.hide = not ZoneLore:Get("showMinimapButton")
+	SpokenZonesDB.hide = not ZoneLore:Get("showMinimapButton")
 
-	dataObject = ldb:NewDataObject("ZoneLore", {
+	dataObject = ldb:NewDataObject("SpokenZones", {
 		type = "data source",
-		text = "ZoneLore",
+		text = "Spoken Zones",
 		icon = ICON,
 		OnClick = OnClick,
 		OnTooltipShow = OnTooltipShow,
 	})
 
 	icon = dbicon
-	icon:Register("ZoneLore", dataObject, ZoneLoreDB)
+	icon:Register("SpokenZones", dataObject, SpokenZonesDB)
 
 	ZoneLore:ApplyMinimapButton()
 end
@@ -94,12 +94,12 @@ end
 -- rather than the toggle.
 function ZoneLore:ApplyMinimapButton()
 	local enabled = ZoneLore:Get("showMinimapButton") and true or false
-	ZoneLoreDB.hide = not enabled
+	SpokenZonesDB.hide = not enabled
 	if icon then
 		if enabled then
-			icon:Show("ZoneLore")
+			icon:Show("SpokenZones")
 		else
-			icon:Hide("ZoneLore")
+			icon:Hide("SpokenZones")
 		end
 	end
 	return enabled

@@ -44,6 +44,7 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@$(LUA) tests/lua/player_frame_test.lua
 	@$(LUA) tests/lua/zones_source_test.lua
 	@$(LUA) tests/lua/quests_source_test.lua
+	@$(LUA) tests/lua/migration_test.lua
 
 test: test-player ## Everything: both webs, the Python pipeline, the addons
 	@pnpm -r test
@@ -55,6 +56,7 @@ lint: ## The checks CI gates on
 	@node pipelines/zones/tools/descriptions.mjs --check
 	@node pipelines/zones/tools/locale/check-strings.mjs
 
-package-all: ## Build both addon zips
+package-all: ## Build every addon zip: the player, quests, zones
+	@./scripts/spoken/package.sh
 	@$(MAKE) --no-print-directory -f make/quests.mk package
 	@$(MAKE) --no-print-directory -f make/zones.mk  package

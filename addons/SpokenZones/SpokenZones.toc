@@ -1,29 +1,32 @@
 ## Interface: 11509, 20506
-## Title: ZoneLore
-## Notes: Shows additional lore about zones on the world map and minimap.|n|cffffcc00Beta:|r the narration is a proof-of-concept voice, being redesigned.
-## Version: 0.4.3
+## Title: Spoken Zones
+## Notes: Zone and subzone lore on the world map, read aloud through the Spoken player. Formerly ZoneLore.
+## Version: 1.0.0
 ## Author: rusty
-## SavedVariables: ZoneLoreDB, ZoneLoreQueueDB
-# ZoneLoreQueueDB held the ported player's own settings. The Spoken player owns those
-# now; the variable stays declared so the migration can read it once.
-## SavedVariablesPerCharacter: ZoneLoreCharDB
+## SavedVariables: SpokenZonesDB
+## SavedVariablesPerCharacter: SpokenZonesCharDB
+# ZoneLoreDB, ZoneLoreCharDB and ZoneLoreQueueDB -- the addon's variables under its old
+# name -- are declared by the ZoneLore tombstone folder, which is what keeps that file
+# loading. Migration.lua copies them once; the Spoken player reads ZoneLoreQueueDB itself.
 ## LoadSavedVariablesFirst: true
 # ^ load-bearing beyond convenience: the generated data files under Data/ ask
 # Language.lua which language to build a table for, and it can only answer that
 # early because ZoneLoreDB is already populated. Without this line every player
 # silently reads English.
-## OptionalDeps: Spoken, ZoneLoreAudio, ZoneLoreAudio64
+## OptionalDeps: Spoken, ZoneLore, ZoneLoreAudio, ZoneLoreAudio64
 # Spoken is the player this addon speaks through. Optional here so a hand-installed
 # copy without it loads and says what is missing rather than failing to load at
 # all; addon managers install it from the CurseForge dependency. The packs are not
 # a registration mechanism either -- they register themselves into ZoneLoreAudioPacks
 # and Audio.lua walks that on demand -- so this list is load order only.
-## IconTexture: Interface\AddOns\ZoneLore\Textures\AddonIcon.tga
+## IconTexture: Interface\AddOns\SpokenZones\Textures\AddonIcon.tga
 ## X-License: Addon code MIT. Zone lore text from warcraft.wiki.gg, CC BY-SA 4.0.
 ## X-Credits: Lore text sourced from warcraft.wiki.gg contributors (CC BY-SA 4.0).
 
 embeds.xml
 
+# Migration.lua before everything: it hands the saved language choice to Language.lua.
+Migration.lua
 # Data/Languages.lua first: it is what Language.lua reads to decide which
 # language is being read, and everything after that guards itself on the answer.
 Data/Languages.lua

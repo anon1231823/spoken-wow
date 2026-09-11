@@ -58,14 +58,14 @@ local defaults = {
 	-- own language the day it ships, and one who picked English should not.
 	debug = false,
 	-- `hide` and `minimapPos` are intentionally absent: LibDBIcon owns those keys
-	-- inside ZoneLoreDB and writes them itself. See UI/MinimapButton.lua.
+	-- inside SpokenZonesDB and writes them itself. See UI/MinimapButton.lua.
 }
 
 --------------------------------------------------------------------------------
 -- Output
 --------------------------------------------------------------------------------
 
-local PREFIX = "|cff66bbffZoneLore|r: "
+local PREFIX = "|cff66bbffSpoken Zones|r: "
 
 function ZoneLore:Print(fmt, ...)
 	local msg = select("#", ...) > 0 and fmt:format(...) or fmt
@@ -78,14 +78,14 @@ end
 
 -- Merge defaults into the saved table without clobbering stored values, so new
 -- options added in later versions appear for existing users. Runtime reads and
--- writes go straight to ZoneLoreDB.
+-- writes go straight to SpokenZonesDB.
 local function InitConfig()
-	if type(ZoneLoreDB) ~= "table" then
-		ZoneLoreDB = {}
+	if type(SpokenZonesDB) ~= "table" then
+		SpokenZonesDB = {}
 	end
 	for key, value in pairs(defaults) do
-		if ZoneLoreDB[key] == nil then
-			ZoneLoreDB[key] = value
+		if SpokenZonesDB[key] == nil then
+			SpokenZonesDB[key] = value
 		end
 	end
 
@@ -93,19 +93,19 @@ local function InitConfig()
 	-- choose a pack for; it is now one folder name per content language. The type
 	-- check makes this idempotent, which is why no stored schema version is needed.
 	-- The old value was necessarily an English pack, so that is where it lands.
-	if type(ZoneLoreDB.audioPack) == "string" then
-		ZoneLoreDB.audioPack = { enUS = ZoneLoreDB.audioPack }
+	if type(SpokenZonesDB.audioPack) == "string" then
+		SpokenZonesDB.audioPack = { enUS = SpokenZonesDB.audioPack }
 	end
 
-	ZoneLore.db = ZoneLoreDB
+	ZoneLore.db = SpokenZonesDB
 end
 
 -- Safe before ADDON_LOADED has run.
 function ZoneLore:Get(key)
-	if ZoneLoreDB == nil then
+	if SpokenZonesDB == nil then
 		return defaults[key]
 	end
-	local value = ZoneLoreDB[key]
+	local value = SpokenZonesDB[key]
 	if value == nil then
 		return defaults[key]
 	end
@@ -113,7 +113,7 @@ function ZoneLore:Get(key)
 end
 
 function ZoneLore:Set(key, value)
-	ZoneLoreDB[key] = value
+	SpokenZonesDB[key] = value
 end
 
 --------------------------------------------------------------------------------
@@ -435,6 +435,13 @@ events:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" then
 		if arg1 == ADDON_NAME then
 			InitConfig()
+			-- The old folder is a TOC-only tombstone or the real old addon; neither may
+			-- stay enabled. Its variables were copied at load, so this is safe now.
+			local disable = (C_AddOns and C_AddOns.DisableAddOn) or DisableAddOn
+			local info = (C_AddOns and C_AddOns.GetAddOnInfo) or GetAddOnInfo
+			if disable and info and info("ZoneLore") then
+				pcall(disable, "ZoneLore")
+			end
 			self:UnregisterEvent("ADDON_LOADED")
 		end
 	elseif event == "PLAYER_ENTERING_WORLD" then
@@ -460,7 +467,7 @@ end)
 
 -- Recursively enumerate the map tree so tools/seed/zones.json can be built from
 -- the client itself rather than transcribed by hand. Results land in
--- ZoneLoreDB.dump, which is only written to disk on logout or /reload.
+-- SpokenZonesDB.dump, which is only written to disk on logout or /reload.
 local MAP_TYPE_NAMES = { [0] = "Cosmic", [1] = "World", [2] = "Continent", [3] = "Zone", [4] = "Dungeon", [5] = "Micro", [6] = "Orphan" }
 
 local function DumpMapTree(rootID, out, seen, depth)
@@ -494,8 +501,8 @@ local function CmdDump()
 	DumpMapTree(947, out, seen, 0)   -- Azeroth (world)
 	DumpMapTree(1414, out, seen, 0)  -- Kalimdor
 	DumpMapTree(1415, out, seen, 0)  -- Eastern Kingdoms
-	ZoneLoreDB.dump = out
-	ZoneLore:Print("dumped %d maps to ZoneLoreDB.dump. Run /reload, then:", #out)
+	SpokenZonesDB.dump = out
+	ZoneLore:Print("dumped %d maps to SpokenZonesDB.dump. Run /reload, then:", #out)
 	ZoneLore:Print("  node tools/seed-from-dump.mjs")
 end
 
