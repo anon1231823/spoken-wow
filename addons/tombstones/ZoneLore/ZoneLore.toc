@@ -1,0 +1,9 @@
+## Interface: 11509, 20506
+## Title: |cff888888ZoneLore|r (now Spoken Zones)
+## Notes: This addon was renamed to Spoken Zones. Its settings are migrated on first login; after that this folder can be deleted.
+## Version: 1.0.0
+## SavedVariables: ZoneLoreDB, ZoneLoreQueueDB
+## SavedVariablesPerCharacter: ZoneLoreCharDB
+## LoadSavedVariablesFirst: true
+## X-Part-Of: Spoken
+# A tombstone: no Lua at all. See tombstones/VoiceOverRedux/VoiceOverRedux.toc.
