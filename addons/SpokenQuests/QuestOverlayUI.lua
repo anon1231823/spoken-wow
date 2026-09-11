@@ -52,7 +52,7 @@ end
 function QuestOverlayUI:UpdatePlayButtonTexture(questID)
     local button = self.questPlayButtons[questID]
     if button then
-        local isPlaying = button.soundData and SoundQueue:Contains(button.soundData)
+        local isPlaying = button.soundData and Player:Contains(button.soundData)
         local texturePath = isPlaying and [[Interface\AddOns\VoiceOverRedux\Textures\QuestLogStopButton]] or [[Interface\AddOns\VoiceOverRedux\Textures\QuestLogPlayButton]]
         button:SetNormalTexture(texturePath)
     end
@@ -78,10 +78,10 @@ function QuestOverlayUI:UpdatePlayButton(soundTitle, questID, questLogTitleFrame
 
         local soundData = self.soundData
         local questID = soundData.questID
-        local isPlaying = SoundQueue:Contains(soundData)
+        local isPlaying = Player:Contains(soundData)
 
         if not isPlaying then
-            SoundQueue:AddSoundToQueue(soundData)
+            Player:Enqueue(soundData)
             QuestOverlayUI:UpdatePlayButtonTexture(questID)
 
             soundData.stopCallback = function()
@@ -89,7 +89,7 @@ function QuestOverlayUI:UpdatePlayButton(soundTitle, questID, questLogTitleFrame
                 self.soundData = nil
             end
         else
-            SoundQueue:RemoveSoundFromQueue(soundData)
+            Player:Remove(soundData)
         end
     end)
 end

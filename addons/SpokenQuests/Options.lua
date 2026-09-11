@@ -22,31 +22,6 @@ local FRAME_STRATAS =
     "DIALOG",
 }
 
-local slashCommandsHandler = {}
-function slashCommandsHandler:values(info)
-    if not self.indexToName then
-        self.indexToName = { "Nothing" }
-        self.indexToCommand = { "" }
-        self.commandToIndex = { [""] = 1 }
-        for command, handler in Utils:Ordered(Options.table.args.SlashCommands.args, SortAceConfigOptions) do
-            if not handler.dropdownHidden then
-                table.insert(self.indexToName, handler.name)
-                table.insert(self.indexToCommand, command)
-                self.commandToIndex[command] = getn(self.indexToCommand)
-            end
-        end
-    end
-    return self.indexToName
-end
-function slashCommandsHandler:get(info)
-    local config, key = info.arg()
-    return self.commandToIndex[config[key]]
-end
-function slashCommandsHandler:set(info, value)
-    local config, key = info.arg()
-    config[key] = self.indexToCommand[value]
-end
-
 -- General Tab
 ---@type AceConfigOptionsTable
 local GeneralTab =
@@ -55,170 +30,6 @@ local GeneralTab =
     type = "group",
     order = 10,
     args = {
-        MinimapButton = {
-            type = "group",
-            order = 2,
-            inline = true,
-            name = "Minimap Button",
-            args = {
-                MinimapButtonShow = {
-                    type = "toggle",
-                    order = 1,
-                    name = "Show Minimap Button",
-                    get = function(info) return not Addon.db.profile.MinimapButton.LibDBIcon.hide end,
-                    set = function(info, value)
-                        Addon.db.profile.MinimapButton.LibDBIcon.hide = not value
-                        if value then
-                            LibStub("LibDBIcon-1.0"):Show("VoiceOverRedux")
-                        else
-                            LibStub("LibDBIcon-1.0"):Hide("VoiceOverRedux")
-                        end
-                    end,
-                },
-                MinimapButtonLock = {
-                    type = "toggle",
-                    order = 2,
-                    name = "Lock Position",
-                    get = function(info) return Addon.db.profile.MinimapButton.LibDBIcon.lock end,
-                    set = function(info, value)
-                        if value then
-                            LibStub("LibDBIcon-1.0"):Lock("VoiceOverRedux")
-                        else
-                            LibStub("LibDBIcon-1.0"):Unlock("VoiceOverRedux")
-                        end
-                    end,
-                },
-                LineBreak1 = { type = "description", name = "", order = 3 },
-                MinimapButtons = {
-                    type = "group",
-                    inline = true,
-                    name = "",
-                    handler = slashCommandsHandler,
-                    args = {
-                        MinimapButtonLeftClick = {
-                            type = "select",
-                            order = 4,
-                            name = "Left Click",
-                            desc = "Action performed by left-clicking the minimap button.",
-                            values = "values", get = "get", set = "set",
-                            arg = function(value) return Addon.db.profile.MinimapButton.Commands, "LeftButton" end,
-                        },
-                        MinimapButtonMiddleClick = {
-                            type = "select",
-                            order = 4,
-                            name = "Middle Click",
-                            desc = "Action performed by middle-clicking the minimap button.",
-                            values = "values", get = "get", set = "set",
-                            arg = function(value) return Addon.db.profile.MinimapButton.Commands, "MiddleButton" end,
-                        },
-                        MinimapButtonRightClick = {
-                            type = "select",
-                            order = 4,
-                            name = "Right Click",
-                            desc = "Action performed by right-clicking the minimap button.",
-                            values = "values", get = "get", set = "set",
-                            arg = function(value) return Addon.db.profile.MinimapButton.Commands, "RightButton" end,
-                        }
-                    }
-                }
-            }
-        },
-        Frame = {
-            type = "group",
-            order = 3,
-            inline = true,
-            name = "Frame",
-            disabled = function(info) return Addon.db.profile.SoundQueueUI.HideFrame end,
-            args = {
-                LockFrame = {
-                    type = "toggle",
-                    order = 1,
-                    name = "Lock Frame",
-                    desc = "Prevent the frame from being moved or resized.",
-                    get = function(info) return Addon.db.profile.SoundQueueUI.LockFrame end,
-                    set = function(info, value)
-                        Addon.db.profile.SoundQueueUI.LockFrame = value
-                        SoundQueueUI:RefreshConfig()
-                    end,
-                },
-                ResetFrame = {
-                    type = "execute",
-                    order = 2,
-                    name = "Reset Frame",
-                    desc = "Resets frame position and size back to default.",
-                    func = function(info)
-                        SoundQueueUI.frame:Reset()
-                    end,
-                },
-                LineBreak1 = { type = "description", name = "", order = 3 },
-                FrameStrata = {
-                    type = "select",
-                    order = 5,
-                    name = "Frame Strata",
-                    desc = "Changes the \"depth\" of the frame, determining which other frames will it overlap or fall behind.",
-                    values = FRAME_STRATAS,
-                    get = function(info)
-                        for k, v in ipairs(FRAME_STRATAS) do
-                            if v == Addon.db.profile.SoundQueueUI.FrameStrata then
-                                return k;
-                            end
-                        end
-                    end,
-                    set = function(info, value)
-                        Addon.db.profile.SoundQueueUI.FrameStrata = FRAME_STRATAS[value]
-                        SoundQueueUI.frame:SetFrameStrata(Addon.db.profile.SoundQueueUI.FrameStrata)
-                    end,
-                },
-                FrameScale = {
-                    type = "range",
-                    order = 4,
-                    name = "Frame Scale",
-                    softMin = 0.5,
-                    softMax = 2,
-                    bigStep = 0.05,
-                    isPercent = true,
-                    get = function(info) return Addon.db.profile.SoundQueueUI.FrameScale end,
-                    set = function(info, value)
-                        local wasShown = Version.IsLegacyVanilla and SoundQueueUI.frame:IsShown() -- 1.12 quirk
-                        if wasShown then
-                            SoundQueueUI.frame:Hide()
-                        end
-                        Addon.db.profile.SoundQueueUI.FrameScale = value
-                        SoundQueueUI:RefreshConfig()
-                        if wasShown then
-                            SoundQueueUI.frame:Show()
-                        end
-                    end,
-                },
-                LineBreak2 = { type = "description", name = "", order = 6 },
-                HidePortrait = {
-                    type = "toggle",
-                    order = 7,
-                    name = "Hide NPC Portrait",
-                    desc = "Talking NPC portrait will not appear when voice over audio is played.\n\n" ..
-                            Utils:ColorizeText("This might be useful when using other addons that replace the dialog experience, such as " ..
-                                Utils:ColorizeText("Immersion", NORMAL_FONT_COLOR_CODE) .. ".",
-                                GRAY_FONT_COLOR_CODE),
-                    get = function(info) return Addon.db.profile.SoundQueueUI.HidePortrait end,
-                    set = function(info, value)
-                        Addon.db.profile.SoundQueueUI.HidePortrait = value
-                        SoundQueueUI:RefreshConfig()
-                    end,
-                },
-                HideFrame = {
-                    type = "toggle",
-                    order = 8,
-                    name = "Hide Entirely",
-                    desc = "Play voiceovers without ever displaying the frame.",
-                    disabled = false,
-                    get = function(info) return Addon.db.profile.SoundQueueUI.HideFrame end,
-                    set = function(info, value)
-                        Addon.db.profile.SoundQueueUI.HideFrame = value
-                        SoundQueueUI:RefreshConfig()
-                    end,
-                },
-            },
-        },
         Audio = {
             type = "group",
             order = 4,
@@ -235,7 +46,7 @@ local GeneralTab =
                     get = function(info) return Addon.db.profile.Audio.SoundChannel end,
                     set = function(info, value)
                         Addon.db.profile.Audio.SoundChannel = value
-                        SoundQueueUI:RefreshConfig()
+                        Player:RefreshConfig()
                     end,
                 },
                 LineBreak = { type = "description", name = "", order = 2 },
@@ -254,7 +65,7 @@ local GeneralTab =
                     get = function(info) return Addon.db.profile.Audio.GossipFrequency end,
                     set = function(info, value)
                         Addon.db.profile.Audio.GossipFrequency = value
-                        SoundQueueUI:RefreshConfig()
+                        Player:RefreshConfig()
                     end,
                 },
                 AutoToggleDialog = (Version.IsLegacyVanilla or Version:IsRetailOrAboveLegacyVersion(60100) or nil) and {
@@ -267,7 +78,7 @@ local GeneralTab =
                     get = function(info) return Addon.db.profile.Audio.AutoToggleDialog end,
                     set = function(info, value)
                         Addon.db.profile.Audio.AutoToggleDialog = value
-                        SoundQueueUI:RefreshConfig()
+                        Player:RefreshConfig()
                         if Addon.db.profile.Audio.AutoToggleDialog and Version:IsRetailOrAboveLegacyVersion(60100) then
                             SetCVar("Sound_EnableDialog", 1)
                         end
@@ -319,89 +130,8 @@ local GeneralTab =
     }
 }
 
----@type AceConfigOptionsTable
-local LegacyWrathTab = (Version.IsLegacyWrath or Version.IsLegacyBurningCrusade or nil) and {
-    type = "group",
-    name = Version.IsLegacyBurningCrusade and "2.4.3 Backport" or "3.3.5 Backport",
-    order = 19,
-    args = {
-        PlayOnMusicChannel = {
-            type = "group",
-            order = 100,
-            name = "Play Voiceovers on Music Channel",
-            inline = true,
-            args = {
-                Description = {
-                    type = "description",
-                    order = 100,
-                    name = format("%s client lacks the ability to stop addon sounds at will. As a workaround, you can play the voiceovers on the music channel instead, which, unlike sounds, can be stopped. Regular background music will not be playing throughout the duration of voiceovers.|n|nIf you normally play with music disabled - it will be temporarily enabled during voiceovers, but no actual background music will be played.", Version.IsLegacyBurningCrusade and "2.4.3" or "3.3.5"),
-                },
-                Enabled = {
-                    type = "toggle",
-                    order = 200,
-                    name = "Enable",
-                    get = function(info) return Addon.db.profile.LegacyWrath.PlayOnMusicChannel.Enabled end,
-                    set = function(info, value) Addon.db.profile.LegacyWrath.PlayOnMusicChannel.Enabled = value end,
-                },
-                Disabled = {
-                    type = "description",
-                    order = 300,
-                    name = format("With this option disabled you %swill not be able to pause|r voiceovers after they start playing. Attempting to pause will instead %1$spause the voiceover queue|r once the current sound has finished playing.", RED_FONT_COLOR_CODE),
-                    hidden = function(info) return Addon.db.profile.LegacyWrath.PlayOnMusicChannel.Enabled end,
-                },
-                Settings = {
-                    type = "group",
-                    order = 400,
-                    name = "",
-                    inline = true,
-                    hidden = function(info) return not Addon.db.profile.LegacyWrath.PlayOnMusicChannel.Enabled end,
-                    args = {
-                        FadeOutMusic = {
-                            type = "range",
-                            order = 100,
-                            name = "Music Fade Out (secs)",
-                            desc = "Background music will fade out over this number of seconds before playing voiceovers. Has no effect if in-game music is disabled or muted.",
-                            min = 0,
-                            softMax = 2,
-                            bigStep = 0.05,
-                            disabled = Version.IsLegacyBurningCrusade,
-                            get = function(info) return Addon.db.profile.LegacyWrath.PlayOnMusicChannel.FadeOutMusic end,
-                            set = function(info, value) Addon.db.profile.LegacyWrath.PlayOnMusicChannel.FadeOutMusic = value end,
-                        },
-                        Volume = {
-                            type = "range",
-                            order = 200,
-                            name = "Voiceover Volume",
-                            desc = "Music channel volume will be temporarily adjusted to this value while the voiceovers are playing.",
-                            min = 0,
-                            max = 1,
-                            bigStep = 0.01,
-                            isPercent = true,
-                            get = function(info) return Addon.db.profile.LegacyWrath.PlayOnMusicChannel.Volume end,
-                            set = function(info, value) Addon.db.profile.LegacyWrath.PlayOnMusicChannel.Volume = value end,
-                        },
-                    }
-                },
-            }
-        },
-        Portraits = {
-            type = "group",
-            order = 200,
-            name = "Animated Portraits",
-            inline = true,
-            args = {
-                HDModels = {
-                    type = "toggle",
-                    order = 100,
-                    name = "I Have HD Models",
-                    desc = "Turn this on if you're using patches with HD character models. This will correct the animation timings for HD models of Undead and Goblin NPCs.",
-                    get = function(info) return Addon.db.profile.LegacyWrath.HDModels end,
-                    set = function(info, value) Addon.db.profile.LegacyWrath.HDModels = value end,
-                },
-            }
-        },
-    }
-}
+-- The 2.4.3/3.3.5 music-channel and HD-model settings are the Spoken player's now.
+local LegacyWrathTab = nil
 
 ---@type AceConfigOptionsTable
 local DataModulesTab =
@@ -436,7 +166,7 @@ local SlashCommands = {
             desc = "Play/Pause voiceovers",
             hidden = true,
             func = function(info)
-                SoundQueue:TogglePauseQueue()
+                if Spoken then Spoken:TogglePause() end
             end
         },
         Play = {
@@ -445,7 +175,7 @@ local SlashCommands = {
             name = "Play Audio",
             desc = "Resume the playback of voiceovers",
             func = function(info)
-                SoundQueue:ResumeQueue()
+                if Spoken then Spoken:Resume() end
             end
         },
         Pause = {
@@ -454,7 +184,7 @@ local SlashCommands = {
             name = "Pause Audio",
             desc = "Pause the playback of voiceovers",
             func = function(info)
-                SoundQueue:PauseQueue()
+                if Spoken then Spoken:Pause() end
             end
         },
         Skip = {
@@ -463,10 +193,7 @@ local SlashCommands = {
             name = "Skip Line",
             desc = "Skip the currently played voiceover",
             func = function(info)
-                local soundData = SoundQueue:GetCurrentSound()
-                if soundData then
-                    SoundQueue:RemoveSoundFromQueue(soundData)
-                end
+                if Spoken then Spoken:Skip() end
             end
         },
         Clear = {
@@ -475,7 +202,7 @@ local SlashCommands = {
             name = "Clear Queue",
             desc = "Stop the playback and clears the voiceovers queue",
             func = function(info)
-                SoundQueue:RemoveAllSoundsFromQueue()
+                if Spoken then Spoken:StopAll() end
             end
         },
         Read = {
@@ -509,19 +236,16 @@ local SlashCommands = {
                     return
                 end
 
+                -- Through the player, the route every real line takes: on 2.4.3 and 3.3.5
+                -- that means the music channel, and a self-test that went another way would
+                -- answer a question nobody asked.
                 local channel = Enums.SoundChannel:GetName(Addon.db.profile.Audio.SoundChannel)
-                -- Through Utils, not PlaySoundFile: the older clients replace Utils:PlaySound
-                -- wholesale - 2.4.3 and 3.3.5 play voiceovers on the music channel so they can
-                -- be stopped at all - and a self-test that took a route the queue never takes
-                -- would answer a question nobody asked. Same guard as SoundQueue:PlaySound,
-                -- where a legacy override returns nothing rather than a willPlay.
-                local willPlay = Utils:PlaySound(soundData)
-                if Version.IsAnyLegacy or willPlay then
-                    Debug:Record("self-test-playing", format("Self-test accepted on %s: %s", channel, soundData.filePath))
+                if Player:Enqueue(soundData) then
+                    Debug:Record("self-test-playing", format("Self-test queued on %s: %s", channel, soundData.filePath))
                     print(format("|cFF40FF40VoiceOver test started on %s.|r You should hear a short voice line.", channel))
                 else
-                    Debug:Record("self-test-playback-failed", format("PlaySoundFile rejected %s on %s", soundData.filePath, channel))
-                    print(format("|cFFFF4040VoiceOver test failed: PlaySoundFile rejected %s on %s.|r", soundData.filePath, channel))
+                    local stage, message = Debug:GetRuntimeStatus()
+                    print(format("|cFFFF4040VoiceOver test failed: %s (%s).|r", message or "refused", stage or "unknown"))
                 end
             end
         },
@@ -537,8 +261,9 @@ local SlashCommands = {
                 print("AddOn API: " .. (C_AddOns and "C_AddOns compatibility layer" or "legacy globals"))
 
                 local channel = Enums.SoundChannel:GetName(Addon.db.profile.Audio.SoundChannel)
-                print(format("Playback: channel=%s, paused=%s, queue=%d", channel,
-                    tostring(Addon.db.char.IsPaused), SoundQueue:GetQueueSize()))
+                print(format("Playback: channel=%s, paused=%s, queue=%d, player=%s", channel,
+                    tostring(Spoken and Spoken:IsPaused()), Spoken and Spoken:GetQueueSize() or 0,
+                    Spoken and Spoken.ADDON_VERSION or "missing"))
                 print("NPC greetings: " ..
                     (Enums.GossipFrequency:GetName(Addon.db.profile.Audio.GossipFrequency) or "unknown"))
                 print(format("Sound CVars: all=%s, master=%s, SFX=%s/%s, dialog=%s/%s",

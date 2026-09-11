@@ -1,0 +1,139 @@
+-- The quests addon speaking through the player: what a quest or gossip line becomes, the
+-- gossip rule expressed as priority, the dialog-channel toggle on the source hooks, the
+-- disengage and abandon removals, the easter egg, and the quest-log overlay's play/stop.
+-- Run with `make test-player`.
+local here = arg[0]:match("^(.*)/[^/]*$") or "."
+package.path = here .. "/?.lua;" .. package.path
+local stub = require("wow_client_stub")
+local H = require("queue_helpers")
+local print = stub.print
+local world = stub.world
+local QUESTS = here .. "/../../addons/SpokenQuests/"
+local SPOKEN = here .. "/../../addons/Spoken/"
+local Expect, Failures = H.Expecter(print)
+
+local BOOK = [[Interface\AddOns\VoiceOverRedux\Textures\Book]]
+
+local lookup = {}
+for _, q in ipairs({ 101, 102, 103 }) do
+    lookup[q .. "-accept"] = 2; lookup[q .. "-progress"] = 2; lookup[q .. "-complete"] = 2
+end
+-- A gossip line is content-addressed: md5(text + race + gender). The stub's pack answers
+-- one fixed hash for the test NPC's greeting.
+local GREETING_HASH = "9fdeb82237b72e8801030487901e690f"
+lookup[GREETING_HASH] = 3
+
+local function Boot()
+    stub.SetClient("11509"); stub.ResetSound(); stub.ResetTimers()
+    stub.ldbObjects = {}; stub.dbIcons = {}
+    -- The client state the previous scenario left: a quest ID and a visible panel would
+    -- have the new addon's 10 Hz watcher queue a line before the scenario starts.
+    world.questID = 0; stub.ShowPanel(nil); world.gossipText = nil; world.greetingText = nil
+    local VO, env = stub.LoadQuests(QUESTS, SPOKEN)
+    VO.Addon:OnInitialize()
+    VO.DataModules:Register("TestPack", {
+        SoundLengthLookupByFileName = lookup,
+        GetSoundPath = function(_, fileName) return fileName .. ".ogg" end,
+        GossipLookupByNPCID = { [1234] = { ["Greetings, traveller."] = GREETING_HASH } },
+    })
+    stub.Advance(2)   -- the deferred pack load
+    world.title = "Test Quest"; world.questText = "Go."; world.progressText = "Done?"; world.rewardText = "Done."
+    world.npcName = "Innkeeper Test"; world.npcGUID = "Creature-0-0-0-0-1234-0"
+    return VO, env, _G.Spoken
+end
+
+---------------------------------------------------------------- registration and the clip
+local VO, env, Spoken = Boot()
+local source = Spoken:GetSource("quests")
+Expect("the quests addon registers a source", source ~= nil and source == VO.Player.source, true)
+Expect("...probing files before queueing, as it always did", source.testBeforeQueue, true)
+Expect("...on the configured channel, as a string", source:GetChannel(), "Master")
+
+world.questID = 101
+stub.ShowPanel("QuestFrameDetailPanel")
+VO.Addon:QUEST_DETAIL()
+local clip = Spoken:GetCurrent()
+Expect("QUEST_DETAIL queues the accept line", clip and clip.fileName, "101-accept")
+Expect("...keyed on the file name, the old dedup key", clip.key, "101-accept")
+Expect("...as a normal-priority clip", clip.priority, "normal")
+Expect("...header is the NPC", clip.present.header, "Innkeeper Test")
+Expect("...label is the quest title", clip.present.label, "Test Quest")
+Expect("...bullet is the accept bullet", clip.present.bullet, "quest-accept")
+Expect("...portrait is the NPC's model", clip.present.portrait.kind .. ":" .. tostring(clip.present.portrait.creatureID), "model:1234")
+Expect("...with the book as fallback", clip.present.portrait.fallback.texture, BOOK)
+Expect("...and the Report action", clip.present.actions[1].id, "report")
+Expect("...the original fields survive for the dispatcher", clip.questID .. "/" .. clip.event, "101/1")
+Expect("the watcher's stage is recorded", VO.Debug.runtime.stage, "playing")
+Expect("the player shows it", env.PlayerFrame.frame.container.name:GetText(), "Innkeeper Test")
+
+---------------------------------------------------------------- gossip yields at the door
+VO, env, Spoken = Boot()
+world.gossipText = "Greetings, traveller."
+VO.Addon:GOSSIP_SHOW()
+local gossip = Spoken:GetCurrent()
+Expect("GOSSIP_SHOW queues the greeting", gossip and gossip.fileName, GREETING_HASH)
+Expect("...as low priority", gossip.priority, "low")
+Expect("...with the gossip bullet", gossip.present.bullet, "gossip")
+world.questID = 102
+VO.Addon:QUEST_DETAIL()
+Expect("a quest arriving keeps the speaking gossip", Spoken:GetCurrent(), gossip)
+Expect("...and queues behind it", Spoken:GetQueue()[2].fileName, "102-accept")
+Spoken:StopAll()
+world.questID = 103
+VO.Addon:QUEST_DETAIL()
+VO.Addon.db.char.hasSeenGossipForNPC = {}
+VO.Addon:GOSSIP_SHOW()
+Expect("gossip is refused while a quest line is queued", Spoken:GetQueueSize(), 1)
+Expect("...and the stage says so", VO.Debug.runtime.stage, "queue-outranked")
+
+---------------------------------------------------------------- the dialog channel
+VO, env, Spoken = Boot()
+VO.Addon.db.profile.Audio.AutoToggleDialog = true
+world.questID = 101
+VO.Addon:QUEST_DETAIL()
+Expect("the first quest clip mutes the dialog channel", world.cvars.Sound_EnableDialog, "0")
+Spoken:StopAll()
+Expect("...and the last leaving restores it", world.cvars.Sound_EnableDialog, "1")
+
+---------------------------------------------------------------- disengage and abandon
+VO, env, Spoken = Boot()
+VO.Addon.db.profile.Audio.StopAudioOnDisengage = true
+world.questID = 101
+VO.Addon:QUEST_DETAIL()
+VO.Addon:QUEST_FINISHED()
+Expect("closing the quest frame stops its line when asked to", Spoken:GetQueueSize(), 0)
+VO.Addon.db.profile.Audio.StopAudioOnDisengage = false
+VO.Addon:QUEST_DETAIL()
+VO.Addon:QUEST_FINISHED()
+Expect("...and leaves it otherwise", Spoken:GetQueueSize(), 1)
+
+---------------------------------------------------------------- the easter egg
+VO, env, Spoken = Boot()
+VO.Addon.db.profile.Audio.OGThrall = true
+world.gossipText = "Greetings, traveller."
+VO.Addon:GOSSIP_SHOW()
+Expect("the easter egg swaps the path before the player sees it", Spoken:GetCurrent().path,
+    [[Interface\AddOns\VoiceOverRedux\Sounds\og-thrall.mp3]])
+Expect("...and the length", Spoken:GetCurrent().length, 33.802375)
+
+---------------------------------------------------------------- the quest-log overlay
+VO, env, Spoken = Boot()
+local overlayClip = { event = VO.Enums.SoundEvent.QuestAccept, questID = 101, name = "Giver", title = "Test Quest" }
+Expect("Contains is false before", VO.Player:Contains(overlayClip), false)
+Expect("Enqueue through the bridge", VO.Player:Enqueue(overlayClip), true)
+Expect("Contains is true while queued", VO.Player:Contains(overlayClip), true)
+Expect("Remove takes it out", VO.Player:Remove(overlayClip), true)
+Expect("...Contains is false again", VO.Player:Contains(overlayClip), false)
+Expect("a line no pack holds is refused", VO.Player:Enqueue({ event = VO.Enums.SoundEvent.QuestAccept, questID = 999, name = "x", title = "x" }), false)
+Expect("...and the stage says so", VO.Debug.runtime.stage, "data-lookup-failed")
+
+---------------------------------------------------------------- the minimap and settings
+VO, env, Spoken = Boot()
+local labels = {}
+for _, entry in ipairs(env.Minimap:BuildMenu()) do table.insert(labels, entry.text) end
+Expect("the quests addon adds its entries to the one button", table.concat(labels, "|"),
+    "Play/Pause|Stop|Settings|Read visible quest|VoiceOver options")
+Expect("...and registers no button of its own", stub.ldbObjects.VoiceOverRedux, nil)
+
+if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
+print("\nAll quests source tests passed")

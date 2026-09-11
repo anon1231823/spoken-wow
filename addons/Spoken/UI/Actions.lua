@@ -41,7 +41,9 @@ local function NewButton(frame, action)
         end)
         button:SetScript("OnLeave", function() GameTooltip_Hide() end)
     end
-    button:SetSize(ACTION_WIDTH, ACTION_HEIGHT)
+    if not action.create then
+        button:SetSize(ACTION_WIDTH, ACTION_HEIGHT)
+    end
     return button
 end
 

@@ -9,17 +9,19 @@ local here = arg[0]:match("^(.*)/[^/]*$") or "."
 package.path = here .. "/?.lua;" .. package.path
 local stub = require("wow_client_stub")
 local print = stub.print
-local VO = stub.LoadPlayer(here .. "/../../addons/SpokenQuests/")
+stub.SetClient("11509"); stub.ResetSound(); stub.ResetTimers()
+local VO = stub.LoadQuests(here .. "/../../addons/SpokenQuests/", here .. "/../../addons/Spoken/")
+local Spoken = _G.Spoken
 
 local world = stub.world
 local failures = 0
 
+-- Observed through the player's public seam rather than by monkeypatching the queue: what
+-- the client would hear is what CLIP_STARTED reports.
 local played = {}
-local realPlaySound = VO.SoundQueue.PlaySound
-VO.SoundQueue.PlaySound = function(self, soundData)
-    table.insert(played, soundData.fileName)
-    return realPlaySound(self, soundData)
-end
+Spoken:RegisterCallback("CLIP_STARTED", function(clip)
+    table.insert(played, clip.fileName)
+end)
 
 local function Expect(scenario, expected)
     local actual = table.concat(played, ", ")
@@ -34,9 +36,7 @@ end
 
 local function StartScenario()
     for i = #played, 1, -1 do played[i] = nil end
-    for i = #VO.SoundQueue.sounds, 1, -1 do
-        VO.SoundQueue:RemoveSoundFromQueue(VO.SoundQueue.sounds[i])
-    end
+    Spoken:StopAll()
     world.questID = 0
     stub.ShowPanel(nil)
     stub.FireEvent("QUEST_FINISHED")

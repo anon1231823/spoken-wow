@@ -240,18 +240,30 @@ _G.C_Timer = {
     After = function(delay, fn) table.insert(timers, { at = world.time + delay, fn = fn }) end,
 }
 _G.ERR_ZONE_EXPLORED = "Discovered %s."
+function _G.GetGossipText() return world.gossipText or "" end
+function _G.GetGreetingText() return world.greetingText or "" end
+function _G.GetNumGossipActiveQuests() return 0 end
+function _G.GetNumGossipAvailableQuests() return 0 end
+function _G.GetGossipOptions() return end
 _G.ERR_ZONE_EXPLORED_XP = "Discovered %s: %d experience gained."
 function _G.hooksecurefunc() return true end
 function _G.IsLoggedIn() return true end
 function _G.GetLocale() return "enUS" end
 M.print = print
 function _G.print() end
-function _G.strsplit(sep, str)
+-- With the client's `limit`: strsplit("-", "a-b-c", 2) is "a", "b-c". GetIDFromGUID
+-- depends on that to keep the id-bearing tail of a GUID in one piece.
+function _G.strsplit(sep, str, limit)
     local out = {}
     for piece in string.gmatch(str or "", "([^" .. sep .. "]*)" .. sep .. "?") do
         table.insert(out, piece)
     end
     if out[#out] == "" then table.remove(out) end
+    if limit and #out > limit then
+        local tail = table.concat(out, sep, limit)
+        for i = #out, limit, -1 do out[i] = nil end
+        out[limit] = tail
+    end
     return unpack(out)
 end
 _G.format = string.format
@@ -383,22 +395,28 @@ function M.ResetSound()
     end
 end
 
---- Load the quests player against this stub and return its private environment.
-function M.LoadPlayer(addonDirectory)
+--- Load the quests addon against this stub, on top of a booted Spoken player, and return
+--- its private environment. The three UI modules the dispatch path touches but which
+--- decide nothing about which line is read are stubbed with answer-everything tables.
+function M.LoadQuests(addonDirectory, spokenDirectory)
+    local env = M.LoadSpoken(spokenDirectory)
+    env.Addon:Enable()
+
     dofile(addonDirectory .. "Environment.lua")
     local VO = _G.VoiceOver
-
-    -- The player calls into these while dispatching quests, but none of them decide which
-    -- line is read, so a stub that answers every call keeps the test about dispatch.
-    for _, module in ipairs({ "SoundQueueUI", "QuestOverlayUI", "ReportButton", "Options" }) do
+    for _, module in ipairs({ "QuestOverlayUI", "Options" }) do
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
-
-    for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "SoundQueue", "EasterEggs",
-        "DataModules", "VoiceOver" }) do
+    for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "EasterEggs",
+        "DataModules", "ReportButton", "Player", "VoiceOver" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
-    VO.Utils.CreateNPCModelFrame = function() end
+    return VO, env
+end
+
+--- Kept for one release: the pre-cutover loader name.
+M.LoadPlayer = function(addonDirectory)
+    local VO = M.LoadQuests(addonDirectory, addonDirectory .. "../Spoken/")
     return VO
 end
 

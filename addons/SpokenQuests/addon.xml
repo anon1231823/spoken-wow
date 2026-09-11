@@ -6,12 +6,11 @@
     <Include file="Debug.lua"/>
     <Include file="Options.lua"/>
     <Include file="FuzzySearch.lua"/>
-    <Include file="SoundQueue.lua"/>
-    <Include file="SoundQueueUI.lua"/>
     <Include file="QuestOverlayUI.lua"/>
     <Include file="ReportButton.lua"/>
     <Include file="EasterEggs.lua"/>
     <Include file="DataModules.lua"/>
+    <Include file="Player.lua"/>
     <Include file="VoiceOver.lua"/>
 
     <Include file="Compatibility.lua"/>

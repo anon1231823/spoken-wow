@@ -4,6 +4,7 @@
 ## Version: 1.3.0
 ## IconTexture: Interface\AddOns\VoiceOverRedux\icon.tga
 ## SavedVariables: VoiceOverDB
+## OptionalDeps: Spoken
 ## Group: VoiceOverRedux
 ## X-Part-Of: VoiceOver Redux
 ## X-VoiceOver-Player: 1

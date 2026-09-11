@@ -160,17 +160,7 @@ function ReportButton:Initialize()
         end,
     }
 
-    -- The sound queue frame is the only host. It is present for gossip, for progress and
-    -- completion text, and while audio is playing - which is when the complaint occurs to
-    -- someone - whereas the quest detail panel covers only the moment a quest is offered.
-    --
-    -- Offset left of the frame's own corner because the resizer already sits exactly there and
-    -- is the handle for dragging the frame's size; covering it would trade one feature for
-    -- another.
-    if SoundQueueUI and SoundQueueUI.frame then
-        local button = self:Create(SoundQueueUI.frame)
-        button:SetWidth(52)
-        button:SetHeight(18)
-        button:SetPoint("BOTTOMRIGHT", SoundQueueUI.frame, "BOTTOMRIGHT", -18, 2)
-    end
+    -- The button itself is created on demand by Player.lua as an action on the Spoken
+    -- player's frame, which is present for gossip, for progress and completion text, and
+    -- while audio is playing -- which is when the complaint occurs to someone.
 end

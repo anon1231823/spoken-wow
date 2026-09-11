@@ -119,13 +119,8 @@ end
 ---@class VoiceOverConfig
 local defaults = {
     profile = {
-        SoundQueueUI = {
-            LockFrame = false,
-            FrameScale = 0.7,
-            FrameStrata = "HIGH",
-            HidePortrait = false,
-            HideFrame = false,
-        },
+        -- The frame, the minimap button, the sound channel's legacy music-channel
+        -- workaround and the paused flag are the Spoken player's settings now.
         Audio = {
             GossipFrequency = Enums.GossipFrequency.OncePerQuestNPC,
             SoundChannel = Enums.SoundChannel.Master,
@@ -133,27 +128,9 @@ local defaults = {
             StopAudioOnDisengage = false,
             OGThrall = false,
         },
-        MinimapButton = {
-            LibDBIcon = {}, -- Table used by LibDBIcon to store position (minimapPos), dragging lock (lock) and hidden state (hide)
-            Commands = {
-                -- References keys from Options.table.args.SlashCommands.args table
-                LeftButton = "Options",
-                MiddleButton = "PlayPause",
-                RightButton = "Clear",
-            }
-        },
-        LegacyWrath = (Version.IsLegacyWrath or Version.IsLegacyBurningCrusade or nil) and {
-            PlayOnMusicChannel = {
-                Enabled = true,
-                Volume = 1,
-                FadeOutMusic = 0.5,
-            },
-            HDModels = false,
-        },
         DebugEnabled = false,
     },
     char = {
-        IsPaused = false,
         hasSeenGossipForNPC = {},
         RecentQuestTitleToID = Version:IsBelowLegacyVersion(30300) and {},
     }
@@ -177,9 +154,9 @@ function Addon:OnInitialize()
         whileDead = 1,
     }
 
-    SoundQueueUI:Initialize()
-    -- After the sound queue frame exists: one of the Report button's two hosts is a child of
-    -- it. Guarded because a failure to draw a button must not stop playback initializing.
+    Player:Setup()
+    -- The copy-link popup behind the Report button. Guarded because a failure to build a
+    -- dialog must not stop playback initializing.
     local reportButtonReady, reportButtonError = pcall(ReportButton.Initialize, ReportButton)
     if not reportButtonReady then
         Debug:Record("report-button-error", tostring(reportButtonError))
@@ -294,7 +271,7 @@ function Addon:OnInitialize()
         local expectedSoundEvent = event == "QUEST_DETAIL" and Enums.SoundEvent.QuestAccept or
             event == "QUEST_PROGRESS" and Enums.SoundEvent.QuestProgress or
             event == "QUEST_COMPLETE" and Enums.SoundEvent.QuestComplete
-        for _, queuedSound in ipairs(SoundQueue.sounds) do
+        for _, queuedSound in ipairs(Player:Queued()) do
             if queuedSound.questID == questID and queuedSound.event == expectedSoundEvent then
                 state.completedKey = key
                 state.lastHandledKey = key
@@ -550,14 +527,14 @@ function Addon:OnInitialize()
         return function()
             local data = getFieldData()
             local soundsToRemove = {}
-            for _, soundData in pairs(SoundQueue.sounds) do
+            for _, soundData in ipairs(Player:Queued()) do
                 if Enums.SoundEvent:IsQuestEvent(soundData.event) and soundData[field] == data then
                     table.insert(soundsToRemove, soundData)
                 end
             end
 
-            for _, soundData in pairs(soundsToRemove) do
-                SoundQueue:RemoveSoundFromQueue(soundData)
+            for _, soundData in ipairs(soundsToRemove) do
+                Player:Remove(soundData)
             end
         end
     end
@@ -596,7 +573,7 @@ function Addon:OnInitialize()
 end
 
 function Addon:RefreshConfig()
-    SoundQueueUI:RefreshConfig()
+    Player:RefreshConfig()
 end
 
 function Addon:ADDON_LOADED(event, addon)
@@ -608,15 +585,11 @@ function Addon:ADDON_LOADED(event, addon)
 end
 
 local function GossipSoundDataAdded(soundData)
-    Utils:CreateNPCModelFrame(soundData)
-
     -- Save current gossip sound data for dialog/frame sync option
     currentGossipSoundData = soundData
 end
 
 local function QuestSoundDataAdded(soundData)
-    Utils:CreateNPCModelFrame(soundData)
-
     -- Save current quest sound data for dialog/frame sync option
     currentQuestSoundData = soundData
 end
@@ -683,7 +656,7 @@ function Addon:QUEST_DETAIL()
         unitIsObjectOrItem = Utils:IsNPCObjectOrItem(),
         addedCallback = QuestSoundDataAdded,
     }
-    SoundQueue:AddSoundToQueue(soundData)
+    Player:Enqueue(soundData)
 end
 
 function Addon:QUEST_PROGRESS()
@@ -715,7 +688,7 @@ function Addon:QUEST_PROGRESS()
         unitIsObjectOrItem = Utils:IsNPCObjectOrItem(),
         addedCallback = QuestSoundDataAdded,
     }
-    SoundQueue:AddSoundToQueue(soundData)
+    Player:Enqueue(soundData)
 end
 
 function Addon:QUEST_COMPLETE()
@@ -748,7 +721,7 @@ function Addon:QUEST_COMPLETE()
         unitIsObjectOrItem = Utils:IsNPCObjectOrItem(),
         addedCallback = QuestSoundDataAdded,
     }
-    SoundQueue:AddSoundToQueue(soundData)
+    Player:Enqueue(soundData)
 end
 
 function Addon:ShouldPlayGossip(guid, text)
@@ -802,7 +775,7 @@ function Addon:QUEST_GREETING()
             self.db.char.hasSeenGossipForNPC[npcKey] = true
         end
     }
-    SoundQueue:AddSoundToQueue(soundData)
+    Player:Enqueue(soundData)
 end
 
 function Addon:GOSSIP_SHOW()
@@ -834,7 +807,7 @@ function Addon:GOSSIP_SHOW()
             self.db.char.hasSeenGossipForNPC[npcKey] = true
         end
     }
-    SoundQueue:AddSoundToQueue(soundData)
+    Player:Enqueue(soundData)
 
     selectedGossipOption = nil
     lastGossipOptions = nil
@@ -847,14 +820,14 @@ end
 
 function Addon:QUEST_FINISHED()
     if Addon.db.profile.Audio.StopAudioOnDisengage and currentQuestSoundData then
-        SoundQueue:RemoveSoundFromQueue(currentQuestSoundData)
+        Player:Remove(currentQuestSoundData)
     end
     currentQuestSoundData = nil
 end
 
 function Addon:GOSSIP_CLOSED()
     if Addon.db.profile.Audio.StopAudioOnDisengage and currentGossipSoundData then
-        SoundQueue:RemoveSoundFromQueue(currentGossipSoundData)
+        Player:Remove(currentGossipSoundData)
     end
     currentGossipSoundData = nil
 

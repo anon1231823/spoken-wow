@@ -781,6 +781,78 @@ if Version.IsLegacyBurningCrusade or Version.IsLegacyWrath then
     end)
 end
 
+if Version.IsLegacyWrath then
+
+    -- 3.3.5 can show a creature it has not cached only after the client fetches it, so
+    -- the portrait shows a placeholder until then and the pause button says why on hover.
+    function hookModel(self)
+        local function HasModelLoaded(self)
+            local model = self:GetModel()
+            return model and type(model) == "string" and self:GetModelFileID() ~= 130737
+        end
+        self._sequence = 0
+        hooksecurefunc(self, "ClearModel", function(self)
+            self._awaitingModel = nil
+            self._camera = nil
+            self._sequence = 0
+            self._sequenceStart = nil
+        end)
+        local oldSetSequence = self.SetSequence
+        function self:SetSequence(sequence)
+            self._sequence = sequence
+            self._sequenceStart = GetTime()
+            if not self._awaitingModel then
+                oldSetSequence(self, sequence)
+            end
+        end
+        local oldSetCreature = self.SetCreature
+        function self:SetCreature(id)
+            self:ClearModel()
+            self:SetModel([[Interface\Buttons\TalkToMeQuestion_White.mdx]])
+            oldSetCreature(self, id)
+            self._awaitingModel = not HasModelLoaded(self)
+        end
+        local oldSetCamera = self.SetCamera
+        function self:SetCamera(id)
+            self._camera = id
+            if not self._awaitingModel then
+                oldSetCamera(self, id)
+            end
+        end
+        self:HookScript("OnUpdate", function(self, elapsed)
+            if self._awaitingModel and HasModelLoaded(self) then
+                self._awaitingModel = nil
+                self:SetModelScale(2)
+                self:SetPosition(0, 0, 0)
+
+                if self._sequence ~= 0 then
+                    self:SetSequence(self._sequence)
+                end
+            elseif self._awaitingModel then
+                self:SetModelScale(0.71 / self:GetEffectiveScale())
+                self:SetPosition(5 * self:GetModelScale(), 0, 2 * self:GetModelScale())
+            end
+            if self._sequence ~= 0 and not self._awaitingModel then
+                self:SetSequenceTime(self._sequence, (GetTime() - self._sequenceStart) * 1000)
+            end
+        end)
+    end
+
+    hooksecurefunc(PlayerFrame, "InitPortrait", function(self)
+        self.frame.portrait.pause:HookScript("OnEnter", function()
+            if self.frame.portrait.model and self.frame.portrait.model._awaitingModel then
+                GameTooltip:SetOwner(self.frame.portrait.pause, "ANCHOR_NONE")
+                GameTooltip:SetPoint("BOTTOMLEFT", self.frame.portrait.pause, "BOTTOMRIGHT", 4, -4)
+                GameTooltip:SetText("Uncached NPC", HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
+                GameTooltip:AddLine("Encounter this NPC in the world again to be able to see their model.", NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b, 1)
+                GameTooltip:Show()
+            end
+        end)
+        self.frame.portrait.pause:HookScript("OnLeave", GameTooltip_Hide)
+    end)
+
+end
+
 if Version.IsRetailMainline then
     function Portrait:GetCurrentModelSet()
         return "HD"
