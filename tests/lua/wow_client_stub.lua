@@ -68,30 +68,83 @@ function M.FireEvent(event, ...)
     end
 end
 
-local function MakeFrame(name)
-    local frame = { name = name, events = {}, scripts = {}, hooks = {} }
-    function frame:RegisterEvent(event) self.events[event] = true end
-    function frame:UnregisterEvent(event) self.events[event] = nil end
-    function frame:UnregisterAllEvents() self.events = {} end
-    function frame:SetScript(script, fn) self.scripts[script] = fn end
-    function frame:HookScript(script, fn)
+-- A widget: enough of a Frame, Texture or FontString for the player's UI files to load
+-- and to answer the questions a test asks (shown? what text? which texture?). Data
+-- fields are lower-case and stay nil until set; any Capitalised method not listed is a
+-- no-op, which is what lets the real UI code run against this without a client.
+local function Widget(kind, name)
+    local w = { kind = kind, name = name, events = {}, scripts = {}, hooks = {}, shown = true,
+        text = "", width = 300, height = 120, id = 0, alpha = 1, children = {} }
+    function w:RegisterEvent(event) self.events[event] = true end
+    function w:UnregisterEvent(event) self.events[event] = nil end
+    function w:UnregisterAllEvents() self.events = {} end
+    function w:SetScript(script, fn) self.scripts[script] = fn end
+    function w:GetScript(script) return self.scripts[script] end
+    function w:HookScript(script, fn)
         self.hooks[script] = self.hooks[script] or {}
         table.insert(self.hooks[script], fn)
     end
-    function frame:IsVisible() return world.panels[self.name] and true or false end
-    function frame:IsShown() return self:IsVisible() end
-    function frame:Show()
-        world.panels[self.name] = true
+    function w:IsVisible() if self.name then return world.panels[self.name] and true or false end return self.shown end
+    function w:IsShown() return self:IsVisible() end
+    function w:Show()
+        self.shown = true
+        if self.name then world.panels[self.name] = true end
         for _, fn in ipairs(self.hooks.OnShow or {}) do fn(self) end
     end
-    function frame:Hide() world.panels[self.name] = nil end
-    for _, noop in ipairs({ "SetSize", "SetPoint", "SetWidth", "SetHeight", "SetScale", "SetFrameStrata",
-        "SetMovable", "EnableMouse", "RegisterForDrag", "SetClampedToScreen", "SetAlpha", "ClearAllPoints",
-        "SetParent", "SetUnit", "SetCamera", "SetModelScale", "SetPosition", "SetFacing", "RefreshUnit" }) do
-        frame[noop] = function() end
-    end
-    table.insert(allFrames, frame)
-    return frame
+    function w:Hide() self.shown = false; if self.name then world.panels[self.name] = nil end end
+    function w:SetShown(v) if v then self:Show() else self:Hide() end end
+    function w:SetText(t) self.text = t end
+    function w:GetText() return self.text end
+    function w:SetWidth(v) self.width = v end
+    function w:SetHeight(v) self.height = v end
+    function w:SetSize(a, b) self.width, self.height = a, b end
+    function w:GetWidth() return self.width end
+    function w:GetHeight() return self.height end
+    function w:GetStringWidth() return #tostring(self.text or "") * 7 end
+    function w:GetTop() return 100 end
+    function w:GetBottom() return 0 end
+    function w:GetLeft() return 0 end
+    function w:GetRight() return self.width end
+    function w:SetAlpha(v) self.alpha = v end
+    function w:GetAlpha() return self.alpha end
+    function w:SetID(v) self.id = v end
+    function w:GetID() return self.id end
+    function w:SetParent(p) self.parent = p end
+    function w:GetParent() return self.parent end
+    function w:GetFrameLevel() return 1 end
+    function w:SetTexture(t) self.texture = t; return true end
+    function w:GetTexture() return self.texture end
+    function w:SetTexCoord(...) self.texCoord = { ... } end
+    function w:CreateTexture(n, layer) local t = Widget("Texture", n); t.parent = self; t.layer = layer; return t end
+    function w:CreateFontString(n, layer) local t = Widget("FontString", n); t.parent = self; return t end
+    function w:SetNormalTexture(t) self.normalTexture = self.normalTexture or Widget("Texture"); self.normalTexture:SetTexture(t) end
+    function w:GetNormalTexture() self.normalTexture = self.normalTexture or Widget("Texture"); return self.normalTexture end
+    function w:SetPushedTexture(t) self.pushedTexture = self.pushedTexture or Widget("Texture"); self.pushedTexture:SetTexture(t) end
+    function w:GetPushedTexture() self.pushedTexture = self.pushedTexture or Widget("Texture"); return self.pushedTexture end
+    function w:SetHighlightTexture(t) self.highlightTexture = self.highlightTexture or Widget("Texture"); self.highlightTexture:SetTexture(t) end
+    function w:GetHighlightTexture() self.highlightTexture = self.highlightTexture or Widget("Texture"); return self.highlightTexture end
+    function w:SetChecked(v) self.checked = v end
+    function w:GetChecked() return self.checked end
+    function w:GetFont() return "Fonts\\FRIZQT__.TTF", 12 end
+    function w:SetCreature(idv) self.creature = idv; self.model = "creature/" .. tostring(idv) end
+    function w:ClearModel() self.creature = nil; self.model = nil end
+    function w:GetModel() return self.model end
+    function w:GetModelFileID() return self.creature and 119940 or nil end
+    function w:GetOwner() return self.owner end
+    function w:SetOwner(o) self.owner = o end
+    function w:Click() local fn = self.scripts.OnClick; if fn then fn(self, "LeftButton") end
+        for _, h in ipairs(self.hooks.OnClick or {}) do h(self, "LeftButton") end end
+    setmetatable(w, { __index = function(_, k)
+        if type(k) == "string" and k:match("^[A-Z]") then return function() end end
+        return nil
+    end })
+    table.insert(allFrames, w)
+    return w
+end
+M.Widget = Widget
+
+local function MakeFrame(name)
+    return Widget("Frame", name)
 end
 
 local frames = {}
@@ -117,8 +170,8 @@ function M.SetClient(label)
     local c = assert(CLIENTS[label], "unknown client " .. tostring(label))
     _G.GetBuildInfo = function() return c[1], c[2], "Jan 1 2026", c[3] end
     _G.WOW_PROJECT_ID = c[4]
+    if c[4] == nil then _G.Settings = nil else _G.Settings = M.modernSettings end
 end
-M.SetClient("20506")
 _G.UIParent = MakeFrame("UIParent")
 _G.WOW_PROJECT_CLASSIC = 2
 _G.WOW_PROJECT_BURNING_CRUSADE_CLASSIC = 5
@@ -150,7 +203,29 @@ end
 function _G.StopSound(handle) table.insert(world.stopped, handle) end
 function _G.PlayMusic(path) table.insert(world.music, path) end
 function _G.StopMusic() table.insert(world.music, false) end
-function _G.CreateFrame(_, name) return name and Frame(name) or MakeFrame("anonymous") end
+function _G.CreateFrame(kind, name, parent) local f = name and Frame(name) or MakeFrame(nil); f.frameType = kind; f.parent = parent; return f end
+function _G.CreateFont(name) return Widget("Font", name) end
+_G.GameFontNormal = Widget("Font", "GameFontNormal")
+_G.GameTooltip = Widget("Frame", "GameTooltip")
+function _G.GameTooltip_Hide() end
+function _G.MouseIsOver() return false end
+function _G.SetCursor() end
+function _G.PlaySound() end
+_G.SOUNDKIT = { U_CHAT_SCROLL_BUTTON = 1115 }
+_G.HIGHLIGHT_FONT_COLOR = { r = 1, g = 1, b = 1 }
+_G.NORMAL_FONT_COLOR = { r = 1, g = 0.82, b = 0 }
+_G.GRAY_FONT_COLOR = { r = 0.5, g = 0.5, b = 0.5 }
+_G.UIDropDownMenu_Initialize = nil
+-- The Settings API as 11509 exposes it; SetClient("1.12") removes it.
+M.settingsCategories = {}
+M.modernSettings = {
+    RegisterCanvasLayoutCategory = function(frame, name) local c = { frame = frame, name = name, GetID = function() return name end }; table.insert(M.settingsCategories, c); return c end,
+    RegisterCanvasLayoutSubcategory = function(parent, frame, name) local c = { frame = frame, name = name, parent = parent }; table.insert(M.settingsCategories, c); return c end,
+    RegisterAddOnCategory = function() end,
+    OpenToCategory = function() return true end,
+}
+_G.Settings = M.modernSettings
+M.SetClient("20506")
 function _G.hooksecurefunc() return true end
 function _G.IsLoggedIn() return true end
 function _G.GetLocale() return "enUS" end
@@ -201,6 +276,13 @@ function _G.DisableAddOn() end
 function _G.LoadAddOn() return true end
 
 local libs = {}
+M.ldbObjects = {}
+libs["LibDataBroker-1.1"] = { NewDataObject = function(_, name, obj) M.ldbObjects[name] = obj; return obj end }
+M.dbIcons = {}
+libs["LibDBIcon-1.0"] = {
+    Register = function(_, name, obj, db) M.dbIcons[name] = { obj = obj, db = db } end,
+    Show = function() end, Hide = function() end, Lock = function() end, Unlock = function() end, Refresh = function() end,
+}
 _G.LibStub = setmetatable({
     NewLibrary = function() end,
     GetLibrary = function(_, name) return libs[name] end,
@@ -253,7 +335,8 @@ libs["AceDB-3.0"] = {
 --- Loads exactly what its addon.xml lists, in order, then initialises the saved
 --- variables the way ADDON_LOADED would.
 function M.LoadSpoken(addonDirectory)
-    for _, file in ipairs({ "Environment", "Version", "Core", "SoundUtils", "Callbacks", "SoundQueue", "Sources", "API", "Compat" }) do
+    for _, file in ipairs({ "Environment", "Version", "Core", "SoundUtils", "Callbacks", "SoundQueue", "Sources",
+        "Strings", "UI/Portrait", "UI/Actions", "UI/PlayerFrame", "UI/MinimapButton", "UI/Options", "API", "Compat" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     local env = _G.SpokenEnv

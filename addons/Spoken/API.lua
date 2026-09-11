@@ -64,17 +64,14 @@ end
 --
 -- The player sets id, handle, source and nextSoundTimer; a caller never does.
 
-local bullets = {}
-local renderers = {}
-
 --- A row bullet, registered once by a feature addon so SpokenBooks needs no change to
 --- the player to have one of its own.
 function Spoken:RegisterBullet(id, texture, size)
-    bullets[id] = { texture = texture, size = size }
+    Bullets[id] = { texture = texture, size = size }
 end
 
 function Spoken:GetBullet(id)
-    return bullets[id]
+    return Bullets[id]
 end
 
 --- A portrait renderer: { Acquire(portrait, parent) -> frame, Update(frame, clip) -> bool,
@@ -82,11 +79,46 @@ end
 --- frames, and the pooling has to live somewhere. "texture", "model" and "none" ship with
 --- the player.
 function Spoken:RegisterPortraitRenderer(kind, renderer)
-    renderers[kind] = renderer
+    Renderers[kind] = renderer
 end
 
 function Spoken:GetPortraitRenderer(kind)
-    return renderers[kind]
+    return Renderers[kind]
+end
+
+--------------------------------------------------------------------------------
+-- The frame, the minimap button, the settings
+--------------------------------------------------------------------------------
+
+--- The player window, for a feature addon that must anchor something to it.
+function Spoken:GetPlayerFrame()
+    return PlayerFrame.frame
+end
+
+--- The Settings category, so a feature addon can nest its panel under it with
+--- Settings.RegisterCanvasLayoutSubcategory. Nil on clients without the Settings API.
+function Spoken:GetSettingsCategory()
+    return Options.category
+end
+
+function Spoken:OpenSettings()
+    Options:Open()
+end
+
+--- A button on the player's panel that opens a feature addon's own settings, for the
+--- addons whose panel cannot be nested.
+function Spoken:AddSettingsLink(text, onClick)
+    Options:AddLink(text, onClick)
+end
+
+--- Menu entries for the one minimap button. entry = { id, text, icon, order, onClick,
+--- tooltip, visible }.
+Spoken.Minimap = {}
+function Spoken.Minimap:AddEntry(sourceKey, entry)
+    Minimap:AddEntry(sourceKey, entry)
+end
+function Spoken.Minimap:RemoveEntry(sourceKey, id)
+    Minimap:RemoveEntry(sourceKey, id)
 end
 
 --------------------------------------------------------------------------------

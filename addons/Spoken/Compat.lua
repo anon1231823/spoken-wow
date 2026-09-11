@@ -233,3 +233,400 @@ if Version.IsLegacyBurningCrusade or Version.IsLegacyWrath then
 
 
 end
+
+--------------------------------------------------------------------------- frames
+--
+-- Everything the UI builds goes through this file's CreateFrame, which applies what an
+-- old client lacks (SetShown, SetSize, SetResizeBounds, Get*Texture, HookScript...) as
+-- mixins and overrides on the frame it returns. Lifted from the quests addon.
+
+local RegionMixins = {}
+local RegionOverrides = {}
+local FrameMixins = {}
+local FrameOverrides = {}
+local FontStringMixins = {}
+local ModelMixins = {}
+local function ApplyMixinsAndOverrides(self, mixins, overrides)
+    if mixins then
+        for k, v in pairs(mixins) do
+            if not self[k] then
+                self[k] = v
+            end
+        end
+    end
+    if overrides then
+        for k, v in pairs(overrides) do
+            if self[k] then
+                self["_" .. k], self[k] = self[k], v
+            end
+        end
+    end
+end
+local hookFrame
+local hookModel
+function CreateFrame(frameType, name, parent, template)
+    if UIParent.SetBackdrop and template == "BackdropTemplate" then
+        template = nil
+    end
+
+    local frame = _G.CreateFrame(frameType, name, parent, template)
+    ApplyMixinsAndOverrides(frame, RegionMixins, RegionOverrides)
+    ApplyMixinsAndOverrides(frame, FrameMixins, FrameOverrides)
+    if hookFrame then
+        hookFrame(frame)
+    end
+    if frameType == "Model" or frameType == "PlayerModel" or frameType == "DressUpModel" then
+        ApplyMixinsAndOverrides(frame, ModelMixins)
+        if hookModel then
+            hookModel(frame)
+        end
+    end
+    return frame
+end
+
+function RegionMixins:SetShown(shown)
+    if shown then
+        self:Show()
+    else
+        self:Hide()
+    end
+end
+function RegionMixins:SetSize(width, height)
+    self:SetWidth(width)
+    self:SetHeight(height)
+end
+function FrameMixins:SetResizeBounds(minWidth, minHeight, maxWidth, maxHeight)
+    self:SetMinResize(minWidth, minHeight)
+    if maxWidth and maxHeight then
+        self:SetMaxResize(maxWidth, maxHeight)
+    end
+end
+function ModelMixins:SetAnimation(animation)
+    self:SetSequence(animation)
+end
+function ModelMixins:SetCustomCamera(camera)
+    self:SetCamera(camera)
+end
+
+-- Patch 7.0.3 (2016-07-19): Added.
+if Version:IsBelowLegacyVersion(70000) then
+    local modelToFileID = {
+        ["Original"] = {
+            ["interface/buttons/talktomequestion_white"]                = 130737,
+
+            ["character/bloodelf/female/bloodelffemale"]                = 116921,
+            ["character/bloodelf/male/bloodelfmale"]                    = 117170,
+            ["character/broken/female/brokenfemale"]                    = 117400,
+            ["character/broken/male/brokenmale"]                        = 117412,
+            ["character/draenei/female/draeneifemale"]                  = 117437,
+            ["character/draenei/male/draeneimale"]                      = 117721,
+            ["character/dwarf/female/dwarffemale"]                      = 118135,
+            ["character/dwarf/female/dwarffemale_hd"]                   = 950080,
+            ["character/dwarf/female/dwarffemale_npc"]                  = 950080,
+            ["character/dwarf/male/dwarfmale"]                          = 118355,
+            ["character/dwarf/male/dwarfmale_hd"]                       = 878772,
+            ["character/dwarf/male/dwarfmale_npc"]                      = 878772,
+            ["character/felorc/female/felorcfemale"]                    = 118652,
+            ["character/felorc/male/felorcmale"]                        = 118653,
+            ["character/felorc/male/felorcmaleaxe"]                     = 118654,
+            ["character/felorc/male/felorcmalesword"]                   = 118667,
+            ["character/foresttroll/male/foresttrollmale"]              = 118798,
+            ["character/gnome/female/gnomefemale"]                      = 119063,
+            ["character/gnome/female/gnomefemale_hd"]                   = 940356,
+            ["character/gnome/female/gnomefemale_npc"]                  = 940356,
+            ["character/gnome/male/gnomemale"]                          = 119159,
+            ["character/gnome/male/gnomemale_hd"]                       = 900914,
+            ["character/gnome/male/gnomemale_npc"]                      = 900914,
+            ["character/goblin/female/goblinfemale"]                    = 119369,
+            ["character/goblin/male/goblinmale"]                        = 119376,
+            ["character/goblinold/male/goblinoldmale"]                  = 119376,
+            ["character/human/female/humanfemale"]                      = 119563,
+            ["character/human/female/humanfemale_hd"]                   = 1000764,
+            ["character/human/female/humanfemale_npc"]                  = 1000764,
+            ["character/human/male/humanmale"]                          = 119940,
+            ["character/human/male/humanmale_cata"]                     = 119940,
+            ["character/human/male/humanmale_hd"]                       = 1011653,
+            ["character/human/male/humanmale_npc"]                      = 1011653,
+            ["character/icetroll/male/icetrollmale"]                    = 232863,
+            ["character/naga_/female/naga_female"]                      = 120263,
+            ["character/naga_/male/naga_male"]                          = 120294,
+            ["character/nightelf/female/nightelffemale"]                = 120590,
+            ["character/nightelf/female/nightelffemale_hd"]             = 921844,
+            ["character/nightelf/female/nightelffemale_npc"]            = 921844,
+            ["character/nightelf/male/nightelfmale"]                    = 120791,
+            ["character/nightelf/male/nightelfmale_hd"]                 = 974343,
+            ["character/nightelf/male/nightelfmale_npc"]                = 974343,
+            ["character/northrendskeleton/male/northrendskeletonmale"]  = 233367,
+            ["character/orc/female/orcfemale"]                          = 121087,
+            ["character/orc/female/orcfemale_npc"]                      = 121087,
+            ["character/orc/male/orcmale"]                              = 121287,
+            ["character/orc/male/orcmale_hd"]                           = 917116,
+            ["character/orc/male/orcmale_npc"]                          = 917116,
+            ["character/scourge/female/scourgefemale"]                  = 121608,
+            ["character/scourge/female/scourgefemale_hd"]               = 997378,
+            ["character/scourge/female/scourgefemale_npc"]              = 997378,
+            ["character/scourge/male/scourgemale"]                      = 121768,
+            ["character/scourge/male/scourgemale_hd"]                   = 959310,
+            ["character/scourge/male/scourgemale_npc"]                  = 959310,
+            ["character/skeleton/male/skeletonmale"]                    = 121942,
+            ["character/taunka/male/taunkamale"]                        = 233878,
+            ["character/tauren/female/taurenfemale"]                    = 121961,
+            ["character/tauren/female/taurenfemale_hd"]                 = 986648,
+            ["character/tauren/female/taurenfemale_npc"]                = 986648,
+            ["character/tauren/male/taurenmale"]                        = 122055,
+            ["character/tauren/male/taurenmale_hd"]                     = 968705,
+            ["character/tauren/male/taurenmale_npc"]                    = 968705,
+            ["character/troll/female/trollfemale"]                      = 122414,
+            ["character/troll/female/trollfemale_hd"]                   = 1018060,
+            ["character/troll/female/trollfemale_npc"]                  = 1018060,
+            ["character/troll/male/trollmale"]                          = 122560,
+            ["character/troll/male/trollmale_hd"]                       = 1022938,
+            ["character/troll/male/trollmale_npc"]                      = 1022938,
+            ["character/tuskarr/male/tuskarrmale"]                      = 122738,
+            ["character/vrykul/male/vrykulmale"]                        = 122815,
+        },
+        ["HD"] = {
+            ["character/scourge/female/scourgefemale"]                  = 997378,
+        },
+    }
+    local function CleanupModelName(model)
+        model = string.lower(model)
+        model = string.gsub(model, "\\", "/")
+        model = string.gsub(model, "%.m2", "")
+        model = string.gsub(model, "%.mdx", "")
+        return model
+    end
+    function ModelMixins:GetModelFileID()
+        local model = self:GetModel()
+        if model and type(model) == "string" then
+            model = CleanupModelName(model)
+            local models = modelToFileID[Portrait:GetCurrentModelSet()] or modelToFileID["Original"]
+            return models[model] or modelToFileID["Original"][model]
+        end
+    end
+end
+
+if Version.IsLegacyVanilla then
+    function RegionOverrides:SetPoint(point, region, relativeFrame, offsetX, offsetY)
+        if region == nil and relativeFrame == nil and offsetX == nil and offsetY == nil then
+            self:_SetPoint(point, 0, 0)
+        else
+            self:_SetPoint(point, region, relativeFrame, offsetX, offsetY)
+        end
+    end
+    function FrameOverrides:SetScript(script, handler)
+        self:_SetScript(script, script == "OnEvent"
+            and function() handler(this, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) end
+            or  function() handler(this,        arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) end)
+    end
+    function FrameMixins:HookScript(script, handler)
+        local old = self:GetScript(script)
+        self:_SetScript(script, script == "OnEvent"
+            and function() if old then old() end handler(this, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) end
+            or  function() if old then old() end handler(this,        arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) end)
+    end
+
+
+    hooksecurefunc(GameTooltip, "SetOwner", function(self, owner, anchor)
+        self._owner = owner
+    end)
+    function GameTooltip:GetOwner()
+        return self._owner
+    end
+
+
+end
+if Version.IsLegacyBurningCrusade then
+    function FrameOverrides:SetScript(script, handler)
+        self:_SetScript(script, script == "OnEvent"
+            and function() handler(this, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) end
+            or  function() handler(this,        arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) end)
+    end
+end
+
+if Version.IsLegacyVanilla or Version.IsLegacyBurningCrusade then
+
+    local modelFramePool = {}
+    function Portrait:AcquireModelFrame(portrait, clip)
+        if portrait.pooledModel and portrait.pooledModel._inUse then
+            return portrait.pooledModel
+        end
+
+        local frame
+        for _, pooled in ipairs(modelFramePool) do
+            if not pooled._inUse then
+                frame = pooled
+                break
+            end
+        end
+
+        if not frame then
+            frame = CreateFrame("PlayerModel", nil, portrait)
+            table.insert(modelFramePool, frame)
+        end
+
+        frame._inUse = true
+        frame:ClearAllPoints()
+        frame:SetPoint("BOTTOMLEFT")
+        frame:SetSize(1, 1)
+        frame:Show()
+        frame:SetUnit("npc")
+
+        portrait.pooledModel = frame
+        return frame
+    end
+    function Portrait:ReleaseModelFrame(portrait, frame)
+        if not frame then
+            return
+        end
+        if portrait.pooledModel == frame then
+            portrait.pooledModel = nil
+        end
+        frame:Hide()
+        frame:ClearModel()
+        frame._inUse = false
+    end
+
+
+    function hookModel(self)
+        self._sequence = 0
+        hooksecurefunc(self, "ClearModel", function(self)
+            self._sequence = 0
+            self._sequenceStart = nil
+        end)
+        hooksecurefunc(self, "SetSequence", function(self, sequence)
+            self._sequence = sequence
+            self._sequenceStart = GetTime()
+        end)
+        self:HookScript("OnUpdate", function(self, elapsed)
+            if self._sequence ~= 0 then
+                self:SetSequenceTime(self._sequence, (GetTime() - self._sequenceStart) * 1000)
+            end
+        end)
+    end
+
+    function FrameOverrides:HookScript(script, handler)
+        if self:GetScript(script) then
+            self:_HookScript(script, handler)
+        else
+            self:SetScript(script, handler)
+        end
+    end
+    function FrameOverrides:CreateTexture(name, layer)
+        local region = self:_CreateTexture(name, layer)
+        ApplyMixinsAndOverrides(region, RegionMixins, RegionOverrides)
+        return region
+    end
+    function FrameOverrides:CreateFontString(name, layer, template)
+        local region = self:_CreateFontString(name, layer, template)
+        ApplyMixinsAndOverrides(region, RegionMixins, RegionOverrides)
+        ApplyMixinsAndOverrides(region, FontStringMixins)
+        return region
+    end
+    function FrameOverrides:SetNormalTexture(file)
+        local texture = self:CreateTexture(nil, "ARTWORK")
+        local success = texture:SetTexture(file)
+        texture:SetAllPoints()
+        self._normalTexture = texture
+        self:_SetNormalTexture(texture)
+        return success
+    end
+    function FrameMixins:GetNormalTexture()
+        return self._normalTexture
+    end
+    function FrameOverrides:SetPushedTexture(file)
+        local texture = self:CreateTexture(nil, "ARTWORK")
+        local success = texture:SetTexture(file)
+        texture:SetAllPoints()
+        self._pushedTexture = texture
+        self:_SetPushedTexture(texture)
+        return success
+    end
+    function FrameMixins:GetPushedTexture()
+        return self._pushedTexture
+    end
+    function FrameOverrides:SetDisabledTexture(file)
+        local texture = self:CreateTexture(nil, "ARTWORK")
+        local success = texture:SetTexture(file)
+        texture:SetAllPoints()
+        self._disabledTexture = texture
+        self:_SetDisabledTexture(texture)
+        return success
+    end
+    function FrameMixins:GetDisabledTexture()
+        return self._disabledTexture
+    end
+    function FrameOverrides:SetHighlightTexture(file)
+        local texture = self:CreateTexture(nil, "HIGHLIGHT")
+        local success = texture:SetTexture(file)
+        texture:SetAllPoints()
+        self._highlightTexture = texture
+        self:_SetHighlightTexture(texture)
+        return success
+    end
+    function FrameMixins:GetHighlightTexture()
+        return self._highlightTexture
+    end
+    function FontStringMixins:SetWordWrap(wrap)
+        if not wrap then
+            self:SetHeight((select(2, self:GetFont())))
+        end
+    end
+    function ModelMixins:SetCreature()
+    end
+
+    function GameTooltip_Hide()
+        -- Used for XML OnLeave handlers
+        GameTooltip:Hide()
+    end
+
+end
+
+if Version.IsLegacyBurningCrusade or Version.IsLegacyWrath then
+    function Portrait:GetCurrentModelSet()
+        return Addon.db.profile.Audio.LegacyHDModels and "HD" or "Original"
+    end
+
+    -- Frame fade-in to soften the delay the music-channel path adds before a clip.
+    hooksecurefunc(PlayerFrame, "InitDisplay", function(self)
+        local fadeIn, animation
+        if self.frame.CreateAnimationGroup then
+            fadeIn = self.frame:CreateAnimationGroup()
+            animation = fadeIn:CreateAnimation("Alpha")
+            animation:SetOrder(1)
+            animation:SetDuration(0)
+            animation:SetChange(-1)
+            animation = fadeIn:CreateAnimation("Alpha")
+            animation:SetOrder(2)
+            animation:SetDuration(1)
+            animation:SetChange(1)
+            animation:SetSmoothing("OUT")
+        else
+            fadeIn, animation = { frame = self.frame }, {}
+            function fadeIn:Stop() self.frame:SetAlpha(1); self.enabled = nil end
+            function fadeIn:Play() self.frame:SetAlpha(0); self.enabled = true end
+            function animation:SetDuration(duration) self.duration = duration end
+            self.frame:HookScript("OnUpdate", function(frame, elapsed)
+                if fadeIn.enabled then
+                    local alpha = math.min(1, frame:GetAlpha() + elapsed / animation.duration)
+                    if alpha >= 1 then fadeIn:Stop() else frame:SetAlpha(alpha) end
+                end
+            end)
+        end
+        self.frame:HookScript("OnShow", function()
+            fadeIn:Stop()
+            local head = SoundQueue:GetCurrentSound()
+            local duration = head and head.delay or 0
+            if duration > 0 then
+                animation:SetDuration(duration)
+                fadeIn:Play()
+            end
+        end)
+    end)
+end
+
+if Version.IsRetailMainline then
+    function Portrait:GetCurrentModelSet()
+        return "HD"
+    end
+end

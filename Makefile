@@ -41,6 +41,7 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@$(LUA) tests/lua/queue_test.lua
 	@$(LUA) tests/lua/sources_test.lua
 	@$(LUA) tests/lua/api_contract_test.lua
+	@$(LUA) tests/lua/player_frame_test.lua
 
 test: test-player ## Everything: both webs, the Python pipeline, the addons
 	@pnpm -r test

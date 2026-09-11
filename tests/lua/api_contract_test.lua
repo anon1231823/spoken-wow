@@ -36,12 +36,16 @@ local METHODS = {
     "RegisterCallback", "UnregisterCallback",
     -- packs
     "EnumerateAddonsWithKey",
+    -- frame, settings
+    "GetPlayerFrame", "GetSettingsCategory", "OpenSettings", "AddSettingsLink",
 }
 for _, name in ipairs(METHODS) do
     Expect("Spoken:" .. name .. " exists", type(Spoken[name]), "function")
 end
 Expect("Spoken.Packs.Register exists", type(Spoken.Packs and Spoken.Packs.Register), "function")
 Expect("Spoken.Packs.Get exists", type(Spoken.Packs and Spoken.Packs.Get), "function")
+Expect("Spoken.Minimap.AddEntry exists", type(Spoken.Minimap and Spoken.Minimap.AddEntry), "function")
+Expect("Spoken.Minimap.RemoveEntry exists", type(Spoken.Minimap and Spoken.Minimap.RemoveEntry), "function")
 
 local SOURCE_METHODS = { "Enqueue", "PlayNow", "Remove", "StopAll", "AddGate", "CanPlay", "SetQueueLimit", "SetInterClipGap" }
 local src = Spoken:RegisterSource("contract", { title = "Contract", addon = "X", order = 1 })
