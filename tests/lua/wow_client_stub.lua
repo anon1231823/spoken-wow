@@ -16,6 +16,14 @@ local world = {
     npcGUID = "Creature-0-0-0-0-1234-0",
     panels = {},
     played = {},
+    -- Sound state the player addon is tested against. `played` keeps the path only, so
+    -- the older quest tests read it unchanged; the channel of the nth play is beside it.
+    playedChannels = {},
+    stopped = {},      -- handles StopSound was asked to stop, in order
+    music = {},        -- paths PlayMusic was given, in order (the 2.4.3/3.3.5 path)
+    missing = {},      -- paths PlaySoundFile refuses, as a set
+    cvars = {},        -- overrides; anything unset reads as "1"
+    cvarLog = {},      -- every SetCVar, as {key, value}, so a toggle can be asserted
 }
 M.world = world
 
@@ -95,9 +103,23 @@ M.Frame = Frame
 
 local _G = _G
 
--- A current Blizzard client, which is where the 10 Hz watcher runs at all.
-function _G.GetBuildInfo() return "2.5.6", "60000", "Jan 1 2026", 20506 end
-_G.WOW_PROJECT_ID = 5
+-- A current Blizzard client by default, which is where the 10 Hz watcher runs at all.
+-- SetClient() swaps in a private-server client: those have no WOW_PROJECT_ID, and 1.12
+-- reports no interface version at all, which is exactly what Version.lua keys on.
+local CLIENTS = {
+    ["20506"] = { "2.5.6", "60000", 20506, 5 },
+    ["11509"] = { "1.15.9", "69109", 11509, 2 },
+    ["1.12"]  = { "1.12.1", "5875", nil, nil },
+    ["2.4.3"] = { "2.4.3", "8606", 20400, nil },
+    ["3.3.5"] = { "3.3.5", "12340", 30300, nil },
+}
+function M.SetClient(label)
+    local c = assert(CLIENTS[label], "unknown client " .. tostring(label))
+    _G.GetBuildInfo = function() return c[1], c[2], "Jan 1 2026", c[3] end
+    _G.WOW_PROJECT_ID = c[4]
+end
+M.SetClient("20506")
+_G.UIParent = MakeFrame("UIParent")
 _G.WOW_PROJECT_CLASSIC = 2
 _G.WOW_PROJECT_BURNING_CRUSADE_CLASSIC = 5
 _G.WOW_PROJECT_WRATH_CLASSIC = 11
@@ -114,13 +136,20 @@ function _G.UnitGUID() return world.npcGUID end
 function _G.UnitExists() return true end
 function _G.UnitIsPlayer() return false end
 function _G.UnitSex() return 2 end
-function _G.GetCVar() return "1" end
-function _G.SetCVar() end
-function _G.PlaySoundFile(path)
+function _G.GetCVar(key) return world.cvars[key] or "1" end
+function _G.SetCVar(key, value)
+    world.cvars[key] = tostring(value)
+    table.insert(world.cvarLog, { key, tostring(value) })
+end
+function _G.PlaySoundFile(path, channel)
+    if world.missing[path] then return false end
     table.insert(world.played, path)
+    world.playedChannels[#world.played] = channel
     return true, #world.played
 end
-function _G.StopSound() end
+function _G.StopSound(handle) table.insert(world.stopped, handle) end
+function _G.PlayMusic(path) table.insert(world.music, path) end
+function _G.StopMusic() table.insert(world.music, false) end
 function _G.CreateFrame(_, name) return name and Frame(name) or MakeFrame("anonymous") end
 function _G.hooksecurefunc() return true end
 function _G.IsLoggedIn() return true end
@@ -177,25 +206,30 @@ _G.LibStub = setmetatable({
     GetLibrary = function(_, name) return libs[name] end,
 }, { __call = function(_, name) return libs[name] end })
 
+local function EmbedTimers(addon)
+    function addon:ScheduleTimer(fn, delay)
+        local timer = { at = world.time + delay, fn = fn }
+        table.insert(timers, timer)
+        return timer
+    end
+    function addon:ScheduleRepeatingTimer(fn, interval)
+        local timer = { at = world.time + interval, fn = fn, interval = interval }
+        table.insert(timers, timer)
+        return timer
+    end
+    function addon:CancelTimer(timer)
+        if timer then timer.at = nil end
+    end
+    return addon
+end
+libs["AceTimer-3.0"] = { Embed = function(_, target) return EmbedTimers(target) end }
+
 libs["AceAddon-3.0"] = {
     GetAddon = function() return nil end,
     NewAddon = function(_, name)
-        local addon = { name = name }
+        local addon = EmbedTimers({ name = name })
         function addon:RegisterEvent() end
         function addon:UnregisterEvent() end
-        function addon:ScheduleTimer(fn, delay)
-            local timer = { at = world.time + delay, fn = fn }
-            table.insert(timers, timer)
-            return timer
-        end
-        function addon:ScheduleRepeatingTimer(fn, interval)
-            local timer = { at = world.time + interval, fn = fn, interval = interval }
-            table.insert(timers, timer)
-            return timer
-        end
-        function addon:CancelTimer(timer)
-            if timer then timer.at = nil end
-        end
         return addon
     end,
 }
@@ -215,7 +249,26 @@ libs["AceDB-3.0"] = {
     end,
 }
 
---- Load the player against this stub and return its private environment.
+--- Load the Spoken player addon against this stub and return its private environment.
+--- Loads exactly what its addon.xml lists, in order, then initialises the saved
+--- variables the way ADDON_LOADED would.
+function M.LoadSpoken(addonDirectory)
+    for _, file in ipairs({ "Environment", "Version", "Core", "SoundUtils", "API", "Compat" }) do
+        dofile(addonDirectory .. file .. ".lua")
+    end
+    local env = _G.SpokenEnv
+    env.Addon:InitDB()
+    return env
+end
+
+--- Reset every piece of sound state a test can observe.
+function M.ResetSound()
+    for _, key in ipairs({ "played", "playedChannels", "stopped", "music", "missing", "cvars", "cvarLog" }) do
+        world[key] = {}
+    end
+end
+
+--- Load the quests player against this stub and return its private environment.
 function M.LoadPlayer(addonDirectory)
     dofile(addonDirectory .. "Environment.lua")
     local VO = _G.VoiceOver

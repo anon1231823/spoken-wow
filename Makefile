@@ -37,6 +37,7 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@[ -n "$(LUA)" ] || { echo "No luajit found: brew install luajit"; exit 1; }
 	@$(LUA) tests/lua/quest_dispatch_test.lua
 	@$(LUA) tests/lua/easter_egg_test.lua
+	@$(LUA) tests/lua/sound_utils_test.lua
 
 test: test-player ## Everything: both webs, the Python pipeline, the addons
 	@pnpm -r test

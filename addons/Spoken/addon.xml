@@ -1,5 +1,9 @@
 <Ui xsi:schemaLocation="http://www.blizzard.com/wow/ui/ ..\FrameXML\UI.xsd">
     <Include file="Environment.lua"/>
     <Include file="Version.lua"/>
+    <Include file="Core.lua"/>
+    <Include file="SoundUtils.lua"/>
     <Include file="API.lua"/>
+
+    <Include file="Compat.lua"/>
 </Ui>
