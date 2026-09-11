@@ -1,17 +1,223 @@
 setfenv(1, SpokenEnv)
 
--- The public surface. Everything a feature addon may rely on is defined in this file
--- or documented here; nothing else on `Spoken` is a contract.
+-- The public surface. Everything a feature addon may rely on is defined in this file;
+-- nothing else on `Spoken` is a contract, and nothing here writes anywhere but `Spoken`.
 --
--- API_VERSION moves only on a breaking change. A feature addon's entire hard
--- requirement is `_G.Spoken and Spoken:IsCompatible(1)`, and a copy bundled into a
--- legacy-client zip may lag the one an addon manager installs, so this is what lets
--- the two disagree safely.
+-- API_VERSION moves only on a breaking change. A feature addon's entire hard requirement
+-- is `_G.Spoken and Spoken:IsCompatible(1)`. A copy bundled into a legacy-client zip may
+-- lag the one an addon manager installs, so this is what lets the two disagree safely.
 Spoken.API_VERSION = 1
 Spoken.ADDON_VERSION = AddonVersion
 
 ---@param required number The API_VERSION the caller was written against.
----@return boolean
 function Spoken:IsCompatible(required)
     return type(required) == "number" and required <= self.API_VERSION
+end
+
+--------------------------------------------------------------------------------
+-- Sources: how a feature addon joins the player. See Sources.lua for the info shape.
+--------------------------------------------------------------------------------
+
+---@param key string  "quests" | "zones" | "books"
+---@param info SpokenSourceInfo
+---@return table source  Carries Enqueue, PlayNow, Remove, StopAll, AddGate, CanPlay,
+---                      SetQueueLimit and SetInterClipGap.
+function Spoken:RegisterSource(key, info)
+    return Sources:Register(key, info)
+end
+
+function Spoken:GetSource(key)
+    return Sources:Get(key)
+end
+
+--- Iterates `key, source` in menu order.
+function Spoken:IterateSources()
+    return Sources:Iterate()
+end
+
+--------------------------------------------------------------------------------
+-- Clips and presentation
+--------------------------------------------------------------------------------
+--
+-- A clip is what a source enqueues. The caller owns the file and the duration; the player
+-- never resolves a path.
+--
+--   clip = {
+--     key      = "q:33:accept",               -- caller-unique; the dedup key
+--     path     = [[Interface\AddOns\...\x.ogg]],
+--     length   = 3.4,                         -- seconds; the client cannot report this
+--     delay    = nil,                         -- silence before; only 2.4.3/3.3.5 set it
+--     priority = "normal" | "low",            -- low yields at the door; gossip is low
+--     present  = {
+--       header   = "Eagan Peltskinner",       -- NPC name | zone name | book title
+--       label    = "Wolves Across the Border",-- quest title | subzone | page label
+--       bullet   = "quest-accept",            -- a RegisterBullet id
+--       tint     = { r, g, b },               -- optional row tint
+--       portrait = { kind = "model", creatureID = 196 }
+--                | { kind = "texture", texture = [[...]], texCoord = { l, r, t, b } }
+--                | { kind = "none" },
+--       actions  = { { id, text, tooltip, visible, onClick, create }, ... },
+--     },
+--     addedCallback = fun(clip), startCallback = fun(clip),
+--     stopCallback  = fun(clip, finishedPlaying),
+--   }
+--
+-- The player sets id, handle, source and nextSoundTimer; a caller never does.
+
+local bullets = {}
+local renderers = {}
+
+--- A row bullet, registered once by a feature addon so SpokenBooks needs no change to
+--- the player to have one of its own.
+function Spoken:RegisterBullet(id, texture, size)
+    bullets[id] = { texture = texture, size = size }
+end
+
+function Spoken:GetBullet(id)
+    return bullets[id]
+end
+
+--- A portrait renderer: { Acquire(portrait, parent) -> frame, Update(frame, clip) -> bool,
+--- Release(frame) }. Acquire/Release exist because 1.12 and 2.4.3 pool DressUpModel
+--- frames, and the pooling has to live somewhere. "texture", "model" and "none" ship with
+--- the player.
+function Spoken:RegisterPortraitRenderer(kind, renderer)
+    renderers[kind] = renderer
+end
+
+function Spoken:GetPortraitRenderer(kind)
+    return renderers[kind]
+end
+
+--------------------------------------------------------------------------------
+-- The queue, player-wide. Source-scoped operations live on the source.
+--------------------------------------------------------------------------------
+
+--- The head: speaking, paused, or held by a gate. Queue rows read this.
+function Spoken:GetCurrent()
+    return SoundQueue:GetCurrentSound()
+end
+
+--- The head only if it is speaking or paused mid-clip. Controls read this: a held clip
+--- sits at the head making no sound, and offering Pause over silence lies.
+function Spoken:GetNowPlaying()
+    return SoundQueue:GetNowPlaying()
+end
+
+--- A shallow copy.
+function Spoken:GetQueue()
+    return SoundQueue:GetQueue()
+end
+
+function Spoken:GetQueueSize()
+    return SoundQueue:GetQueueSize()
+end
+
+--- Excludes the speaking head.
+function Spoken:GetWaitingCount()
+    return SoundQueue:GetWaitingCount()
+end
+
+function Spoken:IsPlaying(clip)
+    return SoundQueue:IsPlaying(clip)
+end
+
+function Spoken:IsPaused()
+    return SoundQueue:IsPaused()
+end
+
+function Spoken:GetHeldReason(clip)
+    return SoundQueue:GetHeldReason(clip)
+end
+
+--- Pause is stop, and resume replays from the start: the client has no seek.
+function Spoken:Pause()
+    return SoundQueue:PauseQueue()
+end
+
+function Spoken:Resume()
+    return SoundQueue:ResumeQueue()
+end
+
+function Spoken:TogglePause()
+    return SoundQueue:TogglePauseQueue()
+end
+
+--- End the head; the backlog runs.
+function Spoken:Skip()
+    return SoundQueue:Skip()
+end
+
+--- Everything, every source, and the paused flag with it.
+function Spoken:StopAll()
+    SoundQueue:RemoveAllSoundsFromQueue()
+end
+
+--- A gate that applies to every source: fn(clip) -> reason | nil.
+function Spoken:AddGate(fn)
+    SoundQueue:AddGate(fn)
+end
+
+--------------------------------------------------------------------------------
+-- Callbacks
+--------------------------------------------------------------------------------
+--
+--   AUDIO_CHANGED      ()                  coarse; after every mutation
+--   CLIP_QUEUED        (clip)
+--   CLIP_STARTED       (clip)
+--   CLIP_STOPPED       (clip, finishedPlaying)
+--   CLIP_DROPPED       (clip, reason)      queue-limit | outranked | missing | an admit reason
+--   QUEUE_EMPTY        ()
+--   SOURCE_REGISTERED  (source)
+
+function Spoken:RegisterCallback(event, fn)
+    return Callbacks:Register(event, fn)
+end
+
+function Spoken:UnregisterCallback(handle)
+    Callbacks:Unregister(handle)
+end
+
+--------------------------------------------------------------------------------
+-- Packs
+--------------------------------------------------------------------------------
+--
+-- A registry convention, not a resolver: each feature addon owns discovering and
+-- resolving its own packs, and the player only ever sees a clip's path. This gives new
+-- packs one place to register and one shared utility for the TOC-key scan.
+
+Spoken.Packs = { bySource = {} }
+
+function Spoken.Packs:Register(sourceKey, folderName, pack)
+    self.bySource[sourceKey] = self.bySource[sourceKey] or {}
+    self.bySource[sourceKey][folderName] = pack
+end
+
+--- Unsorted; the source ranks them.
+function Spoken.Packs:Get(sourceKey)
+    local list = {}
+    for _, pack in pairs(self.bySource[sourceKey] or {}) do
+        table.insert(list, pack)
+    end
+    return list
+end
+
+--- Every installed addon whose TOC carries `tocKey`, as an iterator over
+--- `index, folderName, value`. The reusable half of the quests addon's DataModules
+--- scan, wrapping the GetAddOnMetadata / C_AddOns split.
+function Spoken:EnumerateAddonsWithKey(tocKey)
+    local numAddons = C_AddOns and C_AddOns.GetNumAddOns and C_AddOns.GetNumAddOns() or GetNumAddOns()
+    local getInfo = C_AddOns and C_AddOns.GetAddOnInfo or GetAddOnInfo
+    local getMeta = C_AddOns and C_AddOns.GetAddOnMetadata or GetAddOnMetadata
+    local i = 0
+    return function()
+        while i < numAddons do
+            i = i + 1
+            local value = getMeta(i, tocKey)
+            if value and value ~= "" then
+                local folder = getInfo(i)
+                return i, folder, value
+            end
+        end
+    end
 end
