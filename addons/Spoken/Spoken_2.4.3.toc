@@ -3,6 +3,10 @@
 ## Notes: The voice player every Spoken addon speaks through, for 2.4.3 servers.
 ## Version: 1.0.0
 ## SavedVariables: SpokenDB
+## OptionalDeps: VoiceOverRedux, ZoneLore
+# The renamed addons' tombstones. Migrate() runs on this addon's ADDON_LOADED and reads
+# their saved variables, which exist only once those folders have loaded; without this
+# line they sort after "Spoken" and the settings would be read too early, as empty.
 ## X-Part-Of: Spoken
 ## X-Spoken-Player: 1
 

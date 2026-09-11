@@ -127,15 +127,23 @@ stage_tree() { # <staging dir> <source dir> <installed folder name>
 }
 stage_addon() { stage_tree "$1" "$SRC" "$NAME"; }
 
+# A legacy zip carries one client's tree only: the variant .toc takes the unsuffixed name and
+# everything the other clients need is removed.
+prune_for_client() { # <staged folder> <addon name> <source dir> <client variant>
+  local folder="$1" name="$2" src="$3" variant="$4" other
+  local source_toc="$src/${name}_${variant}.toc"
+  [ -f "$source_toc" ] || { echo "error: no $source_toc" >&2; exit 1; }
+  cp "$source_toc" "$folder/$name.toc"
+  rm -rf "$folder/Libs" "$folder/embeds.xml"
+  rm -f "$folder"/${name}_*.toc
+  for other in "${CLIENTS[@]}"; do
+    [ "${other##*:}" = "$variant" ] || rm -rf "$folder/${other##*:}"
+  done
+}
+
 # Addon hosts unpack into Interface/AddOns, so the archive root must be the folder itself.
 # -X drops the extra macOS attributes that otherwise ride along. The legacy client directories
 # are excluded: a Blizzard client loads none of them, and they are most of the archive.
-# Same check for the player's literal, which the legacy zips carry.
-player_version="$(sed -n 's/^## Version:[[:space:]]*//p' "$PLAYER_SRC/$PLAYER.toc" | head -1 | tr -d '\r')"
-player_literal="$(sed -n 's/^[[:space:]]*AddonVersion = "\(.*\)",/\1/p' "$PLAYER_SRC/Environment.lua" | head -1)"
-[ "$player_version" = "$player_literal" ] || {
-  echo "error: Spoken's Environment.lua says $player_literal but its .toc says $player_version" >&2; exit 1; }
-
 legacy_excludes=()
 for pair in "${CLIENTS[@]}"; do
   legacy_excludes+=("$NAME/${pair##*:}/*" "$NAME/${NAME}_${pair%%:*}.toc")
@@ -155,43 +163,19 @@ echo "built $(basename "$zip_path")   files: $files   size: $(du -h "$zip_path" 
 for pair in "${CLIENTS[@]}"; do
   client="${pair%%:*}"
   variant="${pair##*:}"
-  source_toc="$SRC/${NAME}_${variant}.toc"
-  [ -f "$source_toc" ] || { echo "error: no $source_toc for client $client" >&2; exit 1; }
-
-  stage_addon "$staging/$client"
-  folder="$staging/$client/$NAME"
-
   # The unsuffixed name is the only one this client opens, so the variant for it goes there.
   # Everything the other clients need is then dead weight: the suffixed .toc files, the root
   # Libs/ (its AceTimer binds C_Timer.After, which does not exist here), and the two other
-  # vendored trees.
-  cp "$source_toc" "$folder/$NAME.toc"
-  rm -rf "$folder/Libs" "$folder/embeds.xml"
-  rm -f "$folder"/${NAME}_*.toc
-  for other in "${CLIENTS[@]}"; do
-    [ "${other##*:}" = "$variant" ] || rm -rf "$folder/${other##*:}"
-  done
-  # The one place the dependency is hard: the player is in this zip.
-  sed -i.bak 's/^## OptionalDeps: Spoken, VoiceOverRedux$/## Dependencies: Spoken/' "$folder/$NAME.toc"
-  rm -f "$folder/$NAME.toc.bak"
-  grep -q '^## Dependencies: Spoken$' "$folder/$NAME.toc" || {
-    echo "error: could not make Spoken a hard dependency in $client's $NAME.toc" >&2; exit 1; }
+  # vendored trees. The legacy variant TOC is where the player becomes a hard dependency.
+  stage_addon "$staging/$client"
+  prune_for_client "$staging/$client/$NAME" "$NAME" "$SRC" "$variant"
+  grep -q '^## Dependencies: Spoken$' "$staging/$client/$NAME/$NAME.toc" || {
+    echo "error: ${NAME}_${variant}.toc must declare '## Dependencies: Spoken'" >&2; exit 1; }
 
-  # The player, pruned the same way, and proven to be its own tree.
+  # The player, pruned the same way. It is copied from addons/Spoken on every build; the
+  # packaging tests assert the zip's copy is byte-identical to that tree.
   stage_tree "$staging/$client" "$PLAYER_SRC" "$PLAYER"
-  player="$staging/$client/$PLAYER"
-  player_toc="$PLAYER_SRC/${PLAYER}_${variant}.toc"
-  [ -f "$player_toc" ] || { echo "error: no $player_toc for client $client" >&2; exit 1; }
-  cp "$player_toc" "$player/$PLAYER.toc"
-  rm -rf "$player/Libs" "$player/embeds.xml"
-  rm -f "$player"/${PLAYER}_*.toc
-  for other in "${CLIENTS[@]}"; do
-    [ "${other##*:}" = "$variant" ] || rm -rf "$player/${other##*:}"
-  done
-  (cd "$player" && find . -type f ! -name "$PLAYER.toc" ! -path './.DS_Store' | while read -r f; do
-    cmp -s "$f" "$PLAYER_SRC/$f" || { echo "error: bundled $f differs from addons/Spoken/$f" >&2; exit 1; }
-  done) || exit 1
-  cmp -s "$player/$PLAYER.toc" "$player_toc" || { echo "error: bundled Spoken.toc is not ${PLAYER}_${variant}.toc" >&2; exit 1; }
+  prune_for_client "$staging/$client/$PLAYER" "$PLAYER" "$PLAYER_SRC" "$variant"
 
   zip_path="$DIST/$NAME-WoW_$client-$version.zip"
   rm -f "$zip_path"

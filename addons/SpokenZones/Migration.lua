@@ -7,8 +7,6 @@
 -- choice while the Data/ files are still loading, long before ADDON_LOADED, and it has to
 -- find it in the new table by then. LoadSavedVariablesFirst in the .toc is what makes the
 -- old tables exist this early.
-local ADDON_NAME, ZoneLore = ...
-
 local function DeepCopy(value)
 	if type(value) ~= "table" then
 		return value

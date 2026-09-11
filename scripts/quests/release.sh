@@ -110,18 +110,13 @@ esac; }
 # version in. So a pack's version is whatever was last built, read back out of the built
 # module - which also means releasing a pack nobody built fails here rather than uploading a
 # stale zip that happens to still be in dist/.
+target_toc() { case "$1" in
+  player) echo "$REPO/addons/SpokenQuests/SpokenQuests.toc";;
+  spoken) echo "$REPO/addons/Spoken/Spoken.toc";;
+  *)      local name; name="$(target_zip_name "$1")"; echo "$DIST/$name/$name.toc";;
+esac; }
 target_version() {
-  local name; name="$(target_zip_name "$1")"
-  if [ "$1" = player ]; then
-    sed -n 's/^## Version:[[:space:]]*//p' "$REPO/addons/SpokenQuests/SpokenQuests.toc" \
-      | head -1 | tr -d '\r'
-  elif [ "$1" = spoken ]; then
-    sed -n 's/^## Version:[[:space:]]*//p' "$REPO/addons/Spoken/Spoken.toc" \
-      | head -1 | tr -d '\r'
-  else
-    sed -n 's/^## Version:[[:space:]]*//p' "$DIST/$name/$name.toc" 2>/dev/null \
-      | head -1 | tr -d '\r'
-  fi
+  sed -n 's/^## Version:[[:space:]]*//p' "$(target_toc "$1")" 2>/dev/null | head -1 | tr -d '\r'
 }
 
 # Required dependencies, declared per uploaded file. Only the meta addon has any: it holds no
@@ -291,7 +286,7 @@ upload_target() {
     return 1
   fi
 
-  kind=pack; [ "$target" = player ] && kind=player; [ "$target" = spoken ] && kind=spoken
+  case "$target" in player|spoken) kind=$target;; *) kind=pack;; esac
   changelog="$(changelog_for "$version" "$kind")" || return 1
   size="$(du -h "$zip_path" | cut -f1)"
 

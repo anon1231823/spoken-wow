@@ -42,7 +42,7 @@ literal="$(sed -n 's/^[[:space:]]*AddonVersion = "\(.*\)",/\1/p' "$SRC/Environme
 for toc in "$SRC"/*.toc; do
   while IFS= read -r line; do
     case "$line" in \#*|"") continue;; esac
-    f="$(printf '%s' "$line" | tr -d '\r' | sed 's#\\#/#g; s/[[:space:]]*$//')"
+    f="${line//\\//}"; f="${f%"${f##*[![:space:]]}"}"
     case "$f" in *.lua|*.xml) [ -f "$SRC/$f" ] || { echo "error: $(basename "$toc") lists missing $f" >&2; exit 1; };; esac
   done < "$toc"
 done

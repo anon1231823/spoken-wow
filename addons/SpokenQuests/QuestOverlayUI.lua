@@ -1,5 +1,7 @@
 setfenv(1, VoiceOver)
 
+local TEXTURES = format([[Interface\AddOns\%s\Textures\]], AddonFolder)
+
 ---@class QuestPlayButton : Button
 ---@field soundData SoundData
 
@@ -15,8 +17,8 @@ function QuestOverlayUI:CreatePlayButton(questID)
     playButton:SetWidth(20)
     playButton:SetHeight(20)
     playButton:SetHitRectInsets(2, 2, 2, 2)
-    playButton:SetNormalTexture([[Interface\AddOns\SpokenQuests\Textures\QuestLogPlayButton]])
-    playButton:SetDisabledTexture([[Interface\AddOns\SpokenQuests\Textures\QuestLogPlayButton]])
+    playButton:SetNormalTexture((TEXTURES .. "QuestLogPlayButton"))
+    playButton:SetDisabledTexture((TEXTURES .. "QuestLogPlayButton"))
     playButton:GetDisabledTexture():SetDesaturated(true)
     playButton:GetDisabledTexture():SetAlpha(0.33)
     playButton:SetHighlightTexture("Interface\\BUTTONS\\UI-Panel-MinimizeButton-Highlight")
@@ -53,7 +55,7 @@ function QuestOverlayUI:UpdatePlayButtonTexture(questID)
     local button = self.questPlayButtons[questID]
     if button then
         local isPlaying = button.soundData and Player:Contains(button.soundData)
-        local texturePath = isPlaying and [[Interface\AddOns\SpokenQuests\Textures\QuestLogStopButton]] or [[Interface\AddOns\SpokenQuests\Textures\QuestLogPlayButton]]
+        local texturePath = isPlaying and (TEXTURES .. "QuestLogStopButton") or (TEXTURES .. "QuestLogPlayButton")
         button:SetNormalTexture(texturePath)
     end
 end

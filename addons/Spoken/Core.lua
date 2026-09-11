@@ -79,29 +79,28 @@ function Addon:Migrate()
     local function profileOf(sv)
         return type(sv) == "table" and type(sv.profiles) == "table" and sv.profiles.Default or nil
     end
+    local function copyKeys(from, to, keys)
+        for _, key in ipairs(keys) do
+            if from[key] ~= nil then
+                to[key] = from[key]
+            end
+        end
+    end
     local quests = profileOf(rawget(_G, "VoiceOverDB"))
     local zonesQueue = profileOf(rawget(_G, "ZoneLoreQueueDB"))
     local zones = rawget(_G, "ZoneLoreDB")
 
     local frame = quests and quests.SoundQueueUI or zonesQueue and zonesQueue.SoundQueueUI
     if frame then
-        for _, key in ipairs({ "LockFrame", "FrameScale", "FrameStrata", "HidePortrait", "HideFrame" }) do
-            if frame[key] ~= nil then
-                self.db.profile.Frame[key] = frame[key]
-            end
-        end
+        copyKeys(frame, self.db.profile.Frame, { "LockFrame", "FrameScale", "FrameStrata", "HidePortrait", "HideFrame" })
     end
 
     local icon = quests and quests.MinimapButton and quests.MinimapButton.LibDBIcon
-    if not icon and type(zones) == "table" and (zones.minimapPos ~= nil or zones.hide ~= nil) then
-        icon = { minimapPos = zones.minimapPos, hide = zones.hide, lock = zones.lock }
+    if not icon and type(zones) == "table" then
+        icon = zones -- LibDBIcon wrote its keys at the top level of ZoneLoreDB
     end
     if icon then
-        for _, key in ipairs({ "minimapPos", "hide", "lock" }) do
-            if icon[key] ~= nil then
-                self.db.profile.Minimap.LibDBIcon[key] = icon[key]
-            end
-        end
+        copyKeys(icon, self.db.profile.Minimap.LibDBIcon, { "minimapPos", "hide", "lock" })
     end
 
     if quests and quests.Audio then

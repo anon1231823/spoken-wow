@@ -67,6 +67,11 @@ esac; }
 # a .toc for both clients, so all three are filed against both. Files uploaded
 # before that are Era-only and stay filed as they were -- a file offered to a
 # client it cannot load on is worse than one that is simply absent there.
+# Required dependencies by CurseForge slug: the addon needs the player it speaks through.
+target_dependencies() { case "$1" in
+  zonelore) echo "spoken";;
+esac; }
+
 target_game_versions() { case "$1" in
   zonelore) echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
   audio)    echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
@@ -202,7 +207,7 @@ for target in "${targets[@]}"; do
   # release ends up with a mangled changelog nobody notices for a month.
   # The addon requires the player; the packs require nothing. By slug, which must be an
   # approved project or the upload fails with errorCode 1018.
-  dependencies=""; [ "$target" = zonelore ] && dependencies="spoken"
+  dependencies="$(target_dependencies "$target")"
   metadata="$(node -e '
     const [changelog, releaseType, gameVersionIds, displayName, dependencies] = process.argv.slice(1);
     const slugs = dependencies.trim().split(/\s+/).filter(Boolean);

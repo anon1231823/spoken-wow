@@ -185,3 +185,12 @@ def test_the_player_ships_on_its_own_for_blizzard_clients(player_built):
     for client in LEGACY_CLIENTS:
         assert not any(name.startswith(f"{PLAYER}/{client}/") for name in names)
     assert {entry.split("/", 1)[0] for entry in names} == {PLAYER}
+
+
+def test_the_player_loads_after_the_tombstones_whose_variables_it_migrates(player_built):
+    # Migrate() runs on Spoken's own ADDON_LOADED and reads VoiceOverDB / ZoneLoreDB, which
+    # exist only once those folders have loaded. Alphabetically they load after "Spoken".
+    version = version_of(PLAYER_DIR, PLAYER)
+    _, files = player_built[f"{PLAYER}-{version}.zip"]
+    for path, toc in tocs_in(files, PLAYER).items():
+        assert "## OptionalDeps: VoiceOverRedux, ZoneLore" in toc, path

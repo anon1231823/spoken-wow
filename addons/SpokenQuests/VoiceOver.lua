@@ -523,14 +523,11 @@ function Addon:OnInitialize()
     -- Every player this addon has ever been called, oldest first. Two players handle the same
     -- events and both queue the same line, so exactly one may be enabled - and a rename does
     -- not uninstall anything, which makes the fork's own former name as much of a duplicate
-    -- as upstream's. A name is only ever added here, never removed.
-    local SUPERSEDED_PLAYERS = { "AI_VoiceOver", "AI_VoiceOver_Continued" }
-    -- The old name is a folder that may hold the real old player (hand-installed, or a
-    -- manager that failed to replace it) rather than the tombstone. Either way it must not
-    -- run: the tombstone has no code, so disabling it costs nothing; the old player has
-    -- the same handlers as this one. Its saved variables were adopted above, this login,
-    -- and DisableAddOn takes effect only on the next.
-    table.insert(SUPERSEDED_PLAYERS, "VoiceOverRedux")
+    -- as upstream's. A name is only ever added here, never removed. The last is a folder that
+    -- may hold the real old player (hand-installed, or a manager that failed to replace it)
+    -- rather than the tombstone; either way it must not run, and its saved variables were
+    -- adopted above, this login. DisableAddOn takes effect only on the next.
+    local SUPERSEDED_PLAYERS = { "AI_VoiceOver", "AI_VoiceOver_Continued", "VoiceOverRedux" }
 
     local disabled = {}
     for _, addon in ipairs(SUPERSEDED_PLAYERS) do

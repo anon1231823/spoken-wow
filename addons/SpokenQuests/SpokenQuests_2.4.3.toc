@@ -3,12 +3,10 @@
 ## Notes: Quest and gossip dialogue read aloud, through the Spoken player. Formerly VoiceOver Redux. Restores quest and gossip voiceovers on 2.4.3 servers.
 ## Version: 2.0.0
 ## SavedVariables: SpokenQuestsDB
-## OptionalDeps: Spoken, VoiceOverRedux
-# Spoken is the player this addon speaks through: optional, so a hand-installed copy
-# without it loads and says what is missing; addon managers install it from the
-# CurseForge dependency. VoiceOverRedux is this addon's old name: a TOC-only tombstone
-# that keeps the old SavedVariables file loading, listed so it loads first and the
-# migration in VoiceOver.lua finds it.
+## Dependencies: Spoken
+# This client installs by hand from a zip that bundles the player, so the dependency is
+# hard here where the Blizzard-client .toc files keep it optional. No tombstone: the zip
+# is unpacked over the old folder, so VoiceOverRedux is never a sibling on these clients.
 ## X-Part-Of: Spoken
 ## X-VoiceOver-Player: 1
 
