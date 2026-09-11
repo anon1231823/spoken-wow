@@ -40,7 +40,25 @@ mv -T "$ROOT/current.new" "$ROOT/current" 2>/dev/null \
 
 # startOrReload covers both the first deploy and the steady state. --update-env forces pm2
 # to re-read the config instead of reusing its cached resolution of the old symlink target.
-"$PM2" startOrReload "$ROOT/shared/ecosystem.config.js" --update-env
+#
+# BUT --update-env DOES NOT UPDATE THE SCRIPT PATH. pm2 keeps the `script` it first
+# started an app with; reload re-reads the environment and nothing else. When the
+# monorepo move changed the path from server.js to apps/web-quests/server.js, every
+# reload kept launching the old one, the app errored 70 times over, and the site served
+# 502 while pm2 reported the config it was not using. Recovering needed a delete and a
+# fresh start, which is what this does automatically now -- but only when the path has
+# actually moved, because delete+start drops the connections that a reload preserves.
+expected="$(node -e 'const c=require(process.argv[1]);const a=(c.apps||[]).find(x=>x.name==="voiceover");process.stdout.write(a?a.script:"")' "$ROOT/shared/ecosystem.config.js" 2>/dev/null || true)"
+running="$("$PM2" jlist 2>/dev/null \
+  | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{let l=[];try{l=JSON.parse(s)}catch{};const a=l.find(x=>x.name==="voiceover");process.stdout.write(a&&a.pm2_env&&a.pm2_env.pm_exec_path?a.pm2_env.pm_exec_path:"")})' 2>/dev/null || true)"
+
+if [ -n "$running" ] && [ -n "$expected" ] && [ "$running" != "$ROOT/current/$expected" ]; then
+  echo "activate: script path moved ($running -> $ROOT/current/$expected); recreating the pm2 app"
+  "$PM2" delete voiceover >/dev/null 2>&1 || true
+  "$PM2" start "$ROOT/shared/ecosystem.config.js" --only voiceover
+else
+  "$PM2" startOrReload "$ROOT/shared/ecosystem.config.js" --update-env
+fi
 "$PM2" save --force
 
 echo "activate: done"
