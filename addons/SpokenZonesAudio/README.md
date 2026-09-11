@@ -21,7 +21,7 @@ Two packs, the same voicelines, differing only in quality:
 
 This is the larger pack. If ~450 MB is more than you want to spend, ZoneLore Audio 64 has the same lines, VBR mono, at half the size — close to transparent for speech.
 
-Both can be installed at once — ZoneLore plays the higher-quality one, and `/zl audio` switches between them.
+Both can be installed at once — Spoken Zones plays the higher-quality one, and `/zl audio` switches between them.
 
 ## Installing
 

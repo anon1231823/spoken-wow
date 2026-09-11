@@ -1,8 +1,8 @@
 ---
 project: 1636521
 slug: zonelore
-name: ZoneLore
-summary: Zone lore on the world map. Open the map and read the story of the zone you're looking at, or click any subzone for its own. Every zone and subzone, optionally narrated.
+name: Spoken Zones
+summary: Formerly ZoneLore. Zone lore on the world map. Open the map and read the story of the zone you're looking at, or click any subzone for its own. Every zone and subzone, optionally narrated.
 categories:
   - Miscellaneous
   - Roleplay
@@ -10,7 +10,7 @@ license: MIT
 addonReadme: addons/SpokenZones/README.md
 ---
 
-**Zone lore on the world map, for WoW Classic Era.**
+**Zone lore on the world map, for WoW Classic Era.** Formerly ZoneLore — now one of the Spoken addons, narrating through the [Spoken](https://www.curseforge.com/wow/addons/spoken) player shared with Spoken Quests, which your addon manager installs alongside.
 
 Open the map and the lore of the zone you're looking at appears beside it. Click a named subzone and you get that place's story instead. Optionally, it's read aloud.
 
@@ -24,14 +24,14 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 - **Subzone lore** — click any named area on the map to read about it.
 - **Hover preview** — point at a subzone for the first lines in a tooltip, without disturbing the panel.
 - **Lore window** — browse zones without opening the map, from the minimap button or `/zl window`.
-- **Narration** — a play button beside the lore, with floating pause/skip/stop controls.
+- **Narration** — a play button beside the lore; what is being read, and what is waiting, shows in the Spoken player with Read and Report beside it.
 - **Autoplay** — walking into an area you've never discovered narrates it once, tracked per character. Already explored the world? A setting narrates those areas too, still once each.
 - **Works on non-English clients** — subzone lore is found by the name your client reports, so a German, French, Spanish, Portuguese, Russian, Korean or Chinese client reaches it too. The lore text itself is English for now.
 - **Report a problem** — a Report button on every entry and on the playback controls. The game can't open a browser, so it hands you a short link to that exact line; the page at the other end has the text, the audio and a form.
 
 ## Narration needs a sound pack
 
-The voice audio is a large download, so it ships separately. **ZoneLore works fine without one** — you read rather than listen. Without a pack the Play button simply doesn't appear, and nothing is narrated.
+The voice audio is a large download, so it ships separately. **Spoken Zones works fine without one** — you read rather than listen. Without a pack the Play button simply doesn't appear, and nothing is narrated.
 
 Two packs, the same voicelines — and there are a lot of them — differing only in quality:
 
@@ -40,7 +40,7 @@ Two packs, the same voicelines — and there are a lot of them — differing onl
 | **ZoneLore Audio** | 128 kbps | ~450 MB |
 | **ZoneLore Audio 64** | VBR mono | ~220 MB |
 
-Install ZoneLore Audio unless the download is a problem, in which case ZoneLore Audio 64 is half the size and close to transparent for speech. With both installed ZoneLore plays the higher-quality one; `/zl audio` lists what you have and switches between them.
+Install ZoneLore Audio unless the download is a problem, in which case ZoneLore Audio 64 is half the size and close to transparent for speech. With both installed Spoken Zones plays the higher-quality one; `/zl audio` lists what you have and switches between them.
 
 ### The voice
 
@@ -69,7 +69,11 @@ Built for **Classic Era 1.15.9** and the **Anniversary client (2.5.6)**. Not bui
 
 The lore covers vanilla Azeroth, which is where an Anniversary character spends most of their levelling. Outland and the blood elf and draenei starting zones have no lore yet — the panel is empty there rather than wrong.
 
-ZoneLore and a sound pack work together as long as they share a major version.
+Spoken Zones and a sound pack work together as long as they share a major version.
+
+## Upgrading from ZoneLore
+
+Nothing to do. Your settings and per-character narration history carry over on the first login, and the old `ZoneLore` folder is replaced by an empty placeholder that keeps them loading until then — it shows greyed in the AddOns list and can be deleted afterwards. The sound packs are unchanged. The player window and minimap button are Spoken's now; this addon's entries are on that button.
 
 ## Support
 

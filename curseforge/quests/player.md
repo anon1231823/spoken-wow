@@ -1,4 +1,4 @@
-A rework of the original VoiceOver addon, which makes NPCs speak their quest text.
+**Formerly VoiceOver Redux.** A rework of the original VoiceOver addon, which makes NPCs speak their quest text — now one of the Spoken addons, sharing the [Spoken](https://www.curseforge.com/wow/addons/spoken) player with Spoken Zones.
 
 Main changes:
 
@@ -9,7 +9,11 @@ Main changes:
 - tons of pronunciation fixes
 - more natural-sounding performance
 
-**This addon is the player and holds no audio.** Install a sound pack alongside it; neither does anything alone.
+**This addon holds no audio, and plays through Spoken.** Install a sound pack alongside it; your addon manager installs the Spoken player automatically. Neither does anything alone.
+
+## Upgrading from VoiceOver Redux
+
+Nothing to do. Your settings carry over on the first login, and the old `VoiceOverRedux` folder is replaced by an empty placeholder that keeps them loading until then — it shows greyed in the AddOns list and can be deleted afterwards. The sound packs are unchanged and keep working. The player window, minimap button and sound channel are now Spoken's settings: Game Menu → Options → AddOns → Spoken.
 
 ## Pick a sound pack
 
