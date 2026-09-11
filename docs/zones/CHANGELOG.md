@@ -3,6 +3,19 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 1.0.0 — 2026-09-11
+
+Renamed to **Spoken Zones**, and narration now plays through the **Spoken** player shared
+with Spoken Quests. Addon managers install Spoken automatically.
+
+- Settings migrate on first login from the old ZoneLore folder, which this release replaces
+  with a tombstone that can be deleted afterwards.
+- One queue with quest voiceover: a discovery no longer cuts off or is cut off by a quest
+  line; each waits its turn. Narration held through combat no longer blocks a quest line.
+- The player frame and minimap button are Spoken's; this addon adds its entries to the one
+  button and its Read/Report buttons to the one frame.
+- The sound packs are unchanged and keep working.
+
 ## 0.4.3 — 2026-08-19
 
 **An icon in the addon list**

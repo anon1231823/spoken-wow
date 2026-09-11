@@ -6,6 +6,19 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 2.0.0 — player
+
+Renamed to **Spoken Quests**, and the player extracted into the **Spoken** addon that every
+Spoken addon speaks through. Addon managers install Spoken automatically; the 1.12, 2.4.3 and
+3.3.5 zips carry it inside.
+
+- Settings migrate on first login from the old VoiceOverRedux folder, which this release
+  replaces with a tombstone that can be deleted afterwards.
+- One queue with ZoneLore: quest lines and zone narration wait their turn behind each other,
+  and nothing interrupts. Gossip yields to a queued quest line in both directions.
+- The player frame, minimap button, sound channel and pause are Spoken's settings now.
+- The sound packs are unchanged and keep working.
+
 ## 1.3.0 — player
 
 **"OG Thrall".** A new option under Audio plays AI VoiceOver's original recording of Thrall's
