@@ -1,5 +1,161 @@
 setfenv(1, SpokenEnv)
 
+--------------------------------------------------------------------------- polyfills
+--
+-- What the private-server clients lack of the Lua the rest of this addon is written in.
+-- Lifted from the quests addon. Written into the environment, never into _G, so other
+-- addons on those clients see their own Lua and not ours.
+--
+-- Load order note: this file loads last, and that is fine -- nothing above calls
+-- `select`, `hooksecurefunc` or the rest at load time, only from functions that run
+-- after login.
+
+-- Patch 11.0.2 removed the legacy global AddOn-management API. Current
+-- Classic clients expose the same operations through C_AddOns, with the
+-- character/addon argument order reversed for GetAddOnEnableState.
+-- Keep these shims private to VoiceOver's environment so other addons are
+-- not affected.
+if C_AddOns then
+    GetNumAddOns = GetNumAddOns or C_AddOns.GetNumAddOns
+    GetAddOnInfo = GetAddOnInfo or C_AddOns.GetAddOnInfo
+    GetAddOnMetadata = GetAddOnMetadata or C_AddOns.GetAddOnMetadata
+    IsAddOnLoadOnDemand = IsAddOnLoadOnDemand or C_AddOns.IsAddOnLoadOnDemand
+    LoadAddOn = LoadAddOn or C_AddOns.LoadAddOn
+    EnableAddOn = EnableAddOn or C_AddOns.EnableAddOn
+    DisableAddOn = DisableAddOn or C_AddOns.DisableAddOn
+
+    if not GetAddOnEnableState and C_AddOns.GetAddOnEnableState then
+        function GetAddOnEnableState(character, addon)
+            if addon == nil then
+                addon = character
+                character = nil
+            end
+            return C_AddOns.GetAddOnEnableState(addon, character)
+        end
+    end
+
+    if not IsAddOnLoaded and C_AddOns.IsAddOnLoaded then
+        function IsAddOnLoaded(addon)
+            local loadedOrLoading, loaded = C_AddOns.IsAddOnLoaded(addon)
+            if loaded ~= nil then
+                return loaded
+            end
+            return loadedOrLoading
+        end
+    end
+end
+
+if not select then
+    function select(index, ...)
+        if index == "#" then
+            return arg.n
+        else
+            local result = {}
+            for i = index, arg.n do
+                table.insert(result, arg[i])
+            end
+            return unpack(result)
+        end
+    end
+end
+
+if not print or Version.IsLegacyVanilla or Version.IsLegacyBurningCrusade then
+    local argn, argi
+    if Version.IsLegacyVanilla then
+        argn, argi = "arg.n", "arg[i]"
+    else
+        argn, argi = [[select("#", ...)]], [[(select(i, ...))]]
+    end
+    print = loadstring(format([[return function(...)
+        local text = ""
+        for i = 1, %s do
+            text = text .. (i > 1 and " " or "") .. tostring(%s)
+        end
+        DEFAULT_CHAT_FRAME:AddMessage(text)
+    end]], argn, argi))()
+end
+
+if not strsplit then
+    function strsplit(delimiter, text)
+        local result = {}
+        local from = 1
+        local delim_from, delim_to = string.find(text, delimiter, from)
+        while delim_from do
+            table.insert(result, string.sub(text, from, delim_from - 1))
+            from = delim_to + 1
+            delim_from, delim_to = string.find(text, delimiter, from)
+        end
+        table.insert(result, string.sub(text, from))
+        return unpack(result)
+    end
+end
+
+if not string.gmatch then
+    string.gmatch = string.gfind
+end
+
+if not string.match then
+    local function getargs(s, e, ...)
+        return unpack(arg)
+    end
+    function string.match(str, pattern)
+        return getargs(string.find(str, pattern))
+    end
+end
+
+if not string.trim then
+    function string.trim(str)
+        return (string.match(str, "^%s*(.-)%s*$"))
+    end
+end
+
+if not table.wipe then
+    function table.wipe(tbl)
+        for key in next, tbl do
+            tbl[key] = nil
+        end
+    end
+end
+if not wipe then
+    wipe = table.wipe
+end
+
+if not hooksecurefunc then
+    ---@overload fun(name, hook)
+    function hooksecurefunc(table, name, hook)
+        if not hook then
+            name, hook = table, name
+            table = _G
+        end
+
+        local old = table[name]
+        assert(type(old) == "function")
+        table[name] = function(...)
+            local result = { old(unpack(arg)) }
+            hook(unpack(arg))
+            return unpack(result)
+        end
+    end
+end
+
+if not GetAddOnEnableState then
+    ---@overload fun(addon)
+    function GetAddOnEnableState(character, addon)
+        addon = addon or character
+        local name, _, _, _, loadable, reason = _G.GetAddOnInfo(addon)
+        if not name or not loadable and reason == "DISABLED" then
+            return 0
+        end
+        return 2
+    end
+
+    function GetAddOnInfo(indexOrName)
+        local name, title, notes, enabled, loadable, reason, security, newVersion = _G.GetAddOnInfo(indexOrName)
+        return name, title, notes, loadable, reason, security, newVersion
+    end
+end
+
+
 -- Per-client overrides. Loaded last, so everything it replaces already exists. Each block
 -- writes into the environment, never into _G, which is the whole point of the environment.
 --
