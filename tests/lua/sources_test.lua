@@ -81,5 +81,19 @@ env.Callbacks:Register("SOURCE_REGISTERED", function(source) seen = source end)
 local late = env.Sources:Register("late", { title = "Late", addon = "X", order = 9 })
 Expect("SOURCE_REGISTERED carries the source", seen, late)
 
+---------------------------------------------------------------- a channel the player muted itself is not inaudible
+-- The quests addon mutes Dialog while its line speaks. A zones clip on Dialog arriving
+-- then must still be admitted, and the mute lifted before it plays.
+env, quests, zones = H.Fresh(stub, SPOKEN)
+_G.Spoken:MuteChannel("Dialog", true)
+Expect("muting sets the channel's CVar", world.cvars.Sound_EnableDialog, "0")
+Expect("...and the player knows it did", env.SoundUtils:IsMutedByPlayer("Dialog"), true)
+local z = H.Clip()
+Expect("a clip on the muted channel is still admitted", zones:Enqueue(z), z)
+Expect("...and the mute is lifted for it to play", world.cvars.Sound_EnableDialog, "1")
+Expect("...so the player no longer holds it", env.SoundUtils:IsMutedByPlayer("Dialog"), false)
+world.cvars.Sound_EnableDialog = "0"
+Expect("a channel the user disabled is still inaudible", (zones:Enqueue(H.Clip())), nil)
+
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
 print("\nAll sources tests passed")

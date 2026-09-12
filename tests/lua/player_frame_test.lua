@@ -22,6 +22,16 @@ local function Boot(client)
     return env, quests, zones
 end
 
+---------------------------------------------------------------- a settings link registered before the panel exists
+-- Feature addons register their link from ADDON_LOADED; the panel is built at PLAYER_LOGIN.
+stub.SetClient("11509"); stub.ResetSound(); stub.ResetTimers()
+stub.settingsCategories = {}; stub.ldbObjects = {}; stub.dbIcons = {}
+local early = stub.LoadSpoken(SPOKEN)
+_G.Spoken:AddSettingsLink("Quests settings", function() end)
+early.Addon:Enable()
+Expect("a link registered before the panel is built with it", #_G.SpokenOptionsPanel.links, 1)
+Expect("...with its text", _G.SpokenOptionsPanel.links[1]:GetText(), "Quests settings")
+
 ---------------------------------------------------------------- loads, shows, hides
 local env, quests, zones = Boot()
 local F = env.PlayerFrame

@@ -109,5 +109,45 @@ Clean()
 assert(loadfile(ZONES .. "Migration.lua"))("SpokenZones", {})
 Expect("fresh install: nothing created from nothing", _G.SpokenZonesDB, nil)
 
+---------------------------------------------------------------- the old profile is the character's, not "Default"
+-- AceDB without a default-profile flag keys the profile by "Name - Realm"; that is what
+-- both old addons did, so "Default" exists only for players who chose it.
+Clean()
+_G.VoiceOverDB = { profileKeys = { ["Tester - Realm"] = "Tester - Realm" }, profiles = { ["Tester - Realm"] = {
+    SoundQueueUI = { FrameScale = 0.6 }, MinimapButton = { LibDBIcon = { minimapPos = 45 } } } } }
+env = stub.LoadSpoken(SPOKEN)
+Expect("frame scale from the character's own quests profile", env.Addon.db.profile.Frame.FrameScale, 0.6)
+Expect("minimap from the character's own quests profile", env.Addon.db.profile.Minimap.LibDBIcon.minimapPos, 45)
+Clean()
+_G.ZoneLoreQueueDB = { profileKeys = { ["Tester - Realm"] = "Tester - Realm" }, profiles = { ["Tester - Realm"] = { SoundQueueUI = { FrameScale = 0.65 } } } }
+env = stub.LoadSpoken(SPOKEN)
+Expect("...and from the character's own zones queue profile", env.Addon.db.profile.Frame.FrameScale, 0.65)
+
+---------------------------------------------------------------- the tombstones are gone, the adopted copies remain
+-- A feature addon disables its tombstone once it has adopted the old table. A player
+-- installed only after that login finds no old table, but the adopted copy is the same
+-- shape and says where it came from.
+Clean()
+_G.SpokenQuestsDB = { global = { migratedFrom = "VoiceOverRedux" }, profiles = { Default = {
+    SoundQueueUI = { FrameScale = 0.55 }, MinimapButton = { LibDBIcon = { minimapPos = 7 } } } } }
+env = stub.LoadSpoken(SPOKEN)
+Expect("frame settings from the quests addon's adopted copy", env.Addon.db.profile.Frame.FrameScale, 0.55)
+Expect("...recorded as from VoiceOverRedux", env.Addon.db.global.migratedFrom, "VoiceOverRedux")
+Clean()
+_G.SpokenQuestsDB = { profiles = { Default = { SoundQueueUI = { FrameScale = 0.55 } } } }
+env = stub.LoadSpoken(SPOKEN)
+Expect("a fresh quests table that adopted nothing seeds nothing", env.Addon.db.profile.Frame.FrameScale, 0.7)
+Clean()
+_G.SpokenZonesDB = { migratedFrom = "ZoneLore", minimapPos = 8 }
+env = stub.LoadSpoken(SPOKEN)
+Expect("minimap from the zones addon's adopted copy", env.Addon.db.profile.Minimap.LibDBIcon.minimapPos, 8)
+-- Enable runs the migration again: on a real client the feature addons' tables load
+-- after the player's ADDON_LOADED, and PLAYER_LOGIN is the first moment they exist.
+Clean()
+env = stub.LoadSpoken(SPOKEN)
+_G.SpokenQuestsDB = { global = { migratedFrom = "VoiceOverRedux" }, profiles = { Default = { SoundQueueUI = { FrameScale = 0.45 } } } }
+env.Addon:Enable()
+Expect("PLAYER_LOGIN migrates from tables that loaded after the player", env.Addon.db.profile.Frame.FrameScale, 0.45)
+
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
 print("\nAll migration tests passed")

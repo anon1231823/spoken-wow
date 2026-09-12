@@ -143,6 +143,17 @@ Q:PauseQueue()
 zones:PlayNow(H.Clip())
 Expect("PlayNow on a paused player unpauses it", Q:IsPaused(), false)
 
+---------------------------------------------------------------- PlayNow past the backlog cap
+Fresh()
+local z1, z2, z3 = H.Clip(), H.Clip(), H.Clip()
+zones:SetQueueLimit(2)
+zones:Enqueue(z1); zones:Enqueue(z2); zones:Enqueue(z3)   -- z1 speaks, two wait: at the cap
+local clicked = H.Clip()
+Expect("PlayNow past the cap plays the clicked clip", zones:PlayNow(clicked), true)
+Expect("...at the head", Q:GetCurrentSound(), clicked)
+Expect("...trimming the oldest waiting clip", rec:Has("CLIP_DROPPED " .. z1.key .. " queue-limit"), true)
+Expect("...never the clicked one", rec:Has("CLIP_DROPPED " .. clicked.key .. " queue-limit"), false)
+
 ---------------------------------------------------------------- StopAll per source, and for the player
 Fresh()
 local q1, z1, q2 = H.Clip(), H.Clip(), H.Clip()

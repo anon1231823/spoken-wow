@@ -95,6 +95,25 @@ Expect("the first quest clip mutes the dialog channel", world.cvars.Sound_Enable
 Spoken:StopAll()
 Expect("...and the last leaving restores it", world.cvars.Sound_EnableDialog, "1")
 
+-- Another addon's clip on the Dialog channel, queued behind a quest line, must be heard:
+-- the mute covers a quest line speaking, not the quests source having a backlog.
+VO, env, Spoken = Boot()
+VO.Addon.db.profile.Audio.AutoToggleDialog = true
+local zones = Spoken:RegisterSource("zones", { title = "Zones", addon = "SpokenZones", channel = function() return "Dialog" end })
+world.questID = 101
+VO.Addon:QUEST_DETAIL()
+Expect("a quest line speaking mutes dialog", world.cvars.Sound_EnableDialog, "0")
+local z = H.Clip()
+Expect("a Dialog-channel clip is still admitted behind it", zones:Enqueue(z), z)
+world.questID = 102
+VO.Addon:QUEST_DETAIL()
+Spoken:Skip()
+Expect("the zones clip behind it speaks with dialog restored", world.cvars.Sound_EnableDialog, "1")
+Spoken:Skip()
+Expect("the next quest line mutes it again", world.cvars.Sound_EnableDialog, "0")
+Spoken:Skip()
+Expect("...and the empty queue restores it", world.cvars.Sound_EnableDialog, "1")
+
 ---------------------------------------------------------------- disengage and abandon
 VO, env, Spoken = Boot()
 VO.Addon.db.profile.Audio.StopAudioOnDisengage = true

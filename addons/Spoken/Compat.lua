@@ -332,7 +332,7 @@ if Version.IsLegacyBurningCrusade or Version.IsLegacyWrath then
         if not Addon.db.profile.Audio.LegacyMusicChannel.Enabled then
             -- Play VO as a sound, but have no ability to stop it
             _G.PlaySoundFile(soundData.path)
-            return
+            return true
         end
 
         soundData.handle = 1 -- Just put something here to flag the sound as stoppable
@@ -362,6 +362,8 @@ if Version.IsLegacyBurningCrusade or Version.IsLegacyWrath then
         else
             Play()
         end
+        -- PlayMusic reports nothing; the queue would discard a clip reported as not playing.
+        return true
     end
 
     function SoundUtils:StopSound(soundData)

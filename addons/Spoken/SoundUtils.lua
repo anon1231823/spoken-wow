@@ -10,6 +10,28 @@ setfenv(1, SpokenEnv)
 -- four playback functions wholesale on 1.12, 2.4.3 and 3.3.5.
 SoundUtils = {}
 
+-- A channel this player switched off on a source's behalf: the quests addon mutes
+-- Dialog while its line speaks so the NPC's bark does not talk over it. The queue
+-- treats such a channel as audible at admission and lifts the mute before playing on
+-- it -- the alternative is refusing every zones clip that arrives during a quest line.
+local CHANNEL_CVARS = { SFX = "Sound_EnableSFX", Music = "Sound_EnableMusic", Ambience = "Sound_EnableAmbience", Dialog = "Sound_EnableDialog" }
+local mutedByPlayer = {}
+
+---@param channel string
+---@param muted boolean
+function SoundUtils:MuteChannel(channel, muted)
+    local cvar = CHANNEL_CVARS[channel]
+    if not cvar or (mutedByPlayer[channel] or false) == (muted or false) then
+        return
+    end
+    mutedByPlayer[channel] = muted or nil
+    SetCVar(cvar, muted and 0 or 1)
+end
+
+function SoundUtils:IsMutedByPlayer(channel)
+    return mutedByPlayer[channel] or false
+end
+
 --- Why sound on the given channel cannot be heard right now, or nil when it can.
 --- PlaySoundFile returns false both for a missing file and for a muted channel, so
 --- without asking first those two are indistinguishable -- and they want opposite

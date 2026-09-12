@@ -309,7 +309,11 @@ end
 
 ---@param clip SpokenClip
 function SoundQueue:PlaySound(clip)
-    local willPlay = SoundUtils:PlaySound(clip, clip.source:GetChannel())
+    local channel = clip.source:GetChannel()
+    if SoundUtils:IsMutedByPlayer(channel) then
+        SoundUtils:MuteChannel(channel, false)
+    end
+    local willPlay = SoundUtils:PlaySound(clip, channel)
     if not willPlay then
         Discard(clip, "missing")
         self:Advance()
@@ -363,8 +367,10 @@ end
 -- Admission
 --------------------------------------------------------------------------------
 
--- Trim this source's backlog, oldest first, never the head.
-local function TrimBacklog(source)
+-- Trim this source's backlog, oldest first, never the head and never the clip being
+-- admitted: PlayNow front-inserts, so queue position is not age, and a clicked clip
+-- that fell to the trim would be the one thing the player asked for.
+local function TrimBacklog(source, admitted)
     if not source.queueLimit then
         return
     end
@@ -374,7 +380,9 @@ local function TrimBacklog(source)
             local isHead = index == 1 and SoundQueue:IsPlaying()
             if clip.source == source and not isHead then
                 waiting = waiting + 1
-                oldest = oldest or clip
+                if clip ~= admitted and (not oldest or clip.id < oldest.id) then
+                    oldest = clip
+                end
             end
         end
         if waiting <= source.queueLimit or not oldest then
@@ -413,7 +421,7 @@ function SoundQueue:Add(clip, source, front)
     end
 
     local inaudible = SoundUtils:WhyInaudible(source:GetChannel())
-    if inaudible then
+    if inaudible and not SoundUtils:IsMutedByPlayer(source:GetChannel()) then
         return nil, inaudible
     end
 
@@ -454,7 +462,7 @@ function SoundQueue:Add(clip, source, front)
         table.insert(self.sounds, clip)
     end
     EnteredFor(source)
-    TrimBacklog(source)
+    TrimBacklog(source, clip)
 
     if clip.addedCallback then
         clip.addedCallback(clip)
@@ -477,7 +485,7 @@ function SoundQueue:PlayNow(clip, source)
     end
 
     local inaudible = SoundUtils:WhyInaudible(source:GetChannel())
-    if inaudible then
+    if inaudible and not SoundUtils:IsMutedByPlayer(source:GetChannel()) then
         return false, inaudible
     end
 

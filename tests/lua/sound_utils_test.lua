@@ -119,6 +119,9 @@ Expect("music channel off: played as a plain sound", world.played[1], "a.mp3")
 Expect("...which cannot be stopped, so no handle", clip.handle, nil)
 stub.ResetSound()
 
+Expect("...and reports that it will play, or the queue discards it", (SU:PlaySound({ path = "b.mp3", length = 2 }, "Master")), true)
+stub.ResetSound()
+
 music.Enabled = true
 music.FadeOutMusic = 0
 clip = { path = "a.mp3", length = 2 }
@@ -128,6 +131,7 @@ Expect("...and stoppable", clip.handle ~= nil, true)
 SU:StopSound(clip)
 Expect("stopping plays the player's own silence to cut it", world.music[2], [[Interface\AddOns\Spoken\Sounds\silence.wav]])
 Expect("...then clears the handle", clip.handle, nil)
+Expect("...reported as playing", (SU:PlaySound({ path = "c.mp3", length = 2 }, "Master")), true)
 
 if failures > 0 then
     print(string.format("\n%d failure(s)", failures))

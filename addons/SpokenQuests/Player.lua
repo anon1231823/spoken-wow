@@ -275,17 +275,26 @@ function Player:Setup()
         channel = ChannelName,
         -- Play-and-stop the file before admitting it, as the queue always did here.
         testBeforeQueue = true,
-        onQueueEnter = function()
-            if DialogMuteApplies() then
-                SetCVar("Sound_EnableDialog", 0)
-            end
-        end,
-        onQueueEmpty = function()
-            if DialogMuteApplies() then
-                SetCVar("Sound_EnableDialog", 1)
-            end
-        end,
     })
+
+    -- The Dialog channel is muted while one of this addon's lines speaks and restored the
+    -- moment anything else does, or nothing does. Not while this source merely has a
+    -- backlog: another addon's clip in between may itself be on the Dialog channel.
+    local function SetDialogMuted(muted)
+        Spoken:MuteChannel("Dialog", muted)
+    end
+    Spoken:RegisterCallback("CLIP_STARTED", function(clip)
+        if clip.source == Player.source then
+            if DialogMuteApplies() then
+                SetDialogMuted(true)
+            end
+        else
+            SetDialogMuted(false)
+        end
+    end)
+    Spoken:RegisterCallback("QUEUE_EMPTY", function()
+        SetDialogMuted(false)
+    end)
 
     -- What the watcher reads to know whether an event reached the speaker.
     Spoken:RegisterCallback("CLIP_QUEUED", function(clip)

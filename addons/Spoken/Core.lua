@@ -76,8 +76,22 @@ function Addon:Migrate()
         return
     end
 
+    -- AceDB without a default-profile flag, which is how both old addons made their
+    -- tables, keys the profile by character; "Default" exists only when a player chose it.
+    local charKey = UnitName("player") .. " - " .. GetRealmName()
     local function profileOf(sv)
-        return type(sv) == "table" and type(sv.profiles) == "table" and sv.profiles.Default or nil
+        if type(sv) ~= "table" or type(sv.profiles) ~= "table" then
+            return nil
+        end
+        local key = type(sv.profileKeys) == "table" and sv.profileKeys[charKey] or charKey
+        return sv.profiles[key] or sv.profiles.Default
+    end
+    -- A feature addon disables its tombstone after adopting the old table. A player
+    -- installed later never sees the old table, but the adopted copy has the same shape
+    -- and says where it came from; and it loads after this addon, so this runs again at
+    -- PLAYER_LOGIN.
+    local function adopted(sv, marker)
+        return type(sv) == "table" and marker(sv) and sv or nil
     end
     local function copyKeys(from, to, keys)
         for _, key in ipairs(keys) do
@@ -87,8 +101,10 @@ function Addon:Migrate()
         end
     end
     local quests = profileOf(rawget(_G, "VoiceOverDB"))
+        or profileOf(adopted(rawget(_G, "SpokenQuestsDB"), function(sv) return type(sv.global) == "table" and sv.global.migratedFrom end))
     local zonesQueue = profileOf(rawget(_G, "ZoneLoreQueueDB"))
     local zones = rawget(_G, "ZoneLoreDB")
+        or adopted(rawget(_G, "SpokenZonesDB"), function(sv) return sv.migratedFrom end)
 
     local frame = quests and quests.SoundQueueUI or zonesQueue and zonesQueue.SoundQueueUI
     if frame then
@@ -131,6 +147,7 @@ end
 function Addon:Enable()
     if self.enabled then return end
     self:InitDB()
+    self:Migrate()
     self.enabled = true
     PlayerFrame:Initialize()
     Minimap:Setup()

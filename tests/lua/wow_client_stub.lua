@@ -185,6 +185,7 @@ function _G.GetQuestText() return world.questText end
 function _G.GetProgressText() return world.progressText end
 function _G.GetRewardText() return world.rewardText end
 function _G.UnitName(unit) return unit == "player" and "Tester" or world.npcName end
+function _G.GetRealmName() return "Realm" end
 function _G.UnitGUID() return world.npcGUID end
 function _G.UnitExists() return true end
 function _G.UnitIsPlayer() return false end
@@ -203,7 +204,7 @@ end
 function _G.StopSound(handle) table.insert(world.stopped, handle) end
 function _G.PlayMusic(path) table.insert(world.music, path) end
 function _G.StopMusic() table.insert(world.music, false) end
-function _G.CreateFrame(kind, name, parent) local f = name and Frame(name) or MakeFrame(nil); f.frameType = kind; f.parent = parent; return f end
+function _G.CreateFrame(kind, name, parent) local f = name and Frame(name) or MakeFrame(nil); f.frameType = kind; f.parent = parent; if name then _G[name] = f end; return f end
 function _G.CreateFont(name) return Widget("Font", name) end
 _G.GameFontNormal = Widget("Font", "GameFontNormal")
 _G.GameTooltip = Widget("Frame", "GameTooltip")

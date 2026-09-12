@@ -10,6 +10,7 @@ Options = {}
 
 local INDENT, ROW_GAP = 20, -28
 local panel
+local pendingLinks = {}
 
 local function Heading(parent, text, x, y, template)
     local fs = parent:CreateFontString(nil, "ARTWORK", template or "GameFontNormalLarge")
@@ -110,6 +111,10 @@ local function Build()
     -- Feature addons register a button here to reach their own settings.
     panel.links = {}
     panel.linkY = y + ROW_GAP - 8
+    for _, link in ipairs(pendingLinks) do
+        Options:AddLink(link.text, link.onClick)
+    end
+    pendingLinks = {}
     return panel
 end
 
@@ -137,7 +142,11 @@ end
 --- quests addon uses this because AceConfigDialog owns its frame lifecycle and nesting
 --- it as a canvas subcategory is fragile across six clients.
 function Options:AddLink(text, onClick)
-    if not panel then return end
+    -- Feature addons call this from ADDON_LOADED; the panel is built at PLAYER_LOGIN.
+    if not panel then
+        table.insert(pendingLinks, { text = text, onClick = onClick })
+        return
+    end
     local button = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     button:SetSize(200, 22)
     button:SetPoint("TOPLEFT", INDENT, panel.linkY)
