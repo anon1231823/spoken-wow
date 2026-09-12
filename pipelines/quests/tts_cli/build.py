@@ -55,8 +55,13 @@ VoiceOver.DataModules:Register("{module}", {module})
 # No RequiredDeps on purpose: a player of this lineage ships under three folder names by
 # now - AI_VoiceOver, AI_VoiceOver_Continued, VoiceOverRedux - and a dep on a disabled or
 # absent one makes LoadAddOn fail with DEP_DISABLED. LoadOnDemand plus the guard in
-# Module.lua suffice, and the player finds a pack by its X-VoiceOver-DataModule-Version key
-# rather than by name (DataModules:EnumerateAddons), so a renamed pack needs nothing else.
+# Module.lua suffice, and the player finds a pack by its DataModule-Version key rather than
+# by name (DataModules:EnumerateAddons), so a renamed pack needs nothing else.
+#
+# Both generations of that key are written, with identical values. X-SpokenQuests-* is what
+# the addon reads first; X-VoiceOver-* is what its previous releases and upstream
+# AI_VoiceOver read, so one built pack serves every one of them. Drop the inherited pair
+# only once no supported release still looks for it.
 DEFAULT_TITLE = "VoiceOver Redux Audio"
 
 #: The artwork the client shows beside the addon's name in the AddOns list. Committed as a TGA
@@ -75,6 +80,9 @@ TOC_HEADER = """## Interface: 100000
 ## Group: VoiceOverRedux
 ## X-Part-Of: VoiceOver Redux
 ## X-Child-Of: VoiceOverRedux
+## X-SpokenQuests-DataModule-Version: 1
+## X-SpokenQuests-DataModule-Priority: 100
+## X-SpokenQuests-DataModule-Maps: 0, 1, 30, 33, 43, 47, 48, 70, 90, 109, 129, 189, 209, 229, 230, 289, 309, 329, 349, 369, 389, 429, 469, 509, 531, 533
 ## X-VoiceOver-DataModule-Version: 1
 ## X-VoiceOver-DataModule-Priority: 100
 ## X-VoiceOver-DataModule-Maps: 0, 1, 30, 33, 43, 47, 48, 70, 90, 109, 129, 189, 209, 229, 230, 289, 309, 329, 349, 369, 389, 429, 469, 509, 531, 533

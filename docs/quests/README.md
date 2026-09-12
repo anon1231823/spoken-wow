@@ -243,7 +243,7 @@ dependencies*. The CurseForge app and WowUp fetch those automatically, so "insta
 means "get everything", and no folder is ever owned by two projects. `scripts/package-meta.sh`
 builds it and its header explains the rest; `make package-audio PACKS=all` still builds the
 single complete folder for local use. The stub deliberately carries no
-`X-VoiceOver-DataModule-Version`: with it, the player would count the stub as an installed pack
+`X-SpokenQuests-DataModule-Version` or the inherited `X-VoiceOver-DataModule-Version`: with either, the player would count the stub as an installed pack
 and stop telling somebody with no audio where to get any.
 
 **Each pack is an addon folder and a CurseForge project of its own**, never two files on one
@@ -782,7 +782,7 @@ and this project's own former folder `AI_VoiceOver_Continued`: a rename uninstal
 **The rename.** The player was `AI_VoiceOver_Continued` and the pack `AI_VoiceOverData_Vanilla`
 until this project had diverged far enough from upstream that carrying its name was
 misleading. They are now `VoiceOverRedux` and `VoiceOverReduxAudio`. An old pack still works —
-the player finds packs by the `X-VoiceOver-DataModule-Version` key in the TOC, not by name
+the player finds packs by the `X-SpokenQuests-DataModule-Version` key in the TOC, or the inherited `X-VoiceOver-DataModule-Version` that every shipped pack carries, not by name
 (`DataModules:EnumerateAddons`) — but settings do not survive, because `SavedVariables` live in
 `WTF/…/SavedVariables/<folder>.lua` and the folder is the identity.
 

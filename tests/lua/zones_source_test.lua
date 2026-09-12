@@ -174,5 +174,46 @@ Expect("...and says the player is missing", alone.printed[1] and alone.printed[1
 Expect("...IsPlayingLore is false", alone:IsPlayingLore(), false)
 _G.Spoken = saved
 
+---------------------------------------------------------------- both generations of the pack registry
+-- A pack announces itself by writing into a global table, never by folder name, which is
+-- why the packs kept their names through the rename. The table is being renamed, so both
+-- are read, and a pack that writes into both is listed once.
+local function Packs(spokenZones, zoneLore, legacy)
+	_G.SpokenZonesAudioPacks, _G.ZoneLoreAudioPacks, _G.ZoneLoreAudioData = spokenZones, zoneLore, legacy
+	local Z = select(2, Boot())
+	return Z:GetAudioPacks(), Z
+end
+local function Pack(folder, bitrate)
+	return { version = 1, addon = folder, quality = "high", bitrate = bitrate or 128, language = "enUS",
+		zones = {}, subzones = {} }
+end
+local savedPacks = _G.ZoneLoreAudioPacks
+
+local found = Packs(nil, { ZoneLoreAudio = Pack("ZoneLoreAudio") }, nil)
+Expect("a pack in the inherited registry is found", #found, 1)
+Expect("...by its folder", found[1] and found[1].addon, "ZoneLoreAudio")
+
+found = Packs({ SpokenZonesAudio = Pack("SpokenZonesAudio") }, nil, nil)
+Expect("a pack in the new registry is found", #found, 1)
+Expect("...by its folder", found[1] and found[1].addon, "SpokenZonesAudio")
+
+-- What a pack built during the transition does: register in both, so an older addon
+-- still finds it. It is one installed folder and must be offered once.
+local shared = Pack("SpokenZonesAudio")
+found = Packs({ SpokenZonesAudio = shared }, { SpokenZonesAudio = shared }, nil)
+Expect("a pack registering in both is listed once", #found, 1)
+
+found = Packs({ SpokenZonesAudio = Pack("SpokenZonesAudio", 128) },
+	{ ZoneLoreAudio64 = Pack("ZoneLoreAudio64", 64) }, nil)
+Expect("two packs across the two registries are both found", #found, 2)
+Expect("...still ordered by bitrate", found[1] and found[1].addon, "SpokenZonesAudio")
+
+-- The pre-registry global, which only ever named one folder.
+found = Packs(nil, nil, Pack("ZoneLoreAudio"))
+Expect("a pack predating either registry is still found", #found, 1)
+
+_G.SpokenZonesAudioPacks, _G.ZoneLoreAudioData = nil, nil
+_G.ZoneLoreAudioPacks = savedPacks
+
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
 print("\nAll zones source tests passed")

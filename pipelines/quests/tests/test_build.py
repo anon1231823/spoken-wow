@@ -136,6 +136,21 @@ def test_toc_lists_every_generated_file():
     assert "X-VoiceOver-DataModule-Version: 1" in toc
 
 
+def test_toc_declares_both_generations_of_the_module_key():
+    # The player finds a pack by this key, never by name. It is being renamed, so a pack
+    # built now carries both: the new key for this addon, the inherited one so the same
+    # zip still loads under the addon's previous release and under upstream AI_VoiceOver.
+    toc = module_toc("VoiceOverReduxAudio", [])
+
+    for suffix, value in (("Version", "1"), ("Priority", "100")):
+        assert f"## X-SpokenQuests-DataModule-{suffix}: {value}\n" in toc
+        assert f"## X-VoiceOver-DataModule-{suffix}: {value}\n" in toc
+    assert toc.count("-DataModule-Maps: ") == 2
+    # The two generations must agree, or the pack means one thing to each reader.
+    maps = [line.split(": ", 1)[1] for line in toc.splitlines() if "-DataModule-Maps: " in line]
+    assert maps[0] == maps[1]
+
+
 def test_toc_nests_the_pack_under_the_player():
     # Group is the one the client reads (11.1.0+), and its value is the main addon's *name*,
     # so it is the folder and not the title. X-Part-Of carries the title for addon managers,

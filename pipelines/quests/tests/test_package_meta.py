@@ -25,7 +25,9 @@ def test_the_stub_is_not_a_data_module(tmp_path):
     # The key the player enumerates packs by. With it, the stub counts as an installed pack:
     # DataModules:EnumerateAddons would stop advertising the real ones, and somebody who
     # installed only this would be told nothing is missing while hearing silence.
-    assert "X-VoiceOver-DataModule" not in build(tmp_path)
+    toc = build(tmp_path)
+    assert "X-VoiceOver-DataModule" not in toc
+    assert "X-SpokenQuests-DataModule" not in toc
 
 
 def test_the_stub_carries_the_version_it_was_built_with(tmp_path):

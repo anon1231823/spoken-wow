@@ -11,7 +11,8 @@
 -- quiet.
 --
 -- More than one pack can be installed at a time -- they differ in bitrate, and
--- now in language. Each registers itself into ZoneLoreAudioPacks under its own
+-- now in language. Each registers itself into SpokenZonesAudioPacks (and, while packs
+-- built for the old name are still in circulation, ZoneLoreAudioPacks) under its own
 -- folder name; this file picks which one to play from.
 --
 -- Every pack has the same structure and the same keys, so any installed pack is
@@ -157,26 +158,48 @@ local warnedFormat = {}
 -- narrow the answer to one language.
 function ZoneLore:GetAudioPacks(lang)
 	local packs = {}
-	local registry = _G.ZoneLoreAudioPacks
+	-- Two generations of the registry, newest first. ZoneLoreAudioPacks is what every
+	-- shipped pack writes into; a pack built from now on writes into both, so that the
+	-- same zip is also found by an older release of this addon. Both are keyed by folder
+	-- name, so a pack in both is seen once.
+	local seen = {}
+	local found = false
 
-	if type(registry) == "table" then
+	-- Not a loop over a table of the two: a nil first registry would end an ipairs
+	-- immediately and the second would never be read.
+	local function Collect(registry)
+		if type(registry) ~= "table" then
+			return
+		end
 		for name, pack in pairs(registry) do
-			if type(pack) == "table" and pack.version == PACK_FORMAT then
+			if type(pack) ~= "table" or seen[name] then
+				-- Already taken from the newer registry, or not a pack at all.
+			elseif pack.version == PACK_FORMAT then
+				seen[name] = true
+				found = true
 				-- A pack published before languages existed carries no language and
 				-- is English, which is the same default Sounds.lua applies.
 				if lang == nil or (pack.language or "enUS") == lang then
 					table.insert(packs, pack)
 				end
-			elseif type(pack) == "table" and not warnedFormat[name] then
-				warnedFormat[name] = true
-				self:Print(
-					"|cffffcc00%s is built for a different version of ZoneLore|r "
-						.. "(pack format %s, this build reads %d) -- update both to the same major version",
-					name, tostring(pack.version), PACK_FORMAT
-				)
+			else
+				seen[name] = true
+				found = true
+				if not warnedFormat[name] then
+					warnedFormat[name] = true
+					self:Print(
+						"|cffffcc00%s is built for a different version of Spoken Zones|r "
+							.. "(pack format %s, this build reads %d) -- update both to the same major version",
+						name, tostring(pack.version), PACK_FORMAT
+					)
+				end
 			end
 		end
-	elseif type(_G.ZoneLoreAudioData) == "table" and _G.ZoneLoreAudioData.version == PACK_FORMAT then
+	end
+	Collect(_G.SpokenZonesAudioPacks)
+	Collect(_G.ZoneLoreAudioPacks)
+
+	if not found and type(_G.ZoneLoreAudioData) == "table" and _G.ZoneLoreAudioData.version == PACK_FORMAT then
 		-- A pack predating the registry. It only knew the one folder name.
 		local legacy = _G.ZoneLoreAudioData
 		legacy.addon = legacy.addon or "ZoneLoreAudio"

@@ -1,17 +1,43 @@
 setfenv(1, VoiceOver)
 
 local CURRENT_MODULE_VERSION = 1
+
+-- A pack declares itself with a TOC key rather than a name, which is why a pack published
+-- years ago is still found today and why the packs kept their folder names through the
+-- rename. The key itself is being renamed, so both generations are read, newest first.
+-- X-VoiceOver-DataModule-* is what every shipped pack carries, and what a pack built for
+-- upstream AI_VoiceOver carries; those keep working indefinitely. A pack built during the
+-- transition carries both, so that it also loads under the addon's previous release.
+local MODULE_KEY_PREFIXES = { "X-SpokenQuests-DataModule-", "X-VoiceOver-DataModule-" }
+
+--- One of a pack's module keys, whichever generation it declares.
+---@param addon string|number Addon folder name, or its index in the addon list
+---@param suffix string "Version" | "Priority" | "Maps"
+local function ModuleMeta(addon, suffix)
+    for _, prefix in ipairs(MODULE_KEY_PREFIXES) do
+        -- Absent reads as nil on a client and as "" in the test harness.
+        local value = GetAddOnMetadata(addon, prefix .. suffix)
+        if value and value ~= "" then
+            return value
+        end
+    end
+end
+
+--- The numeric form. Absent stays absent: the client tolerates tonumber(nil), LuaJIT does not.
+local function ModuleNumber(addon, suffix)
+    return tonumber(ModuleMeta(addon, suffix) or "")
+end
 local FORCE_ENABLE_DISABLED_MODULES = true
 local LOAD_ALL_MODULES = true
 
 ---@class DataModuleMetadata
 ---@field AddonName string Addon name
 ---@field LoadOnDemand boolean Whether the module can be dynamically loaded (TOC ##LoadOnDemand)
----@field ModuleVersion number Module's data format version (TOC ##X-VoiceOver-DataModule-Version, must be CURRENT_MODULE_VERSION to be loaded)
----@field ModulePriority number Module's priority (TOC ##X-VoiceOver-DataModule-Priority, larger number = higher priority)
+---@field ModuleVersion number Module's data format version (TOC ##X-SpokenQuests-DataModule-Version or ##X-VoiceOver-DataModule-Version, must be CURRENT_MODULE_VERSION to be loaded)
+---@field ModulePriority number Module's priority (TOC ##X-SpokenQuests-DataModule-Priority or ##X-VoiceOver-DataModule-Priority, larger number = higher priority)
 ---@field ContentVersion? string Module's content version (TOC ##Version)
 ---@field Title string Module's title (TOC ##Title or addon name if missing)
----@field Maps number[] Map IDs in which the module should load (TOC ##X-VoiceOver-DataModule-Maps)
+---@field Maps number[] Map IDs in which the module should load (TOC ##X-SpokenQuests-DataModule-Maps or ##X-VoiceOver-DataModule-Maps)
 
 ---@class DataModule
 ---@field METADATA DataModuleMetadata
@@ -123,7 +149,7 @@ function DataModules:Register(name, module)
 
     local metadata = assert(self.presentModules[name],
         format([[Module "%s" attempted to register but wasn't detected during addon enumeration]], name))
-    local moduleVersion = assert(tonumber(GetAddOnMetadata(name, "X-VoiceOver-DataModule-Version")),
+    local moduleVersion = assert(ModuleNumber(name, "Version"),
         format([[Module "%s" is missing data format version]], name))
 
     -- Ideally if module format would ever change - there should be fallbacks in place to handle outdated formats
@@ -172,10 +198,10 @@ function DataModules:EnumerateAddons(loadModules)
 
     local playerName = UnitName("player")
     for i = 1, GetNumAddOns() do
-        local moduleVersion = tonumber(GetAddOnMetadata(i, "X-VoiceOver-DataModule-Version"))
+        local moduleVersion = ModuleNumber(i, "Version")
         if moduleVersion and (FORCE_ENABLE_DISABLED_MODULES or GetAddOnEnableState(playerName, i) ~= 0) then
             local name = GetAddOnInfo(i)
-            local mapsString = GetAddOnMetadata(i, "X-VoiceOver-DataModule-Maps")
+            local mapsString = ModuleMeta(i, "Maps")
             local maps = {}
             if mapsString then
                 for _, mapString in ipairs({ strsplit(",", mapsString) }) do
@@ -191,7 +217,7 @@ function DataModules:EnumerateAddons(loadModules)
                 AddonName = name,
                 LoadOnDemand = IsAddOnLoadOnDemand(name),
                 ModuleVersion = moduleVersion,
-                ModulePriority = tonumber(GetAddOnMetadata(name, "X-VoiceOver-DataModule-Priority")) or 0,
+                ModulePriority = ModuleNumber(name, "Priority") or 0,
                 ContentVersion = GetAddOnMetadata(name, "Version"),
                 Title = GetAddOnMetadata(name, "Title") or name,
                 Maps = maps,

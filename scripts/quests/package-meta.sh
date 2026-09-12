@@ -16,7 +16,7 @@
 # the same 565 MB and hit the same limit, and those folder names would then be owned by two
 # projects at once, so a manager tracking Alliance from both would update each over the other.
 #
-# NO X-VoiceOver-DataModule KEYS, deliberately. The player enumerates packs by that key, so a
+# NO DataModule KEYS OF EITHER GENERATION (X-SpokenQuests-* or X-VoiceOver-*), deliberately. The player enumerates packs by that key, so a
 # stub carrying it would count as an installed pack: somebody holding only this would be told
 # nothing is missing while hearing silence. See DataModules:EnumerateAddons.
 #

@@ -286,17 +286,42 @@ for _, name in ipairs({ "QuestFrameRewardPanel", "QuestFrameProgressPanel", "Que
     _G[name] = Frame(name)
 end
 
--- One sound pack, present and already loaded.
+-- The installed addons, as the client's addon-management API sees them. One sound pack
+-- carrying the key it has always carried, until a test says otherwise.
 local PACK = "TestPack"
-function _G.GetNumAddOns() return 1 end
-function _G.GetAddOnInfo(i)
-    if i == 1 or i == PACK then return PACK, PACK, "", true, "LOADED" end
+
+--- Replace the installed addon list. Each entry is { folder, meta = { [tocKey] = value } }.
+function M.SetAddOns(list)
+    M.addons = list
 end
-function _G.GetAddOnMetadata(_, key)
-    if key == "X-VoiceOver-DataModule-Version" then return "1" end
-    if key == "Version" then return "1.2.1" end
-    if key == "Title" then return PACK end
-    return ""   -- The client's tonumber tolerates nil, LuaJIT's does not.
+
+--- The default: one loaded pack declaring the inherited TOC key.
+function M.ResetAddOns()
+    M.SetAddOns({ { folder = PACK, meta = {
+        ["X-VoiceOver-DataModule-Version"] = "1", Version = "1.2.1", Title = PACK } } })
+end
+M.ResetAddOns()
+
+local function AddOnAt(addon)
+    if type(addon) == "number" then
+        return M.addons[addon]
+    end
+    for _, entry in ipairs(M.addons) do
+        if entry.folder == addon then
+            return entry
+        end
+    end
+end
+
+function _G.GetNumAddOns() return #M.addons end
+function _G.GetAddOnInfo(i)
+    local entry = AddOnAt(i)
+    if entry then return entry.folder, entry.folder, "", true, "LOADED" end
+end
+function _G.GetAddOnMetadata(addon, key)
+    local entry = AddOnAt(addon)
+    -- The client's tonumber tolerates nil, LuaJIT's does not.
+    return entry and entry.meta[key] or ""
 end
 function _G.IsAddOnLoadOnDemand() return false end
 function _G.GetAddOnEnableState() return 2 end
