@@ -4,7 +4,7 @@
 ## Version: 2.0.0
 ## IconTexture: Interface\AddOns\SpokenQuests\icon.tga
 ## SavedVariables: SpokenQuestsDB
-## OptionalDeps: Spoken, VoiceOverRedux
+## OptionalDeps: SpokenPlayer, VoiceOverRedux
 # Spoken is the player this addon speaks through: optional, so a hand-installed copy
 # without it loads and says what is missing; addon managers install it from the
 # CurseForge dependency. VoiceOverRedux is this addon's old name: a TOC-only tombstone

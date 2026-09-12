@@ -60,7 +60,7 @@ function Addon:InitDB()
     if self.db then
         return
     end
-    self.db = LibStub("AceDB-3.0"):New("SpokenDB", Defaults)
+    self.db = LibStub("AceDB-3.0"):New("SpokenPlayerDB", Defaults)
     self:Migrate()
 end
 

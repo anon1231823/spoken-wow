@@ -1,13 +1,13 @@
-## Interface: 11509
-## Title: Spoken
+## Interface: 100007
+## Title: Spoken Player
 ## Notes: The voice player every Spoken addon speaks through: one queue, one window, one minimap button.
 ## Version: 1.0.0
-## IconTexture: Interface\AddOns\Spoken\icon.tga
-## SavedVariables: SpokenDB
+## IconTexture: Interface\AddOns\SpokenPlayer\icon.tga
+## SavedVariables: SpokenPlayerDB
 ## OptionalDeps: VoiceOverRedux, ZoneLore
 # The renamed addons' tombstones. Migrate() runs on this addon's ADDON_LOADED and reads
 # their saved variables, which exist only once those folders have loaded; without this
-# line they sort after "Spoken" and the settings would be read too early, as empty.
+# line they sort after "SpokenPlayer" and the settings would be read too early, as empty.
 ## Group: Spoken
 ## X-Part-Of: Spoken
 ## X-Spoken-Player: 1

@@ -9,7 +9,7 @@ package.path = here .. "/?.lua;" .. package.path
 local stub = require("wow_client_stub")
 local print = stub.print
 local world = stub.world
-local SPOKEN = here .. "/../../addons/Spoken/"
+local SPOKEN = here .. "/../../addons/SpokenPlayer/"
 
 local failures = 0
 local function Expect(scenario, actual, expected)
@@ -129,7 +129,7 @@ SU:PlaySound(clip, "Master")
 Expect("music channel on: played as music", world.music[1], "a.mp3")
 Expect("...and stoppable", clip.handle ~= nil, true)
 SU:StopSound(clip)
-Expect("stopping plays the player's own silence to cut it", world.music[2], [[Interface\AddOns\Spoken\Sounds\silence.wav]])
+Expect("stopping plays the player's own silence to cut it", world.music[2], [[Interface\AddOns\SpokenPlayer\Sounds\silence.wav]])
 Expect("...then clears the handle", clip.handle, nil)
 Expect("...reported as playing", (SU:PlaySound({ path = "c.mp3", length = 2 }, "Master")), true)
 

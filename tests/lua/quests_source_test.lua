@@ -9,7 +9,7 @@ local H = require("queue_helpers")
 local print = stub.print
 local world = stub.world
 local QUESTS = here .. "/../../addons/SpokenQuests/"
-local SPOKEN = here .. "/../../addons/Spoken/"
+local SPOKEN = here .. "/../../addons/SpokenPlayer/"
 local Expect, Failures = H.Expecter(print)
 
 local BOOK = [[Interface\AddOns\SpokenQuests\Textures\Book]]

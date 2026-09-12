@@ -9,7 +9,7 @@ setfenv(1, SpokenEnv)
 -- behaviour for the players who use it.
 Minimap = { entries = {} }
 
-local ICON = [[Interface\AddOns\Spoken\Textures\MinimapButton]]
+local ICON = [[Interface\AddOns\SpokenPlayer\Textures\MinimapButton]]
 local ldbObject, menuFrame
 
 -- The player's own entries.

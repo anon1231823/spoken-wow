@@ -7,7 +7,7 @@ local stub = require("wow_client_stub")
 local H = require("queue_helpers")
 local print = stub.print
 local world = stub.world
-local SPOKEN = here .. "/../../addons/Spoken/"
+local SPOKEN = here .. "/../../addons/SpokenPlayer/"
 local ZONES = here .. "/../../addons/SpokenZones/"
 local Expect, Failures = H.Expecter(print)
 

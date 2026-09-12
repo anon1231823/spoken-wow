@@ -10,7 +10,7 @@ license: MIT
 addonReadme: addons/SpokenZones/README.md
 ---
 
-**Zone lore on the world map, for WoW Classic Era.** Formerly ZoneLore — now one of the Spoken addons, narrating through the [Spoken](https://www.curseforge.com/wow/addons/spoken) player shared with Spoken Quests, which your addon manager installs alongside.
+**Zone lore on the world map, for WoW Classic Era.** Formerly ZoneLore — now one of the Spoken addons, narrating through the [Spoken](https://www.curseforge.com/wow/addons/spoken-player) player shared with Spoken Quests, which your addon manager installs alongside.
 
 Open the map and the lore of the zone you're looking at appears beside it. Click a named subzone and you get that place's story instead. Optionally, it's read aloud.
 

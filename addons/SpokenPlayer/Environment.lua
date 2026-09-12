@@ -21,7 +21,7 @@ local _G = getfenv(0)
 
 SpokenEnv = setmetatable({
     _G = _G,
-    AddonFolder = "Spoken",
+    AddonFolder = "SpokenPlayer",
     -- A literal because this file loads before any metadata API exists;
     -- scripts/quests/package.sh refuses to build when it disagrees with the .toc.
     AddonVersion = "1.0.0",

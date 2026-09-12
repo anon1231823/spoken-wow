@@ -22,9 +22,9 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.a
 SCRIPT = os.path.join(REPO, "scripts", "quests", "package.sh")
 PLAYER_SCRIPT = os.path.join(REPO, "scripts", "spoken", "package.sh")
 ADDON_DIR = os.path.join(REPO, "addons", "SpokenQuests")
-PLAYER_DIR = os.path.join(REPO, "addons", "Spoken")
+PLAYER_DIR = os.path.join(REPO, "addons", "SpokenPlayer")
 NAME = "SpokenQuests"
-PLAYER = "Spoken"
+PLAYER = "SpokenPlayer"
 TOMBSTONE = "VoiceOverRedux"
 
 #: client label -> the Interface version its .toc must declare.
@@ -121,14 +121,14 @@ def test_a_legacy_zip_bundles_the_player_with_a_hard_dependency(built, client, i
     tocs = tocs_in(files, PLAYER)
     assert list(tocs) == [f"{PLAYER}/{PLAYER}.toc"], names
     assert tocs[f"{PLAYER}/{PLAYER}.toc"].startswith(f"## Interface: {interface}")
-    assert "## Dependencies: Spoken" in files[f"{NAME}/{NAME}.toc"].decode()
-    assert "## OptionalDeps: Spoken" not in files[f"{NAME}/{NAME}.toc"].decode()
+    assert "## Dependencies: SpokenPlayer" in files[f"{NAME}/{NAME}.toc"].decode()
+    assert "## OptionalDeps: SpokenPlayer" not in files[f"{NAME}/{NAME}.toc"].decode()
 
 
 @pytest.mark.parametrize("client", sorted(LEGACY_CLIENTS))
 def test_the_bundled_player_is_byte_identical_to_its_tree(built, client):
     # The one source tree, staged at build time: there is no committed second copy that
-    # could drift. Everything under Spoken/ in the zip equals the repo file, except the
+    # could drift. Everything under SpokenPlayer/ in the zip equals the repo file, except the
     # per-client Libs pruning and the .toc swap the packaging is for.
     names, files = legacy(built, client)
     bundled = [n for n in names if n.startswith(f"{PLAYER}/") and not n.endswith("/")]
@@ -153,7 +153,7 @@ def test_the_blizzard_zip_carries_every_flavor_and_no_legacy_client(built):
     assert any(name.startswith(f"{NAME}/Libs/") for name in names)
     # Managers install the player from the CurseForge dependency; it is not bundled here.
     assert not any(name.startswith(f"{PLAYER}/") for name in names)
-    assert "## OptionalDeps: Spoken" in tocs[f"{NAME}/{NAME}.toc"]
+    assert "## OptionalDeps: SpokenPlayer" in tocs[f"{NAME}/{NAME}.toc"]
 
 
 def test_the_blizzard_zip_carries_the_tombstone(built):
@@ -189,7 +189,7 @@ def test_the_player_ships_on_its_own_for_blizzard_clients(player_built):
 
 def test_the_player_loads_after_the_tombstones_whose_variables_it_migrates(player_built):
     # Migrate() runs on Spoken's own ADDON_LOADED and reads VoiceOverDB / ZoneLoreDB, which
-    # exist only once those folders have loaded. Alphabetically they load after "Spoken".
+    # exist only once those folders have loaded. Alphabetically they load after "SpokenPlayer".
     version = version_of(PLAYER_DIR, PLAYER)
     _, files = player_built[f"{PLAYER}-{version}.zip"]
     for path, toc in tocs_in(files, PLAYER).items():

@@ -17,7 +17,7 @@ setfenv(1, SpokenEnv)
 -- is now the quests addon's fallback rather than the player's knowledge.
 Portrait = {}
 
-local TEXTURES = [[Interface\AddOns\Spoken\Textures\]]
+local TEXTURES = [[Interface\AddOns\SpokenPlayer\Textures\]]
 local WAIT_FOR_ANIMATION_FINISH_BEFORE_IDLE = true
 local CAN_MODEL_LOAD_CACHE = Version:IsRetailOrAboveLegacyVersion(60000)
 

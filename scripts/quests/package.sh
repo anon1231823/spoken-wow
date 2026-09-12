@@ -28,7 +28,7 @@
 # THE LEGACY ZIPS ALSO CARRY THE SPOKEN PLAYER. Those clients have no addon manager to
 # install a dependency, so the player travels inside the zip, staged from its own tree at
 # build time -- there is no committed second copy that could drift, and the build asserts
-# the staged copy is byte-identical to addons/Spoken/ apart from the per-client pruning and
+# the staged copy is byte-identical to addons/SpokenPlayer/ apart from the per-client pruning and
 # the .toc swap. Since it is guaranteed present, the dependency is hard there where it is
 # soft everywhere else.
 #
@@ -44,8 +44,8 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ADDON="${ADDON:-addons/SpokenQuests}"
 NAME="${NAME:-SpokenQuests}"
 SRC="$REPO/$ADDON"
-PLAYER_SRC="$REPO/addons/Spoken"
-PLAYER="Spoken"
+PLAYER_SRC="$REPO/addons/SpokenPlayer"
+PLAYER="SpokenPlayer"
 TOMBSTONE="VoiceOverRedux"
 TOMBSTONE_SRC="$REPO/addons/tombstones/$TOMBSTONE"
 TOC="$SRC/$NAME.toc"
@@ -169,10 +169,10 @@ for pair in "${CLIENTS[@]}"; do
   # vendored trees. The legacy variant TOC is where the player becomes a hard dependency.
   stage_addon "$staging/$client"
   prune_for_client "$staging/$client/$NAME" "$NAME" "$SRC" "$variant"
-  grep -q '^## Dependencies: Spoken$' "$staging/$client/$NAME/$NAME.toc" || {
-    echo "error: ${NAME}_${variant}.toc must declare '## Dependencies: Spoken'" >&2; exit 1; }
+  grep -q '^## Dependencies: SpokenPlayer$' "$staging/$client/$NAME/$NAME.toc" || {
+    echo "error: ${NAME}_${variant}.toc must declare '## Dependencies: SpokenPlayer'" >&2; exit 1; }
 
-  # The player, pruned the same way. It is copied from addons/Spoken on every build; the
+  # The player, pruned the same way. It is copied from addons/SpokenPlayer on every build; the
   # packaging tests assert the zip's copy is byte-identical to that tree.
   stage_tree "$staging/$client" "$PLAYER_SRC" "$PLAYER"
   prune_for_client "$staging/$client/$PLAYER" "$PLAYER" "$PLAYER_SRC" "$variant"

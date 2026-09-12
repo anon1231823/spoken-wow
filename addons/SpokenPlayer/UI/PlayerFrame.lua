@@ -22,7 +22,7 @@ local PORTRAIT_BORDER_OUTSET = 34 * PORTRAIT_BORDER_SCALE
 local PORTRAIT_LINE_WIDTH = 56 * PORTRAIT_BORDER_SCALE
 local FRAME_WIDTH_WITHOUT_PORTRAIT = 300
 local MAX_ROWS = 4
-local TEXTURES = [[Interface\AddOns\Spoken\Textures\]]
+local TEXTURES = [[Interface\AddOns\SpokenPlayer\Textures\]]
 
 do
     local font = CreateFont("SpokenNameFont")

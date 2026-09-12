@@ -6,7 +6,7 @@ name: Release addons
 #
 # The tag prefix picks the addon, because the two version independently and always have:
 #
-#     spoken/v1.0.0   ->  addons/Spoken
+#     spoken/v1.0.0   ->  addons/SpokenPlayer
 #     quests/v2.0.0   ->  addons/SpokenQuests
 #     zones/v1.0.0    ->  addons/SpokenZones
 #
@@ -34,7 +34,7 @@ jobs:
         id: target
         run: |
           case "${GITHUB_REF_NAME%%/*}" in
-            spoken) toc=addons/Spoken/Spoken.toc;               script=scripts/spoken/package.sh ;;
+            spoken) toc=addons/SpokenPlayer/SpokenPlayer.toc;               script=scripts/spoken/package.sh ;;
             quests) toc=addons/SpokenQuests/SpokenQuests.toc;   script=scripts/quests/package.sh ;;
             zones)  toc=addons/SpokenZones/SpokenZones.toc;     script=scripts/zones/package.sh  ;;
             *)      echo "unknown tag prefix in ${GITHUB_REF_NAME}" >&2; exit 1 ;;

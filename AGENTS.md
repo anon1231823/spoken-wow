@@ -7,7 +7,7 @@ Repo-wide conventions. Each project also has its own, and they still apply:
 
 Four things share one tree, and they are not equally finished:
 
-1. `addons/` — the shipped Lua. `Spoken` is the player; `SpokenQuests` and
+1. `addons/` — the shipped Lua. `SpokenPlayer` is the player; `SpokenQuests` and
    `SpokenZones` are feature addons that queue clips through it;
    `SpokenZonesAudio` is a sound pack. `addons/vendor/` holds upstream's
    addons as a diff baseline and nothing builds them.

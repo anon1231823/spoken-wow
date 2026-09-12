@@ -13,7 +13,7 @@
 # Language.lua which language to build a table for, and it can only answer that
 # early because ZoneLoreDB is already populated. Without this line every player
 # silently reads English.
-## OptionalDeps: Spoken, ZoneLore, ZoneLoreAudio, ZoneLoreAudio64
+## OptionalDeps: SpokenPlayer, ZoneLore, ZoneLoreAudio, ZoneLoreAudio64
 # Spoken is the player this addon speaks through. Optional here so a hand-installed
 # copy without it loads and says what is missing rather than failing to load at
 # all; addon managers install it from the CurseForge dependency. The packs are not

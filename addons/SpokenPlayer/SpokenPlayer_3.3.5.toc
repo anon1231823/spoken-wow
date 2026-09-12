@@ -1,14 +1,14 @@
-## Interface: 20400
-## Title: Spoken
-## Notes: The voice player every Spoken addon speaks through, for 2.4.3 servers.
+## Interface: 30300
+## Title: Spoken Player
+## Notes: The voice player every Spoken addon speaks through, for 3.3.5 servers.
 ## Version: 1.0.0
-## SavedVariables: SpokenDB
+## SavedVariables: SpokenPlayerDB
 ## OptionalDeps: VoiceOverRedux, ZoneLore
 # The renamed addons' tombstones. Migrate() runs on this addon's ADDON_LOADED and reads
 # their saved variables, which exist only once those folders have loaded; without this
-# line they sort after "Spoken" and the settings would be read too early, as empty.
+# line they sort after "SpokenPlayer" and the settings would be read too early, as empty.
 ## X-Part-Of: Spoken
 ## X-Spoken-Player: 1
 
-2.4.3\embeds.xml
+3.3.5\embeds.xml
 addon.xml

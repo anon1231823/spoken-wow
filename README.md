@@ -10,7 +10,7 @@ several addons.
 | **SpokenZones** | zone and subzone lore | shipping, was ZoneLore |
 | **SpokenBooks** | books, letters and other in-world texts | planned |
 
-Every feature addon plays through `Spoken`, so a player who installs two of
+Every feature addon plays through `SpokenPlayer`, so a player who installs two of
 them gets one queue and one window rather than two of each. Addon managers
 install it automatically; the legacy-client zips bundle it, because those
 clients have no manager to do it for them.

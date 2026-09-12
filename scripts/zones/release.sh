@@ -69,7 +69,7 @@ esac; }
 # client it cannot load on is worse than one that is simply absent there.
 # Required dependencies by CurseForge slug: the addon needs the player it speaks through.
 target_dependencies() { case "$1" in
-  zonelore) echo "spoken";;
+  zonelore) echo "spoken-player";;
 esac; }
 
 target_game_versions() { case "$1" in

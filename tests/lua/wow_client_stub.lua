@@ -435,7 +435,7 @@ end
 
 --- Kept for one release: the pre-cutover loader name.
 M.LoadPlayer = function(addonDirectory)
-    local VO = M.LoadQuests(addonDirectory, addonDirectory .. "../Spoken/")
+    local VO = M.LoadQuests(addonDirectory, addonDirectory .. "../SpokenPlayer/")
     return VO
 end
 

@@ -87,7 +87,7 @@ esac; }
 # 577 MB of audio comes back 413, so each of those projects ships a few kilobytes declaring its
 # family's four packs as required dependencies, and the manager fetches them.
 target_zip_name() { case "$1" in
-  spoken)         echo "Spoken";;
+  spoken)         echo "SpokenPlayer";;
   player)         echo "SpokenQuests";;
   audio-all)      echo "VoiceOverReduxAudio";;
   audio-alliance) echo "VoiceOverReduxAudioAlliance";;
@@ -112,7 +112,7 @@ esac; }
 # stale zip that happens to still be in dist/.
 target_toc() { case "$1" in
   player) echo "$REPO/addons/SpokenQuests/SpokenQuests.toc";;
-  spoken) echo "$REPO/addons/Spoken/Spoken.toc";;
+  spoken) echo "$REPO/addons/SpokenPlayer/SpokenPlayer.toc";;
   *)      local name; name="$(target_zip_name "$1")"; echo "$DIST/$name/$name.toc";;
 esac; }
 target_version() {
@@ -126,7 +126,7 @@ target_version() {
 # By slug, which is why the slugs are read off the live projects rather than guessed - see
 # curseforge/README.md. A slug that no longer resolves is a dependency silently not installed.
 target_dependencies() { case "$1" in
-  player)    echo "spoken";;
+  player)    echo "spoken-player";;
   audio-all) echo "voiceover-redux-audio-alliance voiceover-redux-audio-horde \
                    voiceover-redux-audio-shared-quests voiceover-redux-audio-gossip";;
   hq-all)    echo "voiceover-redux-hq-audio-alliance voiceover-redux-hq-audio-horde \

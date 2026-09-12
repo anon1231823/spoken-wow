@@ -243,7 +243,7 @@ if Version.IsLegacyBurningCrusade or Version.IsLegacyWrath then
         return tonumber(GetCVar("Sound_MusicVolume")) or 1
     end
     local function PlaySilence()
-        PlayMusic([[Interface\AddOns\Spoken\Sounds\silence.wav]])
+        PlayMusic([[Interface\AddOns\SpokenPlayer\Sounds\silence.wav]])
     end
 
     -- Functions that deal with temporarily changing player's sound settings to utilize the music channel for VO playback

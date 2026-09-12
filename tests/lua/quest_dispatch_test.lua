@@ -10,7 +10,7 @@ package.path = here .. "/?.lua;" .. package.path
 local stub = require("wow_client_stub")
 local print = stub.print
 stub.SetClient("11509"); stub.ResetSound(); stub.ResetTimers()
-local VO = stub.LoadQuests(here .. "/../../addons/SpokenQuests/", here .. "/../../addons/Spoken/")
+local VO = stub.LoadQuests(here .. "/../../addons/SpokenQuests/", here .. "/../../addons/SpokenPlayer/")
 local Spoken = _G.Spoken
 
 local world = stub.world

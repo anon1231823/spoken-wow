@@ -6,14 +6,14 @@ package.path = here .. "/?.lua;" .. package.path
 local stub = require("wow_client_stub")
 local H = require("queue_helpers")
 local print = stub.print
-local SPOKEN = here .. "/../../addons/Spoken/"
+local SPOKEN = here .. "/../../addons/SpokenPlayer/"
 local QUESTS = here .. "/../../addons/SpokenQuests/"
 local ZONES = here .. "/../../addons/SpokenZones/"
 local Expect, Failures = H.Expecter(print)
 
 local function Clean()
     stub.SetClient("11509"); stub.ResetSound(); stub.ResetTimers()
-    _G.VoiceOverDB, _G.SpokenQuestsDB, _G.SpokenDB = nil, nil, nil
+    _G.VoiceOverDB, _G.SpokenQuestsDB, _G.SpokenPlayerDB = nil, nil, nil
     _G.ZoneLoreDB, _G.ZoneLoreCharDB, _G.ZoneLoreQueueDB, _G.SpokenZonesDB, _G.SpokenZonesCharDB = nil, nil, nil, nil, nil
 end
 

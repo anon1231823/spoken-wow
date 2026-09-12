@@ -9,7 +9,7 @@ local stub = require("wow_client_stub")
 local H = require("queue_helpers")
 local print = stub.print
 local world = stub.world
-local SPOKEN = here .. "/../../addons/Spoken/"
+local SPOKEN = here .. "/../../addons/SpokenPlayer/"
 local Expect, Failures = H.Expecter(print)
 
 local function Boot(client)
@@ -68,15 +68,15 @@ _G.Spoken:RegisterBullet("quest-accept", [[Interface\AddOns\SpokenQuests\Texture
 quests:Enqueue(H.Clip({ present = { header = "h", label = "l", bullet = "quest-accept", portrait = { kind = "none" } } }))
 Expect("a row uses its registered bullet", F.frame.container.buttons[1].iconWidget:GetTexture(), [[Interface\AddOns\SpokenQuests\Textures\Accept]])
 quests:Enqueue(H.Clip({ present = { header = "h", label = "l", bullet = "nope", portrait = { kind = "none" } } }))
-Expect("an unknown bullet falls back to the queue bullet", F.frame.container.buttons[2].iconWidget:GetTexture(), [[Interface\AddOns\Spoken\Textures\SoundQueueBulletQueue]])
+Expect("an unknown bullet falls back to the queue bullet", F.frame.container.buttons[2].iconWidget:GetTexture(), [[Interface\AddOns\SpokenPlayer\Textures\SoundQueueBulletQueue]])
 
 ---------------------------------------------------------------- portrait dispatch
 env, quests, zones = Boot(); F = env.PlayerFrame
 local P = env.Portrait
 zones:Enqueue(H.Clip({ present = { header = "h", label = "l", bullet = "b",
-    portrait = { kind = "texture", texture = [[Interface\AddOns\Spoken\Textures\Book]] } } }))
+    portrait = { kind = "texture", texture = [[Interface\AddOns\SpokenPlayer\Textures\Book]] } } }))
 Expect("kind=texture shows a texture", F.frame.portrait.active, "texture")
-Expect("...the one asked for", F.frame.portrait.texture:GetTexture(), [[Interface\AddOns\Spoken\Textures\Book]])
+Expect("...the one asked for", F.frame.portrait.texture:GetTexture(), [[Interface\AddOns\SpokenPlayer\Textures\Book]])
 env.SoundQueue:RemoveAllSoundsFromQueue()
 
 quests:Enqueue(H.Clip({ present = { header = "h", label = "l", bullet = "b",
@@ -87,7 +87,7 @@ env.SoundQueue:RemoveAllSoundsFromQueue()
 
 quests:Enqueue(H.Clip({ present = { header = "h", label = "l", bullet = "b",
     portrait = { kind = "model", creatureID = nil,
-        fallback = { kind = "texture", texture = [[Interface\AddOns\Spoken\Textures\Book]] } } } }))
+        fallback = { kind = "texture", texture = [[Interface\AddOns\SpokenPlayer\Textures\Book]] } } } }))
 Expect("a model with nothing to load falls back", F.frame.portrait.active, "texture")
 env.SoundQueue:RemoveAllSoundsFromQueue()
 
