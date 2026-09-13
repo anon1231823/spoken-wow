@@ -138,18 +138,6 @@ function ZoneLore:SetupOptions()
 			.. "per character. /zl forget clears it.",
 		Get("autoplayExplored"), Set("autoplayExplored"))
 	layout:Outdent()
-	layout:Checkbox("Stop narrating when you open the text",
-		"The Read button on the player opens the lore window on whatever is "
-			.. "playing. Ticked, it stops the narration too -- and discards anything "
-			.. "queued behind it -- so the button reads \"Read instead\". Unticked, "
-			.. "you read along.",
-		Get("stopAudioOnRead"), Set("stopAudioOnRead"), function()
-			-- The Read button on the player relabels from this setting.
-			if _G.Spoken and _G.Spoken.RefreshPlayer then
-				_G.Spoken:RefreshPlayer()
-			end
-		end)
-
 	-- The list is read when the menu opens rather than captured here: packs cannot be
 	-- installed mid-session, but a player who disables one in the AddOns list and reloads
 	-- should not find this offering it.

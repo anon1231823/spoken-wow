@@ -435,34 +435,11 @@ function ZoneLore:GetAudioClip(mapID, areaKey)
 	return nil, nil
 end
 
--- The buttons the player shows under a lore clip. Read opens the text; Report is
--- this addon's own button, told which entry it now stands beside.
+-- The button the player shows under a lore clip: this addon's own Report, told which
+-- entry it now stands beside. There is no Read button. The text is reached from the map,
+-- the minimap menu and /zl, and a button on the player that opened a window over the very
+-- thing being read was one way too many.
 local ACTIONS = {
-	{
-		id = "read",
-		text = function() return ZoneLore:Get("stopAudioOnRead") and ZoneLore.L.READ_INSTEAD or ZoneLore.L.READ end,
-		tooltip = function(tooltip)
-			if ZoneLore:Get("stopAudioOnRead") then
-				tooltip:SetText(ZoneLore.L.READ_INSTEAD)
-				tooltip:AddLine(ZoneLore.L.READ_INSTEAD_TOOLTIP, 1, 1, 1, true)
-			else
-				tooltip:SetText(ZoneLore.L.READ)
-				tooltip:AddLine(ZoneLore.L.READ_TOOLTIP, 1, 1, 1, true)
-			end
-			tooltip:AddLine(ZoneLore.L.READ_SETTING_HINT, 0.7, 0.7, 0.7, true)
-		end,
-		onClick = function(clip)
-			if not clip then
-				return
-			end
-			-- Opened before stopping: stopping hides the player, and reading the
-			-- state after that would be reading it from under our own feet.
-			ZoneLore:ShowLoreFor(clip.mapID, clip.areaKey)
-			if ZoneLore:Get("stopAudioOnRead") then
-				ZoneLore:StopLore()
-			end
-		end,
-	},
 	{
 		id = "report",
 		create = function(parent) return ZoneLore:CreateReportButton(parent) end,

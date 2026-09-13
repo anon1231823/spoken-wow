@@ -50,7 +50,8 @@ Expect("...and the pack's duration", zone.length, 81.9)
 Expect("...header is the zone", zone.present.header, "Durotar")
 Expect("...label is the zone too", zone.present.label, "Durotar")
 Expect("...portrait is the book", zone.present.portrait.kind .. ":" .. zone.present.portrait.texture, "texture:" .. BOOK)
-Expect("...with Read and Report as actions", zone.present.actions[1].id .. "," .. zone.present.actions[2].id, "read,report")
+Expect("...with Report as its only action", zone.present.actions[1].id, "report")
+Expect("...and nothing else", zone.present.actions[2], nil)
 Expect("...remembers where it came from", zone.mapID, 1411)
 
 local sub = Z:NewLoreSound(1411, "valley of trials")
@@ -74,22 +75,16 @@ Expect("starting marks the area heard in the per-character record", Z:HasHeard(1
 
 local F = env.PlayerFrame
 Expect("the player frame shows the zone", F.frame.container.name:GetText(), "Durotar")
-Expect("...and two actions", F.frame.actions.shown, 2)
-Expect("...Read first", F.frame.actions.buttons[1]:GetText(), "Read")
-F.frame.actions.buttons[1]:Click()
-Expect("Read opens the lore window on what is playing", Z.shown and Z.shown[1], 1411)
-Expect("...and keeps playing by default", Spoken:IsPlaying(), true)
-Z:Set("stopAudioOnRead", true)
-F:Update()
-Expect("...the button relabels with the setting", F.frame.actions.buttons[1]:GetText(), "Read instead")
-F.frame.actions.buttons[1]:Click()
-Expect("...and then stops", Spoken:GetQueueSize(), 0)
+-- Report only. Reading the text is reached from the map, the minimap menu and /zl; a
+-- button on the player that opened a window over the thing being read was one way too many.
+Expect("...and one action", F.frame.actions.shown, 1)
+Expect("...which is Report", F.frame.actions.buttons[1]:GetText(), "Report")
 
 env, Z = Boot(); Spoken = _G.Spoken
 Z:PlayLore(1411, nil)
 F = env.PlayerFrame
-Expect("Report is the zones addon's own button", F.frame.actions.buttons[2]:GetText(), "Report")
-F.frame.actions.buttons[2]:Click()
+Expect("Report is the zones addon's own button", F.frame.actions.buttons[1]:GetText(), "Report")
+F.frame.actions.buttons[1]:Click()
 Expect("...targeting what is playing", Z.copied, "https://spoken.test/r/1411/nil")
 
 ---------------------------------------------------------------- pause, skip, stop

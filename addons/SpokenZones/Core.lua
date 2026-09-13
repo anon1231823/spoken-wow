@@ -45,7 +45,6 @@ local defaults = {
 	autoplayExplored = false,
 	-- Off, so Read means "read along". Stopping discards the queue as well, which
 	-- is not something to do to a player who only wanted to see the words.
-	stopAudioOnRead = false,
 	-- Off, so a player cannot end up reading an unfinished translation without
 	-- having asked for one. See Language.lua.
 	languagePreview = false,

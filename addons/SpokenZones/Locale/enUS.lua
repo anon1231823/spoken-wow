@@ -28,16 +28,10 @@ local L = {}
 
 L.PLAY = "Play"
 L.PAUSE = "Pause"
-L.READ = "Read"
-L.READ_INSTEAD = "Read instead"
 
 L.PLAY_TOOLTIP = "Starts this lore again from the beginning."
 L.PAUSE_TOOLTIP =
 	"The game cannot resume a sound part-way through, so playing again starts from the beginning."
-L.READ_TOOLTIP = "Opens this lore in the window and keeps playing."
-L.READ_INSTEAD_TOOLTIP =
-	"Opens this lore in the window and stops the narration, discarding anything queued behind it."
-L.READ_SETTING_HINT = "Which one this does is a ZoneLore setting."
 
 --------------------------------------------------------------------------------
 -- Queue
