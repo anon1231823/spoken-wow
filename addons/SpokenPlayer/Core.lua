@@ -188,6 +188,7 @@ function Addon:Enable()
             for key, source in Sources:Iterate() do
                 print(format("  source %s (%s)", key, source.addon or "?"))
             end
+            for _, line in ipairs(PlayerFrame:Describe()) do print("  " .. line) end
             for _, err in ipairs(Callbacks.errors) do print("  callback error: " .. err) end
         else
             print("Spoken: /spoken play | stop | skip | options | reset | diagnostics")

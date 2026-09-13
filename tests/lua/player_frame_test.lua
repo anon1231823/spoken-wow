@@ -346,5 +346,18 @@ Expect("...its volume", labels["Speech volume"], true)
 Expect("...its fade, as a duration and not a percentage", labels["0.5s"], true)
 Expect("...and the HD model patch", labels["HD model patch installed"], true)
 
+---------------------------------------------------------------- what the frame reports
+-- A row that is present but drawn nowhere looks, from outside, exactly like a row that was
+-- never built. /spoken diagnostics tells the two apart.
+env, quests, zones = Boot()
+quests:Enqueue(H.Clip({ present = { header = "Gornek", label = "Cutting Teeth", bullet = "b",
+    portrait = { kind = "none" } } }))
+env.PlayerFrame:Update()
+local report = table.concat(env.PlayerFrame:Describe(), "\n")
+Expect("it reports the header it drew", string.find(report, 'header="Gornek"', 1, true) ~= nil, true)
+Expect("...the row and its width", string.find(report, 'text="Cutting Teeth"', 1, true) ~= nil, true)
+Expect("...which portrait renderer is in use", string.find(report, "portrait kind=none", 1, true) ~= nil, true)
+Expect("...and how much is queued", string.find(report, "queue=1", 1, true) ~= nil, true)
+
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
 print("\nAll player frame tests passed")

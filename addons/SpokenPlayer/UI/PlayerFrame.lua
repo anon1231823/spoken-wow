@@ -453,6 +453,33 @@ function PlayerFrame:Update()
     end, 0)
 end
 
+--- What the frame is actually doing, for a bug report. A row that is present but drawn
+--- nowhere, or drawn under something, looks from the outside exactly like a row that was
+--- never built; this tells the two apart without a client to poke at.
+function PlayerFrame:Describe()
+    local lines = {}
+    local function Say(text) table.insert(lines, text) end
+    if not self.frame then
+        Say("no frame built")
+        return lines
+    end
+    local container = self.frame.container
+    Say(format("frame shown=%s w=%.0f h=%.0f", tostring(self.frame:IsShown()),
+        self.frame:GetWidth() or 0, self.frame:GetHeight() or 0))
+    Say(format("container shown=%s w=%.0f h=%.0f header=%q", tostring(container:IsShown()),
+        container:GetWidth() or 0, container:GetHeight() or 0, container.name:GetText() or ""))
+    Say(format("portrait kind=%s actions=%d", tostring(self.frame.portrait.active),
+        self.frame.actions and self.frame.actions.shown or 0))
+    for index, button in ipairs(container.buttons) do
+        if button:IsShown() then
+            Say(format("  row %d w=%.0f text=%q", index, button:GetWidth() or 0,
+                button.textWidget:GetText() or ""))
+        end
+    end
+    Say(format("queue=%d", SoundQueue:GetQueueSize()))
+    return lines
+end
+
 --- The client places the frame (SetUserPlaced), so recovering one dragged off-screen
 --- means asking it to lay itself out again rather than clearing a saved coordinate.
 function PlayerFrame:Reset()
