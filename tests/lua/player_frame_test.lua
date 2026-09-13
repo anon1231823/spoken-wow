@@ -134,6 +134,20 @@ Expect("the menu is the player's entries then each source's in order", table.con
 env.Minimap:RemoveEntry("zones", "lore")
 Expect("RemoveEntry", getn(env.Minimap:BuildMenu()), 4)
 
+-- Opening it: the menu is a frame of its own, so it has to draw its own background. A
+-- frame asking for BackdropTemplate and never setting one is transparent -- the rows read
+-- as text floating over the world.
+stub.ldbObjects.Spoken.OnClick(_G.Minimap, "LeftButton")
+local frame = _G.SpokenMinimapMenu
+Expect("left-clicking opens the menu", frame ~= nil and frame:IsShown(), true)
+Expect("...on a background of its own", frame and frame:GetBackdrop() ~= nil, true)
+Expect("...with an edge", frame and frame:GetBackdrop() and frame:GetBackdrop().edgeFile ~= nil, true)
+Expect("...sized to its rows", frame and frame.height > 60, true)
+-- The border is 32 pixels of art, about 12 of it inside the frame. A row placed at the
+-- very edge sits under it.
+local firstRow = frame.rows[1]
+Expect("...and the rows clear the border", firstRow and firstRow.anchor and firstRow.anchor.x >= 12, true)
+
 ---------------------------------------------------------------- settings
 env = Boot()
 Expect("a Settings category is registered, named for the addon and not the family",

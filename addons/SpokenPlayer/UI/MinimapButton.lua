@@ -67,11 +67,27 @@ local function ShowMenu(anchor)
         menuFrame = CreateFrame("Frame", "SpokenMinimapMenu", UIParent, "BackdropTemplate")
         menuFrame:SetFrameStrata("DIALOG")
         menuFrame:SetClampedToScreen(true)
+        -- The template only supplies the methods; without a backdrop of its own the frame
+        -- draws nothing and the rows read as text floating over the game world. The same
+        -- dialog art the lore window uses, so the two look like one addon.
+        if menuFrame.SetBackdrop then
+            menuFrame:SetBackdrop({
+                bgFile = [[Interface\DialogFrame\UI-DialogBox-Background-Dark]],
+                edgeFile = [[Interface\DialogFrame\UI-DialogBox-Border]],
+                tile = true,
+                tileSize = 32,
+                edgeSize = 32,
+                insets = { left = 11, right = 12, top = 12, bottom = 11 },
+            })
+        end
         menuFrame.rows = {}
         menuFrame:HookScript("OnLeave", function(self) self.leaveAt = GetTime() end)
     end
     local menu = Minimap:BuildMenu()
-    local y, width = -6, 140
+    -- The dialog border is 32 pixels of art with roughly 12 of it inside the frame, so the
+    -- rows start below it rather than under it.
+    local PADDING = 14
+    local y, width = -PADDING, 168
     local lastGroup
     for i, entry in ipairs(menu) do
         local row = menuFrame.rows[i]
@@ -79,7 +95,7 @@ local function ShowMenu(anchor)
             row = CreateFrame("Button", nil, menuFrame)
             row:SetHeight(18)
             row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-            row.text:SetPoint("LEFT", 8, 0)
+            row.text:SetPoint("LEFT", 2, 0)
             row:SetScript("OnClick", function(self)
                 menuFrame:Hide()
                 if self.entry.onClick then self.entry.onClick(self) end
@@ -92,13 +108,13 @@ local function ShowMenu(anchor)
         end
         row.entry = entry
         row.text:SetText(entry.text)
-        row:SetPoint("TOPLEFT", 4, y)
-        row:SetWidth(width - 8)
+        row:SetPoint("TOPLEFT", PADDING, y)
+        row:SetWidth(width - PADDING * 2)
         row:Show()
         y = y - 18
     end
     for i = getn(menu) + 1, getn(menuFrame.rows) do menuFrame.rows[i]:Hide() end
-    menuFrame:SetSize(width, -y + 6)
+    menuFrame:SetSize(width, -y + PADDING)
     menuFrame:ClearAllPoints()
     menuFrame:SetPoint("TOPRIGHT", anchor, "BOTTOMLEFT")
     menuFrame:Show()

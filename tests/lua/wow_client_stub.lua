@@ -97,6 +97,10 @@ local function Widget(kind, name)
     function w:GetText() return self.text end
     function w:SetWidth(v) self.width = v end
     function w:SetHeight(v) self.height = v end
+    function w:SetBackdrop(backdrop) self.backdrop = backdrop end
+    function w:GetBackdrop() return self.backdrop end
+    function w:SetBackdropColor(r, g, b, a) self.backdropColor = { r, g, b, a } end
+    function w:SetBackdropBorderColor(r, g, b, a) self.backdropBorderColor = { r, g, b, a } end
     function w:SetOrientation(v) self.orientation = v end
     function w:GetOrientation() return self.orientation end
     function w:SetSize(a, b) self.width, self.height = a, b end
