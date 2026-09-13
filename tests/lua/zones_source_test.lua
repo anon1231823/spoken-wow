@@ -13,28 +13,7 @@ local Expect, Failures = H.Expecter(print)
 
 local BOOK = [[Interface\AddOns\SpokenZones\Textures\Book]]
 
-local function NewZoneLore()
-    local cfg = { voiceEnabled = true, voiceChannel = "Dialog", autoplay = true, autoplaySubzones = true,
-        stopAudioOnRead = false, autoplayExplored = false, debug = false }
-    local Z = { printed = {}, heard = {}, zoneChanged = {}, clientLocale = "enUS" }
-    Z.L = { QUEUE_HELD_COMBAT = "Waiting for combat to end.", QUEUE_HELD_CINEMATIC = "Waiting for the cinematic to end.",
-        QUEUE_HELD_OFF = "Narration is turned off.", READ = "Read", READ_INSTEAD = "Read instead",
-        READ_TOOLTIP = "", READ_INSTEAD_TOOLTIP = "", READ_SETTING_HINT = "" }
-    Z.Subzones = { [1411] = { ["valley of trials"] = { name = "Valley of Trials" } } }
-    function Z:Get(key) return cfg[key] end
-    function Z:Set(key, value) cfg[key] = value end
-    function Z:GetMapName(id) return ({ [1411] = "Durotar", [1426] = "Dun Morogh" })[id] end
-    function Z:GetLanguage() return "enUS" end
-    function Z:Print(fmt, ...) table.insert(self.printed, select("#", ...) > 0 and string.format(fmt, ...) or fmt) end
-    function Z:ReportURL(mapID, areaKey) return "https://spoken.test/r/" .. mapID .. "/" .. tostring(areaKey) end
-    function Z:ShowLoreFor(mapID, areaKey) self.shown = { mapID, areaKey } end
-    function Z:ShowCopyLink(url) self.copied = url end
-    function Z:MarkHeard(mapID, areaKey) table.insert(self.heard, tostring(mapID) .. "/" .. tostring(areaKey)) end
-    function Z:OnZoneChanged(fn) table.insert(self.zoneChanged, fn) end
-    function Z:ToggleLoreWindow() self.toggled = true end
-    function Z:OpenOptions() self.opened = true end
-    return Z
-end
+local NewZoneLore = H.NewZoneLore
 
 _G.ZoneLoreAudioPacks = {
     ZoneLoreAudio = { version = 1, addon = "ZoneLoreAudio", quality = "high", bitrate = 128, language = "enUS",

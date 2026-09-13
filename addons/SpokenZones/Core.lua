@@ -446,6 +446,10 @@ events:SetScript("OnEvent", function(self, event, arg1)
 		end
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		SetupHooks()
+		-- Once the world is up, so every addon waiting on the player has registered.
+		if ZoneLore.PromptForPlayer then
+			ZoneLore:PromptForPlayer()
+		end
 		-- Said every login, not once: an override you have forgotten you enabled
 		-- turns every gap in an unfinished translation into a bug report nobody
 		-- can reproduce.

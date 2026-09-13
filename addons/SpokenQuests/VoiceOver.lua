@@ -166,6 +166,97 @@ local function AdoptSavedVariables()
     _G.SpokenQuestsDB = new
 end
 
+--------------------------------------------------------------------------------
+-- The player, when it is installed but switched off
+--------------------------------------------------------------------------------
+
+-- The player is an optional dependency: without it this addon loads, says so, and reads
+-- nothing. One case deserves more than a line in chat -- the player installed and
+-- disabled -- because it is one click to fix and an addon manager that fetched the
+-- dependency cannot see that the player then turned it off.
+--
+-- The two feature addons each carry a copy of this, because the code they would share
+-- lives in the player, which is the addon that is not there. They coordinate through two
+-- globals instead: one collects the names to say, the other makes sure only one dialog is
+-- raised however many addons are waiting on it.
+local PLAYER_FOLDER = "SpokenPlayer"
+local PLAYER_DIALOG = "SPOKEN_PLAYER_REQUIRED"
+
+--- Say that this addon needs the player. Called whether or not the player is there, since
+--- the addon that raises the dialog may not be the one that noticed first.
+local function RequirePlayer(title)
+    local names = rawget(_G, "SpokenPlayerRequiredBy")
+    if not names then
+        names = {}
+        _G.SpokenPlayerRequiredBy = names
+    end
+    for _, name in ipairs(names) do
+        if name == title then
+            return
+        end
+    end
+    table.insert(names, title)
+end
+
+--- "A", "A and B", "A, B and C".
+local function ListNames(names)
+    local count = 0
+    for _ in ipairs(names) do
+        count = count + 1
+    end
+    local text = ""
+    for index, name in ipairs(names) do
+        if index == 1 then
+            text = name
+        elseif index == count then
+            text = text .. " and " .. name
+        else
+            text = text .. ", " .. name
+        end
+    end
+    return text
+end
+
+--- Raise the dialog, if the player is installed and disabled and nobody has raised it yet.
+--- Returns whether this call was the one that raised it.
+function Addon:PromptForPlayer()
+    if rawget(_G, "Spoken") or rawget(_G, "SpokenPlayerPrompted") then
+        return false
+    end
+    local names = rawget(_G, "SpokenPlayerRequiredBy")
+    if not names or not names[1] then
+        return false
+    end
+    local getInfo = (C_AddOns and C_AddOns.GetAddOnInfo) or GetAddOnInfo
+    local enableAddOn = (C_AddOns and C_AddOns.EnableAddOn) or EnableAddOn
+    if not (getInfo and enableAddOn and StaticPopupDialogs and StaticPopup_Show) then
+        return false
+    end
+    -- Absent rather than disabled: there is nothing to enable, so there is nothing to
+    -- click. The addon has already said in chat that the player is missing.
+    local present, _, _, _, reason = getInfo(PLAYER_FOLDER)
+    if not present or reason ~= "DISABLED" then
+        return false
+    end
+
+    _G.SpokenPlayerPrompted = true
+    StaticPopupDialogs[PLAYER_DIALOG] =
+    {
+        text = format("|cffffd200Spoken Player|r is required to use %s.", ListNames(names)),
+        button1 = ENABLE or "Enable",
+        button2 = CANCEL or "Cancel",
+        timeout = 0,
+        whileDead = 1,
+        -- An addon is only loaded at login, so enabling it takes effect on the next one.
+        OnAccept = function()
+            enableAddOn(PLAYER_FOLDER)
+            ReloadUI()
+        end,
+    }
+    StaticPopup_Show(PLAYER_DIALOG)
+    return true
+end
+
 function Addon:OnInitialize()
     AdoptSavedVariables()
     self.db = LibStub("AceDB-3.0"):New("SpokenQuestsDB", defaults)
@@ -180,6 +271,7 @@ function Addon:OnInitialize()
         whileDead = 1,
     }
 
+    RequirePlayer("Spoken Quests")
     Player:Setup()
     -- The copy-link popup behind the Report button. Guarded because a failure to build a
     -- dialog must not stop playback initializing.
@@ -214,6 +306,15 @@ function Addon:OnInitialize()
             self:ScheduleTimer(LoadDeferredDataModules, 1)
         end
     end
+    -- Always deferred, never raised here: on a /reload every addon's ADDON_LOADED has
+    -- already fired by the time this runs, but on a fresh login the other addon that
+    -- wants the player may not have loaded yet, and the dialog would name only this one.
+    local prompt = CreateFrame("Frame")
+    prompt:RegisterEvent("PLAYER_ENTERING_WORLD")
+    prompt:SetScript("OnEvent", function(frame)
+        frame:UnregisterEvent("PLAYER_ENTERING_WORLD")
+        Addon:PromptForPlayer()
+    end)
     if self.dataModulesPending then
         if IsLoggedIn and IsLoggedIn() then
             ScheduleDeferredDataLoad()

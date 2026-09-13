@@ -17,6 +17,8 @@ and 3.3.5 zips carry it inside.
 - One queue with ZoneLore: quest lines and zone narration wait their turn behind each other,
   and nothing interrupts. Gossip yields to a queued quest line in both directions.
 - The player frame, minimap button, sound channel and pause are Spoken Player's settings now.
+- If Spoken Player is installed but switched off, a dialog offers to enable it and
+  reload, rather than the addon quietly reading nothing.
 - The sound packs are renamed **Spoken Quests Audio: X**, and the HQ family **Spoken Quests
   HQ Audio: X**, in the addon list and on CurseForge. Only the titles change: the folders
   keep their names, so nothing is re-downloaded and every installed pack keeps working.

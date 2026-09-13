@@ -277,8 +277,21 @@ _G.getn = function(t) return #t end
 _G.NORMAL_FONT_COLOR_CODE = "|cffffffff"
 _G.GRAY_FONT_COLOR_CODE = "|cff808080"
 _G.OKAY = "Okay"
+_G.ENABLE = "Enable"
+_G.CANCEL = "Cancel"
 _G.StaticPopupDialogs = {}
-function _G.StaticPopup_Show() end
+--- Every popup a scenario raised, newest last, as { key = ..., dialog = ... }.
+M.popups = {}
+function _G.StaticPopup_Show(key, ...)
+    local dialog = _G.StaticPopupDialogs[key]
+    table.insert(M.popups, { key = key, dialog = dialog, args = { ... } })
+    return dialog
+end
+
+--- Addons enabled and UI reloads a scenario asked for.
+M.enabledAddOns, M.reloads = {}, 0
+function _G.EnableAddOn(addon) table.insert(M.enabledAddOns, addon) end
+function _G.ReloadUI() M.reloads = M.reloads + 1 end
 _G.SlashCmdList = {}
 
 for _, name in ipairs({ "QuestFrameRewardPanel", "QuestFrameProgressPanel", "QuestFrameDetailPanel",
@@ -296,6 +309,14 @@ function M.SetAddOns(list)
 end
 
 --- The default: one loaded pack declaring the inherited TOC key.
+--- Forget the popups, enables and reloads a scenario caused.
+function M.ResetUIActions()
+    for i = #M.popups, 1, -1 do M.popups[i] = nil end
+    for i = #M.enabledAddOns, 1, -1 do M.enabledAddOns[i] = nil end
+    M.reloads = 0
+    for key in pairs(_G.StaticPopupDialogs) do _G.StaticPopupDialogs[key] = nil end
+end
+
 function M.ResetAddOns()
     M.SetAddOns({ { folder = PACK, meta = {
         ["X-VoiceOver-DataModule-Version"] = "1", Version = "1.2.1", Title = PACK } } })
@@ -316,12 +337,19 @@ end
 function _G.GetNumAddOns() return #M.addons end
 function _G.GetAddOnInfo(i)
     local entry = AddOnAt(i)
-    if entry then return entry.folder, entry.folder, "", true, "LOADED" end
+    -- name, title, notes, loadable, reason. An entry may set loadable/reason to stand in
+    -- for an addon the player has switched off or has not installed.
+    if entry then
+        local loadable = entry.loadable
+        if loadable == nil then loadable = true end
+        return entry.folder, entry.title or entry.folder, "", loadable, entry.reason
+    end
 end
 function _G.GetAddOnMetadata(addon, key)
     local entry = AddOnAt(addon)
-    -- The client's tonumber tolerates nil, LuaJIT's does not.
-    return entry and entry.meta[key] or ""
+    -- The client's tonumber tolerates nil, LuaJIT's does not. An entry describing an addon
+    -- that is not a pack carries no metadata at all.
+    return entry and entry.meta and entry.meta[key] or ""
 end
 function _G.IsAddOnLoadOnDemand() return false end
 function _G.GetAddOnEnableState() return 2 end
@@ -456,6 +484,21 @@ function M.LoadQuests(addonDirectory, spokenDirectory)
         dofile(addonDirectory .. file .. ".lua")
     end
     return VO, env
+end
+
+--- The quests addon with no player at all: what a hand-install without the optional
+--- dependency loads. LoadQuests boots the player first; this deliberately does not.
+function M.LoadQuestsAlone(addonDirectory)
+    dofile(addonDirectory .. "Environment.lua")
+    local VO = _G.VoiceOver
+    for _, module in ipairs({ "QuestOverlayUI", "Options" }) do
+        VO[module] = setmetatable({}, { __index = function() return function() end end })
+    end
+    for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "EasterEggs",
+        "DataModules", "ReportButton", "Player", "VoiceOver" }) do
+        dofile(addonDirectory .. file .. ".lua")
+    end
+    return VO
 end
 
 --- Kept for one release: the pre-cutover loader name.
