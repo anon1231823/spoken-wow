@@ -102,6 +102,12 @@ local function Widget(kind, name)
     function w:SetSize(a, b) self.width, self.height = a, b end
     function w:GetWidth() return self.width end
     function w:GetHeight() return self.height end
+    function w:GetWidth() return self.width end
+    -- A scroll frame's own state, which the settings panels' viewport reads back.
+    function w:SetVerticalScroll(v) self.verticalScroll = v end
+    function w:GetVerticalScroll() return self.verticalScroll or 0 end
+    function w:SetScrollChild(child) self.scrollChild = child end
+    function w:GetScrollChild() return self.scrollChild end
     -- Recorded rather than swallowed by the catch-all below: where a control sits is what
     -- a settings panel is, and a panel whose rows drift apart has no other symptom.
     function w:SetPoint(point, a, b, c, d)
@@ -351,6 +357,38 @@ function _G.EnableAddOn(addon) table.insert(M.enabledAddOns, addon) end
 function _G.ReloadUI() M.reloads = M.reloads + 1 end
 _G.SlashCmdList = {}
 
+-- The dropdown API, enough of it that a panel can be built and a choice made. A menu is
+-- not a list of frames here: it is the initializer the addon registered, run on demand.
+local openMenu
+function _G.UIDropDownMenu_Initialize(frame, initializer) frame.dropdownInit = initializer end
+function _G.UIDropDownMenu_CreateInfo() return {} end
+function _G.UIDropDownMenu_AddButton(info) if openMenu then table.insert(openMenu, info) end end
+function _G.UIDropDownMenu_SetText(frame, text) frame.dropdownText = text end
+function _G.UIDropDownMenu_SetWidth() end
+function _G.UIDropDownMenu_SetSelectedValue() end
+function _G.CloseDropDownMenus() end
+
+--- What opening `frame`'s menu would show: one entry per choice, in order, each with the
+--- `text` a player reads, whether it is `checked`, and a `func` that picks it.
+function M.OpenDropdown(frame)
+    openMenu = {}
+    frame.dropdownInit(frame, 1)
+    local entries = openMenu
+    openMenu = nil
+    return entries
+end
+
+--- Pick the entry reading `text`. Returns false if the menu does not offer it.
+function M.PickDropdown(frame, text)
+    for _, entry in ipairs(M.OpenDropdown(frame)) do
+        if entry.text == text then
+            entry.func()
+            return true
+        end
+    end
+    return false
+end
+
 for _, name in ipairs({ "QuestFrameRewardPanel", "QuestFrameProgressPanel", "QuestFrameDetailPanel",
     "QuestFrameGreetingPanel", "QuestLogDetailFrame", "GossipFrame", "QuestFrame" }) do
     _G[name] = Frame(name)
@@ -483,6 +521,23 @@ libs["AceDB-3.0"] = {
         sv.global = sv.global or {}
         local db = { profile = sv.profiles.Default, char = sv.char[charKey], global = sv.global, sv = sv }
         db.RegisterCallback = function() end
+        -- The profile half of AceDB, which the settings panels offer inline.
+        local current = "Default"
+        function db:GetCurrentProfile() return current end
+        function db:GetProfiles()
+            local names = {}
+            for name in pairs(sv.profiles) do table.insert(names, name) end
+            table.sort(names)
+            return names
+        end
+        function db:SetProfile(name)
+            sv.profiles[name] = sv.profiles[name] or Merge(defaults.profile, nil)
+            current = name
+            self.profile = sv.profiles[name]
+        end
+        function db:ResetProfile() sv.profiles[current] = Merge(defaults.profile, nil); self.profile = sv.profiles[current] end
+        function db:CopyProfile(name) sv.profiles[current] = Merge(sv.profiles[name], nil); self.profile = sv.profiles[current] end
+        function db:DeleteProfile(name) sv.profiles[name] = nil end
         return db
     end,
 }

@@ -53,7 +53,7 @@ local function Build()
     -- addons each used to carry their own channel control, and a player with both
     -- installed had two settings for one thing.
     layout:Section(L.OPT_AUDIO_TITLE)
-    layout:Cycle(L.OPT_CHANNEL, L.OPT_CHANNEL_TIP, CHANNELS,
+    layout:Dropdown(L.OPT_CHANNEL, L.OPT_CHANNEL_TIP, CHANNELS,
         function() return audio().SoundChannel end,
         function(v) audio().SoundChannel = v end,
         -- The handle belongs to the old channel, so a line already speaking cannot move.

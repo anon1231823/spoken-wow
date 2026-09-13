@@ -247,7 +247,7 @@ end
 Expect("the scale slider is a slider", scale ~= nil, true)
 Expect("...with a height, or it draws nothing", scale and scale.height, 16)
 Expect("...and an orientation", scale and scale:GetOrientation(), "HORIZONTAL")
-Expect("the channel is chosen here", labels["Sound channel: Master"], true)
+Expect("the channel is chosen here", labels["Sound channel"], true)
 Expect("...and so is silencing the game's own dialogue",
     labels["Silence the game's own dialogue while speaking"], true)
 Expect("a current client is offered nothing about the music channel",

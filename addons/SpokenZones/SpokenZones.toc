@@ -59,7 +59,6 @@ Data/zhCN/Aliases.lua
 Data/zhTW/Aliases.lua
 UI/Layout.lua
 UI/TextView.lua
-UI/Scroller.lua
 UI/CopyLink.lua
 UI/AudioButton.lua
 UI/ReportButton.lua

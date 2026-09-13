@@ -34,7 +34,7 @@ Expect("...under the addon's name", mine, 1)
 Expect("...once, not once per group of the options tree", mine, 1)
 
 local rows, headings = {}, {}
-for _, child in ipairs(SettingsPanel.panel.children) do
+for _, child in ipairs(SettingsPanel.panel.content.children) do
     if child.layoutHeading then
         table.insert(headings, { y = child.layoutY, height = child.layoutHeight, text = child.text })
     elseif child.layoutHeight then
@@ -45,7 +45,7 @@ end
 local names = {}
 for _, heading in ipairs(headings) do table.insert(names, heading.text) end
 Expect("the settings are grouped into sections", table.concat(names, "|"),
-    "Dialogue|Sound packs|Troubleshooting|All options")
+    "Dialogue|Sound packs|Troubleshooting|Profile")
 
 local function Distinct(values)
     local seen, count = {}, 0
@@ -79,31 +79,64 @@ end
 Expect("every section heading the same distance below the section above", Distinct(headingGaps), 1)
 
 ---------------------------------------------------------------- the rows write the settings
--- The cycle steps through the enum by name and stores the number the addon reads.
+-- A dropdown rather than a button that cycles: four named choices, and a player should be
+-- able to see them and pick one rather than click through them.
 local db = VO.Addon.db.profile
 db.Audio.GossipFrequency = VO.Enums.GossipFrequency.Always
-local cycle
-for _, child in ipairs(SettingsPanel.panel.children) do
-    if child.layoutHeight and type(child.text) == "string" and string.find(child.text, "NPC greetings") then
-        cycle = child
+local greetings
+for _, child in ipairs(SettingsPanel.panel.content.children) do
+    if child.dropdownInit and child.layoutLabel and child.layoutLabel.text == "NPC greetings" then
+        greetings = child
     end
 end
-Expect("the greeting frequency is a cycle button", cycle ~= nil, true)
--- Opening the panel is what re-reads the setting: a value changed by a slash command
--- since the panel was built would otherwise still show the old one.
-cycle:GetScript("OnShow")(cycle)
-Expect("...showing the setting when the panel opens", cycle.text, "NPC greetings: Always")
-cycle:Click()
-Expect("...and clicking it stores the next value, as the number the addon reads",
-    db.Audio.GossipFrequency, VO.Enums.GossipFrequency.OncePerQuestNPC)
-Expect("...relabelled", cycle.text, "NPC greetings: Once per quest NPC")
+Expect("the greeting frequency is a dropdown", greetings ~= nil, true)
+greetings:GetScript("OnShow")(greetings)
+Expect("...showing the setting when the panel opens", greetings.dropdownText, "Always")
 
----------------------------------------------------------------- the commands and the buttons agree
--- `/vo test` and the button on the panel run the same code, so the two cannot answer
--- differently -- which is what an inline function per command guarantees they will.
-Expect("the self-test is a method both call", type(VO.Options.RunSelfTest), "function")
-Expect("so are the diagnostics", type(VO.Options.PrintDiagnostics), "function")
-Expect("the command table calls it", type(VO.Options.table.args.Commands.args.Test.func), "function")
+local entries = stub.OpenDropdown(greetings)
+local offered = {}
+for _, entry in ipairs(entries) do table.insert(offered, entry.text) end
+Expect("...offering every choice at once", table.concat(offered, "|"),
+    "Always|Once per quest NPC|Once per NPC|Never")
+Expect("...with the current one ticked", entries[1].checked, true)
+
+Expect("picking one is possible", stub.PickDropdown(greetings, "Once per NPC"), true)
+Expect("...and stores the number the addon reads", db.Audio.GossipFrequency,
+    VO.Enums.GossipFrequency.OncePerNPC)
+Expect("...and relabels", greetings.dropdownText, "Once per NPC")
+-- Picking again from a different value: what the control shows and what it compares have
+-- to be the same thing, or it can never find where in the list it is.
+Expect("picking a second time works too", stub.PickDropdown(greetings, "Never"), true)
+Expect("...and stores that", db.Audio.GossipFrequency, VO.Enums.GossipFrequency.Never)
+Expect("...with the ticked entry moved", stub.OpenDropdown(greetings)[4].checked, true)
+
+---------------------------------------------------------------- packs and profiles, inline
+-- Both used to be a branch of an options tree behind a button, which is two clicks and a
+-- second window to answer "is my audio installed" or "which profile am I on".
+local texts = {}
+for _, child in ipairs(SettingsPanel.panel.content.children) do
+    if type(child.text) == "string" and child.text ~= "" then table.insert(texts, child.text) end
+    if child.dropdownInit and child.layoutLabel then table.insert(texts, child.layoutLabel.text) end
+end
+local function Mentions(needle)
+    for _, text in ipairs(texts) do
+        if string.find(text, needle, 1, true) then return true end
+    end
+    return false
+end
+Expect("the installed pack is named on the panel", Mentions("TestPack"), true)
+Expect("the profile is chosen on the panel", Mentions("Settings profile"), true)
+Expect("...and can be reset there", Mentions("Reset this profile"), true)
+Expect("nothing sends the player to a second window", Mentions("everything else"), false)
+
+local profile
+for _, child in ipairs(SettingsPanel.panel.content.children) do
+    if child.dropdownInit and child.layoutLabel and child.layoutLabel.text == "Settings profile" then
+        profile = child
+    end
+end
+Expect("the profile dropdown shows the one in use", profile and profile.dropdownText, "Default")
+Expect("...and switching is possible", stub.PickDropdown(profile, "Default"), true)
 
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
 print("\nAll quests options tests passed")

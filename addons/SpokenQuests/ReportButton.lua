@@ -99,6 +99,13 @@ function ReportButton:ShowLink(target)
     StaticPopup_Show(COPY_DIALOG)
 end
 
+--- The same popup, for an address that is not a report: the settings panel offers one per
+--- sound pack, since the game cannot open a link and a player has to copy it out.
+function ReportButton:ShowAddress(url)
+    shownLink = url
+    StaticPopup_Show(COPY_DIALOG)
+end
+
 function ReportButton:Create(parent)
     -- Named, because 1.12's UIPanelButtonTemplate gives its label the name "$parentText" and an
     -- unnamed button leaves that substitution with nothing to resolve against.

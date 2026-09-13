@@ -22,7 +22,7 @@ Expect("...under its own name", stub.settingsCategories[1] and stub.settingsCate
 
 -- The rows live in the scroller's content frame, not on the panel: the settings canvas
 -- neither scrolls nor clips, so a panel with more rows than fit draws over the world.
-local content = Z.optionsPanel.children[1]
+local content = Z.optionsPanel.content
 local rows, headings = {}, {}
 for _, child in ipairs(content.children) do
     if child.layoutHeading then
@@ -81,7 +81,7 @@ Expect("no control escapes the row it was given", escaped, 0)
 
 -- Derived from the layout rather than written down, so adding a row cannot leave a
 -- section below the reach of the scrollbar.
-Expect("the scroller is told how tall the content grew", Z.contentHeight > 500, true)
+Expect("the scroller is told how tall the content grew", content.height > 500, true)
 
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
 print("\nAll zones options tests passed")

@@ -64,8 +64,9 @@ function ZoneLore:SetupOptions()
 	-- Everything below is laid out in `content`, not in `panel`. The settings canvas
 	-- is a fixed size and neither scrolls nor clips what overflows it, so a panel
 	-- with more rows than fit draws them over the game world. See UI/Scroller.lua.
-	local scroller = ZoneLore:CreateScroller(panel)
+	local scroller = SpokenLayout.Scroll(panel)
 	local content = scroller.child
+	panel.content = content
 
 	MakeHeading(content, "Spoken Zones", INDENT, -16)
 	local layout = SpokenLayout.New(content, INDENT, -42)
@@ -149,101 +150,75 @@ function ZoneLore:SetupOptions()
 			end
 		end)
 
-	-- The list of packs is built on click rather than captured here: packs cannot be
-	-- installed mid-session, but a player who disables one in the AddOns list and
-	-- reloads should not find this button offering it.
-	local packButton = layout:Button("", 220, function()
-		local packs = ZoneLore:GetAudioPacks()
-		if #packs < 2 then
-			return
-		end
-		local active = ZoneLore:GetActiveAudioPack()
-		local index = 1
-		for i = 1, #packs do
-			if packs[i] == active then
-				index = i
-				break
-			end
-		end
-		ZoneLore:SetActiveAudioPack(packs[(index % #packs) + 1].addon)
-		packButton:GetScript("OnShow")(packButton)
-	end)
-	local packNote = layout:Note("", 460, 32)
-	packButton:SetScript("OnShow", function()
+	-- The list is read when the menu opens rather than captured here: packs cannot be
+	-- installed mid-session, but a player who disables one in the AddOns list and reloads
+	-- should not find this offering it.
+	local packNote
+	local function PackLabel(pack)
+		return pack and ZoneLore:GetAudioPackLabel(pack) or "none installed"
+	end
+	local function DescribePacks()
 		local packs = ZoneLore:GetAudioPacks()
 		local active = ZoneLore:GetActiveAudioPack()
-		local count = #packs
-		if count == 0 then
-			packButton:SetText("No sound pack installed")
-			packButton:Disable()
+		if #packs == 0 then
 			packNote:SetText("Nothing is narrated. Install Spoken Zones Audio to hear the "
 				.. "lore read aloud.")
-			return
-		end
-		packButton:SetText("Sound pack: " .. ZoneLore:GetAudioPackLabel(active))
-		if count > 1 then
-			packButton:Enable()
-			packNote:SetText(string.format("%s. Click to switch between the %d installed packs.",
-				active.addon, count))
+		elseif #packs > 1 then
+			packNote:SetText(string.format("%s. %d installed; the higher quality one is "
+				.. "used unless you choose otherwise.", active.addon, #packs))
 		else
-			-- Disabled rather than hidden: the pack in use is worth reporting even when
-			-- there is no choice to make.
-			packButton:Disable()
 			packNote:SetText(active.addon .. ". Install another pack to switch quality.")
 		end
-	end)
-	packButton:GetScript("OnShow")(packButton)
+	end
+	layout:Dropdown("Sound pack", "Which installed pack narrates the lore.",
+		function() return ZoneLore:GetAudioPacks() end,
+		function() return ZoneLore:GetActiveAudioPack() end,
+		function(pack) ZoneLore:SetActiveAudioPack(pack.addon) end,
+		function() DescribePacks() end,
+		PackLabel)
+	packNote = layout:Note("", 460, 32)
+	DescribePacks()
 
 	layout:Section("Language")
-	-- Only finished languages are offered. A player choosing from a list has no way
-	-- to know that half a translation is missing, and would report the English that
-	-- shows through as a bug; /zl lang <code> force is how an unfinished one gets
-	-- looked at.
-	local langButton = layout:Button("", 220, function()
+	-- Only finished languages are offered. A player choosing from a list has no way to
+	-- know that half a translation is missing, and would report the English that shows
+	-- through as a bug; /zl lang <code> force is how an unfinished one gets looked at.
+	local langNote
+	local function DescribeLanguage()
 		local available = ZoneLore:GetSelectableLanguages()
-		if #available < 2 then
-			return
-		end
-		local current = ZoneLore:GetLanguagePreference() or ZoneLore:GetLanguage()
-		local index = 1
-		for i = 1, #available do
-			if available[i].code == current then
-				index = i
-				break
-			end
-		end
-		local chosen = available[(index % #available) + 1]
-		if ZoneLore:SetLanguage(chosen.code) then
-			-- Said before the reload rather than after: the failure to avoid is a
-			-- player switching, seeing English, and concluding it did not work.
-			ZoneLore:Print("language set to %s -- |cffffcc00/reload to apply|r", chosen.name)
-		end
-		langButton:GetScript("OnShow")(langButton)
-	end)
-	local langNote = layout:Note("", 460, 32)
-	langButton:SetScript("OnShow", function()
-		local available = ZoneLore:GetSelectableLanguages()
-		-- The chosen language, which is not always the one on screen: a switch only
-		-- takes effect on the next load, and a button that snapped back to the old
-		-- name would read as the click having been ignored.
+		-- The chosen language, which is not always the one on screen: a switch only takes
+		-- effect on the next load.
 		local chosen = ZoneLore:GetLanguagePreference() or ZoneLore:GetLanguage()
-		local info = ZoneLore:GetLocaleInfo(chosen)
-		langButton:SetText("Language: " .. (info and info.name or chosen))
-		if #available > 1 then
-			langButton:Enable()
-			if chosen ~= ZoneLore:GetLanguage() then
-				langNote:SetText("Reload to start reading it: type /reload.")
-			else
-				langNote:SetText(string.format(
-					"%d languages available. Switching takes effect after /reload.", #available))
-			end
-		else
-			-- Disabled rather than hidden, for the same reason as the sound pack above.
-			langButton:Disable()
+		if #available < 2 then
 			langNote:SetText("The lore is only written in English so far.")
+		elseif chosen ~= ZoneLore:GetLanguage() then
+			langNote:SetText("Reload to start reading it: type /reload.")
+		else
+			langNote:SetText(string.format(
+				"%d languages available. Switching takes effect after /reload.", #available))
 		end
-	end)
-	langButton:GetScript("OnShow")(langButton)
+	end
+	layout:Dropdown("Language", "Which language the lore is read and shown in.",
+		function() return ZoneLore:GetSelectableLanguages() end,
+		function()
+			local chosen = ZoneLore:GetLanguagePreference() or ZoneLore:GetLanguage()
+			for _, locale in ipairs(ZoneLore:GetSelectableLanguages()) do
+				if locale.code == chosen then
+					return locale
+				end
+			end
+		end,
+		function(locale)
+			if ZoneLore:SetLanguage(locale.code) then
+				-- Said before the reload rather than after: the failure to avoid is a
+				-- player switching, seeing English, and concluding it did not work.
+				ZoneLore:Print("language set to %s -- |cffffcc00/reload to apply|r", locale.name)
+			end
+		end,
+		function() DescribeLanguage() end,
+		function(locale) return locale and locale.name or "English" end)
+	langNote = layout:Note("", 460, 32)
+	DescribeLanguage()
 
 	layout:Section("Troubleshooting")
 	layout:Checkbox("Report area names when clicking the map",

@@ -41,6 +41,7 @@ local BUTTON_HEIGHT = 22
 local SLIDER_HEIGHT = 16
 local SLIDER_LABEL_GAP = 18   -- the label sits above the bar, inside the row
 local INDENT_STEP = 20        -- for an option that qualifies the one above it
+local DROPDOWN_HEIGHT = 26
 
 -- A heading belongs to the section under it. The space above it is what separates two
 -- sections; the space below it must stay smaller, or the heading reads as floating
@@ -191,22 +192,27 @@ function Layout:Slider(label, minValue, maxValue, step, read, write, apply, show
     return self:Row(slider, top, height)
 end
 
---- A button that cycles through `values`. A dropdown would be the obvious control, but
---- UIDropDownMenu's Initialize plumbing cannot be checked without launching the game, and
---- a handful of values does not justify the risk.
-function Layout:Cycle(label, tooltip, values, read, write, apply)
+local function Resolve(values)
+    if type(values) == "function" then
+        return values()
+    end
+    return values
+end
+
+--- A button that cycles through `values`, for a client with no dropdown to offer. What it
+--- shows and what it compares are both `describe(value)`, so it can always find where in
+--- the list it currently is; comparing a label against a value is how a cycle sticks.
+function Layout:Cycle(label, tooltip, values, read, write, apply, describe)
+    describe = describe or tostring
     local top = self:Take(BUTTON_HEIGHT)
     local button = CreateFrame("Button", nil, self.parent, "UIPanelButtonTemplate")
     button:SetSize(240, BUTTON_HEIGHT)
     button:SetPoint("TOPLEFT", self.x, top)
     local function Sync()
-        button:SetText(format(label, read()))
+        button:SetText(format(label, describe(read())))
     end
     button:SetScript("OnClick", function()
-        local list = values
-        if type(list) == "function" then
-            list = list()
-        end
+        local list = Resolve(values)
         local count = Count(list)
         if count == 0 then
             return
@@ -234,6 +240,63 @@ function Layout:Cycle(label, tooltip, values, read, write, apply)
     return self:Row(button, top, BUTTON_HEIGHT)
 end
 
+local dropdowns = 0
+
+--- A labelled dropdown: the control a player expects for a handful of named choices. The
+--- list may be a function, for a choice whose options depend on what is installed.
+---
+--- Falls back to a cycle button where UIDropDownMenu is absent, which is every client
+--- without a Settings API -- the same clients that host the panel in a window of its own.
+function Layout:Dropdown(label, tooltip, values, read, write, apply, describe)
+    describe = describe or tostring
+    if not (UIDropDownMenu_Initialize and UIDropDownMenu_AddButton and CreateFrame) then
+        return self:Cycle(label .. ": %s", tooltip, values, read, write, apply, describe)
+    end
+
+    local height = DROPDOWN_HEIGHT + SLIDER_LABEL_GAP
+    local top = self:Take(height)
+    local caption = self.parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    caption:SetPoint("TOPLEFT", self.x + 4, top)
+    caption:SetJustifyH("LEFT")
+    caption:SetText(label)
+
+    dropdowns = dropdowns + 1
+    local menu = CreateFrame("Frame", "SpokenLayoutDropdown" .. dropdowns, self.parent,
+        "UIDropDownMenuTemplate")
+    -- The template carries its own inset, so the frame sits left of where its text lands.
+    menu:SetPoint("TOPLEFT", self.x - 16, top - SLIDER_LABEL_GAP + 2)
+
+    local function Sync()
+        UIDropDownMenu_SetText(menu, describe(read()))
+    end
+
+    UIDropDownMenu_Initialize(menu, function(_, level)
+        local current = read()
+        for _, value in ipairs(Resolve(values)) do
+            local info = UIDropDownMenu_CreateInfo()
+            info.text = describe(value)
+            info.checked = value == current
+            info.func = function()
+                write(value)
+                if apply then apply() end
+                Sync()
+                if CloseDropDownMenus then
+                    CloseDropDownMenus()
+                end
+            end
+            UIDropDownMenu_AddButton(info, level)
+        end
+    end)
+    if UIDropDownMenu_SetWidth then
+        UIDropDownMenu_SetWidth(menu, 200)
+    end
+    menu:SetScript("OnShow", Sync)
+    Tooltip(menu, label, tooltip)
+    Sync()
+    menu.layoutLabel = caption
+    return self:Row(menu, top, height)
+end
+
 function Layout:Button(label, width, onClick, tooltip)
     local top = self:Take(BUTTON_HEIGHT)
     local button = CreateFrame("Button", nil, self.parent, "UIPanelButtonTemplate")
@@ -250,6 +313,206 @@ function Layout:Custom(frame, height)
     local top = self:Take(height)
     frame:SetPoint("TOPLEFT", self.x, top)
     return self:Row(frame, top, height)
+end
+
+--------------------------------------------------------------------------------
+-- Scrolling
+--------------------------------------------------------------------------------
+--
+-- Settings.RegisterCanvasLayoutCategory hands the addon a fixed-size canvas and does
+-- nothing else: a canvas taller than the settings window does not scroll, and does not
+-- even clip, so the overflow draws over the game world. Any panel that can outgrow one
+-- screen has to bring its own viewport, and a panel of sections always can.
+--
+-- The scrollbar is hand-rolled: ScrollFrameTemplate needs XML KeyValues naming a
+-- scrollBarTemplate, none of which can be verified without launching the client, while a
+-- track and a thumb are deterministic.
+
+local SCROLL_STEP = 32
+local BAR_WIDTH = 6
+local MIN_THUMB = 20
+
+local Scroller = {}
+Scroller.__index = Scroller
+
+local function Clamp(value, low, high)
+    if value < low then
+        return low
+    elseif value > high then
+        return high
+    end
+    return value
+end
+
+--------------------------------------------------------------------------------
+-- Scrollbar
+--------------------------------------------------------------------------------
+
+-- Measures and redraws the bar, and NOTHING ELSE. In particular it must never
+-- scroll: OnVerticalScroll calls it, so a SetVerticalScroll in here is an infinite
+-- recursion and a dead settings panel. Moving the scroll position is ScrollTo's
+-- job, and Recalculate below is what calls it when the range changes.
+function Scroller:UpdateScrollBar()
+    local viewHeight = self.frame:GetHeight() or 0
+    local contentHeight = self.contentHeight or 0
+    local range = contentHeight - viewHeight
+
+    -- Nothing to scroll: keep the bar out of the way entirely.
+    if range <= 1 or viewHeight <= 0 then
+        self.range = 0
+        self.bar:Hide()
+        return
+    end
+
+    self.range = range
+    self.bar:Show()
+
+    local barHeight = self.bar:GetHeight() or 0
+    local thumbHeight = Clamp((viewHeight / contentHeight) * barHeight, MIN_THUMB, barHeight)
+    self.thumb:SetHeight(thumbHeight)
+
+    local travel = barHeight - thumbHeight
+    local fraction = range > 0 and (self.frame:GetVerticalScroll() / range) or 0
+    self.thumb:ClearAllPoints()
+    self.thumb:SetPoint("TOP", self.bar, "TOP", 0, -Clamp(fraction * travel, 0, travel))
+end
+
+function Scroller:ScrollTo(value)
+    self.frame:SetVerticalScroll(Clamp(value, 0, self.range or 0))
+end
+
+-- Re-measure, then pull the scroll position back inside whatever range is left.
+-- Without the second half, shrinking the viewport's content leaves the view parked
+-- past the end of it, showing empty space under the last control.
+function Scroller:Recalculate()
+    self:UpdateScrollBar()
+    self:ScrollTo(self.frame:GetVerticalScroll())
+end
+
+-- How tall the content actually is. The caller knows, because it laid the widgets
+-- out; nothing here can measure a frame whose children are absolutely positioned.
+function Scroller:SetContentHeight(height)
+    self.contentHeight = height
+    self.child:SetHeight(height)
+    self:Recalculate()
+end
+
+local function BuildScrollBar(view, parent)
+    local bar = CreateFrame("Frame", nil, parent)
+    bar:SetWidth(BAR_WIDTH)
+    bar:SetPoint("TOPRIGHT", view.frame, "TOPRIGHT", 0, 0)
+    bar:SetPoint("BOTTOMRIGHT", view.frame, "BOTTOMRIGHT", 0, 0)
+    bar:Hide()
+
+    local track = bar:CreateTexture(nil, "BACKGROUND")
+    track:SetAllPoints()
+    track:SetColorTexture(1, 1, 1, 0.06)
+
+    local thumb = CreateFrame("Button", nil, bar)
+    thumb:SetWidth(BAR_WIDTH)
+    thumb:SetHeight(MIN_THUMB)
+    thumb:SetPoint("TOP", bar, "TOP", 0, 0)
+
+    local thumbTex = thumb:CreateTexture(nil, "ARTWORK")
+    thumbTex:SetAllPoints()
+    thumbTex:SetColorTexture(1, 0.82, 0, 0.45)
+
+    thumb:SetScript("OnEnter", function()
+        thumbTex:SetColorTexture(1, 0.82, 0, 0.75)
+    end)
+    thumb:SetScript("OnLeave", function()
+        if not view.dragging then
+            thumbTex:SetColorTexture(1, 0.82, 0, 0.45)
+        end
+    end)
+
+    thumb:RegisterForDrag("LeftButton")
+    thumb:SetScript("OnDragStart", function()
+        view.dragging = true
+    end)
+    thumb:SetScript("OnDragStop", function()
+        view.dragging = false
+        thumbTex:SetColorTexture(1, 0.82, 0, 0.45)
+    end)
+
+    -- Map the cursor's Y position onto the scroll range while dragging.
+    bar:SetScript("OnUpdate", function()
+        if not view.dragging then
+            return
+        end
+
+        local barHeight = bar:GetHeight() or 0
+        local thumbHeight = thumb:GetHeight() or 0
+        local travel = barHeight - thumbHeight
+        if travel <= 0 then
+            return
+        end
+
+        local _, cursorY = GetCursorPosition()
+        cursorY = cursorY / UIParent:GetEffectiveScale()
+
+        local offset = (bar:GetTop() or 0) - cursorY - (thumbHeight / 2)
+        view:ScrollTo((Clamp(offset, 0, travel) / travel) * (view.range or 0))
+    end)
+
+    view.bar = bar
+    view.thumb = thumb
+end
+
+--------------------------------------------------------------------------------
+-- Construction
+--------------------------------------------------------------------------------
+
+-- Fills `parent`. Anchor widgets inside the returned `child`, then call
+-- SetContentHeight with how far down they reach.
+function Layout.Scroll(parent)
+    local view = setmetatable({}, Scroller)
+    view.range = 0
+    view.contentHeight = 0
+
+    local scroll = CreateFrame("ScrollFrame", nil, parent)
+    scroll:SetAllPoints(parent)
+    if scroll.SetClipsChildren then
+        scroll:SetClipsChildren(true)
+    end
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function(_, delta)
+        view:ScrollTo(scroll:GetVerticalScroll() - (delta * SCROLL_STEP))
+    end)
+    scroll:SetScript("OnVerticalScroll", function()
+        view:UpdateScrollBar()
+    end)
+
+    local child = CreateFrame("Frame", nil, scroll)
+    child:SetSize(1, 1)
+    scroll:SetScrollChild(child)
+
+    view.frame = scroll
+    view.child = child
+
+    BuildScrollBar(view, parent)
+
+    -- A canvas has no resolved size until the settings window lays it out, so the
+    -- viewport height -- and with it whether there is anything to scroll at all --
+    -- is not known at construction time. Setting the child's width does not resize
+    -- the ScrollFrame, so this cannot recurse.
+    -- Belt and braces: the settings window can size its canvas before this is ever
+    -- shown, in which case OnSizeChanged has already fired and there is nothing to
+    -- recompute -- but a bar left hidden because the height was still 0 at that
+    -- moment is invisible until something else resizes.
+    scroll:SetScript("OnShow", function()
+        view:Recalculate()
+    end)
+
+    scroll:SetScript("OnSizeChanged", function(self)
+        local width = self:GetWidth() or 0
+        if width > 0 then
+            child:SetWidth(width - BAR_WIDTH - 2)
+        end
+        view:Recalculate()
+    end)
+
+    return view
 end
 
 SpokenLayout = Layout

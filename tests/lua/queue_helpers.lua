@@ -89,10 +89,6 @@ function M.NewZoneLore()
     -- What UI/Options.lua asks the rest of the addon. The panel is the one part that
     -- reports what is installed, so the answers live here rather than in each test.
     Z.SITE_URL = "https://spoken.test"
-    function Z:CreateScroller(parent)
-        local child = CreateFrame("Frame", nil, parent)
-        return { child = child, SetContentHeight = function(_, height) Z.contentHeight = height end }
-    end
     function Z:GetAudioPacks() return {} end
     function Z:GetActiveAudioPack() return nil end
     function Z:GetAudioPackLabel() return "none" end

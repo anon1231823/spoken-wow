@@ -16,6 +16,8 @@ shared with Spoken Quests. Addon managers install it automatically.
   the one button and its Read/Report buttons to the one frame.
 - The settings panel is laid out by the same code as the other Spoken addons, so the
   three read alike and the spacing no longer varies from section to section.
+- The sound pack and the language are dropdowns rather than buttons that cycled through
+  the options one click at a time.
 - The two places the addon still called itself ZoneLore in its own settings now say
   Spoken Zones.
 - The sound channel moved to Spoken Player's panel, where one setting covers whatever is

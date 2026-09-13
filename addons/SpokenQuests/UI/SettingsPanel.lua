@@ -38,25 +38,32 @@ function SettingsPanel:Setup()
     panel = CreateFrame("Frame", "SpokenQuestsOptionsPanel", UIParent)
     panel.name = "Spoken Quests"
 
-    local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    -- The settings canvas is a fixed size and neither scrolls nor clips what overflows
+    -- it, so a panel with more rows than fit draws them over the game world.
+    local scroller = SpokenLayout.Scroll(panel)
+    local content = scroller.child
+
+    local title = content:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", INDENT, -16)
     title:SetText("Spoken Quests")
 
-    local layout = SpokenLayout.New(panel, INDENT, -42)
+    local layout = SpokenLayout.New(content, INDENT, -42)
     panel.layout = layout
     local audio = function() return Addon.db.profile.Audio end
 
     layout:Note("Quest and gossip dialogue read aloud. The sound channel and the player "
-        .. "window are Spoken Player's settings, since they cover every Spoken addon.")
+        .. "window are Spoken Player's settings, since they cover every Spoken addon.", 460, 32)
 
     layout:Section("Dialogue")
-    layout:Cycle("NPC greetings: %s", "How often an NPC's greeting is read. The Once "
+    layout:Dropdown("NPC greetings", "How often an NPC's greeting is read. The Once "
         .. "options are remembered for this character across revisits and logins.",
         GOSSIP_ORDER,
-        function() return GOSSIP_LABELS[GossipName()] end,
+        GossipName,
         function(name)
             Addon.db.profile.Audio.GossipFrequency = Enums.GossipFrequency[name]
-        end)
+        end,
+        nil,
+        function(name) return GOSSIP_LABELS[name] or name end)
     layout:Checkbox("Stop when the quest window closes",
         "Narration stops as soon as you close the gossip or quest window.",
         function() return audio().StopAudioOnDisengage end,
@@ -67,24 +74,59 @@ function SettingsPanel:Setup()
         function() return audio().OGThrall end,
         function(value) audio().OGThrall = value end)
 
+    -- The packs, inline. This used to be a branch of the options tree behind a button,
+    -- which is two clicks and a second window to answer "is my audio installed".
     layout:Section("Sound packs")
-    local packNote = layout:Note("", 460, 32)
+    local packRows = {}
     local function DescribePacks()
-        local names, count = {}, 0
+        local present = 0
         for _, module in DataModules:GetPresentModules() do
-            count = count + 1
-            table.insert(names, (string.gsub(module.Title, "Spoken Quests Audio: ", "")))
+            present = present + 1
+            local row = packRows[present]
+            if row then
+                local loaded = DataModules:GetModule(module.AddonName)
+                row.note:SetText(format("%s  |cff888888%s%s|r",
+                    (string.gsub(module.Title, "Spoken Quests Audio: ", "")),
+                    module.ContentVersion or "",
+                    loaded and "" or "  (not loaded)"))
+                row.note:Show()
+            end
         end
-        if count == 0 then
-            packNote:SetText("No sound pack installed. Nothing is read aloud without one.")
-        else
-            packNote:SetText(string.format("%d installed: %s.", count, table.concat(names, ", ")))
+        for index = present + 1, table.getn(packRows) do
+            packRows[index].note:Hide()
+        end
+        if present == 0 and packRows[1] then
+            packRows[1].note:SetText("|cffff8080No sound pack installed.|r Nothing is read "
+                .. "aloud without one.")
+            packRows[1].note:Show()
         end
     end
+    -- A row apiece, built once: the set of installed addons cannot change mid-session, and
+    -- the panel is built after they have all loaded.
+    local packCount = 0
+    for _ in DataModules:GetPresentModules() do
+        packCount = packCount + 1
+    end
+    for index = 1, math.max(packCount, 1) do
+        packRows[index] = { note = layout:Note("", 460, 16) }
+    end
     DescribePacks()
-    panel:SetScript("OnShow", DescribePacks)
-    layout:Button("Manage sound packs", 200, function() Options:OpenConfigWindow() end,
-        "Opens the window that lists what is installed and what is available.")
+    content:SetScript("OnShow", DescribePacks)
+
+    -- What is not installed, with the address to get it. The game cannot open a link, so
+    -- the button hands over one to copy.
+    local offered = 0
+    for _, module in DataModules:GetAvailableModules() do
+        if not DataModules.presentModules[module.AddonName] then
+            offered = offered + 1
+            if offered == 1 then
+                layout:Note("Not installed:", 460, 16)
+            end
+            layout:Button((string.gsub(module.Title, "Spoken Quests Audio: ", "")), 220,
+                function() ReportButton:ShowAddress(module.URL) end,
+                "Hands you the address to copy: " .. module.URL)
+        end
+    end
 
     layout:Section("Troubleshooting")
     layout:Checkbox("Print debug messages",
@@ -96,9 +138,50 @@ function SettingsPanel:Setup()
     layout:Button("Print diagnostics", 200, function() Options:PrintDiagnostics() end,
         "Prints the client, the sound settings and what the addon has loaded.")
 
-    layout:Section("All options")
-    layout:Button("Profiles and everything else", 200, function() Options:OpenConfigWindow() end,
-        "The full options window: profiles, sound packs and the command list.")
+    -- Profiles, inline. AceDB owns them; this is the whole of what its own options screen
+    -- offered, minus the second window to reach it.
+    local db = Addon.db
+    if db.GetProfiles then
+        layout:Section("Profile")
+        local function Others()
+            local others, current = {}, db:GetCurrentProfile()
+            for _, name in ipairs(db:GetProfiles()) do
+                if name ~= current then
+                    table.insert(others, name)
+                end
+            end
+            return others
+        end
+        layout:Dropdown("Settings profile",
+            "Profiles keep a separate set of these settings. Characters can share one or "
+                .. "have their own.",
+            function() return db:GetProfiles() end,
+            function() return db:GetCurrentProfile() end,
+            function(name) db:SetProfile(name) end)
+        layout:Button("Reset this profile", 200, function() db:ResetProfile() end,
+            "Puts every setting in this profile back to its default.")
+        if db.CopyProfile then
+            layout:Dropdown("Copy settings from", "Overwrites this profile with another's.",
+                Others,
+                function() return nil end,
+                function(name) db:CopyProfile(name) end,
+                nil,
+                function(name) return name or "pick one" end)
+        end
+        if db.DeleteProfile then
+            layout:Dropdown("Delete a profile", "Deletes a profile you are not using.",
+                Others,
+                function() return nil end,
+                function(name) db:DeleteProfile(name) end,
+                nil,
+                function(name) return name or "pick one" end)
+        end
+    end
+
+    -- Derived rather than written down: a hardcoded height is a number nobody updates
+    -- when a row is added, and the failure it produces is a section you cannot reach.
+    scroller:SetContentHeight(layout:Height() + 40)
+    panel.content = content
 
     category = Settings.RegisterCanvasLayoutCategory(panel, "Spoken Quests")
     Settings.RegisterAddOnCategory(category)
