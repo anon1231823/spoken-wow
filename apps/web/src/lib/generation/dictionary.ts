@@ -78,18 +78,23 @@ type Row = {
   versionId: string | null;
   rulesSent: number | null;
   rulesKept: number | null;
+  /** Whether the dictionary in force was built from exactly these entries. See below. */
+  inForce: boolean;
   syncedAt: string | null;
   updatedAt: string;
   updatedBy: string | null;
 };
 
-function older(a: string, b: string): boolean {
-  return new Date(a).getTime() < new Date(b).getTime();
-}
-
 async function readRow(): Promise<Row | undefined> {
   const { rows } = await db().query<Row>(
+    // The comparison is made in Postgres, against the digest sync() stored, rather than by
+    // comparing syncedAt with updatedAt out here. Both timestamps are now(), which is the
+    // transaction's start time, and the save and the upload are two transactions
+    // microseconds apart - so they can tie, and a refused re-upload then read as synced.
+    // What is in force is in force because it was built from these rules, not because it
+    // happened later. See migration 0019.
     `select "entries", "dictionaryId", "versionId", "rulesSent", "rulesKept",
+            ("syncedDigest" is not null and "syncedDigest" = md5("entries"::text)) as "inForce",
             "syncedAt", "updatedAt", "updatedBy"
        from "pronunciation_lexicon" where "id"`,
   );
@@ -122,16 +127,9 @@ export async function readLexicon(): Promise<EffectiveLexicon> {
     entries: row.entries,
     seeded: true,
     // No locator at all is `never`, not `pending`: nothing is in force, so there is no older
-    // dictionary for this save to be queued behind. Beyond that, syncedAt is stamped in the
-    // same statement as the locator, so an upload that predates the current entries is
-    // exactly the case where syncedAt is older than updatedAt. Compared as instants rather
-    // than as values: pg hands timestamptz back as a Date, but these are declared as strings
-    // and cross the wire as ISO, so both forms reach here.
-    sync: !locator
-      ? "never"
-      : !row.syncedAt || older(row.syncedAt, row.updatedAt)
-        ? "pending"
-        : "synced",
+    // dictionary for this save to be queued behind. With one, the question is whether it was
+    // built from the entries this row now holds - which readRow asks of the stored digest.
+    sync: !locator ? "never" : row.inForce ? "synced" : "pending",
     locator,
     rulesSent: row.rulesSent,
     rulesKept: row.rulesKept,
@@ -281,9 +279,13 @@ export async function sync(
   // syncedAt is then newer than updatedAt, report itself as synced. The editor would be
   // showing entries that nothing is being spoken with, which is the one lie this module is
   // built to avoid. jsonb equality ignores key order, so this compares content, not spelling.
+  // "syncedDigest" is taken from the row's own column rather than hashed here, and the
+  // where clause is what makes that exact: the statement only lands while "entries" is still
+  // what was uploaded, so md5 of it is the digest of these rules and no others.
   const { rowCount } = await db().query(
     `update "pronunciation_lexicon"
         set "dictionaryId" = $1, "versionId" = $2, "syncedAt" = now(),
+            "syncedDigest" = md5("entries"::text),
             "rulesSent" = $4, "rulesKept" = $5
       where "id" and "entries" = $3::jsonb`,
     [locator.dictionaryId, locator.versionId, JSON.stringify(entries), rules.length, kept],

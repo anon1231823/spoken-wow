@@ -95,8 +95,8 @@ afterEach(async () => {
   await db().query(
     `insert into "pronunciation_lexicon"
        ("id", "entries", "dictionaryId", "versionId", "rulesSent", "rulesKept",
-        "syncedAt", "updatedAt", "updatedBy")
-     values (true, $1, $2, $3, $4, $5, $6, $7, $8)
+        "syncedAt", "syncedDigest", "updatedAt", "updatedBy")
+     values (true, $1, $2, $3, $4, $5, $6, $9, $7, $8)
      on conflict ("id") do update set
        "entries"      = excluded."entries",
        "dictionaryId" = excluded."dictionaryId",
@@ -104,6 +104,7 @@ afterEach(async () => {
        "rulesSent"    = excluded."rulesSent",
        "rulesKept"    = excluded."rulesKept",
        "syncedAt"     = excluded."syncedAt",
+       "syncedDigest" = excluded."syncedDigest",
        "updatedAt"    = excluded."updatedAt",
        "updatedBy"    = excluded."updatedBy"`,
     [
@@ -115,6 +116,10 @@ afterEach(async () => {
       snapshot.syncedAt ?? null,
       snapshot.updatedAt,
       snapshot.updatedBy ?? null,
+      // Restored with the rest of the row: it is what says the stored dictionary was built
+      // from these entries, so putting the entries back without it would hand the next case
+      // a lexicon that reads as pending when it is not.
+      snapshot.syncedDigest ?? null,
     ],
   );
 });
@@ -230,6 +235,44 @@ describe("writeLexicon", () => {
     expect(lexicon.entries).toEqual(edited);
     expect(lexicon.locator).toEqual({ dictionaryId: "dict-abc", versionId: "ver-1" });
     expect(await currentLocator()).toEqual({ dictionaryId: "dict-abc", versionId: "ver-1" });
+  });
+});
+
+describe("what is in force", () => {
+  /**
+   * The case the timestamps could not answer.
+   *
+   * A save and its upload are two transactions microseconds apart, and now() is the
+   * transaction's start time, so the pair can tie - and the comparison that used to decide
+   * this then read a refused re-upload as synced. Here the entries move with no time passing
+   * at all, which is that tie made deliberate: nothing about the clock has changed, and the
+   * dictionary in force was still built from the old rules.
+   */
+  it("reports entries that changed without the clock moving as pending", async () => {
+    await writeLexicon(ENTRIES, null as unknown as string, OPTIONS(accepts().fetchImpl));
+    expect((await readLexicon()).sync).toBe("synced");
+
+    // Neither timestamp is touched. The old comparison sees nothing at all here.
+    await db().query(
+      `update "pronunciation_lexicon" set "entries" = $1::jsonb where "id"`,
+      [JSON.stringify([{ ...ENTRIES[0], ipa: "something-else" }])],
+    );
+
+    const lexicon = await readLexicon();
+    expect(lexicon.sync).toBe("pending");
+    // Still in force, and still what generation must use: the rules ElevenLabs holds have
+    // not changed, only the ones this row now describes.
+    expect(lexicon.locator).toEqual({ dictionaryId: "dict-abc", versionId: "ver-1" });
+    expect(await currentLocator()).toEqual({ dictionaryId: "dict-abc", versionId: "ver-1" });
+  });
+
+  /** The other half: re-saving the same entries is still synced, not a new pending state. */
+  it("keeps a lexicon synced when a save changes nothing about the entries", async () => {
+    await writeLexicon(ENTRIES, null as unknown as string, OPTIONS(accepts().fetchImpl));
+
+    await db().query(`update "pronunciation_lexicon" set "updatedAt" = now() where "id"`);
+
+    expect((await readLexicon()).sync).toBe("synced");
   });
 });
 
