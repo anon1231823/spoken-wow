@@ -368,6 +368,9 @@ Expect("the action is a button", corner ~= nil, true)
 Expect("...showing its icon, not a word", corner:GetNormalTexture():GetTexture(), ICON)
 Expect("...with no label", corner:GetText() or "", "")
 Expect("...in the corner", corner.anchor and corner.anchor.point, "TOPRIGHT")
+-- Sized to be aimed at. Pinned as a floor rather than a number, so it can be tuned but
+-- cannot drift back to something you have to hunt for.
+Expect("...big enough to hit", corner.width >= 20 and corner.height >= 20, true)
 Expect("...and it still does what it is for", (corner:Click() or reported), 1)
 -- The strip under the queue is what makes room for itself; a corner icon overlaps nothing.
 Expect("a corner action asks for no strip", env.PlayerFrame.frame.actions.shown, 0)

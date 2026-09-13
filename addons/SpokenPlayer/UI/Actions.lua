@@ -15,7 +15,8 @@ Actions = {}
 
 local ACTION_WIDTH = 70
 local ACTION_HEIGHT = 18
-local ICON_SIZE = 16
+-- Big enough to aim at and to read as a bug rather than a smudge.
+local ICON_SIZE = 24
 local named = 0
 
 --- Whether an action's icon can be drawn. The art these use lives in folders that postdate
