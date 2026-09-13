@@ -64,8 +64,11 @@ end
 
 --- The parts of the zones addon's Core.lua that its playback files read, as a fake.
 function M.NewZoneLore()
-    local cfg = { voiceEnabled = true, voiceChannel = "Dialog", autoplay = true, autoplaySubzones = true,
-        stopAudioOnRead = false, autoplayExplored = false, debug = false }
+    local cfg = { voiceEnabled = true, autoplay = true, autoplaySubzones = true,
+        stopAudioOnRead = false, autoplayExplored = false, debug = false,
+        -- What the options panel reads, as well as what the playback files do.
+        showMapPanel = true, showHoverPreview = true, panelSide = "RIGHT",
+        panelWidth = 320, fontSize = 12, showMinimapButton = true }
     local Z = { printed = {}, heard = {}, zoneChanged = {}, clientLocale = "enUS" }
     Z.L = { QUEUE_HELD_COMBAT = "Waiting for combat to end.", QUEUE_HELD_CINEMATIC = "Waiting for the cinematic to end.",
         QUEUE_HELD_OFF = "Narration is turned off.", READ = "Read", READ_INSTEAD = "Read instead",
@@ -83,6 +86,20 @@ function M.NewZoneLore()
     function Z:OnZoneChanged(fn) table.insert(self.zoneChanged, fn) end
     function Z:ToggleLoreWindow() self.toggled = true end
     function Z:OpenOptions() self.opened = true end
+    -- What UI/Options.lua asks the rest of the addon. The panel is the one part that
+    -- reports what is installed, so the answers live here rather than in each test.
+    Z.SITE_URL = "https://spoken.test"
+    function Z:CreateScroller(parent)
+        local child = CreateFrame("Frame", nil, parent)
+        return { child = child, SetContentHeight = function(_, height) Z.contentHeight = height end }
+    end
+    function Z:GetAudioPacks() return {} end
+    function Z:GetActiveAudioPack() return nil end
+    function Z:GetAudioPackLabel() return "none" end
+    function Z:GetSelectableLanguages() return { { code = "enUS", name = "English" } } end
+    function Z:GetLanguagePreference() return nil end
+    function Z:GetLocaleInfo() return { name = "English" } end
+    function Z:RedrawPanel() end
     return Z
 end
 

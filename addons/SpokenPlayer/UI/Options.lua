@@ -12,18 +12,9 @@ local INDENT = 20
 local panel
 local pendingLinks = {}
 
--- Every row used to place itself by adding a hand-tuned fudge to a running offset, and no
--- two sections ended up spaced alike. One object owns the offset instead: each control
--- declares its own height, the layout applies the same gap after every one of them, and
--- no call site does arithmetic. Adding a row cannot drift the rows below it.
-local ROW_GAP = 8        -- between rows inside a section
-local SECTION_GAP = 20   -- above a section heading
-local HEADING_GAP = 10   -- between a heading and its first row
-local HEADING_HEIGHT = 16
-local CHECKBOX_SIZE = 26
-local BUTTON_HEIGHT = 22
-local SLIDER_HEIGHT = 16
-local SLIDER_LABEL_GAP = 18   -- the label sits above the bar, inside the row
+-- Rows, headings and the spacing between them come from UI/Layout.lua, the file every
+-- Spoken addon carries a copy of, so the three panels read alike.
+local Layout = SpokenLayout
 
 local function Heading(parent, text, x, y, template)
     local fs = parent:CreateFontString(nil, "ARTWORK", template or "GameFontNormalLarge")
@@ -33,165 +24,6 @@ local function Heading(parent, text, x, y, template)
     return fs
 end
 
-local function Checkbox(parent, label, tooltip, x, y, read, write, apply)
-    local box = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-    box:SetPoint("TOPLEFT", x, y)
-    box.text = box:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-    box.text:SetPoint("LEFT", box, "RIGHT", 2, 0)
-    box.text:SetText(label)
-    box:SetScript("OnShow", function(self) self:SetChecked(read() and true or false) end)
-    box:SetScript("OnClick", function(self)
-        write(self:GetChecked() and true or false)
-        if apply then apply() end
-    end)
-    if tooltip then
-        box:SetScript("OnEnter", function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText(label)
-            GameTooltip:AddLine(tooltip, 1, 1, 1, true)
-            GameTooltip:Show()
-        end)
-        box:SetScript("OnLeave", function() GameTooltip_Hide() end)
-    end
-    return box
-end
-
---- `show` renders a value for the label; the default reads it as a percentage.
-local function Percent(value) return format("%d%%", value * 100) end
-local function Seconds(value) return format("%.1fs", value) end
-
-local function Slider(parent, label, minValue, maxValue, step, x, y, read, write, apply, show)
-    show = show or Percent
-    local template = Version.IsAnyLegacy and "OptionsSliderTemplate" or "UISliderTemplate"
-    local slider = CreateFrame("Slider", nil, parent, template)
-    -- y is the top of the row. The label is anchored above the bar, so the bar sits a
-    -- label's height down and the whole row stays inside what the layout reserved.
-    slider:SetPoint("TOPLEFT", x + 4, y - SLIDER_LABEL_GAP)
-    slider:SetWidth(180)
-    -- Both load-bearing: a slider given neither draws nothing at all, leaving a gap on
-    -- the panel where a setting should be. The zones addon's sliders set both.
-    slider:SetHeight(16)
-    slider:SetOrientation("HORIZONTAL")
-    slider:SetMinMaxValues(minValue, maxValue)
-    slider:SetValueStep(step)
-    slider.label = slider:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    slider.label:SetPoint("BOTTOMLEFT", slider, "TOPLEFT", 0, 4)
-    -- Labelled now as well as on show: a slider on a panel that is never opened still
-    -- reads as what it is, and the label is what a test can see.
-    slider.label:SetText(format("%s: %s", label, show(read())))
-    slider:SetScript("OnShow", function(self)
-        self:SetValue(read())
-        self.label:SetText(format("%s: %s", label, show(read())))
-    end)
-    slider:SetScript("OnValueChanged", function(self, value)
-        value = math.floor(value / step + 0.5) * step
-        self.label:SetText(format("%s: %s", label, show(value)))
-        if math.abs(value - read()) >= step / 2 then
-            write(value)
-            if apply then apply() end
-        end
-    end)
-    return slider
-end
-
--- A cycle button rather than a dropdown, the trade the zones addon's own panel already
--- made: UIDropDownMenuTemplate exists on the current clients but none of its Initialize
--- plumbing can be checked without launching the game, and five values do not justify it.
-local function Cycle(parent, label, tooltip, values, x, y, read, write, apply)
-    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-    button:SetPoint("TOPLEFT", x, y)
-    button:SetSize(240, 22)
-    local function Sync()
-        button:SetText(format(label, read()))
-    end
-    button:SetScript("OnClick", function()
-        local index = 1
-        for i = 1, getn(values) do
-            if values[i] == read() then
-                index = i
-                break
-            end
-        end
-        write(values[math.mod(index, getn(values)) + 1])
-        if apply then apply() end
-        Sync()
-    end)
-    button:SetScript("OnShow", Sync)
-    if tooltip then
-        button:SetScript("OnEnter", function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
-            GameTooltip:Show()
-        end)
-        button:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    end
-    Sync()
-    return button
-end
-
-local Layout = {}
-Layout.__index = Layout
-
-function Layout.New(parent, x, top)
-    return setmetatable({ parent = parent, x = x, y = top, empty = true }, Layout)
-end
-
---- Reserve `height` for a row about to be placed at the current offset, and step past it.
-function Layout:Take(height)
-    local y = self.y
-    self.y = self.y - height - ROW_GAP
-    self.empty = false
-    return y
-end
-
---- Record the row a control was given: where its top is and how tall it is. A control may
---- sit inside its row -- a slider's bar hangs below its own label -- but never outside it,
---- which is how a label used to end up over the row above.
-function Layout:Row(frame, top, height)
-    frame.layoutY, frame.layoutHeight = top, height
-    return frame
-end
-
-function Layout:Checkbox(label, tooltip, read, write, apply)
-    local top = self:Take(CHECKBOX_SIZE)
-    local box = Checkbox(self.parent, label, tooltip, self.x, top, read, write, apply)
-    box:SetSize(CHECKBOX_SIZE, CHECKBOX_SIZE)
-    return self:Row(box, top, CHECKBOX_SIZE)
-end
-
-function Layout:Slider(label, minValue, maxValue, step, read, write, apply, show)
-    local height = SLIDER_HEIGHT + SLIDER_LABEL_GAP
-    local top = self:Take(height)
-    return self:Row(Slider(self.parent, label, minValue, maxValue, step,
-        self.x, top, read, write, apply, show), top, height)
-end
-
-function Layout:Cycle(label, tooltip, values, read, write, apply)
-    local top = self:Take(BUTTON_HEIGHT)
-    return self:Row(Cycle(self.parent, label, tooltip, values, self.x, top, read, write, apply), top, BUTTON_HEIGHT)
-end
-
-function Layout:Button(label, width, onClick)
-    local button = CreateFrame("Button", nil, self.parent, "UIPanelButtonTemplate")
-    button:SetSize(width, BUTTON_HEIGHT)
-    local top = self:Take(BUTTON_HEIGHT)
-    button:SetPoint("TOPLEFT", self.x, top)
-    button:SetText(label)
-    button:SetScript("OnClick", onClick)
-    return self:Row(button, top, BUTTON_HEIGHT)
-end
-
-function Layout:Section(text)
-    if not self.empty then
-        self.y = self.y - SECTION_GAP + ROW_GAP   -- the section gap replaces the row gap
-    end
-    Heading(self.parent, text, self.x, self.y, "GameFontNormal")
-    self.y = self.y - HEADING_HEIGHT - HEADING_GAP
-    self.empty = false
-end
-
-
--- `read`/`write` are the setting's accessors; `apply` runs afterwards for redraws.
 local CHANNELS = { "Master", "SFX", "Music", "Ambience", "Dialog" }
 
 local function Build()
@@ -252,7 +84,7 @@ local function Build()
             function(v) music.Volume = v end)
         layout:Slider(L.OPT_MUSIC_FADE, 0, 2, 0.1,
             function() return music.FadeOutMusic end,
-            function(v) music.FadeOutMusic = v end, nil, Seconds)
+            function(v) music.FadeOutMusic = v end, nil, Layout.Seconds)
     end
     if audio().LegacyHDModels ~= nil then
         layout:Checkbox(L.OPT_HD_MODELS, L.OPT_HD_MODELS_TIP,

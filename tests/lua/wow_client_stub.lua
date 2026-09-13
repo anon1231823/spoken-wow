@@ -492,7 +492,8 @@ libs["AceDB-3.0"] = {
 --- variables the way ADDON_LOADED would.
 function M.LoadSpoken(addonDirectory)
     for _, file in ipairs({ "Environment", "Version", "Core", "SoundUtils", "Callbacks", "SoundQueue", "Sources",
-        "Strings", "UI/Portrait", "UI/Actions", "UI/PlayerFrame", "UI/MinimapButton", "UI/Options", "API", "Compat" }) do
+        "Strings", "UI/Layout", "UI/Portrait", "UI/Actions", "UI/PlayerFrame", "UI/MinimapButton", "UI/Options",
+        "API", "Compat" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     local env = _G.SpokenEnv

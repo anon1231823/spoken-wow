@@ -155,10 +155,10 @@ Boot("11509")
 local rows, headings = {}, {}
 for _, child in ipairs(_G.SpokenOptionsPanel.children) do
     if child.anchor and child.anchor.y then
-        if child.layoutHeight then
+        if child.layoutHeading then
+            table.insert(headings, { y = child.layoutY, height = child.layoutHeight })
+        elseif child.layoutHeight then
             table.insert(rows, { y = child.layoutY, height = child.layoutHeight, anchor = child.anchor.y })
-        elseif child.kind == "FontString" then
-            table.insert(headings, child.anchor.y)
         end
     end
 end
@@ -181,8 +181,8 @@ for index = 2, #rows do
     local gap = previous.y - rows[index].y - previous.height
     -- Only within a section: a heading in between adds its own space.
     local crossesHeading = false
-    for _, headingY in ipairs(headings) do
-        if headingY < previous.y and headingY > rows[index].y then crossesHeading = true end
+    for _, heading in ipairs(headings) do
+        if heading.y < previous.y and heading.y > rows[index].y then crossesHeading = true end
     end
     if not crossesHeading then table.insert(gaps, gap) end
 end
@@ -197,14 +197,27 @@ end
 Expect("no control escapes the row it was given", escaped, 0)
 
 local headingGaps = {}
-for _, headingY in ipairs(headings) do
+for _, heading in ipairs(headings) do
     local above
     for _, row in ipairs(rows) do
-        if row.y > headingY and (not above or row.y < above.y) then above = row end
+        if row.y > heading.y and (not above or row.y < above.y) then above = row end
     end
-    if above then table.insert(headingGaps, above.y - headingY - above.height) end
+    if above then table.insert(headingGaps, above.y - heading.y - above.height) end
 end
 Expect("every section heading the same distance below the section above", Distinct(headingGaps), 1)
+
+-- A heading introduces the section under it. Sit it midway and it reads as belonging to
+-- neither: the space above it has to be clearly the larger of the two.
+local below
+for _, heading in ipairs(headings) do
+    local first
+    for _, row in ipairs(rows) do
+        if row.y < heading.y and (not first or row.y > first.y) then first = row end
+    end
+    if first then below = below or (heading.y - heading.height - first.y) end
+end
+Expect("a heading sits nearer its own section than the one above",
+    below ~= nil and headingGaps[1] >= below * 3, true)
 
 ---------------------------------------------------------------- every sound setting is on this panel
 -- The two feature addons each used to carry a channel control of their own, so a player

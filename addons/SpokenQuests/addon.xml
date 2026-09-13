@@ -4,6 +4,7 @@
     <Include file="Enums.lua"/>
     <Include file="Utils.lua"/>
     <Include file="Debug.lua"/>
+    <Include file="UI\Layout.lua"/>
     <Include file="Options.lua"/>
     <Include file="FuzzySearch.lua"/>
     <Include file="QuestOverlayUI.lua"/>

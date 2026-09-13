@@ -194,3 +194,17 @@ def test_the_player_loads_after_the_tombstones_whose_variables_it_migrates(playe
     _, files = player_built[f"{PLAYER}-{version}.zip"]
     for path, toc in tocs_in(files, PLAYER).items():
         assert "## OptionalDeps: VoiceOverRedux, ZoneLore" in toc, path
+
+
+def test_the_shared_layout_is_the_same_file_in_every_addon():
+    # UI/Layout.lua is carried by each addon rather than shared at runtime: they install
+    # separately, and the player is only an optional dependency of the other two. Carrying
+    # it is only safe while the copies agree, which nothing but this enforces.
+    import hashlib
+    copies = {}
+    for addon in ("SpokenPlayer", "SpokenQuests", "SpokenZones"):
+        path = os.path.join(REPO, "addons", addon, "UI", "Layout.lua")
+        assert os.path.isfile(path), f"{addon} is missing its copy of UI/Layout.lua"
+        with open(path, "rb") as handle:
+            copies[addon] = hashlib.sha256(handle.read()).hexdigest()
+    assert len(set(copies.values())) == 1, f"UI/Layout.lua differs between addons: {copies}"
