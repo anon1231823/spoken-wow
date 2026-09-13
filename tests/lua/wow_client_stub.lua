@@ -218,6 +218,12 @@ function M.SetClient(label)
     _G.GetBuildInfo = function() return c[1], c[2], "Jan 1 2026", c[3] end
     _G.WOW_PROJECT_ID = c[4]
     if c[4] == nil then _G.Settings = nil else _G.Settings = M.modernSettings end
+    -- The private-server clients have no context-menu API worth using either, which is
+    -- what makes the player draw its own menu there.
+    -- Guarded: SetClient runs once as this file loads, before the menu API below exists.
+    if M.SetMenuAPI then
+        M.SetMenuAPI(c[4] ~= nil)
+    end
 end
 _G.UIParent = MakeFrame("UIParent")
 _G.WOW_PROJECT_CLASSIC = 2
@@ -369,8 +375,40 @@ function _G.UIDropDownMenu_CreateInfo() return {} end
 function _G.UIDropDownMenu_AddButton(info) if openMenu then table.insert(openMenu, info) end end
 function _G.UIDropDownMenu_SetText(frame, text) frame.dropdownText = text end
 function _G.UIDropDownMenu_SetWidth() end
+
+-- The context-menu half of the API: a menu is open or it is not, and opening it runs the
+-- initializer the addon registered. ToggleDropDownMenu is what gives a Blizzard menu its
+-- toggling, its highlight and its closing on a click elsewhere, none of which a frame of
+-- buttons gets for free.
+M.openDropDown = nil
+M.dropDownEntries = {}
+local menuAPI = {}
+
+--- Present the context-menu API, or take it away as a private-server client does.
+function M.SetMenuAPI(present)
+    for name, fn in pairs(menuAPI) do
+        _G[name] = present and fn or nil
+    end
+end
+function _G.ToggleDropDownMenu(level, value, frame, anchor)
+    if M.openDropDown == frame then
+        M.openDropDown, M.dropDownEntries = nil, {}
+        return
+    end
+    M.openDropDown = frame
+    M.dropDownEntries = M.OpenDropdown(frame)
+    frame.dropdownAnchor = anchor
+end
+function _G.UIDropDownMenu_CreateFrame() end
+function _G.CloseDropDownMenus() M.openDropDown, M.dropDownEntries = nil, {} end
+
+for _, name in ipairs({ "UIDropDownMenu_Initialize", "UIDropDownMenu_CreateInfo",
+    "UIDropDownMenu_AddButton", "UIDropDownMenu_SetText", "UIDropDownMenu_SetWidth",
+    "UIDropDownMenu_SetSelectedValue", "ToggleDropDownMenu", "CloseDropDownMenus",
+    "UIDropDownMenu_CreateFrame" }) do
+    menuAPI[name] = _G[name]
+end
 function _G.UIDropDownMenu_SetSelectedValue() end
-function _G.CloseDropDownMenus() end
 
 --- What opening `frame`'s menu would show: one entry per choice, in order, each with the
 --- `text` a player reads, whether it is `checked`, and a `func` that picks it.
@@ -409,6 +447,11 @@ end
 
 --- The default: one loaded pack declaring the inherited TOC key.
 --- Forget the popups, enables and reloads a scenario caused.
+--- Forget any open context menu.
+function M.ResetDropDowns()
+    M.openDropDown, M.dropDownEntries = nil, {}
+end
+
 function M.ResetUIActions()
     for i = #M.popups, 1, -1 do M.popups[i] = nil end
     for i = #M.enabledAddOns, 1, -1 do M.enabledAddOns[i] = nil end

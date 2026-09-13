@@ -7,9 +7,11 @@ The player every Spoken addon speaks through: one queue, one window, one minimap
 - Extracted from VoiceOver Redux and ZoneLore, which each carried their own copy.
 - One FIFO across every addon; nothing interrupts. Gossip yields to quest dialogue at the door.
 - Narration held through combat no longer blocks a quest line queued behind it.
-- The minimap menu closes when you click the button again, highlights the entry under the
-  cursor, and closes when you click anywhere else.
-- The minimap menu has a background. It asked for the backdrop template and never set a
+- The minimap menu is the client's own on every client that has one, so it looks and
+  behaves like every other addon's: entries grouped under each addon's name, a highlight
+  under the cursor, closing on a second click or a click elsewhere. The 1.12, 2.4.3 and
+  3.3.5 clients have no such menu, and there the player draws its own with the same
+  behaviours and a background of its own. It asked for the backdrop template and never set a
   backdrop, so its entries read as text floating over the game world.
 - The settings layout is shared with Spoken Quests and Spoken Zones, so the three panels
   read alike.

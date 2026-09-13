@@ -59,11 +59,17 @@ function Minimap:FindEntry(id)
     end
 end
 
--- A plain list of buttons rather than UIDropDownMenu: that API has three incompatible
--- shapes across the six clients this runs on, and a menu of a handful of rows does not
--- need it. What it does need is everything a menu does -- a background, a highlight under
--- the cursor, closing when the button is clicked again or when anything else is -- and
--- all of that is below.
+-- Two menus, because there are two kinds of client.
+--
+-- Where the client has UIDropDownMenu, that is what opens: it is the menu every other
+-- addon uses, and it brings its own background, its highlight under the cursor, its
+-- closing on a click elsewhere and its toggling, none of which is worth reimplementing.
+--
+-- The three private-server clients do not have it in a shape worth using -- EasyMenu does
+-- not exist on 1.12 at all, and the initializer differs on the other two -- so there the
+-- player draws its own list of buttons and supplies those four behaviours by hand. That
+-- code exists for those clients only, and is below.
+local dropDown
 local menuCatcher
 
 local function HideMenu()
@@ -73,6 +79,43 @@ local function HideMenu()
     if menuCatcher then
         menuCatcher:Hide()
     end
+end
+
+--- Whether the client has a context menu of its own worth opening.
+local function HasMenuAPI()
+    return UIDropDownMenu_Initialize and UIDropDownMenu_AddButton and UIDropDownMenu_CreateInfo
+        and ToggleDropDownMenu and true or false
+end
+
+--- The client's own menu. Entries are grouped under each source's title, which a plain
+--- list could only show as a gap.
+local function ToggleClientMenu(anchor)
+    if not dropDown then
+        dropDown = CreateFrame("Frame", "SpokenMinimapDropDown", UIParent, "UIDropDownMenuTemplate")
+        UIDropDownMenu_Initialize(dropDown, function(_, level)
+            local lastGroup
+            for _, entry in ipairs(Minimap:BuildMenu()) do
+                if entry.sourceTitle and entry.sourceTitle ~= lastGroup then
+                    lastGroup = entry.sourceTitle
+                    local heading = UIDropDownMenu_CreateInfo()
+                    heading.text = entry.sourceTitle
+                    heading.isTitle = true
+                    heading.notCheckable = true
+                    UIDropDownMenu_AddButton(heading, level)
+                end
+                local info = UIDropDownMenu_CreateInfo()
+                info.text = entry.text
+                info.icon = entry.icon
+                info.notCheckable = true
+                info.func = function()
+                    if entry.onClick then entry.onClick(anchor) end
+                    if CloseDropDownMenus then CloseDropDownMenus() end
+                end
+                UIDropDownMenu_AddButton(info, level)
+            end
+        end, "MENU")
+    end
+    ToggleDropDownMenu(1, nil, dropDown, anchor, 0, 0)
 end
 
 local function ShowMenu(anchor)
@@ -154,6 +197,10 @@ end
 
 --- Open it, or close it if this is the second click of the button that opened it.
 local function ToggleMenu(anchor)
+    if HasMenuAPI() then
+        ToggleClientMenu(anchor)
+        return
+    end
     if menuFrame and menuFrame:IsShown() then
         HideMenu()
         return
