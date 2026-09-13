@@ -559,6 +559,14 @@ function M.LoadQuestsAlone(addonDirectory)
     return VO
 end
 
+--- The quests addon's settings panel, which the dispatch tests have no use for: its two
+--- files, on top of an addon already loaded by LoadQuests or LoadQuestsAlone.
+function M.LoadQuestsPanel(addonDirectory, VO)
+    dofile(addonDirectory .. "UI/Layout.lua")
+    dofile(addonDirectory .. "UI/SettingsPanel.lua")
+    return VO.SettingsPanel
+end
+
 --- Kept for one release: the pre-cutover loader name.
 M.LoadPlayer = function(addonDirectory)
     local VO = M.LoadQuests(addonDirectory, addonDirectory .. "../SpokenPlayer/")

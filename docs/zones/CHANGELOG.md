@@ -14,6 +14,8 @@ shared with Spoken Quests. Addon managers install it automatically.
   line; each waits its turn. Narration held through combat no longer blocks a quest line.
 - The player frame and minimap button are Spoken Player's; this addon adds its entries to
   the one button and its Read/Report buttons to the one frame.
+- The settings panel is laid out by the same code as the other Spoken addons, so the
+  three read alike and the spacing no longer varies from section to section.
 - The two places the addon still called itself ZoneLore in its own settings now say
   Spoken Zones.
 - The sound channel moved to Spoken Player's panel, where one setting covers whatever is

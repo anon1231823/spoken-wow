@@ -284,9 +284,9 @@ function Player:Setup()
     Spoken.Minimap:AddEntry("quests", { id = "Read", text = "Read visible quest", order = 1,
         onClick = function() Addon:ReadVisibleQuest("minimap") end })
     Spoken.Minimap:AddEntry("quests", { id = "Options", text = "Spoken Quests settings", order = 2,
-        onClick = function() Options:OpenConfigWindow() end })
+        onClick = function() Options:OpenSettings() end })
     if Spoken.AddSettingsLink then
-        Spoken:AddSettingsLink("Spoken Quests settings", function() Options:OpenConfigWindow() end)
+        Spoken:AddSettingsLink("Spoken Quests settings", function() Options:OpenSettings() end)
     end
     return true
 end

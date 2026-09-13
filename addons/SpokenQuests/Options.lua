@@ -193,31 +193,7 @@ local SlashCommands = {
             name = "Test Audio",
             desc = "Play a short known file from the Vanilla Data module",
             dropdownHidden = true,
-            func = function(info)
-                local soundData = {
-                    event = Enums.SoundEvent.QuestAccept,
-                    questID = 3441,
-                    name = "Spoken Quests self-test",
-                    title = "Spoken Quests self-test",
-                }
-                if not DataModules:PrepareSound(soundData) then
-                    Debug:Record("self-test-data-failed", "The Vanilla Data module did not provide the known 3441-accept test sound")
-                    print("|cFFFF4040Spoken Quests test failed: the known Vanilla test sound was not found in the loaded sound packs.|r")
-                    return
-                end
-
-                -- Through the player, the route every real line takes: on 2.4.3 and 3.3.5
-                -- that means the music channel, and a self-test that went another way would
-                -- answer a question nobody asked.
-                local channel = Player.source and Player.source:GetChannel() or "unknown"
-                if Player:Enqueue(soundData) then
-                    Debug:Record("self-test-playing", format("Self-test queued on %s: %s", channel, soundData.filePath))
-                    print(format("|cFF40FF40Spoken Quests test started on %s.|r You should hear a short voice line.", channel))
-                else
-                    local stage, message = Debug:GetRuntimeStatus()
-                    print(format("|cFFFF4040Spoken Quests test failed: %s (%s).|r", message or "refused", stage or "unknown"))
-                end
-            end
+            func = function() Options:RunSelfTest() end
         },
         Diagnostics = {
             type = "execute",
@@ -225,59 +201,7 @@ local SlashCommands = {
             name = "Diagnostics",
             desc = "Print client, API, and sound-pack loading status",
             dropdownHidden = true,
-            func = function(info)
-                print(format("|cFF00CCFFSpoken Quests %s|r - client %s, interface %d",
-                    AddonVersion, Version.Client or "unknown", Version.Interface or 0))
-                print("AddOn API: " .. (C_AddOns and "C_AddOns compatibility layer" or "legacy globals"))
-
-                local channel = Player.source and Player.source:GetChannel() or "unknown"
-                print(format("Playback: channel=%s, paused=%s, queue=%d, player=%s", channel,
-                    tostring(Spoken and Spoken:IsPaused()), Spoken and Spoken:GetQueueSize() or 0,
-                    Spoken and Spoken.ADDON_VERSION or "missing"))
-                print("NPC greetings: " ..
-                    (Enums.GossipFrequency:GetName(Addon.db.profile.Audio.GossipFrequency) or "unknown"))
-                print(format("Sound CVars: all=%s, master=%s, SFX=%s/%s, dialog=%s/%s",
-                    tostring(GetCVar("Sound_EnableAllSound")), tostring(GetCVar("Sound_MasterVolume")),
-                    tostring(GetCVar("Sound_EnableSFX")), tostring(GetCVar("Sound_SFXVolume")),
-                    tostring(GetCVar("Sound_EnableDialog")), tostring(GetCVar("Sound_DialogVolume"))))
-
-                local presentCount, registeredCount = 0, 0
-                for _, module in DataModules:GetPresentModules() do
-                    presentCount = presentCount + 1
-                    local registered = DataModules:GetModule(module.AddonName) ~= nil
-                    if registered then
-                        registeredCount = registeredCount + 1
-                    end
-                    local status = registered and "loaded" or (DataModules:GetModuleLoadError(module.AddonName) or "not loaded")
-                    print(format("Data: %s (%s) - %s", module.AddonName,
-                        module.ContentVersion or "unknown version", status))
-                end
-                if presentCount == 0 then
-                    print("Data: no sound packs were detected")
-                else
-                    print(format("Data modules: %d detected, %d loaded", presentCount, registeredCount))
-                end
-                local stage, message = Debug:GetRuntimeStatus()
-                print(format("Last runtime stage: %s - %s", stage or "none", message or "no details"))
-                if Addon.eventBridgeErrors then
-                    for _, warning in ipairs(Addon.eventBridgeErrors) do
-                        print("Bridge warning: " .. warning)
-                    end
-                end
-                if Addon.optionsInitializationError then
-                    print("Options startup warning: " .. Addon.optionsInitializationError)
-                end
-                if Addon.dataModulesPending then
-                    print("Data startup: loading is deferred until one second after entering the world")
-                elseif Addon.dataModulesDeferredError then
-                    print("Data startup warning: " .. Addon.dataModulesDeferredError)
-                end
-                if Options.initializationErrors then
-                    for _, warning in ipairs(Options.initializationErrors) do
-                        print("Options warning: " .. warning)
-                    end
-                end
-            end
+            func = function() Options:PrintDiagnostics() end
         },
         Options = {
             type = "execute",
@@ -398,6 +322,90 @@ function Options:AddAvailableDataModule(module, order, update)
 end
 
 ---Initialization of opens panel
+--- Play a known line the way a real one goes: through the player, on the configured
+--- channel. Called by `/vo test` and by the button on the settings panel, so the two
+--- cannot answer differently.
+function Options:RunSelfTest()
+            local soundData = {
+                event = Enums.SoundEvent.QuestAccept,
+                questID = 3441,
+                name = "Spoken Quests self-test",
+                title = "Spoken Quests self-test",
+            }
+            if not DataModules:PrepareSound(soundData) then
+                Debug:Record("self-test-data-failed", "The Vanilla Data module did not provide the known 3441-accept test sound")
+                print("|cFFFF4040Spoken Quests test failed: the known Vanilla test sound was not found in the loaded sound packs.|r")
+                return
+            end
+
+            -- Through the player, the route every real line takes: on 2.4.3 and 3.3.5
+            -- that means the music channel, and a self-test that went another way would
+            -- answer a question nobody asked.
+            local channel = Player.source and Player.source:GetChannel() or "unknown"
+            if Player:Enqueue(soundData) then
+                Debug:Record("self-test-playing", format("Self-test queued on %s: %s", channel, soundData.filePath))
+                print(format("|cFF40FF40Spoken Quests test started on %s.|r You should hear a short voice line.", channel))
+            else
+                local stage, message = Debug:GetRuntimeStatus()
+                print(format("|cFFFF4040Spoken Quests test failed: %s (%s).|r", message or "refused", stage or "unknown"))
+            end
+end
+
+--- What to paste into a bug report: the client, the sound settings, and what loaded.
+function Options:PrintDiagnostics()
+            print(format("|cFF00CCFFSpoken Quests %s|r - client %s, interface %d",
+                AddonVersion, Version.Client or "unknown", Version.Interface or 0))
+            print("AddOn API: " .. (C_AddOns and "C_AddOns compatibility layer" or "legacy globals"))
+
+            local channel = Player.source and Player.source:GetChannel() or "unknown"
+            print(format("Playback: channel=%s, paused=%s, queue=%d, player=%s", channel,
+                tostring(Spoken and Spoken:IsPaused()), Spoken and Spoken:GetQueueSize() or 0,
+                Spoken and Spoken.ADDON_VERSION or "missing"))
+            print("NPC greetings: " ..
+                (Enums.GossipFrequency:GetName(Addon.db.profile.Audio.GossipFrequency) or "unknown"))
+            print(format("Sound CVars: all=%s, master=%s, SFX=%s/%s, dialog=%s/%s",
+                tostring(GetCVar("Sound_EnableAllSound")), tostring(GetCVar("Sound_MasterVolume")),
+                tostring(GetCVar("Sound_EnableSFX")), tostring(GetCVar("Sound_SFXVolume")),
+                tostring(GetCVar("Sound_EnableDialog")), tostring(GetCVar("Sound_DialogVolume"))))
+
+            local presentCount, registeredCount = 0, 0
+            for _, module in DataModules:GetPresentModules() do
+                presentCount = presentCount + 1
+                local registered = DataModules:GetModule(module.AddonName) ~= nil
+                if registered then
+                    registeredCount = registeredCount + 1
+                end
+                local status = registered and "loaded" or (DataModules:GetModuleLoadError(module.AddonName) or "not loaded")
+                print(format("Data: %s (%s) - %s", module.AddonName,
+                    module.ContentVersion or "unknown version", status))
+            end
+            if presentCount == 0 then
+                print("Data: no sound packs were detected")
+            else
+                print(format("Data modules: %d detected, %d loaded", presentCount, registeredCount))
+            end
+            local stage, message = Debug:GetRuntimeStatus()
+            print(format("Last runtime stage: %s - %s", stage or "none", message or "no details"))
+            if Addon.eventBridgeErrors then
+                for _, warning in ipairs(Addon.eventBridgeErrors) do
+                    print("Bridge warning: " .. warning)
+                end
+            end
+            if Addon.optionsInitializationError then
+                print("Options startup warning: " .. Addon.optionsInitializationError)
+            end
+            if Addon.dataModulesPending then
+                print("Data startup: loading is deferred until one second after entering the world")
+            elseif Addon.dataModulesDeferredError then
+                print("Data startup warning: " .. Addon.dataModulesDeferredError)
+            end
+            if Options.initializationErrors then
+                for _, warning in ipairs(Options.initializationErrors) do
+                    print("Options warning: " .. warning)
+                end
+            end
+end
+
 function Options:Initialize()
     self.initializationErrors = {}
     local function RunOptionalStep(name, callback)
@@ -423,15 +431,11 @@ function Options:Initialize()
     RunOptionalStep("AceConfig slash registration", function()
         AceConfig:RegisterOptionsTable("SpokenQuests", self.table, "vo")
     end)
-    RunOptionalStep("Blizzard settings categories", function()
-        AceConfigDialog:AddToBlizOptions("SpokenQuests", "Spoken Quests")
-        for key, tab in Utils:Ordered(Options.table.args, SortAceConfigOptions) do
-            if not tab.hidden and not tab.dialogHidden then
-                AceConfigDialog:AddToBlizOptions("SpokenQuests",
-                    type(tab.name) == "function" and tab.name() or tab.name,
-                    "SpokenQuests", key)
-            end
-        end
+    RunOptionalStep("settings panel", function()
+        -- One canvas panel of sections rather than a Blizzard category per group. The
+        -- table above still backs every /vo command and still fills the window below,
+        -- which is where profiles and the pack manager live.
+        SettingsPanel:Setup()
     end)
     Debug:Print("Done!", "Options")
 
@@ -448,6 +452,15 @@ function Options:Initialize()
         _G["VoiceOverOptions"] = self.frame.frame
         tinsert(UISpecialFrames, "VoiceOverOptions")
     end)
+end
+
+--- The settings a player is looking for: the panel where there is one, and the window
+--- everywhere else. The window is still how profiles and the pack manager are reached.
+function Options:OpenSettings()
+    if SettingsPanel and SettingsPanel.Open and SettingsPanel:Open() then
+        return
+    end
+    self:OpenConfigWindow()
 end
 
 function Options:OpenConfigWindow()

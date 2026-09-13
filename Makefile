@@ -47,6 +47,7 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@$(LUA) tests/lua/data_modules_test.lua
 	@$(LUA) tests/lua/player_required_test.lua
 	@$(LUA) tests/lua/zones_options_test.lua
+	@$(LUA) tests/lua/quests_options_test.lua
 	@$(LUA) tests/lua/migration_test.lua
 
 test: test-player ## Everything: both webs, the Python pipeline, the addons
