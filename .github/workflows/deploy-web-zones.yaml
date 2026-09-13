@@ -1,27 +1,19 @@
-name: Deploy zones web
+name: Deploy zones web (frozen)
+
+# FROZEN, for the reason the quests one is: lore.rusty.one keeps serving the release it
+# has while the two sites merge into spoken.rusty.one.
+#
+# This one had the sharper edge of the two. It watched `pipelines/zones/**`, and the merge
+# moves those modules onto the unified schema -- store.mjs writes the `take` table rather
+# than `voiceline_take`. A push to main would have deployed a build that reads a table the
+# frozen database does not have.
+#
+# To hotfix the live site before the cutover, dispatch this workflow against the
+# `legacy-freeze` tag: GitHub runs the workflow file from the ref it is dispatched with, so
+# that run gets the pre-merge tree and no guard.
 
 on:
-  push:
-    branches: [main]
-    # Addon-only commits should not redeploy the explorer. The paths below are exactly
-    # what ends up inside a release.
-    paths:
-      - "apps/web-zones/**"
-      # The lore corpus ships in the release, so a scrape that changes it has to produce a
-      # new one - otherwise the explorer keeps serving yesterday's text while the addon
-      # ships today's.
-      - "addons/SpokenZones/Data/**"
-      # The app imports these directly rather than shelling out to the CLI, so they are
-      # part of the bundle.
-      - "pipelines/zones/**"
-      - "deploy/zones/**"
-      - ".github/workflows/deploy-web-zones.yaml"
   workflow_dispatch:
-
-# A deploy that only ever runs by hand is a deploy nobody runs, so the dispatch trigger
-# above is a fallback rather than the path. Note that GitHub only registers this file
-# after a push that modifies it, so a freshly cloned or recreated repo needs one such push
-# before dispatch works.
 
 # Never let two deploys interleave a symlink swap.
 concurrency:
@@ -61,6 +53,15 @@ jobs:
       BETTER_AUTH_SECRET: ci-only-secret-not-used-in-production
 
     steps:
+      # Refuse on main, where the tree no longer builds the site this deploys. Dispatching
+      # from `legacy-freeze` runs that ref's copy of this file, which has no such step.
+      - name: The zonelore deployment is frozen
+        run: |
+          echo "lore.rusty.one is frozen while the two sites merge into spoken.rusty.one."
+          echo "This ref builds pipelines/zones against the merged schema, not the one /srv/zonelore has."
+          echo "To hotfix the live site, dispatch this workflow against the legacy-freeze tag."
+          exit 1
+
       - uses: actions/checkout@v5
 
       - uses: pnpm/action-setup@v6

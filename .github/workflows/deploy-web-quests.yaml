@@ -1,24 +1,23 @@
-name: Deploy quests web
+name: Deploy quests web (frozen)
+
+# FROZEN. voiceover.rusty.one keeps serving the release it has, and nothing on main
+# deploys to it any more.
+#
+# The push trigger is gone rather than narrowed. apps/web-quests became apps/web while the
+# two sites are being merged into spoken.rusty.one, so the paths this used to watch now
+# name a half-merged app -- and a merge to main would have shipped it onto the live site
+# without anyone asking. The guard step below is the second half of that: dispatching this
+# from main would build the same thing by hand.
+#
+# To hotfix the live site before the cutover, dispatch this workflow against the
+# `legacy-freeze` tag. GitHub runs the workflow file from the ref it is dispatched with, so
+# that run gets the pre-merge tree, the pre-merge paths, and no guard.
+#
+# It goes away with /srv/voiceover itself, once spoken.rusty.one has been serving long
+# enough that rolling back to this one is no longer a plan.
 
 on:
-  push:
-    branches: [main]
-    # Addon-only commits should not redeploy the explorer.
-    paths:
-      - "apps/web/**"
-      - "pipelines/quests/corpus/**"
-      # How a line is voiced ships inside the release, so a change to one of these has to
-      # produce a new one. The lexicon is the reason this is not merely tidy: it is meant to
-      # be edited, and an edit that never reached a release would look like a lost commit.
-      - "pipelines/quests/voice/*.json"
-      - "deploy/quests/**"
-      - ".github/workflows/deploy-web-quests.yaml"
   workflow_dispatch:
-
-# A deploy that only ever runs by hand is a deploy nobody runs, so the dispatch trigger
-# above is a fallback rather than the path: pushes to the paths listed above are what is
-# expected to ship. Note that GitHub only registers this file after a push that modifies
-# it, so a freshly cloned or recreated repo needs one such push before dispatch works.
 
 # Never let two deploys interleave a symlink swap.
 concurrency:
@@ -55,6 +54,15 @@ jobs:
       BETTER_AUTH_SECRET: ci-only-secret-not-used-in-production
 
     steps:
+      # Refuse on main, where the tree no longer builds the site this deploys. Dispatching
+      # from `legacy-freeze` runs that ref's copy of this file, which has no such step.
+      - name: The voiceover deployment is frozen
+        run: |
+          echo "voiceover.rusty.one is frozen while the two sites merge into spoken.rusty.one."
+          echo "This ref builds apps/web, which is the merged app and not what /srv/voiceover runs."
+          echo "To hotfix the live site, dispatch this workflow against the legacy-freeze tag."
+          exit 1
+
       - uses: actions/checkout@v5
 
       # The pnpm version comes from "packageManager" in the root package.json, which is

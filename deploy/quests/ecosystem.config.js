@@ -52,7 +52,7 @@ module.exports = {
       // Next.js standalone output. Two levels down, not at the top: next.config.ts traces
       // from the monorepo root, because pnpm hoists node_modules there and a narrower
       // tracing root leaves `next` out of the bundle entirely.
-      script: "apps/web/server.js",
+      script: "apps/web-quests/server.js",
       cwd: "/srv/voiceover/current",
 
       // Cluster mode is what makes `pm2 reload` zero-downtime: workers are replaced one at
@@ -125,8 +125,7 @@ module.exports = {
         // renders with no rows at all.
         VOICEOVER_VOICE_CONFIG: "/srv/voiceover/current/pipelines/quests/voice",
 
-        // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, SPOKEN_SECRET_KEY and
-        // ELEVENLABS_DICTIONARY_ID.
+        // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL and ELEVENLABS_API_KEY.
         ...readSecrets(),
       },
     },

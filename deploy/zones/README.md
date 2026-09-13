@@ -1,5 +1,13 @@
 # Deploying the voiceline explorer
 
+> **Frozen.** lore.rusty.one keeps serving the release it has, and nothing on `main`
+> deploys to it: the workflow is dispatch-only, and it refuses to run from a ref where
+> `pipelines/zones/` has moved onto the merged schema. What comes next is spoken.rusty.one,
+> one site with the quests and zones sections in it, and this tree is kept whole until that
+> has been serving long enough that rolling back to it is no longer a plan. Everything
+> below still describes what is running; to hotfix it, dispatch the workflow against the
+> `legacy-freeze` tag.
+
 The explorer runs at **https://lore.rusty.one** on a DigitalOcean droplet behind nginx,
 supervised by pm2, deployed by GitHub Actions on every push to `master` that touches
 `apps/web-zones/`, `pipelines/zones/tools/`, `addons/SpokenZones/Data/` or `deploy/`.
