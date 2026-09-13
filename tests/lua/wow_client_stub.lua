@@ -72,6 +72,10 @@ end
 -- and to answer the questions a test asks (shown? what text? which texture?). Data
 -- fields are lower-case and stay nil until set; any Capitalised method not listed is a
 -- no-op, which is what lets the real UI code run against this without a client.
+--- Methods the current client does not have. Widgets are built without them, and the
+--- catch-all leaves them missing rather than answering with a no-op.
+M.absentAPI = {}
+
 local function Widget(kind, name)
     local w = { kind = kind, name = name, events = {}, scripts = {}, hooks = {}, shown = true,
         text = "", width = 300, height = 120, id = 0, alpha = 1, children = {} }
@@ -156,13 +160,23 @@ local function Widget(kind, name)
     function w:GetFont() return "Fonts\\FRIZQT__.TTF", 12 end
     function w:SetCreature(idv) self.creature = idv; self.model = "creature/" .. tostring(idv) end
     function w:ClearModel() self.creature = nil; self.model = nil end
-    function w:GetModel() return self.model end
-    function w:GetModelFileID() return self.creature and 119940 or nil end
+    -- Only the one this client has. Model:GetModel returned a path and was removed; the
+    -- current clients answer GetModelFileID instead, and asking the wrong one is an error
+    -- rather than a nil -- which is what the catch-all below would otherwise hide.
+    if not M.absentAPI.GetModel then
+        function w:GetModel() return self.model end
+    end
+    if not M.absentAPI.GetModelFileID then
+        function w:GetModelFileID() return self.creature and 119940 or nil end
+    end
     function w:GetOwner() return self.owner end
     function w:SetOwner(o) self.owner = o end
     function w:Click() local fn = self.scripts.OnClick; if fn then fn(self, "LeftButton") end
         for _, h in ipairs(self.hooks.OnClick or {}) do h(self, "LeftButton") end end
     setmetatable(w, { __index = function(_, k)
+        -- A method this client does not have stays missing. Everything else a real widget
+        -- answers is a no-op, which is what lets the UI code run with no client at all.
+        if M.absentAPI[k] then return nil end
         if type(k) == "string" and k:match("^[A-Z]") then return function() end end
         return nil
     end })
@@ -222,6 +236,10 @@ function M.SetClient(label)
     if c[4] == nil then _G.Settings = nil else _G.Settings = M.modernSettings end
     -- The private-server clients have no context-menu API worth using either, which is
     -- what makes the player draw its own menu there.
+    -- Model frames answered GetModel on the private-server clients and answer
+    -- GetModelFileID on the current ones. Neither client has both.
+    M.absentAPI.GetModel = c[4] ~= nil or nil
+    M.absentAPI.GetModelFileID = c[4] == nil or nil
     -- Guarded: SetClient runs once as this file loads, before the menu API below exists.
     if M.SetMenuAPI then
         M.SetMenuAPI(c[4] ~= nil)

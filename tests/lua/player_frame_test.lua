@@ -346,6 +346,27 @@ Expect("...its volume", labels["Speech volume"], true)
 Expect("...its fade, as a duration and not a percentage", labels["0.5s"], true)
 Expect("...and the HD model patch", labels["HD model patch installed"], true)
 
+---------------------------------------------------------------- a model portrait on a current client
+-- The portrait is configured before the rows, so an error raised while resolving it
+-- abandons the rest of the update: the header, every row and the actions. The frame then
+-- shows a portrait over an empty band, which reads as an empty queue.
+--
+-- Model:GetModel returned a path and was removed from the current clients, which answer
+-- GetModelFileID instead. Asking for the one this client lacks is an error, not a nil.
+for _, client in ipairs({ "11509", "1.12" }) do
+    env, quests, zones = Boot(client)
+    local clip = H.Clip({ present = { header = "Gornek", label = "Cutting Teeth", bullet = "b",
+        portrait = { kind = "model", creatureID = 3143, animation = 60,
+            fallback = { kind = "texture", texture = "Book" } } } })
+    local ok, err = pcall(function() quests:Enqueue(clip) end)
+    Expect(client .. ": a model portrait does not abandon the update", ok, true)
+    if not ok then Expect(client .. ": ...", tostring(err), "no error") end
+    Expect(client .. ": ...so the header is still drawn",
+        env.PlayerFrame.frame.container.name:GetText(), "Gornek")
+    Expect(client .. ": ...and the row with it",
+        env.PlayerFrame.frame.container.buttons[1].textWidget:GetText(), "Cutting Teeth")
+end
+
 ---------------------------------------------------------------- the slash command reaches the client
 -- Every file here runs inside a private environment whose metatable falls back to _G.
 -- Reads fall through; writes do not. A bare `SLASH_SPOKEN1 = "/spoken"` therefore lands in

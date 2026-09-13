@@ -80,6 +80,24 @@ function Portrait:GetCurrentModelSet()
 end
 
 ---@return number|nil seconds  0 if the model is known to lack the animation
+--- Whether a model frame has something to draw.
+---
+--- Model:GetModel returned a path and was removed from the current clients, which answer
+--- GetModelFileID instead; Compat.lua supplies GetModelFileID on the private-server ones
+--- from their GetModel. Asking for the method this client does not have is an error, not
+--- a nil, and one raised here abandons the whole frame update -- the portrait is drawn
+--- before the rows, so the queue reads as empty.
+function Portrait:ModelLoaded(model)
+    if model.GetModelFileID then
+        return model:GetModelFileID() ~= nil
+    end
+    if model.GetModel then
+        return type(model:GetModel()) == "string"
+    end
+    -- Neither: assume it loaded rather than falling back on every clip forever.
+    return true
+end
+
 function Portrait:GetModelAnimationDuration(model, animation)
     if not model or model == 123 then return end
     local models = animationDurations[self:GetCurrentModelSet()] or animationDurations["Original"]
@@ -210,7 +228,7 @@ Renderers["model"] = {
             model.animDelay = clip.delay
         end
         -- A model the client could not load draws nothing; say so, and the fallback shows.
-        return type(model:GetModel()) == "string"
+        return Portrait:ModelLoaded(model)
     end,
     Release = function(model)
         model:Hide()
