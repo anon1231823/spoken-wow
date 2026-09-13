@@ -400,12 +400,15 @@ function _G.ToggleDropDownMenu(level, value, frame, anchor)
     frame.dropdownAnchor = anchor
 end
 function _G.UIDropDownMenu_CreateFrame() end
+function _G.UIDropDownMenu_AddSeparator()
+    if openMenu then table.insert(openMenu, { isSeparator = true }) end
+end
 function _G.CloseDropDownMenus() M.openDropDown, M.dropDownEntries = nil, {} end
 
 for _, name in ipairs({ "UIDropDownMenu_Initialize", "UIDropDownMenu_CreateInfo",
     "UIDropDownMenu_AddButton", "UIDropDownMenu_SetText", "UIDropDownMenu_SetWidth",
     "UIDropDownMenu_SetSelectedValue", "ToggleDropDownMenu", "CloseDropDownMenus",
-    "UIDropDownMenu_CreateFrame" }) do
+    "UIDropDownMenu_CreateFrame", "UIDropDownMenu_AddSeparator" }) do
     menuAPI[name] = _G[name]
 end
 function _G.UIDropDownMenu_SetSelectedValue() end

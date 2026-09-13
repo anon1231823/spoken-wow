@@ -142,10 +142,13 @@ stub.ldbObjects.Spoken.OnClick(_G.Minimap, "LeftButton")
 Expect("left-clicking opens the client's menu", stub.openDropDown ~= nil, true)
 local shown = {}
 for _, entry in ipairs(stub.dropDownEntries) do
-    table.insert(shown, (entry.isTitle and "[" .. entry.text .. "]" or entry.text))
+    table.insert(shown, entry.isSeparator and "---"
+        or (entry.isTitle and "[" .. entry.text .. "]" or entry.text))
 end
-Expect("...listing the player's entries, then each source's under its name",
-    table.concat(shown, "|"), "Play/Pause|Stop|Settings|[Quests]|Quest settings")
+-- A rule before each addon's heading. Without one the headings are the only thing
+-- separating the groups, and a heading reads as a row of the group above it.
+Expect("...listing the player's entries, then each source's under its name, ruled apart",
+    table.concat(shown, "|"), "Play/Pause|Stop|Settings|---|[Quests]|Quest settings")
 Expect("...anchored to the button", stub.openDropDown.dropdownAnchor, _G.Minimap)
 
 stub.ldbObjects.Spoken.OnClick(_G.Minimap, "LeftButton")

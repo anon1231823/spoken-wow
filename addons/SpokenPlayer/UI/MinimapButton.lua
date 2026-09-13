@@ -93,9 +93,26 @@ local function ToggleClientMenu(anchor)
     if not dropDown then
         dropDown = CreateFrame("Frame", "SpokenMinimapDropDown", UIParent, "UIDropDownMenuTemplate")
         UIDropDownMenu_Initialize(dropDown, function(_, level)
-            local lastGroup
+            local lastGroup, shownAny = nil, false
             for _, entry in ipairs(Minimap:BuildMenu()) do
                 if entry.sourceTitle and entry.sourceTitle ~= lastGroup then
+                    -- A rule above each addon's heading. Without one the heading is the
+                    -- only thing between the groups, and it reads as a row of the group
+                    -- above rather than the start of the one below.
+                    if lastGroup ~= nil or shownAny then
+                        if UIDropDownMenu_AddSeparator then
+                            UIDropDownMenu_AddSeparator(level)
+                        else
+                            -- Older clients have no separator: a disabled blank row is
+                            -- the gap every addon drew before there was one.
+                            local gap = UIDropDownMenu_CreateInfo()
+                            gap.text = " "
+                            gap.isTitle = true
+                            gap.notCheckable = true
+                            gap.disabled = true
+                            UIDropDownMenu_AddButton(gap, level)
+                        end
+                    end
                     lastGroup = entry.sourceTitle
                     local heading = UIDropDownMenu_CreateInfo()
                     heading.text = entry.sourceTitle
@@ -112,6 +129,7 @@ local function ToggleClientMenu(anchor)
                     if CloseDropDownMenus then CloseDropDownMenus() end
                 end
                 UIDropDownMenu_AddButton(info, level)
+                shownAny = true
             end
         end, "MENU")
     end
