@@ -80,7 +80,9 @@ datagrip
 /pipelines/zones/tools/cache/
 
 # Generated voicelines. Rebuild with `node pipelines/zones/tools/voice/generate.mjs`.
-/addons/SpokenZonesAudio/Sounds/
+# No trailing slash: a test client is pointed at this pack by symlinking its audio in,
+# and a trailing slash matches only a real directory, leaving the link to be committed.
+/addons/SpokenZonesAudio/Sounds
 
 # Voice samples for checking the model before a bulk run.
 /pipelines/zones/audio-samples/
