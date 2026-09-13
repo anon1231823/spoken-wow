@@ -7,6 +7,10 @@ The player every Spoken addon speaks through: one queue, one window, one minimap
 - Extracted from VoiceOver Redux and ZoneLore, which each carried their own copy.
 - One FIFO across every addon; nothing interrupts. Gossip yields to quest dialogue at the door.
 - Narration held through combat no longer blocks a quest line queued behind it.
+- The settings panel keeps one rhythm. Every row used to place itself by adding a
+  hand-tuned offset, so no two sections were spaced alike; one layout owns the spacing
+  now. The links to each addon's own settings have a section of their own instead of
+  trailing the minimap ones.
 - The settings category is "Spoken Player", and the window's settings are headed as such
   rather than by "Up next", the queue window's own title.
 - The player scale slider is visible. It was built without a height, so it drew nothing

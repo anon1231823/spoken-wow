@@ -13,7 +13,7 @@ local SPOKEN = here .. "/../../addons/SpokenPlayer/"
 local Expect, Failures = H.Expecter(print)
 
 local function Boot(client)
-    stub.SetClient(client or "11509"); stub.ResetSound(); stub.ResetTimers()
+    stub.SetClient(client or "11509"); stub.ResetSound(); stub.ResetTimers(); stub.ResetFrames()
     stub.settingsCategories = {}; stub.ldbObjects = {}; stub.dbIcons = {}
     local env = stub.LoadSpoken(SPOKEN)
     env.Addon:Enable()   -- what PLAYER_LOGIN does: builds the frame, the button, the panel
@@ -146,6 +146,65 @@ quests:Enqueue(H.Clip({ present = { header = "h", label = "l", bullet = "b", por
 Expect("1.12: the frame builds and shows", F.frame:IsShown(), true)
 Expect("1.12: no Settings API, so no category", getn(stub.settingsCategories), 0)
 Expect("1.12: GetSettingsCategory is nil rather than an error", _G.Spoken:GetSettingsCategory(), nil)
+
+---------------------------------------------------------------- the panel keeps one rhythm
+-- Every row used to place itself by adding a hand-tuned fudge to a running offset, so no
+-- two sections were spaced alike. One layout owns the offset now: a row knows its own
+-- height and the gap that follows it, and no caller does arithmetic.
+Boot("11509")
+local rows, headings = {}, {}
+for _, child in ipairs(_G.SpokenOptionsPanel.children) do
+    if child.anchor and child.anchor.y then
+        if child.layoutHeight then
+            table.insert(rows, { y = child.layoutY, height = child.layoutHeight, anchor = child.anchor.y })
+        elseif child.kind == "FontString" then
+            table.insert(headings, child.anchor.y)
+        end
+    end
+end
+
+local function Distinct(values)
+    local seen, count = {}, 0
+    for _, value in ipairs(values) do
+        -- Rounded: the fractional halves of a row height are not a difference anyone sees.
+        local key = string.format("%.1f", value)
+        if not seen[key] then seen[key] = true; count = count + 1 end
+    end
+    return count
+end
+
+Expect("the panel has rows to space", #rows > 4, true)
+local gaps = {}
+for index = 2, #rows do
+    local previous = rows[index - 1]
+    -- Top-anchored and downward, so the gap is the drop less the height already used.
+    local gap = previous.y - rows[index].y - previous.height
+    -- Only within a section: a heading in between adds its own space.
+    local crossesHeading = false
+    for _, headingY in ipairs(headings) do
+        if headingY < previous.y and headingY > rows[index].y then crossesHeading = true end
+    end
+    if not crossesHeading then table.insert(gaps, gap) end
+end
+Expect("every row sits the same distance below the one above it", Distinct(gaps), 1)
+
+-- A control may sit inside its row: a slider's bar hangs below its own label. None may sit
+-- outside it, which is how the scale slider's label used to land on the row above.
+local escaped = 0
+for _, row in ipairs(rows) do
+    if row.anchor > row.y or row.anchor < row.y - row.height then escaped = escaped + 1 end
+end
+Expect("no control escapes the row it was given", escaped, 0)
+
+local headingGaps = {}
+for _, headingY in ipairs(headings) do
+    local above
+    for _, row in ipairs(rows) do
+        if row.y > headingY and (not above or row.y < above.y) then above = row end
+    end
+    if above then table.insert(headingGaps, above.y - headingY - above.height) end
+end
+Expect("every section heading the same distance below the section above", Distinct(headingGaps), 1)
 
 ---------------------------------------------------------------- every sound setting is on this panel
 -- The two feature addons each used to carry a channel control of their own, so a player

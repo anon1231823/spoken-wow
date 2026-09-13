@@ -102,6 +102,15 @@ local function Widget(kind, name)
     function w:SetSize(a, b) self.width, self.height = a, b end
     function w:GetWidth() return self.width end
     function w:GetHeight() return self.height end
+    -- Recorded rather than swallowed by the catch-all below: where a control sits is what
+    -- a settings panel is, and a panel whose rows drift apart has no other symptom.
+    function w:SetPoint(point, a, b, c, d)
+        local x, y
+        if type(a) == "number" then x, y = a, b else x, y = c, d end
+        self.anchor = { point = point, x = x, y = y }
+        return self
+    end
+    function w:ClearAllPoints() self.anchor = nil end
     function w:GetStringWidth() return #tostring(self.text or "") * 7 end
     function w:GetTop() return 100 end
     function w:GetBottom() return 0 end
@@ -160,6 +169,27 @@ local function Frame(name)
     return frames[name]
 end
 M.Frame = Frame
+
+-- The client's named frames live as long as the session, and so do these. An addon
+-- re-loaded by a test would otherwise keep building into the panel the last scenario
+-- built, and its rows would be read alongside those. Forgets only what an addon named;
+-- the client's own frames are created once, below, and stay.
+local baseFrames
+function M.ResetFrames()
+    if not baseFrames then
+        return
+    end
+    for name in pairs(frames) do
+        if not baseFrames[name] then
+            frames[name] = nil
+            _G[name] = nil
+        end
+    end
+end
+function M.MarkBaseFrames()
+    baseFrames = {}
+    for name in pairs(frames) do baseFrames[name] = true end
+end
 
 local _G = _G
 
@@ -533,5 +563,8 @@ M.LoadPlayer = function(addonDirectory)
     local VO = M.LoadQuests(addonDirectory, addonDirectory .. "../SpokenPlayer/")
     return VO
 end
+
+-- Everything named up to here is the client's own; ResetFrames keeps these.
+M.MarkBaseFrames()
 
 return M

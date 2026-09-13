@@ -8,9 +8,22 @@ setfenv(1, SpokenEnv)
 -- panel is a movable window opened with /spoken options. One builder, two hosts.
 Options = {}
 
-local INDENT, ROW_GAP = 20, -28
+local INDENT = 20
 local panel
 local pendingLinks = {}
+
+-- Every row used to place itself by adding a hand-tuned fudge to a running offset, and no
+-- two sections ended up spaced alike. One object owns the offset instead: each control
+-- declares its own height, the layout applies the same gap after every one of them, and
+-- no call site does arithmetic. Adding a row cannot drift the rows below it.
+local ROW_GAP = 8        -- between rows inside a section
+local SECTION_GAP = 20   -- above a section heading
+local HEADING_GAP = 10   -- between a heading and its first row
+local HEADING_HEIGHT = 16
+local CHECKBOX_SIZE = 26
+local BUTTON_HEIGHT = 22
+local SLIDER_HEIGHT = 16
+local SLIDER_LABEL_GAP = 18   -- the label sits above the bar, inside the row
 
 local function Heading(parent, text, x, y, template)
     local fs = parent:CreateFontString(nil, "ARTWORK", template or "GameFontNormalLarge")
@@ -20,7 +33,6 @@ local function Heading(parent, text, x, y, template)
     return fs
 end
 
--- `read`/`write` are the setting's accessors; `apply` runs afterwards for redraws.
 local function Checkbox(parent, label, tooltip, x, y, read, write, apply)
     local box = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
     box:SetPoint("TOPLEFT", x, y)
@@ -52,7 +64,9 @@ local function Slider(parent, label, minValue, maxValue, step, x, y, read, write
     show = show or Percent
     local template = Version.IsAnyLegacy and "OptionsSliderTemplate" or "UISliderTemplate"
     local slider = CreateFrame("Slider", nil, parent, template)
-    slider:SetPoint("TOPLEFT", x + 4, y - 8)
+    -- y is the top of the row. The label is anchored above the bar, so the bar sits a
+    -- label's height down and the whole row stays inside what the layout reserved.
+    slider:SetPoint("TOPLEFT", x + 4, y - SLIDER_LABEL_GAP)
     slider:SetWidth(180)
     -- Both load-bearing: a slider given neither draws nothing at all, leaving a gap on
     -- the panel where a setting should be. The zones addon's sliders set both.
@@ -115,54 +129,106 @@ local function Cycle(parent, label, tooltip, values, x, y, read, write, apply)
     return button
 end
 
+local Layout = {}
+Layout.__index = Layout
+
+function Layout.New(parent, x, top)
+    return setmetatable({ parent = parent, x = x, y = top, empty = true }, Layout)
+end
+
+--- Reserve `height` for a row about to be placed at the current offset, and step past it.
+function Layout:Take(height)
+    local y = self.y
+    self.y = self.y - height - ROW_GAP
+    self.empty = false
+    return y
+end
+
+--- Record the row a control was given: where its top is and how tall it is. A control may
+--- sit inside its row -- a slider's bar hangs below its own label -- but never outside it,
+--- which is how a label used to end up over the row above.
+function Layout:Row(frame, top, height)
+    frame.layoutY, frame.layoutHeight = top, height
+    return frame
+end
+
+function Layout:Checkbox(label, tooltip, read, write, apply)
+    local top = self:Take(CHECKBOX_SIZE)
+    local box = Checkbox(self.parent, label, tooltip, self.x, top, read, write, apply)
+    box:SetSize(CHECKBOX_SIZE, CHECKBOX_SIZE)
+    return self:Row(box, top, CHECKBOX_SIZE)
+end
+
+function Layout:Slider(label, minValue, maxValue, step, read, write, apply, show)
+    local height = SLIDER_HEIGHT + SLIDER_LABEL_GAP
+    local top = self:Take(height)
+    return self:Row(Slider(self.parent, label, minValue, maxValue, step,
+        self.x, top, read, write, apply, show), top, height)
+end
+
+function Layout:Cycle(label, tooltip, values, read, write, apply)
+    local top = self:Take(BUTTON_HEIGHT)
+    return self:Row(Cycle(self.parent, label, tooltip, values, self.x, top, read, write, apply), top, BUTTON_HEIGHT)
+end
+
+function Layout:Button(label, width, onClick)
+    local button = CreateFrame("Button", nil, self.parent, "UIPanelButtonTemplate")
+    button:SetSize(width, BUTTON_HEIGHT)
+    local top = self:Take(BUTTON_HEIGHT)
+    button:SetPoint("TOPLEFT", self.x, top)
+    button:SetText(label)
+    button:SetScript("OnClick", onClick)
+    return self:Row(button, top, BUTTON_HEIGHT)
+end
+
+function Layout:Section(text)
+    if not self.empty then
+        self.y = self.y - SECTION_GAP + ROW_GAP   -- the section gap replaces the row gap
+    end
+    Heading(self.parent, text, self.x, self.y, "GameFontNormal")
+    self.y = self.y - HEADING_HEIGHT - HEADING_GAP
+    self.empty = false
+end
+
+
+-- `read`/`write` are the setting's accessors; `apply` runs afterwards for redraws.
 local CHANNELS = { "Master", "SFX", "Music", "Ambience", "Dialog" }
 
 local function Build()
     panel = CreateFrame("Frame", "SpokenOptionsPanel", UIParent)
     panel.name = "Spoken Player"
     local cfg = function() return Addon.db.profile.Frame end
+    local audio = function() return Addon.db.profile.Audio end
     local mm = function() return Addon.db.profile.Minimap.LibDBIcon end
     local refresh = function() PlayerFrame:RefreshConfig() end
 
     Heading(panel, "Spoken Player", INDENT, -16)
-    local y = -52
-    Heading(panel, L.OPT_WINDOW_TITLE, INDENT, y, "GameFontNormal")
-    y = y + ROW_GAP
-    Checkbox(panel, L.OPT_LOCK_FRAME, L.OPT_LOCK_FRAME_TIP, INDENT, y,
-        function() return cfg().LockFrame end, function(v) cfg().LockFrame = v end, refresh)
-    y = y + ROW_GAP
-    Checkbox(panel, L.OPT_HIDE_PORTRAIT, L.OPT_HIDE_PORTRAIT_TIP, INDENT, y,
-        function() return cfg().HidePortrait end, function(v) cfg().HidePortrait = v end, refresh)
-    y = y + ROW_GAP
-    Checkbox(panel, L.OPT_HIDE_FRAME, L.OPT_HIDE_FRAME_TIP, INDENT, y,
-        function() return cfg().HideFrame end, function(v) cfg().HideFrame = v end, refresh)
-    y = y + ROW_GAP - 12
-    Slider(panel, L.OPT_SCALE, 0.5, 2, 0.05, INDENT, y,
-        function() return cfg().FrameScale end, function(v) cfg().FrameScale = v end, refresh)
-    y = y + ROW_GAP - 16
-    local reset = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    reset:SetSize(120, 22)
-    reset:SetPoint("TOPLEFT", INDENT, y)
-    reset:SetText(L.OPT_RESET)
-    reset:SetScript("OnClick", function() PlayerFrame:Reset() end)
+    local layout = Layout.New(panel, INDENT, -52)
+    panel.layout = layout
 
-    -- Audio. Everything about how a line is played lives here, whichever addon queued
-    -- it: the two feature addons each used to carry their own channel control, and a
-    -- player with both installed had two settings for one thing.
-    local audio = function() return Addon.db.profile.Audio end
-    y = y + ROW_GAP - 8
-    Heading(panel, L.OPT_AUDIO_TITLE, INDENT, y, "GameFontNormal")
-    y = y + ROW_GAP
-    Cycle(panel, L.OPT_CHANNEL, L.OPT_CHANNEL_TIP, CHANNELS, INDENT, y,
+    layout:Section(L.OPT_WINDOW_TITLE)
+    layout:Checkbox(L.OPT_LOCK_FRAME, L.OPT_LOCK_FRAME_TIP,
+        function() return cfg().LockFrame end, function(v) cfg().LockFrame = v end, refresh)
+    layout:Checkbox(L.OPT_HIDE_PORTRAIT, L.OPT_HIDE_PORTRAIT_TIP,
+        function() return cfg().HidePortrait end, function(v) cfg().HidePortrait = v end, refresh)
+    layout:Checkbox(L.OPT_HIDE_FRAME, L.OPT_HIDE_FRAME_TIP,
+        function() return cfg().HideFrame end, function(v) cfg().HideFrame = v end, refresh)
+    layout:Slider(L.OPT_SCALE, 0.5, 2, 0.05,
+        function() return cfg().FrameScale end, function(v) cfg().FrameScale = v end, refresh)
+    layout:Button(L.OPT_RESET, 120, function() PlayerFrame:Reset() end)
+
+    -- Everything about how a line is played, whichever addon queued it: the two feature
+    -- addons each used to carry their own channel control, and a player with both
+    -- installed had two settings for one thing.
+    layout:Section(L.OPT_AUDIO_TITLE)
+    layout:Cycle(L.OPT_CHANNEL, L.OPT_CHANNEL_TIP, CHANNELS,
         function() return audio().SoundChannel end,
         function(v) audio().SoundChannel = v end,
         -- The handle belongs to the old channel, so a line already speaking cannot move.
         function() SoundQueue:RemoveAllSoundsFromQueue() end)
-    y = y + ROW_GAP - 4
     if audio().AutoToggleDialog ~= nil then
-        Checkbox(panel, L.OPT_MUTE_DIALOGUE,
+        layout:Checkbox(L.OPT_MUTE_DIALOGUE,
             Version.IsLegacyVanilla and L.OPT_MUTE_DIALOGUE_TIP_VANILLA or L.OPT_MUTE_DIALOGUE_TIP,
-            INDENT, y,
             function() return audio().AutoToggleDialog end,
             function(v)
                 audio().AutoToggleDialog = v
@@ -171,48 +237,41 @@ local function Build()
                     SoundUtils:MuteChannel("Dialog", false)
                 end
             end)
-        y = y + ROW_GAP
     end
 
     -- 2.4.3 and 3.3.5 only, and absent from the saved variables anywhere else. These had
-    -- no rows at all until now: the settings existed and could only be reached by editing
-    -- the saved variables by hand.
+    -- no rows at all until recently: the settings existed and could only be reached by
+    -- editing the saved variables by hand.
     local music = audio().LegacyMusicChannel
     if music then
-        Checkbox(panel, L.OPT_MUSIC_CHANNEL, L.OPT_MUSIC_CHANNEL_TIP, INDENT, y,
+        layout:Checkbox(L.OPT_MUSIC_CHANNEL, L.OPT_MUSIC_CHANNEL_TIP,
             function() return music.Enabled end,
             function(v) music.Enabled = v end)
-        y = y + ROW_GAP - 12
-        Slider(panel, L.OPT_MUSIC_VOLUME, 0, 1, 0.05, INDENT, y,
+        layout:Slider(L.OPT_MUSIC_VOLUME, 0, 1, 0.05,
             function() return music.Volume end,
             function(v) music.Volume = v end)
-        y = y + ROW_GAP - 16
-        Slider(panel, L.OPT_MUSIC_FADE, 0, 2, 0.1, INDENT, y,
+        layout:Slider(L.OPT_MUSIC_FADE, 0, 2, 0.1,
             function() return music.FadeOutMusic end,
             function(v) music.FadeOutMusic = v end, nil, Seconds)
-        y = y + ROW_GAP - 16
     end
     if audio().LegacyHDModels ~= nil then
-        Checkbox(panel, L.OPT_HD_MODELS, L.OPT_HD_MODELS_TIP, INDENT, y,
+        layout:Checkbox(L.OPT_HD_MODELS, L.OPT_HD_MODELS_TIP,
             function() return audio().LegacyHDModels end,
             function(v) audio().LegacyHDModels = v end)
-        y = y + ROW_GAP
     end
 
-    y = y + ROW_GAP - 8
-    Heading(panel, "Minimap", INDENT, y, "GameFontNormal")
-    y = y + ROW_GAP
-    Checkbox(panel, L.OPT_MINIMAP_SHOW, nil, INDENT, y,
+    layout:Section(L.OPT_MINIMAP_TITLE)
+    layout:Checkbox(L.OPT_MINIMAP_SHOW, nil,
         function() return not mm().hide end,
         function(v) mm().hide = not v end, function() Minimap:Refresh() end)
-    y = y + ROW_GAP
-    Checkbox(panel, L.OPT_MINIMAP_LOCK, nil, INDENT, y,
+    layout:Checkbox(L.OPT_MINIMAP_LOCK, nil,
         function() return mm().lock end,
         function(v) mm().lock = v end, function() Minimap:Refresh() end)
 
-    -- Feature addons register a button here to reach their own settings.
+    -- Feature addons register a button here to reach their own settings. The section is
+    -- created with the first of them: with no feature addon installed there is nothing
+    -- to head.
     panel.links = {}
-    panel.linkY = y + ROW_GAP - 8
     for _, link in ipairs(pendingLinks) do
         Options:AddLink(link.text, link.onClick)
     end
@@ -249,13 +308,11 @@ function Options:AddLink(text, onClick)
         table.insert(pendingLinks, { text = text, onClick = onClick })
         return
     end
-    local button = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    button:SetSize(200, 22)
-    button:SetPoint("TOPLEFT", INDENT, panel.linkY)
-    button:SetText(text)
-    button:SetScript("OnClick", onClick)
-    table.insert(panel.links, button)
-    panel.linkY = panel.linkY - 26
+    if not panel.linksSection then
+        panel.linksSection = true
+        panel.layout:Section(L.OPT_ADDONS_TITLE)
+    end
+    table.insert(panel.links, panel.layout:Button(text, 200, onClick))
 end
 
 function Options:Open()
