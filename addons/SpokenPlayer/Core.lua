@@ -169,7 +169,10 @@ function Addon:Enable()
     Minimap:Setup()
     Options:Setup()
 
-    SLASH_SPOKEN1 = "/spoken"
+    -- Through _G, not bare. Every file here runs inside a private environment whose
+    -- metatable falls back to _G: reads fall through, writes do not. A bare assignment
+    -- lands in the environment, and the client never hears of the command.
+    _G.SLASH_SPOKEN1 = "/spoken"
     SlashCmdList.SPOKEN = function(input)
         local command = strlower(strtrim(input or ""))
         if command == "play" or command == "pause" or command == "" then

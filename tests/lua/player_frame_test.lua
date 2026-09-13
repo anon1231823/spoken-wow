@@ -346,6 +346,14 @@ Expect("...its volume", labels["Speech volume"], true)
 Expect("...its fade, as a duration and not a percentage", labels["0.5s"], true)
 Expect("...and the HD model patch", labels["HD model patch installed"], true)
 
+---------------------------------------------------------------- the slash command reaches the client
+-- Every file here runs inside a private environment whose metatable falls back to _G.
+-- Reads fall through; writes do not. A bare `SLASH_SPOKEN1 = "/spoken"` therefore lands in
+-- the environment and the client never hears of the command.
+env = Boot()
+Expect("the handler is registered", type(SlashCmdList.SPOKEN), "function")
+Expect("...and so is the word that reaches it", rawget(_G, "SLASH_SPOKEN1"), "/spoken")
+
 ---------------------------------------------------------------- what the frame reports
 -- A row that is present but drawn nowhere looks, from outside, exactly like a row that was
 -- never built. /spoken diagnostics tells the two apart.
