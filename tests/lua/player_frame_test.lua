@@ -306,7 +306,14 @@ Expect("a heading sits nearer its own section than the one above",
 -- with both had two settings for one thing and no way to tell which won. Everything about
 -- how a line is played is read here, whichever addon queued it.
 local function PanelLabels(client)
-    Boot(client)
+    -- A feature addon declares its optional actions as it loads; the player builds its
+    -- panel at login. Same order here, or the panel is built before there is anything to
+    -- put on it.
+    stub.SetClient(client or "11509"); stub.ResetSound(); stub.ResetTimers(); stub.ResetFrames()
+    stub.settingsCategories = {}; stub.ldbObjects = {}; stub.dbIcons = {}
+    env = stub.LoadSpoken(SPOKEN)
+    _G.Spoken:RegisterOptionalAction("report", "Report")
+    env.Addon:Enable()
     local labels = {}
     for _, text in ipairs(stub.LabelsUnder(_G.SpokenOptionsPanel)) do
         labels[text] = true
@@ -331,7 +338,7 @@ end
 Expect("the scale slider is a slider", scale ~= nil, true)
 Expect("...with a height, or it draws nothing", scale and scale.height, 16)
 Expect("...and an orientation", scale and scale:GetOrientation(), "HORIZONTAL")
-Expect("the buttons can be hidden here", labels["Hide the buttons on the player"], true)
+Expect("an optional action is named on the panel", labels["Hide the Report button"], true)
 Expect("the channel is chosen here", labels["Sound channel"], true)
 Expect("...and so is silencing the game's own dialogue",
     labels["Silence the game's own dialogue while speaking"], true)
@@ -391,10 +398,13 @@ env, quests, zones = Boot("11509")
 quests:Enqueue(CornerClip())
 env.PlayerFrame:Update()
 corner = env.PlayerFrame.frame.actions.buttons[1]
-env.Addon.db.profile.Frame.HideActions = true
+-- An addon may declare an action optional and name it; the player then offers a setting
+-- for that action by name, without learning what the action does.
+_G.Spoken:RegisterOptionalAction("report", "Report")
+env.Addon.db.profile.Frame.HiddenActions.report = true
 env.PlayerFrame:Update()
-Expect("hidden by the setting", corner:IsShown(), false)
-env.Addon.db.profile.Frame.HideActions = false
+Expect("hidden by its own setting", corner:IsShown(), false)
+env.Addon.db.profile.Frame.HiddenActions.report = false
 env.PlayerFrame:Update()
 Expect("...and back", corner:IsShown(), true)
 

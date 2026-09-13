@@ -66,6 +66,14 @@ end
 
 --- A row bullet, registered once by a feature addon so SpokenBooks needs no change to
 --- the player to have one of its own.
+--- Declare an action switchable, and what the player's settings should call it. Both
+--- shipped addons declare their Report action, so one setting covers whichever is speaking.
+---@param id string the action id, as it appears in a clip's presentation
+---@param label string what to call it, e.g. "Report"
+function Spoken:RegisterOptionalAction(id, label)
+    return Actions:RegisterOptional(id, label)
+end
+
 function Spoken:RegisterBullet(id, texture, size)
     Bullets[id] = { texture = texture, size = size }
 end

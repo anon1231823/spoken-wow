@@ -27,7 +27,7 @@ local METHODS = {
     -- sources
     "RegisterSource", "GetSource", "IterateSources",
     -- presentation registries
-    "RegisterBullet", "RegisterPortraitRenderer",
+    "RegisterOptionalAction", "RegisterBullet", "RegisterPortraitRenderer",
     -- player-wide queue
     "GetCurrent", "GetNowPlaying", "GetQueue", "GetQueueSize", "GetWaitingCount",
     "IsPlaying", "IsPaused", "GetHeldReason",

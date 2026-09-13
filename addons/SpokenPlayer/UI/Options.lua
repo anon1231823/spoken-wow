@@ -45,8 +45,13 @@ local function Build()
         function() return cfg().HidePortrait end, function(v) cfg().HidePortrait = v end, refresh)
     layout:Checkbox(L.OPT_HIDE_FRAME, L.OPT_HIDE_FRAME_TIP,
         function() return cfg().HideFrame end, function(v) cfg().HideFrame = v end, refresh)
-    layout:Checkbox(L.OPT_HIDE_ACTIONS, L.OPT_HIDE_ACTIONS_TIP,
-        function() return cfg().HideActions end, function(v) cfg().HideActions = v end, refresh)
+    -- One row per action an addon declared optional, named by that addon. The player is
+    -- not told what any of them do.
+    for _, optional in ipairs(Actions.optional) do
+        layout:Checkbox(format(L.OPT_HIDE_ACTION, optional.label), L.OPT_HIDE_ACTION_TIP,
+            function() return cfg().HiddenActions[optional.id] end,
+            function(v) cfg().HiddenActions[optional.id] = v or nil end, refresh)
+    end
     layout:Slider(L.OPT_SCALE, 0.5, 2, 0.05,
         function() return cfg().FrameScale end, function(v) cfg().FrameScale = v end, refresh)
     layout:Button(L.OPT_RESET, 120, function() PlayerFrame:Reset() end)

@@ -27,6 +27,23 @@ local function CanDrawIcon()
 end
 Actions.STRIP_HEIGHT = ACTION_HEIGHT + 6
 
+-- Actions an addon has declared optional, in the order declared: { id, label }. The player
+-- offers a setting for each, named by the addon, and never learns what the action does.
+Actions.optional = {}
+
+--- Declare that an action may be switched off, and what to call it in the settings.
+function Actions:RegisterOptional(id, label)
+    for _, entry in ipairs(self.optional) do
+        if entry.id == id then
+            entry.label = label or entry.label
+            return entry
+        end
+    end
+    local entry = { id = id, label = label or id }
+    table.insert(self.optional, entry)
+    return entry
+end
+
 function Actions:Build(frame)
     frame.actions = { buttons = {}, byId = {}, shown = 0 }
 end
@@ -99,9 +116,6 @@ function Actions:Configure(frame, clip)
     -- convenience beside the line, so "hide them" is a player-wide answer rather than one
     -- checkbox per addon per button.
     local list = clip and clip.present and clip.present.actions or {}
-    if Addon.db.profile.Frame.HideActions then
-        list = {}
-    end
     frame.actions.clip = clip
     local previous, shown, placed = nil, 0, 0
     local inUse = {}
@@ -110,8 +124,9 @@ function Actions:Configure(frame, clip)
     -- A button an addon built keeps its own click handler, so that is not a label problem.
     local owner = clip and clip.source and clip.source.key or "?"
 
+    local hidden = Addon.db.profile.Frame.HiddenActions or {}
     for _, action in ipairs(list) do
-        if not action.visible or action.visible() then
+        if not hidden[action.id] and (not action.visible or action.visible()) then
             local id = owner .. ":" .. action.id
             local button = frame.actions.byId[id]
             if not button then

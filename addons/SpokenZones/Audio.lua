@@ -219,6 +219,12 @@ function ZoneLore:SetupAudio()
 		interClipGap = 0.25,
 	})
 
+	-- Switchable from the player's settings, named there by this addon. The quests addon
+	-- declares the same id, so one setting covers whichever is speaking.
+	if Spoken.RegisterOptionalAction then
+		Spoken:RegisterOptionalAction("report", "Report")
+	end
+
 	Spoken:RegisterCallback("AUDIO_CHANGED", function()
 		ZoneLore:NotifyAudioChanged()
 	end)

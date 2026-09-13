@@ -291,6 +291,12 @@ function Player:Setup()
         Debug:Record("playing", format("Playing %s", clip.path or clip.fileName or "voiceover"))
     end)
 
+    -- Switchable from the player's settings, named there by this addon. The zones addon
+    -- declares the same id, so one setting covers whichever is speaking.
+    if Spoken.RegisterOptionalAction then
+        Spoken:RegisterOptionalAction("report", "Report")
+    end
+
     Spoken:RegisterBullet("quest-accept",   TEXTURES .. "SoundQueueBulletAccept", 14)
     Spoken:RegisterBullet("quest-progress", TEXTURES .. "SoundQueueBulletProgress", 14)
     Spoken:RegisterBullet("quest-complete", TEXTURES .. "SoundQueueBulletComplete", 14)

@@ -21,7 +21,8 @@ Defaults = {
             FrameStrata = "HIGH",
             HidePortrait = false,
             HideFrame = false,
-            HideActions = false,
+            -- Per action id, for the ones an addon declared optional. Absent means shown.
+            HiddenActions = {},
         },
         Audio = {
             -- A string, because that is what PlaySoundFile takes. The quests addon keeps
