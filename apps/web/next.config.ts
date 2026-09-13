@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
-// The monorepo root, two levels up from apps/web-quests/.
+// The monorepo root, two levels up from apps/web/.
 const repoRoot = path.resolve(__dirname, "..", "..");
 
 const config: NextConfig = {
@@ -18,7 +18,7 @@ const config: NextConfig = {
   // The bundle booted in CI and died with "Cannot find module 'next'".
   //
   // The cost is the layout: standalone lays out from the tracing root, so server.js
-  // lands at apps/web-quests/server.js rather than at the top. The workflow, activate.sh
+  // lands at apps/web/server.js rather than at the top. The workflow, activate.sh
   // and pm2's `script` all name that path.
   outputFileTracingRoot: repoRoot,
 

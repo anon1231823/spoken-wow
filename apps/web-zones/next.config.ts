@@ -49,7 +49,7 @@ const config: NextConfig = {
     "*": [
       "../../pipelines/quests/**",
       "../../addons/**",
-      "../../apps/web-quests/**",
+      "../../apps/web/**",
       "../../curseforge/**",
       "../../deploy/**",
       "../../dist/**",

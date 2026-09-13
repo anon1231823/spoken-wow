@@ -52,7 +52,7 @@ module.exports = {
       // Next.js standalone output. Two levels down, not at the top: next.config.ts traces
       // from the monorepo root, because pnpm hoists node_modules there and a narrower
       // tracing root leaves `next` out of the bundle entirely.
-      script: "apps/web-quests/server.js",
+      script: "apps/web/server.js",
       cwd: "/srv/voiceover/current",
 
       // Cluster mode is what makes `pm2 reload` zero-downtime: workers are replaced one at

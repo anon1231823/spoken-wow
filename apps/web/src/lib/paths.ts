@@ -2,7 +2,7 @@ import path from "node:path";
 
 /**
  * Where the quests data lives in a checkout: the corpus, the audio store, the voice
- * config and the three sibling caches. Two levels up from apps/web-quests/, then into
+ * config and the three sibling caches. Two levels up from apps/web/, then into
  * pipelines/quests/ -- the monorepo move put the app one directory deeper and the data
  * under the pipeline that produces it.
  *

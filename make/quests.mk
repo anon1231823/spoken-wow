@@ -46,7 +46,7 @@ SSH        := ssh -i $(DEPLOY_KEY) -o IdentitiesOnly=yes
 
 # No -z: mp3 is already compressed, so it is pure CPU for ~0 gain.
 # --delete keeps the two stores in exact correspondence, which is what makes the "missing
-# audio" badges in the UI trustworthy - see isGap() in apps/web-quests/src/lib/search.ts.
+# audio" badges in the UI trustworthy - see isGap() in apps/web/src/lib/search.ts.
 #
 # --exclude-from keeps the lines nobody will ever voice out of both directions. It also stops
 # --delete removing what it excludes, on either side: an ignored line's audio is left where it
@@ -133,7 +133,7 @@ push: ## Upload pipelines/quests/audio/ to the droplet (refuses to clobber newer
 	$(RSYNC) $(RSYNC_OPTS) pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO)
 	@# No pm2 reload: storeIndex() re-reads whenever either subfolder's mtime moves, which
 	@# a push always changes. It had to reload while the memo was permanent - see the
-	@# freshness note in apps/web-quests/src/lib/audio.ts.
+	@# freshness note in apps/web/src/lib/audio.ts.
 	@echo "==> pushed"
 
 pull: ## Download the droplet's audio store into pipelines/quests/audio/ (DESTRUCTIVE: --delete)
