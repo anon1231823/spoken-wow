@@ -173,8 +173,17 @@ local function Widget(kind, name)
     end
     function w:GetOwner() return self.owner end
     function w:SetOwner(o) self.owner = o end
-    function w:Click() local fn = self.scripts.OnClick; if fn then fn(self, "LeftButton") end
-        for _, h in ipairs(self.hooks.OnClick or {}) do h(self, "LeftButton") end end
+    function w:Click()
+        -- 1.12 hands a script no arguments and sets the globals `this` and `arg1` instead,
+        -- which is what Compat.lua's SetScript wrapper reads. Both are set here so a click
+        -- reaches the same handler on every client.
+        local previousThis, previousArg = _G.this, _G.arg1
+        _G.this, _G.arg1 = self, "LeftButton"
+        local fn = self.scripts.OnClick
+        if fn then fn(self, "LeftButton") end
+        for _, h in ipairs(self.hooks.OnClick or {}) do h(self, "LeftButton") end
+        _G.this, _G.arg1 = previousThis, previousArg
+    end
     setmetatable(w, { __index = function(_, k)
         -- A method this client does not have stays missing. Everything else a real widget
         -- answers is a no-op, which is what lets the UI code run with no client at all.

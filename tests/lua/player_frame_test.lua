@@ -350,15 +350,18 @@ Expect("...and the HD model patch", labels["HD model patch installed"], true)
 ---------------------------------------------------------------- an action in the corner, and hiding them
 -- A button that only ever says "Report" earns an icon rather than a word, and it belongs
 -- out of the way of the line being read: the top right corner, not the strip under it.
-env, quests, zones = Boot()
-local ICON = [[Interface\GossipFrame\AvailableQuestIcon]]
+local ICON = [[Interface\HelpFrame\HelpIcon-Bug]]
 local reported = 0
-local cornerClip = H.Clip({ present = { header = "h", label = "l", bullet = "b",
-    portrait = { kind = "none" }, actions = {
-        { id = "report", icon = ICON, anchor = "topright",
-          onClick = function() reported = reported + 1 end },
-    } } })
-quests:Enqueue(cornerClip)
+local function CornerClip()
+    return H.Clip({ present = { header = "h", label = "l", bullet = "b",
+        portrait = { kind = "none" }, actions = {
+            { id = "report", icon = ICON, text = "R", anchor = "topright",
+              onClick = function() reported = reported + 1 end },
+        } } })
+end
+
+env, quests, zones = Boot("11509")
+quests:Enqueue(CornerClip())
 env.PlayerFrame:Update()
 local corner = env.PlayerFrame.frame.actions.buttons[1]
 Expect("the action is a button", corner ~= nil, true)
@@ -369,6 +372,22 @@ Expect("...and it still does what it is for", (corner:Click() or reported), 1)
 -- The strip under the queue is what makes room for itself; a corner icon overlaps nothing.
 Expect("a corner action asks for no strip", env.PlayerFrame.frame.actions.shown, 0)
 
+-- The art this uses postdates the three private-server clients, where the icon would be a
+-- blank square. There the action falls back to the letter it carries for the purpose.
+env, quests, zones = Boot("1.12")
+quests:Enqueue(CornerClip())
+env.PlayerFrame:Update()
+local legacy = env.PlayerFrame.frame.actions.buttons[1]
+Expect("an old client gets a letter instead", legacy:GetText(), "R")
+Expect("...and no icon at all", legacy:GetNormalTexture():GetTexture(), nil)
+Expect("...still in the corner", legacy.anchor and legacy.anchor.point, "TOPRIGHT")
+legacy:Click()
+Expect("...and it still reports", reported, 2)
+
+env, quests, zones = Boot("11509")
+quests:Enqueue(CornerClip())
+env.PlayerFrame:Update()
+corner = env.PlayerFrame.frame.actions.buttons[1]
 env.Addon.db.profile.Frame.HideActions = true
 env.PlayerFrame:Update()
 Expect("hidden by the setting", corner:IsShown(), false)

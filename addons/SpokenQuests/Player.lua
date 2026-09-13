@@ -149,8 +149,11 @@ local STOP_GOSSIP = {
 local REPORT = {
     id = "report",
     -- An icon in the corner rather than a word beside the line: the label never changed,
-    -- and the strip it used to sit in pushed the queue up to make room for it.
-    icon = [[Interface\GossipFrame\AvailableQuestIcon]],
+    -- and the strip it used to sit in pushed the queue up to make room for it. The bug
+    -- icon postdates the three private-server clients, where the texture is missing and
+    -- the button would be a blank square; `text` is what they draw instead.
+    icon = [[Interface\HelpFrame\HelpIcon-Bug]],
+    text = "R",
     anchor = "topright",
     tooltip = function(tooltip)
         tooltip:SetText("Report a problem")

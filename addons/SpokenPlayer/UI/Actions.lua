@@ -16,6 +16,14 @@ Actions = {}
 local ACTION_WIDTH = 70
 local ACTION_HEIGHT = 18
 local ICON_SIZE = 16
+local named = 0
+
+--- Whether an action's icon can be drawn. The art these use lives in folders that postdate
+--- the three private-server clients, where the texture is simply missing and the button
+--- would be a blank square; an action carrying a `text` says what to put there instead.
+local function CanDrawIcon()
+    return not Version.IsAnyLegacy
+end
 Actions.STRIP_HEIGHT = ACTION_HEIGHT + 6
 
 function Actions:Build(frame)
@@ -27,15 +35,26 @@ local function NewButton(frame, action)
     if action.create then
         button = action.create(frame)
     elseif action.icon then
-        -- An icon rather than a word, for an action whose label never changes. No template:
-        -- a button that is only a texture wants none of UIPanelButtonTemplate's furniture.
-        button = CreateFrame("Button", nil, frame)
-        button:SetSize(ICON_SIZE, ICON_SIZE)
-        button:SetNormalTexture(action.icon)
-        button:SetHighlightTexture(action.icon)
-        local highlight = button:GetHighlightTexture()
-        if highlight and highlight.SetBlendMode then
-            highlight:SetBlendMode("ADD")
+        if CanDrawIcon() then
+            -- No template: a button that is only a texture wants none of
+            -- UIPanelButtonTemplate's furniture.
+            button = CreateFrame("Button", nil, frame)
+            button:SetSize(ICON_SIZE, ICON_SIZE)
+            button:SetNormalTexture(action.icon)
+            button:SetHighlightTexture(action.icon)
+            local highlight = button:GetHighlightTexture()
+            if highlight and highlight.SetBlendMode then
+                highlight:SetBlendMode("ADD")
+            end
+            button.showsIcon = true
+        else
+            -- Named, because 1.12's UIPanelButtonTemplate names its label "$parentText"
+            -- and an unnamed button leaves that substitution with nothing to resolve.
+            named = named + 1
+            button = CreateFrame("Button", "SpokenActionButton" .. named, frame,
+                "UIPanelButtonTemplate")
+            button:SetSize(ICON_SIZE + 8, ICON_SIZE + 4)
+            button:SetText(action.text or "?")
         end
         button:SetScript("OnClick", function(self)
             if self.action and self.action.onClick then
@@ -103,7 +122,9 @@ function Actions:Configure(frame, clip)
 
             local text = action.text
             if type(text) == "function" then text = text() end
-            if text then button:SetText(text) end
+            -- An icon button has no label to set; its `text` is the fallback for a client
+            -- that cannot draw the icon, and that was read when it was built.
+            if text and not button.showsIcon then button:SetText(text) end
             if action.onClipChanged then action.onClipChanged(clip, button) end
 
             button:ClearAllPoints()
