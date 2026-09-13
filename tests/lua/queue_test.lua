@@ -28,7 +28,7 @@ Expect("a second clip waits", world.played[2], nil)
 Expect("...counted as waiting", Q:GetWaitingCount(), 1)
 stub.Advance(1.55)
 Expect("after length + gap the next starts, whichever source", world.played[2], b.path)
-Expect("...on that source's channel", world.playedChannels[2], "Dialog")
+Expect("...on the channel every source shares", world.playedChannels[2], "Master")
 
 ---------------------------------------------------------------- strict admission order
 Fresh()

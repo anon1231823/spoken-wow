@@ -37,7 +37,6 @@ local defaults = {
 	voiceEnabled = true,
 	-- Dialog so narration rides the player's dialog volume slider rather than
 	-- competing with it. See Audio.lua for the channels PlaySoundFile accepts.
-	voiceChannel = "Dialog",
 	autoplay = true,
 	autoplaySubzones = true,
 	-- Off, because it replaces the client's own record of what a character has

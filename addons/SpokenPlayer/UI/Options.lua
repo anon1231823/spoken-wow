@@ -44,7 +44,12 @@ local function Checkbox(parent, label, tooltip, x, y, read, write, apply)
     return box
 end
 
-local function Slider(parent, label, minValue, maxValue, step, x, y, read, write, apply)
+--- `show` renders a value for the label; the default reads it as a percentage.
+local function Percent(value) return format("%d%%", value * 100) end
+local function Seconds(value) return format("%.1fs", value) end
+
+local function Slider(parent, label, minValue, maxValue, step, x, y, read, write, apply, show)
+    show = show or Percent
     local template = Version.IsAnyLegacy and "OptionsSliderTemplate" or "UISliderTemplate"
     local slider = CreateFrame("Slider", nil, parent, template)
     slider:SetPoint("TOPLEFT", x + 4, y - 8)
@@ -53,13 +58,16 @@ local function Slider(parent, label, minValue, maxValue, step, x, y, read, write
     slider:SetValueStep(step)
     slider.label = slider:CreateFontString(nil, "ARTWORK", "GameFontNormal")
     slider.label:SetPoint("BOTTOMLEFT", slider, "TOPLEFT", 0, 4)
+    -- Labelled now as well as on show: a slider on a panel that is never opened still
+    -- reads as what it is, and the label is what a test can see.
+    slider.label:SetText(format("%s: %s", label, show(read())))
     slider:SetScript("OnShow", function(self)
         self:SetValue(read())
-        self.label:SetText(format("%s: %d%%", label, read() * 100))
+        self.label:SetText(format("%s: %s", label, show(read())))
     end)
     slider:SetScript("OnValueChanged", function(self, value)
         value = math.floor(value / step + 0.5) * step
-        self.label:SetText(format("%s: %d%%", label, value * 100))
+        self.label:SetText(format("%s: %s", label, show(value)))
         if math.abs(value - read()) >= step / 2 then
             write(value)
             if apply then apply() end
@@ -67,6 +75,43 @@ local function Slider(parent, label, minValue, maxValue, step, x, y, read, write
     end)
     return slider
 end
+
+-- A cycle button rather than a dropdown, the trade the zones addon's own panel already
+-- made: UIDropDownMenuTemplate exists on the current clients but none of its Initialize
+-- plumbing can be checked without launching the game, and five values do not justify it.
+local function Cycle(parent, label, tooltip, values, x, y, read, write, apply)
+    local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    button:SetPoint("TOPLEFT", x, y)
+    button:SetSize(240, 22)
+    local function Sync()
+        button:SetText(format(label, read()))
+    end
+    button:SetScript("OnClick", function()
+        local index = 1
+        for i = 1, getn(values) do
+            if values[i] == read() then
+                index = i
+                break
+            end
+        end
+        write(values[math.mod(index, getn(values)) + 1])
+        if apply then apply() end
+        Sync()
+    end)
+    button:SetScript("OnShow", Sync)
+    if tooltip then
+        button:SetScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+            GameTooltip:SetText(tooltip, nil, nil, nil, nil, true)
+            GameTooltip:Show()
+        end)
+        button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    end
+    Sync()
+    return button
+end
+
+local CHANNELS = { "Master", "SFX", "Music", "Ambience", "Dialog" }
 
 local function Build()
     panel = CreateFrame("Frame", "SpokenOptionsPanel", UIParent)
@@ -96,6 +141,59 @@ local function Build()
     reset:SetPoint("TOPLEFT", INDENT, y)
     reset:SetText(L.OPT_RESET)
     reset:SetScript("OnClick", function() PlayerFrame:Reset() end)
+
+    -- Audio. Everything about how a line is played lives here, whichever addon queued
+    -- it: the two feature addons each used to carry their own channel control, and a
+    -- player with both installed had two settings for one thing.
+    local audio = function() return Addon.db.profile.Audio end
+    y = y + ROW_GAP - 8
+    Heading(panel, L.OPT_AUDIO_TITLE, INDENT, y, "GameFontNormal")
+    y = y + ROW_GAP
+    Cycle(panel, L.OPT_CHANNEL, L.OPT_CHANNEL_TIP, CHANNELS, INDENT, y,
+        function() return audio().SoundChannel end,
+        function(v) audio().SoundChannel = v end,
+        -- The handle belongs to the old channel, so a line already speaking cannot move.
+        function() SoundQueue:RemoveAllSoundsFromQueue() end)
+    y = y + ROW_GAP - 4
+    if audio().AutoToggleDialog ~= nil then
+        Checkbox(panel, L.OPT_MUTE_DIALOGUE,
+            Version.IsLegacyVanilla and L.OPT_MUTE_DIALOGUE_TIP_VANILLA or L.OPT_MUTE_DIALOGUE_TIP,
+            INDENT, y,
+            function() return audio().AutoToggleDialog end,
+            function(v)
+                audio().AutoToggleDialog = v
+                -- Turning it off while it holds the channel down would leave it muted.
+                if not v then
+                    SoundUtils:MuteChannel("Dialog", false)
+                end
+            end)
+        y = y + ROW_GAP
+    end
+
+    -- 2.4.3 and 3.3.5 only, and absent from the saved variables anywhere else. These had
+    -- no rows at all until now: the settings existed and could only be reached by editing
+    -- the saved variables by hand.
+    local music = audio().LegacyMusicChannel
+    if music then
+        Checkbox(panel, L.OPT_MUSIC_CHANNEL, L.OPT_MUSIC_CHANNEL_TIP, INDENT, y,
+            function() return music.Enabled end,
+            function(v) music.Enabled = v end)
+        y = y + ROW_GAP - 12
+        Slider(panel, L.OPT_MUSIC_VOLUME, 0, 1, 0.05, INDENT, y,
+            function() return music.Volume end,
+            function(v) music.Volume = v end)
+        y = y + ROW_GAP - 16
+        Slider(panel, L.OPT_MUSIC_FADE, 0, 2, 0.1, INDENT, y,
+            function() return music.FadeOutMusic end,
+            function(v) music.FadeOutMusic = v end, nil, Seconds)
+        y = y + ROW_GAP - 16
+    end
+    if audio().LegacyHDModels ~= nil then
+        Checkbox(panel, L.OPT_HD_MODELS, L.OPT_HD_MODELS_TIP, INDENT, y,
+            function() return audio().LegacyHDModels end,
+            function(v) audio().LegacyHDModels = v end)
+        y = y + ROW_GAP
+    end
 
     y = y + ROW_GAP - 8
     Heading(panel, "Minimap", INDENT, y, "GameFontNormal")

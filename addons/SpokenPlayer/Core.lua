@@ -26,6 +26,11 @@ Defaults = {
             -- A string, because that is what PlaySoundFile takes. The quests addon keeps
             -- its enum internally and converts at the boundary.
             SoundChannel = "Master",
+            -- The client speaks its own NPC barks on the Dialog channel, over the top of a
+            -- line being read. Muting it while we speak belongs to the player: any addon's
+            -- clip is the one being talked over. Not on clients without the channel, where
+            -- Compat.lua interrupts the bark a different way.
+            AutoToggleDialog = (Version.IsLegacyVanilla or Version:IsRetailOrAboveLegacyVersion(60100)) or false,
             -- 2.4.3 and 3.3.5 only. Those clients cannot stop a sound once started, so the
             -- player routes speech through the music channel, which can be stopped. This
             -- moved here from the quests addon because it is how the *player* plays on those
@@ -124,6 +129,11 @@ function Addon:Migrate()
         if type(channel) == "number" and SOUND_CHANNEL_NAMES[channel] then
             self.db.profile.Audio.SoundChannel = SOUND_CHANNEL_NAMES[channel]
         end
+        -- Both addons carried their own copy of these. The quests one wins where both
+        -- exist, as it does for the frame: it is the older addon.
+        if quests.Audio.AutoToggleDialog ~= nil and self.db.profile.Audio.AutoToggleDialog ~= nil then
+            self.db.profile.Audio.AutoToggleDialog = quests.Audio.AutoToggleDialog
+        end
         local legacy = quests.LegacyWrath
         if legacy and self.db.profile.Audio.LegacyMusicChannel and legacy.PlayOnMusicChannel then
             for key, value in pairs(legacy.PlayOnMusicChannel) do
@@ -133,6 +143,12 @@ function Addon:Migrate()
         if legacy and legacy.HDModels ~= nil and self.db.profile.Audio.LegacyHDModels ~= nil then
             self.db.profile.Audio.LegacyHDModels = legacy.HDModels
         end
+    end
+
+    -- The zones addon named the same setting differently, at the top level of its table.
+    if not (quests and quests.Audio and type(quests.Audio.SoundChannel) == "number")
+        and type(zones) == "table" and type(zones.voiceChannel) == "string" then
+        self.db.profile.Audio.SoundChannel = zones.voiceChannel
     end
 
     if quests then

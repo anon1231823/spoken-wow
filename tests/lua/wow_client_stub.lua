@@ -116,7 +116,12 @@ local function Widget(kind, name)
     function w:GetTexture() return self.texture end
     function w:SetTexCoord(...) self.texCoord = { ... } end
     function w:CreateTexture(n, layer) local t = Widget("Texture", n); t.parent = self; t.layer = layer; return t end
-    function w:CreateFontString(n, layer) local t = Widget("FontString", n); t.parent = self; return t end
+    function w:CreateFontString(n, layer)
+        local t = Widget("FontString", n)
+        t.parent = self
+        table.insert(self.children, t)
+        return t
+    end
     function w:SetNormalTexture(t) self.normalTexture = self.normalTexture or Widget("Texture"); self.normalTexture:SetTexture(t) end
     function w:GetNormalTexture() self.normalTexture = self.normalTexture or Widget("Texture"); return self.normalTexture end
     function w:SetPushedTexture(t) self.pushedTexture = self.pushedTexture or Widget("Texture"); self.pushedTexture:SetTexture(t) end
@@ -204,7 +209,27 @@ end
 function _G.StopSound(handle) table.insert(world.stopped, handle) end
 function _G.PlayMusic(path) table.insert(world.music, path) end
 function _G.StopMusic() table.insert(world.music, false) end
-function _G.CreateFrame(kind, name, parent) local f = name and Frame(name) or MakeFrame(nil); f.frameType = kind; f.parent = parent; if name then _G[name] = f end; return f end
+function _G.CreateFrame(kind, name, parent)
+    local f = name and Frame(name) or MakeFrame(nil)
+    f.frameType = kind
+    f.parent = parent
+    if name then _G[name] = f end
+    -- Recorded so a test can ask what a panel built, the way a player reads it: a row is
+    -- a control with a label, and a panel that lost one is a setting nobody can reach.
+    if parent and parent.children then table.insert(parent.children, f) end
+    return f
+end
+
+--- Every label under this frame, however deep: a control's own text, and the font string
+--- a checkbox hangs beside itself.
+function M.LabelsUnder(frame, found)
+    found = found or {}
+    for _, child in ipairs(frame.children or {}) do
+        if child.text and child.text ~= "" then table.insert(found, child.text) end
+        M.LabelsUnder(child, found)
+    end
+    return found
+end
 function _G.CreateFont(name) return Widget("Font", name) end
 _G.GameFontNormal = Widget("Font", "GameFontNormal")
 _G.GameTooltip = Widget("Frame", "GameTooltip")

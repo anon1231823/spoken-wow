@@ -217,7 +217,6 @@ function ZoneLore:SetupAudio()
 		-- Durations come from a generated lookup and are exact; upstream's larger gap
 		-- absorbs durations that are not.
 		interClipGap = 0.25,
-		channel = function() return ZoneLore:GetVoiceChannel() end,
 	})
 
 	Spoken:RegisterCallback("AUDIO_CHANGED", function()
@@ -403,14 +402,6 @@ end
 --------------------------------------------------------------------------------
 -- Lookup
 --------------------------------------------------------------------------------
-
-function ZoneLore:GetVoiceChannel()
-	local channel = self:Get("voiceChannel")
-	if type(channel) == "string" and CHANNELS[channel] then
-		return channel
-	end
-	return DEFAULT_CHANNEL
-end
 
 function ZoneLore:IsVoiceEnabled()
 	return self:Get("voiceEnabled") and true or false

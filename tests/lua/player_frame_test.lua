@@ -146,5 +146,34 @@ Expect("1.12: the frame builds and shows", F.frame:IsShown(), true)
 Expect("1.12: no Settings API, so no category", getn(stub.settingsCategories), 0)
 Expect("1.12: GetSettingsCategory is nil rather than an error", _G.Spoken:GetSettingsCategory(), nil)
 
+---------------------------------------------------------------- every sound setting is on this panel
+-- The two feature addons each used to carry a channel control of their own, so a player
+-- with both had two settings for one thing and no way to tell which won. Everything about
+-- how a line is played is read here, whichever addon queued it.
+local function PanelLabels(client)
+    Boot(client)
+    local labels = {}
+    for _, text in ipairs(stub.LabelsUnder(_G.SpokenOptionsPanel)) do
+        labels[text] = true
+    end
+    return labels
+end
+
+local labels = PanelLabels("11509")
+Expect("the channel is chosen here", labels["Sound channel: Master"], true)
+Expect("...and so is silencing the game's own dialogue",
+    labels["Silence the game's own dialogue while speaking"], true)
+Expect("a current client is offered nothing about the music channel",
+    labels["Play through the music channel"], nil)
+
+-- 2.4.3 and 3.3.5 route speech through the music channel, because those clients cannot
+-- stop a sound any other way. Those settings existed from the start and had no row at
+-- all: the only way to change one was to edit the saved variables by hand.
+labels = PanelLabels("3.3.5")
+Expect("a legacy client can reach the music channel", labels["Play through the music channel"], true)
+Expect("...its volume", labels["Speech volume: 100%"], true)
+Expect("...its fade, as a duration and not a percentage", labels["Fade the music out over: 0.5s"], true)
+Expect("...and the HD model patch", labels["HD model patch installed"], true)
+
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
 print("\nAll player frame tests passed")

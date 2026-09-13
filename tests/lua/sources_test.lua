@@ -64,15 +64,18 @@ stub.ResetSound()
 quests:Enqueue(H.Clip())
 Expect("no source channel: the player's setting", world.playedChannels[1], "Master")
 env.SoundQueue:RemoveAllSoundsFromQueue()
-zones:Enqueue(H.Clip())
-Expect("a source channel overrides it", world.playedChannels[2], "Dialog")
+-- The field is still in the API for an addon that needs its own, though neither shipped
+-- addon sets one: the channel is a single setting on the player.
+local own = env.Sources:Register("own", { title = "Own", addon = "X", channel = function() return "Dialog" end })
+own:Enqueue(H.Clip())
+Expect("a source may still declare its own", world.playedChannels[2], "Dialog")
 env.SoundQueue:RemoveAllSoundsFromQueue()
 
 world.cvars.Sound_EnableDialog = "0"
-res, why = zones:Enqueue(H.Clip())
+res, why = own:Enqueue(H.Clip())
 Expect("an inaudible channel refuses at the door", res, nil)
 Expect("...with the audibility reason", why, "the Dialog sound channel is disabled")
-Expect("CanPlay says the same", select(2, zones:CanPlay()), "the Dialog sound channel is disabled")
+Expect("CanPlay says the same", select(2, own:CanPlay()), "the Dialog sound channel is disabled")
 stub.ResetSound()
 
 ---------------------------------------------------------------- SOURCE_REGISTERED
@@ -82,18 +85,54 @@ local late = env.Sources:Register("late", { title = "Late", addon = "X", order =
 Expect("SOURCE_REGISTERED carries the source", seen, late)
 
 ---------------------------------------------------------------- a channel the player muted itself is not inaudible
--- The quests addon mutes Dialog while its line speaks. A zones clip on Dialog arriving
--- then must still be admitted, and the mute lifted before it plays.
+-- The player mutes Dialog while a line speaks. A clip on Dialog arriving then must still
+-- be admitted, and the mute lifted before it plays.
 env, quests, zones = H.Fresh(stub, SPOKEN)
+local onDialog = env.Sources:Register("onDialog", { title = "D", addon = "X", channel = function() return "Dialog" end })
 _G.Spoken:MuteChannel("Dialog", true)
 Expect("muting sets the channel's CVar", world.cvars.Sound_EnableDialog, "0")
 Expect("...and the player knows it did", env.SoundUtils:IsMutedByPlayer("Dialog"), true)
 local z = H.Clip()
-Expect("a clip on the muted channel is still admitted", zones:Enqueue(z), z)
+Expect("a clip on the muted channel is still admitted", onDialog:Enqueue(z), z)
 Expect("...and the mute is lifted for it to play", world.cvars.Sound_EnableDialog, "1")
 Expect("...so the player no longer holds it", env.SoundUtils:IsMutedByPlayer("Dialog"), false)
 world.cvars.Sound_EnableDialog = "0"
-Expect("a channel the user disabled is still inaudible", (zones:Enqueue(H.Clip())), nil)
+Expect("a channel the user disabled is still inaudible", (onDialog:Enqueue(H.Clip())), nil)
+
+---------------------------------------------------------------- one sound channel, the player's
+-- Every addon speaks on the channel chosen once, in the player's settings. A source may
+-- still declare its own -- the API keeps the field -- but neither shipped addon does, so
+-- there is one control rather than one per addon.
+env, quests, zones = H.Fresh(stub, SPOKEN)
+env.Addon.db.profile.Audio.SoundChannel = "Dialog"
+Expect("the quests source reads the player's channel", quests:GetChannel(), "Dialog")
+Expect("...and so does the zones source", zones:GetChannel(), "Dialog")
+env.Addon.db.profile.Audio.SoundChannel = "Master"
+Expect("changing it moves every source at once", zones:GetChannel(), "Master")
+
+---------------------------------------------------------------- muting the game's own dialogue
+-- The client speaks its own NPC barks on the Dialog channel, over the top of a line being
+-- read. The player mutes that while it speaks and restores it when the queue drains. It
+-- belongs here rather than in one addon: any addon's clip is talked over.
+env, quests, zones = H.Fresh(stub, SPOKEN)
+env.Addon.db.profile.Audio.AutoToggleDialog = true
+env.Addon.db.profile.Audio.SoundChannel = "Master"
+quests:Enqueue(H.Clip())
+Expect("a line speaking mutes the game's dialogue", GetCVar("Sound_EnableDialog"), "0")
+_G.Spoken:StopAll()
+Expect("...and the empty queue restores it", GetCVar("Sound_EnableDialog"), "1")
+
+-- Speaking on Dialog ourselves: muting it would mute the line.
+env, quests, zones = H.Fresh(stub, SPOKEN)
+env.Addon.db.profile.Audio.AutoToggleDialog = true
+env.Addon.db.profile.Audio.SoundChannel = "Dialog"
+quests:Enqueue(H.Clip())
+Expect("speaking on Dialog does not mute Dialog", GetCVar("Sound_EnableDialog"), "1")
+
+env, quests, zones = H.Fresh(stub, SPOKEN)
+env.Addon.db.profile.Audio.AutoToggleDialog = false
+quests:Enqueue(H.Clip())
+Expect("turned off, nothing is muted", GetCVar("Sound_EnableDialog"), "1")
 
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
 print("\nAll sources tests passed")

@@ -14,6 +14,8 @@ shared with Spoken Quests. Addon managers install it automatically.
   line; each waits its turn. Narration held through combat no longer blocks a quest line.
 - The player frame and minimap button are Spoken Player's; this addon adds its entries to
   the one button and its Read/Report buttons to the one frame.
+- The sound channel moved to Spoken Player's panel, where one setting covers whatever is
+  speaking. Your choice carries over unless Spoken Quests also had one, which wins.
 - If Spoken Player is installed but switched off, a dialog offers to enable it and
   reload, rather than narration quietly not playing.
 - The sound packs are renamed **Spoken Zones Audio** and **Spoken Zones Audio 64** in the

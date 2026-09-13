@@ -22,7 +22,7 @@ Clean()
 _G.VoiceOverDB = { profiles = { Default = {
     SoundQueueUI = { LockFrame = true, FrameScale = 0.9, FrameStrata = "MEDIUM", HidePortrait = true, HideFrame = false },
     MinimapButton = { LibDBIcon = { minimapPos = 123, hide = false }, Commands = { LeftButton = "Options" } },
-    Audio = { SoundChannel = 5, GossipFrequency = 3 },
+    Audio = { SoundChannel = 5, GossipFrequency = 3, AutoToggleDialog = false },
 } }, char = { ["Tester - Realm"] = { IsPaused = true } } }
 local env = stub.LoadSpoken(SPOKEN)
 local cfg = env.Addon.db.profile
@@ -31,6 +31,7 @@ Expect("frame lock carried over", cfg.Frame.LockFrame, true)
 Expect("hide-portrait carried over", cfg.Frame.HidePortrait, true)
 Expect("minimap position carried over", cfg.Minimap.LibDBIcon.minimapPos, 123)
 Expect("the sound channel enum becomes its name", cfg.Audio.SoundChannel, "Dialog")
+Expect("silencing the game's dialogue carries over", cfg.Audio.AutoToggleDialog, false)
 Expect("the migration is recorded", env.Addon.db.global.migratedFrom, "VoiceOverRedux")
 Expect("...and does not touch the quests addon's own settings", _G.VoiceOverDB.profiles.Default.Audio.GossipFrequency, 3)
 
@@ -48,15 +49,18 @@ env = stub.LoadSpoken(SPOKEN)
 Expect("frame scale from the zones addon's queue settings", env.Addon.db.profile.Frame.FrameScale, 0.8)
 Expect("minimap position from the zones addon's own table", env.Addon.db.profile.Minimap.LibDBIcon.minimapPos, 99)
 Expect("...and its hidden state", env.Addon.db.profile.Minimap.LibDBIcon.hide, true)
+Expect("the channel comes from the zones addon when it is all there is",
+    env.Addon.db.profile.Audio.SoundChannel, "Music")
 Expect("recorded as from ZoneLore", env.Addon.db.global.migratedFrom, "ZoneLore")
 
 -- Both present: quests wins, being the older addon.
 Clean()
 _G.VoiceOverDB = { profiles = { Default = { SoundQueueUI = { FrameScale = 0.9 }, MinimapButton = { LibDBIcon = { minimapPos = 123 } }, Audio = { SoundChannel = 1 } } } }
 _G.ZoneLoreQueueDB = { profiles = { Default = { SoundQueueUI = { FrameScale = 0.8 } } } }
-_G.ZoneLoreDB = { minimapPos = 99 }
+_G.ZoneLoreDB = { minimapPos = 99, voiceChannel = "Music" }
 env = stub.LoadSpoken(SPOKEN)
 Expect("both present: the quests addon's frame wins", env.Addon.db.profile.Frame.FrameScale, 0.9)
+Expect("both present: the quests addon's channel wins", env.Addon.db.profile.Audio.SoundChannel, "Master")
 Expect("both present: the quests addon's minimap wins", env.Addon.db.profile.Minimap.LibDBIcon.minimapPos, 123)
 
 -- Nothing old at all: defaults, and no false record.

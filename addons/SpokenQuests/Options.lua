@@ -36,20 +36,6 @@ local GeneralTab =
             inline = true,
             name = "Audio",
             args = {
-                SoundChannel = Version:IsRetailOrAboveLegacyVersion(40000) and {
-                    type = "select",
-                    width = 0.75,
-                    order = 1,
-                    name = "Sound Channel",
-                    desc = "Controls which sound channel VoiceOver will play in.",
-                    values = Enums.SoundChannel:GetValueToNameMap(),
-                    get = function(info) return Addon.db.profile.Audio.SoundChannel end,
-                    set = function(info, value)
-                        Addon.db.profile.Audio.SoundChannel = value
-                        Player:RefreshConfig()
-                    end,
-                },
-                LineBreak = { type = "description", name = "", order = 2 },
                 GossipFrequency = {
                     type = "select",
                     width = 1.1,
@@ -66,22 +52,6 @@ local GeneralTab =
                     set = function(info, value)
                         Addon.db.profile.Audio.GossipFrequency = value
                         Player:RefreshConfig()
-                    end,
-                },
-                AutoToggleDialog = (Version.IsLegacyVanilla or Version:IsRetailOrAboveLegacyVersion(60100) or nil) and {
-                    type = "toggle",
-                    width = 2.25,
-                    order = 4,
-                    name = "Mute Vocal NPCs Greetings While VoiceOver is Playing",
-                    desc = Version.IsLegacyVanilla and "Interrupts generic NPC greeting voicelines upon interacting with them if a voiceover will start playing." or "While VoiceOver is playing, the Dialog channel will be muted.",
-                    disabled = function() return Version:IsRetailOrAboveLegacyVersion(60100) and Addon.db.profile.Audio.SoundChannel == Enums.SoundChannel.Dialog end,
-                    get = function(info) return Addon.db.profile.Audio.AutoToggleDialog end,
-                    set = function(info, value)
-                        Addon.db.profile.Audio.AutoToggleDialog = value
-                        Player:RefreshConfig()
-                        if Addon.db.profile.Audio.AutoToggleDialog and Version:IsRetailOrAboveLegacyVersion(60100) then
-                            SetCVar("Sound_EnableDialog", 1)
-                        end
                     end,
                 },
                 LineBreak2 = { type = "description", name = "", order = 5 },
@@ -239,7 +209,7 @@ local SlashCommands = {
                 -- Through the player, the route every real line takes: on 2.4.3 and 3.3.5
                 -- that means the music channel, and a self-test that went another way would
                 -- answer a question nobody asked.
-                local channel = Enums.SoundChannel:GetName(Addon.db.profile.Audio.SoundChannel)
+                local channel = Player.source and Player.source:GetChannel() or "unknown"
                 if Player:Enqueue(soundData) then
                     Debug:Record("self-test-playing", format("Self-test queued on %s: %s", channel, soundData.filePath))
                     print(format("|cFF40FF40VoiceOver test started on %s.|r You should hear a short voice line.", channel))
@@ -260,7 +230,7 @@ local SlashCommands = {
                     AddonVersion, Version.Client or "unknown", Version.Interface or 0))
                 print("AddOn API: " .. (C_AddOns and "C_AddOns compatibility layer" or "legacy globals"))
 
-                local channel = Enums.SoundChannel:GetName(Addon.db.profile.Audio.SoundChannel)
+                local channel = Player.source and Player.source:GetChannel() or "unknown"
                 print(format("Playback: channel=%s, paused=%s, queue=%d, player=%s", channel,
                     tostring(Spoken and Spoken:IsPaused()), Spoken and Spoken:GetQueueSize() or 0,
                     Spoken and Spoken.ADDON_VERSION or "missing"))

@@ -20,19 +20,6 @@ local BULLETS = {
     [Enums.SoundEvent.Gossip]        = "gossip",
 }
 
-local function ChannelName()
-    return Enums.SoundChannel:GetName(Addon.db.profile.Audio.SoundChannel)
-end
-
--- Muting the Dialog channel while a line plays, so the NPC's own bark does not talk
--- over it. Only on clients that have the channel, and only when the line is not itself
--- on it. This used to sit inside the queue; it is quest policy, so it hooks the source.
-local function DialogMuteApplies()
-    return Addon.db.profile.Audio.AutoToggleDialog
-        and Version:IsRetailOrAboveLegacyVersion(60100)
-        and Addon.db.profile.Audio.SoundChannel ~= Enums.SoundChannel.Dialog
-end
-
 --------------------------------------------------------------------------------
 -- Reading the queue back
 --------------------------------------------------------------------------------
@@ -272,29 +259,9 @@ function Player:Setup()
         -- Upstream's figure: quest durations come from a lookup that has drifted across
         -- transcodes, and the extra gap absorbs one that is slightly short.
         interClipGap = 0.55,
-        channel = ChannelName,
         -- Play-and-stop the file before admitting it, as the queue always did here.
         testBeforeQueue = true,
     })
-
-    -- The Dialog channel is muted while one of this addon's lines speaks and restored the
-    -- moment anything else does, or nothing does. Not while this source merely has a
-    -- backlog: another addon's clip in between may itself be on the Dialog channel.
-    local function SetDialogMuted(muted)
-        Spoken:MuteChannel("Dialog", muted)
-    end
-    Spoken:RegisterCallback("CLIP_STARTED", function(clip)
-        if clip.source == Player.source then
-            if DialogMuteApplies() then
-                SetDialogMuted(true)
-            end
-        else
-            SetDialogMuted(false)
-        end
-    end)
-    Spoken:RegisterCallback("QUEUE_EMPTY", function()
-        SetDialogMuted(false)
-    end)
 
     -- What the watcher reads to know whether an event reached the speaker.
     Spoken:RegisterCallback("CLIP_QUEUED", function(clip)
@@ -307,12 +274,6 @@ function Player:Setup()
             return
         end
         Debug:Record("playing", format("Playing %s", clip.path or clip.fileName or "voiceover"))
-        -- 1.12 has no Dialog channel to mute; what it can do is cut the NPC's greeting
-        -- bark by toggling all effects off and on the moment our line starts.
-        if Version.IsLegacyVanilla and Addon.db.profile.Audio.AutoToggleDialog then
-            SetCVar("MasterSoundEffects", 0)
-            SetCVar("MasterSoundEffects", 1)
-        end
     end)
 
     Spoken:RegisterBullet("quest-accept",   TEXTURES .. "SoundQueueBulletAccept", 14)

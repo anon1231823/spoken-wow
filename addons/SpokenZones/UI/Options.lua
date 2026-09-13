@@ -267,43 +267,11 @@ function ZoneLore:SetupOptions()
 			end
 		end)
 
-	y = y + ROW_GAP - 6
+	y = y + ROW_GAP - 4
 	-- A cycle button rather than a dropdown. UIDropDownMenuTemplate works on 11509
 	-- but none of its Initialize plumbing can be checked without launching the
-	-- game, and five values do not justify the risk -- the same trade the
-	-- hand-rolled scrollbar in UI/TextView.lua makes.
-	local CHANNEL_ORDER = { "Dialog", "Master", "SFX", "Ambience", "Music" }
-	local channelButton = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
-	channelButton:SetPoint("TOPLEFT", INDENT + 4, y)
-	channelButton:SetSize(220, 22)
-
-	local function SyncChannel()
-		channelButton:SetText("Sound channel: " .. ZoneLore:GetVoiceChannel())
-	end
-
-	channelButton:SetScript("OnClick", function()
-		local currentChannel = ZoneLore:GetVoiceChannel()
-		local index = 1
-		for i = 1, #CHANNEL_ORDER do
-			if CHANNEL_ORDER[i] == currentChannel then
-				index = i
-				break
-			end
-		end
-		ZoneLore:Set("voiceChannel", CHANNEL_ORDER[(index % #CHANNEL_ORDER) + 1])
-		-- The handle belongs to the old channel, so a running clip cannot be moved.
-		ZoneLore:StopLore()
-		SyncChannel()
-	end)
-	channelButton:SetScript("OnShow", SyncChannel)
-	SyncChannel()
-
-	y = y + ROW_GAP - 4
-	MakeNote(content, "Dialog follows the Dialog volume slider in the game's sound options.",
-		INDENT + 4, y)
-
-	y = y + ROW_GAP - 4
-	-- Same cycle-button trade as the channel above. The list it cycles through is
+	-- game, and a handful of values do not justify the risk -- the same trade the
+	-- hand-rolled scrollbar in UI/TextView.lua makes. The list it cycles through is
 	-- whatever is installed, so it is built on click rather than captured here:
 	-- packs cannot be installed mid-session, but a player who disables one in the
 	-- AddOns list and reloads should not find this button offering it.

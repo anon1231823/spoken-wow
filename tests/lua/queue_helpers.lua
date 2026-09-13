@@ -10,7 +10,7 @@ function M.Fresh(stub, spokenDir)
     env.Addon.db.char.IsPaused = false
     local quests = env.Sources:Register("quests", { title = "Quests", addon = "SpokenQuests", order = 1 })
     local zones = env.Sources:Register("zones", { title = "Zones", addon = "SpokenZones", order = 2,
-        queueLimit = 3, interClipGap = 0.25, channel = function() return "Dialog" end })
+        queueLimit = 3, interClipGap = 0.25 })
     return env, quests, zones
 end
 

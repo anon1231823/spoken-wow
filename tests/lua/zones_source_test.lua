@@ -38,7 +38,8 @@ end
 local env, Z = Boot()
 local Spoken = _G.Spoken
 Expect("the zones addon registers a source with the player", Spoken:GetSource("zones"), Z.source)
-Expect("...with its own channel", Z.source:GetChannel(), "Dialog")
+-- No channel of its own: the channel is one setting, on the player.
+Expect("...on the player's channel", Z.source:GetChannel(), "Master")
 Expect("...ZoneLore's queue limit", Z.source.queueLimit, 3)
 Expect("...and its own gap", Z.source.interClipGap, 0.25)
 
@@ -63,7 +64,7 @@ local changed = 0
 Z:OnAudioChanged(function() changed = changed + 1 end)
 Expect("PlayLore plays", Z:PlayLore(1411, nil), true)
 Expect("...through the player", Spoken:IsPlaying(), true)
-Expect("...on the zones channel", world.playedChannels[1], "Dialog")
+Expect("...on the player's channel", world.playedChannels[1], "Master")
 Expect("IsPlayingLore for that entry", Z:IsPlayingLore(1411, nil), true)
 Expect("...not for another", Z:IsPlayingLore(1411, "valley of trials"), false)
 local m, a, paused = Z:GetNowPlaying()

@@ -123,8 +123,9 @@ local defaults = {
         -- workaround and the paused flag are the Spoken player's settings now.
         Audio = {
             GossipFrequency = Enums.GossipFrequency.OncePerQuestNPC,
-            SoundChannel = Enums.SoundChannel.Master,
-            AutoToggleDialog = Version.IsLegacyVanilla or Version:IsRetailOrAboveLegacyVersion(60100),
+            -- The sound channel and the muting of the client's own NPC dialogue used to
+            -- live here. They describe how anything is played rather than what this addon
+            -- reads, so they are the player's settings now; Spoken's Migrate lifts them.
             StopAudioOnDisengage = false,
             OGThrall = false,
         },

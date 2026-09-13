@@ -197,6 +197,7 @@ end
 local function AfterRemoval()
     if SoundQueue:IsEmpty() then
         StopRetryTicker()
+        SoundQueue:MuteGameDialogue(nil)
         Callbacks:Fire("QUEUE_EMPTY")
     end
 end
@@ -307,9 +308,32 @@ end
 -- Playing
 --------------------------------------------------------------------------------
 
+--- Silence the client's own NPC dialogue while we speak, and let it back when the queue
+--- drains. `speakingOn` is the channel being spoken on, or nil when nothing is.
+---
+--- Never the channel we are speaking on: muting that would mute the line. On 1.12 there is
+--- no Dialog channel to mute, and what the client can do is cut a bark already playing, so
+--- the effects channel is toggled off and straight back on as the line starts.
+---@param speakingOn string|nil
+function SoundQueue:MuteGameDialogue(speakingOn)
+    if not Addon.db.profile.Audio.AutoToggleDialog then
+        return
+    end
+    if Version.IsLegacyVanilla then
+        if speakingOn then
+            SetCVar("MasterSoundEffects", 0)
+            SetCVar("MasterSoundEffects", 1)
+        end
+        return
+    end
+    SoundUtils:MuteChannel("Dialog", speakingOn ~= nil and speakingOn ~= "Dialog")
+end
+
 ---@param clip SpokenClip
 function SoundQueue:PlaySound(clip)
     local channel = clip.source:GetChannel()
+    -- Whatever we muted, we cannot speak on. Lifted first, so a clip on the very channel
+    -- the last line silenced is heard.
     if SoundUtils:IsMutedByPlayer(channel) then
         SoundUtils:MuteChannel(channel, false)
     end
@@ -319,6 +343,8 @@ function SoundQueue:PlaySound(clip)
         self:Advance()
         return
     end
+
+    self:MuteGameDialogue(channel)
 
     if clip.startCallback then
         clip.startCallback(clip)
