@@ -39,9 +39,9 @@ local HEADING_HEIGHT = 16
 local CHECKBOX_SIZE = 26
 local BUTTON_HEIGHT = 22
 local SLIDER_HEIGHT = 16
-local SLIDER_LABEL_GAP = 18   -- the label sits above the bar, inside the row
+local CONTROL_HEIGHT = 26     -- a labelled control's row: label left, control right
+local LABEL_COLUMN = 190      -- where the control starts, so every one of them lines up
 local INDENT_STEP = 20        -- for an option that qualifies the one above it
-local DROPDOWN_HEIGHT = 26
 
 -- A heading belongs to the section under it. The space above it is what separates two
 -- sections; the space below it must stay smaller, or the heading reads as floating
@@ -53,6 +53,19 @@ Layout.__index = Layout
 function Layout.Percent(value) return format("%d%%", value * 100) end
 function Layout.Seconds(value) return format("%.1fs", value) end
 function Layout.Number(value) return format("%d", math.floor(value + 0.5)) end
+
+--- The left half of a labelled row: white, so it reads as the name of the thing rather
+--- than as a heading, and centred against whatever sits in the right half.
+local function Caption(parent, text, x, top, height)
+    local fs = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    fs:SetPoint("TOPLEFT", x, top)
+    fs:SetWidth(LABEL_COLUMN - 10)
+    fs:SetHeight(height)
+    fs:SetJustifyH("LEFT")
+    fs:SetJustifyV("MIDDLE")
+    fs:SetText(text)
+    return fs
+end
 
 local function Tooltip(frame, title, body)
     if not body and not title then
@@ -80,6 +93,13 @@ function Layout:Take(height)
     self.y = self.y - height - ROW_GAP
     self.empty = false
     return y
+end
+
+--- The column a labelled control's content starts at. Recorded rather than inferred from
+--- the frame, because UIDropDownMenuTemplate insets its own text: two controls that line
+--- up on screen are anchored sixteen pixels apart.
+function Layout:Column()
+    return self.x + LABEL_COLUMN
 end
 
 --- Record the row a control was given. A control may sit inside its row -- a slider's bar
@@ -152,8 +172,9 @@ end
 
 function Layout:Slider(label, minValue, maxValue, step, read, write, apply, show)
     show = show or Layout.Percent
-    local height = SLIDER_HEIGHT + SLIDER_LABEL_GAP
-    local top = self:Take(height)
+    local top = self:Take(CONTROL_HEIGHT)
+    local caption = Caption(self.parent, label, self.x, top, CONTROL_HEIGHT)
+
     -- OptionsSliderTemplate is the private-server clients' name for it; WOW_PROJECT_ID
     -- exists on every client that calls it UISliderTemplate.
     local template = WOW_PROJECT_ID == nil and "OptionsSliderTemplate" or "UISliderTemplate"
@@ -163,33 +184,37 @@ function Layout:Slider(label, minValue, maxValue, step, read, write, apply, show
     slider:SetHeight(SLIDER_HEIGHT)
     slider:SetOrientation("HORIZONTAL")
     slider:SetWidth(180)
-    -- `top` is the top of the row. The label is anchored above the bar, so the bar sits a
-    -- label's height down and the whole row stays inside what was reserved for it.
-    slider:SetPoint("TOPLEFT", self.x + 4, top - SLIDER_LABEL_GAP)
+    slider:SetPoint("TOPLEFT", self.x + LABEL_COLUMN, top - (CONTROL_HEIGHT - SLIDER_HEIGHT) / 2)
     slider:SetMinMaxValues(minValue, maxValue)
     slider:SetValueStep(step)
     if slider.SetObeyStepOnDrag then
         slider:SetObeyStepOnDrag(true)
     end
-    slider.label = slider:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    slider.label:SetPoint("BOTTOMLEFT", slider, "TOPLEFT", 0, 4)
-    -- Labelled when built as well as on show: a slider on a panel nobody has opened still
-    -- reads as what it is.
-    slider.label:SetText(format("%s: %s", label, show(read())))
+
+    -- The value reads to the right of the bar rather than in the label, so the label
+    -- column stays the same width whatever the value happens to be.
+    local value = self.parent:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    value:SetPoint("LEFT", slider, "RIGHT", 8, 0)
+    value:SetJustifyH("LEFT")
+    -- Set when built as well as on show: a slider on a panel nobody has opened still reads
+    -- as what it is.
+    value:SetText(show(read()))
     slider:SetScript("OnShow", function(self)
         self:SetValue(read())
-        self.label:SetText(format("%s: %s", label, show(read())))
+        value:SetText(show(read()))
     end)
-    slider:SetScript("OnValueChanged", function(self, value)
-        value = math.floor(value / step + 0.5) * step
-        self.label:SetText(format("%s: %s", label, show(value)))
-        if math.abs(value - read()) >= step / 2 then
-            write(value)
+    slider:SetScript("OnValueChanged", function(self, current)
+        current = math.floor(current / step + 0.5) * step
+        value:SetText(show(current))
+        if math.abs(current - read()) >= step / 2 then
+            write(current)
             if apply then apply() end
         end
     end)
     slider:SetValue(read())
-    return self:Row(slider, top, height)
+    Tooltip(slider, label, nil)
+    slider.layoutLabel, slider.layoutValue, slider.layoutColumn = caption, value, self:Column()
+    return self:Row(slider, top, CONTROL_HEIGHT)
 end
 
 local function Resolve(values)
@@ -253,18 +278,15 @@ function Layout:Dropdown(label, tooltip, values, read, write, apply, describe)
         return self:Cycle(label .. ": %s", tooltip, values, read, write, apply, describe)
     end
 
-    local height = DROPDOWN_HEIGHT + SLIDER_LABEL_GAP
-    local top = self:Take(height)
-    local caption = self.parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    caption:SetPoint("TOPLEFT", self.x + 4, top)
-    caption:SetJustifyH("LEFT")
-    caption:SetText(label)
+    local top = self:Take(CONTROL_HEIGHT)
+    local caption = Caption(self.parent, label, self.x, top, CONTROL_HEIGHT)
 
     dropdowns = dropdowns + 1
     local menu = CreateFrame("Frame", "SpokenLayoutDropdown" .. dropdowns, self.parent,
         "UIDropDownMenuTemplate")
     -- The template carries its own inset, so the frame sits left of where its text lands.
-    menu:SetPoint("TOPLEFT", self.x - 16, top - SLIDER_LABEL_GAP + 2)
+    -- Vertically it sits exactly on the row: nudging it up would put it in the row above.
+    menu:SetPoint("TOPLEFT", self.x + LABEL_COLUMN - 16, top)
 
     local function Sync()
         UIDropDownMenu_SetText(menu, describe(read()))
@@ -293,8 +315,8 @@ function Layout:Dropdown(label, tooltip, values, read, write, apply, describe)
     menu:SetScript("OnShow", Sync)
     Tooltip(menu, label, tooltip)
     Sync()
-    menu.layoutLabel = caption
-    return self:Row(menu, top, height)
+    menu.layoutLabel, menu.layoutColumn = caption, self:Column()
+    return self:Row(menu, top, CONTROL_HEIGHT)
 end
 
 function Layout:Button(label, width, onClick, tooltip)

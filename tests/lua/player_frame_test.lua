@@ -196,6 +196,20 @@ for _, row in ipairs(rows) do
 end
 Expect("no control escapes the row it was given", escaped, 0)
 
+-- Label on the left, control on the right, at the same column for every row: a panel
+-- whose controls start at different places reads as several panels.
+local columns, captioned = {}, 0
+for _, child in ipairs(_G.SpokenOptionsPanel.children) do
+    if child.layoutColumn then
+        captioned = captioned + 1
+        columns[string.format("%.1f", child.layoutColumn)] = true
+    end
+end
+Expect("there are labelled controls to line up", captioned > 1, true)
+local distinctColumns = 0
+for _ in pairs(columns) do distinctColumns = distinctColumns + 1 end
+Expect("...and every one of them starts at the same column", distinctColumns, 1)
+
 local headingGaps = {}
 for _, heading in ipairs(headings) do
     local above
@@ -239,7 +253,9 @@ Expect("...not by the queue's title", labels["Up next"], nil)
 -- The scale slider was built with no height and no orientation, so it drew nothing: the
 -- setting sat on the panel invisible, with a gap where it should have been. The zones
 -- addon's own sliders, which do render, set both.
-Expect("the scale slider is labelled", labels["Player scale: 70%"], true)
+-- Label on the left, control on the right, value beside it: one row, not two.
+Expect("the scale slider is labelled", labels["Player scale"], true)
+Expect("...with its value beside the bar", labels["70%"], true)
 local scale
 for _, child in ipairs(_G.SpokenOptionsPanel.children) do
     if child.frameType == "Slider" then scale = scale or child end
@@ -258,8 +274,8 @@ Expect("a current client is offered nothing about the music channel",
 -- all: the only way to change one was to edit the saved variables by hand.
 labels = PanelLabels("3.3.5")
 Expect("a legacy client can reach the music channel", labels["Play through the music channel"], true)
-Expect("...its volume", labels["Speech volume: 100%"], true)
-Expect("...its fade, as a duration and not a percentage", labels["Fade the music out over: 0.5s"], true)
+Expect("...its volume", labels["Speech volume"], true)
+Expect("...its fade, as a duration and not a percentage", labels["0.5s"], true)
 Expect("...and the HD model patch", labels["HD model patch installed"], true)
 
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
