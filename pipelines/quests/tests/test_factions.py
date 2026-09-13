@@ -83,12 +83,12 @@ def test_every_pack_has_a_folder_suffix_and_a_label():
 
 
 def test_a_title_reads_as_the_project_it_ships_to():
-    assert pack_title("alliance") == "VoiceOver Redux Audio: Alliance"
-    assert pack_title("shared") == "VoiceOver Redux Audio: Shared Quests"
+    assert pack_title("alliance") == "Spoken Quests Audio: Alliance"
+    assert pack_title("shared") == "Spoken Quests Audio: Shared Quests"
 
 
 def test_a_family_names_a_whole_set_of_packs_at_once():
     # The HQ packs are the same four cut the same way at a different quality, and their
     # CurseForge projects are named for the family rather than per pack - so the family is a
     # parameter and not five more constants to keep in step.
-    assert pack_title("horde", "VoiceOver Redux HQ Audio") == "VoiceOver Redux HQ Audio: Horde"
+    assert pack_title("horde", "Spoken Quests HQ Audio") == "Spoken Quests HQ Audio: Horde"

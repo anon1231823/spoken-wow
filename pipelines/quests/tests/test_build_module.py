@@ -146,10 +146,10 @@ def test_the_toc_title_says_which_pack_this_is(tmp_path):
     store = _store(tmp_path, "quests/5-accept.ogg")
 
     build_module(CORPUS, store, str(tmp_path / "dist"), "Mod",
-                 title="VoiceOver Redux Audio (Horde)")
+                 title="Spoken Quests Audio (Horde)")
 
     with open(tmp_path / "dist" / "Mod" / "Mod.toc", encoding="utf-8") as f:
-        assert "## Title: VoiceOver Redux Audio (Horde)\n" in f.read()
+        assert "## Title: Spoken Quests Audio (Horde)\n" in f.read()
 
 
 def test_the_pack_ships_an_icon_the_toc_points_at(tmp_path):

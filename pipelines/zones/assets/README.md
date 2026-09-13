@@ -25,7 +25,7 @@ there are two of them and a build step to keep them in sync would be larger than
 **CurseForge avatars are uploaded through the website**, not shipped in the zip — so
 `scripts/package.sh` deliberately does not include this directory. The only image either
 addon folder carries is the addon-list icon below. Upload `zonelore-512.png` on the project settings page of both
-ZoneLore and ZoneLore Audio: they install as a pair, and two different icons would imply
+Spoken Zones and Spoken Zones Audio: they install as a pair, and two different icons would imply
 they are alternatives to each other.
 
 ## The in-game addon list

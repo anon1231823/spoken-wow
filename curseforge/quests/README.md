@@ -5,13 +5,13 @@ Markdown mode — paste the file into it.
 
 | File | Project | id | Slug |
 | --- | --- | --- | --- |
-| `../spoken/spoken.md` | Spoken | *create, then write it into `SPOKEN_PROJECT_ID`* | `spoken` |
+| `../spoken/spoken.md` | Spoken Player | *create, then write it into `SPOKEN_PROJECT_ID`* | `spoken-player` |
 | `player.md` | Spoken Quests (was VoiceOver Redux) | 1655859 | `voiceover-redux` |
 | `audio-all.md` | Spoken Quests Audio: All (was VoiceOver Redux Audio: All) | 1655867 | `voiceover-redux-audio` |
-| `audio-alliance.md` | VoiceOver Redux Audio: Alliance | 1658236 | `voiceover-redux-audio-alliance` |
-| `audio-horde.md` | VoiceOver Redux Audio: Horde | 1658237 | `voiceover-redux-audio-horde` |
-| `audio-shared.md` | VoiceOver Redux Audio: Shared Quests | 1658239 | `voiceover-redux-audio-shared-quests` |
-| `audio-gossip.md` | VoiceOver Redux Audio: Gossip | 1658235 | `voiceover-redux-audio-gossip` |
+| `audio-alliance.md` | Spoken Quests Audio: Alliance (was VoiceOver Redux Audio: Alliance) | 1658236 | `voiceover-redux-audio-alliance` |
+| `audio-horde.md` | Spoken Quests Audio: Horde (was VoiceOver Redux Audio: Horde) | 1658237 | `voiceover-redux-audio-horde` |
+| `audio-shared.md` | Spoken Quests Audio: Shared Quests (was VoiceOver Redux Audio: Shared Quests) | 1658239 | `voiceover-redux-audio-shared-quests` |
+| `audio-gossip.md` | Spoken Quests Audio: Gossip (was VoiceOver Redux Audio: Gossip) | 1658235 | `voiceover-redux-audio-gossip` |
 
 **Renames keep the id, the download count and the file history**; only the name changes, and
 the old slug keeps redirecting if the slug is changed too. So the rename to Spoken is done by

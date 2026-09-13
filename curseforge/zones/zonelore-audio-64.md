@@ -26,10 +26,10 @@ Two packs, the same voicelines, differing only in quality:
 
 | Pack | Bitrate | Download |
 |---|---|---|
-| **ZoneLore Audio** | 128 kbps | ~450 MB |
-| **ZoneLore Audio 64** (this one) | VBR mono | ~220 MB |
+| **Spoken Zones Audio** | 128 kbps | ~450 MB |
+| **Spoken Zones Audio 64** (this one) | VBR mono | ~220 MB |
 
-This is the smaller pack. VBR mono is close to transparent for speech, so it costs less than the gap between the numbers suggests — take it if the ~450 MB of ZoneLore Audio is more than you want to spend. A higher bitrate makes the voice clearer on good headphones, not different.
+This is the smaller pack. VBR mono is close to transparent for speech, so it costs less than the gap between the numbers suggests — take it if the ~450 MB of Spoken Zones Audio is more than you want to spend. A higher bitrate makes the voice clearer on good headphones, not different.
 
 Both can be installed at once — Spoken Zones plays the higher-quality one, and `/zl audio` switches between them.
 

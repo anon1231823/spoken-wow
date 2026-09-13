@@ -98,9 +98,11 @@ tier_folder() {
 }
 tier_bitrate()  { case "$1" in standard) echo "64";; high) echo "128";; esac; }
 tier_encoding() { case "$1" in standard) echo "vbr-v6";; high) echo "copy";; esac; }
+# The folder names above are frozen -- a renamed pack folder is a re-download of every
+# clip in it -- so the title is the only place a player reads the current name.
 tier_title() {
-  if [[ "$LOCALE" != "enUS" ]]; then echo "ZoneLore Audio $LOCALE"; return; fi
-  case "$1" in standard) echo "ZoneLore Audio 64";; high) echo "ZoneLore Audio";; esac
+  if [[ "$LOCALE" != "enUS" ]]; then echo "Spoken Zones Audio $LOCALE"; return; fi
+  case "$1" in standard) echo "Spoken Zones Audio 64";; high) echo "Spoken Zones Audio";; esac
 }
 
 # English publishes both tiers; every other language publishes the small one only.

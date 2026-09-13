@@ -8,16 +8,21 @@ carries that version. The heading says which.
 
 ## 2.0.0 — player
 
-Renamed to **Spoken Quests**, and the player extracted into the **Spoken** addon that every
-Spoken addon speaks through. Addon managers install Spoken automatically; the 1.12, 2.4.3 and
-3.3.5 zips carry it inside.
+Renamed to **Spoken Quests**, and the player extracted into the **Spoken Player** addon that
+every Spoken addon speaks through. Addon managers install it automatically; the 1.12, 2.4.3
+and 3.3.5 zips carry it inside.
 
 - Settings migrate on first login from the old VoiceOverRedux folder, which this release
   replaces with a tombstone that can be deleted afterwards.
 - One queue with ZoneLore: quest lines and zone narration wait their turn behind each other,
   and nothing interrupts. Gossip yields to a queued quest line in both directions.
-- The player frame, minimap button, sound channel and pause are Spoken's settings now.
-- The sound packs are unchanged and keep working.
+- The player frame, minimap button, sound channel and pause are Spoken Player's settings now.
+- The sound packs are renamed **Spoken Quests Audio: X**, and the HQ family **Spoken Quests
+  HQ Audio: X**, in the addon list and on CurseForge. Only the titles change: the folders
+  keep their names, so nothing is re-downloaded and every installed pack keeps working.
+- Packs are found by `X-SpokenQuests-DataModule-*` as well as the `X-VoiceOver-DataModule-*`
+  key every published pack carries. A pack built from now on declares both, so one pack
+  serves this release, 1.3.0, and upstream AI VoiceOver alike.
 
 ## 1.3.0 — player
 

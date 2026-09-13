@@ -67,7 +67,7 @@ TITLE="${TITLE:-}"
 # The family a build belongs to: MODULE is the folder every pack's suffix is appended to, and
 # TITLE_FAMILY the words before the colon in every title. The HQ packs are the same four cut
 # the same way at a different quality, so they are a family of their own -
-# VoiceOverReduxHQAudioAlliance, "VoiceOver Redux HQ Audio: Alliance" - rather than a variant
+# VoiceOverReduxHQAudioAlliance, "Spoken Quests HQ Audio: Alliance" - rather than a variant
 # spelled onto the end of each name. A folder per quality, because two packs under one name
 # would have an addon manager updating a player from the quality they chose into the other.
 TITLE_FAMILY="${TITLE_FAMILY:-}"

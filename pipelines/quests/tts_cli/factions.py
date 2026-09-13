@@ -52,7 +52,7 @@ PACK_LABELS = {
 }
 
 #: The family every pack belongs to unless told otherwise. The HQ builds pass their own.
-DEFAULT_TITLE_FAMILY = "VoiceOver Redux Audio"
+DEFAULT_TITLE_FAMILY = "Spoken Quests Audio"
 
 
 def pack_title(pack: str, family: str = DEFAULT_TITLE_FAMILY) -> str:

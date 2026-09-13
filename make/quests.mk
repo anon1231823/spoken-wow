@@ -234,7 +234,7 @@ package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.
 
 package-audio-hq: ## Build the full-bandwidth pack, every line in one folder (~1.3 GB)
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
-	  MODULE_NAME=VoiceOverReduxAudioHQ TITLE="VoiceOver Redux Audio: HQ" \
+	  MODULE_NAME=VoiceOverReduxAudioHQ TITLE="Spoken Quests Audio: HQ" \
 	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
 # The same audio split the same four ways, at full bandwidth: VoiceOverReduxAudioAllianceHQ and
@@ -247,11 +247,11 @@ package-audio-hq: ## Build the full-bandwidth pack, every line in one folder (~1
 
 package-audio-hq-split: ## The four packs at full bandwidth (~300 MB each)
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k MODULE=VoiceOverReduxHQAudio \
-	  TITLE_FAMILY="VoiceOver Redux HQ Audio" JOBS=$(JOBS) ./scripts/quests/package-audio.sh
+	  TITLE_FAMILY="Spoken Quests HQ Audio" JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
 package-meta-hq: ## Zip the meta addon for the HQ family
 	@VERSION=$(VERSION) NAME=VoiceOverReduxHQAudio \
-	  TITLE="VoiceOver Redux HQ Audio: All" VARIANT=" at full bandwidth" \
+	  TITLE="Spoken Quests HQ Audio: All" VARIANT=" at full bandwidth" \
 	  ./scripts/quests/package-meta.sh
 
 # The "install everything" addon, which installs nothing itself: a few kilobytes declaring the

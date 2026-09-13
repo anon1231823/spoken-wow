@@ -7,7 +7,7 @@ This addon plays nothing by itself. It is installed automatically as a dependenc
 | [Spoken Quests](https://www.curseforge.com/wow/addons/voiceover-redux) | quest dialogue and NPC gossip (formerly VoiceOver Redux) |
 | [Spoken Zones](https://www.curseforge.com/wow/addons/zonelore) | zone and subzone lore (formerly ZoneLore) |
 
-Install one of those and your addon manager brings Spoken with it. Installing by hand? Get this too, or the addons above will load and tell you what is missing.
+Install one of those and your addon manager brings Spoken Player with it. Installing by hand? Get this too, or the addons above will load and tell you what is missing.
 
 ## What it does
 

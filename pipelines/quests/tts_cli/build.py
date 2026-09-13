@@ -62,7 +62,7 @@ VoiceOver.DataModules:Register("{module}", {module})
 # the addon reads first; X-VoiceOver-* is what its previous releases and upstream
 # AI_VoiceOver read, so one built pack serves every one of them. Drop the inherited pair
 # only once no supported release still looks for it.
-DEFAULT_TITLE = "VoiceOver Redux Audio"
+DEFAULT_TITLE = "Spoken Quests Audio"
 
 #: The artwork the client shows beside the addon's name in the AddOns list. Committed as a TGA
 #: rather than converted at build time, so building needs no ffmpeg; tools/make_icon.py is what
@@ -73,13 +73,13 @@ ICON_NAME = "icon.tga"
 
 TOC_HEADER = """## Interface: 100000
 ## Title: {title}
-## Notes: Contains voiceovers for content released during the Vanilla era.|n|nIt's |cFF20FF20OK|r for this addon to appear |cFF808080"disabled"|r or |cFFFF2020"out of date"|r, it's compatible with any client and |cFFFFD200VoiceOver Redux|r will load it even if it's disabled or out of date.
+## Notes: Contains voiceovers for content released during the Vanilla era.|n|nIt's |cFF20FF20OK|r for this addon to appear |cFF808080"disabled"|r or |cFFFF2020"out of date"|r, it's compatible with any client and |cFFFFD200Spoken Quests|r will load it even if it's disabled or out of date.
 ## Version: {version}
 ## IconTexture: Interface\\AddOns\\{module}\\{icon}
 ## LoadOnDemand: 1
-## Group: VoiceOverRedux
-## X-Part-Of: VoiceOver Redux
-## X-Child-Of: VoiceOverRedux
+## Group: SpokenQuests
+## X-Part-Of: Spoken
+## X-Child-Of: SpokenQuests
 ## X-SpokenQuests-DataModule-Version: 1
 ## X-SpokenQuests-DataModule-Priority: 100
 ## X-SpokenQuests-DataModule-Maps: 0, 1, 30, 33, 43, 47, 48, 70, 90, 109, 129, 189, 209, 229, 230, 289, 309, 329, 349, 369, 389, 429, 469, 509, 531, 533

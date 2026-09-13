@@ -173,7 +173,7 @@ with five CurseForge projects of its own — four packs and a meta addon:
 | | Standard | HQ |
 | --- | --- | --- |
 | Folders | `VoiceOverReduxAudio…` | `VoiceOverReduxHQAudio…` |
-| Titles | `VoiceOver Redux Audio: Alliance` | `VoiceOver Redux HQ Audio: Alliance` |
+| Titles | `Spoken Quests Audio: Alliance` | `Spoken Quests HQ Audio: Alliance` |
 | Encode | `ogg-q-1-22k`, ~150 MB a pack | `ogg-q0-44k`, ~300 MB a pack |
 | Built by | `make package-audio` + `package-meta` | `make package-audio-hq-split` + `package-meta-hq` |
 

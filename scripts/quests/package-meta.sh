@@ -36,7 +36,7 @@ ZIP="${ZIP:-1}"
 # What this stub is called and which packs it describes. There are two families - the standard
 # packs and the full-bandwidth ones - and each has a project of its own on CurseForge, so each
 # needs a stub of its own. release.sh holds the dependency list that does the actual work.
-TITLE="${TITLE:-VoiceOver Redux Audio: All}"
+TITLE="${TITLE:-Spoken Quests Audio: All}"
 VARIANT="${VARIANT:-}"
 
 module_dir="$DIST/$NAME"
@@ -46,7 +46,7 @@ mkdir -p "$module_dir"
 # A comment and nothing else. The addon has to list a file to be a well-formed addon, and this
 # one deliberately does nothing: every behaviour lives in the player, and every sound in a pack.
 cat > "$module_dir/Meta.lua" <<'LUA'
--- Intentionally empty. This addon exists to pull in the VoiceOver Redux sound packs as
+-- Intentionally empty. This addon exists to pull in the Spoken Quests sound packs as
 -- CurseForge dependencies; it holds no audio and no code of its own.
 LUA
 
@@ -57,11 +57,11 @@ cp "$REPO/pipelines/quests/assets/icon/icon.tga" "$module_dir/icon.tga"
 cat > "$module_dir/$NAME.toc" <<TOC
 ## Interface: 100000
 ## Title: $TITLE
-## Notes: Installs every VoiceOver Redux sound pack$VARIANT - Alliance, Horde, Shared Quests and Gossip.|n|nThis addon holds no audio itself. If your addon manager did not fetch the four packs with it, install them yourself; |cFFFFD200VoiceOver Redux|r plays whatever it finds.
+## Notes: Installs every Spoken Quests sound pack$VARIANT - Alliance, Horde, Shared Quests and Gossip.|n|nThis addon holds no audio itself. If your addon manager did not fetch the four packs with it, install them yourself; |cFFFFD200Spoken Quests|r plays whatever it finds.
 ## Version: $VERSION
 ## IconTexture: Interface\\AddOns\\$NAME\\icon.tga
 ## Group: VoiceOverRedux
-## X-Part-Of: VoiceOver Redux
+## X-Part-Of: Spoken
 ## X-Child-Of: VoiceOverRedux
 
 Meta.lua

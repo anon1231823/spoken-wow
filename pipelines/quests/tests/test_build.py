@@ -157,9 +157,11 @@ def test_toc_nests_the_pack_under_the_player():
     # and X-Child-Of a folder again. Three keys a rename can silently swap between.
     toc = module_toc("VoiceOverReduxAudio", [])
 
-    assert "## Group: VoiceOverRedux\n" in toc
-    assert "## X-Part-Of: VoiceOver Redux\n" in toc
-    assert "## X-Child-Of: VoiceOverRedux\n" in toc
+    # The folder the packs nest under is the addon's, which the rename moved; the pack
+    # folders themselves did not move, so these are the only names here that change.
+    assert "## Group: SpokenQuests\n" in toc
+    assert "## X-Part-Of: Spoken\n" in toc
+    assert "## X-Child-Of: SpokenQuests\n" in toc
 
 
 def test_install_refuses_to_replace_without_force(tmp_path):

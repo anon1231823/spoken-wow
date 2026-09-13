@@ -3,7 +3,7 @@ Voiced dialogue for the quests only a Horde character can take.
 **You need two more addons for this to do anything:**
 
 1. **[VoiceOver Redux](https://www.curseforge.com/wow/addons/voiceover-redux)** — the player. Without it no pack plays.
-2. **[VoiceOver Redux Audio: Shared Quests](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests)** — the quests both factions can take, including everything in the neutral hubs like Booty Bay and Gadgetzan. Without it a Horde character hears only part of their quests.
+2. **[Spoken Quests Audio: Shared Quests](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests)** — the quests both factions can take, including everything in the neutral hubs like Booty Bay and Gadgetzan. Without it a Horde character hears only part of their quests.
 
 ## The packs
 

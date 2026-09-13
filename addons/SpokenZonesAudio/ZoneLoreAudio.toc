@@ -1,6 +1,6 @@
 ## Interface: 11509, 20506
-## Title: ZoneLore Audio
-## Notes: Narrated zone lore for ZoneLore. Install alongside ZoneLore.|n|cffffcc00Beta:|r a proof-of-concept voice, being redesigned and re-generated.
+## Title: Spoken Zones Audio
+## Notes: Narrated zone lore for Spoken Zones. Install alongside Spoken Zones.|n|cffffcc00Beta:|r a proof-of-concept voice, being redesigned and re-generated.
 ## Version: 0.3.3
 ## Author: rusty
 ## IconTexture: Interface\AddOns\ZoneLoreAudio\Textures\AddonIcon.tga

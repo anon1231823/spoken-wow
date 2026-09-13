@@ -1,6 +1,6 @@
 <!-- GENERATED from curseforge/zonelore.md by tools/descriptions.mjs. Do not edit by hand. -->
 
-**Zone lore on the world map, for WoW Classic Era.** Formerly ZoneLore — now one of the Spoken addons, narrating through the [Spoken](https://www.curseforge.com/wow/addons/spoken-player) player shared with Spoken Quests, which your addon manager installs alongside.
+**Zone lore on the world map, for WoW Classic Era.** Formerly ZoneLore — now one of the Spoken addons, narrating through the [Spoken Player](https://www.curseforge.com/wow/addons/spoken-player) shared with Spoken Quests, which your addon manager installs alongside.
 
 Open the map and the lore of the zone you're looking at appears beside it. Click a named subzone and you get that place's story instead. Optionally, it's read aloud.
 
@@ -27,10 +27,10 @@ Two packs, the same voicelines — and there are a lot of them — differing onl
 
 | Pack | Bitrate | Download |
 |---|---|---|
-| **ZoneLore Audio** | 128 kbps | ~450 MB |
-| **ZoneLore Audio 64** | VBR mono | ~220 MB |
+| **Spoken Zones Audio** | 128 kbps | ~450 MB |
+| **Spoken Zones Audio 64** | VBR mono | ~220 MB |
 
-Install ZoneLore Audio unless the download is a problem, in which case ZoneLore Audio 64 is half the size and close to transparent for speech. With both installed Spoken Zones plays the higher-quality one; `/zl audio` lists what you have and switches between them.
+Install Spoken Zones Audio unless the download is a problem, in which case Spoken Zones Audio 64 is half the size and close to transparent for speech. With both installed Spoken Zones plays the higher-quality one; `/zl audio` lists what you have and switches between them.
 
 ### The voice
 
