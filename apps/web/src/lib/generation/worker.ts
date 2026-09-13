@@ -138,7 +138,7 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
     lastKey = apiKey;
 
     // A batch whose owner's account was deleted still has takes to attribute, and
-    // voiceline_version."createdBy" is nullable for exactly that case.
+    // take."createdBy" is nullable for exactly that case.
     const result = await regenerate(job.lineId, job.createdBy ?? "", { apiKey }).catch(
       (error: unknown): RegenerateResult => ({
         ok: false,

@@ -22,7 +22,9 @@ export async function observedRate(modelId: string): Promise<Rate> {
             count(*)::text          as n
        from (
          select "characters", "credits"
-           from "voiceline_version"
+           from "take"
+          -- Both sides, deliberately: the rate being calibrated belongs to the plan, and
+          -- which corpus was narrated to measure it does not change the next line's cost.
           where "modelId" = $1 and "credits" is not null and "characters" > 0
           order by "createdAt" desc
           limit ${CALIBRATION_SAMPLE}

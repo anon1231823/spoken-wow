@@ -19,6 +19,7 @@ let ip: string;
 
 function submission(overrides: Partial<Parameters<typeof createReport>[0]> = {}) {
   return {
+    source: "quests" as const,
     lineId: `q:1:accept`,
     target: "quest/1/accept",
     category: "pronunciation" as const,
@@ -42,7 +43,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await db().query(`delete from "line_report" where "ip" like $1`, [`${ip}%`]);
+  await db().query(`delete from "report" where "ip" like $1`, [`${ip}%`]);
 });
 
 afterAll(async () => {
@@ -61,7 +62,7 @@ describe("createReport and countRecent", () => {
   it("ignores rows older than the window", async () => {
     await createReport(submission());
     await db().query(
-      `update "line_report" set "createdAt" = now() - interval '2 hours' where "ip" = $1`,
+      `update "report" set "createdAt" = now() - interval '2 hours' where "ip" = $1`,
       [ip],
     );
 
@@ -79,7 +80,7 @@ describe("createReport and countRecent", () => {
 
   it("hands back timestamps as strings, not Dates", async () => {
     await createReport(submission());
-    const [report] = await reportsForLine("q:1:accept");
+    const [report] = await reportsForLine("quests", "q:1:accept");
 
     expect(typeof report.createdAt).toBe("string");
   });
@@ -88,7 +89,7 @@ describe("createReport and countRecent", () => {
 describe("setStatus", () => {
   it("records who resolved it and when", async () => {
     await createReport(submission());
-    const [report] = await reportsForLine("q:1:accept");
+    const [report] = await reportsForLine("quests", "q:1:accept");
 
     const updated = await setStatus(report.id, "fixed", RESOLVER);
 
@@ -99,7 +100,7 @@ describe("setStatus", () => {
 
   it("clears the resolution when reopened", async () => {
     await createReport(submission());
-    const [report] = await reportsForLine("q:1:accept");
+    const [report] = await reportsForLine("quests", "q:1:accept");
 
     await setStatus(report.id, "fixed", RESOLVER);
     const reopened = await setStatus(report.id, "open", RESOLVER);
@@ -110,5 +111,41 @@ describe("setStatus", () => {
 
   it("returns null for an id that does not exist", async () => {
     expect(await setStatus(2147483000, "fixed", RESOLVER)).toBeNull();
+  });
+});
+
+/**
+ * The reason the source is part of every read rather than a label on the row: both sides of
+ * the site name lines and files by their own frozen rules, and nothing guarantees the two
+ * namespaces stay apart. A read that forgot the source would hand a zones report to the
+ * quests triage view, where the line it names resolves to something else or to nothing.
+ */
+describe("the two sources", () => {
+  it("keeps a line's reports to the source that filed them", async () => {
+    await createReport(submission({ lineId: "shared:1" }));
+    await createReport(submission({ source: "zones", lineId: "shared:1", target: null }));
+
+    expect(await reportsForLine("quests", "shared:1")).toHaveLength(1);
+    expect(await reportsForLine("zones", "shared:1")).toHaveLength(1);
+  });
+
+  it("lists both by default and one when asked", async () => {
+    await createReport(submission());
+    await createReport(submission({ source: "zones", target: null }));
+
+    const mine = (reports: Awaited<ReturnType<typeof listReports>>) =>
+      reports.filter((report) => report.body === "Said Thrall wrong.");
+
+    expect(mine(await listReports("open"))).toHaveLength(2);
+    expect(mine(await listReports("open", "zones"))).toHaveLength(1);
+    expect(mine(await listReports("open", "zones"))[0]?.source).toBe("zones");
+  });
+
+  /** The zones side reaches its report page with the line already known, so it has none. */
+  it("stores a report with no target at all", async () => {
+    await createReport(submission({ source: "zones", lineId: "z:1411", target: null }));
+
+    const [report] = await reportsForLine("zones", "z:1411");
+    expect(report.target).toBeNull();
   });
 });

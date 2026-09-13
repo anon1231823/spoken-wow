@@ -43,7 +43,7 @@ export function parseTarget(segments: string[]): Target | null {
   return null;
 }
 
-/** The form stored in line_report."target", and the path the addon builds. */
+/** The form stored in report."target", and the path the addon builds. */
 export function formatTarget(target: Target): string {
   return target.kind === "quest"
     ? `quest/${target.questId}/${target.event}`

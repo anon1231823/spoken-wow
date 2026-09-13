@@ -32,7 +32,7 @@ function valid(overrides: Record<string, unknown> = {}) {
 }
 
 afterEach(async () => {
-  await db().query(`delete from "line_report" where "ip" = $1`, [ip]);
+  await db().query(`delete from "report" where "ip" = $1`, [ip]);
 });
 
 afterAll(async () => {
@@ -44,7 +44,7 @@ describe("POST /api/reports", () => {
     expect((await POST(post(valid()))).status).toBe(200);
 
     const { rows } = await db().query<{ target: string }>(
-      `select "target" from "line_report" where "ip" = $1`,
+      `select "target" from "report" where "ip" = $1`,
       [ip],
     );
     expect(rows).toHaveLength(1);
@@ -54,7 +54,7 @@ describe("POST /api/reports", () => {
   it("answers a filled honeypot with 200 and writes nothing", async () => {
     expect((await POST(post(valid({ website: "http://spam.example" })))).status).toBe(200);
 
-    const { rows } = await db().query(`select 1 from "line_report" where "ip" = $1`, [ip]);
+    const { rows } = await db().query(`select 1 from "report" where "ip" = $1`, [ip]);
     expect(rows).toHaveLength(0);
   });
 
@@ -78,7 +78,7 @@ describe("POST /api/reports", () => {
     await POST(post(valid({ lineId: "g:not-a-real-line" })));
 
     const { rows } = await db().query<{ lineId: string | null }>(
-      `select "lineId" from "line_report" where "ip" = $1`,
+      `select "lineId" from "report" where "ip" = $1`,
       [ip],
     );
     expect(rows[0].lineId).toBeNull();

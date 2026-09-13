@@ -56,7 +56,7 @@ function take(overrides: Partial<Parameters<typeof commitVersion>[0]> = {}) {
 
 beforeAll(async () => {
   try {
-    await db().query("select 1 from voiceline_version limit 1");
+    await db().query("select 1 from take limit 1");
   } catch (error) {
     throw new Error(
       "history.test.ts needs a migrated database. Run:\n" +
@@ -72,7 +72,7 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  await db().query(`delete from "voiceline_version" where "file" = $1`, [file]);
+  await db().query(`delete from "take" where "file" = $1`, [file]);
 });
 
 afterAll(async () => {
@@ -231,7 +231,7 @@ describe("restoreVersion", () => {
     // history was made. Restoring over it without archiving would destroy it.
     await take();
     await writeStoreFile(file, Buffer.from("pushed by hand, never recorded"));
-    await db().query(`delete from "voiceline_version" where "file" = $1`, [file]);
+    await db().query(`delete from "take" where "file" = $1`, [file]);
 
     fs.rmSync(versionPath(file, 0));
     await writeStoreFile(file, Buffer.from("current"));
@@ -290,7 +290,7 @@ describe("when the rows are gone but the takes are not", () => {
     await take({ data: Buffer.from("a re-roll") });
 
     // The rows vanish; the audio does not.
-    await db().query(`delete from "voiceline_version" where "file" = $1`, [file]);
+    await db().query(`delete from "take" where "file" = $1`, [file]);
 
     const result = await take({ data: Buffer.from("another re-roll") });
 
@@ -304,7 +304,7 @@ describe("when the rows are gone but the takes are not", () => {
     await take({ data: Buffer.from("second") });
     expect(await versionsOnDisk(file)).toEqual([0, 1, 2]);
 
-    await db().query(`delete from "voiceline_version" where "file" = $1`, [file]);
+    await db().query(`delete from "take" where "file" = $1`, [file]);
 
     const result = await take({ data: Buffer.from("third") });
 

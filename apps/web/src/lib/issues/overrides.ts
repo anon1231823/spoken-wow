@@ -1,7 +1,7 @@
 /**
  * The spoken text someone has rewritten by hand, and where generation reads it from.
  *
- * Keyed on the store-relative file, as voiceline_version is and for the same reason: one mp3
+ * Keyed on the store-relative file, as the take table is and for the same reason: one mp3
  * is spoken by up to many NPCs, so a rewrite necessarily changes what all of them say. See
  * the header of migration 0012 for why rewriting the spoken text cannot rename that file.
  */

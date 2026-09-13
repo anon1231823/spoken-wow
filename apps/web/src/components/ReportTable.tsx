@@ -9,8 +9,16 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CATEGORY_LABELS, STATUS_LABELS, type Report, type Status } from "@/lib/reports/reports";
+import {
+  CATEGORY_LABELS,
+  SOURCE_LABELS,
+  STATUS_LABELS,
+  type Report,
+  type Source,
+  type Status,
+} from "@/lib/reports/reports";
 
 const VIEWS: { value: Status | "all"; label: string }[] = [
   { value: "open", label: "Open" },
@@ -19,12 +27,31 @@ const VIEWS: { value: Status | "all"; label: string }[] = [
   { value: "all", label: "All" },
 ];
 
+const SOURCE_VIEWS: { value: Source | "all"; label: string }[] = [
+  { value: "all", label: "Both" },
+  { value: "quests", label: "Quests" },
+  { value: "zones", label: "Zones" },
+];
+
+/**
+ * Where a line of each corpus is browsed.
+ *
+ * A map rather than one path, because the two explorers are two pages. The zones one arrives
+ * with the port; until then no report carries that source, so nothing links there.
+ */
+const EXPLORER: Record<Source, string> = {
+  quests: "/",
+  zones: "/zones",
+};
+
 export default function ReportTable({
   initial,
   view,
+  source,
 }: {
   initial: Report[];
   view: Status | "all";
+  source: Source | "all";
 }) {
   const [reports, setReports] = useState(initial);
   const [busy, setBusy] = useState<number | null>(null);
@@ -47,12 +74,26 @@ export default function ReportTable({
   return (
     <>
       {/* Links rather than client state, so a view can be shared and reloaded. */}
-      <nav className="mb-4 flex gap-3 text-sm">
+      <nav className="mb-4 flex flex-wrap items-center gap-3 text-sm">
         {VIEWS.map((option) => (
           <Link
             key={option.value}
-            href={`/reports?view=${option.value}`}
+            href={`/reports?view=${option.value}&source=${source}`}
             className={option.value === view ? "font-semibold" : "text-muted-foreground"}
+          >
+            {option.label}
+          </Link>
+        ))}
+
+        <span aria-hidden className="text-muted-foreground">
+          |
+        </span>
+
+        {SOURCE_VIEWS.map((option) => (
+          <Link
+            key={option.value}
+            href={`/reports?view=${view}&source=${option.value}`}
+            className={option.value === source ? "font-semibold" : "text-muted-foreground"}
           >
             {option.label}
           </Link>
@@ -67,13 +108,15 @@ export default function ReportTable({
         {reports.map((report) => (
           <li key={report.id} className="rounded border p-4">
             <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-xs">
+              <Badge variant="outline">{SOURCE_LABELS[report.source]}</Badge>
               <span>{new Date(report.createdAt).toLocaleString()}</span>
               <span>{CATEGORY_LABELS[report.category]}</span>
               <span>{STATUS_LABELS[report.status]}</span>
-              <span className="font-mono">{report.target}</span>
+              {/* Null where the source has no addresses of its own to record. */}
+              {report.target ? <span className="font-mono">{report.target}</span> : null}
               {report.lineId ? (
                 <Link
-                  href={`/?q=${encodeURIComponent(report.lineId)}`}
+                  href={`${EXPLORER[report.source]}?q=${encodeURIComponent(report.lineId)}`}
                   className="font-mono underline-offset-2 hover:underline"
                 >
                   {report.lineId}

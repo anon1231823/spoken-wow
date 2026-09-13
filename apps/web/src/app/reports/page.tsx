@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import ReportTable from "@/components/ReportTable";
 import { auth } from "@/lib/auth";
 import { canRegenerate } from "@/lib/permissions";
-import { isStatus, type Status } from "@/lib/reports/reports";
+import { isSource, isStatus, type Source, type Status } from "@/lib/reports/reports";
 import { listReports } from "@/lib/reports/store";
 
 export const metadata: Metadata = { title: "Reports · VoiceOver Explorer" };
@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; source?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -24,9 +24,12 @@ export default async function Page({
   // learning the page exists, and these rows hold prose written by strangers.
   if (!session || !canRegenerate(session.user.role)) notFound();
 
-  const view = (await searchParams).view;
+  const { view, source: rawSource } = await searchParams;
   const status: Status | "all" = isStatus(view) ? view : view === "all" ? "all" : "open";
-  const reports = await listReports(status);
+  // Both by default: a report is a person waiting for an answer, and which corpus it is
+  // about does not change how long they have been waiting.
+  const source: Source | "all" = isSource(rawSource) ? rawSource : "all";
+  const reports = await listReports(status, source);
 
   return (
     <main className="mx-auto max-w-6xl px-5 pt-6 pb-24">
@@ -37,7 +40,7 @@ export default async function Page({
         Nothing here starts a job on its own.
       </p>
 
-      <ReportTable initial={reports} view={status} />
+      <ReportTable initial={reports} view={status} source={source} />
     </main>
   );
 }

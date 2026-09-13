@@ -5,6 +5,13 @@
  * only by someone deleting files by hand, and listVersions reconciles them on read rather
  * than trusting either alone - offering a restore of a take that is not on disk would fail
  * at the worst moment, after the current file had already been archived.
+ *
+ * Every statement here names `"source" = 'quests'`. The `take` table holds both sides of the
+ * site (see migration 0020), the two name files by different frozen rules, and a query that
+ * forgot the source would be one that could return the other corpus's take for a colliding
+ * path. Written out at each call site rather than hidden behind a helper, because it is a
+ * correctness condition and the point is that it is visible in every query it belongs to.
+ * The zones side reads the same table through its own module, keyed on the lineId.
  */
 import { db } from "@/lib/db";
 
@@ -75,9 +82,9 @@ const COLUMNS = `
 export async function listVersions(file: string): Promise<VoicelineVersion[]> {
   const { rows } = await db().query<VoicelineVersion>(
     `select ${COLUMNS}
-       from "voiceline_version" v
+       from "take" v
        left join "user" u on u."id" = v."createdBy"
-      where v."file" = $1
+      where v."source" = 'quests' and v."file" = $1
       order by v."version" desc`,
     [file],
   );
@@ -89,7 +96,7 @@ export async function versionCounts(files: string[]): Promise<Map<string, number
   if (files.length === 0) return new Map();
   const { rows } = await db().query<{ file: string; count: string }>(
     `select "file", count(*)::text as count
-       from "voiceline_version" where "file" = any($1::text[])
+       from "take" where "source" = 'quests' and "file" = any($1::text[])
       group by "file"`,
     [files],
   );
@@ -111,7 +118,7 @@ export async function versionCounts(files: string[]): Promise<Map<string, number
  */
 export async function generatedAt(): Promise<Map<string, number>> {
   const { rows } = await db().query<{ file: string; createdAt: Date }>(
-    `select "file", "createdAt" from "voiceline_version" where "isCurrent"`,
+    `select "file", "createdAt" from "take" where "source" = 'quests' and "isCurrent"`,
   );
   return new Map(rows.map((row) => [row.file, row.createdAt.getTime()]));
 }
@@ -126,7 +133,7 @@ export async function generatedAt(): Promise<Map<string, number>> {
 export async function nextVersion(file: string): Promise<number> {
   const { rows } = await db().query<{ next: number }>(
     `select coalesce(max("version"), -1) + 1 as next
-       from "voiceline_version" where "file" = $1`,
+       from "take" where "source" = 'quests' and "file" = $1`,
     [file],
   );
   return rows[0]?.next ?? 0;
@@ -134,7 +141,7 @@ export async function nextVersion(file: string): Promise<number> {
 
 export async function hasVersions(file: string): Promise<boolean> {
   const { rows } = await db().query(
-    `select 1 from "voiceline_version" where "file" = $1 limit 1`,
+    `select 1 from "take" where "source" = 'quests' and "file" = $1 limit 1`,
     [file],
   );
   return rows.length > 0;
@@ -142,11 +149,11 @@ export async function hasVersions(file: string): Promise<boolean> {
 
 export async function recordVersion(version: NewVersion): Promise<void> {
   await db().query(
-    `insert into "voiceline_version"
-       ("file", "version", "origin", "lineId", "voice", "bytes",
+    `insert into "take"
+       ("source", "file", "version", "origin", "lineId", "voice", "bytes",
         "voiceId", "modelId", "seed", "characters", "credits", "settings",
         "spokenHash", "dictionaryVersion", "createdBy", "narratorVoice")
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+     values ('quests', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
     [
       version.file,
       version.version,
@@ -180,13 +187,13 @@ export async function setCurrentVersion(file: string, version: number): Promise<
   try {
     await client.query("begin");
     await client.query(
-      `update "voiceline_version" set "isCurrent" = false
-        where "file" = $1 and "isCurrent"`,
+      `update "take" set "isCurrent" = false
+        where "source" = 'quests' and "file" = $1 and "isCurrent"`,
       [file],
     );
     await client.query(
-      `update "voiceline_version" set "isCurrent" = true
-        where "file" = $1 and "version" = $2`,
+      `update "take" set "isCurrent" = true
+        where "source" = 'quests' and "file" = $1 and "version" = $2`,
       [file, version],
     );
     await client.query("commit");
@@ -201,7 +208,8 @@ export async function setCurrentVersion(file: string, version: number): Promise<
 export async function deleteVersions(file: string, versions: number[]): Promise<void> {
   if (versions.length === 0) return;
   await db().query(
-    `delete from "voiceline_version" where "file" = $1 and "version" = any($2::int[])`,
+    `delete from "take"
+      where "source" = 'quests' and "file" = $1 and "version" = any($2::int[])`,
     [file, versions],
   );
 }

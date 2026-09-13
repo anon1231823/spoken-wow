@@ -32,16 +32,17 @@ function currentHash(): string {
 
 async function liveTake(hash: string | null) {
   await db().query(
-    `insert into "voiceline_version"
-       ("file", "version", "isCurrent", "origin", "lineId", "voice", "bytes", "spokenHash")
-     values ($1, 9999, true, 'generated', $2, 'human-male-standard', 1, $3)`,
+    `insert into "take"
+       ("source", "file", "version", "isCurrent", "origin", "lineId", "voice", "bytes",
+        "spokenHash")
+     values ('quests', $1, 9999, true, 'generated', $2, 'human-male-standard', 1, $3)`,
     [file, LINE, hash],
   );
 }
 
 beforeAll(async () => {
   try {
-    await db().query(`select 1 from "voiceline_version" limit 1`);
+    await db().query(`select 1 from "take" limit 1`);
   } catch (error) {
     throw new Error(
       "staleness.test.ts needs a migrated database. Run:\n" +
@@ -60,7 +61,8 @@ let deposed: number[] = [];
 
 beforeEach(async () => {
   const { rows } = await db().query<{ id: string }>(
-    `update "voiceline_version" set "isCurrent" = false where "file" = $1 and "isCurrent"
+    `update "take" set "isCurrent" = false
+      where "source" = 'quests' and "file" = $1 and "isCurrent"
      returning "id"`,
     [file],
   );
@@ -68,9 +70,12 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await db().query(`delete from "voiceline_version" where "file" = $1 and "version" = 9999`, [file]);
+  await db().query(
+    `delete from "take" where "source" = 'quests' and "file" = $1 and "version" = 9999`,
+    [file],
+  );
   if (deposed.length > 0) {
-    await db().query(`update "voiceline_version" set "isCurrent" = true where "id" = any($1::bigint[])`, [
+    await db().query(`update "take" set "isCurrent" = true where "id" = any($1::bigint[])`, [
       deposed,
     ]);
   }

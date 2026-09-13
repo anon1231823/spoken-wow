@@ -8,7 +8,8 @@ import { db } from "@/lib/db";
 
 export async function currentVersion(file: string): Promise<number | null> {
   const { rows } = await db().query<{ version: number }>(
-    `select "version" from "voiceline_version" where "file" = $1 and "isCurrent"`,
+    `select "version" from "take"
+      where "source" = 'quests' and "file" = $1 and "isCurrent"`,
     [file],
   );
   return rows[0]?.version ?? null;

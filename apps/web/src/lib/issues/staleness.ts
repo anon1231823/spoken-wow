@@ -35,12 +35,13 @@ export async function staleFiles(files?: string[]): Promise<Set<string>> {
 
   const { rows } = files
     ? await db().query<{ file: string; spokenHash: string | null }>(
-        `select "file", "spokenHash" from "voiceline_version"
-          where "isCurrent" and "file" = any($1::text[])`,
+        `select "file", "spokenHash" from "take"
+          where "source" = 'quests' and "isCurrent" and "file" = any($1::text[])`,
         [files],
       )
     : await db().query<{ file: string; spokenHash: string | null }>(
-        `select "file", "spokenHash" from "voiceline_version" where "isCurrent"`,
+        `select "file", "spokenHash" from "take"
+          where "source" = 'quests' and "isCurrent"`,
       );
 
   const overrides = await readOverrides();

@@ -59,6 +59,10 @@ export async function POST(request: Request) {
   const lineId = resolveTarget(target).find((line) => line.lineId === claimed)?.lineId ?? null;
 
   await createReport({
+    // The quests corpus, because this route is reached from the quests report page and the
+    // addresses it validates are quest and NPC ones. The zones side files through the same
+    // table with its own source.
+    source: "quests",
     lineId,
     target: formatTarget(target),
     category: validated.value.category,

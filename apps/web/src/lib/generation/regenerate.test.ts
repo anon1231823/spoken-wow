@@ -127,7 +127,7 @@ beforeEach(async () => {
 
   const files = await fixtureFiles();
   const { rows } = await db().query(
-    `delete from "voiceline_version" where "file" = any($1::text[]) returning *`,
+    `delete from "take" where "file" = any($1::text[]) returning *`,
     [files],
   );
   displaced = rows;
@@ -135,12 +135,12 @@ beforeEach(async () => {
 
 afterEach(async () => {
   const files = await fixtureFiles();
-  await db().query(`delete from "voiceline_version" where "file" = any($1::text[])`, [files]);
+  await db().query(`delete from "take" where "file" = any($1::text[])`, [files]);
 
   for (const row of displaced) {
     const columns = Object.keys(row).filter((key) => key !== "id");
     await db().query(
-      `insert into "voiceline_version" (${columns.map((c) => `"${c}"`).join(", ")})
+      `insert into "take" (${columns.map((c) => `"${c}"`).join(", ")})
        values (${columns.map((_, i) => `$${i + 1}`).join(", ")})`,
       columns.map((column) => {
         const value = (row as Record<string, unknown>)[column];
@@ -406,7 +406,7 @@ describe("a line whose spoken text has been rewritten", () => {
     await regenerate(STAGE_DIRECTION, options);
 
     const { rows } = await db().query<{ narratorVoice: string | null; settings: unknown }>(
-      `select "narratorVoice", "settings" from "voiceline_version" where "file" = $1`,
+      `select "narratorVoice", "settings" from "take" where "file" = $1`,
       [fileFor(STAGE_DIRECTION)],
     );
     expect(rows[0].narratorVoice).toBe("narrator-male");
