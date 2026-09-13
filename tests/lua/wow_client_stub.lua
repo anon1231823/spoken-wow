@@ -111,6 +111,8 @@ local function Widget(kind, name)
     function w:GetOrientation() return self.orientation end
     function w:SetSize(a, b) self.width, self.height = a, b end
     function w:GetWidth() return self.width end
+    function w:EnableMouse(v) self.mouseEnabled = v and true or false end
+    function w:IsMouseEnabled() return self.mouseEnabled and true or false end
     function w:GetHeight() return self.height end
     function w:GetWidth() return self.width end
     -- A scroll frame's own state, which the settings panels' viewport reads back.

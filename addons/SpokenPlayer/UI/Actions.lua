@@ -54,16 +54,21 @@ function Actions:Configure(frame, clip)
     frame.actions.clip = clip
     local previous, shown = nil, 0
     local inUse = {}
+    -- Keyed by source as well as id: both shipped addons call their action "report", and
+    -- one button between them means the addon that built it first answers for the other.
+    -- A button an addon built keeps its own click handler, so that is not a label problem.
+    local owner = clip and clip.source and clip.source.key or "?"
 
     for _, action in ipairs(list) do
         if not action.visible or action.visible() then
-            local button = frame.actions.byId[action.id]
+            local id = owner .. ":" .. action.id
+            local button = frame.actions.byId[id]
             if not button then
                 button = NewButton(frame, action)
-                frame.actions.byId[action.id] = button
+                frame.actions.byId[id] = button
             end
             button.action = action
-            inUse[action.id] = true
+            inUse[id] = true
 
             local text = action.text
             if type(text) == "function" then text = text() end

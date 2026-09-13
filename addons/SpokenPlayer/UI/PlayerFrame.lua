@@ -472,10 +472,19 @@ function PlayerFrame:Describe()
         self.frame.actions and self.frame.actions.shown or 0))
     for index, button in ipairs(container.buttons) do
         if button:IsShown() then
-            Say(format("  row %d w=%.0f text=%q", index, button:GetWidth() or 0,
-                button.textWidget:GetText() or ""))
+            -- Whether a row takes a click matters: the head only does while the clip it
+            -- stands for can be stopped, and a row that ignores clicks cannot be cancelled.
+            Say(format("  row %d w=%.0f mouse=%s text=%q", index, button:GetWidth() or 0,
+                tostring(button:IsMouseEnabled()), button.textWidget:GetText() or ""))
         end
     end
+    for id, button in pairs(self.frame.actions.byId) do
+        if button:IsShown() then
+            Say(format("  action %s at %.0f,%.0f text=%q", id,
+                button:GetLeft() or 0, button:GetBottom() or 0, button:GetText() or ""))
+        end
+    end
+    Say(format("head can be stopped=%s", tostring(SoundQueue:CanBePaused())))
     Say(format("queue=%d", SoundQueue:GetQueueSize()))
     return lines
 end

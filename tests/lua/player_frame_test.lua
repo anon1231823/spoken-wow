@@ -346,6 +346,62 @@ Expect("...its volume", labels["Speech volume"], true)
 Expect("...its fade, as a duration and not a percentage", labels["0.5s"], true)
 Expect("...and the HD model patch", labels["HD model patch installed"], true)
 
+---------------------------------------------------------------- one addon's actions are not another's
+-- Both shipped addons call their action "report". Keyed by id alone they are one button,
+-- so whichever addon created it first owns its click: reporting a quest line would file a
+-- zone. Keyed by source they are two, and the other addon's are hidden when the head moves.
+env, quests, zones = Boot()
+local zoneClicks, questClicks = 0, 0
+local function Clip(source, label, actions)
+    return H.Clip({ present = { header = "h", label = label, bullet = "b",
+        portrait = { kind = "none" }, actions = actions } })
+end
+local zoneClip = Clip(zones, "Durotar", {
+    { id = "read", text = "Read", onClick = function() end },
+    { id = "report", text = "Report", onClick = function() zoneClicks = zoneClicks + 1 end },
+})
+local questClip = Clip(quests, "Cutting Teeth", {
+    { id = "report", text = "Report", onClick = function() questClicks = questClicks + 1 end },
+})
+zones:Enqueue(zoneClip)
+env.PlayerFrame:Update()
+Expect("the zone line brings two actions", env.PlayerFrame.frame.actions.shown, 2)
+env.SoundQueue:RemoveSoundFromQueue(zoneClip)
+quests:Enqueue(questClip)
+env.PlayerFrame:Update()
+Expect("the quest line brings one", env.PlayerFrame.frame.actions.shown, 1)
+local visible = {}
+for _, button in pairs(env.PlayerFrame.frame.actions.byId) do
+    if button:IsShown() then table.insert(visible, button:GetText() or "?") end
+end
+Expect("...and only one is on screen", table.concat(visible, "|"), "Report")
+env.PlayerFrame.frame.actions.buttons[1]:Click()
+Expect("...whose click belongs to the addon that is speaking", questClicks, 1)
+Expect("...not to the other one", zoneClicks, 0)
+
+-- An addon may build its own button, and such a button keeps its own click handler. Shared
+-- under one id, the first addon to build one would answer for both.
+env, quests, zones = Boot()
+local built = 0
+local ownClip = Clip(quests, "Cutting Teeth", {
+    { id = "report", create = function(parent)
+        built = built + 1
+        local button = CreateFrame("Button", nil, parent)
+        button.builtBy = "quests"
+        return button
+    end },
+})
+local plainClip = Clip(zones, "Durotar", {
+    { id = "report", text = "Report", onClick = function() zoneClicks = zoneClicks + 1 end },
+})
+quests:Enqueue(ownClip)
+env.PlayerFrame:Update()
+env.SoundQueue:RemoveSoundFromQueue(ownClip)
+zones:Enqueue(plainClip)
+env.PlayerFrame:Update()
+Expect("the other addon does not inherit a button built by this one",
+    env.PlayerFrame.frame.actions.buttons[1].builtBy, nil)
+
 ---------------------------------------------------------------- a model portrait on a current client
 -- The portrait is configured before the rows, so an error raised while resolving it
 -- abandons the rest of the update: the header, every row and the actions. The frame then
