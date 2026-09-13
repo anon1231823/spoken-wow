@@ -22,6 +22,8 @@ and 3.3.5 zips carry it inside.
   rather than behind a button that opened a second window. Every `/vo` command is
   unchanged, and the old window is still there for the clients with no settings panel.
 - Choices are dropdowns again rather than buttons that cycled through the options.
+- Report is an icon in the player's top right corner rather than a button beside the
+  line. Spoken Player's settings can hide it.
 - The addon calls itself Spoken Quests everywhere it speaks: chat, dialogs, the minimap
   menu, the self-test and the diagnostics. The original AI VoiceOver is still credited
   where its recording is used.

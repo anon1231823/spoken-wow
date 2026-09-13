@@ -17,7 +17,6 @@ local COPY_DIALOG = "VOICEOVER_COPY_REPORT_LINK"
 ReportButton =
 {
     ---@type Button[]
-    buttons = {},
 }
 
 -- A copy of VoiceOver.lua's helper of the same name, which is a local there and so not
@@ -104,27 +103,6 @@ end
 function ReportButton:ShowAddress(url)
     shownLink = url
     StaticPopup_Show(COPY_DIALOG)
-end
-
-function ReportButton:Create(parent)
-    -- Named, because 1.12's UIPanelButtonTemplate gives its label the name "$parentText" and an
-    -- unnamed button leaves that substitution with nothing to resolve against.
-    local name = format("SpokenQuestsReportButton%d", getn(self.buttons) + 1)
-    local button = CreateFrame("Button", name, parent, "UIPanelButtonTemplate")
-    button:SetWidth(64)
-    button:SetHeight(22)
-    button:SetText("Report")
-    button:SetScript("OnClick", function()
-        local target = ReportButton:CurrentTarget()
-        if target then
-            ReportButton:ShowLink(target)
-        else
-            StaticPopup_Show("VOICEOVER_ERROR",
-                "This client cannot tell which line that was, so there is no address to report.")
-        end
-    end)
-    table.insert(self.buttons, button)
-    return button
 end
 
 function ReportButton:Initialize()

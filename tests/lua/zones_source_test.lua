@@ -75,15 +75,16 @@ Expect("starting marks the area heard in the per-character record", Z:HasHeard(1
 
 local F = env.PlayerFrame
 Expect("the player frame shows the zone", F.frame.container.name:GetText(), "Durotar")
--- Report only. Reading the text is reached from the map, the minimap menu and /zl; a
--- button on the player that opened a window over the thing being read was one way too many.
-Expect("...and one action", F.frame.actions.shown, 1)
-Expect("...which is Report", F.frame.actions.buttons[1]:GetText(), "Report")
+-- Report only, as an icon in the corner. Reading the text is reached from the map, the
+-- minimap menu and /zl; a button on the player that opened a window over the thing being
+-- read was one way too many.
+Expect("...and no strip of buttons", F.frame.actions.shown, 0)
+Expect("...but Report in the corner", F.frame.actions.buttons[1].anchor.point, "TOPRIGHT")
 
 env, Z = Boot(); Spoken = _G.Spoken
 Z:PlayLore(1411, nil)
 F = env.PlayerFrame
-Expect("Report is the zones addon's own button", F.frame.actions.buttons[1]:GetText(), "Report")
+Expect("Report is an icon", F.frame.actions.buttons[1]:GetNormalTexture():GetTexture() ~= nil, true)
 F.frame.actions.buttons[1]:Click()
 Expect("...targeting what is playing", Z.copied, "https://spoken.test/r/1411/nil")
 

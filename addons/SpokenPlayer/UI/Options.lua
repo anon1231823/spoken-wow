@@ -45,6 +45,8 @@ local function Build()
         function() return cfg().HidePortrait end, function(v) cfg().HidePortrait = v end, refresh)
     layout:Checkbox(L.OPT_HIDE_FRAME, L.OPT_HIDE_FRAME_TIP,
         function() return cfg().HideFrame end, function(v) cfg().HideFrame = v end, refresh)
+    layout:Checkbox(L.OPT_HIDE_ACTIONS, L.OPT_HIDE_ACTIONS_TIP,
+        function() return cfg().HideActions end, function(v) cfg().HideActions = v end, refresh)
     layout:Slider(L.OPT_SCALE, 0.5, 2, 0.05,
         function() return cfg().FrameScale end, function(v) cfg().FrameScale = v end, refresh)
     layout:Button(L.OPT_RESET, 120, function() PlayerFrame:Reset() end)

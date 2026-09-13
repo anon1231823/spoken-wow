@@ -442,9 +442,26 @@ end
 local ACTIONS = {
 	{
 		id = "report",
-		create = function(parent) return ZoneLore:CreateReportButton(parent) end,
-		onClipChanged = function(clip, button) button:SetTarget(clip.mapID, clip.areaKey) end,
-	},
+		-- An icon in the corner rather than a word beside the line. The addon's own
+		-- CreateReportButton still builds the labelled one the lore window uses.
+		icon = [[Interface\GossipFrame\AvailableQuestIcon]],
+		anchor = "topright",
+		tooltip = function(tooltip)
+			tooltip:SetText("Report a problem")
+			tooltip:AddLine("Wrong lore, a bad reading, a mispronounced name -- this gives "
+				.. "you a link to say so.", 1, 0.8, 0.2, true)
+		end,
+		onClick = function(clip)
+			if not clip then
+				return
+			end
+			local url = ZoneLore:ReportURL(clip.mapID, clip.areaKey)
+			if url then
+				ZoneLore:ShowCopyLink(url,
+					"Copy this address and open it in your browser to report a problem with this entry.")
+			end
+		end,
+	}
 }
 
 -- A Spoken clip for a lore entry, or nil when the installed pack cannot narrate it.

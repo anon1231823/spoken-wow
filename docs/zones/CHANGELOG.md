@@ -14,6 +14,8 @@ shared with Spoken Quests. Addon managers install it automatically.
   line; each waits its turn. Narration held through combat no longer blocks a quest line.
 - The player frame and minimap button are Spoken Player's; this addon adds its entries to
   the one button and its Read/Report buttons to the one frame.
+- Report is an icon in the player's top right corner rather than a button beside the
+  line. Spoken Player's settings can hide it.
 - The Read button is gone from the player, and with it the setting that decided whether
   it stopped the narration. The lore text is still one click away on the map, in the
   minimap menu and from `/zl`.

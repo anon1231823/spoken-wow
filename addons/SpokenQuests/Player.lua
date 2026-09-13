@@ -148,11 +148,23 @@ local STOP_GOSSIP = {
 
 local REPORT = {
     id = "report",
-    create = function(parent)
-        local button = ReportButton:Create(parent)
-        button:SetWidth(52)
-        button:SetHeight(18)
-        return button
+    -- An icon in the corner rather than a word beside the line: the label never changed,
+    -- and the strip it used to sit in pushed the queue up to make room for it.
+    icon = [[Interface\GossipFrame\AvailableQuestIcon]],
+    anchor = "topright",
+    tooltip = function(tooltip)
+        tooltip:SetText("Report a problem")
+        tooltip:AddLine("A wrong reading, a mispronounced name -- this gives you a link to say so.",
+            1, 0.8, 0.2, true)
+    end,
+    onClick = function()
+        local target = ReportButton:CurrentTarget()
+        if target then
+            ReportButton:ShowLink(target)
+        else
+            StaticPopup_Show("VOICEOVER_ERROR",
+                "This client cannot tell which line that was, so there is no address to report.")
+        end
     end,
 }
 

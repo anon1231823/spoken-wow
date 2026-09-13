@@ -331,6 +331,7 @@ end
 Expect("the scale slider is a slider", scale ~= nil, true)
 Expect("...with a height, or it draws nothing", scale and scale.height, 16)
 Expect("...and an orientation", scale and scale:GetOrientation(), "HORIZONTAL")
+Expect("the buttons can be hidden here", labels["Hide the buttons on the player"], true)
 Expect("the channel is chosen here", labels["Sound channel"], true)
 Expect("...and so is silencing the game's own dialogue",
     labels["Silence the game's own dialogue while speaking"], true)
@@ -345,6 +346,35 @@ Expect("a legacy client can reach the music channel", labels["Play through the m
 Expect("...its volume", labels["Speech volume"], true)
 Expect("...its fade, as a duration and not a percentage", labels["0.5s"], true)
 Expect("...and the HD model patch", labels["HD model patch installed"], true)
+
+---------------------------------------------------------------- an action in the corner, and hiding them
+-- A button that only ever says "Report" earns an icon rather than a word, and it belongs
+-- out of the way of the line being read: the top right corner, not the strip under it.
+env, quests, zones = Boot()
+local ICON = [[Interface\GossipFrame\AvailableQuestIcon]]
+local reported = 0
+local cornerClip = H.Clip({ present = { header = "h", label = "l", bullet = "b",
+    portrait = { kind = "none" }, actions = {
+        { id = "report", icon = ICON, anchor = "topright",
+          onClick = function() reported = reported + 1 end },
+    } } })
+quests:Enqueue(cornerClip)
+env.PlayerFrame:Update()
+local corner = env.PlayerFrame.frame.actions.buttons[1]
+Expect("the action is a button", corner ~= nil, true)
+Expect("...showing its icon, not a word", corner:GetNormalTexture():GetTexture(), ICON)
+Expect("...with no label", corner:GetText() or "", "")
+Expect("...in the corner", corner.anchor and corner.anchor.point, "TOPRIGHT")
+Expect("...and it still does what it is for", (corner:Click() or reported), 1)
+-- The strip under the queue is what makes room for itself; a corner icon overlaps nothing.
+Expect("a corner action asks for no strip", env.PlayerFrame.frame.actions.shown, 0)
+
+env.Addon.db.profile.Frame.HideActions = true
+env.PlayerFrame:Update()
+Expect("hidden by the setting", corner:IsShown(), false)
+env.Addon.db.profile.Frame.HideActions = false
+env.PlayerFrame:Update()
+Expect("...and back", corner:IsShown(), true)
 
 ---------------------------------------------------------------- one addon's actions are not another's
 -- Both shipped addons call their action "report". Keyed by id alone they are one button,

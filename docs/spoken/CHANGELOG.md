@@ -7,6 +7,8 @@ The player every Spoken addon speaks through: one queue, one window, one minimap
 - Extracted from VoiceOver Redux and ZoneLore, which each carried their own copy.
 - One FIFO across every addon; nothing interrupts. Gossip yields to quest dialogue at the door.
 - Narration held through combat no longer blocks a quest line queued behind it.
+- Report is an icon in the player's top right corner rather than a button beside the line,
+  and the whole strip of buttons can be hidden under Player window.
 - A quest line plays with its NPC and its title shown. The portrait is resolved before the
   rows, and asking a model frame a question the current clients no longer answer abandoned
   the rest of the update, leaving a portrait over an empty band.

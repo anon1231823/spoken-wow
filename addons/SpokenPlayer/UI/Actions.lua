@@ -15,6 +15,7 @@ Actions = {}
 
 local ACTION_WIDTH = 70
 local ACTION_HEIGHT = 18
+local ICON_SIZE = 16
 Actions.STRIP_HEIGHT = ACTION_HEIGHT + 6
 
 function Actions:Build(frame)
@@ -25,6 +26,30 @@ local function NewButton(frame, action)
     local button
     if action.create then
         button = action.create(frame)
+    elseif action.icon then
+        -- An icon rather than a word, for an action whose label never changes. No template:
+        -- a button that is only a texture wants none of UIPanelButtonTemplate's furniture.
+        button = CreateFrame("Button", nil, frame)
+        button:SetSize(ICON_SIZE, ICON_SIZE)
+        button:SetNormalTexture(action.icon)
+        button:SetHighlightTexture(action.icon)
+        local highlight = button:GetHighlightTexture()
+        if highlight and highlight.SetBlendMode then
+            highlight:SetBlendMode("ADD")
+        end
+        button:SetScript("OnClick", function(self)
+            if self.action and self.action.onClick then
+                self.action.onClick(frame.actions.clip)
+            end
+        end)
+        button:SetScript("OnEnter", function(self)
+            if self.action and self.action.tooltip then
+                GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+                self.action.tooltip(GameTooltip)
+                GameTooltip:Show()
+            end
+        end)
+        button:SetScript("OnLeave", function() GameTooltip_Hide() end)
     else
         button = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
         button:SetScript("OnClick", function(self)
@@ -41,7 +66,7 @@ local function NewButton(frame, action)
         end)
         button:SetScript("OnLeave", function() GameTooltip_Hide() end)
     end
-    if not action.create then
+    if not action.create and not action.icon then
         button:SetSize(ACTION_WIDTH, ACTION_HEIGHT)
     end
     return button
@@ -50,9 +75,15 @@ end
 --- Lay out the actions for `clip` (the head), hiding whatever the last clip left.
 ---@return number shown
 function Actions:Configure(frame, clip)
+    -- One setting covers the lot. Every action either of the shipped addons offers is a
+    -- convenience beside the line, so "hide them" is a player-wide answer rather than one
+    -- checkbox per addon per button.
     local list = clip and clip.present and clip.present.actions or {}
+    if Addon.db.profile.Frame.HideActions then
+        list = {}
+    end
     frame.actions.clip = clip
-    local previous, shown = nil, 0
+    local previous, shown, placed = nil, 0, 0
     local inUse = {}
     -- Keyed by source as well as id: both shipped addons call their action "report", and
     -- one button between them means the addon that built it first answers for the other.
@@ -76,7 +107,11 @@ function Actions:Configure(frame, clip)
             if action.onClipChanged then action.onClipChanged(clip, button) end
 
             button:ClearAllPoints()
-            if action.anchor == "header" then
+            if action.anchor == "topright" then
+                -- Out of the way of the line being read, and it makes no room for itself:
+                -- the strip below the queue is what pushes the rows up.
+                button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -8, -8)
+            elseif action.anchor == "header" then
                 button:SetPoint("BOTTOMLEFT", frame.container.name, "RIGHT", -6, 0)
             elseif previous then
                 button:SetPoint("BOTTOMLEFT", previous, "BOTTOMRIGHT", 4, 0)
@@ -86,14 +121,17 @@ function Actions:Configure(frame, clip)
                 previous = button
             end
             button:Show()
-            shown = shown + 1
-            frame.actions.buttons[shown] = button
+            placed = placed + 1
+            frame.actions.buttons[placed] = button
+            if action.anchor ~= "topright" then
+                shown = shown + 1
+            end
         end
     end
     for id, button in pairs(frame.actions.byId) do
         if not inUse[id] then button:Hide() end
     end
-    for i = shown + 1, getn(frame.actions.buttons) do
+    for i = placed + 1, getn(frame.actions.buttons) do
         frame.actions.buttons[i] = nil
     end
     frame.actions.shown = shown
