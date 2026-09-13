@@ -10,6 +10,9 @@ L = {
     SETTINGS = "Settings",
     PLAY_PAUSE = "Play/Pause",
     QUEUE_TITLE = "Up next",
+    -- The settings heading for the window above, which "Up next" -- the window's own
+    -- title, on its tooltip -- did not describe.
+    OPT_WINDOW_TITLE = "Player window",
     QUEUE_DRAG_HINT = "Drag to move. The position can be locked in settings.",
     QUEUE_REMOVE_TOOLTIP = "Click to take this out of the queue.",
     MENU_LEFT = "|cff66bbffLeft-click|r open the menu",
@@ -37,5 +40,5 @@ L = {
     OPT_HD_MODELS_TIP = "Use the animation timings of the high-definition character models, if you have patched them in. Portraits will mouth their lines out of step otherwise.",
     OPT_MINIMAP_SHOW = "Show the minimap button",
     OPT_MINIMAP_LOCK = "Lock the minimap button",
-    OPT_NO_SETTINGS_API = "open Game Menu -> Options -> AddOns -> Spoken, or type /spoken options",
+    OPT_NO_SETTINGS_API = "open Game Menu -> Options -> AddOns -> Spoken Player, or type /spoken options",
 }

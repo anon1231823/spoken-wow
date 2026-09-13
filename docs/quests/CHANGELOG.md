@@ -17,6 +17,9 @@ and 3.3.5 zips carry it inside.
 - One queue with ZoneLore: quest lines and zone narration wait their turn behind each other,
   and nothing interrupts. Gossip yields to a queued quest line in both directions.
 - The player frame, minimap button, sound channel and pause are Spoken Player's settings now.
+- The addon calls itself Spoken Quests everywhere it speaks: chat, dialogs, the minimap
+  menu, the self-test and the diagnostics. The original AI VoiceOver is still credited
+  where its recording is used.
 - Every sound setting is on Spoken Player's panel now: one sound channel for whatever is
   speaking, instead of one per addon, and silencing the game's own NPC dialogue while a
   line is read. Both carry over from your old settings.

@@ -266,7 +266,7 @@ function Addon:OnInitialize()
 
     StaticPopupDialogs["VOICEOVER_ERROR"] =
     {
-        text = "VoiceOver|n|n%s",
+        text = "Spoken Quests|n|n%s",
         button1 = OKAY,
         timeout = 0,
         whileDead = 1,
@@ -296,7 +296,7 @@ function Addon:OnInitialize()
             self.dataModulesDeferredError = tostring(loadError)
             Debug:Record("data-load-error", self.dataModulesDeferredError)
         elseif DataModules:HasRegisteredModules() then
-            Debug:Record("data-ready", "Deferred VoiceOver data modules finished loading")
+            Debug:Record("data-ready", "Deferred sound packs finished loading")
         end
         self:ShowMissingDataModulePopup()
     end

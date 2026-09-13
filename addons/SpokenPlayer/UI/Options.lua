@@ -54,6 +54,10 @@ local function Slider(parent, label, minValue, maxValue, step, x, y, read, write
     local slider = CreateFrame("Slider", nil, parent, template)
     slider:SetPoint("TOPLEFT", x + 4, y - 8)
     slider:SetWidth(180)
+    -- Both load-bearing: a slider given neither draws nothing at all, leaving a gap on
+    -- the panel where a setting should be. The zones addon's sliders set both.
+    slider:SetHeight(16)
+    slider:SetOrientation("HORIZONTAL")
     slider:SetMinMaxValues(minValue, maxValue)
     slider:SetValueStep(step)
     slider.label = slider:CreateFontString(nil, "ARTWORK", "GameFontNormal")
@@ -115,14 +119,14 @@ local CHANNELS = { "Master", "SFX", "Music", "Ambience", "Dialog" }
 
 local function Build()
     panel = CreateFrame("Frame", "SpokenOptionsPanel", UIParent)
-    panel.name = "Spoken"
+    panel.name = "Spoken Player"
     local cfg = function() return Addon.db.profile.Frame end
     local mm = function() return Addon.db.profile.Minimap.LibDBIcon end
     local refresh = function() PlayerFrame:RefreshConfig() end
 
-    Heading(panel, "Spoken", INDENT, -16)
+    Heading(panel, "Spoken Player", INDENT, -16)
     local y = -52
-    Heading(panel, L.QUEUE_TITLE, INDENT, y, "GameFontNormal")
+    Heading(panel, L.OPT_WINDOW_TITLE, INDENT, y, "GameFontNormal")
     y = y + ROW_GAP
     Checkbox(panel, L.OPT_LOCK_FRAME, L.OPT_LOCK_FRAME_TIP, INDENT, y,
         function() return cfg().LockFrame end, function(v) cfg().LockFrame = v end, refresh)
@@ -220,7 +224,7 @@ function Options:Setup()
     if panel then return end
     Build()
     if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
-        self.category = Settings.RegisterCanvasLayoutCategory(panel, "Spoken")
+        self.category = Settings.RegisterCanvasLayoutCategory(panel, "Spoken Player")
         Settings.RegisterAddOnCategory(self.category)
     else
         -- No Settings API: a window of our own, opened by /spoken options.
@@ -264,6 +268,6 @@ function Options:Open()
     elseif panel then
         panel:SetShown(not panel:IsShown())
     else
-        print("Spoken: " .. L.OPT_NO_SETTINGS_API)
+        print("Spoken Player: " .. L.OPT_NO_SETTINGS_API)
     end
 end

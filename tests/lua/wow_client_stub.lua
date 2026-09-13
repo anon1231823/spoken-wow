@@ -97,6 +97,8 @@ local function Widget(kind, name)
     function w:GetText() return self.text end
     function w:SetWidth(v) self.width = v end
     function w:SetHeight(v) self.height = v end
+    function w:SetOrientation(v) self.orientation = v end
+    function w:GetOrientation() return self.orientation end
     function w:SetSize(a, b) self.width, self.height = a, b end
     function w:GetWidth() return self.width end
     function w:GetHeight() return self.height end

@@ -126,7 +126,7 @@ function ReportButton:Initialize()
     -- link people use and a link people read.
     StaticPopupDialogs[COPY_DIALOG] =
     {
-        text = "VoiceOver|n|nCopy this address and open it in your browser to report this line.",
+        text = "Spoken Quests|n|nCopy this address and open it in your browser to report this line.",
         button1 = OKAY,
         timeout = 0,
         whileDead = 1,

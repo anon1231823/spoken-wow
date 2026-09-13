@@ -20,11 +20,11 @@ end
 function Debug:Print(msg, header)
     if Addon and Addon.db and Addon.db.profile.DebugEnabled then
         if header then
-            print(Utils:ColorizeText("VoiceOver", NORMAL_FONT_COLOR_CODE) ..
+            print(Utils:ColorizeText("Spoken Quests", NORMAL_FONT_COLOR_CODE) ..
                 Utils:ColorizeText(" (" .. header .. ")", GRAY_FONT_COLOR_CODE) ..
                 " - " .. msg)
         else
-            print(Utils:ColorizeText("VoiceOver", NORMAL_FONT_COLOR_CODE) ..
+            print(Utils:ColorizeText("Spoken Quests", NORMAL_FONT_COLOR_CODE) ..
                 " - " .. msg)
         end
     end

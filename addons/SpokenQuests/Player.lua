@@ -253,7 +253,7 @@ function Player:Setup()
     end
 
     self.source = Spoken:RegisterSource("quests", {
-        title = "VoiceOver Redux",
+        title = "Spoken Quests",
         addon = AddonFolder,
         order = 1,
         -- Upstream's figure: quest durations come from a lookup that has drifted across
@@ -283,10 +283,10 @@ function Player:Setup()
 
     Spoken.Minimap:AddEntry("quests", { id = "Read", text = "Read visible quest", order = 1,
         onClick = function() Addon:ReadVisibleQuest("minimap") end })
-    Spoken.Minimap:AddEntry("quests", { id = "Options", text = "VoiceOver options", order = 2,
+    Spoken.Minimap:AddEntry("quests", { id = "Options", text = "Spoken Quests settings", order = 2,
         onClick = function() Options:OpenConfigWindow() end })
     if Spoken.AddSettingsLink then
-        Spoken:AddSettingsLink("VoiceOver Redux options", function() Options:OpenConfigWindow() end)
+        Spoken:AddSettingsLink("Spoken Quests settings", function() Options:OpenConfigWindow() end)
     end
     return true
 end

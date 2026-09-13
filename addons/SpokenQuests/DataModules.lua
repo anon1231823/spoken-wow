@@ -536,7 +536,7 @@ local getFileNameForEvent =
 setmetatable(getFileNameForEvent,
     {
         __index = function(self, event)
-            error(format([[Unhandled VoiceOver sound event %d "%s"]], event,
+            error(format([[Unhandled Spoken Quests sound event %d "%s"]], event,
                 Enums.SoundEvent:GetName(event) or "???"))
         end
     })

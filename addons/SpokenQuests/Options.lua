@@ -41,7 +41,7 @@ local GeneralTab =
                     width = 1.1,
                     order = 3,
                     name = "NPC Greeting Playback Frequency",
-                    desc = "Controls how often VoiceOver will play NPC greeting dialog. The Once options are remembered for this character across NPC revisits and logins.",
+                    desc = "Controls how often Spoken Quests will play NPC greeting dialog. The Once options are remembered for this character across NPC revisits and logins.",
                     values = {
                         [Enums.GossipFrequency.Always] = "Always",
                         [Enums.GossipFrequency.OncePerQuestNPC] = "Once per Quest NPC (per character)",
@@ -60,7 +60,7 @@ local GeneralTab =
                     order = 6,
                     width = 2,
                     name = "Sync Dialog to Window State",
-                    desc = "VoiceOver dialog will automatically stop when the gossip/quest window is closed.",
+                    desc = "Narration will automatically stop when the gossip/quest window is closed.",
                     get = function(info) return Addon.db.profile.Audio.StopAudioOnDisengage end,
                     set = function(info, value)
                         Addon.db.profile.Audio.StopAudioOnDisengage = value
@@ -183,7 +183,7 @@ local SlashCommands = {
             dropdownHidden = true,
             func = function(info)
                 if not Addon:ReadVisibleQuest("/vo read") then
-                    print("|cFFFF4040VoiceOver: no visible quest detail, progress, reward, or greeting panel was found.|r")
+                    print("|cFFFF4040Spoken Quests: no visible quest detail, progress, reward, or greeting panel was found.|r")
                 end
             end
         },
@@ -197,12 +197,12 @@ local SlashCommands = {
                 local soundData = {
                     event = Enums.SoundEvent.QuestAccept,
                     questID = 3441,
-                    name = "VoiceOver self-test",
-                    title = "VoiceOver self-test",
+                    name = "Spoken Quests self-test",
+                    title = "Spoken Quests self-test",
                 }
                 if not DataModules:PrepareSound(soundData) then
                     Debug:Record("self-test-data-failed", "The Vanilla Data module did not provide the known 3441-accept test sound")
-                    print("|cFFFF4040VoiceOver test failed: the known Vanilla test sound was not found in the loaded data modules.|r")
+                    print("|cFFFF4040Spoken Quests test failed: the known Vanilla test sound was not found in the loaded sound packs.|r")
                     return
                 end
 
@@ -212,10 +212,10 @@ local SlashCommands = {
                 local channel = Player.source and Player.source:GetChannel() or "unknown"
                 if Player:Enqueue(soundData) then
                     Debug:Record("self-test-playing", format("Self-test queued on %s: %s", channel, soundData.filePath))
-                    print(format("|cFF40FF40VoiceOver test started on %s.|r You should hear a short voice line.", channel))
+                    print(format("|cFF40FF40Spoken Quests test started on %s.|r You should hear a short voice line.", channel))
                 else
                     local stage, message = Debug:GetRuntimeStatus()
-                    print(format("|cFFFF4040VoiceOver test failed: %s (%s).|r", message or "refused", stage or "unknown"))
+                    print(format("|cFFFF4040Spoken Quests test failed: %s (%s).|r", message or "refused", stage or "unknown"))
                 end
             end
         },
@@ -226,7 +226,7 @@ local SlashCommands = {
             desc = "Print client, API, and sound-pack loading status",
             dropdownHidden = true,
             func = function(info)
-                print(format("|cFF00CCFFVoiceOver Redux %s|r - client %s, interface %d",
+                print(format("|cFF00CCFFSpoken Quests %s|r - client %s, interface %d",
                     AddonVersion, Version.Client or "unknown", Version.Interface or 0))
                 print("AddOn API: " .. (C_AddOns and "C_AddOns compatibility layer" or "legacy globals"))
 
@@ -253,7 +253,7 @@ local SlashCommands = {
                         module.ContentVersion or "unknown version", status))
                 end
                 if presentCount == 0 then
-                    print("Data: no VoiceOver data modules were detected")
+                    print("Data: no sound packs were detected")
                 else
                     print(format("Data modules: %d detected, %d loaded", presentCount, registeredCount))
                 end
@@ -452,7 +452,7 @@ end
 
 function Options:OpenConfigWindow()
     if not self.frame then
-        print("|cFFFF4040VoiceOver: the legacy options window is unavailable on this client. " ..
+        print("|cFFFF4040Spoken Quests: the legacy options window is unavailable on this client. " ..
             "Quest narration and slash commands remain active.|r")
         return
     end

@@ -136,7 +136,8 @@ Expect("RemoveEntry", getn(env.Minimap:BuildMenu()), 4)
 
 ---------------------------------------------------------------- settings
 env = Boot()
-Expect("a Settings category is registered", stub.settingsCategories[1] and stub.settingsCategories[1].name, "Spoken")
+Expect("a Settings category is registered, named for the addon and not the family",
+    stub.settingsCategories[1] and stub.settingsCategories[1].name, "Spoken Player")
 Expect("...and exposed for feature addons to nest under", _G.Spoken:GetSettingsCategory(), stub.settingsCategories[1])
 
 ---------------------------------------------------------------- 1.12 loads too
@@ -160,6 +161,20 @@ local function PanelLabels(client)
 end
 
 local labels = PanelLabels("11509")
+-- "Up next" is the queue window's own title. As a settings heading it named nothing.
+Expect("the window settings are headed as such", labels["Player window"], true)
+Expect("...not by the queue's title", labels["Up next"], nil)
+-- The scale slider was built with no height and no orientation, so it drew nothing: the
+-- setting sat on the panel invisible, with a gap where it should have been. The zones
+-- addon's own sliders, which do render, set both.
+Expect("the scale slider is labelled", labels["Player scale: 70%"], true)
+local scale
+for _, child in ipairs(_G.SpokenOptionsPanel.children) do
+    if child.frameType == "Slider" then scale = scale or child end
+end
+Expect("the scale slider is a slider", scale ~= nil, true)
+Expect("...with a height, or it draws nothing", scale and scale.height, 16)
+Expect("...and an orientation", scale and scale:GetOrientation(), "HORIZONTAL")
 Expect("the channel is chosen here", labels["Sound channel: Master"], true)
 Expect("...and so is silencing the game's own dialogue",
     labels["Silence the game's own dialogue while speaking"], true)

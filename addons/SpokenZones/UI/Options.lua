@@ -250,7 +250,7 @@ function ZoneLore:SetupOptions()
 	MakeCheckbox(content, "autoplayExplored", "Also narrate areas you explored before installing",
 		"The game announces a discovery once per character, ever -- so a character "
 			.. "who already explored Azeroth is never narrated anything. Tick this "
-			.. "and ZoneLore keeps its own record instead, still one clip per area "
+			.. "and Spoken Zones keeps its own record instead, still one clip per area "
 			.. "per character. /zl forget clears it.",
 		INDENT + INDENT, y, nil)
 
@@ -413,7 +413,7 @@ function ZoneLore:SetupOptions()
 	feedbackButton:SetText("Report a problem")
 	feedbackButton:SetScript("OnClick", function()
 		ZoneLore:ShowCopyLink(ZoneLore.SITE_URL,
-			"Copy this address and open it in your browser to send feedback about ZoneLore.")
+			"Copy this address and open it in your browser to send feedback about Spoken Zones.")
 	end)
 
 	MakeNote(content, "There is a Report button on each lore entry for problems with that "
