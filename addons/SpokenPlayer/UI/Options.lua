@@ -43,8 +43,6 @@ local function Build()
         function() return cfg().LockFrame end, function(v) cfg().LockFrame = v end, refresh)
     layout:Checkbox(L.OPT_HIDE_PORTRAIT, L.OPT_HIDE_PORTRAIT_TIP,
         function() return cfg().HidePortrait end, function(v) cfg().HidePortrait = v end, refresh)
-    layout:Checkbox(L.OPT_HIDE_FRAME, L.OPT_HIDE_FRAME_TIP,
-        function() return cfg().HideFrame end, function(v) cfg().HideFrame = v end, refresh)
     -- One row per action an addon declared optional, named by that addon. The player is
     -- not told what any of them do.
     for _, optional in ipairs(Actions.optional) do
@@ -52,6 +50,10 @@ local function Build()
             function() return cfg().HiddenActions[optional.id] end,
             function(v) cfg().HiddenActions[optional.id] = v or nil end, refresh)
     end
+    -- After the per-action rows: hiding a single button and hiding the window are the same
+    -- kind of choice, and this one is the whole of it.
+    layout:Checkbox(L.OPT_HIDE_FRAME, L.OPT_HIDE_FRAME_TIP,
+        function() return cfg().HideFrame end, function(v) cfg().HideFrame = v end, refresh)
     layout:Slider(L.OPT_SCALE, 0.5, 2, 0.05,
         function() return cfg().FrameScale end, function(v) cfg().FrameScale = v end, refresh)
     layout:Button(L.OPT_RESET, 120, function() PlayerFrame:Reset() end)

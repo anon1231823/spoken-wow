@@ -305,15 +305,28 @@ Expect("a heading sits nearer its own section than the one above",
 -- The two feature addons each used to carry a channel control of their own, so a player
 -- with both had two settings for one thing and no way to tell which won. Everything about
 -- how a line is played is read here, whichever addon queued it.
-local function PanelLabels(client)
-    -- A feature addon declares its optional actions as it loads; the player builds its
-    -- panel at login. Same order here, or the panel is built before there is anything to
-    -- put on it.
+-- A feature addon declares its optional actions as it loads; the player builds its panel
+-- at login. Same order here, or the panel is built before there is anything to put on it.
+local function PanelLabelsSetup(client)
     stub.SetClient(client or "11509"); stub.ResetSound(); stub.ResetTimers(); stub.ResetFrames()
     stub.settingsCategories = {}; stub.ldbObjects = {}; stub.dbIcons = {}
     env = stub.LoadSpoken(SPOKEN)
     _G.Spoken:RegisterOptionalAction("report", "Report")
     env.Addon:Enable()
+end
+
+--- The panel's labels in the order they are drawn.
+local function PanelOrder(client)
+    PanelLabelsSetup(client)
+    local ordered = {}
+    for _, text in ipairs(stub.LabelsUnder(_G.SpokenOptionsPanel)) do
+        if type(text) == "string" and text ~= "" then table.insert(ordered, text) end
+    end
+    return ordered
+end
+
+local function PanelLabels(client)
+    PanelLabelsSetup(client)
     local labels = {}
     for _, text in ipairs(stub.LabelsUnder(_G.SpokenOptionsPanel)) do
         labels[text] = true
@@ -339,6 +352,11 @@ Expect("the scale slider is a slider", scale ~= nil, true)
 Expect("...with a height, or it draws nothing", scale and scale.height, 16)
 Expect("...and an orientation", scale and scale:GetOrientation(), "HORIZONTAL")
 Expect("an optional action is named on the panel", labels["Hide the Report button"], true)
+-- Hiding one button and hiding the whole window are the same kind of choice, so they sit
+-- together, with the largest of them last.
+local order = table.concat(PanelOrder("11509"), "|")
+Expect("...above hiding the window entirely", string.find(order,
+    "Hide the portrait|Hide the Report button|Hide the player entirely", 1, true) ~= nil, true)
 Expect("the channel is chosen here", labels["Sound channel"], true)
 Expect("...and so is silencing the game's own dialogue",
     labels["Silence the game's own dialogue while speaking"], true)
