@@ -71,6 +71,7 @@ end
 -- code exists for those clients only, and is below.
 local dropDown
 local menuCatcher
+local iconTooltip
 
 local function HideMenu()
     if menuFrame then
@@ -79,6 +80,21 @@ local function HideMenu()
     if menuCatcher then
         menuCatcher:Hide()
     end
+end
+
+--- Whether a menu of ours is open, either kind. Read from the client rather than
+--- remembered: a Blizzard menu closes on a click elsewhere without telling anyone, and a
+--- flag left set would suppress the tooltip for the rest of the session.
+local function MenuIsOpen()
+    if menuFrame and menuFrame:IsShown() then
+        return true
+    end
+    local list = _G.DropDownList1
+    if dropDown and list and list.IsShown and list:IsShown()
+        and _G.UIDROPDOWNMENU_OPEN_MENU == dropDown then
+        return true
+    end
+    return false
 end
 
 --- Whether the client has a context menu of its own worth opening.
@@ -215,6 +231,11 @@ end
 
 --- Open it, or close it if this is the second click of the button that opened it.
 local function ToggleMenu(anchor)
+    -- The menu opens under a cursor that is still on the button, so the button's own
+    -- tooltip is up and the two overlap.
+    if iconTooltip then
+        iconTooltip:Hide()
+    end
     if HasMenuAPI() then
         ToggleClientMenu(anchor)
         return
@@ -253,6 +274,21 @@ function Minimap:Setup()
             end
         end,
         OnTooltipShow = function(tooltip)
+            -- LibDBIcon shows the tooltip whatever this adds to it, so a menu that is
+            -- already open has to hide it as it appears rather than decline to fill it.
+            iconTooltip = tooltip
+            if not tooltip.spokenMenuHook then
+                tooltip.spokenMenuHook = true
+                tooltip:HookScript("OnShow", function(self)
+                    if MenuIsOpen() then
+                        self:Hide()
+                    end
+                end)
+            end
+            if MenuIsOpen() then
+                tooltip:Hide()
+                return
+            end
             tooltip:SetText("Spoken")
             local head = SoundQueue:GetCurrentSound()
             if head and head.present then

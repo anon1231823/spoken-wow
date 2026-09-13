@@ -151,6 +151,20 @@ Expect("...listing the player's entries, then each source's under its name, rule
     table.concat(shown, "|"), "Play/Pause|Stop|Settings|---|[Quests]|Quest settings")
 Expect("...anchored to the button", stub.openDropDown.dropdownAnchor, _G.Minimap)
 
+-- The menu opens under the cursor, which is still on the button, so the button's tooltip
+-- is still up and the two overlap. The tooltip goes.
+local tip = _G.GameTooltip
+tip:SetText("stale")
+tip:Show()
+stub.ldbObjects.Spoken.OnTooltipShow(tip)
+Expect("the tooltip says nothing while the menu is open", tip:NumLines(), 1)
+Expect("...and hides itself if the cursor goes back over the button", tip:IsShown(), false)
+
+stub.ldbObjects.Spoken.OnClick(_G.Minimap, "LeftButton")
+stub.ldbObjects.Spoken.OnTooltipShow(tip)
+Expect("with the menu closed it says what the clicks do again", tip:NumLines() > 3, true)
+stub.ldbObjects.Spoken.OnClick(_G.Minimap, "LeftButton")
+
 stub.ldbObjects.Spoken.OnClick(_G.Minimap, "LeftButton")
 Expect("clicking the button again closes it", stub.openDropDown, nil)
 

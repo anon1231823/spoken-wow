@@ -93,7 +93,9 @@ local function Widget(kind, name)
     end
     function w:Hide() self.shown = false; if self.name then world.panels[self.name] = nil end end
     function w:SetShown(v) if v then self:Show() else self:Hide() end end
-    function w:SetText(t) self.text = t end
+    function w:SetText(t) self.text = t; self.lines = { t } end
+    function w:AddLine(t) self.lines = self.lines or {}; table.insert(self.lines, t) end
+    function w:NumLines() return self.lines and table.getn(self.lines) or 0 end
     function w:GetText() return self.text end
     function w:SetWidth(v) self.width = v end
     function w:SetHeight(v) self.height = v end
@@ -382,6 +384,8 @@ function _G.UIDropDownMenu_SetWidth() end
 -- buttons gets for free.
 M.openDropDown = nil
 M.dropDownEntries = {}
+_G.DropDownList1 = Frame("DropDownList1")
+_G.DropDownList1:Hide()
 local menuAPI = {}
 
 --- Present the context-menu API, or take it away as a private-server client does.
@@ -393,17 +397,25 @@ end
 function _G.ToggleDropDownMenu(level, value, frame, anchor)
     if M.openDropDown == frame then
         M.openDropDown, M.dropDownEntries = nil, {}
+        _G.DropDownList1:Hide()
+        _G.UIDROPDOWNMENU_OPEN_MENU = nil
         return
     end
     M.openDropDown = frame
     M.dropDownEntries = M.OpenDropdown(frame)
     frame.dropdownAnchor = anchor
+    _G.DropDownList1:Show()
+    _G.UIDROPDOWNMENU_OPEN_MENU = frame
 end
 function _G.UIDropDownMenu_CreateFrame() end
 function _G.UIDropDownMenu_AddSeparator()
     if openMenu then table.insert(openMenu, { isSeparator = true }) end
 end
-function _G.CloseDropDownMenus() M.openDropDown, M.dropDownEntries = nil, {} end
+function _G.CloseDropDownMenus()
+    M.openDropDown, M.dropDownEntries = nil, {}
+    _G.DropDownList1:Hide()
+    _G.UIDROPDOWNMENU_OPEN_MENU = nil
+end
 
 for _, name in ipairs({ "UIDropDownMenu_Initialize", "UIDropDownMenu_CreateInfo",
     "UIDropDownMenu_AddButton", "UIDropDownMenu_SetText", "UIDropDownMenu_SetWidth",
