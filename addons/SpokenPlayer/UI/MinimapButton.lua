@@ -61,7 +61,20 @@ end
 
 -- A plain list of buttons rather than UIDropDownMenu: that API has three incompatible
 -- shapes across the six clients this runs on, and a menu of a handful of rows does not
--- need it.
+-- need it. What it does need is everything a menu does -- a background, a highlight under
+-- the cursor, closing when the button is clicked again or when anything else is -- and
+-- all of that is below.
+local menuCatcher
+
+local function HideMenu()
+    if menuFrame then
+        menuFrame:Hide()
+    end
+    if menuCatcher then
+        menuCatcher:Hide()
+    end
+end
+
 local function ShowMenu(anchor)
     if not menuFrame then
         menuFrame = CreateFrame("Frame", "SpokenMinimapMenu", UIParent, "BackdropTemplate")
@@ -81,7 +94,19 @@ local function ShowMenu(anchor)
             })
         end
         menuFrame.rows = {}
-        menuFrame:HookScript("OnLeave", function(self) self.leaveAt = GetTime() end)
+
+        -- A menu is closed by clicking anywhere else, which nothing tells the frame about.
+        -- A transparent button over the whole screen, shown only while the menu is, is how
+        -- that is heard on every client: GLOBAL_MOUSE_DOWN exists on none of the three
+        -- private-server ones.
+        menuCatcher = CreateFrame("Button", "SpokenMinimapMenuCatcher", UIParent)
+        menuCatcher:SetAllPoints(UIParent)
+        menuCatcher:SetFrameStrata("DIALOG")
+        menuCatcher:SetFrameLevel(1)
+        menuCatcher:RegisterForClicks("AnyUp")
+        menuCatcher:SetScript("OnClick", HideMenu)
+        menuCatcher:Hide()
+        menuFrame:SetFrameLevel(10)
     end
     local menu = Minimap:BuildMenu()
     -- The dialog border is 32 pixels of art with roughly 12 of it inside the frame, so the
@@ -94,10 +119,16 @@ local function ShowMenu(anchor)
         if not row then
             row = CreateFrame("Button", nil, menuFrame)
             row:SetHeight(18)
+            -- Without it the menu gives no sign of which row a click would hit.
+            row:SetHighlightTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
+            local highlight = row:GetHighlightTexture()
+            if highlight and highlight.SetBlendMode then
+                highlight:SetBlendMode("ADD")
+            end
             row.text = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
             row.text:SetPoint("LEFT", 2, 0)
             row:SetScript("OnClick", function(self)
-                menuFrame:Hide()
+                HideMenu()
                 if self.entry.onClick then self.entry.onClick(self) end
             end)
             menuFrame.rows[i] = row
@@ -118,6 +149,16 @@ local function ShowMenu(anchor)
     menuFrame:ClearAllPoints()
     menuFrame:SetPoint("TOPRIGHT", anchor, "BOTTOMLEFT")
     menuFrame:Show()
+    menuCatcher:Show()
+end
+
+--- Open it, or close it if this is the second click of the button that opened it.
+local function ToggleMenu(anchor)
+    if menuFrame and menuFrame:IsShown() then
+        HideMenu()
+        return
+    end
+    ShowMenu(anchor)
 end
 
 function Minimap:Setup()
@@ -137,7 +178,7 @@ function Minimap:Setup()
         OnClick = function(button, mouseButton)
             local command = Addon.db.profile.Minimap.Commands[mouseButton]
             if command == "Menu" then
-                ShowMenu(button)
+                ToggleMenu(button)
             elseif command and command ~= "" then
                 local entry = Minimap:FindEntry(command)
                 if entry and entry.onClick then

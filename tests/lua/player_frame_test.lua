@@ -148,6 +148,32 @@ Expect("...sized to its rows", frame and frame.height > 60, true)
 local firstRow = frame.rows[1]
 Expect("...and the rows clear the border", firstRow and firstRow.anchor and firstRow.anchor.x >= 12, true)
 
+-- A menu opened by a button closes on the next click of it. Anything else leaves the
+-- player clicking the button to no visible effect.
+stub.ldbObjects.Spoken.OnClick(_G.Minimap, "LeftButton")
+Expect("clicking the button again closes the menu", frame:IsShown(), false)
+stub.ldbObjects.Spoken.OnClick(_G.Minimap, "LeftButton")
+Expect("...and again opens it", frame:IsShown(), true)
+
+-- Every row highlights under the cursor, or the menu gives no sign of what a click will hit.
+Expect("a row highlights under the cursor", firstRow and firstRow:GetHighlightTexture() ~= nil
+    and firstRow:GetHighlightTexture():GetTexture() ~= nil, true)
+
+-- Clicking anywhere else closes it, which is what every other menu in the game does.
+Expect("something catches a click outside", _G.SpokenMinimapMenuCatcher ~= nil, true)
+Expect("...only while the menu is open", _G.SpokenMinimapMenuCatcher:IsShown(), true)
+_G.SpokenMinimapMenuCatcher:Click()
+Expect("...and that click closes the menu", frame:IsShown(), false)
+Expect("...taking the catcher with it", _G.SpokenMinimapMenuCatcher:IsShown(), false)
+
+-- Choosing an entry closes it too, and runs what was chosen.
+stub.ldbObjects.Spoken.OnClick(_G.Minimap, "LeftButton")
+local chose = false
+frame.rows[1].entry.onClick = function() chose = true end
+frame.rows[1]:Click()
+Expect("choosing an entry runs it", chose, true)
+Expect("...and closes the menu", frame:IsShown(), false)
+
 ---------------------------------------------------------------- settings
 env = Boot()
 Expect("a Settings category is registered, named for the addon and not the family",
