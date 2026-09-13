@@ -13,7 +13,7 @@
  * `g:{hash}:m`), and round-tripping those through a dynamic segment is encoding risk for no
  * benefit.
  */
-import { requireRegenerate } from "@/lib/generation/authz";
+import { requireApiKey, requireRegenerate } from "@/lib/generation/authz";
 import { regenerateLine } from "@/lib/generation/regenerate";
 
 export const dynamic = "force-dynamic";
@@ -22,12 +22,16 @@ export async function POST(request: Request) {
   const { session, denied } = await requireRegenerate();
   if (denied) return denied;
 
+  // After the role check, never instead of it: a key is a credential, not a permission.
+  const { key, denied: noKey } = await requireApiKey(session.user.id);
+  if (noKey) return noKey;
+
   const body = (await request.json().catch(() => ({}))) as { lineId?: unknown };
   if (typeof body.lineId !== "string" || !body.lineId) {
     return Response.json({ error: "lineId is required", kind: "bad-request" }, { status: 400 });
   }
 
-  const result = await regenerateLine(body.lineId, session.user.id);
+  const result = await regenerateLine(body.lineId, session.user.id, { apiKey: key });
 
   if (!result.ok) {
     // `fatal` is the whole contract with the browser: it says whether to abandon the rest of

@@ -11,7 +11,7 @@
  * invite an admin to retype an edit that is already safely in Postgres. `syncError` and the
  * `pending` state carry the bad news instead, and POST retries just the upload.
  */
-import { requireConfigure, requireRegenerate } from "@/lib/generation/authz";
+import { requireApiKey, requireConfigure, requireRegenerate } from "@/lib/generation/authz";
 import { readLexicon, resync, writeLexicon } from "@/lib/generation/dictionary";
 import { LexiconError, validateLexicon } from "@/lib/generation/lexicon";
 
@@ -27,6 +27,13 @@ export async function PUT(request: Request) {
   const { session, denied } = await requireConfigure();
   if (denied) return denied;
 
+  // The upload spends nothing, but it is a write to the admin's own ElevenLabs account and
+  // there is no server key to make it with. Refusing before the save keeps the two in step:
+  // a lexicon stored here that no dictionary anywhere reflects is the state `pending` exists
+  // to report, not one to create on purpose.
+  const { key, denied: noKey } = await requireApiKey(session.user.id);
+  if (noKey) return noKey;
+
   let entries;
   try {
     entries = validateLexicon(await request.json());
@@ -37,15 +44,18 @@ export async function PUT(request: Request) {
     return Response.json({ error: message }, { status: 400 });
   }
 
-  const { lexicon, syncError } = await writeLexicon(entries, session.user.id);
+  const { lexicon, syncError } = await writeLexicon(entries, session.user.id, { apiKey: key });
   return Response.json({ ...lexicon, syncError });
 }
 
 /** Retry the upload for a lexicon already saved. */
 export async function POST() {
-  const { denied } = await requireConfigure();
+  const { session, denied } = await requireConfigure();
   if (denied) return denied;
 
-  const syncError = await resync();
+  const { key, denied: noKey } = await requireApiKey(session.user.id);
+  if (noKey) return noKey;
+
+  const syncError = await resync({ apiKey: key });
   return Response.json({ ...(await readLexicon()), syncError });
 }

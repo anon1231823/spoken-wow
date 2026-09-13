@@ -66,6 +66,11 @@ export default function UserMenu() {
           <Link href="/admin">Users</Link>
         </Button>
       )}
+      {/* Everyone signed in has one, and for a collaborator it is where the ElevenLabs
+          key lives - which is the thing standing between them and the Regenerate button. */}
+      <Button asChild variant="ghost" size="sm">
+        <Link href="/profile">Profile</Link>
+      </Button>
       <span className="text-muted-foreground hidden text-xs sm:inline">
         {session.user.email}
       </span>

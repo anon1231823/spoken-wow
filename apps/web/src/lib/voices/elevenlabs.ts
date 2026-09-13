@@ -23,8 +23,12 @@ export type ElevenLabsOptions = {
 };
 
 function config(options: ElevenLabsOptions = {}) {
-  const apiKey = options.apiKey ?? process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) throw new Error("ELEVENLABS_API_KEY is not set");
+  // No fallback to a server-wide key. Every request is spent from the signed-in user's
+  // own account, so the caller has to say whose - see requireApiKey in
+  // lib/generation/authz.ts. A route that reaches here with nothing has skipped that
+  // guard, and throwing is how that shows up in a log rather than on somebody's bill.
+  const { apiKey } = options;
+  if (!apiKey) throw new Error("no ElevenLabs key was supplied for this request");
   return {
     apiKey,
     baseUrl: options.baseUrl ?? process.env.ELEVENLABS_BASE_URL ?? DEFAULT_BASE_URL,

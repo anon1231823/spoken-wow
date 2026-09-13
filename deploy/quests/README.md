@@ -73,7 +73,7 @@ the pm2 environment. They are secrets, and that file is the only place they exis
 | `DATABASE_URL` | `postgres://voiceover:…@127.0.0.1:5432/voiceover` | localhost only |
 | `BETTER_AUTH_SECRET` | 32 random bytes | signs session cookies; rotating it signs everyone out |
 | `BETTER_AUTH_URL` | `https://voiceover.rusty.one` | **must match the public origin exactly** |
-| `ELEVENLABS_API_KEY` | `sk_…` | reads the voice roster, creates clones, and generates every voiceline. `/voices` reports the failure and still renders without it; Regenerate is refused with the reason |
+| `SPOKEN_SECRET_KEY` | 32 random bytes, base64 | the master key that stored ElevenLabs credentials are sealed under. **Unset, the app refuses to boot in production.** Changing it does not rotate the stored keys — it strands them, and every collaborator has to paste theirs again |
 | `ELEVENLABS_DICTIONARY_ID` | `Elx0…` | the pronunciation dictionary `/lexicon` updates in place. Shared with wow-lore, which names the same id, so **it must not change**: unset, every save creates a new dictionary and that project stays on an old one |
 
 `BETTER_AUTH_URL` is the one worth double-checking. Better Auth validates the `Origin`
@@ -135,7 +135,8 @@ cat > /srv/voiceover/shared/app.env <<EOF
 DATABASE_URL=postgres://voiceover:$PGPW@127.0.0.1:5432/voiceover
 BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 BETTER_AUTH_URL=https://voiceover.rusty.one
-ELEVENLABS_API_KEY=sk_your_key_here
+SPOKEN_SECRET_KEY=$(openssl rand -base64 32)
+ELEVENLABS_DICTIONARY_ID=Elx0hcDze8EXW2rImeLT
 EOF
 chown deploy:deploy /srv/voiceover/shared/app.env
 chmod 600 /srv/voiceover/shared/app.env
@@ -143,6 +144,19 @@ chmod 600 /srv/voiceover/shared/app.env
 
 `BETTER_AUTH_URL` must be the public origin, exactly — scheme, host, no trailing slash.
 See the runtime-paths table above for what goes wrong when it is not.
+
+**`ELEVENLABS_API_KEY` no longer belongs here.** The site spends each collaborator's own
+credits: a key is set per account on `/profile`, sealed with `SPOKEN_SECRET_KEY` and stored
+in `elevenlabs_key`. Nothing reads a server-wide key any more, and a route that reaches
+ElevenLabs without the caller's own is refused with `428 no_api_key` before it gets there.
+The Python CLI still reads `pipelines/quests/.env`, because it is run by one person on their
+own machine.
+
+**`SPOKEN_SECRET_KEY` must be the same value as `/srv/zonelore/shared/app.env`'s
+`ZONELORE_SECRET_KEY`.** The zones site's stored keys are sealed under that one, they are
+imported into this table at cutover, and AES-GCM offers no way to re-seal a credential
+nothing can open. Set it once, from that file, and never rotate it without collecting every
+key again by hand.
 
 **3. Install the nginx vhost.** Adds a file next to your existing sites; touches none of
 them.

@@ -101,10 +101,25 @@ describe("backoffFor", () => {
   });
 });
 
+/**
+ * The owner's key, injected.
+ *
+ * Every job is generated with the key of whoever queued it, so a worker built without this
+ * reads the real `elevenlabs_key` table, finds no row for a seeded job's owner, and fails
+ * the batch as unauthenticated before any of these tests get to their point. Sealing a key
+ * into the test database instead would put a credential path in the way of tests that are
+ * about the queue.
+ */
+const KEYED = async () => "test-key";
+
 describe("startWorker", () => {
   it("drains the queue to empty", async () => {
     const batch = await seed(5);
-    const worker = startWorker(() => true, { regenerate: async () => OK, budget: async () => 3 });
+    const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
+      regenerate: async () => OK,
+      budget: async () => 3,
+    });
 
     await until(async () => (await statesOf(batch)).done === 5);
     await worker.stop();
@@ -116,6 +131,7 @@ describe("startWorker", () => {
     let live = 0;
 
     const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
       budget: async () => 3,
       regenerate: async () => {
         live += 1;
@@ -135,7 +151,7 @@ describe("startWorker", () => {
 
   it("claims nothing while it does not lead", async () => {
     const batch = await seed(3);
-    const worker = startWorker(() => false, { regenerate: async () => OK });
+    const worker = startWorker(() => false, { apiKeyFor: KEYED, regenerate: async () => OK });
 
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(await statesOf(batch)).toEqual({ pending: 3 });
@@ -146,6 +162,7 @@ describe("startWorker", () => {
   it("cancels the rest of a batch after a fatal failure", async () => {
     const batch = await seed(5);
     const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
       budget: async () => 1,
       regenerate: async () => ({
         ok: false,
@@ -171,11 +188,45 @@ describe("startWorker", () => {
     expect(rows[0].stoppedBecause).toContain("out of credits");
   });
 
+  /**
+   * The batch is enqueued by someone who had a key at the time, so reaching the worker
+   * without one means it was cleared or the master key changed underneath it. Every
+   * remaining job would be refused identically, which is what makes this fatal - and no
+   * request is made, so nothing is spent finding out.
+   */
+  it("abandons a batch whose owner has no usable key, without generating", async () => {
+    const batch = await seed(4);
+    let generated = 0;
+    const worker = startWorker(() => true, {
+      apiKeyFor: async () => null,
+      budget: async () => 1,
+      regenerate: async () => {
+        generated += 1;
+        return OK;
+      },
+    });
+
+    await until(async () => {
+      const states = await statesOf(batch);
+      return (states.cancelled ?? 0) === 3 && (states.failed ?? 0) === 1;
+    });
+    await worker.stop();
+
+    expect(generated).toBe(0);
+
+    const { rows } = await db().query<{ stoppedBecause: string }>(
+      `select "stoppedBecause" from "regeneration_batch" where "id" = $1`,
+      [batch],
+    );
+    expect(rows[0].stoppedBecause).toContain("ElevenLabs key");
+  });
+
   it("keeps going after a failure that is not fatal", async () => {
     const batch = await seed(3);
     let first = true;
 
     const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
       budget: async () => 1,
       regenerate: async () => {
         if (first) {
@@ -204,6 +255,7 @@ describe("startWorker", () => {
   it("gives up on a rate-limited job after MAX_ATTEMPTS", async () => {
     const batch = await seed(1);
     const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
       budget: async () => 1,
       // Zero base, so the test does not wait out a real backoff.
       backoffMs: () => 0,
@@ -237,6 +289,7 @@ describe("startWorker", () => {
     );
 
     const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
       budget: async () => 1,
       backoffMs: () => 0,
       regenerate: async () => ({
@@ -286,6 +339,7 @@ describe("stop()", () => {
 
     let regenerateCalls = 0;
     const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
       budget: async () => 1,
       regenerate: async () => {
         regenerateCalls += 1;
@@ -319,6 +373,7 @@ describe("stop()", () => {
     let releaseRegenerate!: () => void;
 
     const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
       budget: async () => 1,
       regenerate: async () => {
         resolveStarted();

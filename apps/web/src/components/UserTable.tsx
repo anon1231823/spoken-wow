@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -26,12 +27,15 @@ type Props = {
   users: AdminUser[];
   /** The signed-in admin, whose own role is deliberately not editable here. */
   currentUserId: string;
+  /** Who holds an ElevenLabs key. Presence only - no value crosses this boundary. */
+  keyedUserIds: string[];
 };
 
-export default function UserTable({ users, currentUserId }: Props) {
+export default function UserTable({ users, currentUserId, keyedUserIds }: Props) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [keyed, setKeyed] = useState(() => new Set(keyedUserIds));
 
   async function changeRole(userId: string, role: Role) {
     setPendingId(userId);
@@ -43,6 +47,33 @@ export default function UserTable({ users, currentUserId }: Props) {
       setError(error.message ?? "Could not change that role.");
     } else {
       router.refresh();
+    }
+    setPendingId(null);
+  }
+
+  /**
+   * Take back what a role spends with.
+   *
+   * The counterpart of handing out `collaborator`: someone who leaves should not need psql
+   * to be un-keyed. Removing is the whole of the power - an admin can see that a key exists
+   * and delete it, never read it.
+   */
+  async function clearKey(userId: string) {
+    setPendingId(userId);
+    setError(null);
+
+    const response = await fetch(`/api/profile/api-key?userId=${encodeURIComponent(userId)}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      setError("Could not clear that key.");
+    } else {
+      setKeyed((current) => {
+        const next = new Set(current);
+        next.delete(userId);
+        return next;
+      });
     }
     setPendingId(null);
   }
@@ -61,7 +92,8 @@ export default function UserTable({ users, currentUserId }: Props) {
             <th className="py-2 pr-3 font-normal">Name</th>
             <th className="py-2 pr-3 font-normal">Email</th>
             <th className="py-2 pr-3 font-normal">Joined</th>
-            <th className="py-2 font-normal">Role</th>
+            <th className="py-2 pr-3 font-normal">Role</th>
+            <th className="py-2 font-normal">Key</th>
           </tr>
         </thead>
         <tbody>
@@ -72,7 +104,7 @@ export default function UserTable({ users, currentUserId }: Props) {
               <td className="text-muted-foreground py-2 pr-3 whitespace-nowrap">
                 {new Date(user.createdAt).toISOString().slice(0, 10)}
               </td>
-              <td className="py-2">
+              <td className="py-2 pr-3">
                 {user.id === currentUserId ? (
                   // No select for yourself: demoting the only admin would lock the last
                   // account out of the only page that can undo it, leaving SQL as the
@@ -103,6 +135,24 @@ export default function UserTable({ users, currentUserId }: Props) {
                       ))}
                     </SelectContent>
                   </Select>
+                )}
+              </td>
+              <td className="py-2 whitespace-nowrap">
+                {keyed.has(user.id) ? (
+                  <span className="flex items-center gap-2">
+                    <span aria-label="key set">✓</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={pendingId === user.id}
+                      onClick={() => clearKey(user.id)}
+                    >
+                      Clear
+                    </Button>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
                 )}
               </td>
             </tr>

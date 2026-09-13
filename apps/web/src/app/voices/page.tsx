@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import GenerationSettings from "@/components/GenerationSettings";
 import VoiceSlotList from "@/components/VoiceSlotList";
+import { readApiKey } from "@/lib/api-key";
 import { auth } from "@/lib/auth";
 import { readSettings } from "@/lib/generation/settings";
 import { canManageVoices } from "@/lib/permissions";
@@ -30,9 +31,16 @@ export default async function Page() {
   // what is left of the character budget. The page has to be useful before the ElevenLabs key
   // exists — that is the state the project was in until a plan was bought — so a failure here
   // is reported, not thrown.
-  const account = await generationStatus();
+  // The admin's own key, because there is no server-wide one: the roster this page shows is
+  // the roster of whichever account is about to be generated from. A row that will not open
+  // reads as none, and the message below covers both.
+  const apiKey = await readApiKey(session.user.id).catch(() => null);
+  const account = await generationStatus(apiKey ? { apiKey } : {});
   const existing = account.error && account.voiceIds.size === 0 ? null : account.voiceIds;
-  const error = account.error;
+  const error = apiKey
+    ? account.error
+    : "No ElevenLabs key on your account. Set one in your profile to see which voices exist" +
+      " and to create them.";
 
   // Twenty readdir calls, so the roster arrives with its clip counts already filled in
   // rather than each row fetching its own once expanded.

@@ -45,6 +45,18 @@ export default defineConfig({
     fileParallelism: false,
   },
   resolve: {
-    alias: { "@": path.resolve(__dirname, "./src") },
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      /**
+       * `server-only` resolved the way the server resolves it.
+       *
+       * The package exports a throwing module by default and an empty one under the
+       * `react-server` condition, which is how it turns "imported from a client component"
+       * into a build error. Vitest runs in plain node, gets the throwing one, and every
+       * server module that imports it - lib/api-key.ts, and everything reaching it - fails
+       * to load. Pointed at the same empty module the server condition selects.
+       */
+      "server-only": path.resolve(__dirname, "./node_modules/server-only/empty.js"),
+    },
   },
 });

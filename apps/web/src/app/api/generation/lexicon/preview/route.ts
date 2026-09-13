@@ -13,7 +13,7 @@
  * preview of an entry the lexicon would refuse to store is a preview of something that can
  * never ship.
  */
-import { requireConfigure } from "@/lib/generation/authz";
+import { requireApiKey, requireConfigure } from "@/lib/generation/authz";
 import { LexiconError, validateEntry } from "@/lib/generation/lexicon";
 import { isPreviewMode, renderPreview, voicePicker } from "@/lib/generation/preview";
 import { currentConfig } from "@/lib/generation/settings";
@@ -22,8 +22,11 @@ import { generationStatus } from "@/lib/generation/status";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const { denied } = await requireConfigure();
+  const { session, denied } = await requireConfigure();
   if (denied) return denied;
+
+  const { key, denied: noKey } = await requireApiKey(session.user.id);
+  if (noKey) return noKey;
 
   let entry;
   let mode;
@@ -39,7 +42,10 @@ export async function POST(request: Request) {
     return Response.json({ error: message }, { status: 400 });
   }
 
-  const [config, status] = await Promise.all([currentConfig(), generationStatus()]);
+  const [config, status] = await Promise.all([
+    currentConfig(),
+    generationStatus({ apiKey: key }),
+  ]);
   if (status.error && status.voiceIds.size === 0) {
     return Response.json({ error: status.error }, { status: 502 });
   }
@@ -49,7 +55,7 @@ export async function POST(request: Request) {
     mode,
     voicePicker(status.voiceIds),
     config,
-    {},
+    { apiKey: key },
     undefined,
     force,
   );

@@ -11,6 +11,7 @@ import fs from "node:fs/promises";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
+import { requireApiKey } from "@/lib/generation/authz";
 import { invalidateStatus } from "@/lib/generation/status";
 import { denyVoiceRequest } from "@/lib/voices/authz";
 import { recordClone } from "@/lib/voices/clones";
@@ -29,6 +30,13 @@ export async function POST(request: Request, context: Context) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return Response.json({ error: "not allowed" }, { status: 403 });
 
+  // A clone is created on somebody's account, and there is no server account to create it
+  // on. Which one it lands in matters beyond the bill: the generator resolves voices by name
+  // against the key generating, so a voice cloned into an account nobody generates with is
+  // a voice that does not exist as far as every line is concerned.
+  const { key, denied: noKey } = await requireApiKey(session.user.id);
+  if (noKey) return noKey;
+
   const body = await request.json().catch(() => ({}) as Record<string, unknown>);
   const replace = body.replace === true;
 
@@ -42,7 +50,7 @@ export async function POST(request: Request, context: Context) {
   // create a second voice with the same name.
   let existing: Map<string, string>;
   try {
-    existing = await listVoices();
+    existing = await listVoices({ apiKey: key });
   } catch (error) {
     return Response.json({ error: message(error) }, { status: 502 });
   }
@@ -66,7 +74,7 @@ export async function POST(request: Request, context: Context) {
   // request rather than leave the old voice in place while reporting success.
   if (current) {
     try {
-      await deleteVoice(current);
+      await deleteVoice(current, { apiKey: key });
     } catch (error) {
       return Response.json({ error: `could not replace: ${message(error)}` }, { status: 502 });
     }
@@ -74,7 +82,7 @@ export async function POST(request: Request, context: Context) {
 
   let voiceId: string;
   try {
-    voiceId = await addVoice(voice, clips);
+    voiceId = await addVoice(voice, clips, { apiKey: key });
   } catch (error) {
     // The window that matters: the old voice is gone and the new one failed, so the slot is
     // empty. The clips are all still on disk, so retrying is the fix - say so.

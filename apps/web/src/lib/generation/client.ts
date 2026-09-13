@@ -7,6 +7,8 @@
  * always, and the production build is the only thing that catches the difference.
  */
 
+import { noApiKeyMessage } from "@/lib/no-api-key";
+
 export type FailureKind =
   | "quota"
   | "auth"
@@ -50,6 +52,14 @@ export type GenerationStatusResponse = {
     resetAt: string | null;
   } | null;
   error: string | null;
+  /**
+   * Whether the signed-in user has no ElevenLabs key on file.
+   *
+   * Distinct from `error`, which is ElevenLabs refusing a key that exists. This one is the
+   * state every new collaborator starts in, and the fix is one page away rather than a
+   * support question - so the explorer names it instead of showing an upstream message.
+   */
+  noApiKey: boolean;
   settings: {
     modelId: string;
     voiceSettings: Record<string, number | boolean>;
@@ -156,6 +166,11 @@ export async function regenerate(
   const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
 
   if (!response.ok) {
+    // A missing key is an auth failure, and fatal for the same reason a bad one is: every
+    // remaining line in the batch would be refused by the same guard.
+    const noKey = noApiKeyMessage(response.status, body as { error?: string; code?: string });
+    if (noKey) return { ok: false, kind: "auth", message: noKey, fatal: true };
+
     return {
       ok: false,
       kind: (body.kind as FailureKind) ?? "upstream",
@@ -191,18 +206,31 @@ export type QueueSnapshot = {
   cursor: string;
 };
 
+export type QueuedBatch = { batchId: string; queued: number; skipped: number };
+
+/**
+ * Start a batch, or say why not.
+ *
+ * A string rather than null for the refusals that have something to tell the operator -
+ * having no ElevenLabs key is the one that a new collaborator meets first, and "Could not
+ * queue the batch" would send them looking in the wrong place.
+ */
 export async function queueBatch(
   filters: URLSearchParams,
   label: string,
-): Promise<{ batchId: string; queued: number; skipped: number } | null> {
+): Promise<QueuedBatch | { error: string } | null> {
   try {
     const response = await fetch("/api/regenerate/queue", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filters: filters.toString(), label }),
     });
-    if (!response.ok) return null;
-    return (await response.json()) as { batchId: string; queued: number; skipped: number };
+    const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    if (!response.ok) {
+      const noKey = noApiKeyMessage(response.status, body as { error?: string; code?: string });
+      return noKey ? { error: noKey } : null;
+    }
+    return body as unknown as QueuedBatch;
   } catch {
     return null;
   }

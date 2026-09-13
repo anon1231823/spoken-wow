@@ -8,7 +8,7 @@
  * `new Pool()` does not open a connection until the first query, so importing this during
  * `next build` does not need a reachable database.
  */
-import { Pool } from "pg";
+import { Pool, type QueryResultRow } from "pg";
 
 /**
  * How many connections one process may hold.
@@ -51,6 +51,22 @@ export function db(): Pool {
     });
   }
   return holder[poolKey]!;
+}
+
+/**
+ * One query, rows only.
+ *
+ * Most of this app reaches for db().query directly, because it wants the result object -
+ * rowCount is what several statements are checked by. This is for the modules where the
+ * rows are the whole answer, and it exists so code moved here from the zones app keeps
+ * reading the way it did rather than growing a `.rows` at every call site.
+ */
+export async function query<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params?: unknown[],
+): Promise<T[]> {
+  const result = await db().query<T>(text, params);
+  return result.rows;
 }
 
 /**

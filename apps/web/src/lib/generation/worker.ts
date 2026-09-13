@@ -9,6 +9,7 @@
  * test may need an ElevenLabs account, and none may ever spend credits. Everything else here
  * runs against the real queue, because the exclusions that keep it honest are in the schema.
  */
+import { readApiKey } from "@/lib/api-key";
 import { POOL_MAX } from "@/lib/db";
 
 import { budgetFor, afterRateLimit, clampToPool } from "./concurrency";
@@ -51,16 +52,30 @@ export function backoffFor(attempts: number, random: () => number = Math.random)
  * Clamped to what the pool can serve: an ElevenLabs plan the account is upgraded to next year
  * must not be able to raise this past the number of connections available to spend it, which
  * is a deadlock rather than a slow batch.
+ *
+ * The key says whose plan. Every job is generated with its own owner's credentials now, so
+ * there is no one account to ask about - the caller passes the last one it claimed for. With
+ * none, budgetFor's floor of one applies, which is the right answer before the first claim:
+ * one job is enough to learn who is next.
  */
-export async function currentBudget(): Promise<number> {
-  const [status, settings] = await Promise.all([generationStatus(), readSettings()]);
+export async function currentBudget(apiKey: string | null = null): Promise<number> {
+  const [status, settings] = await Promise.all([
+    generationStatus(apiKey ? { apiKey } : {}),
+    readSettings(),
+  ]);
   const plan = budgetFor(status.subscription?.tier ?? null, settings.config.modelId);
   return clampToPool(plan, POOL_MAX);
 }
 
 export type WorkerOptions = {
-  regenerate?: (lineId: string, userId: string) => Promise<RegenerateResult>;
-  budget?: () => Promise<number>;
+  regenerate?: (
+    lineId: string,
+    userId: string,
+    options: { apiKey: string },
+  ) => Promise<RegenerateResult>;
+  budget?: (apiKey: string | null) => Promise<number>;
+  /** The owner's stored key. Injectable so a test never needs one sealed in a database. */
+  apiKeyFor?: (userId: string) => Promise<string | null>;
   backoffMs?: (attempts: number) => number;
   leaseMs?: number;
   /** How long to wait before looking again when the queue was empty. */
@@ -77,6 +92,7 @@ export type Worker = {
 export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}): Worker {
   const regenerate = options.regenerate ?? regenerateLine;
   const budget = options.budget ?? currentBudget;
+  const apiKeyFor = options.apiKeyFor ?? readApiKey;
   const backoff = options.backoffMs ?? backoffFor;
   const idleMs = options.idleMs ?? 2_000;
 
@@ -86,11 +102,44 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
   let pumping = false;
   /** When a 429 was last seen, which halves the budget for the cool-down. */
   let rateLimitedAt: number | null = null;
+  /**
+   * The key the last claimed job was generated with, for sizing the next pump.
+   *
+   * The budget belongs to a plan, and which plan depends on whose key. Reading it per pump
+   * from the job most recently claimed is close enough: a queue holding two people's batches
+   * is rare, and the cost of guessing the wrong one is a batch that runs at the other's
+   * width for a tick.
+   */
+  let lastKey: string | null = null;
 
   async function run(job: QueueJob): Promise<void> {
+    // Whose credits this line is spent from. A batch is enqueued by someone who had a key at
+    // the time, so reaching here without one means it was cleared or the master key changed
+    // underneath it - and every remaining job in the batch would fail identically.
+    let apiKey: string | null;
+    try {
+      apiKey = await apiKeyFor(job.createdBy ?? "");
+    } catch {
+      apiKey = null;
+    }
+
+    if (!apiKey) {
+      const message =
+        "the account that started this batch has no usable ElevenLabs key; set one in your" +
+        " profile and start it again";
+      try {
+        await failJob(job.id, { kind: "auth", message });
+        await cancelPending(`Stopped after auth: ${message}`, job.batchId);
+      } catch (error) {
+        console.error(`regeneration queue: job ${job.id} could not be failed`, error);
+      }
+      return;
+    }
+    lastKey = apiKey;
+
     // A batch whose owner's account was deleted still has takes to attribute, and
     // voiceline_version."createdBy" is nullable for exactly that case.
-    const result = await regenerate(job.lineId, job.createdBy ?? "").catch(
+    const result = await regenerate(job.lineId, job.createdBy ?? "", { apiKey }).catch(
       (error: unknown): RegenerateResult => ({
         ok: false,
         failure: {
@@ -155,7 +204,7 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
     try {
       if (!isLeader()) return;
 
-      const allowed = afterRateLimit(await budget(), rateLimitedAt, Date.now());
+      const allowed = afterRateLimit(await budget(lastKey), rateLimitedAt, Date.now());
 
       while (!stopped && isLeader() && running.size < allowed) {
         const job = await claimNext(options.leaseMs);

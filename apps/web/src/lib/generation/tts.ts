@@ -183,8 +183,13 @@ async function requestAudio(
   payload: Record<string, unknown>,
   options: ElevenLabsOptions,
 ): Promise<SpeechResult> {
-  const apiKey = options.apiKey ?? process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) return { ok: false, failure: failure("auth", "ELEVENLABS_API_KEY is not set") };
+  // The caller's own key, never a server-wide one: see config() in lib/voices/elevenlabs.ts.
+  // "auth" is the right kind because it is fatal to a batch - every later job in it would
+  // fail the same way, and the queue stops rather than marching through the rest.
+  const { apiKey } = options;
+  if (!apiKey) {
+    return { ok: false, failure: failure("auth", "no ElevenLabs key was supplied for this request") };
+  }
 
   const baseUrl = options.baseUrl ?? process.env.ELEVENLABS_BASE_URL ?? DEFAULT_BASE_URL;
   const fetchImpl = options.fetchImpl ?? globalThis.fetch;

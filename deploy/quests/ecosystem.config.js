@@ -125,7 +125,8 @@ module.exports = {
         // renders with no rows at all.
         VOICEOVER_VOICE_CONFIG: "/srv/voiceover/current/pipelines/quests/voice",
 
-        // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL and ELEVENLABS_API_KEY.
+        // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, SPOKEN_SECRET_KEY and
+        // ELEVENLABS_DICTIONARY_ID.
         ...readSecrets(),
       },
     },

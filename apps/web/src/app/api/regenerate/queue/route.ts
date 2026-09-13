@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { storeIndex } from "@/lib/audio";
 import { loadCorpus } from "@/lib/corpus";
-import { requireRegenerate } from "@/lib/generation/authz";
+import { requireApiKey, requireRegenerate } from "@/lib/generation/authz";
 import { createBatch, enqueue, snapshot } from "@/lib/generation/queue";
 import { searchContext } from "@/lib/issues/context";
 import { batchJobs, matchingLines } from "@/lib/search";
@@ -25,6 +25,12 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const { session, denied } = await requireRegenerate();
   if (denied) return denied;
+
+  // Checked at enqueue rather than only in the worker. Every job in the batch is generated
+  // with the key of whoever started it, so a batch queued without one is forty thousand rows
+  // that can only fail - and the person who pressed the button is no longer here to be told.
+  const { denied: noKey } = await requireApiKey(session.user.id);
+  if (noKey) return noKey;
 
   // Nothing starts the queue on boot - see lib/generation/boot.ts for why - so every route
   // that touches it wakes it first. After the first call this is a property read.

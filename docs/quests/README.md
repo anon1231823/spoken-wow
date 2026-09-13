@@ -350,6 +350,18 @@ Registration at `/register` is open and needs no email confirmation. Everyone st
 | `collaborator` | the above, plus **Regenerate** on every line, quest and NPC, the take history behind each, and rewriting what a line says out loud |
 | `admin` | the above, plus `/admin` to change anyone's role, `/voices` to manage voices and the global generation settings, `/lexicon` to correct how names are pronounced, and `/issues` to work through what the corpus scan found |
 
+**A role is only half of it.** Everything that reaches ElevenLabs — regenerating, cloning a
+voice, previewing a pronunciation, uploading the lexicon — is spent from the signed-in
+user's own account, using a key they set on `/profile`. There is no server-wide key: the
+site holds one sealed credential per person, AES-256-GCM under `SPOKEN_SECRET_KEY`, and a
+route asked to spend without one answers `428 no_api_key` rather than reaching for
+somebody else's plan. So "who paid for this line" always has an answer, and granting the
+collaborator role does not quietly grant the deployer's bill along with it.
+
+An admin can see which accounts hold a key on `/admin`, and clear one — the counterpart of
+handing out the role. Neither they nor anyone else can read one back: what any surface ever
+shows is the last four characters.
+
 #### Regenerating audio
 
 A line, a quest or a whole NPC can be re-voiced from the explorer. A single line is

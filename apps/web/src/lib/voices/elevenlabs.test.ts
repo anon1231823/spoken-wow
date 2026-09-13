@@ -55,15 +55,23 @@ describe("listVoices", () => {
     await expect(listVoices({ apiKey: "k", fetchImpl })).rejects.toThrow(/401.*invalid_api_key/);
   });
 
+  /**
+   * There is no server-wide key to fall back to: every request is spent from the signed-in
+   * user's own account, so a caller with nothing to spend has skipped requireApiKey. That is
+   * a bug in a route rather than a state to render, hence a throw - and no request, so an
+   * anonymous call can never reach ElevenLabs and be answered from somebody else's plan.
+   */
   it("refuses to run without a key rather than calling anonymously", async () => {
     const fetchImpl = respondWith(ACCOUNT);
     const previous = process.env.ELEVENLABS_API_KEY;
-    delete process.env.ELEVENLABS_API_KEY;
+    // Set, not cleared: the point is that the environment is no longer consulted at all.
+    process.env.ELEVENLABS_API_KEY = "sk_from_the_environment";
     try {
-      await expect(listVoices({ fetchImpl })).rejects.toThrow(/ELEVENLABS_API_KEY/);
+      await expect(listVoices({ fetchImpl })).rejects.toThrow(/no ElevenLabs key/);
       expect(fetchImpl).not.toHaveBeenCalled();
     } finally {
-      if (previous !== undefined) process.env.ELEVENLABS_API_KEY = previous;
+      if (previous === undefined) delete process.env.ELEVENLABS_API_KEY;
+      else process.env.ELEVENLABS_API_KEY = previous;
     }
   });
 });

@@ -410,6 +410,12 @@ export default function Explorer({ facets }: { facets: Facets }) {
       if (!line.voiceable) {
         return `Never voiced: ${line.skipReason}`;
       }
+      // Before the voice checks: with no key the roster is empty, so every line would
+      // otherwise be blocked for the wrong reason - "no voice named orc-male-shady" when
+      // the truth is that nothing has been asked.
+      if (status?.noApiKey) {
+        return "No ElevenLabs key on your account — set one in your profile";
+      }
       if (status && !status.voices.includes(line.voice)) {
         return `No ElevenLabs voice named "${line.voice}" yet — create it on /voices`;
       }
@@ -569,6 +575,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
       // No reason offered because none was given: the route refused for a cause this
       // response does not carry, and inventing one would be a guess dressed as an answer.
       setQueueNote("Could not queue the batch.");
+    } else if ("error" in result) {
+      setQueueNote(result.error);
     } else if (result.skipped > 0) {
       setQueueNote(`${result.skipped.toLocaleString()} already queued`);
     }

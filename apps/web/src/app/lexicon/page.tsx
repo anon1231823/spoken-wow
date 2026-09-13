@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import LexiconEditor from "@/components/LexiconEditor";
+import { readApiKey } from "@/lib/api-key";
 import { auth } from "@/lib/auth";
 import { readLexicon } from "@/lib/generation/dictionary";
 import { previewCache, voicePicker } from "@/lib/generation/preview";
@@ -23,10 +24,15 @@ export default async function Page() {
   // learning that this page exists.
   if (!session || !canConfigureGeneration(session.user.role)) notFound();
 
+  // The admin's own key: which voices the account has decides which one each preview would
+  // be spoken in, and with no key there are none - every button then simply says it costs
+  // money, which is true and harmless.
+  const apiKey = await readApiKey(session.user.id).catch(() => null);
+
   const [lexicon, config, status] = await Promise.all([
     readLexicon(),
     currentConfig(),
-    generationStatus(),
+    generationStatus(apiKey ? { apiKey } : {}),
   ]);
 
   // Resolved here rather than in the browser: knowing whether a preview is cached means
