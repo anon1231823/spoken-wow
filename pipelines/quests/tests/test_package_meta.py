@@ -30,6 +30,17 @@ def test_the_stub_is_not_a_data_module(tmp_path):
     assert "X-SpokenQuests-DataModule" not in toc
 
 
+def test_the_stub_nests_under_the_addon_that_plays_the_packs(tmp_path):
+    # Group and X-Child-Of name a folder, and the folder they named was renamed. Left
+    # pointing at VoiceOverRedux they nest the stub under the tombstone, which is a
+    # greyed-out row the player is told to delete.
+    toc = build(tmp_path)
+
+    assert "## Group: SpokenQuests\n" in toc
+    assert "## X-Part-Of: Spoken\n" in toc
+    assert "## X-Child-Of: SpokenQuests\n" in toc
+
+
 def test_the_stub_carries_the_version_it_was_built_with(tmp_path):
     # release.sh reads the version back out of this TOC to name the zip it uploads.
     assert "## Version: 9.9.9\n" in build(tmp_path, "9.9.9")
