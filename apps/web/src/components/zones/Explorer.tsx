@@ -4,6 +4,9 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import ApiKeyRequiredDialog from "@/components/ApiKeyRequiredDialog";
+import Key from "@/components/Key";
+import Pagination from "@/components/Pagination";
+import { Button } from "@/components/ui/button";
 import RegenerateDialog from "@/components/RegenerateDialog";
 import RegenerationPanel from "@/components/RegenerationPanel";
 import { LineRow, type RowState } from "@/components/zones/LineRow";
@@ -85,10 +88,6 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // ?state=stale the line just edited would vanish as it was saved.
   const [rewritten, setRewritten] = useState<Record<string, string>>({});
   const [reportFor, setReportFor] = useState<ReportTarget | null>(null);
-  // One expansion at a time, mirroring `current`: the panel is a paragraph of prose to
-  // read, and a table with six of them open is no longer a table.
-  const [expanded, setExpanded] = useState<string | null>(null);
-
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
   // Bumped per line after a regeneration, to bust the browser's audio cache: the
   // filename does not change, so without this the old take keeps playing.
@@ -225,10 +224,6 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         // The fetched rows carry the flags as they now are, so the local overlay has
         // done its job and would only go stale from here.
         setFlagged({});
-        // Collapse too. The expansion is keyed on a lineId, so a row left open across a
-        // filter change would reattach to whichever line now holds that id -- or, worse,
-        // stay open showing one line's reports under another line's row.
-        setExpanded(null);
         setLoading(false);
       })
       .catch((err) => {
@@ -619,11 +614,6 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
 
   const pages = result ? Math.max(1, Math.ceil(result.total / PAGE_SIZE)) : 1;
 
-  // The one place the column count is computed. Keep it in step with <colgroup> and
-  // <thead> below, and see the note on LineRow's colSpan prop for why it is not derived
-  // there.
-  const colSpan = canRegenerate ? 6 : 5;
-
   return (
     <div className="pb-24">
       <SearchBar
@@ -638,61 +628,58 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         onClearAll={() => replaceQuery(new URLSearchParams())}
       />
 
-      <div className="shell flex items-center gap-4 py-2 text-muted-foreground">
-        {result && (
-          <>
-            <span>
-              <strong className="text-foreground">{result.total.toLocaleString()}</strong> lines
-            </span>
-            <span className="text-muted-foreground">{result.totalChars.toLocaleString()} chars</span>
-            {result.counts.missing > 0 && (
-              <span className="text-destructive">{result.counts.missing} missing</span>
-            )}
-            {result.counts.stale > 0 && (
-              <span className="text-amber-400">{result.counts.stale} stale</span>
-            )}
-          </>
+      <div className="shell flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 pb-1">
+        <div className="text-muted-foreground text-sm">
+          {loading && !result
+            ? "Searching…"
+            : result
+              ? `${result.total.toLocaleString()} ${result.total === 1 ? "line" : "lines"}, ` +
+                `${result.totalChars.toLocaleString()} chars`
+              : ""}
+        </div>
+        {result && result.counts.missing > 0 && (
+          <span className="text-destructive text-sm">{result.counts.missing} missing</span>
         )}
-        {loading && <span className="text-muted-foreground">loading…</span>}
+        {result && result.counts.stale > 0 && (
+          <span className="text-sm text-amber-300">{result.counts.stale} outdated</span>
+        )}
 
         {canRegenerate && result && result.total > 0 && (
-          <button
-            type="button"
-            onClick={askToRegenerateAll}
-            className="ml-auto rounded border border-border px-2 py-0.5 hover:bg-accent hover:text-foreground"
-          >
-            Regenerate {result.total.toLocaleString()} filtered…
-          </button>
+          <Button size="xs" variant="secondary" className="ml-auto" onClick={askToRegenerateAll}>
+            Regenerate all {result.total.toLocaleString()}
+          </Button>
         )}
       </div>
 
       {/* The wrapper carries the column, not the table: see .shell-table in
           globals.css for why a collapsed table cannot carry it itself. */}
       <div className="shell shell-table">
-        <table className="w-full table-fixed">
-          {/* Two columns narrow or vanish for a visitor rather than being drawn empty:
-              State keeps the missing/stale label but loses the three flag controls, and
-              Audio is nothing but controls, so it goes. The width lands on Lore, which
-              is the column anyone here to read is here for. */}
+        {/* Fixed layout, because the point of the columns is that they line up down the
+            page: left to auto sizing, one long subzone name would widen its column for
+            every row. The lore column takes whatever the named ones leave. */}
+        <table className="w-full table-fixed border-collapse text-sm">
           <colgroup>
-            <col className="w-36" />
+            <col className="w-40" />
             <col className="w-44" />
-            {/* Reviewers get five controls plus a label ("text changed" is the widest)
-                plus a take counter, all on one non-wrapping line; narrower than this
-                the label runs into the Lore column. */}
-            <col className={canReview ? "w-56" : "w-28"} />
+            {/* The review column narrows for a visitor rather than being drawn empty: it
+                keeps the verdict badge and the report count, and loses the three controls.
+                The width lands on Lore, which is what anyone here to read came for. */}
+            <col className={canReview ? "w-44" : "w-20"} />
             <col />
-            <col className="w-16" />
-            {canRegenerate && <col className="w-28" />}
+            {/* Wide enough for what the cell actually holds: icon buttons are 32px, and an
+                editor can have four side by side - report, edit, restore, regenerate - so
+                anything narrower pushes them left over the prose. w-10 for everyone else,
+                who has the report button and nothing more; never w-0, since that button is
+                not gated. */}
+            <col className={canRegenerate ? "w-36" : "w-10"} />
           </colgroup>
-          <thead className="text-left text-xs text-muted-foreground">
-            <tr className="border-b border-border">
-              <th className="px-2 py-1 font-normal">Zone</th>
-              <th className="px-2 py-1 font-normal">Subzone</th>
-              <th className="px-2 py-1 font-normal">State</th>
-              <th className="px-2 py-1 font-normal">Lore</th>
-              <th className="px-2 py-1 text-right font-normal">Chars</th>
-              {canRegenerate && <th className="px-2 py-1 text-right font-normal">Audio</th>}
+          <thead>
+            <tr className="text-muted-foreground border-border border-b text-left text-xs">
+              <th className="px-2 pb-1 font-medium">Zone</th>
+              <th className="px-2 pb-1 font-medium">Subzone</th>
+              <th className="px-2 pb-1 font-medium">Review</th>
+              <th className="px-2 pb-1 font-medium">Lore</th>
+              <th className="sr-only">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -704,8 +691,6 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
                 canReview={canReview}
                 canRegenerate={canRegenerate}
                 canTriage={canTriage}
-                expanded={expanded === line.id}
-                colSpan={colSpan}
                 onPlay={play}
                 onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
                 state={rowStates[line.id]}
@@ -714,7 +699,6 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
                 onReport={(l) =>
                   setReportFor({ lineId: l.id, file: l.file, name: l.name })
                 }
-                onToggleExpand={(l) => setExpanded((open) => (open === l.id ? null : l.id))}
                 onEditText={(l) => setEditFor(withFlag(l))}
                 onRegenerate={regenerateOne}
                 onRestore={restore}
@@ -725,39 +709,22 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       </div>
 
       {result && result.total === 0 && !loading && (
-        <p className="shell py-8 text-center text-muted-foreground">Nothing matches these filters.</p>
+        <p className="text-muted-foreground shell py-8 text-center">
+          Nothing matches these filters.
+        </p>
       )}
 
-      {pages > 1 && (
-        <div className="shell flex items-center justify-center gap-4 py-4">
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => updateUrl({ page: page - 1 })}
-            className="rounded border border-border px-3 py-1 disabled:opacity-30"
-          >
-            Previous
-          </button>
-          <span className="text-muted-foreground">
-            page {page} of {pages}
-          </span>
-          <button
-            type="button"
-            disabled={page >= pages}
-            onClick={() => updateUrl({ page: page + 1 })}
-            className="rounded border border-border px-3 py-1 disabled:opacity-30"
-          >
-            Next
-          </button>
-        </div>
-      )}
+      <div className="shell">
+        <Pagination page={page} pageCount={pages} onPage={(next) => updateUrl({ page: next })} />
+      </div>
 
-      <p className="shell pb-4 text-center text-xs text-muted-foreground">
-        <kbd>/</kbd> search · <kbd>space</kbd> play/pause · <kbd>j</kbd>/<kbd>k</kbd> next/previous
+      <p className="text-muted-foreground shell mt-6 flex flex-wrap items-center gap-1.5 pb-4 text-xs">
+        <Key>/</Key> search · <Key>space</Key> play/pause · <Key>j</Key> <Key>k</Key> next and
+        previous line on this page
         {canReview && (
           <>
             {" "}
-            · <kbd>f</kbd> bad · <kbd>g</kbd> ok · <kbd>u</kbd> undo · <kbd>n</kbd> note
+            · <Key>f</Key> bad · <Key>g</Key> ok · <Key>u</Key> undo · <Key>n</Key> note
           </>
         )}
       </p>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import LineRow from "./LineRow";
+import Key from "./Key";
 import Pagination from "./Pagination";
 import Player from "./Player";
 import IgnoreDialog from "./IgnoreDialog";
@@ -45,14 +46,6 @@ const DEBOUNCE_MS = 200;
 
 function plural(count: number, noun: string): string {
   return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
-}
-
-function Key({ children }: { children: React.ReactNode }) {
-  return (
-    <kbd className="bg-muted rounded border border-b-2 px-1.5 py-px font-mono text-[11px]">
-      {children}
-    </kbd>
-  );
 }
 
 /**

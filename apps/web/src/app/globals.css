@@ -127,7 +127,7 @@
     @apply font-sans;
     }
 }
-/* The zones section's content column, 1024px wide.
+/* The zones section's content column, 1152px wide -- the quests explorer's max-w-6xl.
 
    A utility rather than `mx-auto max-w-5xl px-5` repeated in six places, because three of
    those are bars that span the viewport -- the sticky search bar and the fixed player
@@ -135,12 +135,12 @@
    contents line up with the table. Repeating the numbers is how a sticky bar ends up half
    a padding step out of true with the rows under it.
 
-   One step narrower than the quests explorer's max-w-6xl, and for a reason rather than by
-   accident: that table has more columns, and here the lore prose is the column that has to
-   be readable. */
+   It was one step narrower while the two explorers were two designs. They are one now, and
+   a column that changes width when you switch sections reads as a different site rather
+   than a different page. */
 @utility shell {
   margin-inline: auto;
-  max-width: 64rem;
+  max-width: 72rem;
   padding-inline: 1.25rem;
 }
 
