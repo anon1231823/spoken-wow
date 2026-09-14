@@ -18,7 +18,7 @@ export function subfolder(line: Pick<CorpusLine, "source">): "quests" | "gossip"
   return line.source === "gossip" ? "gossip" : "quests";
 }
 
-/** Store-relative path, e.g. "quests/5-accept.mp3". Also the /api/audio/ route path. */
+/** Store-relative path, e.g. "quests/5-accept.mp3". Also the /api/quests/audio/ route path. */
 export function audioRelPath(line: Pick<CorpusLine, "source" | "fileName">): string {
   return `${subfolder(line)}/${line.fileName}.mp3`;
 }

@@ -11,7 +11,7 @@ import { historyDir, soundsDir } from "./tools";
 
 export { historyDir, soundsDir };
 
-/** Store-relative, e.g. '1411/razor-hill.mp3'. Also the /api/audio/ route path. */
+/** Store-relative, e.g. '1411/razor-hill.mp3'. Also the /api/zones/audio/ route path. */
 export function audioRelPath(file: string): string {
   return `${file}.mp3`;
 }

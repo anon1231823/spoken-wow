@@ -204,7 +204,7 @@ export function LineRow({
             {/* Sits with the other per-line judgements rather than in the Audio column:
                 rewriting the prose is not an audio action, and it is free. It is gated on
                 canRegenerate because the edit is what a later regeneration would speak,
-                and /api/lore holds the same line. */}
+                and /api/zones/lore holds the same line. */}
             {canRegenerate && (
               <button
                 type="button"

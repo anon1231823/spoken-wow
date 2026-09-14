@@ -32,7 +32,7 @@ type Props = {
    * The take currently in the store, when this line has been regenerated in this session.
    *
    * Appended to the audio URL as a cache buster. Replacing a line does not change its path -
-   * the addon resolves sounds by filename, so it cannot - and /api/audio answers with a weak
+   * the addon resolves sounds by filename, so it cannot - and /api/quests/audio answers with a weak
    * ETag that a cached response need not revalidate, so without this the browser replays the
    * take that was just overwritten.
    */

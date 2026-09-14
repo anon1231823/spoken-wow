@@ -89,7 +89,7 @@ export function Player({ line, version, lang = BASE_LANG, audioRef }: Props) {
   if (version !== undefined) query.set("v", String(version));
   if (lang !== BASE_LANG) query.set("lang", lang);
   const src = line
-    ? `/api/audio/${line.file}.mp3${query.size ? `?${query}` : ""}`
+    ? `/api/zones/audio/${line.file}.mp3${query.size ? `?${query}` : ""}`
     : undefined;
 
   const position = scrubbing ?? time;

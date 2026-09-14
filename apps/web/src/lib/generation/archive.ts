@@ -31,7 +31,7 @@ export const INHERITED_VERSION = 0;
 
 function assertSafe(file: string): void {
   // Whitelist, not sanitisation: `file` reaches this from a request body, and the same
-  // pattern already guards /api/audio.
+  // pattern already guards /api/quests/audio.
   if (!isSafeAudioPath(file)) throw new Error(`unsafe store path ${file}`);
 }
 

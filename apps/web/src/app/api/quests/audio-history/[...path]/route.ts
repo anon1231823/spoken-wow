@@ -1,15 +1,15 @@
 /**
- * Playing an archived take: /api/audio-history/quests/5-accept/1.mp3
+ * Playing an archived take: /api/quests/audio-history/quests/5-accept/1.mp3
  *
  * The point of history is being able to hear the alternative before committing to it, so
  * this exists to make "restore" a decision rather than a gamble.
  *
- * Deliberately simpler than /api/audio. An archived take never changes once written - a new
+ * Deliberately simpler than /api/quests/audio. An archived take never changes once written - a new
  * take gets a new number - so it can be cached immutably, and there is no ETag dance to do.
  * Range support is kept because Safari opens audio with `bytes=0-1` and refuses a 200,
  * exactly as it does for the store.
  *
- * Collaborator-only, unlike /api/audio: a signed-out visitor has no business enumerating
+ * Collaborator-only, unlike /api/quests/audio: a signed-out visitor has no business enumerating
  * takes that were rejected.
  */
 import fs from "node:fs";

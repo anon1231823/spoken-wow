@@ -506,7 +506,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
    *
    * On success the line is marked as having audio and its file's version is recorded. That
    * version becomes a query parameter on the audio URL: the path does not change when a file
-   * is replaced, and /api/audio answers with a weak ETag, so without it the browser would
+   * is replaced, and /api/quests/audio answers with a weak ETag, so without it the browser would
    * happily replay the take that was just overwritten.
    */
   const regenerateLine = useCallback(async (line: ResultLine) => {
