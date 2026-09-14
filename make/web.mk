@@ -13,7 +13,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help dev build typecheck test bootstrap deploy-scripts releases rollback logs \
-        ssh-check store cutover-audio migrate-legacy migrate-legacy-dry migrate-lines migrate-reports
+        ssh-check store cutover-audio migrate-legacy migrate-legacy-dry migrate-lines migrate-reports migrate-verdicts
 
 APP := @spoken/web
 
@@ -142,6 +142,12 @@ migrate-reports: ## Copy both sections' reports onto the droplet (rerunnable, pr
 # Reports move early only because a triage page with nothing in it cannot be looked at.
 # They are replaced by source rather than merged, since nothing about a report is unique --
 # three people reporting one line is the signal the table exists to carry.
+
+migrate-verdicts: ## Copy the quests triage decisions onto this database's scan (rerunnable)
+	@$(call remote-import,--verdicts)
+
+# The findings themselves are a scan's output and are rebuilt here; the verdicts on them
+# are not. Matched on (category, item), which is what a finding is.
 
 migrate-legacy-dry: ## Rehearse the full zones import on the droplet (writes nothing)
 	@$(call remote-import,--dry-run)

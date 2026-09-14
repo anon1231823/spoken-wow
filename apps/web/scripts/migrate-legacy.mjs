@@ -3,7 +3,7 @@
  *
  *   DATABASE_URL=postgres://…/spoken \
  *   ZONELORE_URL=postgres://…/zonelore \
- *   node apps/web/scripts/migrate-legacy.mjs [--dry-run] [--lines] [--reports]
+ *   node apps/web/scripts/migrate-legacy.mjs [--dry-run] [--lines] [--reports] [--verdicts]
  *
  * WHAT THIS DOES NOT DO: the quests half. That database is restored wholesale --
  * `pg_dump voiceover | psql spoken`, then the migrations -- because the merged schema was
@@ -69,6 +69,25 @@ const LINES_ONLY = process.argv.includes("--lines");
  */
 const REPORTS_ONLY = process.argv.includes("--reports");
 
+/**
+ * Carry the triage decisions on the quests findings across, and nothing else.
+ *
+ * line_issue is rebuilt wholesale by every scan, so the findings on a staged database are
+ * its own - fresh rows, every verdict back at 'open'. The scan is a machine's output and
+ * regenerating it costs nothing; the verdicts are the part somebody sat down and made, and
+ * they are all this touches.
+ *
+ * Matched on ("category", "item"), which the table declares unique and which is what a
+ * finding IS: the same token flagged by the same rule is the same finding, whatever id a
+ * given scan handed it. A decision whose finding this scan no longer reports is counted
+ * and skipped - the corpus moved, and a verdict on something nobody can see is not a row
+ * worth inventing.
+ *
+ * Nothing is reset: a verdict made here and not there stays. This is a copy of decisions,
+ * not a mirror of a table.
+ */
+const VERDICTS_ONLY = process.argv.includes("--verdicts");
+
 const TARGET = process.env.DATABASE_URL;
 const SOURCE = process.env.ZONELORE_URL;
 const VOICEOVER = process.env.VOICEOVER_URL;
@@ -79,8 +98,11 @@ if (!TARGET || !SOURCE) {
   );
   process.exit(1);
 }
-if (REPORTS_ONLY && !VOICEOVER) {
-  console.error("--reports also needs VOICEOVER_URL: the quests reports are read from it");
+if ((REPORTS_ONLY || VERDICTS_ONLY) && !VOICEOVER) {
+  console.error(
+    `${REPORTS_ONLY ? "--reports" : "--verdicts"} also needs VOICEOVER_URL: ` +
+      "the quests half is read from it",
+  );
   process.exit(1);
 }
 if (TARGET === SOURCE) {
@@ -130,7 +152,7 @@ async function main() {
       `select 1 from "schema_migrations" where "name" = $1`,
       ["legacy-zones-import"],
     );
-    if (already.rowCount && !LINES_ONLY && !REPORTS_ONLY) {
+    if (already.rowCount && !LINES_ONLY && !REPORTS_ONLY && !VERDICTS_ONLY) {
       throw new Error(
         "the zones data has already been imported into this database. Restore it from the " +
           "pg_dump and start again if you need to re-run.",
@@ -138,6 +160,25 @@ async function main() {
     }
 
     await target.query("begin");
+
+    if (VERDICTS_ONLY) {
+      const verdicts = await copyVerdicts(voiceover, target);
+
+      console.log("");
+      console.log(`  line_issue ${verdicts.applied} decisions applied`);
+      if (verdicts.unmatched) {
+        console.log(`             ${verdicts.unmatched} on findings this scan no longer reports`);
+      }
+      console.log("");
+      if (DRY_RUN) {
+        await target.query("rollback");
+        console.log("dry run: rolled back, nothing was written");
+      } else {
+        await target.query("commit");
+        console.log("committed");
+      }
+      return;
+    }
 
     if (REPORTS_ONLY) {
       // Users first, and for the same reason the full import does it first: a zones report
@@ -590,6 +631,36 @@ async function copyQuestReports(voiceover, target) {
   }
 
   return { rows: rows.length, replaced: replaced.rowCount ?? 0 };
+}
+
+/**
+ * Every verdict somebody recorded on the quests findings, onto this database's scan.
+ *
+ * "verdictBy" is carried only where this database has that account, for the reason
+ * copyQuestReports gives: the ids match because the accounts came from the same table, but
+ * one that has since been deleted would take the whole transaction down on the foreign key.
+ */
+async function copyVerdicts(voiceover, target) {
+  const { rows } = await voiceover.query(
+    `select "category", "item", "verdict", "verdictNote", "verdictBy", "verdictAt"
+       from "line_issue" where "verdict" <> 'open' order by "id"`,
+  );
+
+  let applied = 0;
+  for (const row of rows) {
+    const result = await target.query(
+      `update "line_issue"
+          set "verdict" = $3,
+              "verdictNote" = $4,
+              "verdictBy" = (select "id" from "user" where "id" = $5),
+              "verdictAt" = $6
+        where "category" = $1 and "item" = $2`,
+      [row.category, row.item, row.verdict, row.verdictNote, row.verdictBy, row.verdictAt],
+    );
+    applied += result.rowCount ?? 0;
+  }
+
+  return { applied, unmatched: rows.length - applied };
 }
 
 main().catch((error) => {
