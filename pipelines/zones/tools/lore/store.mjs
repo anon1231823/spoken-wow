@@ -1,6 +1,6 @@
 // The lore corpus, read and written.
 //
-// This is to lore_line what tools/voice/store.mjs is to voiceline_take: the one seam
+// This is to lore_line what tools/voice/store.mjs is to the take table: the one seam
 // that decides between Postgres and the files. Nothing else in tools/ talks to the
 // lore table directly.
 //

@@ -41,7 +41,7 @@ LOCALE="${LOCALE:-enUS}"
 # Node processes that resolve their own manifest and Sounds paths from it, and a
 # packaging run that checked English's manifest against another language's files
 # would pass by looking at neither.
-export ZONELORE_LANG="$LOCALE"
+export SPOKEN_ZONES_LANG="$LOCALE"
 
 # The masters live in the language's own pack folder; English's are the high tier
 # it already publishes. Kept in step with packFolder() in tools/lib/locales.mjs:

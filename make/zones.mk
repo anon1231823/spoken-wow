@@ -73,9 +73,9 @@ clean: ## Remove build output
 
 # Every voice target takes LOCALE=deDE and defaults to English, the same way the lore
 # targets do (see the LOCALE note there): pinned here rather than inherited, so a
-# ZONELORE_LANG left in the shell from an earlier run cannot quietly point a dry run,
+# SPOKEN_ZONES_LANG left in the shell from an earlier run cannot quietly point a dry run,
 # an import or a lookup rebuild at another language's files.
-VOICE_LANG = ZONELORE_LANG=$(or $(LOCALE),enUS)
+VOICE_LANG = SPOKEN_ZONES_LANG=$(or $(LOCALE),enUS)
 
 voice: ## Dry run over every voiceline (costs nothing; LOCALE=deDE for another language)
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/generate.mjs --all
@@ -132,23 +132,23 @@ lore-import: ## Seed lore_line from the committed Lua data files (idempotent)
 # LOCALE, not LANG: make inherits LANG from the shell, where it is already set to
 # something like en_US.UTF-8, and the export would be handed that as a locale code.
 lore-export: ## Write addons/SpokenZones/Data/<locale>/*.lua from the database (LOCALE=deDE)
-	@ZONELORE_LANG=$(or $(LOCALE),enUS) node pipelines/zones/tools/lore/export.mjs
+	@SPOKEN_ZONES_LANG=$(or $(LOCALE),enUS) node pipelines/zones/tools/lore/export.mjs
 
 lore-check: ## Confirm the committed Lua matches the database
-	@ZONELORE_LANG=$(or $(LOCALE),enUS) node pipelines/zones/tools/lore/export.mjs --check
+	@SPOKEN_ZONES_LANG=$(or $(LOCALE),enUS) node pipelines/zones/tools/lore/export.mjs --check
 
 # Translations arrive as a spreadsheet, not through a model: a sheet goes out with the
 # English beside the blanks and comes back filled in. Both are free. The upload
 # follows the scraper's rules -- unchanged text records nothing, and a hand edit made
 # in the explorer is never overwritten -- so a re-upload is always safe to run.
 lore-sheet: ## Write the CSV a translator fills in (LOCALE=deDE, OUT=dist/lore-deDE.csv)
-	@ZONELORE_LANG=$(LOCALE) node pipelines/zones/tools/lore/translation-sheet.mjs $(or $(OUT),dist/lore-$(LOCALE).csv)
+	@SPOKEN_ZONES_LANG=$(LOCALE) node pipelines/zones/tools/lore/translation-sheet.mjs $(or $(OUT),dist/lore-$(LOCALE).csv)
 
 lore-upload-dry: ## Say what uploading a filled sheet would record (LOCALE=deDE FILE=...)
-	@ZONELORE_LANG=$(LOCALE) node pipelines/zones/tools/lore/upload-translations.mjs $(FILE) --dry-run
+	@SPOKEN_ZONES_LANG=$(LOCALE) node pipelines/zones/tools/lore/upload-translations.mjs $(FILE) --dry-run
 
 lore-upload: ## Record a filled sheet as that language's lore (LOCALE=deDE FILE=...)
-	@ZONELORE_LANG=$(LOCALE) node pipelines/zones/tools/lore/upload-translations.mjs $(FILE)
+	@SPOKEN_ZONES_LANG=$(LOCALE) node pipelines/zones/tools/lore/upload-translations.mjs $(FILE)
 
 # Unlike every other target here, this one spends money: it sends each of a zone's
 # articles to Claude. There is no free form of it -- the report *is* the model's

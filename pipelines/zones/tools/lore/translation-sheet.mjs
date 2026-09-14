@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Writes the sheet a translator fills in: every line, English beside the blanks.
 //
-//   ZONELORE_LANG=deDE node tools/lore/translation-sheet.mjs dist/lore-deDE.csv
+//   SPOKEN_ZONES_LANG=deDE node tools/lore/translation-sheet.mjs dist/lore-deDE.csv
 //
 // One CSV per language, opened in any spreadsheet. The English columns are for
 // reading; `name`, `full` and `short` are the ones to fill, and they come back
@@ -37,11 +37,11 @@ await loadEnvFile();
 
 export const SHEET_COLUMNS = ["lineId", "zone", "place", "name", "english", "full", "short"];
 
-const lang = process.env.ZONELORE_LANG || BASE_LOCALE;
+const lang = process.env.SPOKEN_ZONES_LANG || BASE_LOCALE;
 const out = process.argv[2];
 
 if (!isLocale(lang) || lang === BASE_LOCALE) {
-  console.error(`error: ZONELORE_LANG must name a language other than English (got ${lang}).`);
+  console.error(`error: SPOKEN_ZONES_LANG must name a language other than English (got ${lang}).`);
   console.error("       usage:  make lore-sheet LOCALE=deDE OUT=dist/lore-deDE.csv");
   process.exit(1);
 }

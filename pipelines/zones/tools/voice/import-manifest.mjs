@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// tools/voice/manifest.json -> voiceline_take, once.
+// tools/voice/manifest.json -> the take table, once.
 //
 //   node tools/voice/import-manifest.mjs
 //   node tools/voice/import-manifest.mjs --dry-run
@@ -21,7 +21,7 @@ import { loadEnvFile } from "../lib/env.mjs";
 import * as db from "./db.mjs";
 import { LANG, insertTake, manifestPath } from "./store.mjs";
 
-// One language per run, like generate.mjs: ZONELORE_LANG picks the manifest and
+// One language per run, like generate.mjs: SPOKEN_ZONES_LANG picks the manifest and
 // the rows. Named explicitly at every use rather than left to the defaults, so a
 // reader can see the import is scoped -- the "already known" check in particular
 // has to be, or a second language's import would skip every line English has.
@@ -44,7 +44,7 @@ async function main() {
   }
 
   const { rows } = await db.query(
-    `select distinct "lineId" from "voiceline_take" where "lang" = $1`,
+    `select distinct "lineId" from "take" where "source" = 'zones' and "lang" = $1`,
     [LANG],
   );
   const known = new Set(rows.map((row) => row.lineId));

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Records a translator's sheet as that language's lore.
 //
-//   ZONELORE_LANG=deDE node tools/lore/upload-translations.mjs dist/lore-deDE.csv --dry-run
-//   ZONELORE_LANG=deDE node tools/lore/upload-translations.mjs dist/lore-deDE.csv
+//   SPOKEN_ZONES_LANG=deDE node tools/lore/upload-translations.mjs dist/lore-deDE.csv --dry-run
+//   SPOKEN_ZONES_LANG=deDE node tools/lore/upload-translations.mjs dist/lore-deDE.csv
 //
 // The sheet is the one translation-sheet.mjs wrote, filled in. Rows with an
 // empty `full` are not translated and are skipped; the rest are recorded as
@@ -29,10 +29,10 @@ await loadEnvFile();
 const argv = process.argv.slice(2);
 const dryRun = argv.includes("--dry-run");
 const file = argv.find((a) => !a.startsWith("--"));
-const lang = process.env.ZONELORE_LANG || BASE_LOCALE;
+const lang = process.env.SPOKEN_ZONES_LANG || BASE_LOCALE;
 
 if (!isLocale(lang) || lang === BASE_LOCALE) {
-  console.error(`error: ZONELORE_LANG must name a language other than English (got ${lang}).`);
+  console.error(`error: SPOKEN_ZONES_LANG must name a language other than English (got ${lang}).`);
   console.error("       usage:  make lore-upload LOCALE=deDE FILE=dist/lore-deDE.csv");
   process.exit(1);
 }

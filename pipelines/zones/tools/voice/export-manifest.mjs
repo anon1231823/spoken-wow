@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// voiceline_take -> tools/voice/manifest.json
+// the take table -> tools/voice/manifest.json
 //
 //   node tools/voice/export-manifest.mjs
 //   node tools/voice/export-manifest.mjs --check    (exit 1 if the file is out of date)
