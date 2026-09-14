@@ -309,16 +309,29 @@ jobs:
       # A bad deploy should heal itself rather than sit broken until someone notices. Both
       # sections are checked: a release that serves quests and 500s on zones is a bad
       # release, and rolling back is the right answer to either.
+      #
+      # THE PORT IS READ FROM app.env RATHER THAN ASSUMED, with the same precedence pm2
+      # applies: ecosystem.config.js sets 3000 and spreads readSecrets() last, so a PORT
+      # line in app.env wins. Before the cutover there is one -- the site is staged on 3002
+      # because voiceover holds 3000 -- and a check hardcoded to 3000 does not fail, which
+      # would be survivable. It asks VOICEOVER, gets a 404 because that app's routes are
+      # /api/search rather than /api/quests/search, and rolls back a release that was
+      # serving perfectly well on the port nobody looked at.
       - name: Smoke check, rolling back on failure
         env:
           TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
         run: |
           set -euo pipefail
+          PORT=$(ssh -i ~/.ssh/deploy_key "$TARGET" \
+            "sed -n 's/^PORT=//p' /srv/spoken/shared/app.env | tr -d '\"'" | tail -1)
+          PORT=${PORT:-3000}
+          echo "checking the app on port $PORT"
+
           ok=""
           for i in $(seq 1 10); do
             if ssh -i ~/.ssh/deploy_key "$TARGET" \
-              "curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:3000/api/quests/search?q=thrall' &&
-               curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:3000/api/zones/search?state=current'"
+              "curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:$PORT/api/quests/search?q=thrall' &&
+               curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:$PORT/api/zones/search?state=current'"
             then ok=1; break; fi
             echo "attempt $i failed, retrying..."
             sleep 3
