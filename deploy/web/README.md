@@ -114,10 +114,24 @@ upstream spoken_app {
 ```
 
 The second way gets the real certificate and a real origin, so sign-in works — but it also
-makes a half-migrated site publicly reachable, with no zone lore and every quest line
-showing as a gap. Whichever you pick, `BETTER_AUTH_URL` must match the origin you actually
+makes a half-migrated site publicly reachable, with every quest line showing as a gap. Whichever you pick, `BETTER_AUTH_URL` must match the origin you actually
 use, or every sign-in returns `403 Invalid origin`: `http://127.0.0.1:3002` for the tunnel,
 `https://spoken.rusty.one` for the vhost.
+
+**The lore corpus can be staged early**, and should be: without it `/zones` renders a
+"not loaded yet" notice and the search API answers `503 corpus_empty`, which is honest but
+untestable. It is extracted text rather than anybody's work, so copying it costs nothing
+and can be repeated:
+
+```bash
+DATABASE_URL=postgres://spoken:…@127.0.0.1:5432/spoken \
+ZONELORE_URL=postgres://zonelore:…@127.0.0.1:5432/zonelore \
+  make web-migrate-corpus     # replaces lore_line; writes no migration marker
+```
+
+Nothing else moves early. Takes, reports, keys and accounts keep being written on
+lore.rusty.one until the freeze, so they are copied once, at the cutover, by the import
+below — which refuses to run a second time.
 
 **Do not regenerate anything on the staged site.** It writes into `shared/`, which at that
 point is a copy that the cutover is about to overwrite, and the credits would be spent on a
@@ -141,7 +155,9 @@ ssh deploy@rusty.one
   sudo -u postgres pg_dump voiceover | sudo -u postgres psql spoken
   /srv/spoken/bin/migrate.sh /srv/spoken/current
 
-# 4. The zones half, laid over it. Rehearse first; it writes nothing.
+# 4. The zones half, laid over it. Rehearse first; it writes nothing. This copies the
+#    corpus again, replacing whatever `web-migrate-corpus` staged earlier, so the lore
+#    edits made between staging and the freeze come with it.
 DATABASE_URL=postgres://spoken:…@127.0.0.1:5432/spoken \
 ZONELORE_URL=postgres://zonelore:…@127.0.0.1:5432/zonelore \
   make web-migrate-legacy-dry

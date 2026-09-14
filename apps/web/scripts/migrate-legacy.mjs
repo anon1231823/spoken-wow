@@ -3,7 +3,7 @@
  *
  *   DATABASE_URL=postgres://…/spoken \
  *   ZONELORE_URL=postgres://…/zonelore \
- *   node apps/web/scripts/migrate-legacy.mjs [--dry-run]
+ *   node apps/web/scripts/migrate-legacy.mjs [--dry-run] [--corpus-only]
  *
  * WHAT THIS DOES NOT DO: the quests half. That database is restored wholesale --
  * `pg_dump voiceover | psql spoken`, then the migrations -- because the merged schema was
@@ -32,6 +32,20 @@ import { createHash } from "node:crypto";
 import pg from "pg";
 
 const DRY_RUN = process.argv.includes("--dry-run");
+
+/**
+ * Copy the lore corpus and nothing else.
+ *
+ * The corpus is the one part of the zones data that is not a record of anybody's work: it
+ * is text the pipeline extracted, so re-copying it is free of consequence, and staging
+ * cannot show a zone page without it. Everything else here -- accounts, keys, takes,
+ * reports -- is written by people and keeps being written right up to the freeze, so it
+ * moves once, at cutover, and not before.
+ *
+ * Which is also why this mode writes no marker: it is not the import, it does not stand in
+ * for it, and the real one must still refuse to run twice afterwards.
+ */
+const CORPUS_ONLY = process.argv.includes("--corpus-only");
 
 const TARGET = process.env.DATABASE_URL;
 const SOURCE = process.env.ZONELORE_URL;
@@ -87,7 +101,7 @@ async function main() {
       `select 1 from "schema_migrations" where "name" = $1`,
       ["legacy-zones-import"],
     );
-    if (already.rowCount) {
+    if (already.rowCount && !CORPUS_ONLY) {
       throw new Error(
         "the zones data has already been imported into this database. Restore it from the " +
           "pg_dump and start again if you need to re-run.",
@@ -95,6 +109,22 @@ async function main() {
     }
 
     await target.query("begin");
+
+    if (CORPUS_ONLY) {
+      const lore = await copyLore(source, target);
+      console.log("");
+      console.log(`  lore_line  ${lore.rows} rows across ${lore.langs} languages` +
+        (lore.replaced ? `, replacing ${lore.replaced}` : ""));
+      console.log("");
+      if (DRY_RUN) {
+        await target.query("rollback");
+        console.log("dry run: rolled back, nothing was written");
+      } else {
+        await target.query("commit");
+        console.log("committed. The corpus only -- the cutover import still has to run.");
+      }
+      return;
+    }
 
     const users = await mergeUsers(source, target);
     const keys = await copyKeys(source, target, users);
@@ -284,6 +314,15 @@ async function copyKeys(source, target, users) {
  * database's user ids would be inventing a match.
  */
 async function copyLore(source, target) {
+  // Replaced rather than added to, so this can be run again -- to stage the corpus before
+  // the cutover, or to pick up lore edits made between then and the freeze. A corpus row
+  // is derived from the pipeline's extraction, so there is nothing here to lose; the rows
+  // that ARE somebody's work live in other tables and are never touched by this.
+  //
+  // Nothing references a lore row by id, so this leaves no dangling anything: takes,
+  // flags and reports all address a line by its lineId, which the copy preserves.
+  const replaced = await target.query(`delete from "lore_line"`);
+
   const { rows } = await source.query(
     `select "lineId", "lang", "version", "isCurrent", "origin", "mapID", "kind", "key",
             "name", "full", "short", "shortIsManual", "source", "editedBy", "note",
@@ -318,7 +357,11 @@ async function copyLore(source, target) {
     );
   }
 
-  return { rows: rows.length, langs: new Set(rows.map((row) => row.lang)).size };
+  return {
+    rows: rows.length,
+    langs: new Set(rows.map((row) => row.lang)).size,
+    replaced: replaced.rowCount ?? 0,
+  };
 }
 
 async function copyFlags(source, target) {

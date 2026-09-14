@@ -13,7 +13,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help dev build typecheck test bootstrap deploy-scripts releases rollback logs \
-        ssh-check cutover-audio migrate-legacy migrate-legacy-dry
+        ssh-check cutover-audio migrate-legacy migrate-legacy-dry migrate-corpus
 
 APP := @spoken/web
 
@@ -107,6 +107,13 @@ cutover-audio: ## Copy both old sites' shared/ into /srv/spoken/shared (COPIES, 
 # COPIES, never moves, and `cp -an` never overwrites. The old trees are the rollback: if
 # spoken.rusty.one has to be stood down, the two old apps start again against audio that
 # was never touched. Disk is the cheap half of that trade.
+
+migrate-corpus: ## Copy the zones lore corpus into the new database (rerunnable, pre-cutover)
+	@node apps/web/scripts/migrate-legacy.mjs --corpus-only
+
+# The corpus is extracted text, not anybody's work, so it can be copied early and copied
+# again. Takes, reports, keys and accounts keep being written on lore.rusty.one until the
+# freeze, so they move exactly once -- `migrate-legacy` below, at cutover.
 
 migrate-legacy-dry: ## Rehearse the zones import into the new database (writes nothing)
 	@node apps/web/scripts/migrate-legacy.mjs --dry-run
