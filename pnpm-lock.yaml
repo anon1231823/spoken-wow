@@ -8,7 +8,7 @@ importers:
 
   .: {}
 
-  apps/web-quests:
+  apps/web:
     dependencies:
       better-auth:
         specifier: ^1.6.25
@@ -43,6 +43,9 @@ importers:
       react-dom:
         specifier: ^19.1.1
         version: 19.2.8(react@19.2.8)
+      server-only:
+        specifier: ^0.0.1
+        version: 0.0.1
       shadcn:
         specifier: ^4.16.0
         version: 4.21.0(typescript@5.9.3)

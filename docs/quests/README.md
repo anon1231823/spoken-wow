@@ -307,15 +307,16 @@ could quietly undo an edit made there. The HQ pack has no project and is not rel
 
 Nothing in a filename identifies an NPC — quest audio is `{questID}-{accept|complete}.mp3`
 and gossip audio is a content hash — so an NPC's lines are scattered across ~9,500 files
-with no shared key. The web explorer reassembles that view. It is deployed at
-[voiceover.rusty.one](https://voiceover.rusty.one); to run it locally:
+with no shared key. The web explorer reassembles that view. It is the `/quests` section of [spoken.rusty.one](https://spoken.rusty.one), beside the
+zone lore one; to run it locally:
 
 ```bash
-docker compose up -d postgres          # the app's own database
-cd web && pnpm install && cp .env.example .env.local && cd ..
+docker compose up -d postgres               # the app's own database
+cd apps/web && cp .env.example .env.local && cd ../..
+pnpm install
 export DATABASE_URL=postgres://voiceover:voiceover@127.0.0.1:5432/voiceover
-deploy/bin/migrate.sh "$PWD/web"       # every migration, in order
-cd web && pnpm dev                     # http://localhost:3000
+deploy/web/bin/migrate.sh "$PWD/apps/web"   # every migration, in order
+make web-dev                                # http://localhost:3000
 ```
 
 Apply migrations with that script rather than by hand: it is what the droplet and CI run, so
@@ -349,6 +350,18 @@ Registration at `/register` is open and needs no email confirmation. Everyone st
 | `member` | browse and play, like a signed-out visitor |
 | `collaborator` | the above, plus **Regenerate** on every line, quest and NPC, the take history behind each, and rewriting what a line says out loud |
 | `admin` | the above, plus `/admin` to change anyone's role, `/voices` to manage voices and the global generation settings, `/lexicon` to correct how names are pronounced, and `/issues` to work through what the corpus scan found |
+
+**A role is only half of it.** Everything that reaches ElevenLabs — regenerating, cloning a
+voice, previewing a pronunciation, uploading the lexicon — is spent from the signed-in
+user's own account, using a key they set on `/profile`. There is no server-wide key: the
+site holds one sealed credential per person, AES-256-GCM under `SPOKEN_SECRET_KEY`, and a
+route asked to spend without one answers `428 no_api_key` rather than reaching for
+somebody else's plan. So "who paid for this line" always has an answer, and granting the
+collaborator role does not quietly grant the deployer's bill along with it.
+
+An admin can see which accounts hold a key on `/admin`, and clear one — the counterpart of
+handing out the role. Neither they nor anyone else can read one back: what any surface ever
+shows is the last four characters.
 
 #### Regenerating audio
 

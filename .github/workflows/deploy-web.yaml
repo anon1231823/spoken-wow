@@ -1,0 +1,336 @@
+name: Deploy Spoken
+
+# The one deploy. Both sections ship in one release, because they are one app: a change to
+# the shared queue, the shared roster or the shared report table is a change to both, and
+# two workflows would mean a window in which one of them had it and the other did not.
+
+on:
+  push:
+    branches: [main]
+    # Addon-only commits should not redeploy the site. The paths below are exactly what
+    # ends up inside a release.
+    paths:
+      - "apps/web/**"
+      # The quests corpus ships in the release so a rollback moves data and code together.
+      - "pipelines/quests/corpus/**"
+      # How a quest line is voiced ships too, so a change to one of these has to produce a
+      # new release.
+      - "pipelines/quests/voice/*.json"
+      # The zones half is COMPILED INTO the bundle -- lib/zones/tools.ts imports it -- so a
+      # change here is a change to the app, not merely to a script beside it.
+      - "pipelines/zones/**"
+      # The lore corpus lives in the database, but the Lua the addon ships is exported from
+      # it and the deploy seeds CI's throwaway database from those files.
+      - "addons/SpokenZones/Data/**"
+      - "deploy/web/**"
+      - ".github/workflows/deploy-web.yaml"
+  workflow_dispatch:
+
+# A deploy that only ever runs by hand is a deploy nobody runs, so the dispatch trigger
+# above is a fallback rather than the path. Note that GitHub only registers this file after
+# a push that modifies it, so a freshly cloned or recreated repo needs one such push before
+# dispatch works.
+
+# Never let two deploys interleave a symlink swap. The group is shared with the two frozen
+# workflows on purpose: while they can still be dispatched against the freeze tag, a hotfix
+# to an old site and a deploy of this one must not swap symlinks at the same moment.
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    # A throwaway database for the build and the smoke test. The droplet's real one is
+    # bound to localhost and unreachable from here, which is the point: CI proves the
+    # bundle can talk to *a* Postgres with this schema, and never touches production data.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: spoken
+          POSTGRES_PASSWORD: spoken
+          POSTGRES_DB: spoken
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://spoken:spoken@127.0.0.1:5432/spoken
+      # CI-only, and never used to sign a cookie anyone keeps. The droplet's real secrets
+      # live in /srv/spoken/shared/app.env.
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-in-production
+      # Thirty-two bytes, so secrets.ts accepts it. Nothing sealed under it survives the
+      # job; the droplet's is the zones deployment's key, for the credentials imported at
+      # cutover.
+      SPOKEN_SECRET_KEY: Y2ktb25seS1rZXktbm90LXVzZWQtaW4tcHJvZHVjdA==
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # The pnpm version comes from "packageManager" in the root package.json, which is
+      # where the action looks by default.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v5
+        with:
+          # Must match the droplet's Node major. The droplet uses its own system Node
+          # (currently 24), so if you upgrade it there, change it here too and redeploy.
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      # One install for the whole workspace: the app and the zones pipeline it compiles in.
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: apps/web
+        run: pnpm typecheck
+
+      # The zones pipeline's own checks: that the Lua and the JS agree on slugs, locales
+      # and normalisation. The addon's report links are built by the Lua half and resolved
+      # by the JS half, so a drift here is a link that 404s in a player's browser.
+      - name: Validate the zones pipeline
+        run: node pipelines/zones/tools/validate.mjs
+
+      # Applied with the same script the droplet uses, so a migration that only works under
+      # a hand-run psql fails here instead of mid-deploy.
+      #
+      # Before the tests, not after: history.test.ts exercises the take table against a
+      # real Postgres, because the ordering it protects -- archive the current take before
+      # anything overwrites it -- is exactly what a mocked database would stop testing.
+      - name: Migrate
+        run: deploy/web/bin/migrate.sh "$PWD/apps/web"
+
+      # The zones catalogue is built from lore_line, so an empty table is a /zones that
+      # cannot render. Seeded from the committed Lua, which is an export of that table.
+      - name: Seed the zones corpus
+        run: node pipelines/zones/tools/lore/import.mjs
+
+      # The gate. audio.test.ts asserts every file in the quests store is addressed by some
+      # corpus line, range.test.ts covers Safari's bytes=0-1 probe, and the zones catalogue
+      # tests cover the stamp that keeps two workers agreeing; none should reach the
+      # droplet red.
+      - name: Test
+        working-directory: apps/web
+        run: pnpm test
+
+      - name: Build
+        working-directory: apps/web
+        run: pnpm build
+
+      - name: Assemble release
+        run: |
+          set -euo pipefail
+          R=release
+          mkdir -p "$R"
+          # cp -a, never cp -r: pnpm's node_modules/next is a symlink into .pnpm/, and a
+          # dereferencing copy detaches it from its siblings, so the bundle dies at boot
+          # with "Cannot find module 'styled-jsx/package.json'". BSD cp -r dereferences.
+          cp -a apps/web/.next/standalone/. "$R"/
+          # standalone does not include static assets or public/; without this the page
+          # renders unstyled. (This project has no public/.)
+          cp -a apps/web/.next/static "$R"/apps/web/.next/static
+
+          # The quests corpus ships inside the release so a rollback moves data and code
+          # together. hiccups.json.gz rides along because it is derived from exactly this
+          # corpus, and a glob because the next file beside it should not depend on anyone
+          # remembering this line.
+          mkdir -p "$R"/pipelines/quests/corpus
+          cp pipelines/quests/corpus/*.json.gz "$R"/pipelines/quests/corpus/
+          # Same reasoning for how a quest line is voiced. These are also what the Python
+          # CLI reads, so shipping them keeps both sides starting from the same defaults --
+          # and without pronunciation.json the app applies no rules and reads "Hm" as
+          # letters.
+          mkdir -p "$R"/pipelines/quests/voice
+          cp pipelines/quests/voice/*.json "$R"/pipelines/quests/voice/
+
+          # THE TWO FILES THE ZONES PIPELINE READS AT RUNTIME. Its modules resolve paths
+          # from SPOKEN_ZONES_ROOT, which points at the release: the area names decide what
+          # a place is called in each client's language, and pronunciation.json decides
+          # what is actually sent to ElevenLabs. activate.sh refuses a release without
+          # them, because a release missing them serves a /zones that works badly rather
+          # than one that fails.
+          mkdir -p "$R"/pipelines/zones/tools/seed "$R"/pipelines/zones/tools/voice
+          cp pipelines/zones/tools/seed/area-names.json "$R"/pipelines/zones/tools/seed/
+          cp pipelines/zones/tools/voice/*.json "$R"/pipelines/zones/tools/voice/
+
+          # Migrations ship with the release too: activate.sh runs migrate.sh against the
+          # release directory, so without this a deploy has nothing to apply.
+          cp -a apps/web/migrations "$R"/migrations
+
+          test -f "$R"/apps/web/server.js
+          test -L "$R"/apps/web/node_modules/next   # symlink survived the copy
+          test -f "$R"/migrations/0001_auth.sql
+          test -f "$R"/migrations/0020_take.sql
+          test -f "$R"/pipelines/quests/voice/generation.json
+          test -f "$R"/pipelines/quests/voice/pronunciation.json
+          test -f "$R"/pipelines/zones/tools/seed/area-names.json
+          test -f "$R"/pipelines/zones/tools/voice/pronunciation.json
+          du -sh "$R"
+
+          # THE TRACER GATE. next.config.ts excludes pipelines/quests from the trace, and
+          # the globs are relative to apps/web and fail SILENTLY when wrong: the first
+          # build after the tracing root widened pulled in the Python virtualenv and
+          # pipelines/quests/.env, which holds the ElevenLabs key and the database
+          # password. A release is rsynced to a droplet, so that is a credential leak
+          # rather than merely weight. 150 MB is well clear of the ~75 MB a healthy bundle
+          # measures and nowhere near the 200 MB a leak produced.
+          size=$(du -sm "$R" | cut -f1)
+          echo "release is ${size} MB"
+          if [ "$size" -gt 150 ]; then
+            echo "::error::the release is ${size} MB. Something is being traced that should not be - check outputFileTracingExcludes in apps/web/next.config.ts, and that no .env came along."
+            exit 1
+          fi
+          if find "$R" -name ".env*" -o -name "*.venv*" -o -name "pyvenv.cfg" | grep -q .; then
+            echo "::error::the release contains an env file or a virtualenv"
+            find "$R" -name ".env*" -o -name "*.venv*" -o -name "pyvenv.cfg"
+            exit 1
+          fi
+
+      # Boot the exact artifact we are about to ship. Catches a broken bundle here rather
+      # than after it has replaced a working release on the droplet. No audio store in CI,
+      # so every line reads as a gap -- that is fine, we are testing that the server starts
+      # and serves, not the contents.
+      - name: Smoke test the bundle
+        working-directory: release
+        env:
+          PORT: 3999
+          HOSTNAME: 127.0.0.1
+          NODE_ENV: production
+          SPOKEN_QUESTS_AUDIO: /nonexistent
+          SPOKEN_ZONES_SOUNDS: /nonexistent
+          # Better Auth rejects any request whose Origin is not this, so the smoke test
+          # below must send exactly this value. Getting it wrong on the droplet is the
+          # failure mode that makes every sign-in return "Invalid origin".
+          BETTER_AUTH_URL: http://127.0.0.1:3999
+        run: |
+          set -euo pipefail
+          SPOKEN_QUESTS_CORPUS="$PWD/pipelines/quests/corpus/corpus.json.gz" \
+          SPOKEN_ZONES_ROOT="$PWD" \
+            node apps/web/server.js &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+          for i in $(seq 1 20); do
+            curl -fsS -o /dev/null "http://127.0.0.1:3999/api/quests/search?q=thrall" && break
+            sleep 1
+          done
+
+          # Scoped to the NPC on purpose. Results are one flat page of fifty in
+          # alphabetical order, and an unscoped "thrall" also matches every line that
+          # merely mentions him, which is enough to push Thrall's own lines off page one.
+          curl -fsS "http://127.0.0.1:3999/api/quests/search?q=thrall&filter=npc" \
+            | grep -q '"npcName":"Thrall"'
+          echo "the quests corpus is served"
+
+          # The zones half, which proves rather more: the catalogue is built from the rows
+          # seeded above, through pipeline modules compiled into this bundle. A tracing
+          # mistake that left them out fails here.
+          total=$(curl -fsS "http://127.0.0.1:3999/api/zones/search" \
+            | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s).total)))')
+          echo "the zones catalogue has $total lines"
+          [ "$total" -gt 800 ] || { echo "::error::expected the whole zones corpus, got $total"; exit 1; }
+
+          # Auth has to survive the standalone bundle too: pg and better-auth are traced
+          # into it, and the schema has to be the one migrate.sh just applied. A registered
+          # user must come back as a member -- the default role is what everything else
+          # gates on.
+          signup=$(curl -fsS -X POST "http://127.0.0.1:3999/api/auth/sign-up/email" \
+            -H 'Content-Type: application/json' \
+            -H "Origin: $BETTER_AUTH_URL" \
+            -D headers.txt \
+            -d '{"name":"CI","email":"ci-'"$GITHUB_RUN_ID"'@example.com","password":"ci-smoke-password"}')
+          echo "$signup" | grep -q '"role":"member"'
+          grep -qi '^set-cookie: better-auth.session_token=' headers.txt
+          echo "sign-up works against the shipped bundle"
+
+          # Nothing that spends money may be reachable without a key. A member is refused
+          # by role and a keyless collaborator by credential; this covers the first, which
+          # is the one a bug in a route guard would open.
+          for path in /api/quests/regenerate /api/zones/regenerate /api/regenerate/queue; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:3999$path" \
+              -H 'Content-Type: application/json' -d '{}')
+            [ "$code" = "403" ] || { echo "::error::$path answered $code to a signed-out POST"; exit 1; }
+          done
+          echo "the paid routes are closed"
+
+          # The stylesheet must resolve, or .next/static did not make it into the release.
+          css=$(curl -fsS http://127.0.0.1:3999/quests | grep -o '_next/static/css/[^"]*' | head -1)
+          curl -fsS -o /dev/null "http://127.0.0.1:3999/$css"
+          echo "bundle boots and serves"
+
+      - name: Set release name
+        run: echo "STAMP=$(date -u +%Y%m%d-%H%M)-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
+      # The key goes to a file rather than into an agent so the workflow controls its exact
+      # bytes: a secret pasted through a browser commonly loses its trailing newline or
+      # picks up CRLF, and ssh then fails with a bare `error in libcrypto` naming neither
+      # the key nor the cause. Both are repaired here; a wrong key cannot be, hence the
+      # explicit check.
+      - name: Set up SSH
+        env:
+          KEY: ${{ secrets.DO_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DO_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$(printf '%s' "$KEY" | tr -d '\r')" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null 2>&1; then
+            echo "::error::DO_SSH_KEY is not a usable private key. Re-set it from the file so the trailing newline survives: gh secret set DO_SSH_KEY < ~/.ssh/id_rusty.one - it must be the private key, not the .pub, including its BEGIN/END lines."
+            exit 1
+          fi
+          echo "deploy key fingerprint: $(ssh-keygen -lf ~/.ssh/deploy_key | awk '{print $2}')"
+
+      - name: Upload release
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: |
+          rsync -a --delete -e "ssh -i ~/.ssh/deploy_key" release/ \
+            "$TARGET:/srv/spoken/releases/$STAMP/"
+
+      - name: Activate
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: |
+          ssh -i ~/.ssh/deploy_key "$TARGET" \
+            "/srv/spoken/bin/activate.sh /srv/spoken/releases/$STAMP"
+
+      # A bad deploy should heal itself rather than sit broken until someone notices. Both
+      # sections are checked: a release that serves quests and 500s on zones is a bad
+      # release, and rolling back is the right answer to either.
+      - name: Smoke check, rolling back on failure
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: |
+          set -euo pipefail
+          ok=""
+          for i in $(seq 1 10); do
+            if ssh -i ~/.ssh/deploy_key "$TARGET" \
+              "curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:3000/api/quests/search?q=thrall' &&
+               curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:3000/api/zones/search?state=current'"
+            then ok=1; break; fi
+            echo "attempt $i failed, retrying..."
+            sleep 3
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::smoke check failed, rolling back"
+            ssh -i ~/.ssh/deploy_key "$TARGET" '/srv/spoken/bin/rollback.sh'
+            exit 1
+          fi
+          echo "smoke check passed"
+
+      - name: Prune old releases
+        env:
+          TARGET: ${{ secrets.DO_USER }}@${{ secrets.DO_HOST }}
+        run: ssh -i ~/.ssh/deploy_key "$TARGET" '/srv/spoken/bin/prune.sh 5'

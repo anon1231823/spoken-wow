@@ -1,0 +1,122 @@
+/**
+ * Filing a report.
+ *
+ * POST IS THE ONLY UNAUTHENTICATED WRITE IN THIS APP. Anyone on the internet can reach it,
+ * because the person best placed to report a bad line is a player who has just heard one and
+ * has no account here. Every defence below exists because of that, and any verb added to this
+ * path inherits the exposure - put it in a sibling route instead, as /resolve is.
+ *
+ * A report never becomes a regeneration job. Regenerating spends ElevenLabs credits, so a
+ * public write that could start one would be a public write that spends money. A collaborator
+ * reads the report and queues the file through the existing flow.
+ */
+import { headers } from "next/headers";
+
+import { auth } from "@/lib/auth";
+import { clientIp } from "@/lib/reports/client-ip";
+import { isSource, validateSubmission, type Source } from "@/lib/reports/reports";
+import { countRecent, createReport } from "@/lib/reports/store";
+import { formatTarget, parseTarget, resolveTarget } from "@/lib/reports/target";
+import { lineByPath } from "@/lib/zones/catalogue";
+import { BASE_LANG } from "@/lib/zones/lang";
+
+export const dynamic = "force-dynamic";
+
+/** Deliberately not configurable: a knob nobody turns is a knob set wrong. */
+const PER_HOUR = 10;
+const WINDOW_MS = 60 * 60 * 1000;
+
+export async function POST(request: Request) {
+  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+
+  // A hidden field a human never fills. 200 and not 400: an error response teaches the script
+  // to stop sending the field, and a bot that believes it succeeded stops adapting.
+  if (typeof body.website === "string" && body.website.trim()) {
+    return Response.json({ ok: true });
+  }
+
+  // Absent means quests, so a client that predates the second section keeps working.
+  const source: Source = isSource(body.source) ? body.source : "quests";
+
+  /**
+   * What the address resolves to, which the two sections answer differently.
+   *
+   * A quests address is one the addon built out of a quest id and an event, or out of a
+   * unit GUID, and it can legitimately resolve to nothing -- when the data module failed to
+   * load there is no sound data at all, and that is the failure most worth reporting. So it
+   * is validated for shape and the lineId is filled in only if it resolves.
+   *
+   * A zones address is the line's own audio path, because that is what the report link is,
+   * and it either names a line or it does not. Accepting one that names nothing would put a
+   * row in triage that nobody can act on -- there is no equivalent of a data module having
+   * failed to load, since the address came from a page this site rendered.
+   */
+  const addressed =
+    source === "zones"
+      ? await zonesTarget(typeof body.target === "string" ? body.target : null)
+      : questsTarget(typeof body.target === "string" ? body.target : null, body.lineId);
+
+  if (!addressed) {
+    return Response.json({ error: "unknown target" }, { status: 400 });
+  }
+
+  const validated = validateSubmission(body);
+  if (!validated.ok) {
+    return Response.json({ error: validated.error }, { status: 400 });
+  }
+
+  const ip = clientIp(request);
+  if ((await countRecent(ip, WINDOW_MS)) >= PER_HOUR) {
+    return Response.json({ error: "too many reports" }, { status: 429 });
+  }
+
+  // A signed-in reporter's identity comes from the session, and any name or email in the body
+  // is dropped rather than merged: letting someone sign in and then type a different name is a
+  // way to put words in another person's mouth.
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  await createReport({
+    source,
+    lineId: addressed.lineId,
+    target: addressed.target,
+    category: validated.value.category,
+    body: validated.value.body,
+    userId: session?.user.id ?? null,
+    name: session ? null : validated.value.name,
+    email: session ? null : validated.value.email,
+    ip,
+  });
+
+  return Response.json({ ok: true });
+}
+
+/**
+ * A quests address: validated for shape, resolved where it can be.
+ *
+ * Only a lineId the address actually resolves to is stored, so the browser cannot attach a
+ * report to a line the reporter never saw.
+ */
+function questsTarget(
+  raw: string | null,
+  claimed: unknown,
+): { lineId: string | null; target: string } | null {
+  const target = raw ? parseTarget(raw.split("/")) : null;
+  if (!target) return null;
+
+  const wanted = typeof claimed === "string" ? claimed : null;
+  const lineId = resolveTarget(target).find((line) => line.lineId === wanted)?.lineId ?? null;
+  return { lineId, target: formatTarget(target) };
+}
+
+/** A zones address: the line's own audio path, '1411/razor-hill'. */
+async function zonesTarget(
+  raw: string | null,
+): Promise<{ lineId: string | null; target: string } | null> {
+  if (!raw) return null;
+
+  const [mapID, slug] = raw.split("/");
+  const entry = await lineByPath(Number(mapID), slug ?? "", BASE_LANG);
+  if (!entry) return null;
+
+  return { lineId: entry.id, target: entry.file };
+}

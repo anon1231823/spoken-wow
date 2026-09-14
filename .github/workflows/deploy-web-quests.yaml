@@ -1,24 +1,23 @@
-name: Deploy quests web
+name: Deploy quests web (frozen)
+
+# FROZEN. voiceover.rusty.one keeps serving the release it has, and nothing on main
+# deploys to it any more.
+#
+# The push trigger is gone rather than narrowed. apps/web-quests became apps/web while the
+# two sites are being merged into spoken.rusty.one, so the paths this used to watch now
+# name a half-merged app -- and a merge to main would have shipped it onto the live site
+# without anyone asking. The guard step below is the second half of that: dispatching this
+# from main would build the same thing by hand.
+#
+# To hotfix the live site before the cutover, dispatch this workflow against the
+# `legacy-freeze` tag. GitHub runs the workflow file from the ref it is dispatched with, so
+# that run gets the pre-merge tree, the pre-merge paths, and no guard.
+#
+# It goes away with /srv/voiceover itself, once spoken.rusty.one has been serving long
+# enough that rolling back to this one is no longer a plan.
 
 on:
-  push:
-    branches: [main]
-    # Addon-only commits should not redeploy the explorer.
-    paths:
-      - "apps/web-quests/**"
-      - "pipelines/quests/corpus/**"
-      # How a line is voiced ships inside the release, so a change to one of these has to
-      # produce a new one. The lexicon is the reason this is not merely tidy: it is meant to
-      # be edited, and an edit that never reached a release would look like a lost commit.
-      - "pipelines/quests/voice/*.json"
-      - "deploy/quests/**"
-      - ".github/workflows/deploy-web-quests.yaml"
   workflow_dispatch:
-
-# A deploy that only ever runs by hand is a deploy nobody runs, so the dispatch trigger
-# above is a fallback rather than the path: pushes to the paths listed above are what is
-# expected to ship. Note that GitHub only registers this file after a push that modifies
-# it, so a freshly cloned or recreated repo needs one such push before dispatch works.
 
 # Never let two deploys interleave a symlink swap.
 concurrency:
@@ -55,6 +54,15 @@ jobs:
       BETTER_AUTH_SECRET: ci-only-secret-not-used-in-production
 
     steps:
+      # Refuse on main, where the tree no longer builds the site this deploys. Dispatching
+      # from `legacy-freeze` runs that ref's copy of this file, which has no such step.
+      - name: The voiceover deployment is frozen
+        run: |
+          echo "voiceover.rusty.one is frozen while the two sites merge into spoken.rusty.one."
+          echo "This ref builds apps/web, which is the merged app and not what /srv/voiceover runs."
+          echo "To hotfix the live site, dispatch this workflow against the legacy-freeze tag."
+          exit 1
+
       - uses: actions/checkout@v5
 
       # The pnpm version comes from "packageManager" in the root package.json, which is
@@ -76,7 +84,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        working-directory: apps/web-quests
+        working-directory: apps/web
         run: pnpm typecheck
 
       # Applied with the same script the droplet uses, so a migration that only works
@@ -86,17 +94,17 @@ jobs:
       # real Postgres, because the ordering it protects - archive the current take before
       # anything overwrites it - is exactly what a mocked database would stop testing.
       - name: Migrate
-        run: deploy/quests/bin/migrate.sh "$PWD/apps/web-quests"
+        run: deploy/quests/bin/migrate.sh "$PWD/apps/web"
 
       # The gate. audio.test.ts asserts every file in the store is addressed by some
       # corpus line and range.test.ts covers Safari's bytes=0-1 probe; neither should
       # reach the droplet red.
       - name: Test
-        working-directory: apps/web-quests
+        working-directory: apps/web
         run: pnpm test
 
       - name: Build
-        working-directory: apps/web-quests
+        working-directory: apps/web
         run: pnpm build
 
       - name: Assemble release
@@ -107,10 +115,10 @@ jobs:
           # cp -a, never cp -r: pnpm's node_modules/next is a symlink into .pnpm/, and a
           # dereferencing copy detaches it from its siblings, so the bundle dies at boot
           # with "Cannot find module 'styled-jsx/package.json'". BSD cp -r dereferences.
-          cp -a apps/web-quests/.next/standalone/. "$R"/
+          cp -a apps/web/.next/standalone/. "$R"/
           # standalone does not include static assets or public/; without this the page
           # renders unstyled. (This project has no public/.)
-          cp -a apps/web-quests/.next/static "$R"/apps/web-quests/.next/static
+          cp -a apps/web/.next/static "$R"/apps/web/.next/static
           # The corpus ships inside the release so a rollback moves data and code together.
           # hiccups.json.gz rides along because it is derived from exactly this corpus, and
           # a glob for the reason the voice/ line below gives: the next file beside it
@@ -118,7 +126,7 @@ jobs:
           #
           # Laid out exactly as the repo lays it out, so paths.ts's DATA_ROOT resolves
           # inside the release without an environment variable: standalone chdirs to
-          # apps/web-quests/, and DATA_ROOT is two levels up plus pipelines/quests.
+          # apps/web/, and DATA_ROOT is two levels up plus pipelines/quests.
           mkdir -p "$R"/pipelines/quests/corpus
           cp pipelines/quests/corpus/*.json.gz "$R"/pipelines/quests/corpus/
           # Same reasoning for how a line is voiced. These are also what the Python CLI
@@ -133,9 +141,9 @@ jobs:
           cp pipelines/quests/voice/*.json "$R"/pipelines/quests/voice/
           # Migrations ship with the release too: activate.sh runs migrate.sh against the
           # release directory, so without this a deploy has nothing to apply.
-          cp -a apps/web-quests/migrations "$R"/migrations
-          test -f "$R"/apps/web-quests/server.js
-          test -L "$R"/apps/web-quests/node_modules/next   # symlink survived the copy
+          cp -a apps/web/migrations "$R"/migrations
+          test -f "$R"/apps/web/server.js
+          test -L "$R"/apps/web/node_modules/next   # symlink survived the copy
           test -f "$R"/migrations/0001_auth.sql
           test -f "$R"/migrations/0005_voiceline_version_credits.sql
           test -f "$R"/pipelines/quests/voice/generation.json
@@ -160,7 +168,7 @@ jobs:
           BETTER_AUTH_URL: http://127.0.0.1:3999
         run: |
           set -euo pipefail
-          VOICEOVER_CORPUS="$PWD/pipelines/quests/corpus/corpus.json.gz" node apps/web-quests/server.js &
+          VOICEOVER_CORPUS="$PWD/pipelines/quests/corpus/corpus.json.gz" node apps/web/server.js &
           pid=$!
           trap 'kill $pid 2>/dev/null || true' EXIT
           for i in $(seq 1 20); do

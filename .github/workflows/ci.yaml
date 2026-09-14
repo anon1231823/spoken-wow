@@ -42,8 +42,8 @@ jobs:
       # which vendored Ace3 each client's zip carries, so it needs the whole tree.
       - run: python -m pytest -q
 
-  web-quests:
-    name: Quests web
+  web:
+    name: Web
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -65,11 +65,11 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @spoken/web-quests typecheck
+      - run: pnpm --filter @spoken/web typecheck
       # Several suites run against a real Postgres on purpose: the invariants they protect
       # live in schema constraints, so a mocked database would stop testing them.
-      - run: deploy/quests/bin/migrate.sh "$PWD/apps/web-quests"
-      - run: pnpm --filter @spoken/web-quests test
+      - run: deploy/quests/bin/migrate.sh "$PWD/apps/web"
+      - run: pnpm --filter @spoken/web test
 
   web-zones:
     name: Zones web and pipeline

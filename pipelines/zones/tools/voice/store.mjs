@@ -9,7 +9,7 @@
 //
 // TWO MODES, ONE INTERFACE:
 //
-//   DATABASE_URL set    -> voiceline_take, with a row per take and a history
+//   DATABASE_URL set    -> the "take" table, with a row per take and a history
 //   DATABASE_URL unset  -> tools/voice/manifest.json, exactly as before
 //
 // The file mode is not a legacy path. manifest.json stays committed and is what
@@ -25,7 +25,7 @@ import { promisify } from "node:util";
 
 import { basename, extname } from "node:path";
 
-import { BASE_LOCALE, isLocale, packFolder } from "../lib/locales.mjs";
+import { BASE_LOCALE, isLocale, sourceFolder } from "../lib/locales.mjs";
 import { ROOT } from "../lib/loredata.mjs";
 import * as db from "./db.mjs";
 
@@ -34,13 +34,13 @@ const execFileAsync = promisify(execFile);
 // The language this process defaults to. The CLI sets it once and never passes a
 // language again -- a generation run is one language by nature. The explorer
 // ignores it and passes a language per request.
-export const LANG = process.env.ZONELORE_LANG || BASE_LOCALE;
+export const LANG = process.env.SPOKEN_ZONES_LANG || BASE_LOCALE;
 if (!isLocale(LANG)) {
-  throw new Error(`ZONELORE_LANG=${LANG} is not a WoW locale code`);
+  throw new Error(`SPOKEN_ZONES_LANG=${LANG} is not a WoW locale code`);
 }
 
 // Each of these can be overridden by an environment variable, and on the droplet each
-// one is: ZONELORE_ROOT points at the current release, and these three point *outside*
+// one is: SPOKEN_ZONES_ROOT points at the current release, and these three point *outside*
 // it. What they have in common is that the app writes them, so leaving them inside a
 // release would mean prune.sh deleting them five deploys later. See deploy/README.md.
 // Unset, which is every local run, they are exactly the repo paths they always were.
@@ -58,9 +58,9 @@ if (!isLocale(LANG)) {
 
 // tools/voice/manifest.json, or manifest.<lang>.json beside it. English keeps the
 // committed name: renaming a 392 KB file buys nothing and breaks every deployment
-// pointing ZONELORE_MANIFEST at it.
+// pointing SPOKEN_ZONES_MANIFEST at it.
 export function manifestPath(lang = LANG) {
-  const base = process.env.ZONELORE_MANIFEST || join(ROOT, "pipelines/zones/tools/voice/manifest.json");
+  const base = process.env.SPOKEN_ZONES_MANIFEST || join(ROOT, "pipelines/zones/tools/voice/manifest.json");
   if (lang === BASE_LOCALE) return base;
   const ext = extname(base);
   return join(dirname(base), `${basename(base, ext)}.${lang}${ext}`);
@@ -70,11 +70,11 @@ export function manifestPath(lang = LANG) {
 // live in ZoneLoreAudio -- its high tier -- and package-audio.sh transcodes down
 // from there.
 export function soundsDir(lang = LANG) {
-  const override = process.env.ZONELORE_SOUNDS;
+  const override = process.env.SPOKEN_ZONES_SOUNDS;
   if (override) {
-    return lang === BASE_LOCALE ? override : join(dirname(override), packFolder(lang, "high"));
+    return lang === BASE_LOCALE ? override : join(dirname(override), sourceFolder(lang));
   }
-  return join(ROOT, "addons", packFolder(lang, "high"), "Sounds");
+  return join(ROOT, "addons", sourceFolder(lang), "Sounds");
 }
 
 export const SAMPLES_DIR = join(ROOT, "pipelines/zones/audio-samples");
@@ -92,7 +92,7 @@ export const SAMPLES_DIR = join(ROOT, "pipelines/zones/audio-samples");
 // split two languages would share one version sequence for the same file, and a
 // restore would install whichever clip happened to be v2.
 export function historyDir(lang = LANG) {
-  const base = process.env.ZONELORE_AUDIO_HISTORY || join(ROOT, "pipelines/zones/audio-history");
+  const base = process.env.SPOKEN_ZONES_AUDIO_HISTORY || join(ROOT, "pipelines/zones/audio-history");
   return lang === BASE_LOCALE ? base : join(base, lang);
 }
 
@@ -111,6 +111,30 @@ const TAKE_COLUMNS = [
   "dictionaryId",
   "dictionaryVersionId",
 ];
+
+// This project's own source in the shared table. Both sites' takes live in one "take"
+// table now, and the two name files by different frozen rules -- quests files carry an
+// extension and are shared by several NPCs, these are extension-less and one per line --
+// so nothing here may read or write a row without saying which corpus it belongs to.
+const SOURCE = "zones";
+
+// Manifest field -> column, for the four the merge renamed. The manifest keys do NOT
+// change: manifest.json is committed, build-lookup.mjs and package-audio.sh read it, and
+// `make import && make export` must still leave it byte-identical. So the record shape is
+// the file's, and the column names are the table's, and this is where the two meet.
+const COLUMN_OF = {
+  textHash: "spokenHash",
+  chars: "characters",
+  dictionaryVersionId: "dictionaryVersion",
+  generatedAt: "createdAt",
+};
+
+const columnOf = (field) => COLUMN_OF[field] ?? field;
+
+// `"spokenHash" as "textHash"`, so a row comes back shaped like a manifest record and
+// every reader below stays written in the manifest's terms.
+const selectAs = (field) =>
+  COLUMN_OF[field] ? `"${COLUMN_OF[field]}" as "${field}"` : `"${field}"`;
 
 //------------------------------------------------------------------------------
 // Reading
@@ -150,9 +174,9 @@ async function loadFromFile(lang) {
 
 async function loadFromDatabase(lang) {
   const { rows } = await db.query(
-    `select "lineId", ${TAKE_COLUMNS.map((c) => `"${c}"`).join(", ")}, "generatedAt"
-       from "voiceline_take"
-      where "isCurrent" and "lang" = $1`,
+    `select "lineId", ${TAKE_COLUMNS.map(selectAs).join(", ")}, ${selectAs("generatedAt")}
+       from "take"
+      where "source" = '${SOURCE}' and "isCurrent" and "lang" = $1`,
     [lang],
   );
 
@@ -226,32 +250,41 @@ async function saveToDatabase(manifest, lang) {
 // apply, or the partial unique index would refuse every later write for this line and
 // the failure would look like a bug in the next run rather than this one.
 export async function insertTake(lineId, record, origin, settings = null, lang = LANG) {
+  // Retired and numbered BY FILE rather than by line, which is what the shared table's
+  // partial unique index is on. For this project the two are the same key -- naming.mjs
+  // gives every line a file of its own and disambiguates a slug collision by hash -- so
+  // this is the same set of rows under the name the index knows it by. Clearing by line
+  // and inserting by file is how a second live take would slip past.
+  const file = record.file;
+
   return db.transaction(async (client) => {
     await client.query(
-      `update "voiceline_take" set "isCurrent" = false
-        where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
-      [lineId, lang],
+      `update "take" set "isCurrent" = false
+        where "source" = '${SOURCE}' and "file" = $1 and "lang" = $2 and "isCurrent"`,
+      [file, lang],
     );
 
-    // The version comes from a select over this line's own rows rather than from the
+    // The version comes from a select over this file's own rows rather than from the
     // caller, so nothing outside this transaction has to know or guess it.
     const { rows } = await client.query(
-      `insert into "voiceline_take" (
-         "lineId", "lang", "version", "isCurrent", "origin", "settings",
-         ${TAKE_COLUMNS.map((c) => `"${c}"`).join(", ")}, "generatedAt"
+      `insert into "take" (
+         "source", "lineId", "lang", "version", "isCurrent", "origin", "settings",
+         ${TAKE_COLUMNS.map((c) => `"${columnOf(c)}"`).join(", ")}, "createdAt"
        )
-       select $1, $2,
+       select '${SOURCE}', $1, $2,
               coalesce(max("version"), 0) + 1,
               true, $3, $4::jsonb,
-              ${TAKE_COLUMNS.map((_, i) => `$${i + 5}`).join(", ")},
-              $${TAKE_COLUMNS.length + 5}::timestamptz
-         from "voiceline_take" where "lineId" = $1 and "lang" = $2
+              ${TAKE_COLUMNS.map((_, i) => `$${i + 6}`).join(", ")},
+              $${TAKE_COLUMNS.length + 6}::timestamptz
+         from "take"
+        where "source" = '${SOURCE}' and "file" = $5 and "lang" = $2
        returning "version"`,
       [
         lineId,
         lang,
         origin,
         settings === null ? null : JSON.stringify(settings),
+        file,
         ...TAKE_COLUMNS.map((column) => record[column] ?? null),
         record.generatedAt,
       ],
@@ -274,7 +307,7 @@ export async function insertTake(lineId, record, origin, settings = null, lang =
 // the file it wanted to keep already overwritten.
 //
 // `file` is store-relative and extension-less, e.g. "1411/razor-hill" -- the same
-// string the manifest, the lookup table and voiceline_take all carry. Returns the
+// string the manifest, the lookup table and the take table all carry. Returns the
 // absolute path written, which the caller needs for ffprobe and stat.
 export async function writeAudio(file, buffer, lang = LANG) {
   const path = join(soundsDir(lang), `${file}.mp3`);
@@ -311,7 +344,7 @@ async function archiveExisting(file, path, lang) {
   const dir = join(historyDir(lang), file);
   await mkdir(dir, { recursive: true });
 
-  // Numbered from what is already archived rather than from voiceline_take."version".
+  // Numbered from what is already archived rather than from take."version".
   // The two agree in database mode, but this has to work with DATABASE_URL unset too,
   // and a filename derived from the database would make the archive unreadable without
   // it.

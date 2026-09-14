@@ -18,13 +18,14 @@ import { apiKey, downloadDictionary, loadConfig, resolveDictionary } from "./ele
 import { parseDictionary, uncoveredSpellings } from "./lexicon.mjs";
 import { assignFiles, lineId } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
-import { localeInfo, packFolder } from "../lib/locales.mjs";
+import { localeInfo, sourceFolder } from "../lib/locales.mjs";
 import { LANG, loadManifest, soundsDir } from "./store.mjs";
 
 // The lookup of the language being validated, not English's: a LOCALE=deDE
 // packaging run that checked the German manifest against the English lookup
 // would fail on a correct pack and pass on an empty one.
-const LOOKUP_PATH = join(ROOT, "addons", packFolder(LANG, "high"), "Data/Sounds.lua");
+// The tree's directory, not the published folder name. See sourceFolder in lib/locales.mjs.
+const LOOKUP_PATH = join(ROOT, "addons", sourceFolder(LANG), "Data/Sounds.lua");
 
 const problems = [];
 const notes = [];

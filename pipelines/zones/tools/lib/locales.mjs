@@ -45,7 +45,27 @@ export function elevenLabsCode(locale) {
 }
 
 /**
- * The addon folder a language's sound pack ships in.
+ * The directory a language's sound pack lives in IN THIS REPOSITORY.
+ *
+ * Not the same thing as packFolder, and the difference has already caused one silent
+ * disagreement. The published folder name is frozen -- players have it installed, and
+ * renaming it is a re-download of every clip in it -- so it is still ZoneLoreAudio even
+ * though nothing here is called ZoneLore any more. The directory in the tree was renamed
+ * with everything else when the two projects merged. Deriving a repo path from the
+ * published name left soundsDir() pointing at addons/ZoneLoreAudio/Sounds, which does not
+ * exist, while `make zones-pull` filled addons/SpokenZonesAudio/Sounds, which does. Nothing
+ * noticed because the droplet sets SPOKEN_ZONES_SOUNDS and local runs had no audio pulled.
+ *
+ * scripts/zones/package-audio.sh has always drawn this line -- it rsyncs from the source
+ * directory into a staging folder named for the published one. This is that same line,
+ * available to the Node tools.
+ */
+export function sourceFolder(locale) {
+  return locale === BASE_LOCALE ? "SpokenZonesAudio" : `SpokenZonesAudio_${locale}`;
+}
+
+/**
+ * The addon folder a language's sound pack ships in, as installed by a player.
  *
  * English keeps the two folder names already published on CurseForge; renaming
  * either would orphan every installation. Other languages ship one VBR tier, so

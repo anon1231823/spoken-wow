@@ -11,13 +11,26 @@ Four things share one tree, and they are not equally finished:
    `SpokenZones` are feature addons that queue clips through it;
    `SpokenZonesAudio` is a sound pack. `addons/vendor/` holds upstream's
    addons as a diff baseline and nothing builds them.
-2. `apps/` — two Next.js sites, on two domains, against two databases. They
-   are scheduled to merge; until then they are separate.
+2. `apps/` — `web` is the site being built: one domain, `spoken.rusty.one`, with a
+   quests section and a zones section. `web-zones` is the site it is absorbing, and
+   stays until the cutover so its code can be read beside the port of it.
 3. `pipelines/` — `quests/` is Python, `zones/` is Node. Also scheduled to
-   merge, onto TypeScript.
+   merge, onto TypeScript. The zones half is not merely a CLI any more: the site
+   imports it (`apps/web/src/lib/zones/tools.ts`) and webpack compiles it into
+   the bundle, so a change there is a change to the site.
 4. `packages/` — where the shared TypeScript will live. Empty for now.
+5. `deploy/` — one directory per deployment. `web/` is the live one; `quests/`
+   and `zones/` describe the two frozen sites and are kept matching them.
 
 ## Rules that are load-bearing
+
+**The two live sites are frozen.** voiceover.rusty.one and lore.rusty.one keep
+serving the releases they have, and neither deploy workflow runs from `main` any
+more — both are dispatch-only and refuse a ref where the merge has landed. Nothing
+on this branch reaches a live site until spoken.rusty.one is stood up beside them
+and the DNS is pointed at it. That means `deploy/quests/` and `deploy/zones/`
+describe what is *running*, not what the code says: leave them matching the
+droplet. A hotfix to either site is a dispatch against the `legacy-freeze` tag.
 
 **Filenames and line ids are frozen.** `q:33:accept`, `g:{md5}`, `z:{mapID}`,
 `s:{mapID}:{key}` and their paths on disk do not change. Renaming one means

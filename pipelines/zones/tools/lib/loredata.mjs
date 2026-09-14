@@ -34,7 +34,7 @@ import { BASE_LOCALE } from "./locales.mjs";
 // Unset -- which is every local run, CLI or `next dev` -- this behaves exactly as it
 // did before. See deploy/README.md for the full set.
 export const ROOT =
-  process.env.ZONELORE_ROOT ||
+  process.env.SPOKEN_ZONES_ROOT ||
   join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 // One corpus per language, under its own locale directory. A language with no
 // text has no directory at all rather than a pair of empty files: the addon

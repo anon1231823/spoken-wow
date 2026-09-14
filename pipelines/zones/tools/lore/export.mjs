@@ -3,7 +3,7 @@
 //
 //   node tools/lore/export.mjs           # write both files
 //   node tools/lore/export.mjs --check   # fail if the files are out of date, write nothing
-//   ZONELORE_LANG=deDE node tools/lore/export.mjs   # a language other than English
+//   SPOKEN_ZONES_LANG=deDE node tools/lore/export.mjs   # a language other than English
 //
 // The counterpart to tools/voice/export-manifest.mjs, and there for the same reason: the
 // database is where the corpus is authored, and a file is what the addon ships. Between
@@ -29,9 +29,9 @@ await loadEnvFile();
 const argv = process.argv.slice(2);
 const checkOnly = argv.includes("--check");
 
-const lang = process.env.ZONELORE_LANG || BASE_LOCALE;
+const lang = process.env.SPOKEN_ZONES_LANG || BASE_LOCALE;
 if (!isLocale(lang)) {
-  console.error(`error: ZONELORE_LANG=${lang} is not a WoW locale code.`);
+  console.error(`error: SPOKEN_ZONES_LANG=${lang} is not a WoW locale code.`);
   process.exit(1);
 }
 

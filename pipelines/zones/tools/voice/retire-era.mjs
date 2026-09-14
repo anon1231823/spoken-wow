@@ -8,14 +8,14 @@
 // game, and the voice pipeline dutifully paid for all of them. The scrape and
 // the export now filter against tools/seed/era-areas.json, which stops the
 // spend going forward; this claws back what already shipped: the takes flip to
-// non-current in voiceline_take and the masters move to audio-history/, the
+// non-current in the take table and the masters move to audio-history/, the
 // same reversible retirement a re-roll performs. Nothing is deleted -- the
 // takes were paid for, and restoreTake puts any of them back without a second
 // purchase.
 //
 // Run `make lookup` afterwards to re-export the manifest and rebuild Sounds.lua.
 //
-// Database mode only: the manifest is an export of voiceline_take, so pruning
+// Database mode only: the manifest is an export of the take table, so pruning
 // the file alone would be undone by the next export.
 
 import { loadEraAreas } from "../lib/era.mjs";
@@ -31,7 +31,7 @@ const apply = process.argv.includes("--apply");
 async function main() {
   if (!db.isEnabled()) {
     console.error("error: DATABASE_URL is not set. The manifest is exported from");
-    console.error("       voiceline_take, so retiring has to happen there.");
+    console.error("       the take table, so retiring has to happen there.");
     process.exit(1);
   }
 
@@ -65,8 +65,8 @@ async function main() {
   // archiving only this language's masters -- the other languages' audio would
   // be lost with no audio-history entry to restore it from.
   await db.query(
-    `update "voiceline_take" set "isCurrent" = false
-      where "isCurrent" and "lang" = $2 and "lineId" = any($1)`,
+    `update "take" set "isCurrent" = false
+      where "source" = 'zones' and "isCurrent" and "lang" = $2 and "lineId" = any($1)`,
     [targets.map((t) => t.id), LANG],
   );
 
