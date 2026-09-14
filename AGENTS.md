@@ -15,8 +15,12 @@ Four things share one tree, and they are not equally finished:
    quests section and a zones section. `web-zones` is the site it is absorbing, and
    stays until the cutover so its code can be read beside the port of it.
 3. `pipelines/` — `quests/` is Python, `zones/` is Node. Also scheduled to
-   merge, onto TypeScript.
+   merge, onto TypeScript. The zones half is not merely a CLI any more: the site
+   imports it (`apps/web/src/lib/zones/tools.ts`) and webpack compiles it into
+   the bundle, so a change there is a change to the site.
 4. `packages/` — where the shared TypeScript will live. Empty for now.
+5. `deploy/` — one directory per deployment. `web/` is the live one; `quests/`
+   and `zones/` describe the two frozen sites and are kept matching them.
 
 ## Rules that are load-bearing
 

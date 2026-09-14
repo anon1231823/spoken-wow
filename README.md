@@ -19,9 +19,12 @@ clients have no manager to do it for them.
 
 ```
 addons/      the player, the feature addons, and the sound packs
-apps/        the websites (Next.js)
+apps/web     the site: spoken.rusty.one, with a quests section and a zones one
+apps/web-zones
+             the site it absorbed, kept until the cutover
 pipelines/   corpus extraction and voiceline generation
              quests/ is Python, zones/ is Node
+deploy/      one directory per deployment; web/ is the live one
 packages/    shared TypeScript
 tests/lua/   the luajit addon harness
 make/        one Makefile per project; the root Makefile dispatches
@@ -33,6 +36,7 @@ docs/        each project's own prose, until it is merged
 `make help` lists what is available. Targets are prefixed by project:
 
 ```
+make web-<target>       # see make/web.mk   -- the site and its droplet
 make quests-<target>    # see make/quests.mk
 make zones-<target>     # see make/zones.mk
 make test-player        # the Lua harness, all addons

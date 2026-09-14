@@ -994,7 +994,13 @@ The **spoken** text is what gets hashed into the manifest, so editing
 That file ships empty on purpose: every rule in it is a claim that the model
 mispronounces a word, and that claim can only be made after listening.
 
-### The pronunciation lexicon lives in wow-voiceover
+### The pronunciation lexicon lives on the quests side
+
+> Both projects are one site now. The lexicon did not move: it is edited at
+> spoken.rusty.one/lexicon, which is the same editor under a shared roof, and the paragraph
+> below still describes why zone lore does not have one of its own.
+
+#### As it was written
 
 A mispronounced name is fixed **in `../wow-voiceover`**, at its `/lexicon` page,
 not here. That project narrates a different corpus on the same ElevenLabs account
