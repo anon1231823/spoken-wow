@@ -93,11 +93,31 @@ chmod 600 /srv/spoken/shared/app.env
 prints what is left. Then, from a workstation, `make web-deploy-scripts`.
 
 **Stage on port 3002 until the cutover.** Port 3000 belongs to voiceover until it is stopped.
-Set `PORT: 3002` in `shared/ecosystem.config.js`, deploy, and reach it over an ssh tunnel:
+
+The port goes in `shared/app.env`, not in `ecosystem.config.js`: that file spreads
+`readSecrets()` last, so `PORT=3002` in app.env overrides the literal above it. A staging
+port is a fact about one box, which is exactly what app.env is for — and it means the
+cutover deletes a line rather than reverting a commit.
+
+Either reach it over an ssh tunnel:
 
 ```bash
-ssh -L 3002:127.0.0.1:3002 deploy@rusty.one
+ssh -L 3002:127.0.0.1:3002 deploy@rusty.one     # then http://127.0.0.1:3002
 ```
+
+…or install the vhost early, pointed at the staging port. `nginx-spoken.conf` names the
+upstream once for exactly this:
+
+```nginx
+upstream spoken_app {
+    server 127.0.0.1:3002;    # 3000 at cutover
+```
+
+The second way gets the real certificate and a real origin, so sign-in works — but it also
+makes a half-migrated site publicly reachable, with no zone lore and every quest line
+showing as a gap. Whichever you pick, `BETTER_AUTH_URL` must match the origin you actually
+use, or every sign-in returns `403 Invalid origin`: `http://127.0.0.1:3002` for the tunnel,
+`https://spoken.rusty.one` for the vhost.
 
 **Do not regenerate anything on the staged site.** It writes into `shared/`, which at that
 point is a copy that the cutover is about to overwrite, and the credits would be spent on a
@@ -129,8 +149,8 @@ ZONELORE_URL=postgres://zonelore:…@127.0.0.1:5432/zonelore \
   make web-migrate-legacy
 
 # 5. Port 3000, and start.
-#    Set PORT back to 3000 in deploy/web/ecosystem.config.js, then:
-make web-deploy-scripts
+#    Delete the PORT line from /srv/spoken/shared/app.env, set BETTER_AUTH_URL to
+#    https://spoken.rusty.one there, and point the upstream in nginx-spoken.conf at 3000.
 ssh deploy@rusty.one 'pm2 startOrReload /srv/spoken/shared/ecosystem.config.js --update-env'
 
 # 6. nginx: the new vhost, and the two old ones become redirects.
