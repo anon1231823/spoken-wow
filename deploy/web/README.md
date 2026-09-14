@@ -161,12 +161,21 @@ ZONELORE_URL=postgres://zonelore:…@127.0.0.1:5432/zonelore \
   make web-migrate-lines      # lore_line, line_flag, take; writes no migration marker
 ```
 
+The reports can move early too, for the same reason - a triage page with nothing in it
+cannot be looked at - and need the quests database as well as the zones one:
+
+```bash
+make web-migrate-reports    # line_report and feedback into report; replaces by source
+```
+
 The split is which rows can be thrown away and written again. Those three are statements
 about a zone line that lore.rusty.one holds the only copy of, so the import deletes and
-re-copies each wholesale and can be run as often as it is useful. Accounts, sealed keys and
-reports cannot be treated that way — accounts merge into rows this database already has,
-and reports are deliberately never deduplicated — so they move exactly once, at the
-cutover, by the import below, which refuses to run a second time.
+re-copies each wholesale and can be run as often as it is useful. Accounts and sealed keys cannot be treated that way — they
+merge into rows this database already has — so they move exactly once, at the cutover, by
+the import below, which refuses to run a second time. Reports are replaceable only because
+the copy deletes this database's reports for that source first: nothing about a report is
+unique, and three people reporting one line is the signal the table exists to carry, so a
+second copy that merged would double every row.
 
 **Do not regenerate anything on the staged site.** It writes into `shared/`, which at that
 point is a copy that the cutover is about to overwrite, and the credits would be spent on a

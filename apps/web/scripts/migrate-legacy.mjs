@@ -3,7 +3,7 @@
  *
  *   DATABASE_URL=postgres://…/spoken \
  *   ZONELORE_URL=postgres://…/zonelore \
- *   node apps/web/scripts/migrate-legacy.mjs [--dry-run] [--lines]
+ *   node apps/web/scripts/migrate-legacy.mjs [--dry-run] [--lines] [--reports]
  *
  * WHAT THIS DOES NOT DO: the quests half. That database is restored wholesale --
  * `pg_dump voiceover | psql spoken`, then the migrations -- because the merged schema was
@@ -53,13 +53,34 @@ const DRY_RUN = process.argv.includes("--dry-run");
  */
 const LINES_ONLY = process.argv.includes("--lines");
 
+/**
+ * Copy the reports both sections have collected, and nothing else.
+ *
+ * A staging mode like --lines, and the same bargain: it replaces this database's reports
+ * with the ones the two old sites hold, rather than merging into them, so it can be run
+ * again. That is safe only because the rows it deletes came from those sites in the first
+ * place -- a report filed against the staged site itself would be thrown away, which is
+ * the cost of being able to re-run at all.
+ *
+ * It needs the quests database as well, which the full import deliberately does not: at
+ * the cutover the quests half arrives as a restored dump and migration 0021 copies its
+ * reports into the merged table as it applies. There is no dump here, so the same copy is
+ * made directly, from the same columns, against a live connection.
+ */
+const REPORTS_ONLY = process.argv.includes("--reports");
+
 const TARGET = process.env.DATABASE_URL;
 const SOURCE = process.env.ZONELORE_URL;
+const VOICEOVER = process.env.VOICEOVER_URL;
 
 if (!TARGET || !SOURCE) {
   console.error(
     "usage: DATABASE_URL=… ZONELORE_URL=… node apps/web/scripts/migrate-legacy.mjs [--dry-run]",
   );
+  process.exit(1);
+}
+if (REPORTS_ONLY && !VOICEOVER) {
+  console.error("--reports also needs VOICEOVER_URL: the quests reports are read from it");
   process.exit(1);
 }
 if (TARGET === SOURCE) {
@@ -99,15 +120,17 @@ const TAKE_COLUMNS = [
 async function main() {
   const source = new pg.Client({ connectionString: SOURCE });
   const target = new pg.Client({ connectionString: TARGET });
+  const voiceover = VOICEOVER ? new pg.Client({ connectionString: VOICEOVER }) : null;
   await source.connect();
   await target.connect();
+  if (voiceover) await voiceover.connect();
 
   try {
     const already = await target.query(
       `select 1 from "schema_migrations" where "name" = $1`,
       ["legacy-zones-import"],
     );
-    if (already.rowCount && !LINES_ONLY) {
+    if (already.rowCount && !LINES_ONLY && !REPORTS_ONLY) {
       throw new Error(
         "the zones data has already been imported into this database. Restore it from the " +
           "pg_dump and start again if you need to re-run.",
@@ -115,6 +138,30 @@ async function main() {
     }
 
     await target.query("begin");
+
+    if (REPORTS_ONLY) {
+      // Users first, and for the same reason the full import does it first: a zones report
+      // carries a zones user id, and the merged table wants this database's. Any zones
+      // account with no match here is created, which is what the cutover would do anyway.
+      const users = await mergeUsers(source, target);
+      const quests = await copyQuestReports(voiceover, target);
+      const zones = await copyReports(source, target, users);
+
+      console.log("");
+      console.log(`  report     ${quests.rows} from voiceover` +
+        (quests.replaced ? `, replacing ${quests.replaced}` : ""));
+      console.log(`  report     ${zones.rows} from zonelore` +
+        (zones.replaced ? `, replacing ${zones.replaced}` : ""));
+      console.log("");
+      if (DRY_RUN) {
+        await target.query("rollback");
+        console.log("dry run: rolled back, nothing was written");
+      } else {
+        await target.query("commit");
+        console.log("committed. Reports only -- keys and the rest still move at the cutover.");
+      }
+      return;
+    }
 
     if (LINES_ONLY) {
       const lore = await copyLore(source, target);
@@ -159,7 +206,7 @@ async function main() {
     console.log(`  lore_line  ${lore.rows} rows across ${lore.langs} languages`);
     console.log(`  line_flag  ${flags.rows} verdicts`);
     console.log(`  take       ${takes.rows} zone takes`);
-    console.log(`  report     ${reports} reports`);
+    console.log(`  report     ${reports.rows} reports`);
     console.log("");
 
     if (DRY_RUN) {
@@ -175,6 +222,7 @@ async function main() {
   } finally {
     await source.end();
     await target.end();
+    if (voiceover) await voiceover.end();
   }
 }
 
@@ -451,6 +499,11 @@ async function copyTakes(source, target) {
  * disagreeing. A report about the project itself has no line and keeps no target.
  */
 async function copyReports(source, target, users) {
+  // Replaced rather than added to, so this can be run again. Reports are deliberately
+  // never deduplicated -- three people reporting one line is the most useful signal this
+  // table carries -- so a second copy that merged would double every row.
+  const replaced = await target.query(`delete from "report" where "source" = 'zones'`);
+
   const { rows: files } = await target.query(
     `select "lineId", "file" from "take" where "source" = 'zones' and "isCurrent"`,
   );
@@ -486,7 +539,57 @@ async function copyReports(source, target, users) {
     );
   }
 
-  return rows.length;
+  return { rows: rows.length, replaced: replaced.rowCount ?? 0 };
+}
+
+/**
+ * The quests reports, from line_report into the merged table.
+ *
+ * The same copy migration 0021 makes, made against a live connection instead of a restored
+ * dump. Columns and order are 0021's; keep the two in step by hand, and prefer changing
+ * 0021 -- it is the one that runs at the cutover.
+ *
+ * "userId" and "resolvedBy" are carried across only where this database has that account.
+ * The ids match because the accounts came from the same table, but a report whose author
+ * has since been deleted would otherwise violate the foreign key and take the whole
+ * transaction with it.
+ */
+async function copyQuestReports(voiceover, target) {
+  const replaced = await target.query(`delete from "report" where "source" = 'quests'`);
+
+  const { rows } = await voiceover.query(
+    `select "lineId", "target", "category", "body", "status", "userId", "name", "email",
+            "ip", "createdAt", "resolvedAt", "resolvedBy"
+       from "line_report" order by "id"`,
+  );
+
+  for (const row of rows) {
+    await target.query(
+      `insert into "report" ("source", "lang", "lineId", "target", "category", "body",
+                             "status", "userId", "name", "email", "ip", "createdAt",
+                             "resolvedAt", "resolvedBy")
+       values ('quests', 'enUS', $1, $2, $3, $4, $5,
+               (select "id" from "user" where "id" = $6),
+               $7, $8, $9, $10, $11,
+               (select "id" from "user" where "id" = $12))`,
+      [
+        row.lineId,
+        row.target,
+        row.category,
+        row.body,
+        row.status,
+        row.userId,
+        row.name,
+        row.email,
+        row.ip,
+        row.createdAt,
+        row.resolvedAt,
+        row.resolvedBy,
+      ],
+    );
+  }
+
+  return { rows: rows.length, replaced: replaced.rowCount ?? 0 };
 }
 
 main().catch((error) => {

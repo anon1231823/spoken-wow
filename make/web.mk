@@ -13,7 +13,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help dev build typecheck test bootstrap deploy-scripts releases rollback logs \
-        ssh-check store cutover-audio migrate-legacy migrate-legacy-dry migrate-lines
+        ssh-check store cutover-audio migrate-legacy migrate-legacy-dry migrate-lines migrate-reports
 
 APP := @spoken/web
 
@@ -121,7 +121,11 @@ cutover-audio: ## Copy both old sites' shared/ into /srv/spoken/shared (COPIES, 
 # node_modules. The connection strings are read from the two app.env files there, so no
 # password is typed, stored in a shell history, or carried across the wire.
 define remote-import
-$(SSH) $(DROPLET) 'cd $(REMOTE_ROOT)/current/apps/web && 	DATABASE_URL=$$(sed -n "s/^DATABASE_URL=//p" $(REMOTE_ROOT)/shared/app.env) 	ZONELORE_URL=$$(sed -n "s/^DATABASE_URL=//p" $(OLD_ZONES)/shared/app.env) 	node scripts/migrate-legacy.mjs $(1)'
+$(SSH) $(DROPLET) 'cd $(REMOTE_ROOT)/current/apps/web && \
+  DATABASE_URL=$$(sed -n "s/^DATABASE_URL=//p" $(REMOTE_ROOT)/shared/app.env) \
+  ZONELORE_URL=$$(sed -n "s/^DATABASE_URL=//p" $(OLD_ZONES)/shared/app.env) \
+  VOICEOVER_URL=$$(sed -n "s/^DATABASE_URL=//p" $(OLD_QUESTS)/shared/app.env) \
+  node scripts/migrate-legacy.mjs $(1)'
 endef
 
 migrate-lines: ## Copy the zones corpus, flags and takes onto the droplet (rerunnable)
@@ -131,6 +135,13 @@ migrate-lines: ## Copy the zones corpus, flags and takes onto the droplet (rerun
 # re-copying them replaces them with themselves and this can be run whenever it is useful.
 # Accounts, sealed keys and reports cannot be: accounts merge into rows this database
 # already has, and reports are never deduplicated. Those move once, at the cutover, below.
+
+migrate-reports: ## Copy both sections' reports onto the droplet (rerunnable, pre-cutover)
+	@$(call remote-import,--reports)
+
+# Reports move early only because a triage page with nothing in it cannot be looked at.
+# They are replaced by source rather than merged, since nothing about a report is unique --
+# three people reporting one line is the signal the table exists to carry.
 
 migrate-legacy-dry: ## Rehearse the full zones import on the droplet (writes nothing)
 	@$(call remote-import,--dry-run)
