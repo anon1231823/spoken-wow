@@ -219,32 +219,82 @@ describe("startWorker", () => {
   });
 
   /**
-   * A claim for a section this build cannot generate is a bug, not a state: the enqueue path
-   * for it does not exist yet. It fails fatally rather than being handed to the other
-   * section's generator, which would be asked for a line id that corpus has never heard of
-   * and would answer "no line" once per job for the length of the batch.
+   * The dispatch, which is what the source column is for. Handing a zones job to the quests
+   * generator would ask that corpus for a line id it has never heard of, and it would
+   * answer "no line" once per job for the length of the batch.
    */
-  it("refuses a job whose section has no generator, rather than guessing", async () => {
-    const batch = await seed(3, "zones");
-    let generated = 0;
+  it("sends a job to the generator for its own section", async () => {
+    const batch = await seed(2, "zones");
+    const seen: string[] = [];
+
     const worker = startWorker(() => true, {
       apiKeyFor: KEYED,
       budget: async () => 1,
       regenerate: {
-        quests: async () => {
-          generated += 1;
+        quests: async (lineId) => {
+          seen.push(`quests:${lineId}`);
           return OK;
+        },
+        zones: async (lineId) => {
+          seen.push(`zones:${lineId}`);
+          return OK;
+        },
+      },
+      // The real one rewrites the addon's whole lookup table; this test is about which
+      // generator ran, and publishing is the queue's business either way.
+      afterDrain: {},
+    });
+
+    await until(async () => (await statesOf(batch)).done === 2);
+    await worker.stop();
+
+    expect(seen).toHaveLength(2);
+    expect(seen.every((entry) => entry.startsWith("zones:"))).toBe(true);
+  });
+
+  /**
+   * The zones side rebuilds the addon's lookup table after a take changes, and that
+   * rewrites all 1,353 rows -- so it runs when the queue empties rather than per line.
+   */
+  it("publishes once after the queue drains, not once per line", async () => {
+    const batch = await seed(3, "zones");
+    let published = 0;
+
+    const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
+      budget: async () => 1,
+      regenerate: { zones: async () => OK },
+      afterDrain: {
+        zones: async () => {
+          published += 1;
         },
       },
     });
 
-    await until(async () => {
-      const states = await statesOf(batch);
-      return (states.cancelled ?? 0) === 2 && (states.failed ?? 0) === 1;
-    });
+    await until(async () => (await statesOf(batch)).done === 3);
+    await until(async () => published > 0);
     await worker.stop();
 
-    expect(generated).toBe(0);
+    expect(published).toBe(1);
+  });
+
+  /** An idle queue publishes nothing: every tick would otherwise rewrite that table. */
+  it("does not publish when it generated nothing", async () => {
+    let published = 0;
+    const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
+      afterDrain: {
+        zones: async () => {
+          published += 1;
+        },
+      },
+      idleMs: 10,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 120));
+    await worker.stop();
+
+    expect(published).toBe(0);
   });
 
   it("keeps going after a failure that is not fatal", async () => {

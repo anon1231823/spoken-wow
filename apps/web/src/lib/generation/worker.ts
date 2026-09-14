@@ -24,6 +24,7 @@ import {
   type Source,
 } from "./queue";
 import { regenerateLine, type RegenerateResult } from "./regenerate";
+import { publish as publishZones, regenerateZoneLine } from "@/lib/zones/regenerate";
 import { readSettings } from "./settings";
 import { generationStatus } from "./status";
 
@@ -88,6 +89,15 @@ export type WorkerOptions = {
    */
   regenerate?: Partial<Record<Source, Generator>>;
   budget?: (apiKey: string | null) => Promise<number>;
+  /**
+   * Run once after the queue empties, per source that generated anything.
+   *
+   * The zones side has to rebuild the addon's lookup table after a take changes, and that
+   * rewrites all 1,353 rows -- doing it per line would be the slowest part of a run that is
+   * otherwise waiting on ElevenLabs. Per drain rather than per batch, because two batches
+   * can be in flight and the answer is the same either way.
+   */
+  afterDrain?: Partial<Record<Source, () => Promise<void>>>;
   /** The owner's stored key. Injectable so a test never needs one sealed in a database. */
   apiKeyFor?: (userId: string) => Promise<string | null>;
   backoffMs?: (attempts: number) => number;
@@ -110,8 +120,16 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
   // corpus has never heard of.
   const generators: Record<Source, Generator | null> = {
     quests: options.regenerate?.quests ?? regenerateLine,
-    zones: options.regenerate?.zones ?? null,
+    zones: options.regenerate?.zones ?? regenerateZoneLine,
   };
+
+  // Only the sources that actually generated something this drain. Publishing for a
+  // section nobody touched would rewrite a table for no reason, and doing it on a drain
+  // that generated nothing at all -- which is every idle tick -- would do it forever.
+  const afterDrain: Partial<Record<Source, () => Promise<void>>> = options.afterDrain ?? {
+    zones: () => publishZones(),
+  };
+  const generated = new Set<Source>();
   const budget = options.budget ?? currentBudget;
   const apiKeyFor = options.apiKeyFor ?? readApiKey;
   const backoff = options.backoffMs ?? backoffFor;
@@ -157,6 +175,7 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
       return;
     }
     lastKey = apiKey;
+    generated.add(job.source);
 
     const generate = generators[job.source];
     if (!generate) {
@@ -241,7 +260,12 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
 
       while (!stopped && isLeader() && running.size < allowed) {
         const job = await claimNext(options.leaseMs);
-        if (!job) return;
+        if (!job) {
+          // Nothing left to claim. If work is still settling, the pump that follows it
+          // will come back here with running.size at zero and publish then.
+          if (running.size === 0) await drain();
+          return;
+        }
 
         if (stopped) {
           // A stop landed while this claim's round trip was in flight. claimNext already
@@ -270,6 +294,29 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
           timer = null;
           void pump();
         }, idleMs);
+      }
+    }
+  }
+
+  /**
+   * Publish what this drain generated, once.
+   *
+   * Failures are logged rather than thrown: the takes are already on disk and in the
+   * table, so a lookup that could not be rewritten is a stale addon table rather than a
+   * lost line, and the next drain rebuilds it. Throwing here would take down the pump.
+   */
+  async function drain(): Promise<void> {
+    if (generated.size === 0) return;
+    const sources = [...generated];
+    generated.clear();
+
+    for (const source of sources) {
+      const publish = afterDrain[source];
+      if (!publish) continue;
+      try {
+        await publish();
+      } catch (error) {
+        console.error(`regeneration queue: could not publish ${source} after a drain`, error);
       }
     }
   }
