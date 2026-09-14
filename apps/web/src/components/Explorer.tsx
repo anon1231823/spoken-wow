@@ -743,8 +743,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
             <col className="w-52" />
             <col className="w-48" />
             <col className="w-32" />
-            <col className="w-28" />
             <col />
+            <col className="w-28" />
             {/* Wide enough for what the cell actually holds, which the old w-20 was not: icon
                 buttons are 32px, and a collaborator can have five of them side by side - report,
                 edit, ignore, history, regenerate - so anything narrower pushes them left over
@@ -757,8 +757,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
               <th className="px-2 pb-1 font-medium">NPC / object</th>
               <th className="px-2 pb-1 font-medium">Quest</th>
               <th className="px-2 pb-1 font-medium">Race / gender / flavor</th>
-              <th className="px-2 pb-1 font-medium">Issue</th>
               <th className="px-2 pb-1 font-medium">Line</th>
+              <th className="px-2 pb-1 font-medium">Issue</th>
               <th className="sr-only">Actions</th>
             </tr>
           </thead>

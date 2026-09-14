@@ -661,24 +661,24 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         <colgroup>
           <col className="w-40" />
           <col className="w-44" />
+          <col />
           {/* The review column narrows for a visitor rather than being drawn empty: it
               keeps the verdict badge and the report count, and loses the three controls.
               The width lands on Lore, which is what anyone here to read came for. */}
-          <col className={canReview ? "w-44" : "w-20"} />
-          <col />
-          {/* Wide enough for what the cell actually holds: icon buttons are 32px, and an
-              editor can have four side by side - report, edit, restore, regenerate - so
-              anything narrower pushes them left over the prose. w-10 for everyone else,
-              who has the report button and nothing more; never w-0, since that button is
-              not gated. */}
-          <col className={canRegenerate ? "w-36" : "w-10"} />
+          <col className={canReview ? "w-40" : "w-20"} />
+          {/* Wide enough for what the cell actually holds: icon buttons are 32px, an editor
+              can have four side by side - report, edit, restore, regenerate - and the take
+              version sits in front of them. Anything narrower and the row overflows left
+              over the prose. w-10 for everyone else, who has the report button and nothing
+              more; never w-0, since that button is not gated. */}
+          <col className={canRegenerate ? "w-48" : "w-10"} />
         </colgroup>
         <thead>
           <tr className="text-muted-foreground border-border border-b text-left text-xs">
             <th className="px-2 pb-1 font-medium">Zone</th>
             <th className="px-2 pb-1 font-medium">Subzone</th>
-            <th className="px-2 pb-1 font-medium">Review</th>
             <th className="px-2 pb-1 font-medium">Lore</th>
+            <th className="px-2 pb-1 font-medium">Review</th>
             <th className="sr-only">Actions</th>
           </tr>
         </thead>

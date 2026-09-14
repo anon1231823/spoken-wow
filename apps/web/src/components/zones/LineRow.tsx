@@ -126,6 +126,79 @@ export function LineRow({
         )}
       </td>
 
+      {/* The prose is plain markup rather than the label of a button, which is what makes it
+          selectable: text inside a <button> cannot reliably be dragged over and copied. That
+          is why playing needs a control of its own. */}
+      <td className="p-0">
+        <div className="flex w-full min-w-0 items-start gap-2 px-2 py-2">
+          <button
+            aria-current={current}
+            disabled={!playable}
+            onClick={() => onPlay(line)}
+            title={playable ? `${line.file}.mp3` : undefined}
+            aria-label={`Play ${line.name}`}
+            className={cn(
+              "mt-px shrink-0 rounded-sm p-0.5",
+              "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
+              playable
+                ? "text-muted-foreground hover:text-foreground cursor-pointer"
+                : "text-muted-foreground/30 cursor-default",
+              current && "text-foreground",
+            )}
+          >
+            <PlayIcon className="size-3.5" />
+          </button>
+
+          {/* An untranslated line is empty, not English: see buildOverlaidCatalogue. The word
+              stands in for the text so the row still says what it is, without putting prose
+              there that nobody wrote in this language. */}
+          {line.translated === false ? (
+            <span className={cn("min-w-0 flex-1 text-xs", STATE_STYLE.missing)}>
+              no translation
+            </span>
+          ) : (
+            <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "clamp-2")}>
+              {line.text}
+            </span>
+          )}
+
+          {/* The regeneration outcome replaces the state chips: once a line has just been
+              made, "no audio" is stale and confusing rather than merely redundant. */}
+          {state?.phase === "error" ? (
+            <span className="text-destructive mt-0.5 max-w-[12rem] shrink-0 text-right text-xs">
+              {state.message}
+            </span>
+          ) : state?.phase === "done" ? (
+            <span className="mt-0.5 shrink-0 text-xs text-emerald-400">
+              regenerated · v{state.version}
+            </span>
+          ) : (
+            STATE_LABEL[line.state] && (
+              <span className={cn("mt-0.5 shrink-0 text-xs", STATE_STYLE[line.state])}>
+                {STATE_LABEL[line.state]}
+              </span>
+            )
+          )}
+
+          {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle needs
+              a real control. It doubles as the only thing on screen saying rows expand. */}
+          <button
+            aria-expanded={expanded}
+            aria-label={expanded ? "Collapse this line" : "Show the whole line"}
+            title={expanded ? "Collapse" : "Show the whole line"}
+            onClick={() => setExpanded((open) => !open)}
+            className={cn(
+              "text-muted-foreground hover:text-foreground mt-px shrink-0 cursor-pointer rounded-sm p-0.5",
+              "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
+            )}
+          >
+            <ChevronDownIcon
+              className={cn("size-3.5 transition-transform", expanded && "rotate-180")}
+            />
+          </button>
+        </div>
+      </td>
+
       {/* The reviewer's verdict on this line, which is the zones section's own column: the
           quests explorer has a machine's finding here instead. */}
       <td className="px-2 py-2 whitespace-nowrap">
@@ -224,80 +297,7 @@ export function LineRow({
         </div>
       </td>
 
-      {/* The prose is plain markup rather than the label of a button, which is what makes it
-          selectable: text inside a <button> cannot reliably be dragged over and copied. That
-          is why playing needs a control of its own. */}
-      <td className="p-0">
-        <div className="flex w-full min-w-0 items-start gap-2 px-2 py-2">
-          <button
-            aria-current={current}
-            disabled={!playable}
-            onClick={() => onPlay(line)}
-            title={playable ? `${line.file}.mp3` : undefined}
-            aria-label={`Play ${line.name}`}
-            className={cn(
-              "mt-px shrink-0 rounded-sm p-0.5",
-              "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
-              playable
-                ? "text-muted-foreground hover:text-foreground cursor-pointer"
-                : "text-muted-foreground/30 cursor-default",
-              current && "text-foreground",
-            )}
-          >
-            <PlayIcon className="size-3.5" />
-          </button>
-
-          {/* An untranslated line is empty, not English: see buildOverlaidCatalogue. The word
-              stands in for the text so the row still says what it is, without putting prose
-              there that nobody wrote in this language. */}
-          {line.translated === false ? (
-            <span className={cn("min-w-0 flex-1 text-xs", STATE_STYLE.missing)}>
-              no translation
-            </span>
-          ) : (
-            <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "clamp-2")}>
-              {line.text}
-            </span>
-          )}
-
-          {/* The regeneration outcome replaces the state chips: once a line has just been
-              made, "no audio" is stale and confusing rather than merely redundant. */}
-          {state?.phase === "error" ? (
-            <span className="text-destructive mt-0.5 max-w-[12rem] shrink-0 text-right text-xs">
-              {state.message}
-            </span>
-          ) : state?.phase === "done" ? (
-            <span className="mt-0.5 shrink-0 text-xs text-emerald-400">
-              regenerated · v{state.version}
-            </span>
-          ) : (
-            STATE_LABEL[line.state] && (
-              <span className={cn("mt-0.5 shrink-0 text-xs", STATE_STYLE[line.state])}>
-                {STATE_LABEL[line.state]}
-              </span>
-            )
-          )}
-
-          {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle needs
-              a real control. It doubles as the only thing on screen saying rows expand. */}
-          <button
-            aria-expanded={expanded}
-            aria-label={expanded ? "Collapse this line" : "Show the whole line"}
-            title={expanded ? "Collapse" : "Show the whole line"}
-            onClick={() => setExpanded((open) => !open)}
-            className={cn(
-              "text-muted-foreground hover:text-foreground mt-px shrink-0 cursor-pointer rounded-sm p-0.5",
-              "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
-            )}
-          >
-            <ChevronDownIcon
-              className={cn("size-3.5 transition-transform", expanded && "rotate-180")}
-            />
-          </button>
-        </div>
-      </td>
-
-      <td className="py-1.5 pr-1 pl-0">
+      <td className="py-1.5 pr-1 pl-2">
         <span className="flex items-center justify-end gap-1">
           {/* Which take is live, beside the two controls that change it. A line with one
               take says nothing: v1 is what every untouched line is. */}
