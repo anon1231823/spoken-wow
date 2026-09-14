@@ -15,20 +15,51 @@ they are the rollback.
   current -> releases/…   the symlink activate.sh swaps, atomically
   bin/                    activate, migrate, rollback, prune
   shared/                 everything the app writes, and nothing a release owns
-    app.env               secrets, mode 600
-    ecosystem.config.js   pm2's config, installed by `make web-deploy-scripts`
-    audio/                the quests store          ~1.1 GB
-    sounds/               the zones masters         ~795 MB
-    audio-history/quests/ superseded quest takes
-    audio-history/zones/  superseded zone takes
-    voices/               clone clips
-    audio-previews/       rendered pronunciation previews
-    downloads/            the HQ sound pack, served off disk by nginx
-    manifest.json         the zones manifest, rewritten when a batch drains
+    app.env               secrets, mode 600                    on root
+    ecosystem.config.js   pm2's config, `make web-deploy-scripts`  on root
+    manifest.json         the zones manifest, rewritten on drain   on root
+    audio/          -> the quests store              ~3.1 GB  \
+    sounds/         -> the zones masters             ~453 MB   |
+    audio-history/  -> superseded takes, quests/ and zones/     > symlinks to
+    voices/         -> clone clips                              |  /mnt/voice
+    audio-previews/ -> rendered pronunciation previews          |
+    downloads/      -> the HQ sound pack, served off disk       /
+
+/mnt/voice/spoken/        a 30 GB block volume; `deploy/web/store.sh` sets it up
+  .store                  marker: present only while the volume is mounted
+  audio/ sounds/ audio-history/{quests,zones}/ voices/ audio-previews/ downloads/
 ```
 
 Everything under `shared/` is there for one reason: a release directory is deleted five
 deploys later, and every one of those is either irreplaceable or was paid for.
+
+## The audio volume
+
+The stores total ~10 GB, and the merge **copies** them rather than moving them, because the
+two old trees are the rollback. The droplet's root filesystem is 33 GB with the old sites
+already on it, which leaves no room to do that and no room to grow afterwards. So the bytes
+live on `/mnt/voice`, a block volume that can be resized without touching the droplet.
+
+`shared/<store>` reaches it through a symlink, so that name still means what it meant:
+`ecosystem.config.js` builds every path variable from it, `make/quests.mk` and
+`make/zones.mk` rsync into it, nginx aliases `/downloads/` at it. One path to reason about,
+and the disk it sits on is an implementation detail.
+
+```bash
+ssh root@rusty.one
+  bash store.sh          # make web-store prints it; idempotent
+```
+
+It refuses to link a directory that holds files, and it refuses to run at all when
+`/mnt/voice` is not a mount point — because `/etc/fstab` mounts it `nofail`, so a droplet
+that reboots without the volume comes up happily with `/mnt/voice` an ordinary empty
+directory on root. The `.store` marker exists for the same reason from the other side:
+`bin/activate.sh` will not deploy without it, which turns a missing volume into a deploy
+that stops rather than a site that answers 404 for every line.
+
+`manifest.json` is deliberately **not** on the volume. It is written write-temp-then-rename,
+and a rename over a symlink replaces the symlink with a real file. It is 384 KB and the
+`take` table rebuilds it.
 
 ## Runtime configuration
 
@@ -40,7 +71,7 @@ no longer lives in is one somebody sets on the wrong box.
 |---|---|---|
 | `SPOKEN_QUESTS_CORPUS` | `current/pipelines/quests/corpus/corpus.json.gz` | per release |
 | `SPOKEN_QUESTS_VOICE_CONFIG` | `current/pipelines/quests/voice` | per release |
-| `SPOKEN_QUESTS_AUDIO` | `shared/audio` | shared |
+| `SPOKEN_QUESTS_AUDIO` | `shared/audio` | shared; a symlink onto `/mnt/voice` |
 | `SPOKEN_QUESTS_AUDIO_HISTORY` | `shared/audio-history/quests` | shared; **must be set**, or version 0 of each file — audio nothing can reproduce — lands in a release |
 | `SPOKEN_QUESTS_VOICE_SAMPLES` | `shared/voices` | shared; **must be set**, or clone clips land where nothing backs them up |
 | `SPOKEN_QUESTS_PREVIEWS` | `shared/audio-previews` | shared; **must be set**, or previews land inside `releases/`, where `prune.sh` counts them as a release and eventually deletes them |
@@ -145,8 +176,9 @@ A short freeze. Everything before this point is reversible by doing nothing.
 # 1. Stop both old apps. This also stops their queues, and frees port 3000.
 ssh deploy@rusty.one 'pm2 stop voiceover zonelore'
 
-# 2. Copy both audio stores into /srv/spoken/shared. Copies, never moves: the old trees
-#    are the rollback. ~1.9 GB, a few minutes.
+# 2. Top up the audio. `cp -an` never overwrites, so if the bulk was copied early (below)
+#    this only carries across what was generated since. Copies, never moves: the old
+#    trees are the rollback. It refuses to run if the volume is not mounted.
 make web-cutover-audio
 
 # 3. The database. The quests half is restored wholesale, because the merged schema was

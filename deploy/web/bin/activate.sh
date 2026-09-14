@@ -24,6 +24,21 @@ PM2=${PM2:-$(command -v pm2 || echo /usr/local/bin/pm2)}
 [ -f "$TARGET/pipelines/zones/tools/seed/area-names.json" ] || { echo "activate: $TARGET has no zones area names" >&2; exit 1; }
 [ -f "$TARGET/pipelines/zones/tools/voice/pronunciation.json" ] || { echo "activate: $TARGET has no zones pronunciation rules" >&2; exit 1; }
 
+# The audio stores live on a block volume, reached through symlinks in shared/ (see
+# deploy/web/store.sh). /etc/fstab mounts it `nofail`, so a droplet that boots without it
+# boots happily and every one of those symlinks dangles. The marker file sits ON the volume,
+# so it is present exactly when the volume is: no marker means do not deploy, because the
+# alternative is an app that answers 404 for every line and a `cp` that starts refilling the
+# root disk.
+if [ -L "$ROOT/shared/audio" ]; then
+  STORE=$(dirname "$(readlink "$ROOT/shared/audio")")
+  [ -f "$STORE/.store" ] || {
+    echo "activate: $STORE/.store is missing - the audio volume is not mounted." >&2
+    echo "activate: mount it (mount $(dirname "$STORE")) and deploy again." >&2
+    exit 1
+  }
+fi
+
 PREVIOUS=$(readlink -f "$ROOT/current" 2>/dev/null || echo "(none)")
 echo "activate: $PREVIOUS -> $TARGET"
 

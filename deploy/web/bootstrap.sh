@@ -27,8 +27,12 @@ install -d -o deploy -g deploy -m 755 \
 
 # Everything the app writes, and nothing a release may own.
 #
-#   audio/            the quests store, ~1.1 GB
-#   sounds/           the zones masters, ~795 MB
+# store.sh replaces most of these with symlinks onto the /mnt/voice volume; they are
+# created here so that a droplet without the volume still has somewhere to put things, and
+# so the layout is described in one place.
+#
+#   audio/            the quests store, ~3.1 GB
+#   sounds/           the zones masters, ~453 MB
 #   audio-history/    what both sections replaced, one directory each
 #   voices/           clone clips: an ElevenLabs voice cannot be exported, so these are
 #                     the only way to remake one
@@ -71,6 +75,11 @@ fi
 cat <<'NEXT'
 
 ==> done. What is left, in order:
+
+  0. Put the stores on the block volume, before anything fills them:
+       bash deploy/web/store.sh
+     It replaces the directories just created with symlinks into /mnt/voice. The root
+     disk has no room for the ~10 GB the cutover copies in.
 
   1. Write /srv/spoken/shared/app.env (mode 600, owned by deploy).
      deploy/web/README.md has the block. SPOKEN_SECRET_KEY must be copied from

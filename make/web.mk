@@ -13,7 +13,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help dev build typecheck test bootstrap deploy-scripts releases rollback logs \
-        ssh-check cutover-audio migrate-legacy migrate-legacy-dry migrate-corpus
+        ssh-check store cutover-audio migrate-legacy migrate-legacy-dry migrate-corpus
 
 APP := @spoken/web
 
@@ -25,6 +25,11 @@ REMOTE_ROOT := /srv/spoken
 # The two trees this one replaces. Read by cutover-audio, and by nothing else.
 OLD_QUESTS := /srv/voiceover
 OLD_ZONES  := /srv/zonelore
+
+# The block volume the audio actually lives on; shared/ reaches it through symlinks that
+# deploy/web/store.sh installs. Named here only so the copy below can refuse to run when
+# the volume is missing -- which would otherwise pour 10 GB onto a 12 GB root disk.
+STORE := /mnt/voice/spoken
 
 # The key CI authenticates with, so `make web-ssh-check` tests what CI actually does.
 DEPLOY_KEY ?= ~/.ssh/id_rusty.one
@@ -63,6 +68,9 @@ test: ## Vitest (several suites need a real Postgres)
 bootstrap: ## Print the first-time setup for /srv/spoken (run it on the droplet as root)
 	@cat deploy/web/bootstrap.sh
 
+store: ## Print the /mnt/voice setup (run it on the droplet as root)
+	@cat deploy/web/store.sh
+
 deploy-scripts: ## Install deploy/web/bin + ecosystem.config.js on the droplet
 	$(RSYNC) -a -e "$(SSH)" deploy/web/bin/ $(DROPLET):$(REMOTE_ROOT)/bin/
 	$(RSYNC) -a -e "$(SSH)" deploy/web/ecosystem.config.js $(DROPLET):$(REMOTE_ROOT)/shared/
@@ -89,19 +97,19 @@ ssh-check: ## Test the CI deploy key against the droplet, as CI authenticates
 #------------------------------------------------------------------------------
 
 cutover-audio: ## Copy both old sites' shared/ into /srv/spoken/shared (COPIES, never moves)
-	@echo "==> copying ~1.9 GB on the droplet; the old trees are left whole"
+	@echo "==> copying ~10 GB onto the /mnt/voice volume; the old trees are left whole"
 	$(SSH) $(DROPLET) 'set -eu; \
-	  mkdir -p $(REMOTE_ROOT)/shared/audio-history; \
-	  cp -an $(OLD_QUESTS)/shared/audio           $(REMOTE_ROOT)/shared/audio; \
-	  cp -an $(OLD_QUESTS)/shared/voices          $(REMOTE_ROOT)/shared/voices; \
-	  cp -an $(OLD_QUESTS)/shared/audio-previews  $(REMOTE_ROOT)/shared/audio-previews; \
-	  cp -an $(OLD_QUESTS)/shared/downloads       $(REMOTE_ROOT)/shared/downloads; \
-	  cp -an $(OLD_QUESTS)/shared/audio-history   $(REMOTE_ROOT)/shared/audio-history/quests; \
-	  cp -an $(OLD_ZONES)/shared/Sounds           $(REMOTE_ROOT)/shared/sounds; \
-	  cp -an $(OLD_ZONES)/shared/audio-history    $(REMOTE_ROOT)/shared/audio-history/zones; \
+	  test -f $(STORE)/.store || { echo "the $(STORE) volume is not mounted"; exit 1; }; \
+	  cp -an $(OLD_QUESTS)/shared/audio/.           $(REMOTE_ROOT)/shared/audio/; \
+	  cp -an $(OLD_QUESTS)/shared/voices/.          $(REMOTE_ROOT)/shared/voices/; \
+	  cp -an $(OLD_QUESTS)/shared/audio-previews/.  $(REMOTE_ROOT)/shared/audio-previews/; \
+	  cp -an $(OLD_QUESTS)/shared/downloads/.       $(REMOTE_ROOT)/shared/downloads/; \
+	  cp -an $(OLD_QUESTS)/shared/audio-history/.   $(REMOTE_ROOT)/shared/audio-history/quests/; \
+	  cp -an $(OLD_ZONES)/shared/Sounds/.           $(REMOTE_ROOT)/shared/sounds/; \
+	  cp -an $(OLD_ZONES)/shared/audio-history/.    $(REMOTE_ROOT)/shared/audio-history/zones/; \
 	  cp -an $(OLD_ZONES)/shared/manifest.json    $(REMOTE_ROOT)/shared/manifest.json; \
-	  chown -R deploy:deploy $(REMOTE_ROOT)/shared || true; \
-	  du -sh $(REMOTE_ROOT)/shared/*'
+	  chown -R deploy:deploy $(STORE) $(REMOTE_ROOT)/shared || true; \
+	  du -sh $(STORE)/*; df -h $(STORE) | tail -1'
 	@echo "==> copied. The old trees still hold their own copies; delete them only after the rollback window."
 
 # COPIES, never moves, and `cp -an` never overwrites. The old trees are the rollback: if
