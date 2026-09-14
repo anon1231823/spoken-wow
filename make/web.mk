@@ -116,16 +116,24 @@ cutover-audio: ## Copy both old sites' shared/ into /srv/spoken/shared (COPIES, 
 # spoken.rusty.one has to be stood down, the two old apps start again against audio that
 # was never touched. Disk is the cheap half of that trade.
 
-migrate-lines: ## Copy the zones corpus, flags and takes (rerunnable, pre-cutover)
-	@node apps/web/scripts/migrate-legacy.mjs --lines
+# Both imports run ON THE DROPLET, against the release's own copy of the script: the two
+# databases listen on 127.0.0.1 only, and the script resolves `pg` out of the release's
+# node_modules. The connection strings are read from the two app.env files there, so no
+# password is typed, stored in a shell history, or carried across the wire.
+define remote-import
+$(SSH) $(DROPLET) 'cd $(REMOTE_ROOT)/current/apps/web && 	DATABASE_URL=$$(sed -n "s/^DATABASE_URL=//p" $(REMOTE_ROOT)/shared/app.env) 	ZONELORE_URL=$$(sed -n "s/^DATABASE_URL=//p" $(OLD_ZONES)/shared/app.env) 	node scripts/migrate-legacy.mjs $(1)'
+endef
+
+migrate-lines: ## Copy the zones corpus, flags and takes onto the droplet (rerunnable)
+	@$(call remote-import,--lines)
 
 # Lore rows, flags and takes are statements about lines that only lore.rusty.one holds, so
 # re-copying them replaces them with themselves and this can be run whenever it is useful.
 # Accounts, sealed keys and reports cannot be: accounts merge into rows this database
 # already has, and reports are never deduplicated. Those move once, at the cutover, below.
 
-migrate-legacy-dry: ## Rehearse the zones import into the new database (writes nothing)
-	@node apps/web/scripts/migrate-legacy.mjs --dry-run
+migrate-legacy-dry: ## Rehearse the full zones import on the droplet (writes nothing)
+	@$(call remote-import,--dry-run)
 
 migrate-legacy: ## Import the zones data into the new database (once, at cutover)
-	@node apps/web/scripts/migrate-legacy.mjs
+	@$(call remote-import)
