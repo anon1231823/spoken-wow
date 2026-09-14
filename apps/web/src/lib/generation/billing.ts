@@ -90,11 +90,28 @@ export function estimate(
 
   const characters = [...byFile.values()].reduce((sum, count) => sum + count, 0);
 
+  return totals({ lines: lines.length, files: byFile.size, characters }, rate);
+}
+
+/**
+ * The same estimate, from figures already counted.
+ *
+ * For a caller that has the totals but not the lines. The zones section is one: its search
+ * already sums the characters it matched, every line there has a file of its own, and
+ * shipping 1,353 per-line records to the browser to add them up again would be work for an
+ * answer it was already given.
+ *
+ * Not a shortcut past the per-file counting above, which exists because 1,076 quests files
+ * are spoken by more than one NPC -- a caller using this one is asserting it has already
+ * done that counting, or that its lines and files are the same set.
+ */
+export function totals(
+  counted: { lines: number; files: number; characters: number },
+  rate: Rate,
+): Estimate {
   return {
-    lines: lines.length,
-    files: byFile.size,
-    characters,
-    credits: estimateCredits(characters, rate.rate),
+    ...counted,
+    credits: estimateCredits(counted.characters, rate.rate),
     rate,
   };
 }

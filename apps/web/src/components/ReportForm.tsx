@@ -6,17 +6,26 @@
  * The success screen matters more than it looks: a reporter cannot read their report back, so
  * a form that merely cleared itself would leave them with no evidence anything happened and a
  * fair chance of filing the same thing twice.
+ *
+ * One form for both sections, against one endpoint and one table. The two sites each had
+ * their own, with their own category vocabulary, and triage was two lists -- which is two
+ * places to forget to look. What differs between them is the address: a quest report carries
+ * one the addon built and a zone report may carry none at all, because its report page is
+ * reached with the line already identified.
  */
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { BODY_MAX, CATEGORIES, CATEGORY_LABELS } from "@/lib/reports/reports";
+import { BODY_MAX, CATEGORIES, CATEGORY_LABELS, type Source } from "@/lib/reports/reports";
 
 export default function ReportForm({
+  source,
   target,
   lineId,
 }: {
-  target: string;
+  source: Source;
+  /** The raw address the report came in on, or null where the section has none. */
+  target: string | null;
   lineId: string | null;
 }) {
   const [sent, setSent] = useState(false);
@@ -33,6 +42,7 @@ export default function ReportForm({
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        source,
         target,
         lineId,
         category: data.get("category"),

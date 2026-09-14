@@ -14,9 +14,11 @@ import { headers } from "next/headers";
 
 import { auth } from "@/lib/auth";
 import { clientIp } from "@/lib/reports/client-ip";
-import { validateSubmission } from "@/lib/reports/reports";
+import { isSource, validateSubmission, type Source } from "@/lib/reports/reports";
 import { countRecent, createReport } from "@/lib/reports/store";
 import { formatTarget, parseTarget, resolveTarget } from "@/lib/reports/target";
+import { lineByPath } from "@/lib/zones/catalogue";
+import { BASE_LANG } from "@/lib/zones/lang";
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +35,28 @@ export async function POST(request: Request) {
     return Response.json({ ok: true });
   }
 
-  const target = typeof body.target === "string" ? parseTarget(body.target.split("/")) : null;
-  if (!target) {
+  // Absent means quests, so a client that predates the second section keeps working.
+  const source: Source = isSource(body.source) ? body.source : "quests";
+
+  /**
+   * What the address resolves to, which the two sections answer differently.
+   *
+   * A quests address is one the addon built out of a quest id and an event, or out of a
+   * unit GUID, and it can legitimately resolve to nothing -- when the data module failed to
+   * load there is no sound data at all, and that is the failure most worth reporting. So it
+   * is validated for shape and the lineId is filled in only if it resolves.
+   *
+   * A zones address is the line's own audio path, because that is what the report link is,
+   * and it either names a line or it does not. Accepting one that names nothing would put a
+   * row in triage that nobody can act on -- there is no equivalent of a data module having
+   * failed to load, since the address came from a page this site rendered.
+   */
+  const addressed =
+    source === "zones"
+      ? await zonesTarget(typeof body.target === "string" ? body.target : null)
+      : questsTarget(typeof body.target === "string" ? body.target : null, body.lineId);
+
+  if (!addressed) {
     return Response.json({ error: "unknown target" }, { status: 400 });
   }
 
@@ -53,18 +75,10 @@ export async function POST(request: Request) {
   // way to put words in another person's mouth.
   const session = await auth.api.getSession({ headers: await headers() });
 
-  // Only a lineId the address actually resolves to is stored, so the browser cannot attach a
-  // report to a line the reporter never saw.
-  const claimed = typeof body.lineId === "string" ? body.lineId : null;
-  const lineId = resolveTarget(target).find((line) => line.lineId === claimed)?.lineId ?? null;
-
   await createReport({
-    // The quests corpus, because this route is reached from the quests report page and the
-    // addresses it validates are quest and NPC ones. The zones side files through the same
-    // table with its own source.
-    source: "quests",
-    lineId,
-    target: formatTarget(target),
+    source,
+    lineId: addressed.lineId,
+    target: addressed.target,
     category: validated.value.category,
     body: validated.value.body,
     userId: session?.user.id ?? null,
@@ -74,4 +88,35 @@ export async function POST(request: Request) {
   });
 
   return Response.json({ ok: true });
+}
+
+/**
+ * A quests address: validated for shape, resolved where it can be.
+ *
+ * Only a lineId the address actually resolves to is stored, so the browser cannot attach a
+ * report to a line the reporter never saw.
+ */
+function questsTarget(
+  raw: string | null,
+  claimed: unknown,
+): { lineId: string | null; target: string } | null {
+  const target = raw ? parseTarget(raw.split("/")) : null;
+  if (!target) return null;
+
+  const wanted = typeof claimed === "string" ? claimed : null;
+  const lineId = resolveTarget(target).find((line) => line.lineId === wanted)?.lineId ?? null;
+  return { lineId, target: formatTarget(target) };
+}
+
+/** A zones address: the line's own audio path, '1411/razor-hill'. */
+async function zonesTarget(
+  raw: string | null,
+): Promise<{ lineId: string | null; target: string } | null> {
+  if (!raw) return null;
+
+  const [mapID, slug] = raw.split("/");
+  const entry = await lineByPath(Number(mapID), slug ?? "", BASE_LANG);
+  if (!entry) return null;
+
+  return { lineId: entry.id, target: entry.file };
 }

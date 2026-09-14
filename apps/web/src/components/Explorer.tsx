@@ -568,7 +568,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
     setQueueNote(null);
 
     const result = await queueBatch(
-      new URLSearchParams(pendingBatch.filters),
+      { source: "quests", filters: new URLSearchParams(pendingBatch.filters) },
       pendingBatch.label,
     );
     if (!result) {

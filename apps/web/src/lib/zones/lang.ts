@@ -38,6 +38,10 @@ export const CODES: Lang[] = LOCALES.map((locale) => locale.code);
 /** English is the corpus every other language is translated from. */
 export const BASE_LANG: Lang = "enUS";
 
+export function langName(lang: Lang): string {
+  return LOCALES.find((locale) => locale.code === lang)?.name ?? lang;
+}
+
 export function isLang(value: unknown): value is Lang {
   return typeof value === "string" && (CODES as readonly string[]).includes(value);
 }

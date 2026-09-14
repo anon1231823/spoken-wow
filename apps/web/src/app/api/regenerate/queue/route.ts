@@ -1,13 +1,19 @@
 /**
  * The regeneration queue: adding to it, and watching it.
  *
- * POST takes the *filters*, not a list of jobs. The job set is re-derived here with the same
- * query /api/search/lines runs, so queueing forty thousand lines is a small request and the
- * server decides what is in the batch - a client that sent the list could send a different
- * one from the one it was quoted for.
+ * One queue for both sections. GET is the whole of it rather than one batch, because there
+ * is one plan and one budget behind it and a batch someone else started is spending the
+ * same money.
  *
- * GET is the whole queue rather than one batch. There is one ElevenLabs account and one
- * budget, so a batch someone else started is spending the same money and belongs on screen.
+ * POST takes a source and, for quests, the *filters* rather than a list of jobs: the job
+ * set is re-derived here with the same query /api/quests/search/lines runs, so queueing
+ * forty thousand lines is a small request and the server decides what is in the batch -- a
+ * client that sent the list could send a different one from the one it was quoted for.
+ *
+ * The zones half sends line ids instead, and that is not an inconsistency worth removing.
+ * Its whole corpus is ~1,400 lines, its filtering is a pure function over a catalogue held
+ * in memory rather than a query, and its explorer already selects lines by hand -- so ids
+ * ARE what the user picked, where on the quests side a filter is.
  */
 import { NextRequest, NextResponse } from "next/server";
 
@@ -19,6 +25,8 @@ import { searchContext } from "@/lib/issues/context";
 import { batchJobs, matchingLines } from "@/lib/search";
 import { filtersFromParams, needsDates, needsStale } from "@/lib/search-request";
 import { ensureQueueRunning, queueWorker } from "@/lib/generation/boot";
+import { catalogue as zoneCatalogue } from "@/lib/zones/catalogue";
+import { BASE_LANG } from "@/lib/zones/lang";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +45,25 @@ export async function POST(request: NextRequest) {
   ensureQueueRunning();
 
   const body = (await request.json().catch(() => ({}))) as {
+    source?: unknown;
     filters?: unknown;
+    lineIds?: unknown;
     label?: unknown;
   };
+
+  // Absent means quests, so a client that predates the second section keeps working.
+  const source = body.source === undefined ? "quests" : body.source;
+  if (source !== "quests" && source !== "zones") {
+    return NextResponse.json(
+      { error: "source must be 'quests' or 'zones'", kind: "bad-request" },
+      { status: 400 },
+    );
+  }
+
+  const label = typeof body.label === "string" && body.label ? body.label : "a search";
+
+  if (source === "zones") return queueZones(body.lineIds, label, session.user.id);
+
   if (typeof body.filters !== "string") {
     return NextResponse.json(
       { error: "filters is required, as a query string", kind: "bad-request" },
@@ -57,7 +81,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "nothing to regenerate", kind: "bad-request" }, { status: 400 });
   }
 
-  const label = typeof body.label === "string" && body.label ? body.label : "a search";
   const batchId = await createBatch(label, session.user.id, "quests");
   // BatchLine calls it audioPath and the queue calls it file, because a job is one mp3 on
   // either side and only the quests corpus thinks of it as a line's audio.
@@ -75,6 +98,55 @@ export async function POST(request: NextRequest) {
 
   // The loop is on a two-second idle tick, and waiting that out before the first take would
   // be the most visible part of pressing the button.
+  queueWorker()?.nudge();
+
+  return NextResponse.json({ batchId, queued, skipped });
+}
+
+/**
+ * A zones batch, from the ids the explorer selected.
+ *
+ * The entries are looked up in the catalogue rather than trusted from the body, which is
+ * the same protection the quests half gets by re-deriving from filters: what is queued is
+ * what exists, and an id nobody recognises is dropped rather than becoming a job that can
+ * only fail. A line with no text is dropped too -- an untranslated line has nothing to
+ * narrate, and paying to find that out once per line is what the quote exists to prevent.
+ */
+async function queueZones(
+  lineIds: unknown,
+  label: string,
+  userId: string,
+): Promise<NextResponse> {
+  if (!Array.isArray(lineIds) || lineIds.some((id) => typeof id !== "string")) {
+    return NextResponse.json(
+      { error: "lineIds is required, as an array of strings", kind: "bad-request" },
+      { status: 400 },
+    );
+  }
+
+  const wanted = new Set(lineIds as string[]);
+  const jobs = (await zoneCatalogue(BASE_LANG))
+    .filter((entry) => wanted.has(entry.id) && entry.spoken.trim() !== "")
+    .map((entry) => ({
+      lineId: entry.id,
+      file: entry.file,
+      // There is no NPC here. The column is a label for the progress readout, and the
+      // zone is what names a line on screen.
+      npcName: entry.zoneName,
+      preview: entry.short || entry.full.slice(0, 120),
+      characters: entry.spoken.length,
+    }));
+
+  if (jobs.length === 0) {
+    return NextResponse.json(
+      { error: "nothing to regenerate", kind: "bad-request" },
+      { status: 400 },
+    );
+  }
+
+  const batchId = await createBatch(label, userId, "zones");
+  const { queued, skipped } = await enqueue(batchId, jobs, "zones");
+
   queueWorker()?.nudge();
 
   return NextResponse.json({ batchId, queued, skipped });

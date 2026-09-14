@@ -62,6 +62,28 @@ export async function exportManifest({ check = false, lang = LANG } = {}) {
   if (current === next) return { skipped: false, changed: false, count, before };
   if (check) return { skipped: false, changed: true, count, before, stale: true };
 
+  // REFUSES TO EMPTY A MANIFEST THAT HAD ENTRIES. "The database has no takes for this
+  // language" is far more often a DATABASE_URL pointing somewhere unexpected than a truth
+  // about the project -- and this file is the record of what has been paid for, the
+  // fallback a clone with no Postgres builds the addon from, and not something any run
+  // can put back.
+  //
+  // It has happened: the merged app's queue publishes when it drains, a test seeded zone
+  // jobs against a database holding only quests rows, and the drain exported an empty
+  // manifest straight over the committed one. Nothing complained, because writing what
+  // the database says is exactly what this function is for.
+  //
+  // Deliberately not "refuses to shrink it". Retiring takes is a real operation
+  // (retire-era.mjs) and a language legitimately loses entries. Zero is the one count
+  // that cannot be arrived at by any sequence of real edits, because a take is never
+  // deleted -- it is superseded.
+  if (count === 0 && before > 0) {
+    throw new Error(
+      `refusing to empty ${path}: the database reports no ${lang} takes, but the file has ` +
+        `${before}. Check DATABASE_URL points at the database you mean.`,
+    );
+  }
+
   // Temp file and rename, for the reason store.mjs gives: this is the record of
   // everything already paid for, and a crash partway through a write would destroy it.
   const temp = `${path}.${process.pid}.tmp`;

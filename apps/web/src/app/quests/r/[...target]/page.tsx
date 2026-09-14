@@ -41,7 +41,7 @@ export default async function ReportPage({
         <p className="text-muted-foreground mt-1 mb-5 text-sm">
           That address is not one this site understands, but you can still tell us about it.
         </p>
-        <ReportForm target={segments.join("/")} lineId={null} />
+        <ReportForm source="quests" target={segments.join("/")} lineId={null} />
       </main>
     );
   }
@@ -103,7 +103,7 @@ export default async function ReportPage({
         </p>
       ) : null}
 
-      <ReportForm target={formatTarget(target)} lineId={line?.lineId ?? null} />
+      <ReportForm source="quests" target={formatTarget(target)} lineId={line?.lineId ?? null} />
     </main>
   );
 }

@@ -9,6 +9,9 @@
 
 import { noApiKeyMessage } from "@/lib/no-api-key";
 
+/** Which section a job belongs to. Mirrors Source in lib/generation/queue.ts. */
+export type Source = "quests" | "zones";
+
 export type FailureKind =
   | "quota"
   | "auth"
@@ -199,10 +202,15 @@ export type QueueSnapshot = {
   counts: Record<"pending" | "running" | "done" | "failed" | "cancelled", number>;
   credits: number;
   unpriced: number;
-  running: { lineId: string; npcName: string; preview: string }[];
-  failures: { lineId: string; message: string }[];
+  running: { source: Source; lineId: string; npcName: string; preview: string }[];
+  failures: { source: Source; lineId: string; message: string }[];
   latestBatch: { cancelled: number; stoppedBecause: string | null } | null;
-  finished: { id: string; lineId: string; file: string; version: number }[];
+  /**
+   * Carries the source because two explorers poll one queue, and each may only adopt its
+   * own: a quests page told that a zones file is now at version 3 would look for a line it
+   * does not have.
+   */
+  finished: { id: string; source: Source; lineId: string; file: string; version: number }[];
   cursor: string;
 };
 
@@ -211,19 +219,28 @@ export type QueuedBatch = { batchId: string; queued: number; skipped: number };
 /**
  * Start a batch, or say why not.
  *
+ * The quests half sends filters and the zones half sends ids, which is the queue route's
+ * distinction rather than this function's: quests re-derives the job set server-side so a
+ * forty-thousand-line batch is a small request, while the zones corpus is ~1,400 lines
+ * selected by hand, where the ids ARE what the user picked.
+ *
  * A string rather than null for the refusals that have something to tell the operator -
  * having no ElevenLabs key is the one that a new collaborator meets first, and "Could not
  * queue the batch" would send them looking in the wrong place.
  */
 export async function queueBatch(
-  filters: URLSearchParams,
+  request: { source: "quests"; filters: URLSearchParams } | { source: "zones"; lineIds: string[] },
   label: string,
 ): Promise<QueuedBatch | { error: string } | null> {
   try {
     const response = await fetch("/api/regenerate/queue", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filters: filters.toString(), label }),
+      body: JSON.stringify(
+        request.source === "quests"
+          ? { source: "quests", filters: request.filters.toString(), label }
+          : { source: "zones", lineIds: request.lineIds, label },
+      ),
     });
     const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
     if (!response.ok) {

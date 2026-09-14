@@ -48,7 +48,7 @@ export default function ReportDialog({ line, onClose }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <ReportForm target={target} lineId={line.lineId} />
+        <ReportForm source="quests" target={target} lineId={line.lineId} />
       </DialogContent>
     </Dialog>
   );

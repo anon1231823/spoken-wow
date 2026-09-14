@@ -28,6 +28,12 @@ export default function UserMenu() {
     return (
       <nav className="flex items-center gap-1">
         <Button asChild variant="ghost" size="sm">
+          <Link href="/quests">Quests</Link>
+        </Button>
+        <Button asChild variant="ghost" size="sm">
+          <Link href="/zones">Zones</Link>
+        </Button>
+        <Button asChild variant="ghost" size="sm">
           <Link href="/login">Sign in</Link>
         </Button>
         <Button asChild variant="outline" size="sm">
@@ -41,6 +47,14 @@ export default function UserMenu() {
 
   return (
     <nav className="flex items-center gap-2">
+      {/* The two sections, for everyone: they are what the site is, and a visitor who
+          landed on one should be able to find the other without going back to the door. */}
+      <Button asChild variant="ghost" size="sm">
+        <Link href="/quests">Quests</Link>
+      </Button>
+      <Button asChild variant="ghost" size="sm">
+        <Link href="/zones">Zones</Link>
+      </Button>
       {canManageVoices(role) && (
         <Button asChild variant="ghost" size="sm">
           <Link href="/voices">Voices</Link>
