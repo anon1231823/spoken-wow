@@ -11,6 +11,7 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { reportHref } from "@/lib/links";
 import {
   CATEGORY_LABELS,
   SOURCE_LABELS,
@@ -39,11 +40,6 @@ const SOURCE_VIEWS: { value: Source | "all"; label: string }[] = [
  * A map rather than one path, because the two explorers are two pages. The zones one arrives
  * with the port; until then no report carries that source, so nothing links there.
  */
-const EXPLORER: Record<Source, string> = {
-  quests: "/quests",
-  zones: "/zones",
-};
-
 export default function ReportTable({
   initial,
   view,
@@ -112,18 +108,20 @@ export default function ReportTable({
               <span>{new Date(report.createdAt).toLocaleString()}</span>
               <span>{CATEGORY_LABELS[report.category]}</span>
               <span>{STATUS_LABELS[report.status]}</span>
-              {/* Null where the source has no addresses of its own to record. */}
-              {report.target ? <span className="font-mono">{report.target}</span> : null}
-              {report.lineId ? (
+              {/* The address the addon produced, linking to the page the reporter saw:
+                  the line, its audio and the form they filed from. Null where the report
+                  came in without one, which is a report about the project itself. */}
+              {report.target ? (
                 <Link
-                  href={`${EXPLORER[report.source]}?q=${encodeURIComponent(report.lineId)}`}
+                  href={reportHref(report.source, report.target)}
                   className="font-mono underline-offset-2 hover:underline"
                 >
-                  {report.lineId}
+                  {report.target}
                 </Link>
-              ) : (
-                <span>unresolved</span>
-              )}
+              ) : null}
+              {/* The line the address resolved to, or that it resolved to none - which is
+                  itself worth reading, since an unresolvable address is still a report. */}
+              <span className="font-mono">{report.lineId ?? "unresolved"}</span>
             </div>
 
             <p className="mt-2 text-sm whitespace-pre-wrap">{report.body}</p>

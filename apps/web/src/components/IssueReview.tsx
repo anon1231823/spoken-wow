@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Toaster, useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { lexiconHref, questsHref } from "@/lib/links";
 import {
   categoryLabel,
   ISSUE_GROUPS,
@@ -59,17 +60,11 @@ const TONES: Record<Severity, string> = {
  * the page.
  */
 function explorerHref(issue: Issue): string {
-  const params = new URLSearchParams({ finding: String(issue.id) });
-  if (issue.category !== "bug-degenerate-line") {
-    params.set("q", issue.item);
-    params.set("filter", "text");
-  }
-  return `/?${params}`;
-}
-
-/** The lexicon editor, with this name already filled in. */
-function lexiconHref(issue: Issue): string {
-  return `/lexicon?${new URLSearchParams({ grapheme: issue.item })}`;
+  // A bug-degenerate-line's item is a lineId, which the search box cannot match, so that
+  // one arrives on the finding filter alone.
+  return issue.category === "bug-degenerate-line"
+    ? questsHref({ finding: issue.id })
+    : questsHref({ finding: issue.id, q: issue.item, filter: "text" });
 }
 
 type Props = {
@@ -365,7 +360,7 @@ function Row({
             offering a fix that cannot work. */}
         {issue.grapheme && (
           <Button size="sm" variant="ghost" asChild title="Add this name to the lexicon">
-            <a href={lexiconHref(issue)} target="_blank" rel="noreferrer">
+            <a href={lexiconHref(issue.item)} target="_blank" rel="noreferrer">
               Pronounce
             </a>
           </Button>

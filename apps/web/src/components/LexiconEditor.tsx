@@ -12,6 +12,7 @@ import type { EffectiveLexicon } from "@/lib/generation/dictionary";
 import { PREVIEW_MODES, type PreviewMode } from "@/lib/generation/preview-modes";
 import type { CacheState } from "@/lib/generation/preview";
 import { Toaster, useToast } from "@/components/ui/toast";
+import { questsHref } from "@/lib/links";
 import {
   honoursPhonemes,
   kindOf,
@@ -59,10 +60,6 @@ const OK_FILTERS: { value: OkFilter; label: string }[] = [
  * source of truth for a search, so this is a working deep link rather than a page that
  * arrives blank and has to be retyped into.
  */
-function explorerHref(grapheme: string): string {
-  return `/?${new URLSearchParams({ q: grapheme, filter: "text" })}`;
-}
-
 // Starts as a respelling, not IPA. Anyone who can write IPA can switch in one click, and
 // everyone else would otherwise meet an empty box they have no way to fill.
 const BLANK: LexiconEntry = {
@@ -890,7 +887,7 @@ function Row({
             title={`Find lines that say ${entry.grapheme}`}
           >
             <a
-              href={explorerHref(entry.grapheme)}
+              href={questsHref({ q: entry.grapheme, filter: "text" })}
               target="_blank"
               rel="noreferrer"
               aria-label={`Find lines that say ${entry.grapheme}`}
