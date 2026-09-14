@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import ReportForm from "@/components/ReportForm";
 import { audioRelPath } from "@/lib/zones/audio";
-import { lineByPath, loadContext } from "@/lib/zones/catalogue";
+import { isCorpusEmpty, lineByPath, loadContext } from "@/lib/zones/catalogue";
 import { BASE_LANG } from "@/lib/zones/lang";
 
 /**
@@ -28,7 +28,14 @@ import { BASE_LANG } from "@/lib/zones/lang";
 type Params = { mapID: string; slug: string };
 
 async function resolve({ mapID, slug }: Params) {
-  return lineByPath(Number(mapID), slug, BASE_LANG);
+  try {
+    return await lineByPath(Number(mapID), slug, BASE_LANG);
+  } catch (error) {
+    // An unseeded corpus names no lines, so no address resolves to one. The page a player
+    // arriving from the game should see is the same one an unknown place gives them.
+    if (isCorpusEmpty(error)) return undefined;
+    throw error;
+  }
 }
 
 export const dynamic = "force-dynamic";

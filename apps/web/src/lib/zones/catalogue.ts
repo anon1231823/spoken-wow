@@ -128,6 +128,18 @@ export class CorpusEmpty extends Error {
 }
 
 /**
+ * Whether a thrown thing is that, across the module boundary.
+ *
+ * `instanceof` rather than a name check would be enough in one process, and this is not
+ * defensive dressing: `next dev` re-evaluates modules, so a route holding a reference to one
+ * evaluation's class can be handed an error built by another's, and the two are not the same
+ * constructor. The name is what survives.
+ */
+export function isCorpusEmpty(error: unknown): boolean {
+  return error instanceof Error && error.name === "CorpusEmpty";
+}
+
+/**
  * Memoised, and checked against the table rather than dropped by hand.
  *
  * Deriving 1353 entries is a sha1 and a normalise pass per line, so doing it per request

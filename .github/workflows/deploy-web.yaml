@@ -327,11 +327,26 @@ jobs:
           PORT=${PORT:-3000}
           echo "checking the app on port $PORT"
 
+          # Quests must serve. Zones must ANSWER: 200 when the corpus is loaded, or 503
+          # with `corpus_empty` before the cutover import has been run, which is a
+          # deployment state rather than a bad release. Anything else -- a 500, a refused
+          # connection, a 404 from some other app on that port -- fails and rolls back.
+          #
+          # That the zones half is compiled into the bundle at all is proven earlier, by
+          # the in-CI smoke test against a seeded throwaway database. This step is about
+          # whether the release boots and serves on the droplet, not about whether somebody
+          # has run a one-time import.
           ok=""
           for i in $(seq 1 10); do
             if ssh -i ~/.ssh/deploy_key "$TARGET" \
-              "curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:$PORT/api/quests/search?q=thrall' &&
-               curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:$PORT/api/zones/search?state=current'"
+              "set -e
+               curl -fsS --max-time 10 -o /dev/null 'http://127.0.0.1:$PORT/api/quests/search?q=thrall'
+               code=\$(curl -s --max-time 10 -o /tmp/zones-smoke -w '%{http_code}' 'http://127.0.0.1:$PORT/api/zones/search?state=current')
+               case \$code in
+                 200) exit 0 ;;
+                 503) grep -q corpus_empty /tmp/zones-smoke && { echo '  zones: not seeded yet, which is expected before the cutover'; exit 0; } ;;
+               esac
+               echo \"  zones answered \$code\"; exit 1"
             then ok=1; break; fi
             echo "attempt $i failed, retrying..."
             sleep 3
