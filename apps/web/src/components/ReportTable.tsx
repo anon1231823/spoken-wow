@@ -40,7 +40,7 @@ const SOURCE_VIEWS: { value: Source | "all"; label: string }[] = [
  * with the port; until then no report carries that source, so nothing links there.
  */
 const EXPLORER: Record<Source, string> = {
-  quests: "/",
+  quests: "/quests",
   zones: "/zones",
 };
 

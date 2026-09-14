@@ -124,7 +124,7 @@ export default function Player({
   // One URL for both the element and the download, so a take regenerated in this session is
   // the one that gets saved rather than whatever the browser still has cached.
   const src = line
-    ? `/api/audio/${line.audioPath}${version === undefined ? "" : `?v=${version}`}`
+    ? `/api/quests/audio/${line.audioPath}${version === undefined ? "" : `?v=${version}`}`
     : undefined;
 
   return (

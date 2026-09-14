@@ -8,7 +8,7 @@ import { canRegenerate } from "@/lib/permissions";
 import { isSource, isStatus, type Source, type Status } from "@/lib/reports/reports";
 import { listReports } from "@/lib/reports/store";
 
-export const metadata: Metadata = { title: "Reports · VoiceOver Explorer" };
+export const metadata: Metadata = { title: "Reports · Spoken" };
 
 // What strangers filed and what people did about it; nothing here can be cached between views.
 export const dynamic = "force-dynamic";

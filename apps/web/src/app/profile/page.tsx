@@ -7,7 +7,7 @@ import { apiKeyStatus } from "@/lib/api-key";
 import { auth } from "@/lib/auth";
 import { canRegenerate } from "@/lib/permissions";
 
-export const metadata: Metadata = { title: "Profile · VoiceOver Explorer" };
+export const metadata: Metadata = { title: "Profile · Spoken" };
 
 // The stored key's state changes underneath this page, and it is per-user, so nothing here
 // can be cached between views.

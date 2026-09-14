@@ -55,8 +55,8 @@ export default function IgnoreDialog({ line, onSaved, onCancel }: Props) {
     try {
       const url =
         method === "PUT"
-          ? "/api/lines/ignore"
-          : `/api/lines/ignore?lineId=${encodeURIComponent(line.lineId)}`;
+          ? "/api/quests/lines/ignore"
+          : `/api/quests/lines/ignore?lineId=${encodeURIComponent(line.lineId)}`;
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },

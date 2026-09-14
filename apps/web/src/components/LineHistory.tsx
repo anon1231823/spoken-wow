@@ -52,7 +52,7 @@ export default function LineHistory({
   const load = useCallback(async () => {
     setError(null);
     try {
-      const response = await fetch(`/api/lines/versions?file=${encodeURIComponent(file)}`);
+      const response = await fetch(`/api/quests/lines/versions?file=${encodeURIComponent(file)}`);
       const body = await response.json();
       if (!response.ok) {
         setError(body.error ?? `could not read history (${response.status})`);
@@ -84,7 +84,7 @@ export default function LineHistory({
       setPlaying(null);
       return;
     }
-    element.src = `/api/audio-history/${file.replace(/\.mp3$/, "")}/${version}.mp3`;
+    element.src = `/api/quests/audio-history/${file.replace(/\.mp3$/, "")}/${version}.mp3`;
     void element.play().catch(() => setPlaying(null));
     setPlaying(version);
   }
@@ -93,7 +93,7 @@ export default function LineHistory({
     setBusy(version);
     setError(null);
     try {
-      const response = await fetch("/api/lines/restore", {
+      const response = await fetch("/api/quests/lines/restore", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ file, version }),

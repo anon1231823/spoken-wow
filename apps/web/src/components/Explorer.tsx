@@ -289,7 +289,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
     if (page > 1) search.set("page", String(page));
 
     setLoading(true);
-    fetch(`/api/search?${search}`, { signal: controller.signal })
+    fetch(`/api/quests/search?${search}`, { signal: controller.signal })
       .then((r) => r.json())
       .then((data: SearchResult) => {
         setResult(data);

@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "VoiceOver Explorer",
-  description: "Find and play WoW Classic voicelines by NPC or quest",
+  title: "Spoken",
+  description: "Voiced dialogue, lore and text for World of Warcraft Classic",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header className="border-b">
           <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-3 px-5">
             <Link href="/" className="text-sm font-medium">
-              VoiceOver Explorer
+              Spoken
             </Link>
             <UserMenu />
           </div>

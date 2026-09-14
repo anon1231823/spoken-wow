@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import AuthForm from "@/components/AuthForm";
 
-export const metadata: Metadata = { title: "Register · VoiceOver Explorer" };
+export const metadata: Metadata = { title: "Register · Spoken" };
 
 export default function Page() {
   return (

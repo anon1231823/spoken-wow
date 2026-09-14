@@ -7,7 +7,7 @@ import { userIdsWithApiKey } from "@/lib/api-key";
 import { auth } from "@/lib/auth";
 import { isAdmin } from "@/lib/permissions";
 
-export const metadata: Metadata = { title: "Users · VoiceOver Explorer" };
+export const metadata: Metadata = { title: "Users · Spoken" };
 
 /**
  * The only server-rendered session check in the app, and the real access boundary for user

@@ -70,8 +70,8 @@ export default function OverrideDialog({ line, onSaved, onCancel }: Props) {
 
       const url =
         method === "PUT"
-          ? "/api/lines/override"
-          : `/api/lines/override?file=${encodeURIComponent(line.audioPath)}`;
+          ? "/api/quests/lines/override"
+          : `/api/quests/lines/override?file=${encodeURIComponent(line.audioPath)}`;
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },

@@ -69,7 +69,7 @@ export default async function ReportPage({
           <audio
             controls
             className="mt-3 w-full"
-            src={`/api/audio/${audioRelPath(line)}${version === null ? "" : `?v=${version}`}`}
+            src={`/api/quests/audio/${audioRelPath(line)}${version === null ? "" : `?v=${version}`}`}
           />
         </section>
       ) : null}
@@ -84,7 +84,7 @@ export default async function ReportPage({
             {lines.map((candidate) => (
               <li key={candidate.lineId}>
                 <Link
-                  href={`/r/${formatTarget(target)}?line=${encodeURIComponent(candidate.lineId)}`}
+                  href={`/quests/r/${formatTarget(target)}?line=${encodeURIComponent(candidate.lineId)}`}
                   className="underline-offset-2 hover:underline"
                 >
                   {candidate.text.slice(0, 120)}

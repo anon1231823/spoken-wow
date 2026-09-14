@@ -8,7 +8,7 @@ import { readLexicon } from "@/lib/generation/dictionary";
 import { issueList } from "@/lib/issues/store";
 import { canConfigureGeneration } from "@/lib/permissions";
 
-export const metadata: Metadata = { title: "Issues · VoiceOver Explorer" };
+export const metadata: Metadata = { title: "Issues · Spoken" };
 
 // Rows the scan wrote and verdicts people are recording against them; nothing here can be
 // cached between views.

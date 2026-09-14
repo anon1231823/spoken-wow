@@ -12,7 +12,7 @@ import { generationStatus } from "@/lib/generation/status";
 import { listSamples, type Sample } from "@/lib/voices/samples";
 import { slots } from "@/lib/voices/slots";
 
-export const metadata: Metadata = { title: "Voices · VoiceOver Explorer" };
+export const metadata: Metadata = { title: "Voices · Spoken" };
 
 // The account state is read live on every view: a voice created in the ElevenLabs dashboard
 // rather than here should still show up, since tts_cli/voices.py would find it either way.

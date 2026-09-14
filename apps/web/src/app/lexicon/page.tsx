@@ -11,7 +11,7 @@ import { currentConfig } from "@/lib/generation/settings";
 import { generationStatus } from "@/lib/generation/status";
 import { canConfigureGeneration } from "@/lib/permissions";
 
-export const metadata: Metadata = { title: "Pronunciation · VoiceOver Explorer" };
+export const metadata: Metadata = { title: "Pronunciation · Spoken" };
 
 // The lexicon is a database row and the sync state changes underneath it, so nothing here
 // can be cached between views.

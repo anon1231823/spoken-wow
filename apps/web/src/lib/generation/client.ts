@@ -102,7 +102,7 @@ export async function fetchTakeCounts(
   signal?: AbortSignal,
 ): Promise<TakeInfo | null> {
   try {
-    const response = await fetch("/api/lines/versions", {
+    const response = await fetch("/api/quests/lines/versions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ files }),
@@ -138,7 +138,7 @@ export async function fetchBatchJobs(
   signal?: AbortSignal,
 ): Promise<BatchJob[] | null> {
   try {
-    const response = await fetch(`/api/search/lines?${params}`, { signal });
+    const response = await fetch(`/api/quests/search/lines?${params}`, { signal });
     if (!response.ok) return null;
     return ((await response.json()) as { jobs: BatchJob[] }).jobs;
   } catch {
@@ -152,7 +152,7 @@ export async function regenerate(
 ): Promise<RegenerateResponse> {
   let response: Response;
   try {
-    response = await fetch("/api/regenerate", {
+    response = await fetch("/api/quests/regenerate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lineId }),
