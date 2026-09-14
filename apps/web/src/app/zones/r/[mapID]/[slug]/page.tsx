@@ -64,7 +64,7 @@ export default async function Page({ params }: { params: Promise<Params> }) {
   const take = (await loadContext(BASE_LANG)).takes.get(entry.id);
 
   return (
-    <main className="shell pt-8 pb-24">
+    <main className="mx-auto max-w-6xl px-5 pt-8 pb-24">
       <article className="max-w-2xl">
         <h1 className="text-xl font-semibold">{entry.name}</h1>
         <p className="text-muted-foreground mt-1 text-sm">

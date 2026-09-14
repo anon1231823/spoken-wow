@@ -271,30 +271,11 @@ export function LineRow({
               regenerated · v{state.version}
             </span>
           ) : (
-            <span className="mt-0.5 flex shrink-0 items-center gap-2 text-xs">
-              {STATE_LABEL[line.state] && (
-                <span className={STATE_STYLE[line.state]}>{STATE_LABEL[line.state]}</span>
-              )}
-              {line.take && line.take.takes > 1 && (
-                <span
-                  className="text-muted-foreground flex items-center gap-0.5"
-                  title={`${line.take.takes} takes; v${line.take.version} is live`}
-                >
-                  <RotateCw size={10} /> v{line.take.version}
-                </span>
-              )}
-              <span className="text-muted-foreground font-mono">
-                {line.chars}
-                {line.short && (
-                  <span
-                    className="ml-0.5 text-amber-300"
-                    title="Under 250 characters, where v3 is least reliable"
-                  >
-                    !
-                  </span>
-                )}
+            STATE_LABEL[line.state] && (
+              <span className={cn("mt-0.5 shrink-0 text-xs", STATE_STYLE[line.state])}>
+                {STATE_LABEL[line.state]}
               </span>
-            </span>
+            )
           )}
 
           {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle needs
@@ -317,7 +298,18 @@ export function LineRow({
       </td>
 
       <td className="py-1.5 pr-1 pl-0">
-        <span className="flex items-center justify-end">
+        <span className="flex items-center justify-end gap-1">
+          {/* Which take is live, beside the two controls that change it. A line with one
+              take says nothing: v1 is what every untouched line is. */}
+          {line.take && line.take.takes > 1 && (
+            <span
+              className="text-muted-foreground flex items-center gap-0.5 font-mono text-xs"
+              title={`${line.take.takes} takes; v${line.take.version} is live`}
+            >
+              <RotateCw size={10} /> v{line.take.version}
+            </span>
+          )}
+
           {/* Outside the canRegenerate gate, deliberately: reporting is what a visitor who
               cannot sign in has, and /api/reports is unauthenticated for the same reason. */}
           <Button

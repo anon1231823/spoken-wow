@@ -70,109 +70,107 @@ export function SearchBar({
   const active = activeFilterCount(filters);
 
   return (
-    <div className="bg-background sticky top-0 z-20 border-b">
-      <div className="shell flex flex-wrap items-center gap-2 py-3">
-        <Input
-          ref={inputRef}
-          type="search"
-          value={query}
-          placeholder="Search lore, names, zones…"
-          aria-label="Search"
-          autoFocus
-          className="min-w-0 flex-1 basis-64"
-          onChange={(event) => onQueryChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter") return;
-            // Nothing here is inside a <form>, so this is not a submit being prevented:
-            // it stops the browser's own "search" behaviour on a type=search input.
-            event.preventDefault();
-            onQuerySubmit();
-          }}
+    <div className="bg-background sticky top-0 z-10 flex flex-wrap items-center gap-2 border-b py-3">
+      <Input
+        ref={inputRef}
+        type="search"
+        value={query}
+        placeholder="Search lore, names, zones…"
+        aria-label="Search"
+        autoFocus
+        className="min-w-0 flex-1 basis-64"
+        onChange={(event) => onQueryChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter") return;
+          // Nothing here is inside a <form>, so this is not a submit being prevented:
+          // it stops the browser's own "search" behaviour on a type=search input.
+          event.preventDefault();
+          onQuerySubmit();
+        }}
+      />
+      <FilterChip
+        label="search in"
+        value={filters.field === "any" ? undefined : filters.field}
+        options={FIELD_OPTIONS}
+        onChange={(field) => onChange({ field: (field ?? "any") as LineFilters["field"] })}
+      />
+
+      <div className="flex w-full flex-wrap items-center gap-2">
+        {/* The count rides in the label rather than in a column of its own: it is what
+            makes one zone worth picking over another. */}
+        <FilterChip
+          label="zone"
+          value={filters.mapID === undefined ? undefined : String(filters.mapID)}
+          options={zones.map((zone) => ({
+            value: String(zone.mapID),
+            label: `${zone.name} (${zone.lines})`,
+          }))}
+          onChange={(mapID) => onChange({ mapID: mapID === undefined ? undefined : Number(mapID) })}
         />
         <FilterChip
-          label="search in"
-          value={filters.field === "any" ? undefined : filters.field}
-          options={FIELD_OPTIONS}
-          onChange={(field) => onChange({ field: (field ?? "any") as LineFilters["field"] })}
+          label="kind"
+          value={filters.kind}
+          options={KIND_OPTIONS}
+          onChange={(kind) => onChange({ kind: kind as LineFilters["kind"] })}
+        />
+        <FilterChip
+          label="state"
+          value={filters.state}
+          options={plainOptions(STATES)}
+          onChange={(state) => onChange({ state: state as LineFilters["state"] })}
+        />
+        <FilterChip
+          label="review"
+          value={filters.flag}
+          options={plainOptions(FLAGS)}
+          onChange={(flag) => onChange({ flag: flag as LineFilters["flag"] })}
         />
 
-        <div className="flex w-full flex-wrap items-center gap-2">
-          {/* The count rides in the label rather than in a column of its own: it is what
-              makes one zone worth picking over another. */}
-          <FilterChip
-            label="zone"
-            value={filters.mapID === undefined ? undefined : String(filters.mapID)}
-            options={zones.map((zone) => ({
-              value: String(zone.mapID),
-              label: `${zone.name} (${zone.lines})`,
-            }))}
-            onChange={(mapID) => onChange({ mapID: mapID === undefined ? undefined : Number(mapID) })}
-          />
-          <FilterChip
-            label="kind"
-            value={filters.kind}
-            options={KIND_OPTIONS}
-            onChange={(kind) => onChange({ kind: kind as LineFilters["kind"] })}
-          />
-          <FilterChip
-            label="state"
-            value={filters.state}
-            options={plainOptions(STATES)}
-            onChange={(state) => onChange({ state: state as LineFilters["state"] })}
-          />
-          <FilterChip
-            label="review"
-            value={filters.flag}
-            options={plainOptions(FLAGS)}
-            onChange={(flag) => onChange({ flag: flag as LineFilters["flag"] })}
-          />
+        {/* Read as one range: "generated after X" and "generated before Y". */}
+        <DateChip
+          label="generated after"
+          value={filters.generatedAfter}
+          onChange={(generatedAfter) => onChange({ generatedAfter })}
+        />
+        <DateChip
+          label="generated before"
+          value={filters.generatedBefore}
+          onChange={(generatedBefore) => onChange({ generatedBefore })}
+        />
 
-          {/* Read as one range: "generated after X" and "generated before Y". */}
-          <DateChip
-            label="generated after"
-            value={filters.generatedAfter}
-            onChange={(generatedAfter) => onChange({ generatedAfter })}
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Checkbox
+            id="short-only"
+            checked={filters.short ?? false}
+            onCheckedChange={(value) => onChange({ short: value === true || undefined })}
           />
-          <DateChip
-            label="generated before"
-            value={filters.generatedBefore}
-            onChange={(generatedBefore) => onChange({ generatedBefore })}
-          />
+          <Label htmlFor="short-only" className="text-muted-foreground text-sm">
+            short only
+          </Label>
+        </div>
 
+        {canReview && (
           <div className="flex items-center gap-2 whitespace-nowrap">
             <Checkbox
-              id="short-only"
-              checked={filters.short ?? false}
-              onCheckedChange={(value) => onChange({ short: value === true || undefined })}
+              id="reported-only"
+              checked={filters.reports === "open"}
+              onCheckedChange={(value) =>
+                onChange({ reports: value === true ? "open" : undefined })
+              }
             />
-            <Label htmlFor="short-only" className="text-muted-foreground text-sm">
-              short only
+            <Label htmlFor="reported-only" className="text-muted-foreground text-sm">
+              reported only
             </Label>
           </div>
+        )}
 
-          {canReview && (
-            <div className="flex items-center gap-2 whitespace-nowrap">
-              <Checkbox
-                id="reported-only"
-                checked={filters.reports === "open"}
-                onCheckedChange={(value) =>
-                  onChange({ reports: value === true ? "open" : undefined })
-                }
-              />
-              <Label htmlFor="reported-only" className="text-muted-foreground text-sm">
-                reported only
-              </Label>
-            </div>
-          )}
-
-          {/* Only when there is something to clear: a button that does nothing on most
-              visits is one more thing to read past every time. */}
-          {active > 0 && (
-            <Button size="sm" variant="ghost" className="ml-auto" onClick={onClearAll}>
-              Clear {active === 1 ? "filter" : `all ${active} filters`}
-            </Button>
-          )}
-        </div>
+        {/* Only when there is something to clear: a button that does nothing on most
+            visits is one more thing to read past every time. */}
+        {active > 0 && (
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={onClearAll}>
+            Clear {active === 1 ? "filter" : `all ${active} filters`}
+          </Button>
+        )}
       </div>
     </div>
   );

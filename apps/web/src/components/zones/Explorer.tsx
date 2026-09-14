@@ -628,13 +628,12 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         onClearAll={() => replaceQuery(new URLSearchParams())}
       />
 
-      <div className="shell flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 pb-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 pb-1">
         <div className="text-muted-foreground text-sm">
           {loading && !result
             ? "Searching…"
             : result
-              ? `${result.total.toLocaleString()} ${result.total === 1 ? "line" : "lines"}, ` +
-                `${result.totalChars.toLocaleString()} chars`
+              ? `${result.total.toLocaleString()} ${result.total === 1 ? "line" : "lines"}`
               : ""}
         </div>
         {result && result.counts.missing > 0 && (
@@ -651,74 +650,70 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         )}
       </div>
 
-      {/* The wrapper carries the column, not the table: see .shell-table in
-          globals.css for why a collapsed table cannot carry it itself. */}
-      <div className="shell shell-table">
-        {/* Fixed layout, because the point of the columns is that they line up down the
-            page: left to auto sizing, one long subzone name would widen its column for
-            every row. The lore column takes whatever the named ones leave. */}
-        <table className="w-full table-fixed border-collapse text-sm">
-          <colgroup>
-            <col className="w-40" />
-            <col className="w-44" />
-            {/* The review column narrows for a visitor rather than being drawn empty: it
-                keeps the verdict badge and the report count, and loses the three controls.
-                The width lands on Lore, which is what anyone here to read came for. */}
-            <col className={canReview ? "w-44" : "w-20"} />
-            <col />
-            {/* Wide enough for what the cell actually holds: icon buttons are 32px, and an
-                editor can have four side by side - report, edit, restore, regenerate - so
-                anything narrower pushes them left over the prose. w-10 for everyone else,
-                who has the report button and nothing more; never w-0, since that button is
-                not gated. */}
-            <col className={canRegenerate ? "w-36" : "w-10"} />
-          </colgroup>
-          <thead>
-            <tr className="text-muted-foreground border-border border-b text-left text-xs">
-              <th className="px-2 pb-1 font-medium">Zone</th>
-              <th className="px-2 pb-1 font-medium">Subzone</th>
-              <th className="px-2 pb-1 font-medium">Review</th>
-              <th className="px-2 pb-1 font-medium">Lore</th>
-              <th className="sr-only">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result?.lines.map((line) => (
-              <LineRow
-                key={line.id}
-                line={withFlag(line)}
-                current={line.id === current?.id}
-                canReview={canReview}
-                canRegenerate={canRegenerate}
-                canTriage={canTriage}
-                onPlay={play}
-                onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
-                state={rowStates[line.id]}
-                onFlag={setFlag}
-                onNote={(l) => setNoteFor(withFlag(l))}
-                onReport={(l) =>
-                  setReportFor({ lineId: l.id, file: l.file, name: l.name })
-                }
-                onEditText={(l) => setEditFor(withFlag(l))}
-                onRegenerate={regenerateOne}
-                onRestore={restore}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Above the table as well as below it: 43 pages of lore is a lot of scrolling to
+          reach a control that is one line away at the top. */}
+      <Pagination page={page} pageCount={pages} onPage={(next) => updateUrl({ page: next })} />
+
+      {/* Fixed layout, because the point of the columns is that they line up down the
+          page: left to auto sizing, one long subzone name would widen its column for
+          every row. The lore column takes whatever the named ones leave. */}
+      <table className="w-full table-fixed border-collapse text-sm">
+        <colgroup>
+          <col className="w-40" />
+          <col className="w-44" />
+          {/* The review column narrows for a visitor rather than being drawn empty: it
+              keeps the verdict badge and the report count, and loses the three controls.
+              The width lands on Lore, which is what anyone here to read came for. */}
+          <col className={canReview ? "w-44" : "w-20"} />
+          <col />
+          {/* Wide enough for what the cell actually holds: icon buttons are 32px, and an
+              editor can have four side by side - report, edit, restore, regenerate - so
+              anything narrower pushes them left over the prose. w-10 for everyone else,
+              who has the report button and nothing more; never w-0, since that button is
+              not gated. */}
+          <col className={canRegenerate ? "w-36" : "w-10"} />
+        </colgroup>
+        <thead>
+          <tr className="text-muted-foreground border-border border-b text-left text-xs">
+            <th className="px-2 pb-1 font-medium">Zone</th>
+            <th className="px-2 pb-1 font-medium">Subzone</th>
+            <th className="px-2 pb-1 font-medium">Review</th>
+            <th className="px-2 pb-1 font-medium">Lore</th>
+            <th className="sr-only">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {result?.lines.map((line) => (
+            <LineRow
+              key={line.id}
+              line={withFlag(line)}
+              current={line.id === current?.id}
+              canReview={canReview}
+              canRegenerate={canRegenerate}
+              canTriage={canTriage}
+              onPlay={play}
+              onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
+              state={rowStates[line.id]}
+              onFlag={setFlag}
+              onNote={(l) => setNoteFor(withFlag(l))}
+              onReport={(l) =>
+                setReportFor({ lineId: l.id, file: l.file, name: l.name })
+              }
+              onEditText={(l) => setEditFor(withFlag(l))}
+              onRegenerate={regenerateOne}
+              onRestore={restore}
+            />
+          ))}
+        </tbody>
+      </table>
 
       {result && result.total === 0 && !loading && (
-        <p className="text-muted-foreground shell py-8 text-center">
-          Nothing matches these filters.
-        </p>
+        <p className="text-muted-foreground py-8 text-center">Nothing matches these filters.</p>
       )}
 
-      <div className="shell">
-        <Pagination page={page} pageCount={pages} onPage={(next) => updateUrl({ page: next })} />
-      </div>
+      <Pagination page={page} pageCount={pages} onPage={(next) => updateUrl({ page: next })} />
 
-      <p className="text-muted-foreground shell mt-6 flex flex-wrap items-center gap-1.5 pb-4 text-xs">
+      <p className="text-muted-foreground mt-6 flex flex-wrap items-center gap-1.5 text-xs">
         <Key>/</Key> search · <Key>space</Key> play/pause · <Key>j</Key> <Key>k</Key> next and
         previous line on this page
         {canReview && (
