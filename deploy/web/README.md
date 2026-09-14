@@ -187,9 +187,26 @@ make web-cutover-audio
 
 # 3. The database. The quests half is restored wholesale, because the merged schema was
 #    grown from it and the migrations carry it forward.
-ssh deploy@rusty.one
-  sudo -u postgres pg_dump voiceover | sudo -u postgres psql spoken
+#
+#    DROP IT FIRST. By this point the staged database holds the migrations and whatever
+#    `web-migrate-lines` copied in, and a pg_dump restored over that fails every CREATE
+#    TABLE while its COPYs land on top of rows that are already there. Nothing is lost:
+#    everything the staging held came from one of the two old databases, and steps 3 and
+#    4 bring all of it back.
+ssh root@rusty.one
+  # dropdb refuses while anything holds a connection, and the staged app holds several.
+  sudo -u deploy pm2 stop spoken
+  sudo -u postgres dropdb --if-exists spoken
+  sudo -u postgres createdb -O spoken spoken
+  sudo -u postgres pg_dump voiceover | sudo -u postgres psql --set ON_ERROR_STOP=on spoken
   /srv/spoken/bin/migrate.sh /srv/spoken/current
+  # Started again by step 5, which is where it picks up port 3000 and the real origin.
+
+#    The accounts arrive here, with the quests database: five of them, one an admin. The
+#    two on the zones side are merged in by step 4, by lower(email) - and today both of
+#    them already exist on the quests side, so nobody new is created and both keep the
+#    password they use on voiceover.rusty.one. Sessions do not move; everyone signs in
+#    again against an origin that has changed anyway.
 
 # 4. The zones half, laid over it. Rehearse first; it writes nothing. This copies the
 #    corpus, flags and takes again, replacing whatever `web-migrate-lines` staged
