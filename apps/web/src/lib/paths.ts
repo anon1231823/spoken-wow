@@ -24,7 +24,7 @@ const PIPELINE_DIR = ["pipelines", "quests"].join(path.sep);
 const DATA_ROOT = path.resolve(process.cwd(), "..", "..", PIPELINE_DIR);
 
 export const CORPUS_PATH =
-  process.env.VOICEOVER_CORPUS ?? path.join(DATA_ROOT, "corpus", "corpus.json.gz");
+  process.env.SPOKEN_QUESTS_CORPUS ?? path.join(DATA_ROOT, "corpus", "corpus.json.gz");
 
 /**
  * The hiccup scan's findings, written by tools/scan_corpus_hiccups.py.
@@ -33,8 +33,8 @@ export const CORPUS_PATH =
  * and findings came from different scans would mark the wrong lines.
  *
  * Derived from CORPUS_PATH rather than given an env var of its own, which it had until this
- * cost an afternoon. VOICEOVER_CORPUS is set on the droplet and points into the release;
- * VOICEOVER_HICCUPS was new, so it lived in shared/ecosystem.config.js and only reached the
+ * cost an afternoon. SPOKEN_QUESTS_CORPUS is set on the droplet and points into the release;
+ * SPOKEN_QUESTS_HICCUPS was new, so it lived in shared/ecosystem.config.js and only reached the
  * process after someone remembered `make deploy-scripts`. Until then this resolved against
  * DATA_ROOT - which is cwd/../../pipelines/quests - and the standalone server's cwd is the
  * release directory, so
@@ -45,10 +45,10 @@ export const CORPUS_PATH =
  * request time live in Postgres, where a verdict can be recorded against them.
  */
 export const HICCUPS_PATH =
-  process.env.VOICEOVER_HICCUPS ?? path.join(path.dirname(CORPUS_PATH), "hiccups.json.gz");
+  process.env.SPOKEN_QUESTS_HICCUPS ?? path.join(path.dirname(CORPUS_PATH), "hiccups.json.gz");
 
 export const AUDIO_DIR =
-  process.env.VOICEOVER_AUDIO ?? path.join(DATA_ROOT, "audio");
+  process.env.SPOKEN_QUESTS_AUDIO ?? path.join(DATA_ROOT, "audio");
 
 /**
  * Clips uploaded to build a voice clone, one directory per race-gender.
@@ -58,7 +58,7 @@ export const AUDIO_DIR =
  * and a rollback. Gitignored locally.
  */
 export const VOICE_SAMPLES_DIR =
-  process.env.VOICEOVER_VOICE_SAMPLES ?? path.join(DATA_ROOT, "voice", "samples");
+  process.env.SPOKEN_QUESTS_VOICE_SAMPLES ?? path.join(DATA_ROOT, "voice", "samples");
 
 /**
  * Blizzard's own NPC greeting barks, as `<race-gender>/<flavor>/<Title>.ogg`.
@@ -69,7 +69,7 @@ export const VOICE_SAMPLES_DIR =
  * droplet, so seeding is something you do from a checkout.
  */
 export const NPC_LINES_DIR =
-  process.env.VOICEOVER_NPC_LINES ?? path.join(DATA_ROOT, "voice", "npc-lines");
+  process.env.SPOKEN_QUESTS_NPC_LINES ?? path.join(DATA_ROOT, "voice", "npc-lines");
 
 /**
  * Previous takes of a regenerated line: <sub>/<fileName>/<version>.mp3.
@@ -79,7 +79,7 @@ export const NPC_LINES_DIR =
  * living under there would be mistaken for the store's own contents by both.
  */
 export const AUDIO_HISTORY_DIR =
-  process.env.VOICEOVER_AUDIO_HISTORY ?? path.join(DATA_ROOT, "audio-history");
+  process.env.SPOKEN_QUESTS_AUDIO_HISTORY ?? path.join(DATA_ROOT, "audio-history");
 
 /**
  * Rendered pronunciation previews, as `<hash>.mp3`.
@@ -91,7 +91,7 @@ export const AUDIO_HISTORY_DIR =
  * twice to hear the same entry.
  */
 export const PREVIEW_DIR =
-  process.env.VOICEOVER_PREVIEWS ?? path.join(DATA_ROOT, "audio-previews");
+  process.env.SPOKEN_QUESTS_PREVIEWS ?? path.join(DATA_ROOT, "audio-previews");
 
 /**
  * generation.json and pronunciation.json: how a line is voiced.
@@ -102,4 +102,4 @@ export const PREVIEW_DIR =
  * app treats them as defaults rather than owning them outright.
  */
 export const VOICE_CONFIG_DIR =
-  process.env.VOICEOVER_VOICE_CONFIG ?? path.join(DATA_ROOT, "voice");
+  process.env.SPOKEN_QUESTS_VOICE_CONFIG ?? path.join(DATA_ROOT, "voice");

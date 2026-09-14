@@ -12,8 +12,8 @@ import path from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "voice-regen-"));
-process.env.VOICEOVER_AUDIO = path.join(root, "audio");
-process.env.VOICEOVER_AUDIO_HISTORY = path.join(root, "audio-history");
+process.env.SPOKEN_QUESTS_AUDIO = path.join(root, "audio");
+process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
 const { storePath, versionPath, versionsOnDisk, writeStoreFile } = await import("./archive");

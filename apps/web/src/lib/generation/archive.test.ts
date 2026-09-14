@@ -11,8 +11,8 @@ const HISTORY = path.join(root, "audio-history");
 
 // paths.ts reads the environment at import time, so this has to be set before the module
 // graph is pulled in - hence the dynamic import below rather than a top-level one.
-process.env.VOICEOVER_AUDIO = AUDIO;
-process.env.VOICEOVER_AUDIO_HISTORY = HISTORY;
+process.env.SPOKEN_QUESTS_AUDIO = AUDIO;
+process.env.SPOKEN_QUESTS_AUDIO_HISTORY = HISTORY;
 
 const {
   archiveStoreFile,

@@ -10,13 +10,13 @@ let dir: string;
 // module graph is loaded. Same reason as samples.test.ts.
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), "voiceover-npc-lines-"));
-  process.env.VOICEOVER_NPC_LINES = dir;
+  process.env.SPOKEN_QUESTS_NPC_LINES = dir;
   vi.resetModules();
 });
 
 afterEach(async () => {
   await fs.rm(dir, { recursive: true, force: true });
-  delete process.env.VOICEOVER_NPC_LINES;
+  delete process.env.SPOKEN_QUESTS_NPC_LINES;
 });
 
 async function seed(voice: string, ...names: string[]) {
