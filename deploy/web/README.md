@@ -166,7 +166,18 @@ cannot be looked at - and need the quests database as well as the zones one:
 
 ```bash
 make web-migrate-reports    # line_report and feedback into report; replaces by source
+make web-migrate-verdicts   # the quests triage decisions, onto this database's own scan
 ```
+
+`line_issue` is rebuilt wholesale by every scan, so a staged database has its own findings
+with every verdict back at `open`. The scan is a machine's output and costs nothing to
+redo; the verdicts are the part somebody sat down and made, and they are matched across on
+`(category, item)` — which the table declares unique, and which is what a finding is.
+
+None of this reaches what only the restore carries: the line overrides, the voice clones,
+the quests takes and their history, and the lexicon as it actually stands. Those arrive
+with the `pg_dump` at step 3 below, which is the one description of that copy there should
+be.
 
 The split is which rows can be thrown away and written again. Those three are statements
 about a zone line that lore.rusty.one holds the only copy of, so the import deletes and
