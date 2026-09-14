@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import LineRow from "./LineRow";
 import Key from "./Key";
@@ -89,6 +89,7 @@ function filterParams(filters: LineFilters): URLSearchParams {
 export default function Explorer({ facets }: { facets: Facets }) {
   const router = useRouter();
   const params = useSearchParams();
+  const pathname = usePathname();
   const { data: session } = useSession();
 
   // Read once here and drilled down, rather than a hook per row: a page renders fifty
@@ -205,9 +206,12 @@ export default function Explorer({ facets }: { facets: Facets }) {
       if (next.page !== undefined && next.page > 1) search.set("page", String(next.page));
       else search.delete("page");
 
-      router.replace(search.toString() ? `/?${search}` : "/", { scroll: false });
+      // The current path, never a literal "/": this explorer was the site root until the
+      // merge moved it to /quests, and a hardcoded "/" sent every narrowing click to the
+      // landing page carrying the filters it was asked for.
+      router.replace(search.toString() ? `${pathname}?${search}` : pathname, { scroll: false });
     },
-    [params, router],
+    [params, pathname, router],
   );
 
   const updateFilters = useCallback(
@@ -252,8 +256,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const clearAll = useCallback(() => {
     setQuery("");
     pending.current = write(pending.current, "");
-    router.replace("/", { scroll: false });
-  }, [router]);
+    router.replace(pathname, { scroll: false });
+  }, [pathname, router]);
 
   // Held in a ref so the debounce below restarts on keystrokes only. `updateUrl` changes
   // identity on every param change, and letting that reset the timer would let a filter
