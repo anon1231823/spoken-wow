@@ -2,7 +2,11 @@
   "compilerOptions": {
     "target": "ES2022",
     "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": false,
+    // The zones pipeline is dependency-free ESM with no build step, and lib/zones/tools.ts
+    // imports it directly rather than shelling out - see the header there. TypeScript reads
+    // those modules and infers their shapes, which is what makes a change in pipelines/zones
+    // show up as a type error rather than as undefined at runtime.
+    "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
@@ -14,7 +18,10 @@
     "jsx": "preserve",
     "incremental": true,
     "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./src/*"] }
+    "paths": {
+      "@/*": ["./src/*"],
+      "@tools/*": ["../../pipelines/zones/tools/*"]
+    }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]

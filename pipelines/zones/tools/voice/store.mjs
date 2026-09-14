@@ -25,7 +25,7 @@ import { promisify } from "node:util";
 
 import { basename, extname } from "node:path";
 
-import { BASE_LOCALE, isLocale, packFolder } from "../lib/locales.mjs";
+import { BASE_LOCALE, isLocale, sourceFolder } from "../lib/locales.mjs";
 import { ROOT } from "../lib/loredata.mjs";
 import * as db from "./db.mjs";
 
@@ -72,9 +72,9 @@ export function manifestPath(lang = LANG) {
 export function soundsDir(lang = LANG) {
   const override = process.env.SPOKEN_ZONES_SOUNDS;
   if (override) {
-    return lang === BASE_LOCALE ? override : join(dirname(override), packFolder(lang, "high"));
+    return lang === BASE_LOCALE ? override : join(dirname(override), sourceFolder(lang));
   }
-  return join(ROOT, "addons", packFolder(lang, "high"), "Sounds");
+  return join(ROOT, "addons", sourceFolder(lang), "Sounds");
 }
 
 export const SAMPLES_DIR = join(ROOT, "pipelines/zones/audio-samples");

@@ -12,14 +12,17 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadEnvFile } from "../lib/env.mjs";
-import { packFolder } from "../lib/locales.mjs";
+import { sourceFolder } from "../lib/locales.mjs";
 import { ROOT } from "../lib/loredata.mjs";
 import { close as closeStore, LANG, loadManifest, soundsDir } from "./store.mjs";
 
 // Beside the masters, whichever language those are. The lookup describes the
 // files next to it, so the two cannot be built for different languages.
+//
+// The directory in this repository, not the folder the pack ships under: those are two
+// names now, and this writes a file into the tree. See sourceFolder in lib/locales.mjs.
 function packDir(lang) {
-  return join(ROOT, "addons", packFolder(lang, "high"));
+  return join(ROOT, "addons", sourceFolder(lang));
 }
 
 function luaString(text) {

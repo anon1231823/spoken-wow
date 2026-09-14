@@ -22,6 +22,10 @@ const config: NextConfig = {
   // and pm2's `script` all name that path.
   outputFileTracingRoot: repoRoot,
 
+  // `pg` stays a real require rather than being bundled. The zones pipeline's db.mjs reaches
+  // for it too, and two copies in one process would each install their own type parsers.
+  serverExternalPackages: ["pg"],
+
   // AND THE EXCLUDES THAT HAVE TO COME WITH IT. Widening the root re-opened exactly what
   // the narrow one was set to prevent. Next's tracer statically evaluates the
   // path.resolve() in src/lib/paths.ts, resolves it to a real directory, and pulls the
@@ -39,9 +43,15 @@ const config: NextConfig = {
   // reach the droplet: the deploy workflow copies them into the release by glob, so a
   // rollback moves data and code together. Tracing them in as well would ship them twice
   // and let a stale copy win.
+  // pipelines/quests, NOT pipelines/**. The zones half of that directory is compiled INTO
+  // this bundle -- lib/zones/tools.ts imports it, webpack follows those imports, and
+  // excluding it here would exclude nothing webpack had already pulled in while making the
+  // exclusion list read as though the whole pipelines tree were out. The Python side is what
+  // has to stay out, and for a reason worth repeating: its .env holds the ElevenLabs key and
+  // the database password, and a release bundle is rsynced to a droplet.
   outputFileTracingExcludes: {
     "*": [
-      "../../pipelines/**",
+      "../../pipelines/quests/**",
       "../../addons/**",
       "../../apps/web-zones/**",
       "../../curseforge/**",
