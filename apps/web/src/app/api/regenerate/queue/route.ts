@@ -58,8 +58,20 @@ export async function POST(request: NextRequest) {
   }
 
   const label = typeof body.label === "string" && body.label ? body.label : "a search";
-  const batchId = await createBatch(label, session.user.id);
-  const { queued, skipped } = await enqueue(batchId, jobs);
+  const batchId = await createBatch(label, session.user.id, "quests");
+  // BatchLine calls it audioPath and the queue calls it file, because a job is one mp3 on
+  // either side and only the quests corpus thinks of it as a line's audio.
+  const { queued, skipped } = await enqueue(
+    batchId,
+    jobs.map((job) => ({
+      lineId: job.lineId,
+      file: job.audioPath,
+      npcName: job.npcName,
+      preview: job.preview,
+      characters: job.characters,
+    })),
+    "quests",
+  );
 
   // The loop is on a two-second idle tick, and waiting that out before the first take would
   // be the most visible part of pressing the button.

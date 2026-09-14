@@ -21,6 +21,7 @@ import {
   finishJob,
   retryJob,
   type QueueJob,
+  type Source,
 } from "./queue";
 import { regenerateLine, type RegenerateResult } from "./regenerate";
 import { readSettings } from "./settings";
@@ -67,12 +68,25 @@ export async function currentBudget(apiKey: string | null = null): Promise<numbe
   return clampToPool(plan, POOL_MAX);
 }
 
+/**
+ * How one job is generated.
+ *
+ * A function per source rather than one that switches inside, so adding a section is adding
+ * an entry here and the loop below stays the loop. Every one takes the same three arguments
+ * because that is all a job carries: which line, whose credits, and the key to spend them.
+ */
+export type Generator = (
+  lineId: string,
+  userId: string,
+  options: { apiKey: string },
+) => Promise<RegenerateResult>;
+
 export type WorkerOptions = {
-  regenerate?: (
-    lineId: string,
-    userId: string,
-    options: { apiKey: string },
-  ) => Promise<RegenerateResult>;
+  /**
+   * Overrides per source, for tests. A source with no entry falls back to the real
+   * generator for it; there is no default that would quietly generate the wrong corpus.
+   */
+  regenerate?: Partial<Record<Source, Generator>>;
   budget?: (apiKey: string | null) => Promise<number>;
   /** The owner's stored key. Injectable so a test never needs one sealed in a database. */
   apiKeyFor?: (userId: string) => Promise<string | null>;
@@ -90,7 +104,14 @@ export type Worker = {
 };
 
 export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}): Worker {
-  const regenerate = options.regenerate ?? regenerateLine;
+  // Zones has no generator here yet; its jobs cannot be enqueued until it does, so a claim
+  // for one would be a bug rather than a state to handle - and it fails as one, loudly and
+  // fatally, rather than being handed to the quests generator and asked for a line id that
+  // corpus has never heard of.
+  const generators: Record<Source, Generator | null> = {
+    quests: options.regenerate?.quests ?? regenerateLine,
+    zones: options.regenerate?.zones ?? null,
+  };
   const budget = options.budget ?? currentBudget;
   const apiKeyFor = options.apiKeyFor ?? readApiKey;
   const backoff = options.backoffMs ?? backoffFor;
@@ -137,9 +158,21 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
     }
     lastKey = apiKey;
 
+    const generate = generators[job.source];
+    if (!generate) {
+      const message = `no generator for ${job.source} jobs in this build`;
+      try {
+        await failJob(job.id, { kind: "bad-request", message });
+        await cancelPending(`Stopped: ${message}`, job.batchId);
+      } catch (error) {
+        console.error(`regeneration queue: job ${job.id} could not be failed`, error);
+      }
+      return;
+    }
+
     // A batch whose owner's account was deleted still has takes to attribute, and
     // take."createdBy" is nullable for exactly that case.
-    const result = await regenerate(job.lineId, job.createdBy ?? "", { apiKey }).catch(
+    const result = await generate(job.lineId, job.createdBy ?? "", { apiKey }).catch(
       (error: unknown): RegenerateResult => ({
         ok: false,
         failure: {

@@ -11,22 +11,19 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { closeDb, db } from "@/lib/db";
-import type { BatchLine } from "@/lib/search";
-
 import * as queue from "./queue";
-import { createBatch, enqueue } from "./queue";
+import { createBatch, enqueue, type QueueEntry, type Source } from "./queue";
 import type { RegenerateResult } from "./regenerate";
 import { backoffFor, startWorker } from "./worker";
 
 let prefix: string;
 const batches: string[] = [];
 
-function line(n: number): BatchLine {
+function line(n: number): QueueEntry {
   return {
     lineId: `q:${n}:accept`,
-    audioPath: `${prefix}/${n}.mp3`,
+    file: `${prefix}/${n}.mp3`,
     npcName: `NPC ${n}`,
-    voice: "human-male",
     characters: 100,
     preview: `line ${n}`,
   };
@@ -49,10 +46,10 @@ const OK: RegenerateResult = {
   archivedInherited: false,
 };
 
-async function seed(count: number): Promise<string> {
-  const id = await createBatch("test", null as unknown as string);
+async function seed(count: number, source: Source = "quests"): Promise<string> {
+  const id = await createBatch("test", null as unknown as string, source);
   batches.push(id);
-  await enqueue(id, Array.from({ length: count }, (_, i) => line(i + 1)));
+  await enqueue(id, Array.from({ length: count }, (_, i) => line(i + 1)), source);
   return id;
 }
 
@@ -117,7 +114,7 @@ describe("startWorker", () => {
     const batch = await seed(5);
     const worker = startWorker(() => true, {
       apiKeyFor: KEYED,
-      regenerate: async () => OK,
+      regenerate: { quests: async () => OK },
       budget: async () => 3,
     });
 
@@ -133,13 +130,13 @@ describe("startWorker", () => {
     const worker = startWorker(() => true, {
       apiKeyFor: KEYED,
       budget: async () => 3,
-      regenerate: async () => {
+      regenerate: { quests: async () => {
         live += 1;
         peak = Math.max(peak, live);
         await new Promise((resolve) => setTimeout(resolve, 20));
         live -= 1;
         return OK;
-      },
+      } },
     });
 
     await until(async () => (await statesOf(batch)).done === 10);
@@ -151,7 +148,7 @@ describe("startWorker", () => {
 
   it("claims nothing while it does not lead", async () => {
     const batch = await seed(3);
-    const worker = startWorker(() => false, { apiKeyFor: KEYED, regenerate: async () => OK });
+    const worker = startWorker(() => false, { apiKeyFor: KEYED, regenerate: { quests: async () => OK }});
 
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(await statesOf(batch)).toEqual({ pending: 3 });
@@ -164,7 +161,7 @@ describe("startWorker", () => {
     const worker = startWorker(() => true, {
       apiKeyFor: KEYED,
       budget: async () => 1,
-      regenerate: async () => ({
+      regenerate: { quests: async () => ({
         ok: false,
         failure: {
           kind: "quota",
@@ -172,7 +169,7 @@ describe("startWorker", () => {
           status: 402,
           fatal: true,
         },
-      }),
+      }) },
     });
 
     await until(async () => {
@@ -200,10 +197,10 @@ describe("startWorker", () => {
     const worker = startWorker(() => true, {
       apiKeyFor: async () => null,
       budget: async () => 1,
-      regenerate: async () => {
+      regenerate: { quests: async () => {
         generated += 1;
         return OK;
-      },
+      } },
     });
 
     await until(async () => {
@@ -221,6 +218,35 @@ describe("startWorker", () => {
     expect(rows[0].stoppedBecause).toContain("ElevenLabs key");
   });
 
+  /**
+   * A claim for a section this build cannot generate is a bug, not a state: the enqueue path
+   * for it does not exist yet. It fails fatally rather than being handed to the other
+   * section's generator, which would be asked for a line id that corpus has never heard of
+   * and would answer "no line" once per job for the length of the batch.
+   */
+  it("refuses a job whose section has no generator, rather than guessing", async () => {
+    const batch = await seed(3, "zones");
+    let generated = 0;
+    const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
+      budget: async () => 1,
+      regenerate: {
+        quests: async () => {
+          generated += 1;
+          return OK;
+        },
+      },
+    });
+
+    await until(async () => {
+      const states = await statesOf(batch);
+      return (states.cancelled ?? 0) === 2 && (states.failed ?? 0) === 1;
+    });
+    await worker.stop();
+
+    expect(generated).toBe(0);
+  });
+
   it("keeps going after a failure that is not fatal", async () => {
     const batch = await seed(3);
     let first = true;
@@ -228,7 +254,7 @@ describe("startWorker", () => {
     const worker = startWorker(() => true, {
       apiKeyFor: KEYED,
       budget: async () => 1,
-      regenerate: async () => {
+      regenerate: { quests: async () => {
         if (first) {
           first = false;
           return {
@@ -242,7 +268,7 @@ describe("startWorker", () => {
           };
         }
         return OK;
-      },
+      } },
     });
 
     await until(async () => {
@@ -259,7 +285,7 @@ describe("startWorker", () => {
       budget: async () => 1,
       // Zero base, so the test does not wait out a real backoff.
       backoffMs: () => 0,
-      regenerate: async () => ({
+      regenerate: { quests: async () => ({
         ok: false,
         failure: {
           kind: "rate-limit",
@@ -267,7 +293,7 @@ describe("startWorker", () => {
           status: 429,
           fatal: false,
         },
-      }),
+      }) },
     });
 
     await until(async () => (await statesOf(batch)).failed === 1);
@@ -292,7 +318,7 @@ describe("startWorker", () => {
       apiKeyFor: KEYED,
       budget: async () => 1,
       backoffMs: () => 0,
-      regenerate: async () => ({
+      regenerate: { quests: async () => ({
         ok: false,
         failure: {
           kind: "rate-limit",
@@ -300,7 +326,7 @@ describe("startWorker", () => {
           status: 429,
           fatal: false,
         },
-      }),
+      }) },
     });
 
     await until(async () => (await statesOf(batch)).failed === 1);
@@ -341,10 +367,10 @@ describe("stop()", () => {
     const worker = startWorker(() => true, {
       apiKeyFor: KEYED,
       budget: async () => 1,
-      regenerate: async () => {
+      regenerate: { quests: async () => {
         regenerateCalls += 1;
         return OK;
-      },
+      } },
     });
 
     await claimStarted;
@@ -375,13 +401,13 @@ describe("stop()", () => {
     const worker = startWorker(() => true, {
       apiKeyFor: KEYED,
       budget: async () => 1,
-      regenerate: async () => {
+      regenerate: { quests: async () => {
         resolveStarted();
         await new Promise<void>((resolve) => {
           releaseRegenerate = resolve;
         });
         return OK;
-      },
+      } },
     });
 
     await regenerateStarted;

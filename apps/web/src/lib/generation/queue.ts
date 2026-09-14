@@ -6,17 +6,42 @@
  *
  * Rows are keyed on the file for the reason migration 0013 records - a job is one mp3, not
  * one line - and the exclusions that keep the queue honest live in the schema, not here.
+ *
+ * ONE QUEUE FOR BOTH SECTIONS. There is one ElevenLabs plan behind it, the panel shows what
+ * everyone is spending, and two queues would need a scheduler between them to decide which
+ * is allowed to run. The source rides on each job and decides which generator worker.ts
+ * hands it to; it is also half the credit guard's key, because the two sides name files by
+ * their own frozen rules and a collision would mean one section's job silently blocking the
+ * other's - which reads as "nothing happened when I pressed Regenerate".
  */
 import { db } from "@/lib/db";
-import type { BatchLine } from "@/lib/search";
 
 export type JobState = "pending" | "running" | "done" | "failed" | "cancelled";
+
+/** Which corpus a batch is against, and so which generator its jobs go to. */
+export type Source = "quests" | "zones";
+
+/**
+ * One unit of work, in terms both sections can express.
+ *
+ * npcName and preview are denormalised from whatever corpus this came from, so that polling
+ * every two seconds - and the worker itself - never need to load one. The zones side has no
+ * NPC and puts the zone's name there; what the column is for is a label the panel can show.
+ */
+export type QueueEntry = {
+  lineId: string;
+  file: string;
+  npcName: string;
+  preview: string;
+  characters: number;
+};
 
 /** A claimed job, with the batch's owner joined in so the take records who paid for it. */
 export type QueueJob = {
   /** bigserial, which `pg` returns as a string. Kept as one so nothing rounds it. */
   id: string;
   batchId: string;
+  source: Source;
   lineId: string;
   file: string;
   npcName: string;
@@ -34,8 +59,8 @@ export type QueueSnapshot = {
   credits: number;
   /** Takes ElevenLabs did not price, counted rather than assumed to be free. */
   unpriced: number;
-  running: { lineId: string; npcName: string; preview: string }[];
-  failures: { lineId: string; message: string }[];
+  running: { source: Source; lineId: string; npcName: string; preview: string }[];
+  failures: { source: Source; lineId: string; message: string }[];
   /**
    * The newest batch's own stop, or null when there is no batch at all.
    *
@@ -44,8 +69,14 @@ export type QueueSnapshot = {
    * would put yesterday's stop reason on today's clean run.
    */
   latestBatch: { cancelled: number; stoppedBecause: string | null } | null;
-  /** Jobs that reached `done` after the cursor, for the page to adopt. */
-  finished: { id: string; lineId: string; file: string; version: number }[];
+  /**
+   * Jobs that reached `done` after the cursor, for the page to adopt.
+   *
+   * Carries the source because two explorers poll the same queue, and each may only adopt
+   * its own: a quests page told that '1411/razor-hill' is now at version 3 would look for a
+   * line it does not have.
+   */
+  finished: { id: string; source: Source; lineId: string; file: string; version: number }[];
   /** Pass back as `since` on the next poll. */
   cursor: string;
 };
@@ -72,10 +103,15 @@ const RETENTION = "30 days";
 /** How many finished jobs one poll carries. Enough that a tab which slept catches up fast. */
 const FINISHED_PAGE = 500;
 
-export async function createBatch(label: string, createdBy: string | null): Promise<string> {
+export async function createBatch(
+  label: string,
+  createdBy: string | null,
+  source: Source,
+): Promise<string> {
   const { rows } = await db().query<{ id: string }>(
-    `insert into "regeneration_batch" ("label", "createdBy") values ($1, $2) returning "id"`,
-    [label, createdBy],
+    `insert into "regeneration_batch" ("label", "createdBy", "source")
+     values ($1, $2, $3) returning "id"`,
+    [label, createdBy, source],
   );
   return rows[0].id;
 }
@@ -90,7 +126,8 @@ export async function createBatch(label: string, createdBy: string | null): Prom
  */
 export async function enqueue(
   batchId: string,
-  jobs: BatchLine[],
+  jobs: QueueEntry[],
+  source: Source,
 ): Promise<{ queued: number; skipped: number }> {
   if (jobs.length === 0) return { queued: 0, skipped: 0 };
 
@@ -102,13 +139,14 @@ export async function enqueue(
 
   const { rowCount } = await db().query(
     `insert into "regeneration_job"
-       ("batchId", "lineId", "file", "npcName", "preview", "characters")
-     select $1, * from unnest($2::text[], $3::text[], $4::text[], $5::text[], $6::int[])
-     on conflict ("file") where "state" in ('pending', 'running') do nothing`,
+       ("batchId", "source", "lineId", "file", "npcName", "preview", "characters")
+     select $1, $2, * from unnest($3::text[], $4::text[], $5::text[], $6::text[], $7::int[])
+     on conflict ("source", "file") where "state" in ('pending', 'running') do nothing`,
     [
       batchId,
+      source,
       jobs.map((job) => job.lineId),
-      jobs.map((job) => job.audioPath),
+      jobs.map((job) => job.file),
       jobs.map((job) => job.npcName),
       jobs.map((job) => job.preview),
       jobs.map((job) => job.characters),
@@ -144,8 +182,8 @@ export async function claimNext(leaseMs: number = DEFAULT_LEASE_MS): Promise<Que
          for update skip locked
          limit 1
       )
-      returning j."id"::text, j."batchId", j."lineId", j."file", j."npcName", j."preview",
-                j."characters", j."attempts",
+      returning j."id"::text, j."batchId", j."source", j."lineId", j."file", j."npcName",
+                j."preview", j."characters", j."attempts",
                 (select b."createdBy" from "regeneration_batch" b where b."id" = j."batchId")
                   as "createdBy"`,
     [leaseMs / 1000],
@@ -242,9 +280,9 @@ type JobAggregateRow = {
   cancelled: string;
   credits: string;
   unpriced: string;
-  running: { lineId: string; npcName: string; preview: string }[];
-  failures: { lineId: string; message: string }[];
-  finished: { id: string; lineId: string; file: string; version: number }[];
+  running: { source: Source; lineId: string; npcName: string; preview: string }[];
+  failures: { source: Source; lineId: string; message: string }[];
+  finished: { id: string; source: Source; lineId: string; file: string; version: number }[];
   cursor: string | null;
 };
 
@@ -310,15 +348,15 @@ export async function snapshot(since: string | null): Promise<QueueSnapshot> {
          where ${window}
        ),
        running_jobs as (
-         select "lineId", "npcName", "preview" from "regeneration_job"
+         select "source", "lineId", "npcName", "preview" from "regeneration_job"
           where "state" = 'running' order by "id" limit 20
        ),
        recent_failures as (
-         select "lineId", "error" as message from "regeneration_job"
+         select "source", "lineId", "error" as message from "regeneration_job"
           where "state" = 'failed' and ${window} order by "id" desc limit 20
        ),
        finished_page as (
-         select "id"::text as "id", "lineId", "file", "version" from "regeneration_job"
+         select "id"::text as "id", "source", "lineId", "file", "version" from "regeneration_job"
           where "state" = 'done' and "version" is not null
             and "id" > greatest(coalesce($1::bigint, 0), (select through from dismissal))
           order by "id" limit ${FINISHED_PAGE}
