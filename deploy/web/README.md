@@ -149,20 +149,24 @@ makes a half-migrated site publicly reachable, with every quest line showing as 
 use, or every sign-in returns `403 Invalid origin`: `http://127.0.0.1:3002` for the tunnel,
 `https://spoken.rusty.one` for the vhost.
 
-**The lore corpus can be staged early**, and should be: without it `/zones` renders a
-"not loaded yet" notice and the search API answers `503 corpus_empty`, which is honest but
-untestable. It is extracted text rather than anybody's work, so copying it costs nothing
-and can be repeated:
+**The zones line data can be staged early**, and should be. Without the corpus `/zones`
+renders a "not loaded yet" notice and the search API answers `503 corpus_empty`; without
+the takes every line reports missing audio, because presence is read from the `take` table
+while the files themselves are already on disk. Quests does not have that second problem —
+it reads its store from disk — which is why a half-staged site looks lopsided.
 
 ```bash
 DATABASE_URL=postgres://spoken:…@127.0.0.1:5432/spoken \
 ZONELORE_URL=postgres://zonelore:…@127.0.0.1:5432/zonelore \
-  make web-migrate-corpus     # replaces lore_line; writes no migration marker
+  make web-migrate-lines      # lore_line, line_flag, take; writes no migration marker
 ```
 
-Nothing else moves early. Takes, reports, keys and accounts keep being written on
-lore.rusty.one until the freeze, so they are copied once, at the cutover, by the import
-below — which refuses to run a second time.
+The split is which rows can be thrown away and written again. Those three are statements
+about a zone line that lore.rusty.one holds the only copy of, so the import deletes and
+re-copies each wholesale and can be run as often as it is useful. Accounts, sealed keys and
+reports cannot be treated that way — accounts merge into rows this database already has,
+and reports are deliberately never deduplicated — so they move exactly once, at the
+cutover, by the import below, which refuses to run a second time.
 
 **Do not regenerate anything on the staged site.** It writes into `shared/`, which at that
 point is a copy that the cutover is about to overwrite, and the credits would be spent on a
@@ -188,8 +192,8 @@ ssh deploy@rusty.one
   /srv/spoken/bin/migrate.sh /srv/spoken/current
 
 # 4. The zones half, laid over it. Rehearse first; it writes nothing. This copies the
-#    corpus again, replacing whatever `web-migrate-corpus` staged earlier, so the lore
-#    edits made between staging and the freeze come with it.
+#    corpus, flags and takes again, replacing whatever `web-migrate-lines` staged
+#    earlier, so the edits and takes made between staging and the freeze come with them.
 DATABASE_URL=postgres://spoken:…@127.0.0.1:5432/spoken \
 ZONELORE_URL=postgres://zonelore:…@127.0.0.1:5432/zonelore \
   make web-migrate-legacy-dry

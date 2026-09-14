@@ -13,7 +13,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help dev build typecheck test bootstrap deploy-scripts releases rollback logs \
-        ssh-check store cutover-audio migrate-legacy migrate-legacy-dry migrate-corpus
+        ssh-check store cutover-audio migrate-legacy migrate-legacy-dry migrate-lines
 
 APP := @spoken/web
 
@@ -116,12 +116,13 @@ cutover-audio: ## Copy both old sites' shared/ into /srv/spoken/shared (COPIES, 
 # spoken.rusty.one has to be stood down, the two old apps start again against audio that
 # was never touched. Disk is the cheap half of that trade.
 
-migrate-corpus: ## Copy the zones lore corpus into the new database (rerunnable, pre-cutover)
-	@node apps/web/scripts/migrate-legacy.mjs --corpus-only
+migrate-lines: ## Copy the zones corpus, flags and takes (rerunnable, pre-cutover)
+	@node apps/web/scripts/migrate-legacy.mjs --lines
 
-# The corpus is extracted text, not anybody's work, so it can be copied early and copied
-# again. Takes, reports, keys and accounts keep being written on lore.rusty.one until the
-# freeze, so they move exactly once -- `migrate-legacy` below, at cutover.
+# Lore rows, flags and takes are statements about lines that only lore.rusty.one holds, so
+# re-copying them replaces them with themselves and this can be run whenever it is useful.
+# Accounts, sealed keys and reports cannot be: accounts merge into rows this database
+# already has, and reports are never deduplicated. Those move once, at the cutover, below.
 
 migrate-legacy-dry: ## Rehearse the zones import into the new database (writes nothing)
 	@node apps/web/scripts/migrate-legacy.mjs --dry-run

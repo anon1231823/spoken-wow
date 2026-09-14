@@ -3,7 +3,7 @@
  *
  *   DATABASE_URL=postgres://…/spoken \
  *   ZONELORE_URL=postgres://…/zonelore \
- *   node apps/web/scripts/migrate-legacy.mjs [--dry-run] [--corpus-only]
+ *   node apps/web/scripts/migrate-legacy.mjs [--dry-run] [--lines]
  *
  * WHAT THIS DOES NOT DO: the quests half. That database is restored wholesale --
  * `pg_dump voiceover | psql spoken`, then the migrations -- because the merged schema was
@@ -34,18 +34,24 @@ import pg from "pg";
 const DRY_RUN = process.argv.includes("--dry-run");
 
 /**
- * Copy the lore corpus and nothing else.
+ * Copy what the zones site knows about LINES, and nothing it knows about PEOPLE.
  *
- * The corpus is the one part of the zones data that is not a record of anybody's work: it
- * is text the pipeline extracted, so re-copying it is free of consequence, and staging
- * cannot show a zone page without it. Everything else here -- accounts, keys, takes,
- * reports -- is written by people and keeps being written right up to the freeze, so it
- * moves once, at cutover, and not before.
+ * The split is which rows can be thrown away and written again. A lore row, a flag and a
+ * take are all statements about a zone line that lore.rusty.one holds the only copy of:
+ * re-copying them replaces them with themselves, so this mode deletes and re-imports each
+ * of the three wholesale and can be run as often as it is useful. Accounts, sealed keys
+ * and reports cannot be treated that way -- accounts are merged into rows this database
+ * already has, and reports are deliberately never deduplicated -- so they move exactly
+ * once, at the cutover.
+ *
+ * What it is for: a staged site that can be looked at. Without the corpus /zones says the
+ * lore is not loaded; without the takes it says every line is missing audio, because
+ * presence is read from the take table while the files themselves sit on disk.
  *
  * Which is also why this mode writes no marker: it is not the import, it does not stand in
  * for it, and the real one must still refuse to run twice afterwards.
  */
-const CORPUS_ONLY = process.argv.includes("--corpus-only");
+const LINES_ONLY = process.argv.includes("--lines");
 
 const TARGET = process.env.DATABASE_URL;
 const SOURCE = process.env.ZONELORE_URL;
@@ -101,7 +107,7 @@ async function main() {
       `select 1 from "schema_migrations" where "name" = $1`,
       ["legacy-zones-import"],
     );
-    if (already.rowCount && !CORPUS_ONLY) {
+    if (already.rowCount && !LINES_ONLY) {
       throw new Error(
         "the zones data has already been imported into this database. Restore it from the " +
           "pg_dump and start again if you need to re-run.",
@@ -110,18 +116,24 @@ async function main() {
 
     await target.query("begin");
 
-    if (CORPUS_ONLY) {
+    if (LINES_ONLY) {
       const lore = await copyLore(source, target);
+      const flags = await copyFlags(source, target);
+      const takes = await copyTakes(source, target);
       console.log("");
       console.log(`  lore_line  ${lore.rows} rows across ${lore.langs} languages` +
         (lore.replaced ? `, replacing ${lore.replaced}` : ""));
+      console.log(`  line_flag  ${flags.rows} verdicts` +
+        (flags.replaced ? `, replacing ${flags.replaced}` : ""));
+      console.log(`  take       ${takes.rows} zone takes` +
+        (takes.replaced ? `, replacing ${takes.replaced}` : ""));
       console.log("");
       if (DRY_RUN) {
         await target.query("rollback");
         console.log("dry run: rolled back, nothing was written");
       } else {
         await target.query("commit");
-        console.log("committed. The corpus only -- the cutover import still has to run.");
+        console.log("committed. Lines only -- accounts, keys and reports still move at the cutover.");
       }
       return;
     }
@@ -145,8 +157,8 @@ async function main() {
     console.log(`  users      ${users.matched} matched by email, ${users.created} created`);
     console.log(`  keys       ${keys} sealed ElevenLabs credentials`);
     console.log(`  lore_line  ${lore.rows} rows across ${lore.langs} languages`);
-    console.log(`  line_flag  ${flags} verdicts`);
-    console.log(`  take       ${takes} zone takes`);
+    console.log(`  line_flag  ${flags.rows} verdicts`);
+    console.log(`  take       ${takes.rows} zone takes`);
     console.log(`  report     ${reports} reports`);
     console.log("");
 
@@ -365,6 +377,10 @@ async function copyLore(source, target) {
 }
 
 async function copyFlags(source, target) {
+  // Replaced, for the reason copyLore gives: a flag is a verdict this database holds no
+  // other copy of, so re-importing it is a no-op rather than a merge.
+  const replaced = await target.query(`delete from "line_flag"`);
+
   const { rows } = await source.query(
     `select "lineId", "lang", "status", "note", "updatedAt" from "line_flag"`,
   );
@@ -375,7 +391,7 @@ async function copyFlags(source, target) {
       [row.lineId, row.lang, row.status, row.note, row.updatedAt],
     );
   }
-  return rows.length;
+  return { rows: rows.length, replaced: replaced.rowCount ?? 0 };
 }
 
 /**
@@ -387,6 +403,10 @@ async function copyFlags(source, target) {
  * gap the column is nullable for.
  */
 async function copyTakes(source, target) {
+  // Only this section's rows. The quests takes in the same table were carried across by
+  // migration 0020 from a database restored wholesale, and are nothing to do with here.
+  const replaced = await target.query(`delete from "take" where "source" = 'zones'`);
+
   const columns = TAKE_COLUMNS.map(([from]) => `"${from}"`).join(", ");
   const { rows } = await source.query(
     `select "lineId", "lang", "version", "isCurrent", "origin", "settings", "generatedAt",
@@ -415,7 +435,7 @@ async function copyTakes(source, target) {
     );
   }
 
-  return rows.length;
+  return { rows: rows.length, replaced: replaced.rowCount ?? 0 };
 }
 
 /**
