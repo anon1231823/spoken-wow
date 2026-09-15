@@ -30,6 +30,9 @@ const CONFIG = {
   modelId: "eleven_v3",
   voiceSettings: { stability: 0.5, similarity_boost: 0.75, style: 0, use_speaker_boost: true },
   seedStrategy: "npc" as const,
+  // A preview renders one word to check how it is said, not a race's line, so no accent
+  // direction belongs on it.
+  raceTags: {},
 };
 
 function line(text: string, over: Partial<CorpusLine> = {}): CorpusLine {

@@ -34,6 +34,7 @@ type Row = {
   modelId: string;
   voiceSettings: VoiceSettings;
   seedStrategy: string;
+  raceTags: Record<string, string> | null;
   updatedAt: string;
   updatedBy: string | null;
 };
@@ -42,7 +43,7 @@ export async function readSettings(): Promise<EffectiveSettings> {
   const defaults = fileDefaults().config;
 
   const { rows } = await db().query<Row>(
-    `select "modelId", "voiceSettings", "seedStrategy", "updatedAt", "updatedBy"
+    `select "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy"
        from "generation_setting" where "id"`,
   );
 
@@ -58,6 +59,10 @@ export async function readSettings(): Promise<EffectiveSettings> {
       // Defended rather than trusted: the column is text, and a strategy the code does not
       // implement must fall back to a working one instead of throwing mid-generation.
       seedStrategy: isSeedStrategy(row.seedStrategy) ? row.seedStrategy : defaults.seedStrategy,
+      // Empty, not the committed tags, when the column is null: a row written by the release
+      // before this column existed said nothing about accents, and inheriting the file's
+      // tags would start tagging lines that nobody asked to have tagged.
+      raceTags: row.raceTags ?? {},
     },
     source: "database",
     defaults,
@@ -115,21 +120,61 @@ export function validateConfig(input: unknown): GenerationConfig {
     throw new SettingsError(`unknown seed strategy ${JSON.stringify(raw.seedStrategy)}`);
   }
 
-  return { modelId: modelId.trim(), voiceSettings, seedStrategy: raw.seedStrategy };
+  return {
+    modelId: modelId.trim(),
+    voiceSettings,
+    seedStrategy: raw.seedStrategy,
+    raceTags: validateRaceTags(raw.raceTags),
+  };
+}
+
+/**
+ * The accent directions, checked for the ways a tag can quietly do the wrong thing.
+ *
+ * Shape only: the race keys are not checked against the corpus. Validating them would mean
+ * loading the corpus on every settings write, and the form offers the races it already knows
+ * from facets, so a name no line carries is not reachable through the UI - it would simply
+ * match nothing, which is the same as not setting it.
+ */
+function validateRaceTags(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new SettingsError("raceTags must be an object");
+  }
+
+  const tags: Record<string, string> = {};
+  for (const [race, tag] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof tag !== "string") throw new SettingsError(`the ${race} tag must be a string`);
+    const trimmed = tag.trim();
+    if (!trimmed) throw new SettingsError(`the ${race} tag is empty; remove it instead`);
+    // narration.ts splits speech from stage directions on angle brackets, so a tag carrying
+    // one would be read by the narrator rather than tagging the race it belongs to.
+    if (/[<>]/.test(trimmed)) {
+      throw new SettingsError(`the ${race} tag must not contain an angle bracket`);
+    }
+    tags[race] = trimmed;
+  }
+  return tags;
 }
 
 export async function writeSettings(config: GenerationConfig, updatedBy: string): Promise<void> {
   await db().query(
     `insert into "generation_setting"
-       ("id", "modelId", "voiceSettings", "seedStrategy", "updatedAt", "updatedBy")
-     values (true, $1, $2, $3, now(), $4)
+       ("id", "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy")
+     values (true, $1, $2, $3, $4, now(), $5)
      on conflict ("id") do update set
        "modelId"       = excluded."modelId",
        "voiceSettings" = excluded."voiceSettings",
        "seedStrategy"  = excluded."seedStrategy",
+       "raceTags"      = excluded."raceTags",
        "updatedAt"     = excluded."updatedAt",
        "updatedBy"     = excluded."updatedBy"`,
-    [config.modelId, JSON.stringify(config.voiceSettings), config.seedStrategy, updatedBy],
+    [
+      config.modelId,
+      JSON.stringify(config.voiceSettings),
+      config.seedStrategy,
+      JSON.stringify(config.raceTags),
+      updatedBy,
+    ],
   );
 }
 

@@ -14,6 +14,7 @@ const VALID = {
     use_speaker_boost: true,
   },
   seedStrategy: "npc",
+  raceTags: { dwarf: "[Scottish accent]" },
 };
 
 describe("validateConfig", () => {
@@ -23,6 +24,42 @@ describe("validateConfig", () => {
 
   it("accepts a full, valid body", () => {
     expect(validateConfig(VALID)).toEqual(VALID);
+  });
+
+  describe("race tags", () => {
+    it("accepts a race with no tag configured", () => {
+      expect(validateConfig({ ...VALID, raceTags: {} }).raceTags).toEqual({});
+    });
+
+    it("refuses a body with no raceTags at all, so a stale form cannot clear them", () => {
+      const { raceTags: _omitted, ...body } = VALID;
+      expect(() => validateConfig(body)).toThrow(SettingsError);
+    });
+
+    it("refuses a tag that is not a string", () => {
+      expect(() => validateConfig({ ...VALID, raceTags: { dwarf: 3 } })).toThrow(SettingsError);
+    });
+
+    it("refuses an empty tag", () => {
+      expect(() => validateConfig({ ...VALID, raceTags: { dwarf: "   " } })).toThrow(
+        SettingsError,
+      );
+    });
+
+    // An angle bracket is how narration.ts tells a stage direction from speech, so a tag
+    // containing one would be handed to the narrator instead of tagging the dwarf.
+    it("refuses a tag containing an angle bracket", () => {
+      expect(() => validateConfig({ ...VALID, raceTags: { dwarf: "<Scottish>" } })).toThrow(
+        /angle bracket/,
+      );
+    });
+
+    it("trims a tag", () => {
+      expect(validateConfig({ ...VALID, raceTags: { dwarf: " [Scottish accent] " } })).toEqual({
+        ...VALID,
+        raceTags: { dwarf: "[Scottish accent]" },
+      });
+    });
   });
 
   it("trims the model id", () => {
