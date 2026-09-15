@@ -56,6 +56,35 @@ export function audioTags(text: string): string {
   return text.replace(SOUND, "[$1]");
 }
 
+/**
+ * The accent direction for a race, prefixed to the words the NPC says.
+ *
+ * Dwarves are the reason this exists: the game's actors play them with a strong Scottish
+ * brogue, and an instant clone read by eleven_v3 returns something closer to RP. The model
+ * has no other channel for direction - a text-to-speech request carries text, settings and a
+ * seed, nothing else - so the direction has to travel inside the text.
+ *
+ * Applied per stretch of speech rather than once at the front, because a line can be
+ * interrupted by a stage direction that `narrator-male` reads. Tagging the whole string would
+ * tell the narrator to sound like a dwarf too, and would leave the second half of the NPC's
+ * own speech untagged.
+ *
+ * Runs after audioTags, so the sounds it rewrote are square-bracketed by now and stay with
+ * the speech that makes them. Angle brackets are still what separates a direction from
+ * speech here, and an unbalanced one is left as damage for the gate to refuse.
+ */
+export function accentTagged(text: string, tag: string | undefined): string {
+  if (!tag) return text;
+  return text
+    .split(DIRECTION)
+    .map((piece) =>
+      DIRECTION.test(piece) || !piece.trim()
+        ? piece
+        : piece.replace(/^(\s*)/, `$1${tag} `),
+    )
+    .join("");
+}
+
 export function segments(text: string): Segment[] {
   const out: Segment[] = [];
   for (const piece of text.split(DIRECTION)) {

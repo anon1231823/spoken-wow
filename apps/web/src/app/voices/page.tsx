@@ -7,6 +7,7 @@ import VoiceSlotList from "@/components/VoiceSlotList";
 import { readApiKey } from "@/lib/api-key";
 import { auth } from "@/lib/auth";
 import { readSettings } from "@/lib/generation/settings";
+import { facets } from "@/lib/facets";
 import { canManageVoices } from "@/lib/permissions";
 import { generationStatus } from "@/lib/generation/status";
 import { listSamples, type Sample } from "@/lib/voices/samples";
@@ -72,7 +73,7 @@ export default async function Page() {
         </div>
       )}
 
-      <GenerationSettings initial={settings} models={account.models} />
+      <GenerationSettings initial={settings} models={account.models} races={facets().races} />
 
       <VoiceSlotList
         slots={all}

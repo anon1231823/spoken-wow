@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { audioTags, hasNarration, restoresOnlyNarration, segments } from "./narration";
+import {
+  accentTagged,
+  audioTags,
+  hasNarration,
+  restoresOnlyNarration,
+  segments,
+} from "./narration";
 
 describe("audioTags", () => {
   it("turns a lowercase sound into the tag syntax ElevenLabs performs", () => {
@@ -116,5 +122,41 @@ describe("restoresOnlyNarration", () => {
 
   it("ignores whitespace, which the strip leaves behind unevenly", () => {
     expect(restoresOnlyNarration("<He turns it over.>   A crystal   fragment.", corpus)).toBe(true);
+  });
+});
+
+describe("accentTagged", () => {
+  it("prefixes the tag to a plain line", () => {
+    expect(accentTagged("Welcome to Ironforge.", "[Scottish accent]")).toBe(
+      "[Scottish accent] Welcome to Ironforge.",
+    );
+  });
+
+  it("leaves the line alone when the race has no tag", () => {
+    expect(accentTagged("Welcome to Ironforge.", undefined)).toBe("Welcome to Ironforge.");
+  });
+
+  it("tags the speech but not the direction the narrator reads", () => {
+    expect(accentTagged("Excellent.\n\n<He opens the note.>", "[Scottish accent]")).toBe(
+      "[Scottish accent] Excellent.\n\n<He opens the note.>",
+    );
+  });
+
+  it("tags every stretch of speech a direction interrupts", () => {
+    expect(accentTagged("Aye. <He nods.> Off with ye.", "[Scottish accent]")).toBe(
+      "[Scottish accent] Aye. <He nods.> [Scottish accent] Off with ye.",
+    );
+  });
+
+  it("keeps a sound already rewritten by audioTags with the speech that makes it", () => {
+    expect(accentTagged("Take some coin... [hic]", "[Scottish accent]")).toBe(
+      "[Scottish accent] Take some coin... [hic]",
+    );
+  });
+
+  it("leaves an unbalanced bracket as damage for the gate to refuse", () => {
+    expect(accentTagged("What < is this", "[Scottish accent]")).toBe(
+      "[Scottish accent] What < is this",
+    );
   });
 });

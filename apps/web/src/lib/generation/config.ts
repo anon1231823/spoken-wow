@@ -27,6 +27,18 @@ export type GenerationConfig = {
   modelId: string;
   voiceSettings: VoiceSettings;
   seedStrategy: SeedStrategy;
+  /**
+   * An accent direction per race, e.g. `{ dwarf: "[Scottish accent]" }`.
+   *
+   * Keyed by the corpus's spelling of the race rather than the voice slot, so one entry
+   * covers every gender and flavor of that race. eleven_v3 performs a square-bracketed tag
+   * instead of reading it; narration.ts puts them on the words the NPC says.
+   *
+   * Data rather than a constant because whether a model honours a tag on a ten-word greeting
+   * is a question only generating one can answer, and backing the answer out should not need
+   * a deploy.
+   */
+  raceTags: Record<string, string>;
 };
 
 /** The unit-interval fields, checked on every write. Same list as _UNIT_INTERVAL in Python. */
@@ -48,6 +60,7 @@ export const FALLBACK: GenerationConfig = {
     use_speaker_boost: true,
   },
   seedStrategy: "npc",
+  raceTags: { dwarf: "[Scottish accent]" },
 };
 
 /** The JSON shape on disk, which is Python's. */
@@ -55,6 +68,7 @@ export type GenerationFile = {
   model_id?: unknown;
   voice_settings?: Record<string, unknown>;
   seed_strategy?: unknown;
+  race_tags?: unknown;
 };
 
 export function isSeedStrategy(value: unknown): value is SeedStrategy {
@@ -87,5 +101,22 @@ export function fromFileShape(raw: GenerationFile): GenerationConfig {
           : FALLBACK.voiceSettings.use_speaker_boost,
     },
     seedStrategy: isSeedStrategy(raw.seed_strategy) ? raw.seed_strategy : FALLBACK.seedStrategy,
+    raceTags: raw.race_tags === undefined ? FALLBACK.raceTags : raceTags(raw.race_tags),
   };
+}
+
+/**
+ * The string-valued entries of a race_tags object, and nothing else.
+ *
+ * A number or null would reach the spoken text as "undefined" and be read aloud, and an array
+ * would contribute its indices as race names. Same reasoning as readPronunciationFile, which
+ * filters the rules for the same failure.
+ */
+function raceTags(raw: unknown): Record<string, string> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>).filter(
+      ([, tag]) => typeof tag === "string",
+    ) as [string, string][],
+  );
 }

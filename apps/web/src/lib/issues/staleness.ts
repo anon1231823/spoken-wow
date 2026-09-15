@@ -17,8 +17,9 @@ import { fileIndex } from "../audio";
 import { db } from "../db";
 import { fileDefaults } from "../generation/files";
 import { spokenHash } from "../generation/history";
-import { audioTags } from "../generation/narration";
+import { accentTagged, audioTags } from "../generation/narration";
 import { applyPronunciation } from "../generation/pronunciation";
+import { currentConfig } from "../generation/settings";
 import { readOverrides } from "./overrides";
 
 /**
@@ -47,6 +48,10 @@ export async function staleFiles(files?: string[]): Promise<Set<string>> {
   const overrides = await readOverrides();
   const lines = fileIndex();
   const rules = fileDefaults().rules;
+  // Once for the whole sweep, unlike regenerate.ts which reads it per line: this answers a
+  // question about the takes as they stand, and a settings change landing mid-sweep would
+  // only make half the answer describe a configuration that was never used to generate.
+  const { raceTags } = await currentConfig();
 
   const stale = new Set<string>();
   for (const row of rows) {
@@ -54,9 +59,12 @@ export async function staleFiles(files?: string[]): Promise<Set<string>> {
     const line = lines.get(row.file);
     if (!line) continue;
     const text = overrides.get(row.file)?.text ?? line.text;
-    // Same two transforms regenerate.ts applies, in the same order: the hash is of the string
-    // that was sent, so a take of "[hic]" must be compared against "[hic]" and not "<hic>".
-    if (spokenHash(audioTags(applyPronunciation(text, rules))) !== row.spokenHash) {
+    // Same three transforms regenerate.ts applies, in the same order: the hash is of the
+    // string that was sent, so a take of "[hic]" must be compared against "[hic]" and not
+    // "<hic>", and a dwarf take made with its accent direction against that same direction -
+    // otherwise every dwarf line reads as stale forever rather than once.
+    const spoken = accentTagged(audioTags(applyPronunciation(text, rules)), raceTags[line.race]);
+    if (spokenHash(spoken) !== row.spokenHash) {
       stale.add(row.file);
     }
   }

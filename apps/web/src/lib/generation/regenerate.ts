@@ -27,7 +27,7 @@ import { canonicalNpcId, seedFor } from "./seed";
 import { commitVersion } from "./history";
 import { currentConfig } from "./settings";
 import { generationStatus } from "./status";
-import { audioTags, NARRATOR_VOICE, segments } from "./narration";
+import { accentTagged, audioTags, NARRATOR_VOICE, segments } from "./narration";
 import { textToDialogue, textToSpeech } from "./tts";
 import { BUSY, withFileLock } from "./lock";
 import { failure, type Failure } from "./errors";
@@ -141,7 +141,14 @@ export async function regenerateLine(
 
   const outcome = await withFileLock(file, async (): Promise<RegenerateResult> => {
     const config = await currentConfig();
-    const spokenText = audioTags(applyPronunciation(source, fileDefaults().rules));
+    // The accent direction goes on last, so it sits in front of the words rather than in
+    // front of a `<hic>` audioTags has yet to rewrite. Inside spokenText and not bolted on at
+    // the request, because these are characters ElevenLabs bills and the staleness check
+    // hashes: a take that under-reported them would be mispriced and permanently stale.
+    const spokenText = accentTagged(
+      audioTags(applyPronunciation(source, fileDefaults().rules)),
+      config.raceTags[line.race],
+    );
     // Read inside the lock and per line, not hoisted: an admin saving the lexicon mid-batch
     // should affect the lines after the save, and pinning one locator for a whole batch
     // would record a version that some of those takes were not made with.

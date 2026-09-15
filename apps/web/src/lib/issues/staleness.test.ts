@@ -13,6 +13,8 @@ const { lineIndex } = await import("@/lib/corpus");
 const { fileDefaults } = await import("@/lib/generation/files");
 const { spokenHash } = await import("@/lib/generation/history");
 const { applyPronunciation } = await import("@/lib/generation/pronunciation");
+const { accentTagged } = await import("@/lib/generation/narration");
+const { currentConfig } = await import("@/lib/generation/settings");
 const { clearOverride, writeOverride } = await import("./overrides");
 const { staleFiles } = await import("./staleness");
 
@@ -116,5 +118,71 @@ describe("staleFiles", () => {
   it("says nothing about a file with no take at all", async () => {
     expect(await staleFiles([file])).toEqual(new Set());
     expect(await staleFiles([])).toEqual(new Set());
+  });
+});
+
+/**
+ * A dwarf line, for the race the committed config gives an accent direction.
+ *
+ * Its own file and its own fixtures, for the reason LINE gives: two describes sharing an
+ * mp3's version rows flake under parallel test files.
+ */
+const DWARF_LINE = "q:48:complete";
+const dwarfFile = audioRelPath(lineIndex().get(DWARF_LINE)![0]);
+
+describe("a race with an accent tag", () => {
+  let deposedDwarf: number[] = [];
+
+  beforeEach(async () => {
+    const { rows } = await db().query<{ id: string }>(
+      `update "take" set "isCurrent" = false
+        where "source" = 'quests' and "file" = $1 and "isCurrent"
+       returning "id"`,
+      [dwarfFile],
+    );
+    deposedDwarf = rows.map((r) => Number(r.id));
+  });
+
+  afterEach(async () => {
+    await db().query(
+      `delete from "take" where "source" = 'quests' and "file" = $1 and "version" = 9999`,
+      [dwarfFile],
+    );
+    if (deposedDwarf.length > 0) {
+      await db().query(`update "take" set "isCurrent" = true where "id" = any($1::bigint[])`, [
+        deposedDwarf,
+      ]);
+    }
+  });
+
+  async function dwarfTake(hash: string) {
+    await db().query(
+      `insert into "take"
+         ("source", "file", "version", "isCurrent", "origin", "lineId", "voice", "bytes",
+          "spokenHash")
+       values ('quests', $1, 9999, true, 'generated', $2, 'dwarf-male-grim', 1, $3)`,
+      [dwarfFile, DWARF_LINE, hash],
+    );
+  }
+
+  function tagged(text: string): string {
+    return accentTagged(text, { dwarf: "[Scottish accent]" }.dwarf);
+  }
+
+  // The tag is part of the string that was sent, so a take made with it must compare equal to
+  // what would be sent now - otherwise every dwarf line is stale forever rather than once.
+  it("leaves a take made with the tag alone", async () => {
+    const line = fileIndex().get(dwarfFile)!;
+    await dwarfTake(spokenHash(tagged(applyPronunciation(line.text, fileDefaults().rules))));
+
+    expect((await currentConfig()).raceTags.dwarf).toBe("[Scottish accent]");
+    expect(await staleFiles([dwarfFile])).toEqual(new Set());
+  });
+
+  it("catches a take made before the race had a tag", async () => {
+    const line = fileIndex().get(dwarfFile)!;
+    await dwarfTake(spokenHash(applyPronunciation(line.text, fileDefaults().rules)));
+
+    expect(await staleFiles([dwarfFile])).toEqual(new Set([dwarfFile]));
   });
 });

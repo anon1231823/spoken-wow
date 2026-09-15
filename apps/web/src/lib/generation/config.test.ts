@@ -57,6 +57,7 @@ describe("fromFileShape", () => {
           use_speaker_boost: false,
         },
         seed_strategy: "none",
+        race_tags: { dwarf: "[Scottish accent]" },
       }),
     ).toEqual({
       modelId: "eleven_turbo_v2_5",
@@ -67,7 +68,20 @@ describe("fromFileShape", () => {
         use_speaker_boost: false,
       },
       seedStrategy: "none",
+      raceTags: { dwarf: "[Scottish accent]" },
     });
+  });
+
+  // A tag that is not a string would reach the spoken text as "undefined" and be read aloud,
+  // the same failure readPronunciationFile guards against for replacements.
+  it("drops race tags that are not strings", () => {
+    expect(fromFileShape({ race_tags: { dwarf: "[Scottish accent]", gnome: 3 } }).raceTags).toEqual(
+      { dwarf: "[Scottish accent]" },
+    );
+  });
+
+  it("treats a race_tags array as no tags rather than reading its indices", () => {
+    expect(fromFileShape({ race_tags: ["[Scottish accent]"] }).raceTags).toEqual({});
   });
 
   // A field the file omits must not become undefined and reach ElevenLabs as null: the API
@@ -81,6 +95,10 @@ describe("fromFileShape", () => {
 
   it("refuses a seed strategy the code does not implement", () => {
     expect(fromFileShape({ seed_strategy: "per-line" }).seedStrategy).toBe(FALLBACK.seedStrategy);
+  });
+
+  it("keeps the committed tags when the file omits race_tags", () => {
+    expect(fromFileShape({ model_id: "eleven_v3" }).raceTags).toEqual(FALLBACK.raceTags);
   });
 
   it("refuses an empty model id", () => {

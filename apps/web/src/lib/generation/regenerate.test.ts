@@ -27,6 +27,8 @@ const { clearOverride, writeOverride } = await import("@/lib/issues/overrides");
 const SOLO = "q:5:accept";
 /** A quest line six NPCs share, so one file serves all of them. Lowest npcId is 233. */
 const SHARED = "q:109:accept";
+/** A dwarf line: "Hiccup! Ho Ho!", spoken by Grimand Elmore. The race with an accent tag. */
+const DWARF = "q:48:complete";
 /** Progress text, which the generator never voices. */
 const NEVER_VOICED = "q:6:progress";
 /** A whole line of stage direction: "<Sirra begins translating…>". The narrator reads it. */
@@ -57,6 +59,8 @@ const DEFAULT_VOICES = {
   "orc-female-warrior": "voice-orc-female-warrior",
   // Not a race-gender-flavor slot: it reads stage directions, and no corpus line names it.
   "narrator-male": "voice-narrator-male",
+  // The dwarf line, which the committed race tags give an accent direction.
+  "dwarf-male-grim": "voice-dwarf-male-grim",
 };
 
 function stub({ voices = DEFAULT_VOICES, speech }: StubOptions = {}) {
@@ -196,6 +200,41 @@ describe("a line with no audio yet", () => {
       .text;
     expect(result.spokenText).toBe(spoken);
     expect(result.characters).toBe(spoken.length);
+  });
+});
+
+describe("a race with an accent tag", () => {
+  it("sends the direction ahead of the words", async () => {
+    const { options, calls } = stub();
+
+    const result = await regenerate(DWARF, options);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const speech = calls.find((call) => call.url.includes("text-to-speech"))!;
+    expect((speech.body as { text: string }).text).toBe("[Scottish accent] Hiccup! Ho Ho!");
+  });
+
+  // The tag is text ElevenLabs bills for and text the staleness check hashes, so a take that
+  // under-reports it would be both mispriced and permanently stale.
+  it("records the tag in the spoken text it bills for", async () => {
+    const { options } = stub();
+
+    const result = await regenerate(DWARF, options);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.spokenText).toBe("[Scottish accent] Hiccup! Ho Ho!");
+    expect(result.characters).toBe("[Scottish accent] Hiccup! Ho Ho!".length);
+  });
+
+  it("leaves a race with no tag exactly as it was", async () => {
+    const { options, calls } = stub();
+
+    await regenerate(SOLO, options);
+
+    const speech = calls.find((call) => call.url.includes("text-to-speech"))!;
+    expect((speech.body as { text: string }).text.startsWith("[")).toBe(false);
   });
 });
 
