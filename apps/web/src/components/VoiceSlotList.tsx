@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, Loader2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 import VoiceSamples from "./VoiceSamples";
 import { Badge } from "@/components/ui/badge";
@@ -18,17 +19,58 @@ import type { VoiceSlot } from "@/lib/voices/slots";
  * enough that finding one row matters more than knowing which to create first. One row
  * expands at a time: the clips carry <audio> elements, and fifty slots' worth open at once
  * would be both unreadable and a lot of metadata requests.
+ *
+ * Grouped by race, collapsed, so the page opens as eleven rows rather than fifty - and
+ * because the accent direction is a property of the race rather than of any one of its
+ * voices, so the group header is the only row it belongs on.
  */
+
+/** A race and the voices under it, in the order slots.ts already sorted them. */
+type Group = {
+  race: string;
+  slots: VoiceSlot[];
+  npcCount: number;
+  lineCount: number;
+};
+
+/**
+ * Races from the roster itself rather than from the corpus facets.
+ *
+ * The two agree today. Deriving them here keeps a race with no voice slot from appearing as
+ * a header with nothing under it, and means this list cannot disagree with the rows it heads.
+ */
+function groups(slots: VoiceSlot[]): Group[] {
+  const byRace = new Map<string, Group>();
+  for (const slot of slots) {
+    const race = slot.name.split("-")[0];
+    const group = byRace.get(race) ?? { race, slots: [], npcCount: 0, lineCount: 0 };
+    group.slots.push(slot);
+    // Summed rather than counted distinctly: an NPC speaks with one voice, so no NPC is in
+    // two of a race's slots.
+    group.npcCount += slot.npcCount;
+    group.lineCount += slot.lineCount;
+    byRace.set(race, group);
+  }
+  return [...byRace.values()];
+}
 
 type Props = {
   slots: VoiceSlot[];
   /** Voice names present in the ElevenLabs account, or null when it could not be read. */
   existing: string[] | null;
   initialSamples: Record<string, Sample[]>;
+  /** The accent direction per race, as the settings currently in force hold it. */
+  raceTags: Record<string, string>;
 };
 
-export default function VoiceSlotList({ slots, existing, initialSamples }: Props) {
+export default function VoiceSlotList({ slots, existing, initialSamples, raceTags }: Props) {
   const [open, setOpen] = useState<string | null>(null);
+  const [openRace, setOpenRace] = useState<string | null>(null);
+  const [tags, setTags] = useState(raceTags);
+  // The last value written, so a box that was edited and put back does not claim a save.
+  const [saved, setSaved] = useState(raceTags);
+  const [tagError, setTagError] = useState<string | null>(null);
+  const [savingRace, setSavingRace] = useState<string | null>(null);
   const [samples, setSamples] = useState(initialSamples);
   // Held as state so a slot flips to "created" without a reload; the server value is the
   // account, read fresh on every page view.
@@ -88,6 +130,47 @@ export default function VoiceSlotList({ slots, existing, initialSamples }: Props
   }
 
   const sweeping = sweep !== null && sweep.done < sweep.total;
+  const races = groups(slots);
+
+  /**
+   * Write the whole map, on blur, when this race's box actually changed.
+   *
+   * The whole map rather than the one race because removing a direction is as much an edit as
+   * adding one, and the endpoint takes what the tags should now be. On blur rather than per
+   * keystroke because every save is a row write and a half-typed "[Scot" is not a direction
+   * anyone meant to store.
+   */
+  async function saveTags(race: string) {
+    const next = { ...tags };
+    if (!next[race]?.trim()) delete next[race];
+    if ((saved[race] ?? "") === (next[race] ?? "")) return;
+
+    setSavingRace(race);
+    setTagError(null);
+    try {
+      const response = await fetch("/api/generation/settings/race-tags", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ raceTags: next }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        setTagError(body.error ?? `could not save (${response.status})`);
+        // Back to what the server holds, so the box never shows a direction that is not in
+        // force - the generation would not use it, and nothing else on the page would say so.
+        setTags(saved);
+        return;
+      }
+      const stored = body.config.raceTags as Record<string, string>;
+      setTags(stored);
+      setSaved(stored);
+    } catch (caught) {
+      setTagError(caught instanceof Error ? caught.message : String(caught));
+      setTags(saved);
+    } finally {
+      setSavingRace(null);
+    }
+  }
 
   return (
     <>
@@ -135,58 +218,123 @@ export default function VoiceSlotList({ slots, existing, initialSamples }: Props
         </div>
       )}
 
+      {tagError && (
+        <div
+          role="alert"
+          className="border-destructive/40 bg-destructive/10 text-destructive mb-3 rounded-md border px-3 py-2 text-sm"
+        >
+          {tagError}
+        </div>
+      )}
+
       <div className="divide-y overflow-hidden rounded-md border">
-        {slots.map((slot) => {
-          const clips = samples[slot.name] ?? [];
-          const expanded = open === slot.name;
+        {races.map((group) => {
+          const openGroup = openRace === group.race;
 
           return (
-            <div key={slot.name}>
-              <button
-                onClick={() => setOpen(expanded ? null : slot.name)}
-                aria-expanded={expanded}
+            <div key={group.race}>
+              {/* Not a <button>: the accent box lives on this row, and a text input inside a
+                  button is neither valid nor focusable the way anyone expects. */}
+              <div
                 className={cn(
-                  "hover:bg-muted/50 flex w-full items-center gap-3 px-3 py-2 text-left text-sm",
-                  "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
-                  expanded && "bg-muted/50",
+                  "flex w-full items-center gap-3 px-3 py-2 text-sm",
+                  openGroup && "bg-muted/50",
                 )}
               >
-                {expanded ? (
-                  <ChevronDown className="size-4 shrink-0" />
-                ) : (
-                  <ChevronRight className="text-muted-foreground size-4 shrink-0" />
-                )}
-                <span className="min-w-0 flex-1 font-medium">{slot.name}</span>
-                <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                  {slot.npcCount.toLocaleString()} NPCs · {slot.lineCount.toLocaleString()} lines
-                </span>
-                {clips.length > 0 && (
-                  <Badge variant="outline" className="shrink-0">
-                    {clips.length} {clips.length === 1 ? "clip" : "clips"}
-                  </Badge>
-                )}
-                <span className="w-24 shrink-0 text-right">
-                  {present === null ? (
-                    <span className="text-muted-foreground text-xs">unknown</span>
-                  ) : present.has(slot.name) ? (
-                    <Badge variant="outline" className="text-emerald-400">
-                      created
-                    </Badge>
-                  ) : (
-                    <span className="text-muted-foreground text-xs">not created</span>
+                <button
+                  onClick={() => setOpenRace(openGroup ? null : group.race)}
+                  aria-expanded={openGroup}
+                  className={cn(
+                    "hover:text-foreground flex min-w-0 flex-1 items-center gap-3 text-left",
+                    "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
                   )}
-                </span>
-              </button>
+                >
+                  {openGroup ? (
+                    <ChevronDown className="size-4 shrink-0" />
+                  ) : (
+                    <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+                  )}
+                  <span className="min-w-0 flex-1 font-medium">{group.race}</span>
+                  <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                    {group.slots.length} {group.slots.length === 1 ? "voice" : "voices"} ·{" "}
+                    {group.npcCount.toLocaleString()} NPCs · {group.lineCount.toLocaleString()}{" "}
+                    lines
+                  </span>
+                </button>
 
-              {expanded && (
-                <VoiceSamples
-                  voice={slot.name}
-                  samples={clips}
-                  exists={present?.has(slot.name) ?? false}
-                  onChange={(next) => setSamples((current) => ({ ...current, [slot.name]: next }))}
-                  onCloned={() => setPresent((current) => new Set(current ?? []).add(slot.name))}
+                <Input
+                  aria-label={`Accent direction for ${group.race}`}
+                  value={tags[group.race] ?? ""}
+                  placeholder="no accent direction"
+                  disabled={savingRace !== null}
+                  onChange={(event) =>
+                    setTags((current) => ({ ...current, [group.race]: event.target.value }))
+                  }
+                  onBlur={() => void saveTags(group.race)}
+                  className="h-7 w-56 shrink-0 font-mono text-xs"
                 />
-              )}
+              </div>
+
+              {openGroup &&
+                group.slots.map((slot) => {
+                  const clips = samples[slot.name] ?? [];
+                  const expanded = open === slot.name;
+
+                  return (
+                    <div key={slot.name} className="border-t">
+                      <button
+                        onClick={() => setOpen(expanded ? null : slot.name)}
+                        aria-expanded={expanded}
+                        className={cn(
+                          "hover:bg-muted/50 flex w-full items-center gap-3 py-2 pr-3 pl-9 text-left text-sm",
+                          "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
+                          expanded && "bg-muted/50",
+                        )}
+                      >
+                        {expanded ? (
+                          <ChevronDown className="size-4 shrink-0" />
+                        ) : (
+                          <ChevronRight className="text-muted-foreground size-4 shrink-0" />
+                        )}
+                        <span className="min-w-0 flex-1 font-medium">{slot.name}</span>
+                        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                          {slot.npcCount.toLocaleString()} NPCs ·{" "}
+                          {slot.lineCount.toLocaleString()} lines
+                        </span>
+                        {clips.length > 0 && (
+                          <Badge variant="outline" className="shrink-0">
+                            {clips.length} {clips.length === 1 ? "clip" : "clips"}
+                          </Badge>
+                        )}
+                        <span className="w-24 shrink-0 text-right">
+                          {present === null ? (
+                            <span className="text-muted-foreground text-xs">unknown</span>
+                          ) : present.has(slot.name) ? (
+                            <Badge variant="outline" className="text-emerald-400">
+                              created
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">not created</span>
+                          )}
+                        </span>
+                      </button>
+
+                      {expanded && (
+                        <VoiceSamples
+                          voice={slot.name}
+                          samples={clips}
+                          exists={present?.has(slot.name) ?? false}
+                          onChange={(next) =>
+                            setSamples((current) => ({ ...current, [slot.name]: next }))
+                          }
+                          onCloned={() =>
+                            setPresent((current) => new Set(current ?? []).add(slot.name))
+                          }
+                        />
+                      )}
+                    </div>
+                  );
+                })}
             </div>
           );
         })}

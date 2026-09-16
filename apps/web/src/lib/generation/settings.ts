@@ -136,7 +136,7 @@ export function validateConfig(input: unknown): GenerationConfig {
  * from facets, so a name no line carries is not reachable through the UI - it would simply
  * match nothing, which is the same as not setting it.
  */
-function validateRaceTags(raw: unknown): Record<string, string> {
+export function validateRaceTags(raw: unknown): Record<string, string> {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new SettingsError("raceTags must be an object");
   }
@@ -165,7 +165,11 @@ export async function writeSettings(config: GenerationConfig, updatedBy: string)
        "modelId"       = excluded."modelId",
        "voiceSettings" = excluded."voiceSettings",
        "seedStrategy"  = excluded."seedStrategy",
-       "raceTags"      = excluded."raceTags",
+       -- "raceTags" deliberately absent: they are edited on /voices, by writeRaceTags, and
+       -- the settings form no longer shows them. Its config carries whatever they were when
+       -- the page loaded, so writing those back would let a Save on the model silently
+       -- revert a direction somebody set in the meantime. The insert above still seeds them,
+       -- because a row being created has no earlier value to preserve.
        "updatedAt"     = excluded."updatedAt",
        "updatedBy"     = excluded."updatedBy"`,
     [
@@ -173,6 +177,46 @@ export async function writeSettings(config: GenerationConfig, updatedBy: string)
       JSON.stringify(config.voiceSettings),
       config.seedStrategy,
       JSON.stringify(config.raceTags),
+      updatedBy,
+    ],
+  );
+}
+
+/**
+ * Change the accent directions and nothing else.
+ *
+ * Its own write, rather than a field of the settings form, because the two are edited in
+ * different places for different reasons: a tag belongs to one race and is set while looking
+ * at that race's voices, whereas stability applies to everything and is set once. Sending the
+ * whole config to change a tag would make a tag edit capable of reverting a model change made
+ * a minute earlier in another tab.
+ *
+ * Whole-map rather than per-race, though. Removing a tag is as much an edit as adding one,
+ * and a merge could not express it.
+ *
+ * The row has to exist to hold a tag, so this creates it from the committed defaults when it
+ * does not - which overrides the model and the voice settings too, at whatever the file says
+ * right now. readSettings reports the source, so the page can say so rather than leaving
+ * someone to discover it.
+ */
+export async function writeRaceTags(
+  tags: Record<string, string>,
+  updatedBy: string | null,
+): Promise<void> {
+  const defaults = fileDefaults().config;
+  await db().query(
+    `insert into "generation_setting"
+       ("id", "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy")
+     values (true, $1, $2, $3, $4, now(), $5)
+     on conflict ("id") do update set
+       "raceTags"  = excluded."raceTags",
+       "updatedAt" = excluded."updatedAt",
+       "updatedBy" = excluded."updatedBy"`,
+    [
+      defaults.modelId,
+      JSON.stringify(defaults.voiceSettings),
+      defaults.seedStrategy,
+      JSON.stringify(tags),
       updatedBy,
     ],
   );

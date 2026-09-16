@@ -5,7 +5,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -80,19 +79,10 @@ function same(a: GenerationConfig, b: GenerationConfig): boolean {
 export default function GenerationSettings({
   initial,
   models,
-  races,
 }: {
   initial: EffectiveSettings;
   /** Read from the account. Empty when ElevenLabs could not be reached. */
   models: Model[];
-  /**
-   * Every race the corpus carries, offered rather than typed.
-   *
-   * validateConfig checks the shape of a tag but not its race, because doing so would mean
-   * loading the corpus on every settings write. Offering the list here is what keeps a race
-   * no line carries - one that would silently tag nothing - out of reach.
-   */
-  races: string[];
 }) {
   const [saved, setSaved] = useState(initial);
   const [draft, setDraft] = useState<GenerationConfig>(initial.config);
@@ -101,16 +91,6 @@ export default function GenerationSettings({
 
   const dirty = !same(draft, saved.config);
   const overridden = saved.source === "database";
-
-  /** An empty box means no direction for that race, so it is removed rather than stored blank. */
-  function patchRaceTag(race: string, value: string) {
-    setDraft((current) => {
-      const raceTags = { ...current.raceTags };
-      if (value.trim()) raceTags[race] = value;
-      else delete raceTags[race];
-      return { ...current, raceTags };
-    });
-  }
 
   function patchVoice(key: keyof VoiceSettings, value: number | boolean) {
     setDraft((current) => ({
@@ -260,32 +240,6 @@ export default function GenerationSettings({
             There is one voice per race and gender, so the seed is what keeps two NPCs sharing
             a voice from sounding like two different performances of it.
           </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Accent directions</Label>
-          <p className="text-muted-foreground text-xs">
-            Sent ahead of the words, for models that perform a bracketed tag rather than
-            reading it aloud. The game plays dwarves Scottish and a clone tends to come back
-            closer to RP, and a text-to-speech request has no other channel for direction.
-            A stage direction inside the line still goes to the narrator untagged.
-          </p>
-          <div className="grid max-w-md gap-1.5 sm:grid-cols-2">
-            {races.map((race) => (
-              <div key={race} className="flex items-center gap-2">
-                <Label htmlFor={`tag-${race}`} className="w-20 shrink-0 text-xs font-normal">
-                  {race}
-                </Label>
-                <Input
-                  id={`tag-${race}`}
-                  value={draft.raceTags[race] ?? ""}
-                  placeholder="none"
-                  onChange={(event) => patchRaceTag(race, event.target.value)}
-                  className="h-8 font-mono text-xs"
-                />
-              </div>
-            ))}
-          </div>
         </div>
 
         {error && (

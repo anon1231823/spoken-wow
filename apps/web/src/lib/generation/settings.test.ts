@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { FALLBACK } from "./config";
-import { SettingsError, validateConfig } from "./settings";
+import { SettingsError, validateConfig, validateRaceTags } from "./settings";
 
 // The shape the settings form sends. Every field, every time: partial updates against a row
 // read a moment earlier are how two admins silently overwrite each other.
@@ -137,5 +137,131 @@ describe("validateConfig", () => {
       voiceSettings: { ...VALID.voiceSettings, speed: 1.4 },
     });
     expect(result).toEqual(VALID);
+  });
+});
+
+/**
+ * The write path, against a real Postgres: what is being tested is that a tag edit leaves the
+ * rest of the row alone, and a mocked pg would only confirm the SQL was the SQL.
+ *
+ * Needs DATABASE_URL and migrations applied:
+ *   deploy/web/bin/migrate.sh "$PWD/apps/web"
+ */
+const { closeDb, db } = await import("@/lib/db");
+const { readSettings, writeRaceTags, writeSettings } = await import("./settings");
+
+/**
+ * The settings row, put back after every case.
+ *
+ * One row forever, and it is whatever this database generates with. A test that deleted it
+ * would silently reset the settings of whatever DATABASE_URL points at - the mistake
+ * dictionary.test.ts records having made with the lexicon.
+ */
+let snapshot: Record<string, unknown> | undefined;
+
+beforeAll(async () => {
+  const { rows } = await db().query("select * from generation_setting where id");
+  snapshot = rows[0];
+});
+
+afterEach(async () => {
+  await db().query(`delete from "generation_setting" where "id"`);
+  if (snapshot) {
+    await db().query(
+      `insert into "generation_setting"
+         ("id", "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy")
+       values (true, $1, $2, $3, $4, $5, $6)`,
+      [
+        snapshot.modelId,
+        JSON.stringify(snapshot.voiceSettings),
+        snapshot.seedStrategy,
+        snapshot.raceTags === null ? null : JSON.stringify(snapshot.raceTags),
+        snapshot.updatedAt,
+        snapshot.updatedBy,
+      ],
+    );
+  }
+});
+
+afterAll(async () => {
+  await closeDb();
+});
+
+describe("writeRaceTags", () => {
+  it("stores the tags on a database with no override yet", async () => {
+    await writeRaceTags({ dwarf: "[Scottish accent]" }, null);
+
+    const settings = await readSettings();
+    expect(settings.config.raceTags).toEqual({ dwarf: "[Scottish accent]" });
+  });
+
+  // The row has to be created to hold a tag, and creating it overrides everything else too.
+  // Whatever the file says at that moment is what gets pinned, so it must be exactly that
+  // and not some other default.
+  it("pins the committed settings when it has to create the row", async () => {
+    await writeRaceTags({ dwarf: "[Scottish accent]" }, null);
+
+    const settings = await readSettings();
+    expect(settings.source).toBe("database");
+    expect(settings.config.modelId).toBe(settings.defaults.modelId);
+    expect(settings.config.voiceSettings).toEqual(settings.defaults.voiceSettings);
+  });
+
+  it("leaves the rest of an existing row alone", async () => {
+    await writeSettings(
+      { ...FALLBACK, modelId: "eleven_flash_v2_5", seedStrategy: "none", raceTags: {} },
+      null as unknown as string,
+    );
+
+    await writeRaceTags({ orc: "[gruff]" }, null);
+
+    const settings = await readSettings();
+    expect(settings.config.modelId).toBe("eleven_flash_v2_5");
+    expect(settings.config.seedStrategy).toBe("none");
+    expect(settings.config.raceTags).toEqual({ orc: "[gruff]" });
+  });
+
+  it("clears every tag when given an empty map", async () => {
+    await writeRaceTags({ dwarf: "[Scottish accent]" }, null);
+    await writeRaceTags({}, null);
+
+    expect((await readSettings()).config.raceTags).toEqual({});
+  });
+});
+
+// The settings form no longer shows the tags, so the config it holds carries whatever they
+// were when the page loaded. Writing those back would let a Save on the model revert a tag
+// somebody set on /voices in the meantime.
+describe("writeSettings", () => {
+  it("does not touch the race tags of a row that already exists", async () => {
+    await writeRaceTags({ dwarf: "[Scottish accent]" }, null);
+
+    await writeSettings(
+      { ...FALLBACK, modelId: "eleven_flash_v2_5", raceTags: {} },
+      null as unknown as string,
+    );
+
+    const settings = await readSettings();
+    expect(settings.config.modelId).toBe("eleven_flash_v2_5");
+    expect(settings.config.raceTags).toEqual({ dwarf: "[Scottish accent]" });
+  });
+
+  it("uses the tags it was given when there is no row to preserve", async () => {
+    await writeSettings(
+      { ...FALLBACK, raceTags: { orc: "[gruff]" } },
+      null as unknown as string,
+    );
+
+    expect((await readSettings()).config.raceTags).toEqual({ orc: "[gruff]" });
+  });
+});
+
+describe("validateRaceTags", () => {
+  it("is the same check the whole-config path applies", () => {
+    expect(validateRaceTags({ dwarf: " [Scottish accent] " })).toEqual({
+      dwarf: "[Scottish accent]",
+    });
+    expect(() => validateRaceTags({ dwarf: "<Scottish>" })).toThrow(SettingsError);
+    expect(() => validateRaceTags("dwarf")).toThrow(SettingsError);
   });
 });
