@@ -10,7 +10,7 @@ Markdown mode — paste the file into it.
 | `audio-all.md` | Spoken Quests Audio: All | 1660196 | `spoken-quests-audio` |
 | `audio-alliance.md` | Spoken Quests Audio: Alliance | 1660197 | `spoken-quests-audio-alliance` |
 | `audio-horde.md` | Spoken Quests Audio: Horde | 1660198 | `spoken-quests-audio-horde` |
-| `audio-shared.md` | Spoken Quests Audio: Shared Quests | 1660199 | `spoken-quests-audio-shared-quests` |
+| `audio-shared.md` | Spoken Quests Audio: Shared Quests | 1660199 | `spoken-quests-audio-shared` |
 | `audio-gossip.md` | Spoken Quests Audio: Gossip | 1660202 | `spoken-quests-audio-gossip` |
 
 **Five more projects exist and are retired.** 1655867, 1658236, 1658237, 1658239 and 1658235 held
@@ -50,8 +50,7 @@ the four packs uploaded fine while their own projects were still pending.
 upload time, so it goes after the things it depends on.
 
 The slugs are what the pages and the addon link to, so they are read off the live projects
-rather than guessed - Shared Quests is not the slug its name suggests. They were all changed
-when the projects were renamed; the old ones redirect, but a redirect is not something to
+rather than guessed. They were all changed when the projects were renamed; the old ones redirect, but a redirect is not something to
 depend on, and CurseForge resolves a `relations` slug at upload time. `scripts/quests/release.sh`
 carries the same slugs in `target_dependencies()`, `SpokenQuests/DataModules.lua` the same URLs,
 and `.github/workflows/release-addons.yaml` the same links, so a slug that changes has to change

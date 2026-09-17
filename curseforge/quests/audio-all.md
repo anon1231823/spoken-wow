@@ -9,7 +9,7 @@ You still need the player: [Spoken Quests](https://www.curseforge.com/wow/addons
 | **All** | installs the four below | **this page** |
 | [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests | |
 | [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests | |
-| [Shared Quests](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared-quests) | quests both factions can take | |
+| [Shared Quests](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) | quests both factions can take | |
 | [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) | NPC gossip chatter | |
 
 Most players want less than this. An Alliance character only ever hears Alliance + Shared Quests, a Horde character Horde + Shared Quests, and Gossip is optional chatter on top — so picking two packs saves a large download of dialogue your character can never reach.

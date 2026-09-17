@@ -123,7 +123,7 @@ DataModules =
             Title = "Spoken Quests Audio: Shared Quests",
             ContentVersion = "1.2.1",
             RelevantAboveVersion = 0,
-            URL = "https://www.curseforge.com/wow/addons/spoken-quests-audio-shared-quests",
+            URL = "https://www.curseforge.com/wow/addons/spoken-quests-audio-shared",
         },
         {
             AddonName = "VoiceOverReduxHQAudioGossip",

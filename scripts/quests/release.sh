@@ -132,7 +132,7 @@ target_version() {
 target_dependencies() { case "$1" in
   player)    echo "spoken-player";;
   audio-all) echo "spoken-quests-audio-alliance spoken-quests-audio-horde \
-                   spoken-quests-audio-shared-quests spoken-quests-audio-gossip";;
+                   spoken-quests-audio-shared spoken-quests-audio-gossip";;
 esac; }
 
 # THE META ADDON GOES LAST. It names the four packs as dependencies, and CurseForge resolves
