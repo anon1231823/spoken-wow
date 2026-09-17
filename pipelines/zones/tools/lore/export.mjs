@@ -58,11 +58,22 @@ async function main() {
     console.log(`leaving ${notInEra} line(s) behind: not in the Era client (build ${era.build})`);
   }
 
-  const edited = rows.filter((row) => row.origin === "edited").length;
+  // A 'discovered' row is a place the client has and nobody has written about yet: it is
+  // in the corpus so the explorer can list it, and its text is empty until somebody fills
+  // it in. Exporting one would put an entry with no prose in front of a player and fail
+  // validate.mjs, which treats empty full/short as a broken file -- correctly, because for
+  // every other origin it is.
+  const unwritten = rows.filter((row) => !row.full.trim() || !row.short.trim());
+  const writable = rows.filter((row) => row.full.trim() && row.short.trim());
+  if (unwritten.length) {
+    console.log(`leaving ${unwritten.length} line(s) behind: discovered, not written yet`);
+  }
+
+  const edited = writable.filter((row) => row.origin === "edited").length;
 
   if (checkOnly) {
-    const zones = rows.filter((r) => r.kind === "zone");
-    const subzones = rows.filter((r) => r.kind === "subzone");
+    const zones = writable.filter((r) => r.kind === "zone");
+    const subzones = writable.filter((r) => r.kind === "subzone");
     const zoneNames = new Map(zones.map((z) => [z.mapID, z.name]));
 
     const stale = [];
@@ -86,7 +97,7 @@ async function main() {
     return;
   }
 
-  const written = await writeCorpus(rows, lang);
+  const written = await writeCorpus(writable, lang);
   console.log(
     `wrote ${written.zones} zones and ${written.subzones} subzones in ${lang} ` +
       `(${edited} hand-edited)`,
