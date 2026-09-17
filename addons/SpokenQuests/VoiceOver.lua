@@ -631,9 +631,25 @@ function Addon:OnInitialize()
     -- adopted above, this login. DisableAddOn takes effect only on the next.
     local SUPERSEDED_PLAYERS = { "AI_VoiceOver", "AI_VoiceOver_Continued", "VoiceOverRedux" }
 
+    -- Camelot answers GetAddOnInfo for a folder that is not installed by handing the
+    -- name straight back, so the old truthiness test flagged all three players on a
+    -- client where none of them exist and popped the duplicate dialog at every login.
+    -- DoesAddOnExist is the honest question; the loop is the answer on clients without it.
+    local function IsAddOnInstalled(name)
+        if C_AddOns and C_AddOns.DoesAddOnExist then
+            return C_AddOns.DoesAddOnExist(name)
+        end
+        for i = 1, GetNumAddOns() do
+            if string.lower(GetAddOnInfo(i) or "") == string.lower(name) then
+                return true
+            end
+        end
+        return false
+    end
+
     local disabled = {}
     for _, addon in ipairs(SUPERSEDED_PLAYERS) do
-        if GetAddOnInfo(addon) then
+        if IsAddOnInstalled(addon) then
             DisableAddOn(addon)
             table.insert(disabled, format('"%s"', addon))
         end

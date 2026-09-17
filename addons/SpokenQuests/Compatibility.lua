@@ -44,6 +44,26 @@ if C_GossipInfo then
     GetNumGossipAvailableQuests = GetNumGossipAvailableQuests or C_GossipInfo.GetNumAvailableQuests
 end
 
+-- Camelot (1.60.1, interface 16001) ships FrameXML without the global
+-- SetDesaturation helper; only the Texture:SetDesaturated method survives.
+-- AceGUI's CheckBox calls the global by name, and the embedded libs run in _G
+-- rather than in this environment, so unlike every other shim in this file
+-- that one has to be written to _G. Guarded, so a client that still defines
+-- it keeps its own, and the body is Blizzard's: SetDesaturated returns false
+-- where the shader is unsupported, and the grey vertex colour is the fallback.
+if not _G.SetDesaturation then
+    function _G.SetDesaturation(texture, desaturation)
+        local shaderSupported = texture.SetDesaturated and texture:SetDesaturated(desaturation)
+        if not shaderSupported then
+            if desaturation then
+                texture:SetVertexColor(0.5, 0.5, 0.5)
+            else
+                texture:SetVertexColor(1.0, 1.0, 1.0)
+            end
+        end
+    end
+end
+
 if not select then
     function select(index, ...)
         if index == "#" then
