@@ -87,9 +87,10 @@ DataModules =
 
     --- Stores modules known to exist to present the player with information on how to download or update them
     ---@type AvailableDataModule[]
-    -- The folder names still say VoiceOverReduxHQAudio: they are what is on disk for everyone
-    -- who already installed a pack, and the HQ told them apart from a downsampled family that
-    -- is now retired. The titles and the URLs are the current names; the folders cannot be.
+    -- AddonName is the folder on disk, which is what EnumerateAddons keys presentModules by -
+    -- so these are the names the packs were published under and cannot be renamed without
+    -- telling every player who has one that they are missing it. The titles and the URLs are
+    -- the current names; the folders are the old ones and stay that way.
     --
     -- The sound pack ships in five pieces, so this is a menu rather than a single answer: a
     -- player picks their side plus the shared quests, or takes the complete pack. Only shown

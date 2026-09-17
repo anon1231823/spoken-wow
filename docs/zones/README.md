@@ -1122,7 +1122,7 @@ line in that script.
 
 ZoneLore picks the highest bitrate installed unless the player has chosen
 otherwise, and stores that choice as a folder name rather than an index: someone
-who uninstalls the HQ pack should fall back to what remains, not to whichever
+who uninstalls the higher-bitrate pack should fall back to what remains, not to whichever
 pack happens to occupy that slot afterwards.
 
 `pack.version` is the compatibility contract, checked against `PACK_FORMAT` in

@@ -70,7 +70,7 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
         pull-history push-history history-status pull-ignores package package-audio \
-        package-audio-hq package-meta push-hq \
+        package-audio-complete package-meta push-complete \
         downloads-status \
         factions release release-audio \
         release-dry deploy-scripts \
@@ -215,12 +215,11 @@ history-status: ## Compare take count and size on both sides
 # PACKS=all builds only the complete one, ENCODE=copy skips the transcode to hear the masters
 # in game, JOBS=1 makes a failing encode readable.
 #
-# THE DOWNSAMPLED PACKS ARE GONE. There were two families for a while - these at 44.1 kHz and
-# a 22.05 kHz set at half the size - each with five CurseForge projects of its own, because an
-# addon manager installs a project's newest file and one project holding both qualities would
-# move a player out of the one they picked. Only the full-bandwidth family is maintained now;
-# the five downsampled projects stay published and are never uploaded to again, so nothing here
-# builds them. docs/pack-size.md is where every encode that was considered was measured.
+# ONE PACK FORMAT. A second set at half the size shipped alongside these for a while, five
+# CurseForge projects of its own, because an addon manager installs a project's newest file and
+# one project holding two formats would move a player out of the one they picked. That is over:
+# those five projects stay published and are never uploaded to again, and nothing here builds
+# them. docs/pack-size.md is where every encode that was considered was measured.
 
 package: ## Zip the player addon into dist/: one Blizzard zip, one per legacy client
 	@./scripts/quests/package.sh
@@ -230,12 +229,12 @@ package-audio: ## Transcode, build and zip the five sound packs into dist/ (VERS
 	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
 # Every line in one folder rather than split five ways, ~1.3 GB. Not a CurseForge release - it
-# is over the upload ceiling and always will be - so it is built when somebody wants to
-# distribute it themselves, and it is a folder of its own rather than a fatter copy of a
-# shipping pack, so installing it beside them is possible but pointless. The site hosts it:
-# `push-hq` below, and the published URL carries the folder name, so neither can be renamed.
+# is over the upload ceiling and always will be - so it is built for people who would rather
+# take one download, and it is a folder of its own rather than a fatter copy of a shipping pack,
+# so installing it beside them is possible but pointless. The site hosts it: `push-complete`
+# below, and the published URL carries the folder name, so the folder cannot be renamed.
 
-package-audio-hq: ## Build the whole corpus as one folder for the site (~1.3 GB)
+package-audio-complete: ## Build the whole corpus as one folder for the site (~1.3 GB)
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
 	  MODULE_NAME=VoiceOverReduxAudioHQ TITLE="Spoken Quests Audio: Complete" \
 	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
@@ -249,7 +248,7 @@ package-audio-hq: ## Build the whole corpus as one folder for the site (~1.3 GB)
 package-meta: ## Zip the meta addon that pulls in all four packs
 	@VERSION=$(VERSION) NAME=VoiceOverReduxHQAudio ./scripts/quests/package-meta.sh
 
-# The HQ pack's home, since it is too big for CurseForge: nginx serves
+# The complete pack's home, since it is too big for CurseForge: nginx serves
 # /srv/voiceover/shared/downloads/ straight off disk (see deploy/quests/nginx-voiceover.conf), and
 # this puts a freshly built zip there.
 #
@@ -260,9 +259,9 @@ package-meta: ## Zip the meta addon that pulls in all four packs
 
 REMOTE_DOWNLOADS := $(REMOTE_ROOT)/shared/downloads
 
-push-hq: ## Upload the built HQ pack to the site's downloads directory
+push-complete: ## Upload the built complete pack to the site's downloads directory
 	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. brew install rsync"; exit 1; }
-	@v=$$(sed -n 's/^## Version:[[:space:]]*//p' dist/VoiceOverReduxAudioHQ/VoiceOverReduxAudioHQ.toc 2>/dev/null | head -1); 	[ -n "$$v" ] || { echo "No HQ module built. Run: make package-audio-hq"; exit 1; }; 	zip=dist/VoiceOverReduxAudioHQ-$$v.zip; 	[ -f "$$zip" ] || { echo "$$zip is missing. Run: make package-audio-hq"; exit 1; }; 	echo "==> $$zip -> $(DROPLET):$(REMOTE_DOWNLOADS)/"; 	$(RSYNC) -a --human-readable --info=progress2 -e "$(SSH)" "$$zip" $(DROPLET):$(REMOTE_DOWNLOADS)/; 	$(SSH) $(DROPLET) "ln -sfn VoiceOverReduxAudioHQ-$$v.zip $(REMOTE_DOWNLOADS)/VoiceOverReduxAudioHQ-latest.zip"; 	echo "==> https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip"
+	@v=$$(sed -n 's/^## Version:[[:space:]]*//p' dist/VoiceOverReduxAudioHQ/VoiceOverReduxAudioHQ.toc 2>/dev/null | head -1); 	[ -n "$$v" ] || { echo "No complete module built. Run: make package-audio-complete"; exit 1; }; 	zip=dist/VoiceOverReduxAudioHQ-$$v.zip; 	[ -f "$$zip" ] || { echo "$$zip is missing. Run: make package-audio-complete"; exit 1; }; 	echo "==> $$zip -> $(DROPLET):$(REMOTE_DOWNLOADS)/"; 	$(RSYNC) -a --human-readable --info=progress2 -e "$(SSH)" "$$zip" $(DROPLET):$(REMOTE_DOWNLOADS)/; 	$(SSH) $(DROPLET) "ln -sfn VoiceOverReduxAudioHQ-$$v.zip $(REMOTE_DOWNLOADS)/VoiceOverReduxAudioHQ-latest.zip"; 	echo "==> https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip"
 
 downloads-status: ## List what the site is offering for download
 	@$(SSH) $(DROPLET) 'ls -lh $(REMOTE_DOWNLOADS)/'

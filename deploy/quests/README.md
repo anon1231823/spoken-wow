@@ -283,9 +283,9 @@ psql "$(grep ^DATABASE_URL /srv/voiceover/shared/app.env | cut -d= -f2-)" \
 Every role after this one is handed out from `/admin`, which will not let an admin demote
 themselves.
 
-## Serving the HQ sound pack
+## Serving the complete sound pack
 
-The HQ pack is 1.2 GB, which CurseForge will not take, so the site hosts it:
+The complete pack is 1.2 GB, which CurseForge will not take, so the site hosts it:
 
 ```
 https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip
@@ -293,7 +293,7 @@ https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip
 
 `shared/downloads/` holds the versioned zips, and `-latest.zip` is a symlink to the current
 one — so the published URL never changes and never has to be edited anywhere it was pasted.
-`make push-hq` copies a freshly built zip up and repoints the symlink afterwards, which is the
+`make push-complete` copies a freshly built zip up and repoints the symlink afterwards, which is the
 order that matters: rsync writes to a temporary name and renames, so the link is never pointing
 at a half-transferred file.
 

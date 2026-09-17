@@ -11,11 +11,10 @@
 # file for a project - so two packs under one project would silently move a player from the one
 # they chose to whichever was uploaded last, which would mean the wrong faction.
 #
-# There were two families once, the downsampled packs and the full-bandwidth ones, eleven
-# projects between them. The downsampled family is retired: the audio-* targets below now carry
-# the full-bandwidth projects and their VoiceOverReduxHQAudio* folders. The five retired
-# projects stay published so existing installs keep working, and are simply never uploaded to
-# again - which is why no target names them.
+# The audio shipped at two qualities for a while, five projects each. That is over: there is one
+# pack format now, and the audio-* targets below are the projects that carry it. The five
+# projects the other set used stay published so existing installs keep working, and are never
+# uploaded to again - which is why no target names them.
 #
 # Needs CURSEFORGE_TOKEN in the environment or in .env. Generate one at
 # https://authors-old.curseforge.com/account/api-tokens -- it is an author token tied to your
@@ -61,9 +60,9 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 # /projects//upload-file, which would fail somewhere less legible or land on whatever project
 # the API resolved.
 #
-# The one-folder HQ pack (make package-audio-hq) is deliberately absent: at 1.2 GB it is twice
-# the upload ceiling, so the site hosts it instead - see deploy/README.md. The audio-all target
-# here is the meta addon, not that pack.
+# The complete pack (make package-audio-complete) is deliberately absent: the whole corpus in one
+# folder is twice the upload ceiling, so the site hosts it instead - see deploy/README.md. The
+# audio-all target here is the meta addon, not that pack.
 #
 # A pack whose project does not exist yet has no id, and the run fails on it rather than
 # uploading a Horde pack over the Alliance project. Create the project on CurseForge, then
@@ -72,9 +71,8 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 # could name it as a dependency (errorCode 1018 otherwise); it was created first for that
 # reason. SPOKEN_PROJECT_ID still overrides, for a test project.
 #
-# THE AUDIO IDS ARE THE FULL-BANDWIDTH PROJECTS. The five downsampled ones - 1655867, 1658236,
-# 1658237, 1658239, 1658235 - are retired and deliberately absent: an id left here is an id
-# something eventually uploads to.
+# THE RETIRED PROJECTS ARE DELIBERATELY ABSENT. 1655867, 1658236, 1658237, 1658239 and 1658235
+# carried the second pack format; an id left here is an id something eventually uploads to.
 target_project() { case "$1" in
   spoken)         echo "${SPOKEN_PROJECT_ID:-1700375}";;
   player)         echo "1655859";;
@@ -91,10 +89,11 @@ esac; }
 # corpus in one zip comes back 413, so that project ships a few kilobytes declaring the other
 # four packs as required dependencies, and the manager fetches them.
 #
-# The folder names still say VoiceOverReduxHQAudio, and stay that way: they are the paths every
-# player who installed one of these packs already has on disk, and a rename re-ships hundreds of
-# megabytes to move files that are already correct. The HQ in them is now historical too - it
-# distinguished two families and only one is left.
+# The folder names still say VoiceOverReduxHQAudio, and stay that way. They are the paths every
+# player who installed one of these packs already has on disk, and DataModules matches an
+# installed pack by exactly this name - so a rename is both a re-download of 300 MB per pack and
+# a player being offered a pack they already have. The name is historical in both halves and
+# that costs nothing: nobody reads a folder name, and every title and page says Spoken Quests.
 target_zip_name() { case "$1" in
   spoken)         echo "SpokenPlayer";;
   player)         echo "SpokenQuests";;

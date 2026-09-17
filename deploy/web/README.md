@@ -23,7 +23,7 @@ they are the rollback.
     audio-history/  -> superseded takes, quests/ and zones/     > symlinks to
     voices/         -> clone clips                              |  /mnt/voice
     audio-previews/ -> rendered pronunciation previews          |
-    downloads/      -> the HQ sound pack, served off disk       /
+    downloads/      -> the complete sound pack, served off disk /
 
 /mnt/voice/spoken/        a 30 GB block volume; `deploy/web/store.sh` sets it up
   .store                  marker: present only while the volume is mounted

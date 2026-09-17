@@ -2,7 +2,7 @@
 # Build the data module from transcoded copies of the audio store, and zip it.
 #
 #   make package-audio                 # the four shipping packs, Ogg Vorbis, into dist/
-#   make package-audio-hq              # every line in one folder at full bandwidth
+#   make package-audio-complete        # every line in one folder, for the site
 #   make package-audio VERSION=1.4.0   # the version written into the .toc
 #   ENCODE=copy make package-audio     # the masters, untranscoded, for a listening check
 #   JOBS=1 make package-audio          # serial, when a failing encode needs readable output
@@ -48,10 +48,11 @@ cd "$REPO"
 
 STORE="${STORE:-audio}"
 DIST="${DIST:-dist}"
-# The shipping family's folder prefix. The name still says VoiceOverRedux and still says HQ:
-# it is the path every player who has a pack already holds on disk, and the HQ distinguished it
-# from a downsampled family that is now retired. Renaming either half re-ships 1.3 GB to move
-# files that are already correct.
+# The shipping packs' folder prefix. The name is the one they were published under, and stays
+# that way whatever the projects are called: it is the path every player who has a pack already
+# holds on disk, and DataModules matches an installed pack by exactly this name. A rename is
+# 1.3 GB re-downloaded to move files that are already correct, and every one of those players
+# told they are missing a pack they have.
 MODULE="${MODULE:-VoiceOverReduxHQAudio}"
 VERSION="${VERSION:-1.2.1}"
 # Which packs to build; each becomes MODULE plus the suffix tts_cli/factions.py gives it.
@@ -61,22 +62,22 @@ VERSION="${VERSION:-1.2.1}"
 # meta addon from scripts/package-meta.sh instead. Build it with PACKS=all when you want the
 # whole thing in one folder locally, which is also the fast way to try an encode change.
 PACKS="${PACKS:-alliance horde shared gossip}"
-ENCODE="${ENCODE:-ogg-q-1-22k}"
+ENCODE="${ENCODE:-ogg-q0-44k}"
 ZIP="${ZIP:-1}"
 # Distinguishes the zips of two profiles built from the same module name, so one profile's
 # build does not overwrite another's in dist/.
 LABEL="${LABEL:-}"
 # Names the addon folder outright, instead of MODULE plus the pack's suffix. Only meaningful
-# when building a single pack, and it exists for the HQ build: one folder holding every line at
-# full bandwidth, which is a thing of its own rather than a bigger copy of the All pack.
+# when building a single pack, and it exists for the complete build: one folder holding every
+# line, which is a thing of its own rather than a bigger copy of the All pack.
 MODULE_NAME="${MODULE_NAME:-}"
 TITLE="${TITLE:-}"
 # The family a build belongs to: MODULE is the folder every pack's suffix is appended to, and
-# TITLE_FAMILY the words before the colon in every title. The HQ packs are the same four cut
-# the same way at a different quality, so they are a family of their own -
-# VoiceOverReduxHQAudioAlliance, "Spoken Quests HQ Audio: Alliance" - rather than a variant
-# spelled onto the end of each name. A folder per quality, because two packs under one name
-# would have an addon manager updating a player from the quality they chose into the other.
+# TITLE_FAMILY the words before the colon in every title. Both are parameters because a set of
+# packs built together is named together - a second encode once, a language pack next - and a
+# set needs a folder and projects of its own rather than a variant spelled onto the end of each
+# name, since two packs under one project would have an addon manager updating a player from
+# the one they chose into the other.
 TITLE_FAMILY="${TITLE_FAMILY:-}"
 # kbps above which an mp3 is worth re-encoding as an mp3. See tools/plan_transcode.py.
 THRESHOLD="${THRESHOLD:-80}"

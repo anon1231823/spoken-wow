@@ -33,9 +33,9 @@ NAME="${NAME:-VoiceOverReduxAudio}"
 DIST="${DIST:-$REPO/dist}"
 VERSION="${VERSION:-1.2.1}"
 ZIP="${ZIP:-1}"
-# What this stub is called and which packs it describes. There are two families - the standard
-# packs and the full-bandwidth ones - and each has a project of its own on CurseForge, so each
-# needs a stub of its own. release.sh holds the dependency list that does the actual work.
+# What this stub is called and which packs it describes. A set of packs built together needs a
+# stub of its own, because the stub is a CurseForge project like any other; release.sh holds the
+# dependency list that does the actual work.
 TITLE="${TITLE:-Spoken Quests Audio: All}"
 VARIANT="${VARIANT:-}"
 

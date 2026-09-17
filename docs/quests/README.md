@@ -127,7 +127,7 @@ For a module to hand to players, use `make package-audio` instead: it transcodes
 ```bash
 make package                       # the player addon: one Blizzard zip, one per legacy client
 make package-audio                 # transcode to ogg, build five packs, zip each -> dist/
-make package-audio-hq              # every line in one folder, for the site (~1.3 GB)
+make package-audio-complete        # every line in one folder, for the site (~1.3 GB)
 make package-meta                  # the "install everything" addon
 make package-audio PACKS=all       # only the complete pack, when trying an encode change
 make package-audio VERSION=1.4.0   # the version written into each pack's .toc
@@ -156,13 +156,17 @@ The sound packs are the same files on every client. Their `## Interface: 100000`
 and `DataModules` sets `checkAddonVersion` to 0 around `LoadAddOn` so a client that considers a
 pack out of date loads it anyway.
 
-**The shipping pack is Ogg Vorbis at 22.05 kHz**, which takes 3.2 GB of masters to about
-0.6 GB. Two things earn that, and they are worth keeping apart: Vorbis is worth 1.3–1.5×
-over LAME at these rates, and speech survives the 11 kHz ceiling a 22.05 kHz downsample
-imposes. `make package-audio-hq` skips only the downsample — full-bandwidth ogg, ~1.3 GB, every
-line in one `VoiceOverReduxAudioHQ` folder. It is **not a CurseForge release**: it is far over
-the upload ceiling and always will be. The site hosts it instead — `make push-hq` puts a built
-zip in `shared/downloads/` on the droplet and repoints
+**The shipping packs are Ogg Vorbis at 44.1 kHz** (`ogg-q0-44k`), which takes 3.2 GB of masters
+to about 1.3 GB, split five ways. Vorbis is worth 1.3–1.5× over LAME at these rates and is VBR,
+so the bits follow the voice instead of padding silence to a constant rate. A 22.05 kHz
+downsample halves that again and speech survives the 11 kHz ceiling it imposes — it shipped as a
+second set of packs for a while and is retired, because one format is one set of projects and one
+answer to "which do I install".
+
+`make package-audio-complete` builds the same audio as one `VoiceOverReduxAudioHQ` folder, ~1.3 GB.
+It is **not a CurseForge release**: it is far over the upload ceiling and always will be. The site
+hosts it instead — `make push-complete` puts a built zip in `shared/downloads/` on the droplet and
+repoints
 [`/downloads/VoiceOverReduxAudioHQ-latest.zip`](https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip),
 a symlink, so the published URL never changes. See `deploy/README.md`.
 
@@ -175,17 +179,13 @@ a symlink, so the published URL never changes. See `deploy/README.md`.
 | Encode | `ogg-q0-44k`, ~300 MB a pack |
 | Built by | `make package-audio` + `package-meta` |
 
-There were two families until the rename: these, and a `ogg-q-1-22k` set at half the size under
-`VoiceOverReduxAudio…`. A family per quality rather than two files on one project, because an
-addon manager installs a project's newest file and would otherwise move a player from the quality
-they picked into the other one. The downsampled family is retired — its five projects stay
-published and are never uploaded to again — so `MODULE` and `TITLE_FAMILY` in
-`scripts/quests/package-audio.sh` now have one family to name. The folders keep `VoiceOverRedux`
-and `HQ` in them because they are what players already have on disk.
+The five projects the retired packs used stay published and are never uploaded to again, so
+`MODULE` and `TITLE_FAMILY` in `scripts/quests/package-audio.sh` have one set of packs to name.
+The folder names are the ones the packs were published under and do not change: `DataModules`
+matches an installed pack by folder name, so renaming one is a 300 MB re-download *and* a player
+being offered a pack they already have.
 
-The one-folder `VoiceOverReduxAudioHQ` from `make package-audio-hq` is separate from both: it
-is 1.2 GB, cannot be uploaded anywhere, and is what the site hosts. `docs/pack-size.md` is where every encode
-was measured, along with the dead ends (deduplication, silence trimming, harder zip
+`docs/pack-size.md` is where every encode was measured, along with the dead ends (deduplication, silence trimming, harder zip
 compression — all worth nothing).
 
 Homebrew's `ffmpeg` has no `libvorbis` and ffmpeg's own Vorbis encoder is worse, so `oggenc`
@@ -302,7 +302,7 @@ which players meet as "the addon does not appear in my list".
 
 Uploading a file cannot change the page around it: descriptions, relations and project
 settings live in the web UI, and a script that rewrote them each release would be one that
-could quietly undo an edit made there. The HQ pack has no project and is not released.
+could quietly undo an edit made there. The complete pack has no project and is not released.
 
 ### Browsing the corpus
 
