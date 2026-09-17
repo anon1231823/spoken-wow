@@ -278,7 +278,7 @@ make release              # upload every zip in dist/
 that goes out is the one you tested. Seven projects, one per target: `spoken`
 ([spoken-player](https://www.curseforge.com/wow/addons/spoken-player), `1700375`), `player`
 ([spoken-quests](https://www.curseforge.com/wow/addons/spoken-quests), `1655859`), `audio-all`
-([spoken-quests-audio](https://www.curseforge.com/wow/addons/spoken-quests-audio), `1660196`),
+([spoken-quests-audio-all](https://www.curseforge.com/wow/addons/spoken-quests-audio-all), `1660196`),
 and `audio-alliance` / `audio-horde` / `audio-shared` / `audio-gossip`. A target with no id
 fails the run rather than uploading a Horde pack over the Alliance project — which is also why
 the five retired downsampled projects have no id here at all. It needs

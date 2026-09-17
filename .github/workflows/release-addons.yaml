@@ -87,7 +87,7 @@ jobs:
               "github_zip_download_243": f"{download}/SpokenQuests-WoW_2.4.3-{version}.zip",
               "github_zip_download_335": f"{download}/SpokenQuests-WoW_3.3.5-{version}.zip",
               "curse_link_blizz": "https://www.curseforge.com/wow/addons/spoken-quests",
-              "curse_link_pack_alliance": "https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance",
+              "curse_link_pack_alliance": "https://www.curseforge.com/wow/addons/spoken-quests-audio",
               "curse_link_pack_horde": "https://www.curseforge.com/wow/addons/spoken-quests-audio-horde",
               "curse_link_pack_shared": "https://www.curseforge.com/wow/addons/spoken-quests-audio-shared",
               "curse_link_pack_gossip": "https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip",

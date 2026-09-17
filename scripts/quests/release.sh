@@ -131,7 +131,7 @@ target_version() {
 # curseforge/README.md. A slug that no longer resolves is a dependency silently not installed.
 target_dependencies() { case "$1" in
   player)    echo "spoken-player";;
-  audio-all) echo "spoken-quests-audio-alliance spoken-quests-audio-horde \
+  audio-all) echo "spoken-quests-audio spoken-quests-audio-horde \
                    spoken-quests-audio-shared spoken-quests-audio-gossip";;
 esac; }
 

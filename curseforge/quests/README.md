@@ -7,8 +7,12 @@ Markdown mode — paste the file into it.
 | --- | --- | --- | --- |
 | `../spoken/spoken.md` | Spoken Player | 1700375 | `spoken-player` |
 | `player.md` | Spoken Quests (was VoiceOver Redux) | 1655859 | `spoken-quests` |
-| `audio-all.md` | Spoken Quests Audio: All | 1660196 | `spoken-quests-audio` |
-| `audio-alliance.md` | Spoken Quests Audio: Alliance | 1660197 | `spoken-quests-audio-alliance` |
+| `audio-all.md` | Spoken Quests Audio: All | 1660196 | `spoken-quests-audio-all` |
+| `audio-alliance.md` | Spoken Quests Audio: Alliance | 1660197 | `spoken-quests-audio` |
+
+**Alliance holds the bare `spoken-quests-audio` slug**, which reads like the family and is not:
+the meta addon is `spoken-quests-audio-all`. Both were read off the live projects rather than
+derived from the pattern, which is exactly the case this table exists for.
 | `audio-horde.md` | Spoken Quests Audio: Horde | 1660198 | `spoken-quests-audio-horde` |
 | `audio-shared.md` | Spoken Quests Audio: Shared Quests | 1660199 | `spoken-quests-audio-shared` |
 | `audio-gossip.md` | Spoken Quests Audio: Gossip | 1660202 | `spoken-quests-audio-gossip` |

@@ -9,7 +9,7 @@ Voiced dialogue for the quests only an Alliance character can take.
 
 | Pack | Holds | |
 | --- | --- | --- |
-| [All](https://www.curseforge.com/wow/addons/spoken-quests-audio) | installs the four below | |
+| [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all) | installs the four below | |
 | **Alliance** | Alliance-only quests | **this pack** |
 | [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests | |
 | [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) | quests both factions can take | |
@@ -17,7 +17,7 @@ Voiced dialogue for the quests only an Alliance character can take.
 
 Gossip — the chatter NPCs give you when you talk to them without a quest — is optional on top.
 
-If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/spoken-quests-audio)** instead. It holds no audio itself - it just tells your addon manager to fetch all four packs.
+If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all)** instead. It holds no audio itself - it just tells your addon manager to fetch all four packs.
 
 ## Why the pack is split
 

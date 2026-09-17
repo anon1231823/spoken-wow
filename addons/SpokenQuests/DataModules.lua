@@ -102,14 +102,14 @@ DataModules =
             Title = "Spoken Quests Audio: All",
             ContentVersion = "1.2.1",
             RelevantAboveVersion = 0,
-            URL = "https://www.curseforge.com/wow/addons/spoken-quests-audio",
+            URL = "https://www.curseforge.com/wow/addons/spoken-quests-audio-all",
         },
         {
             AddonName = "VoiceOverReduxHQAudioAlliance",
             Title = "Spoken Quests Audio: Alliance",
             ContentVersion = "1.2.1",
             RelevantAboveVersion = 0,
-            URL = "https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance",
+            URL = "https://www.curseforge.com/wow/addons/spoken-quests-audio",
         },
         {
             AddonName = "VoiceOverReduxHQAudioHorde",
