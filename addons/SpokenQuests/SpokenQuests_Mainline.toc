@@ -1,4 +1,4 @@
-## Interface: 100007
+## Interface: 100007, 16001
 ## Title: Spoken Quests
 ## Notes: Quest and gossip dialogue read aloud, through the Spoken player. Formerly VoiceOver Redux. Restores quest and gossip voiceovers on supported clients.
 ## Version: 2.0.0

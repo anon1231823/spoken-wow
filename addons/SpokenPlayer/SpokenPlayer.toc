@@ -1,4 +1,4 @@
-## Interface: 100007
+## Interface: 100007, 16001
 ## Title: Spoken Player
 ## Notes: The voice player every Spoken addon speaks through: one queue, one window, one minimap button.
 ## Version: 1.0.0

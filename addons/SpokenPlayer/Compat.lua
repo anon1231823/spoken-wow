@@ -155,6 +155,15 @@ if not GetAddOnEnableState then
     end
 end
 
+-- Camelot's FrameXML no longer defines MouseIsOver. The global was only ever a
+-- wrapper over Region:IsMouseOver with the same argument order, and that method is
+-- on every client this addon runs on, so the wrapper is safe to restore ourselves.
+if not MouseIsOver then
+    function MouseIsOver(frame, topOffset, bottomOffset, leftOffset, rightOffset)
+        return frame:IsMouseOver(topOffset, bottomOffset, leftOffset, rightOffset)
+    end
+end
+
 
 -- Per-client overrides. Loaded last, so everything it replaces already exists. Each block
 -- writes into the environment, never into _G, which is the whole point of the environment.
