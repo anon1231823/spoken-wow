@@ -19,11 +19,11 @@ Nothing to do. Your settings carry over on the first login, and the old `VoiceOv
 
 | Pack | Holds |
 | --- | --- |
-| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | installs the four below |
-| [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance) | Alliance-only quests |
-| [Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde) | Horde-only quests |
-| [Shared](https://www.curseforge.com/wow/addons/voiceover-redux-audio-shared-quests) | quests both factions can take |
-| [Gossip](https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip) | NPC gossip chatter |
+| [All](https://www.curseforge.com/wow/addons/spoken-quests-audio) | installs the four below |
+| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests |
+| [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests |
+| [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared-quests) | quests both factions can take |
+| [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) | NPC gossip chatter |
 
 An Alliance player wants Alliance + Shared, a Horde player Horde + Shared, and Gossip on top if they want NPC chatter. Anyone who would rather not choose can take All, which holds no audio itself and simply pulls the four packs in as dependencies.
 

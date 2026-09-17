@@ -5,13 +5,17 @@
 #   ./scripts/release.sh              # every project
 #   ./scripts/release.sh player       # just the player addon
 #   ./scripts/release.sh audio-horde  # just one sound pack
-#   ./scripts/release.sh hq-horde     # the same pack at full bandwidth
 #
-# The sound pack ships in five pieces (see tts_cli/factions.py), twice over: the standard packs
-# and the full-bandwidth HQ ones. Each of the eleven is a CurseForge project of its own rather
-# than another file on one project, because an addon manager installs the newest file for a
-# project - so two packs under one project would silently move a player from the one they chose
-# to whichever was uploaded last, whether that means the wrong faction or the wrong quality.
+# The sound pack ships in five pieces (see tts_cli/factions.py). Each is a CurseForge project of
+# its own rather than another file on one project, because an addon manager installs the newest
+# file for a project - so two packs under one project would silently move a player from the one
+# they chose to whichever was uploaded last, which would mean the wrong faction.
+#
+# There were two families once, the downsampled packs and the full-bandwidth ones, eleven
+# projects between them. The downsampled family is retired: the audio-* targets below now carry
+# the full-bandwidth projects and their VoiceOverReduxHQAudio* folders. The five retired
+# projects stay published so existing installs keep working, and are simply never uploaded to
+# again - which is why no target names them.
 #
 # Needs CURSEFORGE_TOKEN in the environment or in .env. Generate one at
 # https://authors-old.curseforge.com/account/api-tokens -- it is an author token tied to your
@@ -58,47 +62,47 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 # the API resolved.
 #
 # The one-folder HQ pack (make package-audio-hq) is deliberately absent: at 1.2 GB it is twice
-# the upload ceiling, so the site hosts it instead - see deploy/README.md. Its hq-all target
-# here is the meta addon for the HQ family, not that pack.
+# the upload ceiling, so the site hosts it instead - see deploy/README.md. The audio-all target
+# here is the meta addon, not that pack.
 #
 # A pack whose project does not exist yet has no id, and the run fails on it rather than
 # uploading a Horde pack over the Alliance project. Create the project on CurseForge, then
 # write its id in here.
-# `spoken` is the player. Its project must exist AND be approved before any other target may
-# name it as a dependency (errorCode 1018 otherwise); write its id here once it is created.
+# `spoken` is the player. Its project had to exist AND be approved before any other target
+# could name it as a dependency (errorCode 1018 otherwise); it was created first for that
+# reason. SPOKEN_PROJECT_ID still overrides, for a test project.
+#
+# THE AUDIO IDS ARE THE FULL-BANDWIDTH PROJECTS. The five downsampled ones - 1655867, 1658236,
+# 1658237, 1658239, 1658235 - are retired and deliberately absent: an id left here is an id
+# something eventually uploads to.
 target_project() { case "$1" in
-  spoken)         echo "${SPOKEN_PROJECT_ID:-}";;
+  spoken)         echo "${SPOKEN_PROJECT_ID:-1700375}";;
   player)         echo "1655859";;
-  audio-all)      echo "1655867";;
-  audio-alliance) echo "1658236";;
-  audio-horde)    echo "1658237";;
-  audio-shared)   echo "1658239";;
-  audio-gossip)   echo "1658235";;
-  hq-all)         echo "1660196";;
-  hq-alliance)    echo "1660197";;
-  hq-horde)       echo "1660198";;
-  hq-shared)      echo "1660199";;
-  hq-gossip)      echo "1660202";;
+  audio-all)      echo "1660196";;
+  audio-alliance) echo "1660197";;
+  audio-horde)    echo "1660198";;
+  audio-shared)   echo "1660199";;
+  audio-gossip)   echo "1660202";;
 esac; }
 
 # The addon folder each target ships, which is also the basename package*.sh gives its zip.
 #
-# audio-all and hq-all are meta addons (scripts/package-meta.sh) rather than one-folder packs:
-# 577 MB of audio comes back 413, so each of those projects ships a few kilobytes declaring its
-# family's four packs as required dependencies, and the manager fetches them.
+# audio-all is a meta addon (scripts/package-meta.sh) rather than a one-folder pack: the whole
+# corpus in one zip comes back 413, so that project ships a few kilobytes declaring the other
+# four packs as required dependencies, and the manager fetches them.
+#
+# The folder names still say VoiceOverReduxHQAudio, and stay that way: they are the paths every
+# player who installed one of these packs already has on disk, and a rename re-ships hundreds of
+# megabytes to move files that are already correct. The HQ in them is now historical too - it
+# distinguished two families and only one is left.
 target_zip_name() { case "$1" in
   spoken)         echo "SpokenPlayer";;
   player)         echo "SpokenQuests";;
-  audio-all)      echo "VoiceOverReduxAudio";;
-  audio-alliance) echo "VoiceOverReduxAudioAlliance";;
-  audio-horde)    echo "VoiceOverReduxAudioHorde";;
-  audio-shared)   echo "VoiceOverReduxAudioShared";;
-  audio-gossip)   echo "VoiceOverReduxAudioGossip";;
-  hq-all)         echo "VoiceOverReduxHQAudio";;
-  hq-alliance)    echo "VoiceOverReduxHQAudioAlliance";;
-  hq-horde)       echo "VoiceOverReduxHQAudioHorde";;
-  hq-shared)      echo "VoiceOverReduxHQAudioShared";;
-  hq-gossip)      echo "VoiceOverReduxHQAudioGossip";;
+  audio-all)      echo "VoiceOverReduxHQAudio";;
+  audio-alliance) echo "VoiceOverReduxHQAudioAlliance";;
+  audio-horde)    echo "VoiceOverReduxHQAudioHorde";;
+  audio-shared)   echo "VoiceOverReduxHQAudioShared";;
+  audio-gossip)   echo "VoiceOverReduxHQAudioGossip";;
 esac; }
 
 # Where a version comes from, which is not the same question for the player and a pack.
@@ -127,18 +131,15 @@ target_version() {
 # curseforge/README.md. A slug that no longer resolves is a dependency silently not installed.
 target_dependencies() { case "$1" in
   player)    echo "spoken-player";;
-  audio-all) echo "voiceover-redux-audio-alliance voiceover-redux-audio-horde \
-                   voiceover-redux-audio-shared-quests voiceover-redux-audio-gossip";;
-  hq-all)    echo "voiceover-redux-hq-audio-alliance voiceover-redux-hq-audio-horde \
-                   voiceover-redux-hq-audio-shared-quests voiceover-redux-hq-audio-gossip";;
+  audio-all) echo "spoken-quests-audio-alliance spoken-quests-audio-horde \
+                   spoken-quests-audio-shared-quests spoken-quests-audio-gossip";;
 esac; }
 
 # THE META ADDON GOES LAST. It names the four packs as dependencies, and CurseForge resolves
 # those at upload time, so anything about them that has to be true - the project existing and
 # being approved, above all - is truest after they have just been uploaded. It costs nothing to
 # order it this way and it removes a class of first-release surprise.
-ALL_TARGETS="spoken player audio-alliance audio-horde audio-shared audio-gossip audio-all \
-             hq-alliance hq-horde hq-shared hq-gossip hq-all"
+ALL_TARGETS="spoken player audio-alliance audio-horde audio-shared audio-gossip audio-all"
 
 dry_run=""
 targets=()
@@ -146,7 +147,6 @@ for arg in "$@"; do
   case "$arg" in
     --dry-run|-n) dry_run=1;;
     spoken|player|audio-all|audio-alliance|audio-horde|audio-shared|audio-gossip) targets+=("$arg");;
-    hq-all|hq-alliance|hq-horde|hq-shared|hq-gossip) targets+=("$arg");;
     *) echo "error: unknown argument '$arg' (expected: $ALL_TARGETS, --dry-run)" >&2; exit 1;;
   esac
 done
@@ -244,7 +244,7 @@ changelog_for() {
 
 #-- upload --------------------------------------------------------------------------------
 #
-# ONE TARGET'S FAILURE DOES NOT STOP THE REST. There are six of them now and they fail
+# ONE TARGET'S FAILURE DOES NOT STOP THE REST. There are seven of them now and they fail
 # independently: the complete pack is over CurseForge's upload ceiling while the four split
 # packs are well under it, so exiting on the first error meant one 413 held back five uploads
 # that would have gone through. Failures are collected and reported at the end, and the script

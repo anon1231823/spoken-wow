@@ -20,7 +20,7 @@ help: ## Show this help
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-package: check ## Build dist/ZoneLore-<version>.zip for upload
+package: check ## Build dist/SpokenZones-<version>.zip for upload
 	@./scripts/zones/package.sh
 
 check: validate lint locale-check descriptions-check ## Run every pre-package check
@@ -405,7 +405,7 @@ rollback: ## Roll back to the previous release (or RELEASE=<name>)
 logs: ## Tail the droplet's application log
 	@$(SSH) $(DROPLET) 'pm2 logs zonelore --lines 100'
 
-package-audio: validate-audio ## Build both sound-pack zips (standard + high)
+package-audio: validate-audio ## Build the sound-pack zip
 	@./scripts/zones/package-audio.sh
 
 release-dry: ## Show what `make release` would upload to CurseForge

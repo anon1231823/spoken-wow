@@ -24,10 +24,13 @@ because they are a large download. Two tiers with identical content:
 | Folder | Bitrate | Zip |
 |---|---|---|
 | `ZoneLoreAudio` | 128 kbps (the masters) | ~790 MB |
-| `ZoneLoreAudio64` | 64 kbps mono | ~400 MB |
+| `ZoneLoreAudio64` | 64 kbps mono | ~400 MB — **retired** |
 
-Both can be installed at once. ZoneLore plays the higher-bitrate one and `/zl
-audio` switches; see "Sound packs are self-describing" below for how it decides.
+`ZoneLoreAudio64` is no longer built or uploaded: one quality is one project, one
+folder and one answer to "which do I install". It stays published for anyone who
+has it. Both can still be installed at once — Spoken Zones plays the
+higher-bitrate one and `/zl audio` switches; see "Sound packs are
+self-describing" below for how it decides.
 
 Player-facing documentation lives in `addon/ZoneLore/README.md` and
 `addon/ZoneLoreAudio/README.md` — those are the CurseForge project descriptions.
@@ -1445,15 +1448,15 @@ Three CurseForge projects, released on their own cadences: most ZoneLore release
 do not touch a voiceline, and the packs should not re-upload 400MB for a Lua fix.
 
 ```sh
-make package                    # dist/ZoneLore-<version>.zip
-make package-audio              # dist/ZoneLoreAudio-<v>.zip + ZoneLoreAudio64-<v>.zip
+make package                    # dist/SpokenZones-<version>.zip
+make package-audio              # dist/ZoneLoreAudio-<v>.zip
 ```
 
 `make package` refuses to build from a dirty `addon/` tree, so a zip can always be
 traced back to a commit. Both scripts unpack to the addon folder itself, which is
 what the addon hosts expect — check with `unzip -l` if that ever seems in doubt.
 
-**Versioning.** All three carry the same version, bumped together in their
+**Versioning.** Both carry the same version, bumped together in their
 `.toc`s. ZoneLore and a pack interoperate as long as their **major versions
 match**; `PACK_FORMAT` in `Audio.lua` is the machine-checkable half of that rule
 and is bumped only alongside a major.
@@ -1463,8 +1466,8 @@ and is bumped only alongside a major.
 
 ```sh
 make release-dry                # what would be sent, sending nothing
-make release                    # all three
-./scripts/release.sh zonelore   # or one at a time
+make release                    # both projects
+./scripts/release.sh zones      # or one at a time
 ```
 
 `scripts/release.sh` posts to the CurseForge author API. It needs

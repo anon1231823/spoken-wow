@@ -672,7 +672,9 @@ local function CmdAudioPack(arg)
 		-- Any pack would do -- packs are interchangeable across languages -- so an
 		-- empty list really does mean nothing is installed.
 		ZoneLore:Print("|cffffcc00no sound pack installed|r")
-		ZoneLore:Print("  install ZoneLoreAudio (128 kbps) or ZoneLoreAudio64 (64 kbps) alongside ZoneLore")
+		-- Named by CurseForge project, not by folder: the folder is still ZoneLoreAudio and
+		-- saying so sends a player looking for a project of that name, which no longer exists.
+		ZoneLore:Print("  install Spoken Zones Audio alongside Spoken Zones")
 		return
 	end
 

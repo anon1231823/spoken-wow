@@ -5,25 +5,34 @@ Markdown mode — paste the file into it.
 
 | File | Project | id | Slug |
 | --- | --- | --- | --- |
-| `../spoken/spoken.md` | Spoken Player | *create, then write it into `SPOKEN_PROJECT_ID`* | `spoken-player` |
-| `player.md` | Spoken Quests (was VoiceOver Redux) | 1655859 | `voiceover-redux` |
-| `audio-all.md` | Spoken Quests Audio: All (was VoiceOver Redux Audio: All) | 1655867 | `voiceover-redux-audio` |
-| `audio-alliance.md` | Spoken Quests Audio: Alliance (was VoiceOver Redux Audio: Alliance) | 1658236 | `voiceover-redux-audio-alliance` |
-| `audio-horde.md` | Spoken Quests Audio: Horde (was VoiceOver Redux Audio: Horde) | 1658237 | `voiceover-redux-audio-horde` |
-| `audio-shared.md` | Spoken Quests Audio: Shared Quests (was VoiceOver Redux Audio: Shared Quests) | 1658239 | `voiceover-redux-audio-shared-quests` |
-| `audio-gossip.md` | Spoken Quests Audio: Gossip (was VoiceOver Redux Audio: Gossip) | 1658235 | `voiceover-redux-audio-gossip` |
+| `../spoken/spoken.md` | Spoken Player | 1700375 | `spoken-player` |
+| `player.md` | Spoken Quests (was VoiceOver Redux) | 1655859 | `spoken-quests` |
+| `audio-all.md` | Spoken Quests Audio: All | 1660196 | `spoken-quests-audio` |
+| `audio-alliance.md` | Spoken Quests Audio: Alliance | 1660197 | `spoken-quests-audio-alliance` |
+| `audio-horde.md` | Spoken Quests Audio: Horde | 1660198 | `spoken-quests-audio-horde` |
+| `audio-shared.md` | Spoken Quests Audio: Shared Quests | 1660199 | `spoken-quests-audio-shared-quests` |
+| `audio-gossip.md` | Spoken Quests Audio: Gossip | 1660202 | `spoken-quests-audio-gossip` |
 
-**Renames keep the id, the download count and the file history**; only the name changes, and
-the old slug keeps redirecting if the slug is changed too. So the rename to Spoken is done by
-renaming the existing projects in the web UI, never by creating replacements. The slugs above
-are still the pre-rename ones and stay valid either way; change them here, in `release.sh` and
-in `DataModules.lua` only if the slugs are changed on the site.
+**Five more projects exist and are retired.** 1655867, 1658236, 1658237, 1658239 and 1658235 held
+the downsampled packs, back when the audio shipped at two qualities. They stay published so that
+an existing install keeps working, and nothing uploads to them again: they have no id in
+`scripts/quests/release.sh`, no description file here, and no row above. The ids are written down
+only so that the next person to find them knows they are retired rather than missing.
 
-**Spoken is the one new project.** It must exist *and be approved* before any upload may name
-it as a required dependency -- the same errorCode 1018 gate as below -- so create it and upload
-its placeholder first, on day one, and write its id into `SPOKEN_PROJECT_ID` (or into
-`target_project()` in `scripts/quests/release.sh`) once it is approved. Every Spoken addon then
-declares it in `relations`, which is what makes addon managers install it.
+**Renames keep the id, the download count and the file history**; only the name changes, and the
+old slug keeps redirecting once the slug is changed too. So the rename to Spoken was done by
+renaming the existing projects in the web UI, never by creating replacements - which is also why
+the ids above are the ones the projects have always had.
+
+**The old names stay searchable on purpose.** CurseForge has no keywords field: search matches the
+project name and the summary, so "VoiceOver Redux" is findable only because each summary says
+*Formerly VoiceOver Redux*. That clause is the one place an old name belongs. Everywhere else -
+prose, headings, comments, new identifiers - it reads as a name the project still uses.
+
+**Spoken Player is the project everything else depends on**, and it had to exist *and be
+approved* before any upload could name it: the errorCode 1018 gate below. It was created first
+for that reason and its id is in `target_project()` in `scripts/quests/release.sh`. Every Spoken
+addon declares it in `relations`, which is what makes addon managers install it.
 
 `audio-all` is the odd one: that project ships a **meta addon** rather than audio, because the
 complete pack is too big to upload. It is a few kilobytes declaring the other four as required
@@ -41,11 +50,18 @@ the four packs uploaded fine while their own projects were still pending.
 upload time, so it goes after the things it depends on.
 
 The slugs are what the pages and the addon link to, so they are read off the live projects
-rather than guessed - Shared Quests is not the slug its name suggests, and Alliance was
-something else again before it was renamed. `scripts/release.sh` carries the same ids, and
-`VoiceOverRedux/DataModules.lua` the same URLs, so a slug that changes has to change in all
-three. The project names are the addons' `## Title` too - `tts_cli/factions.py:PACK_TITLES` -
+rather than guessed - Shared Quests is not the slug its name suggests. They were all changed
+when the projects were renamed; the old ones redirect, but a redirect is not something to
+depend on, and CurseForge resolves a `relations` slug at upload time. `scripts/quests/release.sh`
+carries the same slugs in `target_dependencies()`, `SpokenQuests/DataModules.lua` the same URLs,
+and `.github/workflows/release-addons.yaml` the same links, so a slug that changes has to change
+in all four. The project names are the addons' `## Title` too - `tts_cli/factions.py:pack_title` -
 so a player sees the same name in the AddOns list as on the site.
+
+**The folder names did not change with them.** The packs ship as `VoiceOverReduxHQAudio*` and the
+zones pack as `ZoneLoreAudio`, because a renamed folder is a re-download of every clip in it, and
+because the player finds packs by folder name. Old name on disk, current name everywhere a player
+reads one.
 
 **These are pasted by hand and the site is the live copy.** There is no API for descriptions —
 `scripts/release.sh` uploads files and nothing else, deliberately, because a script that

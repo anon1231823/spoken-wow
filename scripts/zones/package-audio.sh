@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the ZoneLore sound packs, one zip per quality tier.
 #
-#   ./scripts/package-audio.sh                 # both English tiers
+#   ./scripts/package-audio.sh                 # the English pack
 #   ./scripts/package-audio.sh standard        # just the 64kbps one
 #   ./scripts/package-audio.sh high            # just the 128kbps one
 #   LOCALE=deDE ./scripts/package-audio.sh     # the German pack, VBR only
@@ -105,9 +105,16 @@ tier_title() {
   case "$1" in standard) echo "Spoken Zones Audio 64";; high) echo "Spoken Zones Audio";; esac
 }
 
-# English publishes both tiers; every other language publishes the small one only.
+# One tier per language, now that the 64 kbps English pack is retired: two qualities meant
+# two CurseForge projects, two folder names and a question at install time that the answer
+# "take the bigger one" always won. ZoneLoreAudio64 stays published so existing installs keep
+# working and is never uploaded to again.
+#
+# `standard` is still reachable by naming it, and is still what a non-English pack ships:
+# a language has one tier, and its folder carries no bitrate marker because there is nothing
+# to tell it apart from.
 if [[ "$LOCALE" == "enUS" ]]; then
-  tiers=("standard" "high")
+  tiers=("high")
 else
   tiers=("standard")
 fi
@@ -163,18 +170,20 @@ node "$REPO/pipelines/zones/tools/descriptions.mjs" --write >/dev/null
 # A language with no CurseForge page of its own ships the English description
 # rather than nothing: the page it was downloaded from is the honest fallback
 # until somebody writes one for it.
+# Named by CurseForge slug, which is what descriptions.mjs writes the files out as -- not by
+# folder, which still carries the pre-rename name.
+#
+# The retired 64 kbps page is gone, so every tier without a page of its own falls back to the
+# one shipping description rather than to a page nobody maintains.
 tier_readme() {
   local path
   if [[ "$LOCALE" != "enUS" ]]; then
     path="$REPO/dist/descriptions/$(echo "$(tier_folder "$1")" | tr '[:upper:]' '[:lower:]').md"
-    [[ -f "$path" ]] || path="$REPO/dist/descriptions/zoneloreaudio64.md"
+    [[ -f "$path" ]] || path="$REPO/dist/descriptions/spoken-zones-audio.md"
     echo "$path"
     return
   fi
-  case "$1" in
-    standard) echo "$REPO/dist/descriptions/zoneloreaudio64.md";;
-    high)     echo "$REPO/dist/descriptions/zoneloreaudio.md";;
-  esac
+  echo "$REPO/dist/descriptions/spoken-zones-audio.md"
 }
 
 # Transcoding needs ffmpeg, but only for the tiers that are not a straight copy.

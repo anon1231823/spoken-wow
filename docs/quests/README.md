@@ -127,9 +127,8 @@ For a module to hand to players, use `make package-audio` instead: it transcodes
 ```bash
 make package                       # the player addon: one Blizzard zip, one per legacy client
 make package-audio                 # transcode to ogg, build five packs, zip each -> dist/
-make package-audio-hq              # every line in one folder, full bandwidth (~1.3 GB)
-make package-audio-hq-split        # the four packs at full bandwidth (~300 MB each)
-make package-meta-hq               # the "install everything" addon for the HQ family
+make package-audio-hq              # every line in one folder, for the site (~1.3 GB)
+make package-meta                  # the "install everything" addon
 make package-audio PACKS=all       # only the complete pack, when trying an encode change
 make package-audio VERSION=1.4.0   # the version written into each pack's .toc
 ENCODE=copy make package-audio     # the masters untouched, to hear what is being given up
@@ -167,20 +166,22 @@ zip in `shared/downloads/` on the droplet and repoints
 [`/downloads/VoiceOverReduxAudioHQ-latest.zip`](https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip),
 a symlink, so the published URL never changes. See `deploy/README.md`.
 
-**There are two families of packs**, the standard ones and the full-bandwidth HQ ones, each
-with five CurseForge projects of its own — four packs and a meta addon:
+**The packs ship as five CurseForge projects** — four packs and a meta addon:
 
-| | Standard | HQ |
-| --- | --- | --- |
-| Folders | `VoiceOverReduxAudio…` | `VoiceOverReduxHQAudio…` |
-| Titles | `Spoken Quests Audio: Alliance` | `Spoken Quests HQ Audio: Alliance` |
-| Encode | `ogg-q-1-22k`, ~150 MB a pack | `ogg-q0-44k`, ~300 MB a pack |
-| Built by | `make package-audio` + `package-meta` | `make package-audio-hq-split` + `package-meta-hq` |
+| | |
+| --- | --- |
+| Folders | `VoiceOverReduxHQAudio…` |
+| Titles | `Spoken Quests Audio: Alliance` |
+| Encode | `ogg-q0-44k`, ~300 MB a pack |
+| Built by | `make package-audio` + `package-meta` |
 
-`MODULE` and `TITLE_FAMILY` are what make a family: the first is the folder every pack suffix
-is appended to, the second the words before the colon in every title. A family per quality
-rather than two files on one project, because an addon manager installs a project's newest
-file and would otherwise move a player from the quality they picked into the other one.
+There were two families until the rename: these, and a `ogg-q-1-22k` set at half the size under
+`VoiceOverReduxAudio…`. A family per quality rather than two files on one project, because an
+addon manager installs a project's newest file and would otherwise move a player from the quality
+they picked into the other one. The downsampled family is retired — its five projects stay
+published and are never uploaded to again — so `MODULE` and `TITLE_FAMILY` in
+`scripts/quests/package-audio.sh` now have one family to name. The folders keep `VoiceOverRedux`
+and `HQ` in them because they are what players already have on disk.
 
 The one-folder `VoiceOverReduxAudioHQ` from `make package-audio-hq` is separate from both: it
 is 1.2 GB, cannot be uploaded anywhere, and is what the site hosts. `docs/pack-size.md` is where every encode
@@ -269,18 +270,18 @@ player megabytes, being strict costs them a line that never plays.
 
 ```bash
 make release-dry          # resolve clients, print every file and note, send nothing
-make release              # upload both zips
+make release              # upload every zip in dist/
 ./scripts/release.sh audio   # or just one of them
 ```
 
 `scripts/release.sh` uploads what is **already in `dist/`** — it builds nothing, so the zip
-that goes out is the one you tested. Six projects, one per target: `player`
-([voiceover-redux](https://www.curseforge.com/wow/addons/voiceover-redux), `1655859`),
-`audio-all`
-([voiceover-redux-audio](https://www.curseforge.com/wow/addons/voiceover-redux-audio),
-`1655867`), and `audio-alliance` / `audio-horde` / `audio-shared` / `audio-gossip`, whose
-projects have to be created before their ids can go into `target_project()`. A target with no
-id fails the run rather than uploading a Horde pack over the Alliance project. It needs
+that goes out is the one you tested. Seven projects, one per target: `spoken`
+([spoken-player](https://www.curseforge.com/wow/addons/spoken-player), `1700375`), `player`
+([spoken-quests](https://www.curseforge.com/wow/addons/spoken-quests), `1655859`), `audio-all`
+([spoken-quests-audio](https://www.curseforge.com/wow/addons/spoken-quests-audio), `1660196`),
+and `audio-alliance` / `audio-horde` / `audio-shared` / `audio-gossip`. A target with no id
+fails the run rather than uploading a Horde pack over the Alliance project — which is also why
+the five retired downsampled projects have no id here at all. It needs
 `CURSEFORGE_TOKEN` in `.env` — an *author* token from
 [authors-old.curseforge.com](https://authors-old.curseforge.com/account/api-tokens), tied to
 the account rather than a project, so one covers both.

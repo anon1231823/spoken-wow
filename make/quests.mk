@@ -70,9 +70,9 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
         pull-history push-history history-status pull-ignores package package-audio \
-        package-audio-hq package-audio-hq-split package-meta package-meta-hq push-hq \
+        package-audio-hq package-meta push-hq \
         downloads-status \
-        factions release release-standard release-hq \
+        factions release release-audio \
         release-dry deploy-scripts \
         rollback releases \
         ssh-check
@@ -209,57 +209,45 @@ history-status: ## Compare take count and size on both sides
 # nothing else and each need their own vendored Ace3 in it. Only the first goes to CurseForge;
 # the GitHub release workflow publishes all four.
 #
-# `package-audio` transcodes the store to Ogg Vorbis at 22.05 kHz and builds it into five
-# packs - Alliance, Horde, the quests both sides share, gossip, and one holding everything -
-# zipping each. 3.2 GB of masters become 157 + 155 + 144 + 145 MB, or 601 MB together. Its own
-# header explains every choice; VERSION goes into each TOC, PACKS=all builds only the complete
-# one, ENCODE=copy skips the transcode to hear the masters in game, JOBS=1 makes a failing
-# encode readable.
+# `package-audio` builds the store into five packs - Alliance, Horde, the quests both sides
+# share, gossip, and one holding everything - and zips each. Ogg Vorbis at the full 44.1 kHz,
+# around 300 MB a pack. Its own header explains every choice; VERSION goes into each TOC,
+# PACKS=all builds only the complete one, ENCODE=copy skips the transcode to hear the masters
+# in game, JOBS=1 makes a failing encode readable.
 #
-# `package-audio-hq` is the same pack without the downsample: full 44.1 kHz, 1.3 GB, for
-# anyone who would rather spend the bandwidth. Only the zip name distinguishes them, so
-# building one after the other leaves both zips and the second one's module in dist/.
-# docs/pack-size.md is where the two encodes were measured against everything else.
+# THE DOWNSAMPLED PACKS ARE GONE. There were two families for a while - these at 44.1 kHz and
+# a 22.05 kHz set at half the size - each with five CurseForge projects of its own, because an
+# addon manager installs a project's newest file and one project holding both qualities would
+# move a player out of the one they picked. Only the full-bandwidth family is maintained now;
+# the five downsampled projects stay published and are never uploaded to again, so nothing here
+# builds them. docs/pack-size.md is where every encode that was considered was measured.
 
 package: ## Zip the player addon into dist/: one Blizzard zip, one per legacy client
 	@./scripts/quests/package.sh
 
-package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.4.0)
-	@VERSION=$(VERSION) ENCODE=$(ENCODE) JOBS=$(JOBS) ./scripts/quests/package-audio.sh
-
-# The HQ pack: every line in one folder, Ogg Vorbis at the full 44.1 kHz, ~1.3 GB. Not a
-# CurseForge release - it is over the upload ceiling and always will be - so it is built when
-# somebody wants to distribute it themselves, and it is a folder of its own rather than a
-# fatter copy of a shipping pack, so installing it beside them is possible but pointless.
-
-package-audio-hq: ## Build the full-bandwidth pack, every line in one folder (~1.3 GB)
-	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
-	  MODULE_NAME=VoiceOverReduxAudioHQ TITLE="Spoken Quests Audio: HQ" \
+package-audio: ## Transcode, build and zip the five sound packs into dist/ (VERSION=1.4.0)
+	@VERSION=$(VERSION) ENCODE=$(if $(ENCODE),$(ENCODE),ogg-q0-44k) MODULE=VoiceOverReduxHQAudio \
 	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
-# The same audio split the same four ways, at full bandwidth: VoiceOverReduxAudioAllianceHQ and
-# friends. Each lands around 300 MB, which is under CurseForge's ceiling - unlike the one-folder
-# HQ pack - so these can have projects of their own when there are projects to give them.
-#
-# A folder per quality rather than a second file on the standard pack's project: an addon
-# manager installs a project's newest file, so sharing a name would move a player from the
-# quality they picked into the other one.
+# Every line in one folder rather than split five ways, ~1.3 GB. Not a CurseForge release - it
+# is over the upload ceiling and always will be - so it is built when somebody wants to
+# distribute it themselves, and it is a folder of its own rather than a fatter copy of a
+# shipping pack, so installing it beside them is possible but pointless. The site hosts it:
+# `push-hq` below, and the published URL carries the folder name, so neither can be renamed.
 
-package-audio-hq-split: ## The four packs at full bandwidth (~300 MB each)
-	@VERSION=$(VERSION) ENCODE=ogg-q0-44k MODULE=VoiceOverReduxHQAudio \
-	  TITLE_FAMILY="Spoken Quests HQ Audio" JOBS=$(JOBS) ./scripts/quests/package-audio.sh
-
-package-meta-hq: ## Zip the meta addon for the HQ family
-	@VERSION=$(VERSION) NAME=VoiceOverReduxHQAudio \
-	  TITLE="Spoken Quests HQ Audio: All" VARIANT=" at full bandwidth" \
-	  ./scripts/quests/package-meta.sh
+package-audio-hq: ## Build the whole corpus as one folder for the site (~1.3 GB)
+	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
+	  MODULE_NAME=VoiceOverReduxAudioHQ TITLE="Spoken Quests Audio: Complete" \
+	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
 # The "install everything" addon, which installs nothing itself: a few kilobytes declaring the
 # four packs as CurseForge dependencies, because the complete pack is too big to upload. Its
 # header explains the rest; release.sh sends the dependency list with the file.
+#
+# NAME is the shipping family's folder, which release.sh uploads as audio-all.
 
 package-meta: ## Zip the meta addon that pulls in all four packs
-	@VERSION=$(VERSION) ./scripts/quests/package-meta.sh
+	@VERSION=$(VERSION) NAME=VoiceOverReduxHQAudio ./scripts/quests/package-meta.sh
 
 # The HQ pack's home, since it is too big for CurseForge: nginx serves
 # /srv/voiceover/shared/downloads/ straight off disk (see deploy/quests/nginx-voiceover.conf), and
@@ -299,14 +287,11 @@ release-dry: ## Show what `make release` would upload to CurseForge
 release: ## Upload the built zips to CurseForge (needs CURSEFORGE_TOKEN)
 	@./scripts/quests/release.sh
 
-# One family at a time, for when only that family was rebuilt. `release` does all eleven.
-# The meta addon comes last in both, since CurseForge resolves its dependencies at upload time.
+# The packs alone, for when the audio was rebuilt and the player was not. The meta addon comes
+# last, since CurseForge resolves its dependencies at upload time.
 
-release-standard: ## Upload the standard packs and their meta addon
+release-audio: ## Upload the four packs and their meta addon
 	@./scripts/quests/release.sh audio-alliance audio-horde audio-shared audio-gossip audio-all
-
-release-hq: ## Upload the HQ packs and their meta addon
-	@./scripts/quests/release.sh hq-alliance hq-horde hq-shared hq-gossip hq-all
 
 # --- the ignore list ------------------------------------------------------------------
 #

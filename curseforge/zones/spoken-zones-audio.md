@@ -1,8 +1,8 @@
 ---
 project: 1636532
-slug: zoneloreaudio
-name: ZoneLoreAudio
-summary: The ZoneLore narration
+slug: spoken-zones-audio
+name: Spoken Zones Audio
+summary: Formerly ZoneLoreAudio. The narration for Spoken Zones: every zone and subzone read aloud.
 categories:
   - Audio & Video
   - Miscellaneous
@@ -11,7 +11,7 @@ license: MIT
 addonReadme: addons/SpokenZonesAudio/README.md
 ---
 
-Narrated zone lore for **ZoneLore**, at full 128 kbps quality. This addon is data only — it does nothing on its own.
+Narrated zone lore for **[Spoken Zones](https://www.curseforge.com/wow/addons/spoken-zones)** (formerly ZoneLore), at full 128 kbps quality. This addon is data only — it does nothing on its own.
 
 ## The voice, as of 0.3.0
 
@@ -21,28 +21,17 @@ That doesn't make it finished. With this many lines, some readings will still la
 
 The **lore text** was rewritten in the same release to describe the world as a vanilla character finds it. Where a line's text gets fixed, its narration is regenerated — so an occasional re-download is expected.
 
-## Which pack to install
-
-Two packs, the same voicelines, differing only in quality:
-
-| Pack | Bitrate | Download |
-|---|---|---|
-| **Spoken Zones Audio** (this one) | 128 kbps | ~450 MB |
-| **Spoken Zones Audio 64** | VBR mono | ~220 MB |
-
-This is the larger pack. If ~450 MB is more than you want to spend, Spoken Zones Audio 64 has the same lines, VBR mono, at half the size — close to transparent for speech.
-
-Both can be installed at once — Spoken Zones plays the higher-quality one, and `/zl audio` switches between them.
-
 ## Installing
 
-Install **ZoneLore** first; this pack is inert without it. Extract into `Interface/AddOns` so the folder sits alongside `ZoneLore`, and leave the folder name as shipped — ZoneLore finds packs by folder name.
+Install **Spoken Zones** first; this pack is inert without it. Extract into `Interface/AddOns` and leave the folder name as shipped — the folder is called `ZoneLoreAudio`, the name it was published under, and Spoken Zones finds packs by folder name.
+
+There was a second, smaller pack at 64 kbps. It is retired: it stays installable for anyone who has it, and gets no further updates. This one is the pack to install.
 
 Neither addon declares a hard dependency on the other, so install order doesn't matter.
 
 ## Compatibility
 
-Built for **Classic Era 1.15.9**. The pack and ZoneLore work together as long as they share a major version.
+Built for **Classic Era 1.15.9**. The pack and Spoken Zones work together as long as they share a major version.
 
 ## Support
 

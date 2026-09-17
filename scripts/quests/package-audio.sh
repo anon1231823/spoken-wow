@@ -12,12 +12,15 @@
 # asks a player to download three gigabytes for audio most of them hear once per
 # quest. docs/pack-size.md measures every encode that was considered.
 #
-# THE SHIPPING PACK IS OGG VORBIS AT 22.05 kHz. Vorbis is worth 1.3-1.5x over LAME
-# at these rates, and speech survives an 11 kHz ceiling, which together take 3.2 GB
-# to 0.6 GB - the difference between a pack people download and one they do not.
-# `ogg-q0-44k` keeps the full bandwidth for anyone who would rather have it, at
-# 1.3 GB, and it is what package-audio-hq builds. Both are VBR: the bits follow the
-# voice instead of padding silence to a constant rate.
+# THE SHIPPING PACK IS OGG VORBIS AT 44.1 kHz (`ogg-q0-44k`), which make passes in:
+# 3.2 GB of masters become ~1.3 GB, split five ways. Vorbis is worth 1.3-1.5x over
+# LAME at these rates, and it is VBR, so the bits follow the voice instead of padding
+# silence to a constant rate.
+#
+# A 22.05 kHz downsample halves that again and speech survives an 11 kHz ceiling, so
+# it shipped as a second family for a while. It is retired - one family is one set of
+# projects, one set of folder names and one answer to "which do I install" - and the
+# profile stays available here for anyone measuring. docs/pack-size.md has the numbers.
 #
 # The masters stay in audio/ untouched, so raising the shipped quality later is a
 # re-run of this script rather than a second purchase from ElevenLabs, which bills
@@ -45,7 +48,11 @@ cd "$REPO"
 
 STORE="${STORE:-audio}"
 DIST="${DIST:-dist}"
-MODULE="${MODULE:-VoiceOverReduxAudio}"
+# The shipping family's folder prefix. The name still says VoiceOverRedux and still says HQ:
+# it is the path every player who has a pack already holds on disk, and the HQ distinguished it
+# from a downsampled family that is now retired. Renaming either half re-ships 1.3 GB to move
+# files that are already correct.
+MODULE="${MODULE:-VoiceOverReduxHQAudio}"
 VERSION="${VERSION:-1.2.1}"
 # Which packs to build; each becomes MODULE plus the suffix tts_cli/factions.py gives it.
 #

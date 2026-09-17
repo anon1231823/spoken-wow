@@ -2,9 +2,9 @@
 # Uploads built zips to CurseForge through the author API.
 #
 #   ./scripts/release.sh --dry-run        # say what would be sent, send nothing
-#   ./scripts/release.sh                  # all three projects
-#   ./scripts/release.sh zonelore         # just the addon
-#   ./scripts/release.sh audio audio64    # just the sound packs
+#   ./scripts/release.sh                  # both projects
+#   ./scripts/release.sh zones            # just the addon
+#   ./scripts/release.sh audio            # just the sound pack
 #
 # Needs CURSEFORGE_TOKEN in the environment or in .env. Generate one at
 # https://authors-old.curseforge.com/account/api-tokens -- it is an author token
@@ -49,33 +49,36 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 # it fails on the empty project id below -- which is the failure to want, because
 # the alternative is uploading a German pack over the English project.
 target_project() { case "$1" in
-  zonelore) echo "1636521";;
+  zones)    echo "1636521";;
   audio)    echo "1636532";;
-  audio64)  echo "1636548";;
 esac; }
 target_addon() { case "$1" in
-  zonelore) echo "SpokenZones";;
-  audio)    echo "ZoneLoreAudio";;
-  audio64)  echo "ZoneLoreAudio";;   # both packs are versioned from the one tree
+  zones)    echo "SpokenZones";;
+  audio)    echo "SpokenZonesAudio";;
 esac; }
 target_zip() { case "$1" in
-  zonelore) echo "SpokenZones";;
+  zones)    echo "SpokenZones";;
   audio)    echo "ZoneLoreAudio";;
-  audio64)  echo "ZoneLoreAudio64";;
+esac; }
+# The project's slug, which is neither the folder nor the zip name: the folders keep the names
+# they were published under and the slugs were changed with the rename. Used for the link
+# printed after an upload, so a wrong one here is a dead link and nothing worse.
+target_slug() { case "$1" in
+  zones)    echo "spoken-zones";;
+  audio)    echo "spoken-zones-audio";;
 esac; }
 # Which clients each file is offered to. Every zip built from 0.3.1 onwards carries
-# a .toc for both clients, so all three are filed against both. Files uploaded
+# a .toc for both clients, so both are filed against both. Files uploaded
 # before that are Era-only and stay filed as they were -- a file offered to a
 # client it cannot load on is worse than one that is simply absent there.
 # Required dependencies by CurseForge slug: the addon needs the player it speaks through.
 target_dependencies() { case "$1" in
-  zonelore) echo "spoken-player";;
+  zones)    echo "spoken-player";;
 esac; }
 
 target_game_versions() { case "$1" in
-  zonelore) echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
+  zones)    echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
   audio)    echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
-  audio64)  echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
 esac; }
 
 dry_run=""
@@ -83,12 +86,12 @@ targets=()
 for arg in "$@"; do
   case "$arg" in
     --dry-run|-n) dry_run=1;;
-    zonelore|audio|audio64) targets+=("$arg");;
-    *) echo "error: unknown argument '$arg' (expected: zonelore, audio, audio64, --dry-run)" >&2; exit 1;;
+    zones|audio) targets+=("$arg");;
+    *) echo "error: unknown argument '$arg' (expected: zones, audio, --dry-run)" >&2; exit 1;;
   esac
 done
 if (( ${#targets[@]} == 0 )); then
-  targets=("zonelore" "audio" "audio64")
+  targets=("zones" "audio")
 fi
 
 command -v curl >/dev/null || { echo "error: curl is required" >&2; exit 1; }
@@ -262,7 +265,7 @@ for target in "${targets[@]}"; do
 
   file_id="$(node -e 'process.stdout.write(String(JSON.parse(process.argv[1]).id ?? "?"))' "$response")"
   echo "  uploaded -- file id $file_id"
-  echo "  https://www.curseforge.com/wow/addons/$zip_name/files/$file_id"
+  echo "  https://www.curseforge.com/wow/addons/$(target_slug "$target")/files/$file_id"
 done
 
 #-- descriptions --------------------------------------------------------------
