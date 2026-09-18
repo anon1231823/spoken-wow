@@ -2,7 +2,7 @@
 -- stopping one file. Run with `make test-player`.
 --
 -- The audibility predicate is VoiceOverRedux's (it checks volumes, and Master bypasses the
--- per-channel toggles) with ZoneLore's player-facing reasons. The per-client overrides in
+-- per-channel toggles) with SpokenZones's player-facing reasons. The per-client overrides in
 -- Compat.lua are covered by reloading the same files as a 1.12 and a 3.3.5 client.
 local here = arg[0]:match("^(.*)/[^/]*$") or "."
 package.path = here .. "/?.lua;" .. package.path

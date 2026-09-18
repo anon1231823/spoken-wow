@@ -1,5 +1,5 @@
 -- The zones addon speaking through the player. Audio.lua and Autoplay.lua are loaded for
--- real against a hand-built ZoneLore table; the queue, frame and callbacks are the real
+-- real against a hand-built SpokenZones table; the queue, frame and callbacks are the real
 -- Spoken ones. Run with `make test-player`.
 local here = arg[0]:match("^(.*)/[^/]*$") or "."
 package.path = here .. "/?.lua;" .. package.path
@@ -40,7 +40,7 @@ local Spoken = _G.Spoken
 Expect("the zones addon registers a source with the player", Spoken:GetSource("zones"), Z.source)
 -- No channel of its own: the channel is one setting, on the player.
 Expect("...on the player's channel", Z.source:GetChannel(), "Master")
-Expect("...ZoneLore's queue limit", Z.source.queueLimit, 3)
+Expect("...SpokenZones's queue limit", Z.source.queueLimit, 3)
 Expect("...and its own gap", Z.source.interClipGap, 0.25)
 
 local zone = Z:NewLoreSound(1411, nil)
@@ -70,7 +70,7 @@ Expect("IsPlayingLore for that entry", Z:IsPlayingLore(1411, nil), true)
 Expect("...not for another", Z:IsPlayingLore(1411, "valley of trials"), false)
 local m, a, paused = Z:GetNowPlaying()
 Expect("GetNowPlaying names it", tostring(m) .. "/" .. tostring(a) .. "/" .. tostring(paused), "1411/nil/false")
-Expect("the player's AUDIO_CHANGED reaches ZoneLore's own listeners", changed > 0, true)
+Expect("the player's AUDIO_CHANGED reaches SpokenZones's own listeners", changed > 0, true)
 Expect("starting marks the area heard in the per-character record", Z:HasHeard(1411, nil), true)
 
 local F = env.PlayerFrame
@@ -91,7 +91,7 @@ Expect("...targeting what is playing", Z.copied, "https://spoken.test/r/1411/nil
 ---------------------------------------------------------------- pause, skip, stop
 Z:PauseLore()
 Expect("PauseLore pauses the player", Spoken:IsPaused(), true)
-Expect("...and ZoneLore sees it", Z:IsPaused(), true)
+Expect("...and SpokenZones sees it", Z:IsPaused(), true)
 Z:ResumeLore()
 Expect("ResumeLore", Spoken:IsPaused(), false)
 

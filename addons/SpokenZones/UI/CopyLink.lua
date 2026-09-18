@@ -1,4 +1,4 @@
--- ZoneLore -- a popup holding one selectable URL.
+-- SpokenZones -- a popup holding one selectable URL.
 --
 -- The client has no way to open a browser, so every link this addon offers ends
 -- up here: an edit box with the address already highlighted, so the player
@@ -9,7 +9,7 @@
 -- backdrop, the Escape handling and the edit box with it, and because a modal is
 -- the honest shape for something you have to finish before carrying on.
 
-local ADDON_NAME, ZoneLore = ...
+local ADDON_NAME, SpokenZones = ...
 
 local POPUP = "ZONELORE_COPY_LINK"
 
@@ -60,7 +60,7 @@ StaticPopupDialogs[POPUP] = {
 }
 
 -- `caption` is the sentence above the box; it says what the address is for.
-function ZoneLore:ShowCopyLink(url, caption)
+function SpokenZones:ShowCopyLink(url, caption)
 	if not url then
 		return
 	end

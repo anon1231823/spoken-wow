@@ -131,16 +131,16 @@ function checkBraces(src, label) {
 // handing its table to Language.lua. A file missing the guard builds its table on
 // every client at once; one missing the registration call builds it for nobody.
 function checkHeader(src, label, { lang, local, kind }) {
-  if (!/^local _, ZoneLore = \.\.\.$/m.test(src)) {
-    note(`${label}: missing the 'local _, ZoneLore = ...' vararg header`);
+  if (!/^local _, SpokenZones = \.\.\.$/m.test(src)) {
+    note(`${label}: missing the 'local _, SpokenZones = ...' vararg header`);
   }
-  if (!src.includes(`if not ZoneLore:ShouldLoadLanguage("${lang}") then`)) {
+  if (!src.includes(`if not SpokenZones:ShouldLoadLanguage("${lang}") then`)) {
     note(`${label}: missing the ShouldLoadLanguage("${lang}") guard -- would load on every client`);
   }
   if (!new RegExp(`^local ${local} = \\{$`, "m").test(src)) {
     note(`${label}: missing the 'local ${local} = {' table`);
   }
-  if (!src.includes(`ZoneLore:RegisterLoreData("${lang}", "${kind}", ${local})`)) {
+  if (!src.includes(`SpokenZones:RegisterLoreData("${lang}", "${kind}", ${local})`)) {
     note(`${label}: missing the RegisterLoreData call -- the table would never be reachable`);
   }
 }
@@ -282,10 +282,10 @@ for (const lang of languages) {
 
   const label = `${lang}/Aliases.lua`;
   checkBraces(src, label);
-  if (!src.includes(`if not ZoneLore:ShouldLoadAliases("${lang}") then`)) {
+  if (!src.includes(`if not SpokenZones:ShouldLoadAliases("${lang}") then`)) {
     note(`${label}: missing the ShouldLoadAliases("${lang}") guard -- would load on every client`);
   }
-  if (!src.includes(`ZoneLore:RegisterAliases("${lang}", aliases)`)) {
+  if (!src.includes(`SpokenZones:RegisterAliases("${lang}", aliases)`)) {
     note(`${label}: missing the RegisterAliases call -- the table would never be reachable`);
   }
 
@@ -322,16 +322,16 @@ for (const lang of languages) {
   const languages = order("Data/Languages.lua");
   const language = order("Language.lua");
 
-  if (languages === -1) note("ZoneLore.toc: Data/Languages.lua is not loaded");
-  if (language === -1) note("ZoneLore.toc: Language.lua is not loaded");
+  if (languages === -1) note("SpokenZones.toc: Data/Languages.lua is not loaded");
+  if (language === -1) note("SpokenZones.toc: Language.lua is not loaded");
   if (languages > -1 && language > -1 && languages > language) {
-    note("ZoneLore.toc: Data/Languages.lua must load before Language.lua, or no language is ever ready");
+    note("SpokenZones.toc: Data/Languages.lua must load before Language.lua, or no language is ever ready");
   }
 
   for (const file of files) {
     if ((file.startsWith("Data/") && file !== "Data/Languages.lua") || file.startsWith("Locale/")) {
       if (order(file) < language) {
-        note(`ZoneLore.toc: ${file} loads before Language.lua, whose guard it calls`);
+        note(`SpokenZones.toc: ${file} loads before Language.lua, whose guard it calls`);
       }
     }
   }
@@ -342,7 +342,7 @@ for (const lang of languages) {
     for (const name of ["Zones.lua", "Subzones.lua", "Aliases.lua"]) {
       const path = `Data/${lang}/${name}`;
       const exists = await readFile(join(DATA, lang, name), "utf8").then(() => true, () => false);
-      if (exists && order(path) === -1) note(`ZoneLore.toc: ${path} exists but is not loaded`);
+      if (exists && order(path) === -1) note(`SpokenZones.toc: ${path} exists but is not loaded`);
     }
     const localePath = `Locale/${lang}.lua`;
     const localeExists = await readFile(join(ROOT, "addons/SpokenZones", localePath), "utf8").then(
@@ -350,7 +350,7 @@ for (const lang of languages) {
       () => false,
     );
     if (localeExists && order(localePath) === -1) {
-      note(`ZoneLore.toc: ${localePath} exists but is not loaded`);
+      note(`SpokenZones.toc: ${localePath} exists but is not loaded`);
     }
   }
 }
@@ -392,7 +392,7 @@ for (const lang of languages) {
 //------------------------------------------------------------------------------
 // Report URL slugs
 //
-// ZoneLore:ReportURL builds lore.rusty.one/{lang}/r/{mapID}/{slug} in Lua, and the site
+// SpokenZones:ReportURL builds lore.rusty.one/{lang}/r/{mapID}/{slug} in Lua, and the site
 // resolves that path back to a line by looking it up among the file paths
 // naming.mjs assigns. That only works while every slug is derivable from the key
 // alone: assignFiles has a hash fallback for collisions, and the addon has no way

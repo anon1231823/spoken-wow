@@ -7,15 +7,15 @@
 -- leading "the " removed, apostrophes dropped, punctuation collapsed to
 -- single spaces. The client reports "The Bulwark" where the wiki titles the
 -- page "Bulwark", so both sides are reduced to the same key at lookup time
--- via ZoneLore:NormaliseAreaKey.
+-- via SpokenZones:NormaliseAreaKey.
 --
 -- Every language is keyed by the ENGLISH name: a place is one place whatever
 -- it is called, and a non-English client gets from its own name to this key
 -- through Data/<locale>/Aliases.lua.
 
-local _, ZoneLore = ...
+local _, SpokenZones = ...
 
-if not ZoneLore:ShouldLoadLanguage("enUS") then
+if not SpokenZones:ShouldLoadLanguage("enUS") then
 	return
 end
 
@@ -5002,4 +5002,4 @@ local subzones = {
 	},
 }
 
-ZoneLore:RegisterLoreData("enUS", "subzones", subzones)
+SpokenZones:RegisterLoreData("enUS", "subzones", subzones)

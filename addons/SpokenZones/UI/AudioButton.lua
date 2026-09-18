@@ -1,6 +1,6 @@
--- ZoneLore -- the play/stop button shown next to a lore description.
+-- SpokenZones -- the play/stop button shown next to a lore description.
 --
--- A factory in the same shape as ZoneLore:CreateTextView: anchor the returned
+-- A factory in the same shape as SpokenZones:CreateTextView: anchor the returned
 -- button yourself, then call SetTarget whenever the panel's content changes.
 --
 -- Deliberately a text button rather than an icon. Icon paths cannot be verified
@@ -8,7 +8,7 @@
 -- nothing at all -- an invisible button is a worse failure than a plain one. This
 -- is the same trade the hand-rolled scrollbar in UI/TextView.lua makes.
 
-local ADDON_NAME, ZoneLore = ...
+local ADDON_NAME, SpokenZones = ...
 
 local BUTTON_WIDTH = 58
 local BUTTON_HEIGHT = 20
@@ -28,19 +28,19 @@ function AudioButton:SetTarget(mapID, areaKey)
 end
 
 function AudioButton:Refresh()
-	if not ZoneLore:IsVoiceEnabled() or not self.mapID then
+	if not SpokenZones:IsVoiceEnabled() or not self.mapID then
 		self:Hide()
 		return
 	end
 
-	if not ZoneLore:HasAudio(self.mapID, self.areaKey) then
+	if not SpokenZones:HasAudio(self.mapID, self.areaKey) then
 		self:Hide()
 		return
 	end
 
 	self:Show()
 
-	if ZoneLore:IsPlayingLore(self.mapID, self.areaKey) then
+	if SpokenZones:IsPlayingLore(self.mapID, self.areaKey) then
 		self:SetText("Stop")
 	else
 		self:SetText("Play")
@@ -51,7 +51,7 @@ end
 -- Construction
 --------------------------------------------------------------------------------
 
-function ZoneLore:CreateAudioButton(parent)
+function SpokenZones:CreateAudioButton(parent)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
 	button:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
 	button:SetText("Play")
@@ -64,12 +64,12 @@ function ZoneLore:CreateAudioButton(parent)
 		if not self.mapID then
 			return
 		end
-		ZoneLore:ToggleLore(self.mapID, self.areaKey)
+		SpokenZones:ToggleLore(self.mapID, self.areaKey)
 	end)
 
 	button:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-		if ZoneLore:IsPlayingLore(self.mapID, self.areaKey) then
+		if SpokenZones:IsPlayingLore(self.mapID, self.areaKey) then
 			GameTooltip:SetText("Stop the narration")
 		else
 			GameTooltip:SetText("Read this lore aloud")
@@ -83,7 +83,7 @@ function ZoneLore:CreateAudioButton(parent)
 
 	-- Both panels can show the same entry at once, and either can start playback,
 	-- so every button re-reads the shared state rather than tracking its own.
-	ZoneLore:OnAudioChanged(function()
+	SpokenZones:OnAudioChanged(function()
 		button:Refresh()
 	end)
 

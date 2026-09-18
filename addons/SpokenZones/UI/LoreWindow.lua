@@ -1,4 +1,4 @@
--- ZoneLore -- standalone, browsable lore window.
+-- SpokenZones -- standalone, browsable lore window.
 --
 -- Opened from the minimap button or /zl window. Independent of WorldMapFrame, so
 -- it works with the map closed.
@@ -9,7 +9,7 @@
 -- can be a real button and no view virtualisation is needed. Expanding all zones
 -- at once would be 1353 rows, which is why the accordion is not optional.
 
-local ADDON_NAME, ZoneLore = ...
+local ADDON_NAME, SpokenZones = ...
 
 local WINDOW_WIDTH = 720
 local WINDOW_HEIGHT = 460
@@ -38,13 +38,13 @@ local function ZoneIDs()
 		return sortedZoneIDs
 	end
 	sortedZoneIDs = {}
-	for mapID in pairs(ZoneLore.Zones) do
+	for mapID in pairs(SpokenZones.Zones) do
 		table.insert(sortedZoneIDs, mapID)
 	end
 	-- Alphabetical by display name: uiMapID order is meaningless to a reader.
 	table.sort(sortedZoneIDs, function(a, b)
-		local na = ZoneLore:GetMapName(a) or ZoneLore.Zones[a].name or ""
-		local nb = ZoneLore:GetMapName(b) or ZoneLore.Zones[b].name or ""
+		local na = SpokenZones:GetMapName(a) or SpokenZones.Zones[a].name or ""
+		local nb = SpokenZones:GetMapName(b) or SpokenZones.Zones[b].name or ""
 		if na == nb then
 			return a < b
 		end
@@ -54,7 +54,7 @@ local function ZoneIDs()
 end
 
 local function SubzoneKeys(mapID)
-	local tbl = ZoneLore.Subzones[mapID]
+	local tbl = SpokenZones.Subzones[mapID]
 	if not tbl then
 		return nil
 	end
@@ -76,7 +76,7 @@ local function BuildRowList()
 		table.insert(list, {
 			kind = "zone",
 			mapID = mapID,
-			label = ZoneLore:GetMapName(mapID) or ZoneLore.Zones[mapID].name or tostring(mapID),
+			label = SpokenZones:GetMapName(mapID) or SpokenZones.Zones[mapID].name or tostring(mapID),
 			count = subKeys and #subKeys or 0,
 		})
 		if expandedZone == mapID and subKeys then
@@ -85,7 +85,7 @@ local function BuildRowList()
 					kind = "subzone",
 					mapID = mapID,
 					key = key,
-					label = ZoneLore.Subzones[mapID][key].name or key,
+					label = SpokenZones.Subzones[mapID][key].name or key,
 				})
 			end
 		end
@@ -110,10 +110,10 @@ local function ShowEntry()
 	local mapID, key = selection.mapID, selection.key
 
 	if key then
-		local entry = ZoneLore.Subzones[mapID] and ZoneLore.Subzones[mapID][key]
+		local entry = SpokenZones.Subzones[mapID] and SpokenZones.Subzones[mapID][key]
 		if entry then
 			header:SetText(entry.name or key)
-			subheader:SetText("in " .. (ZoneLore:GetMapName(mapID) or ""))
+			subheader:SetText("in " .. (SpokenZones:GetMapName(mapID) or ""))
 			body:SetText(entry.full or entry.short or "")
 			-- Rows are already keyed by the canonical form, so this needs no
 			-- normalising -- unlike the map panel, which starts from a client name.
@@ -123,8 +123,8 @@ local function ShowEntry()
 		end
 	end
 
-	local entry = ZoneLore:GetLore(mapID)
-	header:SetText(ZoneLore:GetMapName(mapID) or (entry and entry.name) or tostring(mapID))
+	local entry = SpokenZones:GetLore(mapID)
+	header:SetText(SpokenZones:GetMapName(mapID) or (entry and entry.name) or tostring(mapID))
 	local subKeys = SubzoneKeys(mapID)
 	subheader:SetText(subKeys and (#subKeys .. " subzones") or "")
 	body:SetText(entry and (entry.full or entry.short) or "|cff888888No lore recorded.|r")
@@ -160,7 +160,7 @@ local function OnRowClick(self)
 		selection = { mapID = row.mapID, key = row.key }
 	end
 
-	ZoneLore:RefreshLoreWindow()
+	SpokenZones:RefreshLoreWindow()
 end
 
 local function AcquireRow(index)
@@ -264,7 +264,7 @@ local function ScrollToSelection(list)
 	end
 end
 
-function ZoneLore:RefreshLoreWindow(scrollToSelection)
+function SpokenZones:RefreshLoreWindow(scrollToSelection)
 	if not window then
 		return
 	end
@@ -280,7 +280,7 @@ end
 --------------------------------------------------------------------------------
 
 local function BuildWindow()
-	window = CreateFrame("Frame", "ZoneLoreWindow", UIParent, "BackdropTemplate")
+	window = CreateFrame("Frame", "SpokenZonesWindow", UIParent, "BackdropTemplate")
 	window:SetSize(WINDOW_WIDTH, WINDOW_HEIGHT)
 	window:SetPoint("CENTER")
 	window:SetFrameStrata("HIGH")
@@ -314,7 +314,7 @@ local function BuildWindow()
 	-- On the title row beside the close button rather than on the header row.
 	-- UIPanelCloseButton is 32x32 and reaches down to -40, which is exactly where
 	-- the header row starts, so anything anchored top-right there overlaps it.
-	audioButton = ZoneLore:CreateAudioButton(window)
+	audioButton = SpokenZones:CreateAudioButton(window)
 	audioButton:SetPoint("TOPRIGHT", close, "TOPLEFT", -2, -5)
 
 	-- Left: the zone/subzone list.
@@ -359,16 +359,16 @@ local function BuildWindow()
 	footer:SetJustifyH("LEFT")
 	footer:SetText("Lore: warcraft.wiki.gg (CC BY-SA 4.0)")
 
-	reportButton = ZoneLore:CreateReportButton(window)
+	reportButton = SpokenZones:CreateReportButton(window)
 	reportButton:SetPoint("LEFT", footer, "RIGHT", 6, -4)
 
-	body = ZoneLore:CreateTextView(window)
+	body = SpokenZones:CreateTextView(window)
 	body.frame:SetPoint("TOPLEFT", subheader, "BOTTOMLEFT", 0, -8)
 	-- Cleared against the button rather than the credit line: the button is the
 	-- taller of the two, so it is the one that decides where the text has to stop.
 	body.frame:SetPoint("BOTTOMRIGHT", reportButton, "TOPRIGHT", 0, 6)
 
-	ZoneLore.window = window
+	SpokenZones.window = window
 end
 
 --------------------------------------------------------------------------------
@@ -379,15 +379,15 @@ end
 -- lore for. C_Map.GetBestMapForUnit can return an indoor or micro map (an inn,
 -- a dungeon) that is not itself a key in Zones, so walk up to its parent.
 local function CurrentZoneID()
-	local playerMap = ZoneLore:GetPlayerMapID()
+	local playerMap = SpokenZones:GetPlayerMapID()
 	if not playerMap then
 		return nil
 	end
-	local _, resolved = ZoneLore:GetLoreWithFallback(playerMap)
+	local _, resolved = SpokenZones:GetLoreWithFallback(playerMap)
 	return resolved
 end
 
-function ZoneLore:ToggleLoreWindow()
+function SpokenZones:ToggleLoreWindow()
 	if not window then
 		return
 	end
@@ -406,7 +406,7 @@ function ZoneLore:ToggleLoreWindow()
 		local subZone = GetSubZoneText()
 		local subEntry, subKey
 		if subZone and subZone ~= "" then
-			subEntry, subKey = ZoneLore:GetSubzoneLore(current, subZone)
+			subEntry, subKey = SpokenZones:GetSubzoneLore(current, subZone)
 		end
 
 		expandedZone = current
@@ -418,14 +418,14 @@ function ZoneLore:ToggleLoreWindow()
 	end
 
 	window:Show()
-	ZoneLore:RefreshLoreWindow(true)
+	SpokenZones:RefreshLoreWindow(true)
 end
 
 -- Open on a named entry rather than on the player's location. Deliberately not
 -- routed through ToggleLoreWindow: that re-syncs to where the player is standing
 -- on every open, which is right for the minimap button and wrong for anything
 -- naming an entry -- narration outlives the zone you started it in.
-function ZoneLore:ShowLoreFor(mapID, areaKey)
+function SpokenZones:ShowLoreFor(mapID, areaKey)
 	if not window or not mapID then
 		return
 	end
@@ -434,13 +434,13 @@ function ZoneLore:ShowLoreFor(mapID, areaKey)
 	selection = { mapID = mapID, key = areaKey }
 
 	window:Show()
-	ZoneLore:RefreshLoreWindow(true)
+	SpokenZones:RefreshLoreWindow(true)
 end
 
-function ZoneLore:SetupLoreWindow()
+function SpokenZones:SetupLoreWindow()
 	if window then
 		return
 	end
 	BuildWindow()
-	tinsert(UISpecialFrames, "ZoneLoreWindow") -- close on Escape
+	tinsert(UISpecialFrames, "SpokenZonesWindow") -- close on Escape
 end

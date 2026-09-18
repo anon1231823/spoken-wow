@@ -654,14 +654,14 @@ function M.ResetTimers()
 end
 
 --- Load the zones addon's playback files the way the client would -- each chunk receives
---- the addon name and the shared table as varargs -- against a hand-built ZoneLore table
+--- the addon name and the shared table as varargs -- against a hand-built SpokenZones table
 --- carrying the few Core.lua facts Audio.lua and Autoplay.lua read. Returns that table.
-function M.LoadZones(addonDirectory, ZoneLore)
+function M.LoadZones(addonDirectory, SpokenZones)
     for _, file in ipairs({ "Audio", "UI/ReportButton", "Autoplay" }) do
         local chunk = assert(loadfile(addonDirectory .. file .. ".lua"))
-        chunk("SpokenZones", ZoneLore)
+        chunk("SpokenZones", SpokenZones)
     end
-    return ZoneLore
+    return SpokenZones
 end
 
 --- Reset every piece of sound state a test can observe.

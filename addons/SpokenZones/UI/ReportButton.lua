@@ -1,6 +1,6 @@
--- ZoneLore -- the "Report" button shown beside a lore description.
+-- SpokenZones -- the "Report" button shown beside a lore description.
 --
--- A factory in the same shape as ZoneLore:CreateAudioButton: anchor the returned
+-- A factory in the same shape as SpokenZones:CreateAudioButton: anchor the returned
 -- button yourself, then call SetTarget whenever the panel's content changes.
 -- Text rather than an icon, for the reason UI/AudioButton.lua gives.
 --
@@ -9,7 +9,7 @@
 -- or not anyone has read it aloud, and a report on a line with no voiceover is
 -- one of the more useful kinds.
 
-local ADDON_NAME, ZoneLore = ...
+local ADDON_NAME, SpokenZones = ...
 
 local BUTTON_WIDTH = 58
 local BUTTON_HEIGHT = 20
@@ -40,7 +40,7 @@ end
 -- Construction
 --------------------------------------------------------------------------------
 
-function ZoneLore:CreateReportButton(parent)
+function SpokenZones:CreateReportButton(parent)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
 	button:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
 	button:SetText("Report")
@@ -50,11 +50,11 @@ function ZoneLore:CreateReportButton(parent)
 	button.Refresh = ReportButton.Refresh
 
 	button:SetScript("OnClick", function(self)
-		local url = ZoneLore:ReportURL(self.mapID, self.areaKey)
+		local url = SpokenZones:ReportURL(self.mapID, self.areaKey)
 		if not url then
 			return
 		end
-		ZoneLore:ShowCopyLink(url, "Copy this address and open it in your browser to report a problem with this entry.")
+		SpokenZones:ShowCopyLink(url, "Copy this address and open it in your browser to report a problem with this entry.")
 	end)
 
 	button:SetScript("OnEnter", function(self)

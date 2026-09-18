@@ -4,16 +4,16 @@
 -- corpus is stored under. Built by joining AreaTable's localized and English
 -- strings on their shared ID, from client build 1.15.9.69109.
 --
--- Keyed by the raw client name: ZoneLore:NormaliseAreaKey reduces a name to
+-- Keyed by the raw client name: SpokenZones:NormaliseAreaKey reduces a name to
 -- [a-z0-9 ], which erases a Cyrillic or Chinese name entirely.
 
-local _, ZoneLore = ...
+local _, SpokenZones = ...
 
-if not ZoneLore:ShouldLoadAliases("itIT") then
+if not SpokenZones:ShouldLoadAliases("itIT") then
 	return
 end
 
 local aliases = {
 }
 
-ZoneLore:RegisterAliases("itIT", aliases)
+SpokenZones:RegisterAliases("itIT", aliases)

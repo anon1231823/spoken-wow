@@ -1,5 +1,5 @@
--- The addon was ZoneLore, and the client names a SavedVariables file after the folder:
--- ZoneLoreDB and ZoneLoreCharDB live in ZoneLore.lua, which only still loads because a
+-- The addon was SpokenZones, and the client names a SavedVariables file after the folder:
+-- ZoneLoreDB and ZoneLoreCharDB live in SpokenZones.lua, which only still loads because a
 -- tombstone folder of that name declares them. This copies them once into this addon's own
 -- variables.
 --
@@ -20,6 +20,7 @@ end
 
 if type(ZoneLoreDB) == "table" and not (type(SpokenZonesDB) == "table" and SpokenZonesDB.migratedFrom) then
 	SpokenZonesDB = DeepCopy(ZoneLoreDB)
+	-- The name migrated FROM, which is a record and not a reference to this addon.
 	SpokenZonesDB.migratedFrom = "ZoneLore"
 	if type(ZoneLoreCharDB) == "table" then
 		SpokenZonesCharDB = DeepCopy(ZoneLoreCharDB)

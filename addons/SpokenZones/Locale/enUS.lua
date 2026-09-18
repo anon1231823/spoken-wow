@@ -18,7 +18,7 @@
 --   UI/MapPanel.lua      the two sentences that were built by concatenation
 --   Core.lua             the /zl command list
 
-local _, ZoneLore = ...
+local _, SpokenZones = ...
 
 local L = {}
 
@@ -82,4 +82,4 @@ L.CMD_DEBUG = "  /zl debug      -- report area names on map click"
 L.CMD_VERIFY = "  /zl verify     -- check data against this client"
 L.CMD_DUMP = "  /zl dump       -- enumerate the map tree (dev)"
 
-ZoneLore:RegisterStrings("enUS", L)
+SpokenZones:RegisterStrings("enUS", L)

@@ -1,4 +1,4 @@
--- ZoneLore -- the language axis.
+-- SpokenZones -- the language axis.
 --
 -- Two identifiers live here and are deliberately never merged:
 --
@@ -17,12 +17,12 @@
 --
 -- This file loads before Core.lua and before anything under Data/, because the
 -- generated data files ask ShouldLoadLanguage whether to build their tables at
--- all. That question can only be answered this early because ZoneLore.toc sets
+-- all. That question can only be answered this early because SpokenZones.toc sets
 -- LoadSavedVariablesFirst -- SpokenZonesDB is already populated when these files
 -- run. Removing that .toc line does not error; it silently pins every player to
 -- English.
 
-local ADDON_NAME, ZoneLore = ...
+local ADDON_NAME, SpokenZones = ...
 
 -- Every locale a Classic Era or Anniversary client can run in. A code absent
 -- here can never be selected, so the list is the addon's definition of "a
@@ -34,7 +34,7 @@ local ADDON_NAME, ZoneLore = ...
 --
 -- Must stay in step with LOCALES in tools/lib/locales.mjs; tools/validate.mjs
 -- fails the build if the two lists drift.
-ZoneLore.LOCALES = {
+SpokenZones.LOCALES = {
 	{ code = "enUS", name = "English", native = "English", script = "latin" },
 	{ code = "deDE", name = "German", native = "Deutsch", script = "latin" },
 	{ code = "esES", name = "Spanish (EU)", native = "Espanol", script = "latin" },
@@ -51,15 +51,15 @@ ZoneLore.LOCALES = {
 local BASE = "enUS"
 
 local byCode = {}
-for i = 1, #ZoneLore.LOCALES do
-	byCode[ZoneLore.LOCALES[i].code] = ZoneLore.LOCALES[i]
+for i = 1, #SpokenZones.LOCALES do
+	byCode[SpokenZones.LOCALES[i].code] = SpokenZones.LOCALES[i]
 end
 
-ZoneLore.clientLocale = GetLocale()
+SpokenZones.clientLocale = GetLocale()
 
 -- Localized area name -> English corpus key, keyed by *client* locale.
 -- Populated by Data/<locale>/Aliases.lua.
-ZoneLore.Aliases = {}
+SpokenZones.Aliases = {}
 
 --------------------------------------------------------------------------------
 -- Readiness
@@ -69,10 +69,10 @@ ZoneLore.Aliases = {}
 -- Data/Languages.lua. Declared here so this file works before that one loads and
 -- on a build where it is missing: without it only English exists, which is the
 -- state the addon shipped in for its whole life so far.
-ZoneLore.Languages = ZoneLore.Languages or {}
+SpokenZones.Languages = SpokenZones.Languages or {}
 
 local function coverage(code)
-	local list = ZoneLore.Languages
+	local list = SpokenZones.Languages
 	for i = 1, #list do
 		if list[i].code == code then
 			return list[i]
@@ -85,7 +85,7 @@ end
 -- non-English one, an alias table). Interface strings are not required -- they
 -- fall back to English per key. Computed at build time rather than counted
 -- here, because the addon cannot know how many lines there are supposed to be.
-function ZoneLore:IsLanguageReady(code)
+function SpokenZones:IsLanguageReady(code)
 	if code == BASE then
 		return true
 	end
@@ -98,7 +98,7 @@ end
 -- font, so Chinese lore on a German client is a screen of boxes -- a bug report
 -- that looks like corrupted data. English is always allowed: it is what the addon
 -- falls back to when nothing else can be selected, and every client can draw it.
-function ZoneLore:CanRenderLanguage(code)
+function SpokenZones:CanRenderLanguage(code)
 	if code == BASE then
 		return true
 	end
@@ -120,19 +120,19 @@ end
 -- The stored preference, or nil for "follow the client". The two are not the
 -- same: a player who never chose should start reading German the day German
 -- ships, while one who explicitly picked English must keep English.
-function ZoneLore:GetLanguagePreference()
+function SpokenZones:GetLanguagePreference()
 	local pref = SpokenZonesDB and SpokenZonesDB.language
 	return type(pref) == "string" and byCode[pref] and pref or nil
 end
 
-function ZoneLore:IsPreviewingLanguage()
+function SpokenZones:IsPreviewingLanguage()
 	return (SpokenZonesDB and SpokenZonesDB.languagePreview) and true or false
 end
 
 -- Whether a language may be selected at all. Preview mode relaxes readiness so
 -- an unfinished translation can be looked at, but never relaxes the font check:
 -- previewing boxes tells you nothing.
-function ZoneLore:IsLanguageSelectable(code)
+function SpokenZones:IsLanguageSelectable(code)
 	if not byCode[code] then
 		return false
 	end
@@ -143,12 +143,12 @@ function ZoneLore:IsLanguageSelectable(code)
 end
 
 local function resolve()
-	local pref = ZoneLore:GetLanguagePreference()
-	if pref and ZoneLore:IsLanguageSelectable(pref) then
+	local pref = SpokenZones:GetLanguagePreference()
+	if pref and SpokenZones:IsLanguageSelectable(pref) then
 		return pref
 	end
-	local client = ZoneLore.clientLocale
-	if byCode[client] and ZoneLore:IsLanguageReady(client) and ZoneLore:CanRenderLanguage(client) then
+	local client = SpokenZones.clientLocale
+	if byCode[client] and SpokenZones:IsLanguageReady(client) and SpokenZones:CanRenderLanguage(client) then
 		return client
 	end
 	return BASE
@@ -157,14 +157,14 @@ end
 -- Resolved once, at load, and never recomputed: the generated data files consult
 -- it as they load and only get one chance to build their table. Everything that
 -- changes the answer therefore asks for a /reload.
-ZoneLore.language = resolve()
+SpokenZones.language = resolve()
 
-function ZoneLore:GetLanguage()
+function SpokenZones:GetLanguage()
 	return self.language
 end
 
 -- Every language the player could pick right now, in LOCALES order.
-function ZoneLore:GetSelectableLanguages()
+function SpokenZones:GetSelectableLanguages()
 	local out = {}
 	for i = 1, #self.LOCALES do
 		local locale = self.LOCALES[i]
@@ -175,7 +175,7 @@ function ZoneLore:GetSelectableLanguages()
 	return out
 end
 
-function ZoneLore:GetLocaleInfo(code)
+function SpokenZones:GetLocaleInfo(code)
 	return byCode[code]
 end
 
@@ -185,7 +185,7 @@ end
 -- Takes effect on /reload. Nothing here fakes a live switch: the tables for a
 -- language that was not active at load were never built, and pretending
 -- otherwise would show half-translated screens.
-function ZoneLore:SetLanguage(code)
+function SpokenZones:SetLanguage(code)
 	if code ~= nil and not self:IsLanguageSelectable(code) then
 		return false
 	end
@@ -193,14 +193,14 @@ function ZoneLore:SetLanguage(code)
 	return true
 end
 
-function ZoneLore:SetLanguagePreview(enabled)
+function SpokenZones:SetLanguagePreview(enabled)
 	SpokenZonesDB.languagePreview = enabled and true or false
 end
 
 --------------------------------------------------------------------------------
 -- Interface strings
 --
--- ZoneLore.L is every string the interface can show, looked up by name:
+-- SpokenZones.L is every string the interface can show, looked up by name:
 -- the active language first, English second, and the key itself last so a
 -- missing string is legible on screen rather than a nil concatenation error.
 --
@@ -211,19 +211,19 @@ end
 -- exactly what a translator cannot fix inside a Lua concatenation.
 --------------------------------------------------------------------------------
 
-ZoneLore.Strings = { enUS = {} }
+SpokenZones.Strings = { enUS = {} }
 
 local warnedMissing = {}
 
-ZoneLore.L = setmetatable({}, {
+SpokenZones.L = setmetatable({}, {
 	__index = function(_, key)
-		local active = ZoneLore.Strings[ZoneLore.language]
+		local active = SpokenZones.Strings[SpokenZones.language]
 		local value = active and active[key]
 		if value ~= nil then
 			return value
 		end
 
-		value = ZoneLore.Strings.enUS[key]
+		value = SpokenZones.Strings.enUS[key]
 		if value ~= nil then
 			return value
 		end
@@ -231,9 +231,9 @@ ZoneLore.L = setmetatable({}, {
 		-- Only in debug mode, and only once: a key with no English string is a
 		-- bug in this addon rather than a gap in a translation, and it should be
 		-- findable by playing rather than by grepping.
-		if ZoneLore:Get("debug") and not warnedMissing[key] then
+		if SpokenZones:Get("debug") and not warnedMissing[key] then
 			warnedMissing[key] = true
-			ZoneLore:Print("|cffffcc00no string for|r [[%s]]", key)
+			SpokenZones:Print("|cffffcc00no string for|r [[%s]]", key)
 		end
 		return "[[" .. key .. "]]"
 	end,
@@ -247,7 +247,7 @@ ZoneLore.L = setmetatable({}, {
 -- missing line of lore has an honest empty state, which prose from another language
 -- does not improve on. The readiness gate demands 100% of both before a language is
 -- offered, so both paths are safety nets rather than plans.
-function ZoneLore:RegisterStrings(code, strings)
+function SpokenZones:RegisterStrings(code, strings)
 	self.Strings[code] = strings
 end
 
@@ -267,12 +267,12 @@ end
 -- all does. Falling back would put English prose under a German heading, which
 -- reads as a translation somebody did badly rather than one nobody has done -- and
 -- the readiness gate means a language on offer has no holes to fall through
--- anyway. See ZoneLore.Languages and the /zl lang preview override.
-function ZoneLore:ShouldLoadLanguage(code)
+-- anyway. See SpokenZones.Languages and the /zl lang preview override.
+function SpokenZones:ShouldLoadLanguage(code)
 	return code == self.language
 end
 
-function ZoneLore:RegisterLoreData(code, kind, data)
+function SpokenZones:RegisterLoreData(code, kind, data)
 	if code ~= self.language then
 		return
 	end
@@ -281,10 +281,10 @@ end
 
 -- Aliases are keyed by client locale, not content language, so this guard is
 -- deliberately not ShouldLoadLanguage.
-function ZoneLore:ShouldLoadAliases(locale)
+function SpokenZones:ShouldLoadAliases(locale)
 	return locale == self.clientLocale
 end
 
-function ZoneLore:RegisterAliases(locale, data)
+function SpokenZones:RegisterAliases(locale, data)
 	self.Aliases[locale] = data
 end
