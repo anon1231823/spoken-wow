@@ -34,8 +34,8 @@ validate: ## Sanity-check the generated Lua data files
 # The in-game addon list reads a TGA or BLP, never the PNG or SVG in pipelines/zones/assets/, so the
 # icon is converted and committed. Both addons carry the same shield: they install as a
 # pair, and two icons would imply they are alternatives to each other.
-icon: ## Rebuild both addons' AddonIcon.tga from pipelines/zones/assets/zonelore-512.png (needs ffmpeg)
-	@python3 pipelines/zones/tools/make-icon.py pipelines/zones/assets/zonelore-512.png addons/SpokenZones/Textures/AddonIcon.tga
+icon: ## Rebuild both addons' AddonIcon.tga from pipelines/zones/assets/spoken-zones-512.png (needs ffmpeg)
+	@python3 pipelines/zones/tools/make-icon.py pipelines/zones/assets/spoken-zones-512.png addons/SpokenZones/Textures/AddonIcon.tga
 	@cp addons/SpokenZones/Textures/AddonIcon.tga addons/SpokenZonesAudio/Textures/AddonIcon.tga
 	@echo "==> copied to addons/SpokenZonesAudio/Textures/AddonIcon.tga"
 

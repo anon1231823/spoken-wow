@@ -17,11 +17,14 @@
 <polygon points="62,20 194,20 236,62 236,194 194,236 62,236 20,194 20,62" fill="url(#field)"></polygon>
 <polygon points="62,20 194,20 236,62 236,194 194,236 62,236 20,194 20,62" fill="none" stroke="#000" stroke-opacity="0.5" stroke-width="6"></polygon>
 <polygon points="62,20 194,20 236,62 138,62 62,20" fill="#8FA6D8" opacity="0.09"></polygon>
-<polygon points="66,52 120,52 120,152 200,152 200,204 66,204" fill="#2E1C03" stroke="#2E1C03" stroke-width="13" stroke-linejoin="round"></polygon>
-<polygon points="66,52 120,52 120,152 200,152 200,204 66,204" fill="url(#gold)"></polygon>
-<polygon points="66,52 90,52 90,204 66,204" fill="#FFFFFF" opacity="0.20"></polygon>
-<polygon points="90,52 120,52 120,152 90,166" fill="#000000" opacity="0.16"></polygon>
-<polygon points="120,152 200,152 200,168 120,168" fill="#FFFFFF" opacity="0.14"></polygon>
-<polygon points="66,190 200,190 200,204 66,204" fill="#000000" opacity="0.28"></polygon>
-<polygon points="66,52 120,52 120,152 200,152 200,204 66,204" fill="none" stroke="#FFE9A8" stroke-opacity="0.5" stroke-width="2.5" stroke-linejoin="round"></polygon>
+      <g id="glyph-zones">
+        <polygon points="128,34 150,106 222,128 150,150 128,222 106,150 34,128 106,106" fill="#2E1C03" stroke="#2E1C03" stroke-width="14" stroke-linejoin="round"></polygon>
+        <polygon points="128,34 150,106 222,128 150,150 128,222 106,150 34,128 106,106" fill="url(#gold)"></polygon>
+        <polygon points="128,34 128,128 106,106" fill="#FFFFFF" opacity="0.26"></polygon>
+        <polygon points="34,128 128,128 106,150" fill="#FFFFFF" opacity="0.14"></polygon>
+        <polygon points="128,34 150,106 128,128" fill="#000000" opacity="0.16"></polygon>
+        <polygon points="222,128 128,128 150,150" fill="#000000" opacity="0.22"></polygon>
+        <polygon points="128,222 128,128 106,150" fill="#000000" opacity="0.28"></polygon>
+        <polygon points="128,34 150,106 222,128 150,150 128,222 106,150 34,128 106,106" fill="none" stroke="#FFE9A8" stroke-opacity="0.5" stroke-width="2.5" stroke-linejoin="round"></polygon>
+      </g>
 </svg>

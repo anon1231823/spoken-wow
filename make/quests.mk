@@ -85,7 +85,7 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
         pull-history push-history history-status pull-ignores package package-audio \
-        package-audio-complete package-meta push-complete \
+        package-audio-complete package-meta push-complete icon \
         downloads-status \
         factions release release-audio \
         release-dry deploy-scripts \
@@ -235,6 +235,18 @@ history-status: ## Compare take count and size on both sides
 # one project holding two formats would move a player out of the one they picked. That is over:
 # those five projects stay published and are never uploaded to again, and nothing here builds
 # them. docs/pack-size.md is where every encode that was considered was measured.
+
+# The AddOns list reads a TGA or BLP, never the PNGs in pipelines/quests/assets/icon/, so the
+# icon is converted and committed. Two marks, not one: the player wears the play triangle and
+# Spoken Quests the exclamation mark, since they sit next to each other in that list. The five
+# sound packs take the Quests mark -- scripts/quests/package-meta.sh and tts_cli/build.py copy
+# spoken-quests.tga into every module they build.
+icon: ## Rebuild the addons' icon.tga from pipelines/quests/assets/icon/*-512.png (needs ffmpeg)
+	@python3 pipelines/quests/tools/make_icon.py pipelines/quests/assets/icon/spoken-player-512.png pipelines/quests/assets/icon/spoken-player.tga
+	@python3 pipelines/quests/tools/make_icon.py pipelines/quests/assets/icon/spoken-quests-512.png pipelines/quests/assets/icon/spoken-quests.tga
+	@cp pipelines/quests/assets/icon/spoken-player.tga addons/SpokenPlayer/icon.tga
+	@cp pipelines/quests/assets/icon/spoken-quests.tga addons/SpokenQuests/icon.tga
+	@echo "==> copied into addons/SpokenPlayer/ and addons/SpokenQuests/"
 
 package: ## Zip the player addon into dist/: one Blizzard zip, one per legacy client
 	@./scripts/quests/package.sh

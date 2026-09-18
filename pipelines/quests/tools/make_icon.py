@@ -1,6 +1,6 @@
 """Turn the project artwork into the TGA the client shows beside an addon's name.
 
-    python tools/make_icon.py assets/icon/icon-source.png assets/icon/icon.tga
+    python tools/make_icon.py assets/icon/spoken-quests-512.png assets/icon/spoken-quests.tga
 
 WHY NOT JUST ffmpeg. Its targa encoder writes RLE (image type 10) and ignores
 -compression_algo raw on the versions to hand; the client wants an uncompressed image. So
@@ -12,7 +12,12 @@ convention every WoW addon icon follows; a top-down file loads upside down rathe
 failing, which is the kind of bug that survives review.
 
 Committed as a TGA rather than converted at build time so that building an addon needs no
-ffmpeg - the same reason the corpus is committed.
+ffmpeg - the same reason the corpus is committed. Re-run it (`make quests-icon`) when the
+SVGs beside the PNGs change and their renders are re-exported.
+
+ONE ICON PER ADDON. The player carries the play triangle, Spoken Quests and its five sound
+packs the exclamation mark; they sit next to each other in the AddOns list, so the same
+artwork on both would say they are the same thing.
 """
 import argparse
 import struct

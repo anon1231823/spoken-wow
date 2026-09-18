@@ -1,5 +1,11 @@
 # Changelog — Spoken Player
 
+## 2.0.1 — 2026-09-18
+
+- **A new icon in the AddOns list**: a gold play triangle on the Spoken shield. Spoken Quests
+  and Spoken Zones wear the same shield with a mark of their own, so the three read as one
+  family without any two of them looking like the same addon listed twice.
+
 ## 2.0.0 — 2026-09-18
 
 The player every Spoken addon speaks through: one queue, one window, one minimap button.

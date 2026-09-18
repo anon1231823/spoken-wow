@@ -1,7 +1,7 @@
 /**
- * The ZoneLore shield, inline.
+ * The Spoken Zones shield, inline.
  *
- * A copy of `assets/zonelore-icon.svg` transcribed into JSX rather than an <img> or a
+ * A copy of `assets/spoken-zones.svg` transcribed into JSX rather than an <img> or a
  * next/image pointing at it: `web/src/app/icon.svg` exists for Next's favicon
  * convention and is not a URL to be relied on, and `../../assets` is outside the app
  * directory and would not be traced into the standalone bundle. Inline also means the
@@ -60,22 +60,23 @@ export function BrandMark({ className }: { className?: string }) {
       />
       <polygon points="62,20 194,20 236,62 138,62 62,20" fill="#8FA6D8" opacity="0.09" />
       <polygon
-        points="66,52 120,52 120,152 200,152 200,204 66,204"
+        points="128,34 150,106 222,128 150,150 128,222 106,150 34,128 106,106"
         fill="#2E1C03"
         stroke="#2E1C03"
-        strokeWidth="13"
+        strokeWidth="14"
         strokeLinejoin="round"
       />
       <polygon
-        points="66,52 120,52 120,152 200,152 200,204 66,204"
+        points="128,34 150,106 222,128 150,150 128,222 106,150 34,128 106,106"
         fill="url(#brandmark-gold)"
       />
-      <polygon points="66,52 90,52 90,204 66,204" fill="#FFFFFF" opacity="0.20" />
-      <polygon points="90,52 120,52 120,152 90,166" fill="#000000" opacity="0.16" />
-      <polygon points="120,152 200,152 200,168 120,168" fill="#FFFFFF" opacity="0.14" />
-      <polygon points="66,190 200,190 200,204 66,204" fill="#000000" opacity="0.28" />
+      <polygon points="128,34 128,128 106,106" fill="#FFFFFF" opacity="0.26" />
+      <polygon points="34,128 128,128 106,150" fill="#FFFFFF" opacity="0.14" />
+      <polygon points="128,34 150,106 128,128" fill="#000000" opacity="0.16" />
+      <polygon points="222,128 128,128 150,150" fill="#000000" opacity="0.22" />
+      <polygon points="128,222 128,128 106,150" fill="#000000" opacity="0.28" />
       <polygon
-        points="66,52 120,52 120,152 200,152 200,204 66,204"
+        points="128,34 150,106 222,128 150,150 128,222 106,150 34,128 106,106"
         fill="none"
         stroke="#FFE9A8"
         strokeOpacity="0.5"
