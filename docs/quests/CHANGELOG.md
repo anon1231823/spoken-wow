@@ -6,6 +6,13 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 2.0.2 — player
+
+- **A new icon in the AddOns list**: a gold exclamation mark on the Spoken shield, the same
+  shield Spoken Player and Spoken Zones wear with a mark of their own. The sound packs carry
+  the Quests mark, so a pack and the addon that reads it are visibly a pair. Where the player
+  and this addon showed the same artwork, they no longer do.
+
 ## 2.0.1 — player
 
 - **A first login no longer warns about an addon you never installed.** This release carries a

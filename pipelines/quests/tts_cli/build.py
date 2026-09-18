@@ -68,7 +68,7 @@ DEFAULT_TITLE = "Spoken Quests Audio"
 #: rather than converted at build time, so building needs no ffmpeg; tools/make_icon.py is what
 #: made it, and its header explains the format.
 ICON_SOURCE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                           "assets", "icon", "icon.tga")
+                           "assets", "icon", "spoken-quests.tga")
 ICON_NAME = "icon.tga"
 
 TOC_HEADER = """## Interface: 100000

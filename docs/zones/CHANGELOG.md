@@ -3,6 +3,17 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+The addon and the pack have numbered themselves independently since 2.0.0, so a heading says
+which of the two it belongs to when there is any doubt: a section headed `## <version> — audio`
+is the pack's, and `scripts/zones/release.sh` matches on the kind as well as the number. A
+section with no kind in its heading is the addon's.
+
+## 2.0.3 — 2026-09-18
+
+- **A new icon in the AddOns list**: a gold four-pointed star on the Spoken shield, replacing
+  the ZoneLore **L**. Spoken Player and Spoken Quests wear the same shield with a mark of their
+  own, so the three read as one family. The website's icon changes with it.
+
 ## 2.0.2 — 2026-09-18
 
 Places the client knows but nobody has written about yet now appear in the panel.
@@ -14,6 +25,12 @@ Places the client knows but nobody has written about yet now appear in the panel
   play button stays dark until there is something to read. Lore is being written; it will
   arrive in a later release without you needing to reinstall anything.
 - Everything already written is unchanged.
+
+## 2.0.1 — audio — 2026-09-18
+
+- **A new icon in the AddOns list**: the gold four-pointed star on the Spoken shield that
+  Spoken Zones now wears, so the pack and the addon that reads it are visibly a pair. The
+  narration itself is unchanged.
 
 ## 2.0.1 — 2026-09-18
 

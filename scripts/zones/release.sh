@@ -156,15 +156,27 @@ done
 # notes on the site and the notes in the repository cannot drift apart. Extracted
 # per version rather than sending the whole file: a player opening the Files tab
 # wants to know what changed in this one.
+#
+# THE KIND IS HALF THE KEY. The addon and the pack read their own TOCs and have numbered
+# themselves independently since 2.0.0, so the same number belongs to both of them at
+# different times -- 2.0.1 is the addon's placeholder-folder fix and, separately, the pack's
+# new icon. A heading of `## <version> — audio` is the pack's and anything else at that
+# number is the addon's, which is what keeps one's notes off the other's upload.
 changelog_for() {
   node -e '
     const { readFileSync } = require("fs");
-    const [path, version] = process.argv.slice(1);
+    const [path, version, target] = process.argv.slice(1);
     const text = readFileSync(path, "utf8");
     const lines = text.split("\n");
-    const start = lines.findIndex((l) => l.startsWith(`## ${version}`));
+    const matches = (l) => l.startsWith(`## ${version}`) &&
+      /—\s*audio\b/.test(l) === (target === "audio");
+    const start = lines.findIndex(matches);
     if (start === -1) {
-      console.error(`no "## ${version}" section in CHANGELOG.md`);
+      console.error(`no "## ${version}" section for ${target} in CHANGELOG.md`);
+      process.exit(1);
+    }
+    if (lines.findIndex((l, i) => i > start && matches(l)) !== -1) {
+      console.error(`two "## ${version}" sections for ${target} in CHANGELOG.md`);
       process.exit(1);
     }
     let end = lines.length;
@@ -172,7 +184,7 @@ changelog_for() {
       if (lines[i].startsWith("## ")) { end = i; break; }
     }
     process.stdout.write(lines.slice(start, end).join("\n").trim());
-  ' "$REPO/docs/zones/CHANGELOG.md" "$1"
+  ' "$REPO/docs/zones/CHANGELOG.md" "$1" "$2"
 }
 
 #-- upload --------------------------------------------------------------------
@@ -201,7 +213,7 @@ for target in "${targets[@]}"; do
     exit 1
   fi
 
-  changelog="$(changelog_for "$version")"
+  changelog="$(changelog_for "$version" "$target")"
   size="$(du -h "$zip_path" | cut -f1)"
 
   game_version_names="$(target_game_versions "$target")"

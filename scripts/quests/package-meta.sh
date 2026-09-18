@@ -52,7 +52,7 @@ LUA
 
 # The same artwork every pack carries, so the five sit together in the AddOns list instead of
 # one of them showing the client's red question mark. See tools/make_icon.py.
-cp "$REPO/pipelines/quests/assets/icon/icon.tga" "$module_dir/icon.tga"
+cp "$REPO/pipelines/quests/assets/icon/spoken-quests.tga" "$module_dir/icon.tga"
 
 cat > "$module_dir/$NAME.toc" <<TOC
 ## Interface: 100000
