@@ -17,3 +17,5 @@ Checksum.lua
 Data/Books.lua
 Core.lua
 Reader.lua
+Audio.lua
+Playlist.lua

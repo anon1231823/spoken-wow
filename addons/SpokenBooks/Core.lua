@@ -61,11 +61,17 @@ function SpokenBooks:SetupSource()
 		title = "Spoken Books",
 		addon = ADDON_NAME,
 		order = 3,
-		-- One page behind the one speaking. A book is read at the pace of its narration,
-		-- and a queue that runs ahead of the reader is a queue describing a page they have
-		-- already turned past. The playlist re-syncs on every page turn, so the clips that
-		-- matter are always the next ones rather than the ones queued a minute ago.
-		queueLimit = 1,
+		-- NO LIMIT, unlike the zones source, and the difference is what the limit is for.
+		-- Zone lore arrives in bursts nobody asked for -- crossing a cluster of small
+		-- subzones queues narration about places the player has already left -- so it caps
+		-- the backlog and drops the oldest. A book is the opposite: a bounded sequence
+		-- somebody deliberately opened, whose pages are only meaningful in order. Capped at
+		-- one, queueing a four-page book keeps the first page and the last and silently
+		-- discards the middle, which is how this was found.
+		--
+		-- Nothing accumulates regardless: closing the book stops this source, and turning to
+		-- a page that is not queued rebuilds from there.
+		queueLimit = nil,
 		-- Durations come from a generated lookup and are exact, so the gap only has to
 		-- separate two pages of prose rather than absorb a bad measurement.
 		interClipGap = 0.35,

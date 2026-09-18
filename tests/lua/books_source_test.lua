@@ -35,7 +35,9 @@ local Spoken = _G.Spoken
 
 ---------------------------------------------------------------- registration
 Expect("the books addon registers a source with the player", Spoken:GetSource("books"), B.source)
-Expect("...as one page behind the one speaking", B.source.queueLimit, 1)
+-- No cap: a book is a bounded sequence somebody opened, not a burst of discoveries. Capped,
+-- the player trims the oldest waiting clip and a four-page book loses its middle.
+Expect("...with no queue limit", B.source.queueLimit, nil)
 Expect("...with its own gap", B.source.interClipGap, 0.35)
 Expect("...and reports itself compatible", B.compatible, true)
 
