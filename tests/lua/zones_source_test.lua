@@ -76,7 +76,7 @@ Expect("starting marks the area heard in the per-character record", Z:HasHeard(1
 local F = env.PlayerFrame
 Expect("the player frame shows the zone", F.frame.container.name:GetText(), "Durotar")
 -- Report only, as an icon in the corner. Reading the text is reached from the map, the
--- minimap menu and /zl; a button on the player that opened a window over the thing being
+-- minimap menu and /spz; a button on the player that opened a window over the thing being
 -- read was one way too many.
 Expect("...and no strip of buttons", F.frame.actions.shown, 0)
 Expect("...but Report in the corner", F.frame.actions.buttons[1].anchor.point, "TOPRIGHT")

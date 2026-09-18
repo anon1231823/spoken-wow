@@ -48,7 +48,7 @@ As of 0.3.0 every line is recorded with a new narrator, and NPC and place names 
 
 ## Commands
 
-`/spokenzones`, or `/spz` for short. `/zonelore` and `/zl` still work.
+`/spokenzones`, or `/spz` for short.
 
 ```
 /spz              status for the current zone and subzone

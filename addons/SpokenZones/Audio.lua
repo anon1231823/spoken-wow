@@ -443,7 +443,7 @@ end
 
 -- The button the player shows under a lore clip: this addon's own Report, told which
 -- entry it now stands beside. There is no Read button. The text is reached from the map,
--- the minimap menu and /zl, and a button on the player that opened a window over the very
+-- the minimap menu and /spz, and a button on the player that opened a window over the very
 -- thing being read was one way too many.
 local ACTIONS = {
 	{

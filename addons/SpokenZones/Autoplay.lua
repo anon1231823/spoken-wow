@@ -40,7 +40,7 @@ local ADDON_NAME, SpokenZones = ...
 
 local patterns = nil
 
--- How many of the two message forms this client actually defines. Reported by /zl,
+-- How many of the two message forms this client actually defines. Reported by /spz,
 -- so "the feature cannot work here" is distinguishable from "nothing has been
 -- discovered yet" without another character.
 local formCount = 0

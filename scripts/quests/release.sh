@@ -49,7 +49,7 @@ API="https://wow.curseforge.com/api"
 #
 # The 1.12, 2.4.3 and 3.3.5 zips package.sh also builds are deliberately not uploaded here:
 # CurseForge has no game version to file them against. They go out on the GitHub release that
-# .github/workflows/release-player.yaml publishes from a tag.
+# .github/workflows/release-addons.yaml publishes from a tag.
 GAME_VERSION_ERA="${GAME_VERSION_ERA:-1.15.9}"
 GAME_VERSION_ANNIVERSARY="${GAME_VERSION_ANNIVERSARY:-2.5.6}"
 GAME_VERSION_FOREVER="${GAME_VERSION_FOREVER:-1.60.1}"

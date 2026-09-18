@@ -19,7 +19,7 @@ Five stages, and only the first needs a database:
 | `extract` | vmangos world DB | `corpus/corpus.json.gz` | a maintainer, when vmangos ships a new dump |
 | `import-audio` | an existing sound pack | `audio/` | once, to adopt audio you already have |
 | `synthesize` | corpus + voice config | mp3s in `audio/` | anyone producing lines |
-| `build` | corpus + `audio/` | `dist/VoiceOverReduxAudio/` | anyone cutting a release |
+| `build` | corpus + `audio/` | `dist/SpokenQuestsAudio/` | anyone cutting a release |
 | `install` | the built module | WoW AddOns folder | to try it in game |
 
 The corpus is **committed** — 17,507 lines, 2 MB gzipped — so producing audio needs no
@@ -115,7 +115,7 @@ elwynn = lines_in_area(corpus, map_id=0, x_range=(-9900, -9000), y_range=(-600, 
 python cli-main.py import-audio                       # adopt an existing pack, once
 python cli-main.py synthesize --npc 240 --dry-run     # what would be made, and its cost
 python cli-main.py synthesize --npc 240               # make it
-python cli-main.py build                              # dist/VoiceOverReduxAudio/
+python cli-main.py build                              # dist/SpokenQuestsAudio/
 python cli-main.py install --force                    # into the AddOns folder
 ```
 
@@ -135,7 +135,7 @@ make package-audio VERSION=1.4.0   # the version written into each pack's .toc
 ENCODE=copy make package-audio     # the masters untouched, to hear what is being given up
 ```
 
-`make package` takes its version from `## Version:` in `VoiceOverRedux.toc` and produces four
+`make package` takes its version from `## Version:` in `SpokenQuests.toc` and produces four
 zips. It refuses to build from an uncommitted tree — `ALLOW_DIRTY=1` overrides while testing —
 and refuses when a variant `.toc` or `Environment.lua` names a different version, which is drift
 nothing else notices until it ships.
@@ -143,14 +143,14 @@ nothing else notices until it ships.
 **One zip for Blizzard's clients, one apiece for the private-server ones.** Blizzard's clients
 pick a `.toc` by flavor suffix — `_Vanilla`, `_TBC`, `_Wrath`, `_Mainline` — so a single archive
 serves Classic Era through retail and the client chooses. The 1.12, 2.4.3 and 3.3.5 clients
-predate suffix support: each reads `VoiceOverRedux.toc` and nothing else, and each wants a
+predate suffix support: each reads `SpokenQuests.toc` and nothing else, and each wants a
 different file under that one name, so each needs an archive of its own. Each also loads its own
-vendored Ace3 from `VoiceOverRedux/<client>/`, because the root `Libs/AceTimer-3.0` binds
+vendored Ace3 from `SpokenQuests/<client>/`, because the root `Libs/AceTimer-3.0` binds
 `C_Timer.After` while loading and would error there. A legacy zip therefore carries one `.toc`,
 one Ace3, and neither of the other two clients' directories.
 
 CurseForge has no game version to file those zips against, so they are published to a GitHub
-release: tag `v<version>` and `.github/workflows/release-player.yaml` checks the tag against
+release: tag `v<version>` and `.github/workflows/release-addons.yaml` checks the tag against
 `## Version:`, runs this same script, and attaches all four zips.
 
 The sound packs are the same files on every client. Their `## Interface: 100000` is deliberate,
@@ -231,11 +231,11 @@ character cannot reach. So the store is transcoded once and built into five pack
 
 | Pack | Folder | Zip |
 | --- | --- | --- |
-| All (meta addon) | `VoiceOverReduxAudio` | 4 KB |
-| Alliance quests | `VoiceOverReduxAudioAlliance` | 161 MB |
-| Horde quests | `VoiceOverReduxAudioHorde` | 160 MB |
-| Shared quests | `VoiceOverReduxAudioShared` | 144 MB |
-| Gossip | `VoiceOverReduxAudioGossip` | 144 MB |
+| All (meta addon) | `SpokenQuestsAudio` | 4 KB |
+| Alliance quests | `SpokenQuestsAudioAlliance` | 161 MB |
+| Horde quests | `SpokenQuestsAudioHorde` | 160 MB |
+| Shared quests | `SpokenQuestsAudioShared` | 144 MB |
+| Gossip | `SpokenQuestsAudioGossip` | 144 MB |
 
 The four partition the audio exactly — 2,644 + 2,251 + 2,552 + 3,742 = 11,189 files, no overlap
 and nothing dropped. A player installs their side plus Shared, adds Gossip if they want ambient
@@ -640,7 +640,7 @@ The following language codes are supported:
 `synthesize` writes into the audio store at `audio/{quests,gossip}/`, which is gitignored and
 is the project's most expensive asset — it moves between machines with `make push` / `make
 pull` and never through git or CI. `build` copies from there into
-`dist/VoiceOverReduxAudio/generated/sounds/`, alongside every lookup table and the
+`dist/SpokenQuestsAudio/generated/sounds/`, alongside every lookup table and the
 `sound_length_table.lua` computed from exactly those files. A pack for players goes through
 `make package-audio`, which stages an ogg copy of the store first — see *Packaging*.
 
@@ -785,26 +785,27 @@ separate folder in the same AddOns directory; symlink both for faster developmen
 
 ```bash
 export WOW_DIR=PATH_OF_YOUR_WOW_DIR
-ln -s "$PWD/VoiceOverRedux" "$WOW_DIR/_classic_era_/Interface/AddOns/VoiceOverRedux"
-ln -s "$PWD/dist/VoiceOverReduxAudio" "$WOW_DIR/_classic_era_/Interface/AddOns/VoiceOverReduxAudio"
+ln -s "$PWD/SpokenQuests" "$WOW_DIR/_classic_era_/Interface/AddOns/SpokenQuests"
+ln -s "$PWD/dist/SpokenQuestsAudio" "$WOW_DIR/_classic_era_/Interface/AddOns/SpokenQuestsAudio"
 ```
 
-Use `VoiceOverRedux/` on a current client. Upstream `AI_VoiceOver/` calls
+Use `SpokenQuests/` on a current client. Upstream `AI_VoiceOver/` calls
 `GetNumAddOns`, `GetAddOnMetadata` and `LoadAddOn`, which Blizzard moved to `C_AddOns` in
 10.2 and removed in 11.0.2, so on Classic Era 1.15.9 it errors while enumerating and the
 sound pack never registers. Install one player, never two — two copies fight over the same
-`VoiceOverDB` and the same sound queue. `VoiceOverRedux` disables any it finds, by AceAddon
+`VoiceOverDB` and the same sound queue. `SpokenQuests` disables any it finds, by AceAddon
 name for the session and by folder for the next login, and that list names both `AI_VoiceOver`
 and this project's own former folder `AI_VoiceOver_Continued`: a rename uninstalls nothing.
 
 **The rename.** The player was `AI_VoiceOver_Continued` and the pack `AI_VoiceOverData_Vanilla`
 until this project had diverged far enough from upstream that carrying its name was
-misleading. They are now `VoiceOverRedux` and `VoiceOverReduxAudio`. An old pack still works —
+misleading; they became `VoiceOverRedux` and `VoiceOverReduxAudio`, and are `SpokenQuests` and
+`SpokenQuestsAudio` since 2.0.0. An old pack still works —
 the player finds packs by the `X-SpokenQuests-DataModule-Version` key in the TOC, or the inherited `X-VoiceOver-DataModule-Version` that every shipped pack carries, not by name
 (`DataModules:EnumerateAddons`) — but settings do not survive, because `SavedVariables` live in
 `WTF/…/SavedVariables/<folder>.lua` and the folder is the identity.
 
-**The pack is nested under the player in the AddOns list** by `## Group: VoiceOverRedux` in
+**The pack is nested under the player in the AddOns list** by `## Group: SpokenQuests` in
 both TOCs — the value is the main addon's *name*, so it is the folder rather than the title.
 That tag arrived in 11.1.0; the `X-Part-Of` and `X-Child-Of` lines beside it are custom `X-`
 fields the client never reads, kept because addon managers do and because upstream shipped

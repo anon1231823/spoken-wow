@@ -635,7 +635,7 @@ local function CmdStatus()
 	if pack then
 		SpokenZones:Print("sound pack: %s -- %s", pack.addon, SpokenZones:GetAudioPackLabel(pack))
 	else
-		SpokenZones:Print("|cffffcc00no sound pack installed|r -- install ZoneLoreAudio to hear the lore")
+		SpokenZones:Print("|cffffcc00no sound pack installed|r -- install Spoken Zones Audio to hear the lore")
 	end
 
 	if SpokenZones:Get("debug") then
@@ -694,8 +694,9 @@ local function CmdAudioPack(arg)
 		-- Any pack would do -- packs are interchangeable across languages -- so an
 		-- empty list really does mean nothing is installed.
 		SpokenZones:Print("|cffffcc00no sound pack installed|r")
-		-- Named by CurseForge project, not by folder: the folder is still ZoneLoreAudio and
-		-- saying so sends a player looking for a project of that name, which no longer exists.
+		-- Named by CurseForge project, not by folder: a player with the pre-rename pack has a
+		-- ZoneLoreAudio folder, and saying that name sends them looking for a project that no
+		-- longer exists.
 		SpokenZones:Print("  install Spoken Zones Audio alongside Spoken Zones")
 		return
 	end
@@ -822,13 +823,12 @@ local function CmdHelp()
 	end
 end
 
--- /spokenzones and /spz are the addon's own; /zonelore and /spz are what it answered to
--- before the rename and stay registered, because a slash command lives in players' macros
--- and chat habits and costs nothing to keep.
+-- /spokenzones and /spz, matching /spoken and /sp on the player and /spokenquests and
+-- /spq on Spoken Quests. The pre-rename /zonelore and /zl are not registered: the addon
+-- answers to one name, and a command that still worked would keep the retired one alive
+-- in macros and in what players tell each other.
 _G.SLASH_SPOKENZONES1 = "/spokenzones"
 _G.SLASH_SPOKENZONES2 = "/spz"
-_G.SLASH_SPOKENZONES3 = "/zonelore"
-_G.SLASH_SPOKENZONES4 = "/spz"
 SlashCmdList["SPOKENZONES"] = function(msg)
 	local cmd = (msg or ""):lower():match("^%s*(%S*)")
 	if cmd == "dump" then

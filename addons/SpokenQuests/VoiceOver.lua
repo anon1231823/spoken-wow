@@ -79,7 +79,7 @@ function Addon:ShowMissingDataModulePopup()
     local details = next(loadDetails) and ("|n|nDetected but not loaded:|n" .. table.concat(loadDetails, "|n")) or ""
     StaticPopupDialogs["VOICEOVER_NO_REGISTERED_DATA_MODULES"] =
     {
-        text = [[Spoken Quests|n|nNo usable sound packs were loaded.|n|nKeep a sound pack installed beside this addon - "VoiceOverReduxAudio", or the older "AI_VoiceOverData_Vanilla". Run "/spq diagnostics" for details.]] .. details,
+        text = [[Spoken Quests|n|nNo usable sound packs were loaded.|n|nKeep a sound pack installed beside this addon - "Spoken Quests Audio", or the older "AI_VoiceOverData_Vanilla". Run "/spq diagnostics" for details.]] .. details,
         button1 = OKAY,
         timeout = 0,
         whileDead = 1,
@@ -449,7 +449,6 @@ function Addon:OnInitialize()
 
     local slashInstalled, slashError = pcall(function()
         _G.SLASH_SPOKENQUESTSREAD1 = "/spqread"
-        _G.SLASH_SPOKENQUESTSREAD2 = "/voread"
         _G.SlashCmdList.SPOKENQUESTSREAD = function()
             self:ReadVisibleQuest("/spqread")
         end
@@ -659,7 +658,7 @@ function Addon:OnInitialize()
     if next(disabled) and not self.db.profile.SeenDuplicatePlayerDialog then
         StaticPopupDialogs["VOICEOVER_REDUX_DUPLICATE_ADDON"] =
         {
-            text = format([[Spoken Quests|n|n%s was also enabled. It has been disabled for the next login, and its event handler was stopped for this session.|n|nKeep your sound pack enabled - "VoiceOverReduxAudio" or the older "AI_VoiceOverData_Vanilla", either works. You can delete or leave the old player disabled, then /reload.]],
+            text = format([[Spoken Quests|n|n%s was also enabled. It has been disabled for the next login, and its event handler was stopped for this session.|n|nKeep your sound pack enabled - "Spoken Quests Audio" or the older "AI_VoiceOverData_Vanilla", either works. You can delete or leave the old player disabled, then /reload.]],
                 table.concat(disabled, " and ")),
             button1 = OKAY,
             timeout = 0,

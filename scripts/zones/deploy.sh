@@ -144,5 +144,5 @@ echo
 echo "next steps in-game ($CLIENT client):"
 echo "  1. enable ZoneLore in the AddOns list at the character select screen"
 echo "  2. /console scriptErrors 1     (surface Lua errors)"
-echo "  3. /zl                         (status for the current zone)"
-echo "  4. /zl verify                  (check data against this client)"
+echo "  3. /spz                        (status for the current zone)"
+echo "  4. /spz verify                 (check data against this client)"

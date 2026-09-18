@@ -430,10 +430,10 @@ function Options:Initialize()
     end
     RunOptionalStep("AceConfig slash registration", function()
         -- A table, not a string: AceConfig registers each as a slash command for the same
-        -- options table. "spokenquests" and "spq" are the addon's own; "vo" is what it
-        -- answered to before the rename and stays, because a slash command lives in
-        -- players' macros and chat habits.
-        AceConfig:RegisterOptionsTable("SpokenQuests", self.table, { "spokenquests", "spq", "vo" })
+        -- options table. The pre-rename "vo" is not among them: the addon answers to one
+        -- name, and a command that still worked would keep the retired one alive in macros
+        -- and in what players tell each other.
+        AceConfig:RegisterOptionsTable("SpokenQuests", self.table, { "spokenquests", "spq" })
     end)
     RunOptionalStep("settings panel", function()
         -- One canvas panel of sections rather than a Blizzard category per group. The

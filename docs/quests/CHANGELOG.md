@@ -15,8 +15,8 @@ and 3.3.5 zips carry it inside.
 - **Runs on the Forever client** (1.60.1, interface 16001 — the one whose TOC suffix is
   `_Camelot`), alongside Classic Era 1.15.9 and the 2.5.6 Anniversary client.
 - **The commands are `/spokenquests` and `/spq`**, matching `/spoken` and `/sp` on the player
-  and `/spokenzones` and `/spz` on Spoken Zones. `/vo` and `/voread` still work, so nothing in
-  your macros breaks.
+  and `/spokenzones` and `/spz` on Spoken Zones. `/vo` and `/voread` are retired — a macro that
+  used one has to be edited, and `/voread` is `/spqread` now.
 - The sound packs are **Spoken Quests Audio** now, and their folders moved with them:
   `SpokenQuestsAudioAlliance` and friends, where they were `VoiceOverReduxHQAudio*`. Your
   addon manager replaces the old folders; a hand-installed pack has to be deleted by hand,
@@ -28,7 +28,7 @@ and 3.3.5 zips carry it inside.
 - The player frame, minimap button, sound channel and pause are Spoken Player's settings now.
 - The settings are sections on one panel rather than a category per branch of an options
   tree. The sound packs you have, the ones you do not, and your profile are all on it,
-  rather than behind a button that opened a second window. Every `/vo` command is
+  rather than behind a button that opened a second window. Every `/spq` command is
   unchanged, and the old window is still there for the clients with no settings panel.
 - Choices are dropdowns again rather than buttons that cycled through the options.
 - Report is an icon in the player's top right corner rather than a button beside the
