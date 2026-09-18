@@ -16,7 +16,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help db extract import export lookup deploy deploy-copy status remove \
-        pull pull-dry sounds db-pull test
+        pull pull-dry sounds db-pull package-audio test
 
 PIPELINE := pipelines/books
 QUESTS   := pipelines/quests
@@ -108,6 +108,31 @@ sounds: ## Copy the narration into addons/SpokenBooksAudio/Sounds
 	@mkdir -p addons/SpokenBooksAudio/Sounds
 	@$(RSYNC) -a $(LOCAL_BOOKS) addons/SpokenBooksAudio/Sounds/
 	@echo "==> $$(find addons/SpokenBooksAudio/Sounds -name '*.mp3' | wc -l | tr -d ' ') mp3 in addons/SpokenBooksAudio/Sounds"
+
+# STORED, NOT DEFLATED. The payload is mp3, which is already compressed: deflate spends
+# minutes on 450 MB to save well under a percent. -0 makes this a container rather than a
+# compressor, which is all it needs to be.
+#
+# -X drops the extended attributes macOS attaches, so the zip is the same bytes wherever it
+# is built.
+#
+# ZIPPED FROM INSIDE addons/, so the archive's top level is SpokenBooksAudio/ and it
+# unpacks straight into a client's AddOns directory. Zipped from the repo root instead it
+# carries an addons/ prefix, and unzipping lands it at AddOns/addons/SpokenBooksAudio,
+# where the client will never look.
+package-audio: ## Zip the sound pack into dist/ (for another machine, or a release)
+	@test -d addons/SpokenBooksAudio/Sounds || { echo "no Sounds/ -- run: make books-pull && make books-sounds"; exit 1; }
+	@mkdir -p dist
+	@version=$$(sed -n 's/^## Version: //p' addons/SpokenBooksAudio/SpokenBooksAudio.toc); \
+	 zip_path="$$PWD/dist/SpokenBooksAudio-$$version.zip"; \
+	 rm -f "$$zip_path"; \
+	 (cd addons && zip -r -0 -q -X "$$zip_path" SpokenBooksAudio \
+	   -x '*.DS_Store' '*/.*'); \
+	 printf '%s\n' "built dist/SpokenBooksAudio-$$version.zip"; \
+	 printf '  %s mp3, %s\n' \
+	   "$$(unzip -Z1 "$$zip_path" | grep -c '\.mp3$$')" \
+	   "$$(du -h "$$zip_path" | cut -f1)"; \
+	 shasum -a 256 "$$zip_path"
 
 deploy: ## Symlink the addon into a client (CLIENT=era|anniversary|forever)
 	@./scripts/books/deploy.sh
