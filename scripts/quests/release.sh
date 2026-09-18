@@ -124,16 +124,17 @@ target_version() {
   sed -n 's/^## Version:[[:space:]]*//p' "$(target_toc "$1")" 2>/dev/null | head -1 | tr -d '\r'
 }
 
-# Required dependencies, declared per uploaded file. Only the meta addon has any: it holds no
-# audio, and the four packs it names are the whole point of installing it. Both the CurseForge
-# app and WowUp fetch required dependencies, so "install All" still means "get everything".
+# Required dependencies, declared per uploaded file. Both the CurseForge app and WowUp fetch
+# them, so "install All" still means "get everything" - and a pack can no longer be installed
+# without the addon that reads it, which is several hundred megabytes of silence otherwise.
 #
 # By slug, which is why the slugs are read off the live projects rather than guessed - see
 # curseforge/README.md. A slug that no longer resolves is a dependency silently not installed.
 target_dependencies() { case "$1" in
   player)    echo "spoken-player";;
-  audio-all) echo "spoken-quests-audio-alliance spoken-quests-audio-horde \
+  audio-all) echo "spoken-quests spoken-quests-audio-alliance spoken-quests-audio-horde \
                    spoken-quests-audio-shared spoken-quests-audio-gossip";;
+  audio-*)   echo "spoken-quests";;
 esac; }
 
 # THE META ADDON GOES LAST. It names the four packs as dependencies, and CurseForge resolves
