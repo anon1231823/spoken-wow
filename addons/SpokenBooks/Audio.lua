@@ -14,7 +14,10 @@ local ADDON_NAME, SpokenBooks = ...
 -- plays silence and reports nothing.
 local PACK_FORMAT = 1
 
-local BOOK_TEXTURE = [[Interface\AddOns\SpokenBooks\Textures\AddonIcon]]
+-- The player's own book art. Pointed at rather than copied: SpokenPlayer is installed
+-- alongside this addon by definition -- it is what the clips are queued through -- and a
+-- second copy of the same texture is a second thing to keep in step.
+local BOOK_TEXTURE = [[Interface\AddOns\SpokenPlayer\Textures\Book]]
 
 --- Every installed pack this version can read, newest format first.
 function SpokenBooks:GetAudioPacks()

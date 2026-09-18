@@ -15,7 +15,7 @@
 # reads like a missing dump.
 
 .DEFAULT_GOAL := help
-.PHONY: help db extract import export lookup test
+.PHONY: help db extract import export lookup deploy deploy-copy status remove test
 
 PIPELINE := pipelines/books
 QUESTS   := pipelines/quests
@@ -38,6 +38,18 @@ export: ## book_line -> addons/SpokenBooks/Data/Books.lua (needs DATABASE_URL)
 
 lookup: ## take -> addons/SpokenBooksAudio/Data/Sounds.lua (needs DATABASE_URL)
 	@node $(PIPELINE)/tools/build-lookup.mjs
+
+deploy: ## Symlink the addon into a client (CLIENT=era|anniversary|forever)
+	@./scripts/books/deploy.sh
+
+deploy-copy: ## Copy the addon into the client instead of symlinking
+	@./scripts/books/deploy.sh --copy
+
+status: ## Show what is installed in every client
+	@./scripts/books/deploy.sh --status
+
+remove: ## Uninstall the addon from every client
+	@./scripts/books/deploy.sh --remove
 
 test: ## The pipeline's unit tests
 	@pnpm --filter @spoken/books-pipeline test

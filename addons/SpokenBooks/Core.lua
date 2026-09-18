@@ -83,6 +83,12 @@ function SpokenBooks:SetupSource()
 		Spoken:RegisterOptionalAction("report", "Report")
 	end
 
+	-- The row bullet the clips ask for. Registered rather than assumed: an unregistered id
+	-- draws nothing, which looks like a rendering bug rather than a missing declaration.
+	if Spoken.RegisterBullet then
+		Spoken:RegisterBullet("book", [[Interface\AddOns\SpokenPlayer\Textures\Book]], 14)
+	end
+
 	return self.source
 end
 

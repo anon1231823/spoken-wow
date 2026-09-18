@@ -97,3 +97,38 @@ changing its wording as well, and one page did move between books without a word
 make books-test                    # the pipeline: text, naming, chains, promotion
 pnpm --filter @spoken/web test     # the site, including lib/books
 ```
+
+## The addon
+
+`addons/SpokenBooks` hooks `ITEM_TEXT_BEGIN` / `READY` / `CLOSED` — the whole book UI, and
+the same API on Era, Anniversary and Forever, which is why there is one addon rather than
+three.
+
+**A page is identified by what is on screen**, because the client never says which page id
+it is showing. Title, page number and a checksum of the text; then the checksum alone,
+where no other page shares it; then nothing. Nothing is the right third answer: the
+alternative is reading the wrong page's words aloud.
+
+**The checksum is the load-bearing part.** `pipelines/books/tools/lib/naming.mjs` and
+`addons/SpokenBooks/Checksum.lua` must produce the same number for the same text, over
+UTF-8 bytes, using only multiply, add and modulo — the clients run Lua 5.1, which has no
+bitwise operators. `tests/lua/books_source_test.lua` asserts the two agree, on an ASCII
+string and an accented one. They have to: the lookup is keyed on that number, and a
+disagreement makes every page unfindable, silently.
+
+**Mail is excluded twice.** `ItemTextFrame` serves mail as well as books, so a letter with
+a creator is skipped, and so is anything shown while `MailFrame` is open — which catches
+the mail that has no creator, like a returned letter.
+
+**A book is queued whole.** Opening page one queues to the end, so a journal reads on while
+you turn pages; turning to a queued page changes nothing, and turning elsewhere rebuilds
+from there. The source has no queue limit, unlike zones: a cap trims the oldest waiting
+clip, which on a four-page book keeps the first page and the last and discards the middle.
+
+### Installing it in a client
+
+```bash
+make books-deploy                  # symlink into Classic Era
+CLIENT=forever make books-deploy   # or the Forever beta (wow_classic_beta)
+make books-status                  # what is installed where, and how many mp3s exist
+```
