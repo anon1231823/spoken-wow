@@ -20,11 +20,12 @@ export const STATUSES = ["open", "fixed", "not_an_issue"] as const;
 /**
  * Which side of the site a report came from.
  *
- * One table holds both (migration 0021), so the triage page needs to say which corpus a row
- * is about: "read text that is not what the NPC says" and the same complaint about a zone's
- * lore go to different places and different fixes.
+ * One table holds all three (migration 0021, widened for books by 0028), so the triage page
+ * needs to say which corpus a row is about: "read text that is not what the NPC says", the
+ * same complaint about a zone's lore, and a misread page of a book go to different places
+ * and different fixes.
  */
-export const SOURCES = ["quests", "zones"] as const;
+export const SOURCES = ["quests", "zones", "books"] as const;
 
 export type Category = (typeof CATEGORIES)[number];
 export type Status = (typeof STATUSES)[number];
@@ -33,6 +34,7 @@ export type Source = (typeof SOURCES)[number];
 export const SOURCE_LABELS: Record<Source, string> = {
   quests: "Quests",
   zones: "Zones",
+  books: "Books",
 };
 
 /** Written for a player rather than an editor: the reporter is not reading the schema. */

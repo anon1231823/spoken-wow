@@ -258,6 +258,25 @@ export async function isKnownLine(lineId: string, lang: string = BASE_LANG): Pro
   return (await catalogue(lang)).some((page) => page.id === lineId);
 }
 
+/**
+ * One page, by the id the game and the addon know it as.
+ *
+ * What /books/r/{pageId} resolves, and what the report endpoint checks an address against.
+ * The addon can only name a page by this number -- `b:{pageTextID}` is frozen, which is what
+ * lets it build a report link with no per-page table to ship.
+ *
+ * Off the memoised catalogue rather than a query of its own, as isKnownLine above is: the
+ * corpus is 1,191 rows, it is already in memory for every other page on this section, and a
+ * second query would be a second thing to keep in step with `isCurrent`.
+ */
+export async function pageById(
+  pageId: number,
+  lang: string = BASE_LANG,
+): Promise<BookPage | undefined> {
+  if (!Number.isInteger(pageId)) return undefined;
+  return (await catalogue(lang)).find((page) => page.pageId === pageId);
+}
+
 /** The book dropdown's options, derived from the corpus rather than hardcoded. */
 export type BookFacet = { bookId: number; title: string; pages: number; ownerKind: OwnerKind };
 

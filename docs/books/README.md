@@ -169,11 +169,20 @@ alone. That is deliberate: the id is frozen, so the addon can address any page w
 per-page table to ship and nothing to escape — the trade the zones landing page makes with
 its `{mapID}/{slug}` path.
 
-> **The landing page does not exist yet.** `apps/web/src/app/books/` is the explorer and
-> nothing else; `quests/r` and `zones/r` have their routes and books does not, so the link
-> above currently 404s. What it needs is the zones page's shape — the page's text, its
-> current take to listen to, and `<ReportForm source="books" …>` — plus a lookup by page id
-> in `lib/books/catalogue.ts`, which today can only load the whole corpus.
+**The landing page is `app/books/r/[pageId]/page.tsx`**, shaped like the zones one: the
+page's words, its current take to listen to, and the report form already pointed at the
+right line. Not the explorer — somebody arriving from the game is a player, not a
+collaborator, and flags, takes and regenerate controls answer questions they did not ask.
+`pageById` in `lib/books/catalogue.ts` resolves the id, off the memoised catalogue the rest
+of the section already loads.
+
+Reports from books needed the section admitted to `SOURCES` in `lib/reports/reports.ts`;
+migration `0028` had already widened the table's check constraint, so the database was
+waiting for it. `/api/reports` resolves a books address the strict way it resolves a zones
+one — the reporter arrived from a page this site rendered, so an id that names nothing is a
+typo rather than a corpus that failed to load — and takes the lineId from the resolved page
+rather than from the request body, so nothing the reporter can edit decides which row
+triage sees.
 
 `UI/Layout.lua` is the fourth copy of a file that must stay byte-identical across
 SpokenPlayer, SpokenQuests, SpokenZones and SpokenBooks;
