@@ -32,8 +32,8 @@ has it. Both can still be installed at once — Spoken Zones plays the
 higher-bitrate one and `/spz audio` switches; see "Sound packs are
 self-describing" below for how it decides.
 
-Player-facing documentation lives in `addon/ZoneLore/README.md` and
-`addon/ZoneLoreAudio/README.md` — those are the CurseForge project descriptions.
+Player-facing documentation lives in `addons/SpokenZones/README.md` and
+`addons/SpokenZonesAudio/README.md` — those are the CurseForge project descriptions.
 Release history is in `CHANGELOG.md`.
 
 ## What is here but not shipped
@@ -42,13 +42,13 @@ Release history is in `CHANGELOG.md`.
 regenerating the bad ones. Backed by Postgres. Deployed to lore.rusty.one via
 `deploy/`; it is a working tool, not a public one.
 
-**`tools/`** — the wiki scraper, the ElevenLabs generation pipeline, and the
+**`pipelines/zones/tools/`** — the wiki scraper, the ElevenLabs generation pipeline, and the
 validators that keep the generated Lua honest.
 
 ## Layout
 
 ```
-addon/ZoneLore/          the addon itself (this is what WoW loads)
+addons/SpokenZones/          the addon itself (this is what WoW loads)
   ZoneLore.toc
   embeds.xml             loads the bundled libraries
   Language.lua           which language is read, and the string lookup
@@ -73,12 +73,12 @@ addon/ZoneLore/          the addon itself (this is what WoW loads)
   Libs/                  LibStub, CallbackHandler-1.0, LibDataBroker-1.1,
                          LibDBIcon-1.0 (copied from AI_VoiceOver_Continued)
   README.md              player-facing docs; the CurseForge description
-addon/ZoneLoreAudio/     the sound pack, at master (128kbps) quality
-  ZoneLoreAudio.toc      rewritten per tier at packaging time
+addons/SpokenZonesAudio/     the sound pack, at master (128kbps) quality
+  SpokenZonesAudio.toc      rewritten per tier at packaging time
   Data/Sounds.lua        GENERATED -- the clip lookup table
   Sounds/                GENERATED, gitignored -- the mp3s themselves
   README.md              player-facing docs; the CurseForge description
-tools/
+pipelines/zones/tools/
   lib/wiki.mjs           shared fetching, era filter, Lua emission
   lib/sections.mjs       which article headings count as lore
   lib/loredata.mjs       reads the generated Lua data back into JS
@@ -108,22 +108,22 @@ tools/
   locale/build-aliases.mjs   AreaTable -> Data/<locale>/Aliases.lua
   locale/build-languages.mjs coverage -> Data/Languages.lua, the readiness gate
   locale/check-strings.mjs   per-language interface string coverage
-scripts/deploy.sh        install both addons into the Classic Era AddOns folder
-scripts/package.sh       build the ZoneLore zip
-scripts/package-audio.sh build the sound pack zips, one per quality tier
+scripts/zones/deploy.sh        install both addons into the Classic Era AddOns folder
+scripts/zones/package.sh       build the ZoneLore zip
+scripts/zones/package-audio.sh build the sound pack zips, one per quality tier
 CHANGELOG.md             release notes; the text pasted into CurseForge
 ```
 
 ## Installing for development
 
 ```sh
-./scripts/deploy.sh            # symlink; edits are live, just /reload in-game
-./scripts/deploy.sh --status
-./scripts/deploy.sh --remove
+./scripts/zones/deploy.sh            # symlink; edits are live, just /reload in-game
+./scripts/zones/deploy.sh --status
+./scripts/zones/deploy.sh --remove
 ```
 
 Symlinking means no redeploy per edit. If the client's AddOns list does not show
-ZoneLore, use `./scripts/deploy.sh --copy` and re-run it after each change.
+ZoneLore, use `./scripts/zones/deploy.sh --copy` and re-run it after each change.
 SavedVariables live under `WTF/`, so neither mode can lose your settings.
 
 ## Regenerating the lore data
@@ -135,9 +135,9 @@ node tools/scrape.mjs --only 1411 --verbose   # tune one zone, show filtering
 node tools/validate.mjs            # check the generated Lua
 ```
 
-The scraper needs Node 18+ and has no dependencies (`tools/voice/` does: `pg`, for
+The scraper needs Node 18+ and has no dependencies (`pipelines/zones/tools/voice/` does: `pg`, for
 the explorer's database — see "The voiceline explorer"). It caches every raw API
-response under `tools/cache/` (gitignored) so iterating on text cleanup never
+response under `pipelines/zones/tools/cache/` (gitignored) so iterating on text cleanup never
 re-hits the wiki, and throttles to one request per 500ms with an identifying
 User-Agent.
 
@@ -204,7 +204,7 @@ cataclysm, the huge lake from which the region takes its name" about Loch Modan 
 and in Classic Era that lake is still full. A rare false positive on a Sundering
 reference is cheaper than wrong-era geography; use `overrides.json` if one shows up.
 
-`tools/validate.mjs` re-checks the generated file for leaks, so a filter
+`pipelines/zones/tools/validate.mjs` re-checks the generated file for leaks, so a filter
 regression fails loudly rather than shipping.
 
 ## Rewriting the lore: selection was never going to be enough
@@ -216,26 +216,26 @@ encyclopedic order rather than as a story. Reading only the lead avoided most of
 that, at the cost of the `== History ==` section — which is where the pre-WoW lore
 lives, and which 169 of 224 cached articles keep below the fold.
 
-So there is a second pipeline. `tools/rewrite-lore.mjs` reads the **whole**
+So there is a second pipeline. `pipelines/zones/tools/rewrite-lore.mjs` reads the **whole**
 article, keeps the lore-bearing sections, and has Claude write them back as one to
 three paragraphs of in-world prose.
 
 ```sh
-make lore-rewrite ZONE=1420                         # dry run, both variants, report only
+make zones-lore-rewrite ZONE=1420                         # dry run, both variants, report only
 node tools/rewrite-lore.mjs --zone 1420 --variant a # write one zone to the corpus
 node tools/rewrite-lore.mjs --all --variant a       # the whole corpus
 ```
 
-**This spends Claude credits, which is why it is not part of `make scrape`.** A
+**This spends Claude credits, which is why it is not part of `make zones-scrape`.** A
 scrape is a thing you run without thinking about it; a paid rewrite of 1353 lines
 is not. `--dry-run` writes only a markdown report to `dist/`, and every response is
-cached under `tools/cache/rewrite/` keyed by model, prompt version and source text —
+cached under `pipelines/zones/tools/cache/rewrite/` keyed by model, prompt version and source text —
 so re-running an unchanged zone is free, and iterating on the prompt only pays for
 what actually changed.
 
 ### Section selection is deterministic; only the prose is not
 
-`tools/lib/sections.mjs` decides what the model may see, by heading: History,
+`pipelines/zones/tools/lib/sections.mjs` decides what the model may see, by heading: History,
 Background, Description, Overview, Geography. Everything else — NPC and mob lists,
 quests, loot, travel connections, Notes, Trivia, Speculation, "Patch changes" —
 never reaches the prompt. `In the RPG` is dropped twice over, by heading and by the
@@ -305,7 +305,7 @@ node tools/scrape-subzones.mjs --zone 1420 --verbose
 
 Counts range from Ashenvale's 59 down to Alterac Mountains' 5. A full run is about
 1300 pages, roughly 11 minutes at the 500ms throttle; with a warm
-`tools/cache/` it is under a minute.
+`pipelines/zones/tools/cache/` it is under a minute.
 
 Azeroth (947), Kalimdor (1414) and Eastern Kingdoms (1415) are deliberately
 excluded: they are not Zone-type maps, so a click on them is Blizzard's own
@@ -337,11 +337,11 @@ That canonical form matters because the client and wiki disagree cosmetically:
 the wiki titles a page **"Bulwark"** while the client reports **"The Bulwark"**.
 `normaliseKey` (JS) and `ZoneLore:NormaliseAreaKey` (Lua) both lower-case, drop a
 leading "the", strip apostrophes and collapse punctuation to single spaces, so
-both sides meet at `bulwark`. `tools/validate.mjs` asserts the two
+both sides meet at `bulwark`. `pipelines/zones/tools/validate.mjs` asserts the two
 implementations stay in step and that every generated key is already canonical —
 a non-canonical key would be silently unreachable.
 
-If a client name still misses, `tools/seed/subzones.json` has an `aliases` section
+If a client name still misses, `pipelines/zones/tools/seed/subzones.json` has an `aliases` section
 mapping a client-reported name to a wiki page title. Use `/spz debug` in-game to
 see the raw name.
 
@@ -369,8 +369,8 @@ are in.
 
 The corpus is keyed by the **English** name in every language, because a place is
 one place whatever it is called. `Data/<locale>/Aliases.lua` maps the localized
-name a client reports back to that key, generated by `make aliases` from the
-client's own `AreaTable` at the build pinned in `tools/lib/db2.mjs` — the same
+name a client reports back to that key, generated by `make zones-aliases` from the
+client's own `AreaTable` at the build pinned in `pipelines/zones/tools/lib/db2.mjs` — the same
 table `fetch-era-areas.mjs` already reads, requested once per locale and joined
 on the row ID.
 
@@ -389,7 +389,7 @@ fallback.
 
 ### A language is hidden until its lore is finished
 
-`Data/Languages.lua` is generated by `make languages` and records, per language,
+`Data/Languages.lua` is generated by `make zones-languages` and records, per language,
 how much of the lore and how many interface strings exist and whether an alias
 table is present. `ready` is lore complete plus an alias table; interface strings
 are counted but not required, since they fall back to English per key and an
@@ -432,10 +432,10 @@ Nothing here translates. A language's lore is written by people, either one line
 time in the explorer's edit dialog under that language, or in bulk through a sheet:
 
 ```sh
-make lore-sheet LOCALE=deDE                          # dist/lore-deDE.csv, English beside the blanks
-make lore-upload-dry LOCALE=deDE FILE=dist/lore-deDE.csv   # what recording it would do
-make lore-upload LOCALE=deDE FILE=dist/lore-deDE.csv       # record it
-make lore-export LOCALE=deDE && make languages       # into the addon; readiness recount
+make zones-lore-sheet LOCALE=deDE                          # dist/lore-deDE.csv, English beside the blanks
+make zones-lore-upload-dry LOCALE=deDE FILE=dist/lore-deDE.csv   # what recording it would do
+make zones-lore-upload LOCALE=deDE FILE=dist/lore-deDE.csv       # record it
+make zones-lore-export LOCALE=deDE && make languages       # into the addon; readiness recount
 ```
 
 The sheet lists every line the Era client can report — `lineId`, where it is, the
@@ -445,7 +445,7 @@ for the hover preview. Whatever is already translated comes
 back filled in, so the sheet is also the review copy, and re-uploading it unchanged
 records nothing.
 
-`recordTranslations` in `tools/lore/store.mjs` follows the scraper's rules: a new or
+`recordTranslations` in `pipelines/zones/tools/lore/store.mjs` follows the scraper's rules: a new or
 changed text is a new `translated` version of the line in that language; a line
 somebody has since hand-edited in the explorer keeps the edit, and the upload lands
 underneath it as a kept, non-live version. So a stale sheet can never overwrite a
@@ -454,8 +454,8 @@ from the English row — a translation is a derivative of that text and carries 
 attribution — and it never adds or removes a line.
 
 **Place names are never translated here.** The client already names every zone and
-subzone in its own language, and `make aliases` writes those names out of `AreaTable`
-into `tools/seed/area-names.json` alongside the alias tables (`tools/lib/area-names.mjs`
+subzone in its own language, and `make zones-aliases` writes those names out of `AreaTable`
+into `pipelines/zones/tools/seed/area-names.json` alongside the alias tables (`pipelines/zones/tools/lib/area-names.mjs`
 reads it). The explorer names places from that table in whatever language is being
 read, translated line or not; a translated row is stored under the same name, so an
 exported `Subzones.lua` lists places as the client does. A place whose name the client
@@ -529,7 +529,7 @@ language derives its own beside them, so one setting still decides where audio l
 version sequence for the same file would make a restore install the wrong clip.
 
 **Each language has its own narrator, picked on its own `/voice` page.** English is
-`tools/voice/config.json`; every other language is `tools/voice/config.<code>.json`
+`pipelines/zones/tools/voice/config.json`; every other language is `pipelines/zones/tools/voice/config.<code>.json`
 merged over it, holding only what changes with the language — voice, model, `language_code`,
 pronunciation dictionary, voice settings. `/deDE/voice` reads and writes the German file,
 and the first save there is what creates it, with the language code filled in and the
@@ -658,8 +658,8 @@ voice ships:
 
 | File | Where it shows |
 |---|---|
-| `addon/ZoneLore/ZoneLore.toc` and `addon/ZoneLoreAudio/ZoneLoreAudio.toc` (`## Notes:`) | the in-game addon list, and the CurseForge blurb |
-| `addon/ZoneLore/README.md`, `addon/ZoneLoreAudio/README.md` | the two CurseForge project descriptions |
+| `addons/SpokenZones/SpokenZones.toc` and `addons/SpokenZonesAudio/SpokenZonesAudio.toc` (`## Notes:`) | the in-game addon list, and the CurseForge blurb |
+| `addons/SpokenZones/README.md`, `addons/SpokenZonesAudio/README.md` | the two CurseForge project descriptions |
 | `web/src/lib/beta.ts` | the **beta** badge beside the logo on lore.rusty.one |
 
 **Descriptions only, in the addon.** Nothing in the client says any of this out
@@ -945,7 +945,7 @@ made, `--older-than <date>` anything generated before then, `--limit n` caps it.
 node tools/voice/generate.mjs --sample                  # 2 lines, then listen
 node tools/voice/generate.mjs --zone Durotar --generate # 44 lines, then listen in-game
 node tools/voice/build-lookup.mjs && node tools/voice/validate-audio.mjs
-./scripts/deploy.sh                                     # symlinks ZoneLoreAudio too
+./scripts/zones/deploy.sh                                     # symlinks ZoneLoreAudio too
 
 node tools/voice/generate.mjs --all --zones-only --generate   # 49 lines, 58k chars
 node tools/voice/generate.mjs --all --generate                # the remaining ~614k
@@ -988,12 +988,12 @@ regenerated — it is the record of everything already paid for.
 
 Eleven v3 reads bracketed text as an **audio tag** — a performance direction — so
 `[Deviate Fish]` would be acted rather than spoken. The lore carries 163 bracketed
-spans. `tools/voice/normalise.mjs` drops IPA guides (`Kalimdor [ˈkælɪmdɔɹ]`) and
+spans. `pipelines/zones/tools/voice/normalise.mjs` drops IPA guides (`Kalimdor [ˈkælɪmdɔɹ]`) and
 level ranges entirely, and unwraps the rest to keep the words. The generator
 refuses to start if any bracket survives, and `validate-audio.mjs` checks it too.
 
 The **spoken** text is what gets hashed into the manifest, so editing
-`tools/voice/pronunciation.json` correctly marks the lines it affects as `--stale`.
+`pipelines/zones/tools/voice/pronunciation.json` correctly marks the lines it affects as `--stale`.
 That file ships empty on purpose: every rule in it is a claim that the model
 mispronounces a word, and that claim can only be made after listening.
 
@@ -1013,7 +1013,7 @@ check that reads every upload back to see what ElevenLabs actually kept.
 
 What crosses between the two projects is **one id per language**, and nothing else.
 No shared database, no API call, no exported file. English's is `dictionaryId` in
-`tools/voice/config.json`; every other language's is in its `config.<code>.json`,
+`pipelines/zones/tools/voice/config.json`; every other language's is in its `config.<code>.json`,
 and is set on that language's **`/pronunciation`** page — which, for now, is that one
 field. A dictionary is never inherited from English: an English phoneme dictionary
 applied to German rewrites words that happen to be spelled the same, so a language
@@ -1043,7 +1043,7 @@ differently would have no rule at all. That is reported as a note, with the fix
 being an entry in voiceover's editor. The check needs the network, so it skips
 itself rather than failing when there is no key.
 
-`tools/voice/pronunciation.json` is what remains here, and it is now the last
+`pipelines/zones/tools/voice/pronunciation.json` is what remains here, and it is now the last
 resort rather than the route. It rewrites the text before it is sent — spelling
 "Kalimdor" as "Kalimdore" and hoping — which is worse than a phoneme rule
 wherever a phoneme rule works, and it is the only mechanism that *does* move the
@@ -1069,12 +1069,12 @@ manifest stores.
 
 ### What is committed, and what is not
 
-`tools/voice/manifest.json` (what exists, when it was made, from which text) and
-`addon/ZoneLoreAudio/Data/Sounds.lua` (the generated lookup) are committed. The
-mp3s are not — `addon/ZoneLoreAudio/Sounds/` is gitignored, like
+`pipelines/zones/tools/voice/manifest.json` (what exists, when it was made, from which text) and
+`addons/SpokenZonesAudio/Data/Sounds.lua` (the generated lookup) are committed. The
+mp3s are not — `addons/SpokenZonesAudio/Sounds/` is gitignored, like
 `../wow-voiceover`'s `audio/`.
 
-`tools/voice/naming.mjs` owns both the line id and the file path, and nothing else
+`pipelines/zones/tools/voice/naming.mjs` owns both the line id and the file path, and nothing else
 derives either. The addon resolves clips through the lookup table, so a filename
 that drifts plays silence rather than failing — which is why `validate-audio.mjs`
 checks the manifest, the files on disk and the lookup table against each other, and
@@ -1086,9 +1086,9 @@ ElevenLabs bills **characters, not bytes**, so output format does not change the
 price. Audio is generated at the default 128kbps and shrunk at packaging time:
 
 ```sh
-./scripts/package-audio.sh              # both tiers
-./scripts/package-audio.sh standard     # just the 64kbps one
-./scripts/package-audio.sh high         # just the masters
+./scripts/zones/package-audio.sh              # both tiers
+./scripts/zones/package-audio.sh standard     # just the 64kbps one
+./scripts/zones/package-audio.sh high         # just the masters
 ```
 
 Generating at a low bitrate to save money would save nothing, and would make a
@@ -1140,9 +1140,9 @@ which in practice means it never gets started.
 
 ```sh
 cp .env.example .env      # DATABASE_URL is already filled in; add your API key
-make db-up                # Postgres on 5433, then migrations
-make import               # seed from tools/voice/manifest.json (idempotent)
-make web                  # http://localhost:3000
+make zones-db-up                # Postgres on 5433, then migrations
+make zones-import               # seed from tools/voice/manifest.json (idempotent)
+make zones-web                  # http://localhost:3000
 ```
 
 Browse and filter all 1353 lines, play them, flag what is wrong, fix it, regenerate.
@@ -1165,14 +1165,14 @@ is the worst outcome available here.
 that comes out worse can be undone — the superseded mp3s go to `audio-history/`
 (gitignored, a *sibling* of `Sounds/` because `validate-audio.mjs` walks `Sounds/`).
 
-`tools/voice/manifest.json` is still committed and is still what `build-lookup.mjs`
+`pipelines/zones/tools/voice/manifest.json` is still committed and is still what `build-lookup.mjs`
 turns into the addon's lookup table. It stopped being hand-maintained and became an
-export: `make lookup` runs `export-manifest.mjs` before `build-lookup.mjs`. **The
+export: `make zones-lookup` runs `export-manifest.mjs` before `build-lookup.mjs`. **The
 addon build never learns the database exists** — with `DATABASE_URL` unset every tool
 falls back to the file and a clone with no Postgres can still generate audio and ship
 the addon.
 
-The seam is `tools/voice/store.mjs`, which already owned `loadManifest`/`saveManifest`
+The seam is `pipelines/zones/tools/voice/store.mjs`, which already owned `loadManifest`/`saveManifest`
 and is the only way the other tools reach that state. Putting Postgres behind those
 two functions is what keeps the CLI and the web app writing the same rows.
 `../wow-voiceover/web/migrations/0012` records the alternative: *"the Python CLI reads
@@ -1188,11 +1188,11 @@ One line goes straight through — it is one click, it is cheap, and the archive
 it reversible. Anything larger quotes first, priced from `measureRates()`, the same
 0.607 credits/character measured over real billing that the CLI's dry run uses.
 
-The web app imports `tools/voice/elevenlabs.mjs` directly rather than spawning the
+The web app imports `pipelines/zones/tools/voice/elevenlabs.mjs` directly rather than spawning the
 CLI, so the typed failure kinds and the `character-cost` header reach the take row
 instead of being parsed back out of stdout. This needs `outputFileTracingRoot` in
 `web/next.config.ts` pointed at the repo root, without which Next traces dependencies
-from `web/` alone and leaves `tools/` out of the build.
+from `web/` alone and leaves `pipelines/zones/tools/` out of the build.
 
 Batches run in-process with progress in memory — no queue tables. Those exist in
 `../wow-voiceover` because two pm2 workers share one billing account; here there is
@@ -1231,12 +1231,12 @@ ElevenLabs key. Each editor sets theirs on `/profile`, where it is encrypted
 (AES-256-GCM, under the droplet's `ZONELORE_SECRET_KEY`) before it is stored and is never
 shown again — only its last four characters. Anyone without one is refused with a dialog
 saying so, before anything reaches ElevenLabs. An admin can see which accounts have a key
-and clear one, never read it. The CLI in `tools/` is unaffected and still reads
+and clear one, never read it. The CLI in `pipelines/zones/tools/` is unaffected and still reads
 `ELEVENLABS_API_KEY` from `.env`.
 
-The one thing worth knowing here rather than there: **`tools/` paths are overridable by
+The one thing worth knowing here rather than there: **`pipelines/zones/tools/` paths are overridable by
 environment variable, and on the droplet all five are overridden.** Every path under
-`tools/` derives from `ROOT` in `tools/lib/loredata.mjs`, which is the module's own
+`pipelines/zones/tools/` derives from `ROOT` in `pipelines/zones/tools/lib/loredata.mjs`, which is the module's own
 location — and cannot be, once webpack has compiled it, because webpack replaces
 `import.meta.url` at *build* time. A bundle built in CI otherwise looks for the lore
 corpus under a GitHub runner's checkout path. So a deployed process is told instead:
@@ -1298,11 +1298,11 @@ breaks.
 `deploy@rusty.one`; override it for anywhere else.
 
 ```sh
-make audio-status     # local and droplet, side by side
-make pull-dry         # what `make pull` would change
-make pull             # the audio the droplet regenerated
-make db-pull          # the takes and flags behind it
-make lookup           # rebuild Sounds.lua from the manifest
+make zones-audio-status     # local and droplet, side by side
+make zones-pull-dry         # what `make zones-pull` would change
+make zones-pull             # the audio the droplet regenerated
+make zones-db-pull          # the takes and flags behind it
+make zones-lookup           # rebuild Sounds.lua from the manifest
 ```
 
 One language per transfer: every target above takes `LOCALE=deDE` and defaults to
@@ -1310,7 +1310,7 @@ English. English keeps the droplet paths it always had (`shared/Sounds`,
 `shared/manifest.json`); another language lives beside them under its pack folder
 (`shared/ZoneLoreAudio_deDE`) and a suffixed manifest, which is what `store.mjs`
 derives on the droplet, so `make pull LOCALE=deDE` lands the masters in
-`addon/ZoneLoreAudio_deDE/Sounds/` — where `make lookup LOCALE=deDE` and
+`addons/SpokenZonesAudio_deDE/Sounds/` — where `make lookup LOCALE=deDE` and
 `make package-audio LOCALE=deDE` expect them. `audio-history/` holds every language
 under one tree and moves whole.
 
@@ -1368,12 +1368,12 @@ credits on the spot.
 Getting that into the addon is one command and a commit:
 
 ```
-make lore-export        # rewrite addon/ZoneLore/Data/*.lua from the database
-git diff addon/ZoneLore/Data/
-make lookup             # only if the text moved and the audio was regenerated
+make zones-lore-export        # rewrite addons/SpokenZones/Data/*.lua from the database
+git diff addons/SpokenZones/Data/
+make zones-lookup             # only if the text moved and the audio was regenerated
 ```
 
-`make lore-check` answers the other direction — whether the committed Lua still
+`make zones-lore-check` answers the other direction — whether the committed Lua still
 matches the database.
 
 A re-scrape never takes a hand edit back. `node tools/scrape.mjs` records what
@@ -1381,14 +1381,14 @@ the wiki says now as a new version, but a line whose live version was edited
 keeps that edit; the wiki text waits in the history for someone to compare and
 promote. That is what makes re-scraping safe to run.
 
-`tools/seed/overrides.json` still exists and still wins over scraped text for
+`pipelines/zones/tools/seed/overrides.json` still exists and still wins over scraped text for
 **zones**, keyed by uiMapID. It is the right place for lore that should survive a
 rebuild of the database from a fresh scrape; the explorer is the right place for
 everything else.
 
 ### Correcting uiMapIDs
 
-`tools/seed/zones.json` was seeded from the known Classic Era uiMapID block
+`pipelines/zones/tools/seed/zones.json` was seeded from the known Classic Era uiMapID block
 (947 Azeroth, 1414 Kalimdor, 1415 Eastern Kingdoms, 1411–1458 zones and cities).
 To check it against your own client:
 
@@ -1448,11 +1448,11 @@ Three CurseForge projects, released on their own cadences: most ZoneLore release
 do not touch a voiceline, and the packs should not re-upload 400MB for a Lua fix.
 
 ```sh
-make package                    # dist/SpokenZones-<version>.zip
-make package-audio              # dist/SpokenZonesAudio-<v>.zip
+make zones-package                    # dist/SpokenZones-<version>.zip
+make zones-package-audio              # dist/SpokenZonesAudio-<v>.zip
 ```
 
-`make package` refuses to build from a dirty `addon/` tree, so a zip can always be
+`make zones-package` refuses to build from a dirty `addons/SpokenZones/` tree, so a zip can always be
 traced back to a commit. Both scripts unpack to the addon folder itself, which is
 what the addon hosts expect — check with `unzip -l` if that ever seems in doubt.
 
@@ -1465,9 +1465,9 @@ and is bumped only alongside a major.
 `v<version>`, build, then upload:
 
 ```sh
-make release-dry                # what would be sent, sending nothing
-make release                    # both projects
-./scripts/release.sh zones      # or one at a time
+make zones-release-dry                # what would be sent, sending nothing
+make zones-release                    # both projects
+./scripts/zones/release.sh zones      # or one at a time
 ```
 
 `scripts/release.sh` posts to the CurseForge author API. It needs
@@ -1512,17 +1512,17 @@ for besides the body — project id, summary, categories, tags, license — and 
 body is the description. `scripts/descriptions.mjs` generates two things from it:
 
 ```sh
-make descriptions          # addon READMEs + dist/descriptions/ to paste from
-make descriptions-check     # part of `make check`
+make zones-descriptions          # addon READMEs + dist/descriptions/ to paste from
+make zones-descriptions-check     # part of `make zones-check`
 ```
 
 The addon README that ships inside each zip is generated from the same body, so
 the page a player reads before installing and the file they get afterwards cannot
 say different things. Those READMEs are generated files and carry the usual
-warning at the top; `make check` fails if one has been edited by hand.
+warning at the top; `make zones-check` fails if one has been edited by hand.
 
 Nothing here can read the site back, so `curseforge/published.json` records a hash
-of each description at the moment it was pasted. `make descriptions-published`
+of each description at the moment it was pasted. `make zones-descriptions-published`
 says "what is in the repository is now what is on the site" — run it *after*
 pasting, since nothing can verify the claim. `scripts/release.sh` prints anything
 that has drifted, at the one moment you already have the project pages open.
@@ -1547,12 +1547,12 @@ the public domain under the Unlicense. Nothing in that licence requires
 attribution; the credit is here because knowing where the code came from is what
 makes re-applying its fixes possible.
 
-Zone lore text in `addon/ZoneLore/Data/Zones.lua` and `Data/Subzones.lua` is
+Zone lore text in `addons/SpokenZones/Data/Zones.lua` and `Data/Subzones.lua` is
 derived from [warcraft.wiki.gg](https://warcraft.wiki.gg) and is licensed
 **CC BY-SA 4.0**; each entry carries a `source` URL to its page. The narration in
 the sound packs is generated from that text and carries the same license. Any
 distribution must keep that attribution and license the lore data and audio under
-CC BY-SA. Text in `tools/seed/overrides.json` is original and not covered by that,
+CC BY-SA. Text in `pipelines/zones/tools/seed/overrides.json` is original and not covered by that,
 and so is any entry the data files emit with an empty `source` — a line rewritten
 in the explorer keeps the source of the text it was derived from, because an edit
 of wiki prose is still a derivative of it, so an empty `source` means the entry

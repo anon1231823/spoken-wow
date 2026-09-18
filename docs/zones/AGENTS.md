@@ -11,16 +11,16 @@ short of actions clearly beyond it.
 
 Scope expansion is expensive here specifically:
 
-- `make sample`, and any `tools/voice/generate.mjs` run carrying `--generate`,
+- `make zones-sample`, and any `pipelines/zones/tools/voice/generate.mjs` run carrying `--generate`,
   **spend real ElevenLabs credits**. The bare targets are dry runs and cost
   nothing. Adding `--generate` is the user's call, never a judgment call made
   mid-task.
-- `make push`, `make pull`, `make db-push`, `make db-pull` are destructive
+- `make zones-push`, `make zones-pull`, `make zones-db-push`, `make zones-db-pull` are destructive
   (`rsync --delete`, table replacement). Confirm before running one.
-- `addon/ZoneLore/Data/*.lua` and `addon/ZoneLoreAudio/Data/Sounds.lua` are
+- `addons/SpokenZones/Data/*.lua` and `addons/SpokenZonesAudio/Data/Sounds.lua` are
   generated. Fix the source, not the output. For lore text that source is the
   `lore_line` table -- edit it through the explorer, or re-scrape, then
-  `make lore-export` and commit the diff.
+  `make zones-lore-export` and commit the diff.
 - Regenerating lore or voicelines because it seemed related to a UI fix is scope
   expansion, not thoroughness.
 
@@ -29,8 +29,8 @@ Scope expansion is expensive here specifically:
 Run these when the change touches what they cover:
 
 ```sh
-make check          # validate + lint, the pre-package gate
-make validate-audio # manifest, files on disk and lookup table agree
+make zones-check          # validate + lint, the pre-package gate
+make zones-validate-audio # manifest, files on disk and lookup table agree
 ```
 
 Those are the verification. Do not add extra self-review passes on top, and do
@@ -42,8 +42,8 @@ A change that reaches players bumps the `## Version:` of every addon it affects
 and writes that version's section of `CHANGELOG.md`, in the same PR as the change.
 Not as a follow-up, and not left to whoever releases.
 
-**Bump only what the PR actually changes.** `addon/ZoneLore/ZoneLore.toc` and
-`addon/ZoneLoreAudio/ZoneLoreAudio.toc` carry their own versions and
+**Bump only what the PR actually changes.** `addons/SpokenZones/SpokenZones.toc` and
+`addons/SpokenZonesAudio/SpokenZonesAudio.toc` carry their own versions and
 `scripts/release.sh` reads each independently, so they are free to diverge. The
 one rule binding them is compatibility: ZoneLore reads any pack sharing its
 **major** version, and says so in chat rather than going silent when handed one
@@ -95,7 +95,7 @@ handful of tool calls, and do not use subagents to double-check your own work. I
 one subagent can do it, use one.
 
 Most work here is a direct edit. A sweep across all nine
-`addon/ZoneLore/UI/*.lua` files may warrant an agent; a two-file change does not.
+`addons/SpokenZones/UI/*.lua` files may warrant an agent; a two-file change does not.
 
 ## Communication
 
