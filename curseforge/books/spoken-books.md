@@ -1,4 +1,15 @@
-<!-- GENERATED from curseforge/books/spoken-books.md by scripts/descriptions.mjs. Do not edit by hand. -->
+---
+project: 0
+slug: spoken-books
+name: Spoken Books
+summary: Books, letters and notes read aloud. Open a book and it narrates — following you as you turn the pages, stopping when you close it. 1,191 pages across 404 books, from a one-line gravestone to a twenty-page journal.
+categories:
+  - Miscellaneous
+  - Roleplay
+  - Audio & Video
+license: MIT
+addonReadme: addons/SpokenBooks/README.md
+---
 
 **Every book in the world, read aloud.** One of the Spoken addons, narrating through the [Spoken Player](https://www.curseforge.com/wow/addons/spoken-player) it shares with Spoken Quests and Spoken Zones — your addon manager installs it alongside.
 
