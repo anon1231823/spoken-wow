@@ -191,6 +191,46 @@ Expect("a pack predating either registry is still found", #found, 1)
 _G.SpokenZonesAudioPacks, _G.ZoneLoreAudioData = nil, nil
 _G.ZoneLoreAudioPacks = savedPacks
 
+---------------------------------------------------------------- the login greeting
+-- The greeting is the one thing here that needs a memory: "have I greeted this character"
+-- is not a question the client can answer. On a client that restores no saved variables --
+-- the 1.60.1 beta writes both files every logout and reads neither back, for every addon --
+-- that memory is always empty, and the greeting stops being a greeting: it narrates the
+-- current zone at every login instead of once per character.
+--
+-- Asked by the question the greeting puts first, rather than by what ends up in the queue:
+-- reaching GetPlayerMapID is exactly "the gate let me through", and stubbing it to nil ends
+-- the attempt there without needing lore, audio or a map behind it.
+local function GreetingAsked(restored, level)
+    stub.SetClient("11509"); stub.ResetSound(); stub.ResetTimers()
+    stub.ldbObjects = {}; stub.dbIcons = {}
+    world.inCombat = false
+    world.playerLevel = level
+    local seed
+    local env = stub.LoadSpoken(SPOKEN)
+    env.Addon:Enable()
+    _G.C_Timer.After = function(_, fn) seed = seed or fn end
+    local Z = stub.LoadZones(ZONES, NewZoneLore())
+    Z.savedVariablesRestored = restored
+    local asked = false
+    Z.GetPlayerMapID = function() asked = true end
+    -- Answering nil ends the attempt on the next line, which is all this needs: the
+    -- question is whether the gate let it get this far, not what it would have narrated.
+    Z.GetLoreWithFallback = function() return nil, nil end
+    Z:SetupAudio()
+    Z:SetupAutoplay()
+    _G.SpokenZonesCharDB = nil
+    seed()
+    _G.SpokenZonesCharDB = nil
+    return asked
+end
+
+Expect("a client that restored nothing is not greeted", GreetingAsked(false, 60), false)
+-- The case the greeting exists for: a character standing in the valley it woke up in, which
+-- the client never announces. Worth hearing once per login on a client that cannot remember.
+Expect("...unless the character is new", GreetingAsked(false, 1), true)
+Expect("a greeting runs as before once something was restored", GreetingAsked(true, 60), true)
+
 ---------------------------------------------------------------- the pack this repo ships
 -- The shipped Data/Sounds.lua, loaded for real. Everything above uses hand-built tables, so
 -- nothing until here notices if the generator writes a registry name the addon does not read

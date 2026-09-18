@@ -34,6 +34,11 @@ shared with Spoken Quests. Addon managers install it automatically.
   and both are read, so a pack and an addon of either generation still find each other.
 - **Runs on the Forever client** (1.60.1, interface 16001 — the one whose TOC suffix is
   `_Camelot`), alongside Classic Era 1.15.9 and the 2.5.6 Anniversary client.
+- **The login greeting no longer repeats on a client that forgets.** It narrates the area a
+  new character wakes up in, once, guarded by a per-character flag — and a client that never
+  restores saved variables (the 1.60.1 beta writes them every logout and reads none of them
+  back, for any addon) made that flag always empty, so it narrated the current zone at every
+  login. It now greets only a level 1 character there, which is the case it exists for.
 - **The commands are `/spokenzones` and `/spz`**, matching `/spoken` and `/sp` on the player
   and `/spokenquests` and `/spq` on Spoken Quests. `/zonelore` and `/zl` still work, so nothing
   in your macros breaks.

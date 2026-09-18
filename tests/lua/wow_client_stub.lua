@@ -337,6 +337,9 @@ _G.DEFAULT_CHAT_FRAME = { AddMessage = function() end }
 world.inCombat = false
 function _G.UnitAffectingCombat() return world.inCombat end
 function _G.GetSubZoneText() return world.subZone or "" end
+-- Defaults to 1: the login greeting's one exception is a brand-new character, so a test
+-- that says nothing about the level is testing that case.
+function _G.UnitLevel() return world.playerLevel or 1 end
 _G.C_Map = {
     GetMapInfo = function(id) return { mapType = 3 } end,
     GetBestMapForUnit = function() return world.playerMapID or 1411 end,

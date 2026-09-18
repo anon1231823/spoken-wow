@@ -77,7 +77,18 @@ end
 -- Merge defaults into the saved table without clobbering stored values, so new
 -- options added in later versions appear for existing users. Runtime reads and
 -- writes go straight to SpokenZonesDB.
+-- Whether the client handed back anything it saved. Read before the tables below are
+-- created, because creating one is what makes the question unanswerable afterwards.
+--
+-- False means one of two things: a first run, or a client that does not restore saved
+-- variables at all. The 1.60.1 beta is the second - it writes both files correctly every
+-- logout and never reads either back, for any addon, which leaves every feature that
+-- remembers something across a login repeating itself. Autoplay's login greeting is the
+-- one a player hears; see SeedLoginArea.
 local function InitConfig()
+	SpokenZones.savedVariablesRestored =
+		type(SpokenZonesDB) == "table" or type(SpokenZonesCharDB) == "table"
+
 	if type(SpokenZonesDB) ~= "table" then
 		SpokenZonesDB = {}
 	end
@@ -440,7 +451,15 @@ events:SetScript("OnEvent", function(self, event, arg1)
 			-- The literal folder name, not the addon's own: this disables the tombstone
 			-- left behind by the rename. Renaming it with the namespace would have the
 			-- addon disable itself on first login.
-			if disable and info and info("ZoneLore") then
+			--
+			-- DoesAddOnExist, not the truthiness of GetAddOnInfo: Camelot answers for a
+			-- folder that is not installed by handing the name straight back, so the old
+			-- test disabled ZoneLore on every login of a client that has never had it -
+			-- visible as `ZoneLore: disabled` in a fresh AddOns.txt. SpokenQuests was
+			-- already fixed the same way; this is the same client and the same trap.
+			local exists = C_AddOns and C_AddOns.DoesAddOnExist
+			local installed = exists and exists("ZoneLore") or (not exists and info and info("ZoneLore"))
+			if disable and installed then
 				pcall(disable, "ZoneLore")
 			end
 			self:UnregisterEvent("ADDON_LOADED")

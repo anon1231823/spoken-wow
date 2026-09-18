@@ -344,6 +344,26 @@ local function SeedLoginArea(attempt)
 	if db.greeted then
 		return true
 	end
+
+	-- A client that restored nothing cannot remember a greeting either. db.greeted was
+	-- written last session and came back empty, so without this the greeting is not a
+	-- greeting: it narrates the current zone at every single login, forever.
+	--
+	-- Level 1 is the exception, because it is the case this whole function exists for -- a
+	-- character standing in the valley it woke up in, which the client never announces. A
+	-- new character on a client that cannot remember hears it once per login while it is
+	-- level 1 and never again; every other character hears nothing rather than everything.
+	--
+	-- Evidence rather than a client check: it clears itself the day the client starts
+	-- restoring saved variables, and it also covers an installation where the WTF folder is
+	-- unwritable, which looks identical from in here.
+	if not SpokenZones.savedVariablesRestored and (UnitLevel("player") or 1) > 1 then
+		if debugOn then
+			SpokenZones:Print("greeting: the client restored no saved variables -- skipping, "
+				.. "since nothing here can remember having greeted this character")
+		end
+		return true
+	end
 	if not SpokenZones:Get("autoplay") or not SpokenZones:IsVoiceEnabled() then
 		-- Deliberately without setting the flag, so turning autoplay on later still
 		-- greets on the next login rather than having silently used up its turn.
