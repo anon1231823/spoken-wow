@@ -24,6 +24,15 @@ local world = {
     missing = {},      -- paths PlaySoundFile refuses, as a set
     cvars = {},        -- overrides; anything unset reads as "1"
     cvarLog = {},      -- every SetCVar, as {key, value}, so a toggle can be asserted
+
+    -- The book frame, as ItemTextFrame reports it. `itemTextCreator` is what makes a
+    -- letter mail rather than a book, and is nil for everything the game wrote itself.
+    itemText = nil,       -- the page's words
+    itemTextItem = nil,   -- the object's or item's name, i.e. the book's title
+    itemTextPage = 1,
+    itemTextCreator = nil,
+    itemTextHasNext = false,
+    itemTextMaterial = "Parchment",
 }
 M.world = world
 
@@ -349,6 +358,30 @@ _G.C_Timer = {
 }
 _G.ERR_ZONE_EXPLORED = "Discovered %s."
 function _G.GetGossipText() return world.gossipText or "" end
+
+-- The book UI, which is the same API on all three targets: Era, Anniversary and Forever.
+-- ItemTextFrame serves mail as well as books, which is why a test can set a creator.
+function _G.ItemTextGetText() return world.itemText end
+function _G.ItemTextGetItem() return world.itemTextItem end
+function _G.ItemTextGetPage() return world.itemTextPage or 1 end
+function _G.ItemTextGetCreator() return world.itemTextCreator end
+function _G.ItemTextHasNextPage() return world.itemTextHasNext and true or false end
+function _G.ItemTextGetMaterial() return world.itemTextMaterial end
+
+--- Put a page on screen, as ITEM_TEXT_READY would find it.
+function M.ShowPage(page)
+    world.itemText = page.text
+    world.itemTextItem = page.title
+    world.itemTextPage = page.number or 1
+    world.itemTextCreator = page.creator
+    world.itemTextHasNext = page.hasNext or false
+end
+
+--- Close it, as ITEM_TEXT_CLOSED leaves things.
+function M.ClosePage()
+    world.itemText, world.itemTextItem, world.itemTextCreator = nil, nil, nil
+    world.itemTextPage, world.itemTextHasNext = 1, false
+end
 function _G.GetGreetingText() return world.greetingText or "" end
 function _G.GetNumGossipActiveQuests() return 0 end
 function _G.GetNumGossipAvailableQuests() return 0 end

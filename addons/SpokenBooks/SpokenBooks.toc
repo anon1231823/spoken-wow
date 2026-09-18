@@ -16,3 +16,4 @@
 Checksum.lua
 Data/Books.lua
 Core.lua
+Reader.lua
