@@ -1,7 +1,18 @@
 import gzip
 import json
 
-import pandas as pd
+import pytest
+
+# The extraction path hands build_corpus a real DataFrame, so these cases build one too rather
+# than a stand-in carrying a to_dict method -- the dtypes are half of what build_corpus has to
+# survive.
+#
+# Skipped rather than imported, because pandas is not installed on a normal checkout: it lives
+# in requirements-extract.txt with the rest of the corpus refresh, and the pin there (1.5.3)
+# has no wheel for this project's Python and does not build from source on it. A missing import
+# at collection time fails the entire run before any other module is collected, which is how
+# one absent package came to report the whole suite as broken.
+pd = pytest.importorskip("pandas")
 
 from tts_cli.corpus import build_corpus, load_corpus, lines_in_area, write_corpus
 

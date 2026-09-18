@@ -164,6 +164,16 @@ beforeAll(async () => {
   snapshot = rows[0];
 });
 
+/**
+ * The precondition two cases below need: no override row at all.
+ *
+ * Deleting is safe here only because afterEach puts the snapshot back -- the row is the
+ * settings of whatever DATABASE_URL points at, and this file is careful with it.
+ */
+async function noRow() {
+  await db().query(`delete from "generation_setting" where "id"`);
+}
+
 afterEach(async () => {
   await db().query(`delete from "generation_setting" where "id"`);
   if (snapshot) {
@@ -199,6 +209,11 @@ describe("writeRaceTags", () => {
   // Whatever the file says at that moment is what gets pinned, so it must be exactly that
   // and not some other default.
   it("pins the committed settings when it has to create the row", async () => {
+    // Stated rather than assumed. afterEach restores the row this database generates with,
+    // so a developer machine reaches this case with one already there -- and the case then
+    // watches an update and calls it a creation, which is how it passed on CI and failed
+    // on anyone's laptop.
+    await noRow();
     await writeRaceTags({ dwarf: "[Scottish accent]" }, null);
 
     const settings = await readSettings();
@@ -247,6 +262,7 @@ describe("writeSettings", () => {
   });
 
   it("uses the tags it was given when there is no row to preserve", async () => {
+    await noRow();
     await writeSettings(
       { ...FALLBACK, raceTags: { orc: "[gruff]" } },
       null as unknown as string,

@@ -126,6 +126,13 @@ afterEach(async () => {
 
 afterAll(closeDb);
 
+// ELEVENLABS_DICTIONARY_ID pins one dictionary to update in place, and .env.local sets it to
+// the real one -- so every case below took the pinned branch instead of the create branch it
+// describes, and failed against an id and a key it was never given. The suite that means to
+// test pinning stubs it for itself; every other case states the absence it assumes.
+beforeEach(() => vi.stubEnv("ELEVENLABS_DICTIONARY_ID", ""));
+afterEach(() => vi.unstubAllEnvs());
+
 describe("readLexicon", () => {
   /** Migration 0008 puts the lexicon there; nothing in the app writes it on first read. */
   it("reads the seeded row", async () => {
