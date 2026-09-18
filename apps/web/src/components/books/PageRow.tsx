@@ -18,9 +18,19 @@ type Props = {
   current: boolean;
   /** Editor and up: the regenerate control. */
   canRegenerate: boolean;
+  /**
+   * How many rows this book occupies here, or 0 when this is not its first row.
+   *
+   * The count is the run in THIS result page, not `line.pageCount`: a filter can show three
+   * pages of a twenty-page journal, and paging can split a book across two screens. A
+   * rowspan longer than the rows beneath it pushes every following row one column right.
+   */
+  groupRows: number;
   state?: RowState;
   onPlay: (line: ResultLine) => void;
   onRegenerate: (line: ResultLine) => void;
+  /** Narrowing to this book, from its name. */
+  onSelectBook: (line: ResultLine) => void;
 };
 
 // The same colour discipline as the other two explorers: red is only ever a real problem,
@@ -37,7 +47,16 @@ const STATE_LABEL = {
   current: "",
 } as const;
 
-export function PageRow({ line, current, canRegenerate, state, onPlay, onRegenerate }: Props) {
+export function PageRow({
+  line,
+  current,
+  canRegenerate,
+  groupRows,
+  state,
+  onPlay,
+  onRegenerate,
+  onSelectBook,
+}: Props) {
   const playable = line.state !== "missing";
   const [expanded, setExpanded] = useState(false);
 
@@ -63,10 +82,44 @@ export function PageRow({ line, current, canRegenerate, state, onPlay, onRegener
         "border-border/60 border-b align-top transition-colors",
         "hover:bg-muted/60",
         current && "bg-muted",
+        // The first row of a book carries the heavier rule, so the books stay legible as
+        // blocks once their name is written only once.
+        groupRows > 0 && "border-t-border border-t",
       )}
     >
-      <td className="text-muted-foreground w-20 px-2 py-2 text-xs whitespace-nowrap">
-        {line.pageCount > 1 ? `page ${line.pageNumber}/${line.pageCount}` : "single page"}
+      {/* Written once per book and spanning its pages, the way the zone column reads as one
+          zone rather than as the same word forty times. Only on the run's first row: the
+          rows beneath it have no cell here at all. */}
+      {groupRows > 0 && (
+        <>
+          <td rowSpan={groupRows} className="border-border/60 border-r px-2 py-2">
+            <button
+              className="hover:text-foreground block max-w-full text-left font-medium break-words underline-offset-2 hover:underline"
+              title={`Show only ${line.title}`}
+              onClick={() => onSelectBook(line)}
+            >
+              {line.title}
+            </button>
+          </td>
+
+          <td
+            rowSpan={groupRows}
+            className="text-muted-foreground border-border/60 border-r px-2 py-2 text-xs"
+          >
+            <div>{line.ownerKind === "object" ? "in the world" : "carried"}</div>
+            <div>{materialName(line.material)}</div>
+            <div>{line.pageCount === 1 ? "1 page" : `${line.pageCount} pages`}</div>
+            {/* Which object or item opens it. More than one is common, and two objects
+                sharing a name is exactly why the addon needs a checksum. */}
+            <div className="mt-1 font-mono break-words opacity-70">
+              {line.ownerIds.join(", ")}
+            </div>
+          </td>
+        </>
+      )}
+
+      <td className="text-muted-foreground px-2 py-2 text-xs whitespace-nowrap">
+        {line.pageCount > 1 ? `${line.pageNumber} / ${line.pageCount}` : "—"}
       </td>
 
       {/* The prose is plain markup rather than a button's label, which is what makes it
@@ -96,30 +149,6 @@ export function PageRow({ line, current, canRegenerate, state, onPlay, onRegener
             {line.text}
           </span>
 
-          {/* The regeneration outcome replaces the state chip: once a page has just been
-              made, "no audio" is stale and confusing rather than merely redundant. */}
-          {state?.phase === "error" ? (
-            <span className="text-destructive mt-0.5 max-w-[12rem] shrink-0 text-right text-xs">
-              {state.message}
-            </span>
-          ) : state?.phase === "done" ? (
-            <span className="mt-0.5 shrink-0 text-xs text-emerald-400">
-              regenerated · v{state.version}
-            </span>
-          ) : !line.generatable ? (
-            // Why this page is silent, rather than leaving it looking un-narrated. It is in
-            // the corpus because the game has it.
-            <span className="text-muted-foreground mt-0.5 shrink-0 text-xs italic">
-              {line.skipReason}
-            </span>
-          ) : (
-            STATE_LABEL[line.state] && (
-              <span className={cn("mt-0.5 shrink-0 text-xs", STATE_STYLE[line.state])}>
-                {STATE_LABEL[line.state]}
-              </span>
-            )
-          )}
-
           {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle
               needs a real control. It doubles as the only thing saying rows expand. */}
           <button
@@ -139,15 +168,30 @@ export function PageRow({ line, current, canRegenerate, state, onPlay, onRegener
         </div>
       </td>
 
-      <td className="text-muted-foreground w-24 px-2 py-2 text-xs whitespace-nowrap">
-        {materialName(line.material)}
+      {/* Audio, in a column of its own rather than floated into the prose: the point of a
+          column is that it lines up down the page, and "which of these has no clip yet" is
+          the question this screen is most often asked. */}
+      <td className="px-2 py-2 text-xs whitespace-nowrap">
+        {state?.phase === "error" ? (
+          <span className="text-destructive">{state.message}</span>
+        ) : state?.phase === "done" ? (
+          <span className="text-emerald-400">v{state.version}</span>
+        ) : !line.generatable ? (
+          // Why this page is silent, rather than leaving it looking merely un-narrated. It
+          // is in the corpus because the game has it.
+          <span className="text-muted-foreground italic">{line.skipReason}</span>
+        ) : (
+          <span className={STATE_STYLE[line.state]}>
+            {STATE_LABEL[line.state] || `v${line.take?.version ?? 1}`}
+          </span>
+        )}
       </td>
 
-      <td className="text-muted-foreground w-16 px-2 py-2 text-right text-xs whitespace-nowrap">
+      <td className="text-muted-foreground px-2 py-2 text-right text-xs whitespace-nowrap">
         {line.chars}
       </td>
 
-      <td className="w-10 px-2 py-2">
+      <td className="px-2 py-2">
         {canRegenerate && (
           <RegenerateButton
             onClick={() => onRegenerate(line)}

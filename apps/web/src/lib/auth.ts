@@ -18,6 +18,23 @@ export const auth = betterAuth({
   // nginx terminates TLS, so the origin Better Auth sees is http://127.0.0.1:3000 unless we
   // tell it the public one. Cookies and redirects are built from this.
   baseURL: process.env.BETTER_AUTH_URL,
+  // Any localhost port, in development only.
+  //
+  // Better Auth refuses a sign-in whose Origin does not match baseURL, and `next dev` moves
+  // to 3001 whenever something else holds 3000 -- so the login form answers "invalid origin"
+  // for a port nobody chose. Production keeps the strict check: this list is what stops a
+  // page on another origin posting credentials here, and widening it there would be handing
+  // that protection away to save an env var.
+  //
+  // Wildcard strings rather than regexes: this version matches patterns with * and ?
+  // (dist/auth/trusted-origins.mjs) and its options type takes string[]. A plain property
+  // rather than a conditional spread, because spreading widens the object enough that the
+  // admin plugin's types stop reaching the session and `session.user.role` disappears from
+  // every caller.
+  trustedOrigins:
+    process.env.NODE_ENV === "production"
+      ? []
+      : ["http://localhost:*", "http://127.0.0.1:*"],
   plugins: [
     adminPlugin({
       ac,
