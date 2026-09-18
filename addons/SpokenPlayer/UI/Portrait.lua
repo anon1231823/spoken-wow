@@ -79,6 +79,14 @@ function Portrait:GetCurrentModelSet()
     return "Original"
 end
 
+--- Frame a loaded model on its head. Every client this addon has run on embeds a
+--- portrait camera at index 0 in the creature's M2, and selecting it is what makes the
+--- portrait a portrait rather than a figure standing in a box; Compat.lua overrides this
+--- for Camelot, whose engine accepts the call and ignores it.
+function Portrait:FrameHead(model)
+    model:SetCustomCamera(0)
+end
+
 ---@return number|nil seconds  0 if the model is known to lack the animation
 --- Whether a model frame has something to draw.
 ---
@@ -139,7 +147,7 @@ local function InitModelFrame(model)
             self:SetCreature(self.oldCreatureID)
             if not self:GetModelFileID() then return end
         end
-        self:SetCustomCamera(0)
+        Portrait:FrameHead(self)
         if self.animation and not self.animDuration then
             self.animDuration = Portrait:GetModelAnimationDuration(self:GetModelFileID(), self.animation)
             if self.animDuration and self.animDuration == 0 then
@@ -215,7 +223,7 @@ Renderers["model"] = {
         if creatureID ~= model.oldCreatureID then
             if CAN_MODEL_LOAD_CACHE then model:ClearModel() end
             model:SetCreature(creatureID)
-            model:SetCustomCamera(0)
+            Portrait:FrameHead(model)
             model:SetModelScale(2)
             model.animation = spec.animation or 60
             model.animDuration = nil

@@ -1,5 +1,12 @@
 # Changelog — Spoken Player
 
+## 2.0.4 — 2026-09-18
+
+- **The portrait is a portrait again on the Forever client.** Selecting camera 0 of the
+  creature's own model is what has framed the speaker's head on every client this addon
+  runs on; the Forever client accepts that call and ignores it, so the whole NPC stood in
+  the box instead. It is framed with the portrait zoom there, which that client honours.
+
 ## 2.0.3 — 2026-09-18
 
 - **The minimap button's texture is DXT5, like every other texture Spoken ships.** The

@@ -869,3 +869,13 @@ if Version.IsRetailMainline then
         return "HD"
     end
 end
+
+if Version.IsCamelot then
+    -- Camelot accepts SetCustomCamera and ignores it: the model keeps the default
+    -- full-body framing, so the portrait showed the whole NPC standing in the box.
+    -- SetPortraitZoom is the framing that client honours, and 1 is the head shot the
+    -- M2's camera 0 used to give. Verified in the client on tauren male (122055).
+    function Portrait:FrameHead(model)
+        model:SetPortraitZoom(1)
+    end
+end
