@@ -4,7 +4,7 @@
 -- how long a sound file is; without them the Play button never resets itself.
 --
 -- Globals rather than a private namespace: a data addon cannot reach into
--- ZoneLore's, which is how AI_VoiceOverData_Vanilla does the same job.
+-- SpokenZones's, which is how AI_VoiceOverData_Vanilla does the same job.
 
 local ADDON_NAME = ...
 
@@ -970,8 +970,8 @@ local pack = {
 local GetAddOnMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 
 -- The folder name comes from the loader rather than being baked in, so one
--- generated file serves every quality tier: ZoneLoreAudio and ZoneLoreAudio64
--- ship the same Sounds.lua and differ only in their .toc and their mp3s.
+-- generated file serves every pack built from this tree: the English pack and a
+-- language's ship the same Sounds.lua and differ only in their .toc and their mp3s.
 pack.addon = ADDON_NAME
 pack.quality = GetAddOnMeta(ADDON_NAME, "X-SpokenZones-Quality") or "standard"
 pack.bitrate = tonumber(GetAddOnMeta(ADDON_NAME, "X-SpokenZones-Bitrate")) or 0
@@ -981,16 +981,12 @@ pack.packVersion = GetAddOnMeta(ADDON_NAME, "Version") or "dev"
 -- existed carry no such key, and they are English.
 pack.language = GetAddOnMeta(ADDON_NAME, "X-SpokenZones-Language") or "enUS"
 
--- Keyed by folder name so two tiers installed at once both register instead of
+-- Keyed by folder name so two packs installed at once both register instead of
 -- the second silently overwriting the first. Spoken Zones picks between them.
+--
+-- ONE REGISTRY. A pack built before the rename writes ZoneLoreAudioPacks, and Audio.lua
+-- still reads that: those files are on players' disks and cannot be changed. This is the
+-- other direction -- a pack this new beside an addon too old to read this name -- and it
+-- is not carried, because the addon and its pack are released together.
 SpokenZonesAudioPacks = SpokenZonesAudioPacks or {}
 SpokenZonesAudioPacks[ADDON_NAME] = pack
-
--- The registry under its former name, written with the same key so the two are one
--- pack to any reader. It keeps this zip working under ZoneLore 0.3 and later.
-ZoneLoreAudioPacks = ZoneLoreAudioPacks or {}
-ZoneLoreAudioPacks[ADDON_NAME] = pack
-
--- What ZoneLore 0.2 and earlier read. Harmless once the registries above exist,
--- and it keeps an old addon working with a new pack rather than going quiet.
-ZoneLoreAudioData = ZoneLoreAudioData or pack

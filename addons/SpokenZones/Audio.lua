@@ -255,10 +255,10 @@ local warnedFormat = {}
 -- narrow the answer to one language.
 function SpokenZones:GetAudioPacks(lang)
 	local packs = {}
-	-- Two generations of the registry, newest first. ZoneLoreAudioPacks is what every
-	-- shipped pack writes into; a pack built from now on writes into both, so that the
-	-- same zip is also found by an older release of this addon. Both are keyed by folder
-	-- name, so a pack in both is seen once.
+	-- Two generations of the registry, newest first. ZoneLoreAudioPacks is what every pack
+	-- published before the rename writes into, and those files are on players' disks and
+	-- cannot be changed, so reading it is permanent. Packs built from now on write only
+	-- SpokenZonesAudioPacks. Both are keyed by folder name, so a pack in both is seen once.
 	local seen = {}
 	local found = false
 
