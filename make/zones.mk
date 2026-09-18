@@ -7,7 +7,7 @@
         web push push-dry pull pull-dry audio-status ssh-check pull-manifest \
         db-push db-pull bootstrap deploy-scripts releases rollback logs \
         icon lore-import lore-export lore-check lore-sheet lore-upload lore-upload-dry lore-rewrite aliases languages locale-check \
-        release release-dry descriptions descriptions-check descriptions-published
+        release release-dry
 
 # The \# escapes are required: an unescaped # starts a make comment, even
 # inside a $(shell ...) call.
@@ -23,16 +23,10 @@ help: ## Show this help
 package: check ## Build dist/SpokenZones-<version>.zip for upload
 	@./scripts/zones/package.sh
 
-check: validate lint locale-check descriptions-check ## Run every pre-package check
+check: validate lint locale-check ## Run every pre-package check
 
-descriptions: ## Regenerate the addon READMEs and dist/descriptions/ from curseforge/zones/
-	@node pipelines/zones/tools/descriptions.mjs --write
-
-descriptions-check: ## Confirm the addon READMEs match curseforge/zones/
-	@node pipelines/zones/tools/descriptions.mjs
-
-descriptions-published: ## Record the current descriptions as pasted into the site
-	@node pipelines/zones/tools/descriptions.mjs --published
+# descriptions, descriptions-check and descriptions-published moved to the root Makefile when
+# the generator grew to cover every project's pages rather than only this one's.
 
 validate: ## Sanity-check the generated Lua data files
 	@node pipelines/zones/tools/validate.mjs

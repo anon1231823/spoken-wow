@@ -1,3 +1,15 @@
+---
+project: 1660198
+slug: spoken-quests-audio-horde
+name: Spoken Quests Audio: Horde
+summary: Horde-only quest dialogue, voiced. Pair it with the Shared pack. Needs Spoken Quests.
+categories:
+  - Audio & Video
+  - Roleplay
+  - Quests & Leveling
+license: MIT
+---
+
 Voiced dialogue for the quests only a Horde character can take.
 
 **You need two more addons for this to do anything:**

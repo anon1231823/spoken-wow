@@ -167,7 +167,7 @@ node "$REPO/pipelines/zones/tools/voice/validate-audio.mjs"
 
 # Each tier ships the README for its own CurseForge page, so the description a
 # player read before downloading is the file they end up with.
-node "$REPO/pipelines/zones/tools/descriptions.mjs" --write >/dev/null
+node "$REPO/scripts/descriptions.mjs" --write >/dev/null
 # A language with no CurseForge page of its own ships the English description
 # rather than nothing: the page it was downloaded from is the honest fallback
 # until somebody writes one for it.

@@ -274,7 +274,7 @@ done
 # from what was last pasted, and say so at the moment somebody is already looking
 # at the project pages.
 echo
-stale="$(node "$REPO/pipelines/zones/tools/descriptions.mjs" --drift)"
+stale="$(node "$REPO/scripts/descriptions.mjs" --drift --group=zones)"
 if [[ -n "$stale" ]]; then
   echo "descriptions that differ from what was last pasted into the site:"
   echo "$stale" | while IFS=$'\t' read -r slug why; do

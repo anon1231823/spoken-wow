@@ -1,3 +1,15 @@
+---
+project: 1660202
+slug: spoken-quests-audio-gossip
+name: Spoken Quests Audio: Gossip
+summary: NPC gossip chatter, voiced. Optional extra for any of the quest packs. Needs Spoken Quests.
+categories:
+  - Audio & Video
+  - Roleplay
+  - Quests & Leveling
+license: MIT
+---
+
 Voiced NPC gossip — the chatter you get when you talk to someone without a quest to hand in.
 
 Innkeepers, guards, faction quartermasters and the rest saying their piece out loud, in the same voices they use for quests. Purely extra: it adds nothing to a quest you were already hearing, and it costs nothing to skip.

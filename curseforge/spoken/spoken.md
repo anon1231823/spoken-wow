@@ -1,3 +1,15 @@
+---
+project: 1700375
+slug: spoken-player
+name: Spoken Player
+summary: The voice player every Spoken addon speaks through: one queue, one window, one minimap button.
+categories:
+  - Audio & Video
+  - Roleplay
+  - Miscellaneous
+license: MIT
+---
+
 **The voice player every Spoken addon speaks through.** One queue, one window, one minimap button — whichever Spoken addons you install.
 
 This addon plays nothing by itself. It is installed automatically as a dependency of:

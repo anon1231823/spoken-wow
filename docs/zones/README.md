@@ -1509,7 +1509,7 @@ into a web form, so the only question is where the pasted text comes from.
 
 It comes from `curseforge/<slug>.md`. The frontmatter is everything the form asks
 for besides the body — project id, summary, categories, tags, license — and the
-body is the description. `tools/descriptions.mjs` generates two things from it:
+body is the description. `scripts/descriptions.mjs` generates two things from it:
 
 ```sh
 make descriptions          # addon READMEs + dist/descriptions/ to paste from

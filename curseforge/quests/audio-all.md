@@ -1,3 +1,15 @@
+---
+project: 1660196
+slug: spoken-quests-audio-all
+name: Spoken Quests Audio: All
+summary: Every quest and gossip line, voiced. The whole pack in one install. Needs Spoken Quests.
+categories:
+  - Audio & Video
+  - Roleplay
+  - Quests & Leveling
+license: MIT
+---
+
 **Install this and get the lot.** It holds no audio itself — it is a few kilobytes that pulls in all four sound packs as dependencies, so your addon manager fetches them for you.
 
 You still need the player: [Spoken Quests](https://www.curseforge.com/wow/addons/spoken-quests). That addon speaks the lines, the packs are the lines, and neither does anything alone.

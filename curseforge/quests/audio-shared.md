@@ -1,3 +1,15 @@
+---
+project: 1660199
+slug: spoken-quests-audio-shared
+name: Spoken Quests Audio: Shared Quests
+summary: Quest dialogue both factions can hear, voiced. Install alongside the Alliance or Horde pack. Needs Spoken Quests.
+categories:
+  - Audio & Video
+  - Roleplay
+  - Quests & Leveling
+license: MIT
+---
+
 Voiced dialogue for the quests **both factions** can take. Neutral hubs like Booty Bay, Gadgetzan, Everlook and Ratchet live here, along with every other quest whose giver talks to either side.
 
 **Everyone wants this pack**, and on its own it is only part of the story. Pair it with your side, and with the player:

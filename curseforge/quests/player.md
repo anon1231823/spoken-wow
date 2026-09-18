@@ -1,3 +1,15 @@
+---
+project: 1655859
+slug: spoken-quests
+name: Spoken Quests
+summary: Quest and gossip dialogue, voiced. Needs a Spoken Quests Audio pack. Formerly VoiceOver Redux.
+categories:
+  - Audio & Video
+  - Roleplay
+  - Quests & Leveling
+license: MIT
+---
+
 **Formerly VoiceOver Redux.** A rework of the original VoiceOver addon, which makes NPCs speak their quest text — now one of the Spoken addons, sharing the [Spoken Player](https://www.curseforge.com/wow/addons/spoken-player) with Spoken Zones.
 
 Main changes:

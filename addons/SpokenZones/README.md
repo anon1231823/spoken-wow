@@ -1,4 +1,4 @@
-<!-- GENERATED from curseforge/spoken-zones.md by tools/descriptions.mjs. Do not edit by hand. -->
+<!-- GENERATED from curseforge/zones/spoken-zones.md by scripts/descriptions.mjs. Do not edit by hand. -->
 
 **Zone lore on the world map, for WoW Classic Era.** Formerly ZoneLore — now one of the Spoken addons, narrating through the [Spoken Player](https://www.curseforge.com/wow/addons/spoken-player) shared with Spoken Quests, which your addon manager installs alongside.
 

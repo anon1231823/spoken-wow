@@ -1,3 +1,15 @@
+---
+project: 1660197
+slug: spoken-quests-audio-alliance
+name: Spoken Quests Audio: Alliance
+summary: Alliance-only quest dialogue, voiced. Pair it with the Shared pack. Needs Spoken Quests.
+categories:
+  - Audio & Video
+  - Roleplay
+  - Quests & Leveling
+license: MIT
+---
+
 Voiced dialogue for the quests only an Alliance character can take.
 
 **You need two more addons for this to do anything:**

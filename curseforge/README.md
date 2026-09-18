@@ -1,23 +1,40 @@
 # CurseForge project pages
 
-The description of each project, as markdown, one file per project. CurseForge's editor has a
-Markdown mode — paste the file into it.
+The description of each project, as markdown, one file per project. The frontmatter is
+everything the submission form asks for besides the body; the body is the description.
+CurseForge's editor has a Markdown mode — paste `dist/descriptions/<slug>.md` into it.
+
+`scripts/descriptions.mjs` reads every directory under `curseforge/`, writes the paste-ready
+bodies into `dist/descriptions/`, regenerates any README a page names in `addonReadme`, and
+tracks which pages have been pasted:
+
+```
+make descriptions              # regenerate
+make descriptions-check        # fail if a generated README has drifted (make lint runs this)
+make descriptions-published    # record the current pages as pasted, AFTER pasting them
+```
+
+Each directory keeps its own `published.json`, and a release prints the pages in its own group
+that have moved on since they were last pasted.
 
 | File | Project | id | Slug |
 | --- | --- | --- | --- |
-| `../spoken/spoken.md` | Spoken Player | 1700375 | `spoken-player` |
-| `player.md` | Spoken Quests (was VoiceOver Redux) | 1655859 | `spoken-quests` |
-| `audio-all.md` | Spoken Quests Audio: All | 1660196 | `spoken-quests-audio-all` |
-| `audio-alliance.md` | Spoken Quests Audio: Alliance | 1660197 | `spoken-quests-audio-alliance` |
-| `audio-horde.md` | Spoken Quests Audio: Horde | 1660198 | `spoken-quests-audio-horde` |
-| `audio-shared.md` | Spoken Quests Audio: Shared Quests | 1660199 | `spoken-quests-audio-shared` |
-| `audio-gossip.md` | Spoken Quests Audio: Gossip | 1660202 | `spoken-quests-audio-gossip` |
+| `spoken/spoken.md` | Spoken Player | 1700375 | `spoken-player` |
+| `quests/player.md` | Spoken Quests (was VoiceOver Redux) | 1655859 | `spoken-quests` |
+| `quests/audio-all.md` | Spoken Quests Audio: All | 1660196 | `spoken-quests-audio-all` |
+| `quests/audio-alliance.md` | Spoken Quests Audio: Alliance | 1660197 | `spoken-quests-audio-alliance` |
+| `quests/audio-horde.md` | Spoken Quests Audio: Horde | 1660198 | `spoken-quests-audio-horde` |
+| `quests/audio-shared.md` | Spoken Quests Audio: Shared Quests | 1660199 | `spoken-quests-audio-shared` |
+| `quests/audio-gossip.md` | Spoken Quests Audio: Gossip | 1660202 | `spoken-quests-audio-gossip` |
+| `zones/spoken-zones.md` | Spoken Zones (was ZoneLore) | 1636521 | `spoken-zones` |
+| `zones/spoken-zones-audio.md` | Spoken Zones Audio | 1636532 | `spoken-zones-audio` |
 
 The slugs follow the projects' names, `-all` included: the meta addon is the "All" pack as far
 as a player is concerned, so it is the one project whose slug names a pack that holds no audio.
 
-**Five more projects exist and are retired.** 1655867, 1658236, 1658237, 1658239 and 1658235 held
-the downsampled packs, back when the audio shipped at two qualities. They stay published so that
+**Six more projects exist and are retired.** 1655867, 1658236, 1658237, 1658239 and 1658235 held
+the second set of quest packs, back when the audio shipped at two qualities, and 1636548 the
+64 kbps zones pack. They stay published so that
 an existing install keeps working, and nothing uploads to them again: they have no id in
 `scripts/quests/release.sh`, no description file here, and no row above. The ids are written down
 only so that the next person to find them knows they are retired rather than missing.
@@ -66,17 +83,14 @@ is a re-download of every clip in it, which the release doing the renaming costs
 is not is a broken path, because nothing stores one built from a folder name.
 
 **These are pasted by hand and the site is the live copy.** There is no API for descriptions —
-`scripts/release.sh` uploads files and nothing else, deliberately, because a script that
-rewrote project pages each release could quietly undo an edit made in the web UI. So these
-files are the source to edit and re-paste, not a mirror anything checks.
+`release.sh` uploads files and nothing else, deliberately, because a script that rewrote project
+pages each release could quietly undo an edit made in the web UI. So these files are the source
+to edit and re-paste, and `published.json` records what you say you pasted rather than anything
+read back off the site.
 
-The summaries (the one-line preview, separate from the description) are:
-
-- **All** — Every quest and gossip line, voiced. The whole pack in one install. Needs Spoken Quests.
-- **Alliance** — Alliance-only quest dialogue, voiced. Pair it with the Shared pack. Needs Spoken Quests.
-- **Horde** — Horde-only quest dialogue, voiced. Pair it with the Shared pack. Needs Spoken Quests.
-- **Shared** — Quest dialogue both factions can hear, voiced. Install alongside the Alliance or Horde pack. Needs Spoken Quests.
-- **Gossip** — NPC gossip chatter, voiced. Optional extra for any of the quest packs. Needs Spoken Quests.
+The summary — the one-line preview, separate from the description — is the `summary:` line in
+each page's frontmatter, where the 255-character limit is checked. It used to be listed here,
+which meant two places to edit and one of them silently authoritative.
 
 **No sizes and no line counts in the text.** Both move every time a pack is rebuilt or a line
 re-recorded, and a number in prose nothing checks is a number that goes stale on the site while
