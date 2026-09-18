@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Writes addon/ZoneLore/Data/<lang>/{Zones,Subzones}.lua from lore_line.
+// Writes addon/SpokenZones/Data/<lang>/{Zones,Subzones}.lua from lore_line.
 //
 //   node tools/lore/export.mjs           # write both files
 //   node tools/lore/export.mjs --check   # fail if the files are out of date, write nothing
@@ -91,7 +91,7 @@ async function main() {
     `wrote ${written.zones} zones and ${written.subzones} subzones in ${lang} ` +
       `(${edited} hand-edited)`,
   );
-  console.log("\nreview with:  git diff addon/ZoneLore/Data/");
+  console.log("\nreview with:  git diff addon/SpokenZones/Data/");
   console.log("then rebuild the audio lookup if any text moved:  make lookup");
 }
 

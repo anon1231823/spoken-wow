@@ -145,7 +145,7 @@ async function main() {
         + "(unreachable in-game) -- run node tools/voice/build-lookup.mjs");
     }
 
-    // Keys in the table must be exactly what ZoneLore:NormaliseAreaKey produces,
+    // Keys in the table must be exactly what SpokenZones:NormaliseAreaKey produces,
     // or the lookup silently misses.
     const validKeys = new Set(entries.filter((e) => e.key).map((e) => `${e.mapID}:${e.key}`));
     let currentMap = null;

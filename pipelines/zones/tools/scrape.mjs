@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds addon/ZoneLore/Data/Zones.lua from warcraft.wiki.gg page intros.
+// Builds addon/SpokenZones/Data/Zones.lua from warcraft.wiki.gg page intros.
 //
 //   node tools/scrape.mjs                 # use cache where present
 //   node tools/scrape.mjs --refresh       # re-fetch everything

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Builds addon/ZoneLore/Data/Subzones.lua from warcraft.wiki.gg.
+// Builds addon/SpokenZones/Data/Subzones.lua from warcraft.wiki.gg.
 //
 //   node tools/scrape-subzones.mjs                # every zone in the seed
 //   node tools/scrape-subzones.mjs --zone 1420    # one parent zone

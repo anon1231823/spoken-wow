@@ -11,7 +11,7 @@
 // recordTranslations is the one writer for every other language.
 //
 // WITHOUT DATABASE_URL everything here still works, reading and writing
-// addon/ZoneLore/Data/*.lua as the scrapers always did. That is not a courtesy: the
+// addon/SpokenZones/Data/*.lua as the scrapers always did. That is not a courtesy: the
 // addon build, validate.mjs and package-audio.sh all run on clones with no Postgres,
 // and a corpus that could only be assembled by a database would take the whole release
 // path with it.

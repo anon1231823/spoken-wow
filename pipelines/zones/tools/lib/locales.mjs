@@ -1,7 +1,7 @@
-// The languages ZoneLore knows about, and the naming rules that follow from a
+// The languages SpokenZones knows about, and the naming rules that follow from a
 // language: which sound-pack folder it ships in, and what code ElevenLabs wants.
 //
-// Must stay in step with ZoneLore.LOCALES in addon/ZoneLore/Language.lua;
+// Must stay in step with SpokenZones.LOCALES in addon/SpokenZones/Language.lua;
 // tools/validate.mjs fails the build if the two lists drift, the same way it
 // already guards NormaliseAreaKey.
 
