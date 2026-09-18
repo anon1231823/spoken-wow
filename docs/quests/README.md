@@ -226,6 +226,13 @@ quests-icon` regenerates both from the PNGs, `tools/make_icon.py` is what it run
 file's header explains why ffmpeg's own targa encoder is not used (it writes RLE, and the
 client wants uncompressed).
 
+The minimap button is the same mark again, as `addons/SpokenPlayer/Textures/MinimapButton.blp`
+— BLP because a texture a frame loads is BLP on every client this ships to, where the AddOns
+list takes either. `tools/make_minimap_icon.py` (also run by `make quests-icon`) crops the
+shield's frame off the 512 px render before scaling, since LibDBIcon draws the icon 17 pixels
+across inside a round border of its own and two frames at that size read as dirt; the header
+explains the crop, the 5% LibDBIcon trims off each edge, and why the BLP is palettized.
+
 ### The pack ships in five pieces
 
 600 MB is more than CurseForge accepts in one upload — a 564 MB zip comes back `413` from

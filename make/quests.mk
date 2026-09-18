@@ -241,12 +241,17 @@ history-status: ## Compare take count and size on both sides
 # Spoken Quests the exclamation mark, since they sit next to each other in that list. The five
 # sound packs take the Quests mark -- scripts/quests/package-meta.sh and tts_cli/build.py copy
 # spoken-quests.tga into every module they build.
-icon: ## Rebuild the addons' icon.tga from pipelines/quests/assets/icon/*-512.png (needs ffmpeg)
+# The minimap button wears the same player mark from a tighter crop, as a BLP rather than a
+# TGA: a texture a frame loads is BLP on every client this ships to. LibDBIcon draws its own
+# round border around it, so the crop drops the shield's octagonal frame -- two frames at 17
+# pixels is mud. pipelines/quests/tools/make_minimap_icon.py says why each number is what it is.
+icon: ## Rebuild the addons' icon.tga and the minimap BLP from pipelines/quests/assets/icon/*-512.png (needs ffmpeg)
 	@python3 pipelines/quests/tools/make_icon.py pipelines/quests/assets/icon/spoken-player-512.png pipelines/quests/assets/icon/spoken-player.tga
 	@python3 pipelines/quests/tools/make_icon.py pipelines/quests/assets/icon/spoken-quests-512.png pipelines/quests/assets/icon/spoken-quests.tga
 	@cp pipelines/quests/assets/icon/spoken-player.tga addons/SpokenPlayer/icon.tga
 	@cp pipelines/quests/assets/icon/spoken-quests.tga addons/SpokenQuests/icon.tga
 	@echo "==> copied into addons/SpokenPlayer/ and addons/SpokenQuests/"
+	@python3 pipelines/quests/tools/make_minimap_icon.py pipelines/quests/assets/icon/spoken-player-512.png addons/SpokenPlayer/Textures/MinimapButton.blp
 
 package: ## Zip the player addon into dist/: one Blizzard zip, one per legacy client
 	@./scripts/quests/package.sh
