@@ -268,7 +268,7 @@ curl -sI 'https://spoken.rusty.one/api/zones/audio/1411/zone.mp3' | head -1
 curl -sI 'https://voiceover.rusty.one/r/quest/5/accept'      | grep -i location  # /quests/r/quest/5/accept
 curl -sI 'https://lore.rusty.one/enUS/r/1411/razor-hill'     | grep -i location  # /zones/r/1411/razor-hill
 curl -sI 'https://lore.rusty.one/r/1411/razor-hill'          | grep -i location  # the same
-curl -sI 'https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip' | grep -i location
+curl -sI 'https://voiceover.rusty.one/downloads/SpokenQuestsAudioComplete-latest.zip' | grep -i location
 ```
 
 Then sign in with an account that only ever existed on the zones site, and regenerate one

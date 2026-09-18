@@ -168,9 +168,9 @@ It is **not a CurseForge release**: it is far over the upload ceiling and always
 hosts it instead — `make push-complete` puts a built zip in `shared/downloads/` on the droplet and
 repoints
 [`/downloads/SpokenQuestsAudioComplete-latest.zip`](https://spoken.rusty.one/downloads/SpokenQuestsAudioComplete-latest.zip),
-a symlink, so the published URL never changes. It repoints the old
-`VoiceOverReduxAudioHQ-latest.zip` at the same file as well, because that name is in
-descriptions and forum posts this repository cannot edit. See `deploy/README.md`.
+a symlink, so the published URL never changes once the pack is renamed. The pre-rename
+`VoiceOverReduxAudioHQ-latest.zip` is not kept alive: the descriptions carrying it are being
+re-pasted. See `deploy/README.md`.
 
 **The packs ship as five CurseForge projects** — four packs and a meta addon:
 

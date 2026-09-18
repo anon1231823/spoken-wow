@@ -265,16 +265,15 @@ package-meta: ## Zip the meta addon that pulls in all four packs
 # symlink repointed after the copy: the published URL never changes, and it never points at a
 # half-transferred file because rsync writes to a temporary name and renames.
 #
-# TWO SYMLINKS, because the pack folder was renamed and the old URL was not. Descriptions and
-# forum posts point at VoiceOverReduxAudioHQ-latest.zip, and deploy/web/nginx-spoken.conf calls
-# that path frozen; it now points at the same file as the current name. Dropping it would break
-# links this repository cannot edit.
+# ONE NAME. The pack was published as VoiceOverReduxAudioHQ-latest.zip before the rename, and
+# that URL is not kept alive: the descriptions that carried it are being re-pasted with the
+# current one, and the pack itself is re-downloaded this release whatever its name.
 
 REMOTE_DOWNLOADS := $(REMOTE_ROOT)/shared/downloads
 
 push-complete: ## Upload the built complete pack to the site's downloads directory
 	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. brew install rsync"; exit 1; }
-	@v=$$(sed -n 's/^## Version:[[:space:]]*//p' dist/SpokenQuestsAudioComplete/SpokenQuestsAudioComplete.toc 2>/dev/null | head -1); 	[ -n "$$v" ] || { echo "No complete module built. Run: make package-audio-complete"; exit 1; }; 	zip=dist/SpokenQuestsAudioComplete-$$v.zip; 	[ -f "$$zip" ] || { echo "$$zip is missing. Run: make package-audio-complete"; exit 1; }; 	echo "==> $$zip -> $(DROPLET):$(REMOTE_DOWNLOADS)/"; 	$(RSYNC) -a --human-readable --info=progress2 -e "$(SSH)" "$$zip" $(DROPLET):$(REMOTE_DOWNLOADS)/; 	$(SSH) $(DROPLET) "ln -sfn SpokenQuestsAudioComplete-$$v.zip $(REMOTE_DOWNLOADS)/SpokenQuestsAudioComplete-latest.zip; ln -sfn SpokenQuestsAudioComplete-$$v.zip $(REMOTE_DOWNLOADS)/VoiceOverReduxAudioHQ-latest.zip"; 	echo "==> https://spoken.rusty.one/downloads/SpokenQuestsAudioComplete-latest.zip"
+	@v=$$(sed -n 's/^## Version:[[:space:]]*//p' dist/SpokenQuestsAudioComplete/SpokenQuestsAudioComplete.toc 2>/dev/null | head -1); 	[ -n "$$v" ] || { echo "No complete module built. Run: make package-audio-complete"; exit 1; }; 	zip=dist/SpokenQuestsAudioComplete-$$v.zip; 	[ -f "$$zip" ] || { echo "$$zip is missing. Run: make package-audio-complete"; exit 1; }; 	echo "==> $$zip -> $(DROPLET):$(REMOTE_DOWNLOADS)/"; 	$(RSYNC) -a --human-readable --info=progress2 -e "$(SSH)" "$$zip" $(DROPLET):$(REMOTE_DOWNLOADS)/; 	$(SSH) $(DROPLET) "ln -sfn SpokenQuestsAudioComplete-$$v.zip $(REMOTE_DOWNLOADS)/SpokenQuestsAudioComplete-latest.zip"; 	echo "==> https://spoken.rusty.one/downloads/SpokenQuestsAudioComplete-latest.zip"
 
 downloads-status: ## List what the site is offering for download
 	@$(SSH) $(DROPLET) 'ls -lh $(REMOTE_DOWNLOADS)/'
