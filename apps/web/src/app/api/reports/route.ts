@@ -17,6 +17,7 @@ import { clientIp } from "@/lib/reports/client-ip";
 import { isSource, validateSubmission, type Source } from "@/lib/reports/reports";
 import { countRecent, createReport } from "@/lib/reports/store";
 import { formatTarget, parseTarget, resolveTarget } from "@/lib/reports/target";
+import { BASE_LANG as BOOKS_LANG, pageById } from "@/lib/books/catalogue";
 import { lineByPath } from "@/lib/zones/catalogue";
 import { BASE_LANG } from "@/lib/zones/lang";
 
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
   const source: Source = isSource(body.source) ? body.source : "quests";
 
   /**
-   * What the address resolves to, which the two sections answer differently.
+   * What the address resolves to, which the three sections answer differently.
    *
    * A quests address is one the addon built out of a quest id and an event, or out of a
    * unit GUID, and it can legitimately resolve to nothing -- when the data module failed to
@@ -50,11 +51,18 @@ export async function POST(request: Request) {
    * and it either names a line or it does not. Accepting one that names nothing would put a
    * row in triage that nobody can act on -- there is no equivalent of a data module having
    * failed to load, since the address came from a page this site rendered.
+   *
+   * A books address is the page id the addon built its link from, and is resolved as strictly
+   * as a zones one for the same reason: the reporter got here from a page this site rendered,
+   * so an id naming nothing is a typo in the URL bar rather than a corpus that failed to load.
    */
+  const raw = typeof body.target === "string" ? body.target : null;
   const addressed =
     source === "zones"
-      ? await zonesTarget(typeof body.target === "string" ? body.target : null)
-      : questsTarget(typeof body.target === "string" ? body.target : null, body.lineId);
+      ? await zonesTarget(raw)
+      : source === "books"
+        ? await booksTarget(raw)
+        : questsTarget(raw, body.lineId);
 
   if (!addressed) {
     return Response.json({ error: "unknown target" }, { status: 400 });
@@ -106,6 +114,23 @@ function questsTarget(
   const wanted = typeof claimed === "string" ? claimed : null;
   const lineId = resolveTarget(target).find((line) => line.lineId === wanted)?.lineId ?? null;
   return { lineId, target: formatTarget(target) };
+}
+
+/**
+ * A books address: the page id, '261'.
+ *
+ * The lineId is taken from the page the id resolves to rather than from the body, as the
+ * zones branch does. Nothing the reporter can edit decides which row triage sees.
+ */
+async function booksTarget(
+  raw: string | null,
+): Promise<{ lineId: string | null; target: string } | null> {
+  if (!raw) return null;
+
+  const page = await pageById(Number(raw), BOOKS_LANG);
+  if (!page) return null;
+
+  return { lineId: page.id, target: page.file };
 }
 
 /** A zones address: the line's own audio path, '1411/razor-hill'. */

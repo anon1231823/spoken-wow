@@ -28,6 +28,8 @@ that have moved on since they were last pasted.
 | `quests/audio-gossip.md` | Spoken Quests Audio: Gossip | 1660202 | `spoken-quests-audio-gossip` |
 | `zones/spoken-zones.md` | Spoken Zones (was ZoneLore) | 1636521 | `spoken-zones` |
 | `zones/spoken-zones-audio.md` | Spoken Zones Audio | 1636532 | `spoken-zones-audio` |
+| `books/spoken-books.md` | Spoken Books | 1701514 | `spoken-books` |
+| `books/spoken-books-audio.md` | Spoken Books Audio | 1701520 | `spoken-books-audio` |
 
 The slugs follow the projects' names, `-all` included: the meta addon is the "All" pack as far
 as a player is concerned, so it is the one project whose slug names a pack that holds no audio.

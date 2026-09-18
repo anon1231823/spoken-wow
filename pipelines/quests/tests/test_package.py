@@ -202,7 +202,7 @@ def test_the_shared_layout_is_the_same_file_in_every_addon():
     # it is only safe while the copies agree, which nothing but this enforces.
     import hashlib
     copies = {}
-    for addon in ("SpokenPlayer", "SpokenQuests", "SpokenZones"):
+    for addon in ("SpokenPlayer", "SpokenQuests", "SpokenZones", "SpokenBooks"):
         path = os.path.join(REPO, "addons", addon, "UI", "Layout.lua")
         assert os.path.isfile(path), f"{addon} is missing its copy of UI/Layout.lua"
         with open(path, "rb") as handle:

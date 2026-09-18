@@ -97,3 +97,120 @@ changing its wording as well, and one page did move between books without a word
 make books-test                    # the pipeline: text, naming, chains, promotion
 pnpm --filter @spoken/web test     # the site, including lib/books
 ```
+
+## The addon
+
+`addons/SpokenBooks` hooks `ITEM_TEXT_BEGIN` / `READY` / `CLOSED` — the whole book UI, and
+the same API on Era, Anniversary and Forever, which is why there is one addon rather than
+three.
+
+**A page is identified by what is on screen**, because the client never says which page id
+it is showing. Title, page number and a checksum of the text; then the checksum alone,
+where no other page shares it; then nothing. Nothing is the right third answer: the
+alternative is reading the wrong page's words aloud.
+
+**The checksum is the load-bearing part.** `pipelines/books/tools/lib/naming.mjs` and
+`addons/SpokenBooks/Checksum.lua` must produce the same number for the same text, over
+UTF-8 bytes, using only multiply, add and modulo — the clients run Lua 5.1, which has no
+bitwise operators. `tests/lua/books_source_test.lua` asserts the two agree, on an ASCII
+string and an accented one. They have to: the lookup is keyed on that number, and a
+disagreement makes every page unfindable, silently.
+
+**Mail is excluded twice.** `ItemTextFrame` serves mail as well as books, so a letter with
+a creator is skipped, and so is anything shown while `MailFrame` is open — which catches
+the mail that has no creator, like a returned letter.
+
+**A book is queued whole.** Opening page one queues to the end, so a journal reads on while
+you turn pages; turning to a queued page changes nothing, and turning elsewhere rebuilds
+from there. The source has no queue limit, unlike zones: a cap trims the oldest waiting
+clip, which on a four-page book keeps the first page and the last and discards the middle.
+
+**Two saved-variable tables, on purpose.** `SpokenBooksDB` is account-wide and holds the
+three switches — autoplay, whole-book, read-once. `SpokenBooksCharDB` is per character and
+holds only what that character has been read, keyed by book id. Settings are how you like
+the addon to behave; having read something is a thing a character did, so an alt walking
+into the same library hears it fresh.
+
+**Read-once marks a book when narration starts, not when it ends.** The addon is never told
+that a clip finished — the player owns the queue — so "finished" could only be inferred
+from a queue that `/spb stop` or a zone change can empty early. The rule refuses autoplay
+only: `/spb read` and the Play button go straight to the playlist, because a reader pressing
+play has asked again in so many words. It also does not refuse the book it is in the middle
+of reading, which is what `SpokenBooks:IsNarrating` is for — a reader who jumps past the
+queued pages would otherwise strand the narration on the page they turned away from.
+
+**The panel and the button are the two files this addon reads books without.**
+`UI/Options.lua` registers a settings canvas the way the zones panel does, and
+`UI/PlayButton.lua` puts Play/Stop on the book window's page row. `Events.lua` guards both
+calls, so a partial install still narrates. Every switch on the panel is also a `/spb`
+command, which is what a client with no Settings API gets.
+
+**The button is anchored to `ItemTextScrollFrame` — the page — in its bottom-right corner,
+and not to anything on the row above it.** That row looks empty on page one and is not:
+`ItemTextFrame.xml` in `Gethe/wow-ui-source` gives the two arrows a `PREV` and a `NEXT`
+FontString anchored to their inner edges, and `ItemTextCurrentPage` is a 192-wide FontString
+centred across the row whose left edge reaches back under the left arrow. A book with more
+than one page fills all of it. The scrollbar hangs outside the page's right edge — its
+textures anchor `TOPLEFT` to the frame's `TOPRIGHT` — so the page's own corner is clear of
+that too. Both the Classic frame (Era, Anniversary) and the Mainline one (Forever) name and
+place all of this identically, so one anchor covers three clients.
+
+The cost is that a full page's last line runs under the button; the alternative was
+colliding with one of Blizzard's controls on page two of every book.
+
+**Every clip carries a Report action**, the bug icon the quests and zones clips use, falling
+back to an "R" on the three private-server clients where that texture does not exist. The
+client cannot open a browser or post anywhere, so pressing it raises a popup holding one
+selectable address — `UI/CopyLink.lua`, the same shape the zones addon carries, and not
+shared with it because two addons cannot own one StaticPopup id.
+
+The address is `https://spoken.rusty.one/books/r/{pageTextID}`, built from the page id
+alone. That is deliberate: the id is frozen, so the addon can address any page with no
+per-page table to ship and nothing to escape — the trade the zones landing page makes with
+its `{mapID}/{slug}` path.
+
+**The landing page is `app/books/r/[pageId]/page.tsx`**, shaped like the zones one: the
+page's words, its current take to listen to, and the report form already pointed at the
+right line. Not the explorer — somebody arriving from the game is a player, not a
+collaborator, and flags, takes and regenerate controls answer questions they did not ask.
+`pageById` in `lib/books/catalogue.ts` resolves the id, off the memoised catalogue the rest
+of the section already loads.
+
+Reports from books needed the section admitted to `SOURCES` in `lib/reports/reports.ts`;
+migration `0028` had already widened the table's check constraint, so the database was
+waiting for it. `/api/reports` resolves a books address the strict way it resolves a zones
+one — the reporter arrived from a page this site rendered, so an id that names nothing is a
+typo rather than a corpus that failed to load — and takes the lineId from the resolved page
+rather than from the request body, so nothing the reporter can edit decides which row
+triage sees.
+
+`UI/Layout.lua` is the fourth copy of a file that must stay byte-identical across
+SpokenPlayer, SpokenQuests, SpokenZones and SpokenBooks;
+`pipelines/quests/tests/test_package.py` is what enforces that.
+
+### Installing it in a client
+
+```bash
+make books-deploy                  # symlink into Classic Era
+CLIENT=forever make books-deploy   # or the Forever beta (wow_classic_beta)
+make books-status                  # what is installed where, and how many mp3s exist
+```
+
+## Releasing
+
+The two CurseForge projects:
+
+| Project | id | Slug |
+| --- | --- | --- |
+| Spoken Books | 1701514 | `spoken-books` |
+| Spoken Books Audio | 1701520 | `spoken-books-audio` |
+
+There is no `scripts/books/release.sh` yet. When there is, those ids belong in its
+`target_project()` the way the quests and zones ones do — and an unknown target must fail
+rather than default, for the reason `docs/quests/CLAUDE.md` gives: an id left in that
+function is an id something eventually uploads to, and uploading a books pack over another
+project is not recoverable from this side.
+
+The project pages themselves are `curseforge/books/*.md`; paste
+`dist/descriptions/<slug>.md` after `make descriptions`, then record it with
+`make descriptions-published`.

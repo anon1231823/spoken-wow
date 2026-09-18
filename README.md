@@ -8,7 +8,7 @@ several addons.
 | **Spoken** | nothing — it *is* the player: the queue, the frame, the minimap button | published as Spoken Player, id 1700375 |
 | **SpokenQuests** | quest dialogue and NPC gossip | shipping, renamed from VoiceOver Redux |
 | **SpokenZones** | zone and subzone lore | shipping, renamed from ZoneLore |
-| **SpokenBooks** | books, letters and other in-world texts | corpus and site section built, addon next |
+| **SpokenBooks** | books, letters and other in-world texts | addon built, narration in progress |
 
 Every feature addon plays through `SpokenPlayer`, so a player who installs two of
 them gets one queue and one window rather than two of each. Addon managers

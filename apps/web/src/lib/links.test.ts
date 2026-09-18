@@ -9,7 +9,20 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { lexiconHref, questsHref, zonesHref } from "./links";
+import { lexiconHref, questsHref, reportHref, zonesHref } from "./links";
+
+describe("reportHref", () => {
+  it("sends a triager to the landing page each section serves", () => {
+    expect(reportHref("quests", "quest/84/accept")).toBe("/quests/r/quest/84/accept");
+    expect(reportHref("zones", "1411/razor-hill")).toBe("/zones/r/1411/razor-hill");
+    // A books target is the bare page id the addon put in the address.
+    expect(reportHref("books", "261")).toBe("/books/r/261");
+  });
+
+  it("escapes a segment without escaping the separators", () => {
+    expect(reportHref("zones", "1411/a b&c")).toBe("/zones/r/1411/a%20b%26c");
+  });
+});
 
 describe("questsHref", () => {
   it("addresses the section, never the site root", () => {

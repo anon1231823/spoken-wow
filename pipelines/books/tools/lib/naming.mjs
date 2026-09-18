@@ -23,6 +23,9 @@ export function fileFor(pageId) {
 // no bitwise operators, which the 5.1 Lua these clients run does not have either. Changing
 // the constants means re-exporting the data module, because its tables are keyed on this.
 //
+// It exists because a book's title does not identify it: seven books in this corpus are
+// called "Decoded Twilight Text", each holding different words.
+//
 // The modulus is the largest signed 32-bit prime, which keeps sum * FACTOR + byte under
 // 2^36 and therefore exact in the doubles Lua stores numbers as.
 //

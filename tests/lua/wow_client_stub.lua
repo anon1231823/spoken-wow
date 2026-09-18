@@ -24,6 +24,15 @@ local world = {
     missing = {},      -- paths PlaySoundFile refuses, as a set
     cvars = {},        -- overrides; anything unset reads as "1"
     cvarLog = {},      -- every SetCVar, as {key, value}, so a toggle can be asserted
+
+    -- The book frame, as ItemTextFrame reports it. `itemTextCreator` is what makes a
+    -- letter mail rather than a book, and is nil for everything the game wrote itself.
+    itemText = nil,       -- the page's words
+    itemTextItem = nil,   -- the object's or item's name, i.e. the book's title
+    itemTextPage = 1,
+    itemTextCreator = nil,
+    itemTextHasNext = false,
+    itemTextMaterial = "Parchment",
 }
 M.world = world
 
@@ -123,9 +132,17 @@ local function Widget(kind, name)
     -- Recorded rather than swallowed by the catch-all below: where a control sits is what
     -- a settings panel is, and a panel whose rows drift apart has no other symptom.
     function w:SetPoint(point, a, b, c, d)
-        local x, y
-        if type(a) == "number" then x, y = a, b else x, y = c, d end
-        self.anchor = { point = point, x = x, y = y }
+        local x, y, relativeTo, relativePoint
+        if type(a) == "number" then
+            x, y = a, b
+        else
+            -- What it was anchored TO, not just where: a button placed against one of the
+            -- client's own widgets is making a claim about that widget, and the claim is
+            -- what a test has to be able to read back.
+            relativeTo, relativePoint, x, y = a, b, c, d
+        end
+        self.anchor = { point = point, x = x, y = y,
+            relativeTo = relativeTo, relativePoint = relativePoint }
         return self
     end
     function w:ClearAllPoints() self.anchor = nil end
@@ -349,6 +366,56 @@ _G.C_Timer = {
 }
 _G.ERR_ZONE_EXPLORED = "Discovered %s."
 function _G.GetGossipText() return world.gossipText or "" end
+
+-- The book UI, which is the same API on all three targets: Era, Anniversary and Forever.
+-- ItemTextFrame serves mail as well as books, which is why a test can set a creator.
+function _G.ItemTextGetText() return world.itemText end
+function _G.ItemTextGetItem() return world.itemTextItem end
+function _G.ItemTextGetPage() return world.itemTextPage or 1 end
+function _G.ItemTextGetCreator() return world.itemTextCreator end
+function _G.ItemTextHasNextPage() return world.itemTextHasNext and true or false end
+function _G.ItemTextGetMaterial() return world.itemTextMaterial end
+
+-- The frame itself, not just its getters: an addon that hangs a button on the book window
+-- needs something to parent it to. One of the client's own frames, created here so
+-- ResetFrames keeps it -- an addon that lost the book window between tests would be
+-- rebuilding its button against a frame the client never replaces.
+_G.ItemTextFrame = MakeFrame("ItemTextFrame")
+_G.ItemTextFrame:Hide()
+
+-- The page itself and the arrow above it, because those are what an addon anchors to.
+-- Sized and placed as both frames in Gethe/wow-ui-source do -- Classic for Era and
+-- Anniversary, Mainline for Forever, which agree on all of this: the arrow 32x32 centred 75
+-- right and 41 down from the top-left corner, the page 280x355 anchored 33 in from the
+-- top-right and 63 down.
+_G.ItemTextPrevPageButton = Widget("Button", "ItemTextPrevPageButton")
+_G.ItemTextPrevPageButton:SetParent(_G.ItemTextFrame)
+_G.ItemTextPrevPageButton:SetWidth(32)
+_G.ItemTextPrevPageButton:SetHeight(32)
+_G.ItemTextPrevPageButton:SetPoint("CENTER", _G.ItemTextFrame, "TOPLEFT", 75, -41)
+
+_G.ItemTextScrollFrame = Widget("ScrollFrame", "ItemTextScrollFrame")
+_G.ItemTextScrollFrame:SetParent(_G.ItemTextFrame)
+_G.ItemTextScrollFrame:SetWidth(280)
+_G.ItemTextScrollFrame:SetHeight(355)
+_G.ItemTextScrollFrame:SetPoint("TOPRIGHT", _G.ItemTextFrame, "TOPRIGHT", -33, -63)
+
+--- Put a page on screen, as ITEM_TEXT_READY would find it.
+function M.ShowPage(page)
+    world.itemText = page.text
+    world.itemTextItem = page.title
+    world.itemTextPage = page.number or 1
+    world.itemTextCreator = page.creator
+    world.itemTextHasNext = page.hasNext or false
+    _G.ItemTextFrame:Show()
+end
+
+--- Close it, as ITEM_TEXT_CLOSED leaves things.
+function M.ClosePage()
+    world.itemText, world.itemTextItem, world.itemTextCreator = nil, nil, nil
+    world.itemTextPage, world.itemTextHasNext = 1, false
+    _G.ItemTextFrame:Hide()
+end
 function _G.GetGreetingText() return world.greetingText or "" end
 function _G.GetNumGossipActiveQuests() return 0 end
 function _G.GetNumGossipAvailableQuests() return 0 end

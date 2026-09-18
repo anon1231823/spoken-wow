@@ -29,9 +29,10 @@ const VIEWS: { value: Status | "all"; label: string }[] = [
 ];
 
 const SOURCE_VIEWS: { value: Source | "all"; label: string }[] = [
-  { value: "all", label: "Both" },
+  { value: "all", label: "All" },
   { value: "quests", label: "Quests" },
   { value: "zones", label: "Zones" },
+  { value: "books", label: "Books" },
 ];
 
 /**

@@ -8,6 +8,8 @@
  * 200 is the kind a build cannot catch, so the addresses live in one tested module.
  */
 
+import type { Source } from "@/lib/reports/reports";
+
 /** Which field a free-text query is matched against. Mirrors LineFilters["filter"]. */
 type Scope = "any" | "npc" | "quest" | "text";
 
@@ -45,10 +47,10 @@ export function zonesHref(options: { q?: string; mapID?: number } = {}): string 
  * form, which is what a triager wants to see.
  *
  * `target` is stored as the addon produced it: 'quest/84/accept' or 'npc/5678' for quests,
- * '<mapID>/<slug>' for zones. Both are already path-shaped, and both routes are catch-alls
- * over exactly that shape.
+ * '<mapID>/<slug>' for zones, and a bare page id for books. All three are already
+ * path-shaped, and each section's route takes exactly its own shape.
  */
-export function reportHref(source: "quests" | "zones", target: string): string {
+export function reportHref(source: Source, target: string): string {
   return `/${source}/r/${target.split("/").map(encodeURIComponent).join("/")}`;
 }
 

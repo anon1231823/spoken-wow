@@ -47,3 +47,22 @@ from the order MySQL returned the owners in.
 `ItemTextFrame` serves mail as well as books. When the addon is written, a letter with a
 creator, or the frame opened underneath `MailFrame`, must be skipped — otherwise it reads
 the player's own post aloud.
+
+## The droplet's copy of Sounds.lua is ephemeral
+
+When the queue drains, the site rebuilds `addons/SpokenBooksAudio/Data/Sounds.lua` -- but
+inside the release directory it is running from, which is deleted five deploys later. That
+write is what keeps a take reachable if anybody reads the file from that release; it is not
+what ships.
+
+What ships is the committed one. Before cutting a sound pack, bring the takes and the
+narration home and regenerate it here:
+
+```bash
+make books-db-pull     # the droplet's takes -> local database
+make books-lookup      # -> addons/SpokenBooksAudio/Data/Sounds.lua (committed)
+make books-pull        # the mp3s -> pipelines/books/audio
+make books-sounds      # -> addons/SpokenBooksAudio/Sounds (not committed)
+```
+
+The zones side has the same arrangement for the same reason.
