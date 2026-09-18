@@ -1,0 +1,18 @@
+## Interface: 11509, 20506, 16001
+## Title: Spoken Books
+## Notes: Books, letters and notes read aloud through the Spoken player.
+## Version: 1.0.0
+## Author: rusty
+## SavedVariables: SpokenBooksDB
+## OptionalDeps: SpokenPlayer, SpokenBooksAudio
+# SpokenPlayer is the player this addon speaks through. Optional here so a hand-installed
+# copy without it loads and says what is missing rather than failing to load at all; addon
+# managers install it from the CurseForge dependency. The pack is not a registration
+# mechanism either -- it registers itself into SpokenBooksAudioPacks and Audio.lua walks
+# that on demand -- so this list is load order only.
+## IconTexture: Interface\AddOns\SpokenBooks\Textures\AddonIcon.tga
+## X-License: Addon code MIT. Book text is Blizzard's, extracted from the game.
+
+Checksum.lua
+Data/Books.lua
+Core.lua

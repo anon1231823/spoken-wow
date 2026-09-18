@@ -61,6 +61,7 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@$(LUA) tests/lua/duplicate_player_test.lua
 	@$(LUA) tests/lua/zones_options_test.lua
 	@$(LUA) tests/lua/quests_options_test.lua
+	@$(LUA) tests/lua/books_source_test.lua
 	@$(LUA) tests/lua/migration_test.lua
 
 # The Python half needs its own venv:
