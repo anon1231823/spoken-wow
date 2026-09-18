@@ -44,6 +44,8 @@ python -m venv .venv && source .venv/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
+   Add `-r requirements-dev.txt -r requirements-extract.txt` if you intend to run the
+   tests; see [Tests](#tests) for why the second one is not optional there.
 3. Copy `.env.example` to `.env` and fill in your ElevenLabs API key:
 ```bash
 cp .env.example .env
@@ -816,10 +818,20 @@ unless `VoiceOver.DataModules` exists, so the dependency bought nothing and cost
 ## Tests
 
 ```bash
-pip install -r requirements-dev.txt && pytest       # the pipeline
-cd web && pnpm typecheck && pnpm test               # the explorer
-make test-player                                    # the addon, needs luajit
+cd pipelines/quests
+pip install -r requirements-dev.txt -r requirements-extract.txt && pytest
 ```
+
+```bash
+pnpm -r typecheck && pnpm -r test                   # the sites
+make test-player                                    # the addons, needs luajit
+```
+
+**`requirements-extract.txt` is needed for the tests and not for the pipeline.**
+`tests/test_corpus.py` imports pandas, which only the corpus refresh otherwise uses, and an
+import missing at collection time fails the whole run before a single test executes — so
+installing only `requirements-dev.txt` reports zero tests passing rather than one module
+skipped. `make test` from the repo root runs the same suite and fails the same way.
 
 `make test-player` runs the player's quest dispatch against a stubbed client
 (`tests/lua/wow_client_stub.lua`), on LuaJIT because it speaks the same Lua 5.1 the game does.

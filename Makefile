@@ -56,8 +56,19 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@$(LUA) tests/lua/quests_options_test.lua
 	@$(LUA) tests/lua/migration_test.lua
 
+# The Python half needs its own venv, and needs requirements-extract.txt in it as well as
+# requirements-dev.txt: tests/test_corpus.py imports pandas, which nothing else outside the
+# corpus refresh uses, and a missing import at collection time fails the run before a single
+# test executes. See docs/quests/README.md#tests.
+#
+#   cd pipelines/quests && python -m venv .venv \
+#     && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt -r requirements-extract.txt
+
 test: test-player ## Everything: both webs, the Python pipeline, the addons
 	@pnpm -r test
+	@[ -x pipelines/quests/.venv/bin/python ] || { \
+	  echo "No venv at pipelines/quests/.venv -- see the comment above 'test' in the Makefile"; \
+	  exit 1; }
 	@cd pipelines/quests && ./.venv/bin/python -m pytest -q
 
 lint: ## The checks CI gates on
