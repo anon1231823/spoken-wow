@@ -12,13 +12,13 @@
 # 128kbps master every shipped tier is transcoded from, so it describes itself as
 # the high tier. Data/Sounds.lua reads these back at load time and reports them
 # to ZoneLore, which is how two tiers installed side by side can be told apart.
-## X-ZoneLore-Quality: high
-## X-ZoneLore-Bitrate: 128
+## X-SpokenZones-Quality: high
+## X-SpokenZones-Bitrate: 128
 
 # The language this pack narrates, read back the same way. ZoneLore plays only
 # packs matching the language it is showing text in: an English voice reading
 # under German prose is worse than the silence it would replace.
-## X-ZoneLore-Language: enUS
+## X-SpokenZones-Language: enUS
 
 # Defines the ZoneLoreAudioPacks registry entry that ZoneLore reads. No dependency
 # is declared in either direction: ZoneLore reads its lore without narrating when

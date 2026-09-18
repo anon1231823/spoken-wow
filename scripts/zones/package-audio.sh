@@ -147,8 +147,8 @@ fi
 
 # The language is set by rewriting this line, so a .toc without it would ship a
 # pack that reports itself as English and plays under English text only.
-if ! grep -q '^## X-ZoneLore-Language:' "$TOC"; then
-  echo "error: $TOC has no '## X-ZoneLore-Language:' line to rewrite" >&2
+if ! grep -q '^## X-SpokenZones-Language:' "$TOC"; then
+  echo "error: $TOC has no '## X-SpokenZones-Language:' line to rewrite" >&2
   exit 1
 fi
 
@@ -236,9 +236,9 @@ for tier in "${tiers[@]}"; do
   sed -i.bak \
     -e "s|^## IconTexture:.*|## IconTexture: Interface\\\\AddOns\\\\$folder\\\\Textures\\\\AddonIcon.tga|" \
     -e "s|^## Title:.*|## Title: $title|" \
-    -e "s|^## X-ZoneLore-Quality:.*|## X-ZoneLore-Quality: $tier|" \
-    -e "s|^## X-ZoneLore-Bitrate:.*|## X-ZoneLore-Bitrate: $bitrate|" \
-    -e "s|^## X-ZoneLore-Language:.*|## X-ZoneLore-Language: $LOCALE|" \
+    -e "s|^## X-SpokenZones-Quality:.*|## X-SpokenZones-Quality: $tier|" \
+    -e "s|^## X-SpokenZones-Bitrate:.*|## X-SpokenZones-Bitrate: $bitrate|" \
+    -e "s|^## X-SpokenZones-Language:.*|## X-SpokenZones-Language: $LOCALE|" \
     "$staging/$folder/$folder.toc"
   rm -f "$staging/$folder/$folder.toc.bak"
 
