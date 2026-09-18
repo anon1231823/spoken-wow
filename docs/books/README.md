@@ -132,3 +132,22 @@ make books-deploy                  # symlink into Classic Era
 CLIENT=forever make books-deploy   # or the Forever beta (wow_classic_beta)
 make books-status                  # what is installed where, and how many mp3s exist
 ```
+
+## Releasing
+
+The two CurseForge projects:
+
+| Project | id | Slug |
+| --- | --- | --- |
+| Spoken Books | 1701514 | `spoken-books` |
+| Spoken Books Audio | 1701520 | `spoken-books-audio` |
+
+There is no `scripts/books/release.sh` yet. When there is, those ids belong in its
+`target_project()` the way the quests and zones ones do — and an unknown target must fail
+rather than default, for the reason `docs/quests/CLAUDE.md` gives: an id left in that
+function is an id something eventually uploads to, and uploading a books pack over another
+project is not recoverable from this side.
+
+The project pages themselves are `curseforge/books/*.md`; paste
+`dist/descriptions/<slug>.md` after `make descriptions`, then record it with
+`make descriptions-published`.
