@@ -3,14 +3,35 @@ setfenv(1, VoiceOver)
 ---@class Addon : AceAddon, AceAddon-3.0, AceEvent-3.0, AceTimer-3.0
 ---@field db VoiceOverConfig|AceDBObject-3.0
 local AceAddon = LibStub("AceAddon-3.0")
--- Every AceAddon name a player of this lineage has registered under: upstream's, and this
--- fork's own before the rename. Loading two used to cause a duplicate AceAddon error and two
--- event handlers, so each is disabled for this session; the folders are disabled for the next
--- login further down, where the same list appears as folder names.
-for _, name in ipairs({ "VoiceOver", "VoiceOverContinued", "VoiceOverRedux" }) do
-    local supersededAddon = AceAddon:GetAddon(name, true)
-    if supersededAddon and supersededAddon.Disable then
-        supersededAddon:Disable()
+
+-- Every player of this lineage, oldest first: the AceAddon name it registers under, and the
+-- folder it installs into. Upstream's, and this fork's own two names before the rename -- a
+-- rename uninstalls nothing, so a former name is as much of a duplicate as upstream's. Names
+-- are only ever added to this list.
+local SUPERSEDED_PLAYERS = {
+    { name = "VoiceOver", folder = "AI_VoiceOver" },
+    { name = "VoiceOverContinued", folder = "AI_VoiceOver_Continued" },
+    { name = "VoiceOverRedux", folder = "VoiceOverRedux" },
+}
+
+-- The folders of the players that actually registered. Two players handle the same events and
+-- queue the same line, so each is stopped here for this session and its folder disabled for
+-- the next login further down; loading two also used to cause a duplicate AceAddon error.
+--
+-- Registering is what makes a folder a duplicate, rather than merely existing. A folder that
+-- registered nothing is either an old install already switched off, or the TOC-only tombstone
+-- this release ships under the old name -- which holds no code at all and exists only to keep
+-- the old SavedVariables file loading for AdoptSavedVariables below. On a fresh install that
+-- tombstone arrives inside this addon's own zip, so treating an installed folder as a
+-- duplicate opened every first login with a dialog about an addon nobody installed.
+local supersededFolders = {}
+for _, player in ipairs(SUPERSEDED_PLAYERS) do
+    local supersededAddon = AceAddon:GetAddon(player.name, true)
+    if supersededAddon then
+        if supersededAddon.Disable then
+            supersededAddon:Disable()
+        end
+        table.insert(supersededFolders, player.folder)
     end
 end
 Addon = AceAddon:NewAddon("SpokenQuests", "AceEvent-3.0", "AceTimer-3.0")
@@ -622,37 +643,19 @@ function Addon:OnInitialize()
         Debug:Record("event-bridge-ready", "Stabilized quest watcher and deferred greeting bridge are registered")
     end
 
-    -- Every player this addon has ever been called, oldest first. Two players handle the same
-    -- events and both queue the same line, so exactly one may be enabled - and a rename does
-    -- not uninstall anything, which makes the fork's own former name as much of a duplicate
-    -- as upstream's. A name is only ever added here, never removed. The last is a folder that
-    -- may hold the real old player (hand-installed, or a manager that failed to replace it)
-    -- rather than the tombstone; either way it must not run, and its saved variables were
-    -- adopted above, this login. DisableAddOn takes effect only on the next.
-    local SUPERSEDED_PLAYERS = { "AI_VoiceOver", "AI_VoiceOver_Continued", "VoiceOverRedux" }
-
-    -- Camelot answers GetAddOnInfo for a folder that is not installed by handing the
-    -- name straight back, so the old truthiness test flagged all three players on a
-    -- client where none of them exist and popped the duplicate dialog at every login.
-    -- DoesAddOnExist is the honest question; the loop is the answer on clients without it.
-    local function IsAddOnInstalled(name)
-        if C_AddOns and C_AddOns.DoesAddOnExist then
-            return C_AddOns.DoesAddOnExist(name)
-        end
-        for i = 1, GetNumAddOns() do
-            if string.lower(GetAddOnInfo(i) or "") == string.lower(name) then
-                return true
-            end
-        end
-        return false
-    end
-
+    -- The folders of the players that registered this session, stopped at the top of this
+    -- file. Disabling one takes effect on the next login only, which is why it waits until
+    -- here: the saved variables of the folder carrying this addon's own former name were
+    -- adopted above, this login, so there is nothing left in it to lose.
+    --
+    -- Through pcall because current clients reserve enabling and disabling an addon for their
+    -- own UI. A client that refuses raises its own "blocked from an action only available to
+    -- the Blizzard UI" dialog and an error with it, and every quest hook below this still has
+    -- to be installed. The duplicate is stopped for the session either way.
     local disabled = {}
-    for _, addon in ipairs(SUPERSEDED_PLAYERS) do
-        if IsAddOnInstalled(addon) then
-            DisableAddOn(addon)
-            table.insert(disabled, format('"%s"', addon))
-        end
+    for _, folder in ipairs(supersededFolders) do
+        pcall(DisableAddOn, folder)
+        table.insert(disabled, format('"%s"', folder))
     end
 
     if next(disabled) and not self.db.profile.SeenDuplicatePlayerDialog then

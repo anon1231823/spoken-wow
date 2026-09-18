@@ -3,6 +3,15 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 2.0.1 — 2026-09-18
+
+- **A fresh install no longer raises the client's "blocked from an action only available to the
+  Blizzard UI" dialog.** This release carries a placeholder folder under the old `ZoneLore`
+  name, so that your settings and narration history keep loading until they have been migrated;
+  the addon switched that folder off on sight, and current clients refuse that to an addon and
+  say so in a dialog of their own. A real ZoneLore install is still switched off, so it cannot
+  narrate over this one.
+
 ## 2.0.0 — 2026-09-18
 
 Renamed to **Spoken Zones**, and narration now plays through the **Spoken Player** addon
