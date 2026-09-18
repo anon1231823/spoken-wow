@@ -1,0 +1,3 @@
+# The extract's intermediate output. book_line is the corpus; this is only what the
+# importer read on the way there, and it is reproducible from the dump in minutes.
+corpus/extract.json
