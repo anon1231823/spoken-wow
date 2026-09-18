@@ -307,6 +307,41 @@ local zones = {
 		full = "Long before the Forsaken made it their own, the Undercity had a name and a purpose. Far beneath the palace of Lordaeron ran the ancient crypts of its royal dead, its dungeons, its sewers. It was meant only for prisoners and corpses, but the poorest of Lordaeron's people crowded down into the dark anyway, and the guards' sweeps to clear them out never held.\n\nWhen the Lich King's grip on his creations slipped, Sylvanas Windrunner broke from the Scourge with those undead who had kept their minds, and turned on Arthas, the fallen prince who had made her what she was. She lured him into a trap in the ruined kingdom; he escaped with Kel'Thuzad's help and fled north to become the Lich King himself. Sylvanas and her followers, left masters of the field, named themselves the Forsaken and claimed the crypts beneath the wrecked capital, finishing the stronghold the Scourge had begun.\n\nWhat stands now is a maze built for defense: rivers of poisonous sludge running through every avenue, the air thick with fumes the living can barely stand to breathe. For the Forsaken it is shelter in a world that still hunts them.",
 		source = "https://warcraft.wiki.gg/wiki/Undercity",
 	},
+	[2482] = {
+		pending = true,
+		name = "Mount Hyjal",
+		short = "",
+		full = "",
+		source = "",
+	},
+	[2521] = {
+		pending = true,
+		name = "Zephras Isle",
+		short = "",
+		full = "",
+		source = "",
+	},
+	[2524] = {
+		pending = true,
+		name = "Darkspear Islands",
+		short = "",
+		full = "",
+		source = "",
+	},
+	[2548] = {
+		pending = true,
+		name = "Riverglades",
+		short = "",
+		full = "",
+		source = "",
+	},
+	[2652] = {
+		pending = true,
+		name = "Shen'dralas",
+		short = "",
+		full = "",
+		source = "",
+	},
 }
 
 SpokenZones:RegisterLoreData("enUS", "zones", zones)

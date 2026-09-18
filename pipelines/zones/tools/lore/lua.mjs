@@ -34,6 +34,20 @@ function guard(lang) {
 }
 
 /**
+ * A place the client has that nobody has written about yet: it ships so the addon can
+ * name it, and the marker is what tells the addon to say "not written yet" rather than
+ * draw an empty panel -- in Lua the empty string is truthy, so `entry.full or ...` would
+ * happily render nothing at all.
+ *
+ * It leads the entry rather than trailing it because validate.mjs reads these files in a
+ * single forward pass: a flag arriving after the empty fields it excuses would come too
+ * late to excuse them.
+ */
+function pendingLine(entry, indent) {
+  return !entry.full.trim() || !entry.short.trim() ? [`${indent}pending = true,`] : [];
+}
+
+/**
  * addon/SpokenZones/Data/<lang>/Zones.lua.
  *
  * @param entries {name, short, full, source, mapID}[] -- any order; sorted here, because
@@ -55,6 +69,7 @@ export function emitZones(entries, lang = BASE_LOCALE) {
 
   for (const e of [...entries].sort((a, b) => a.mapID - b.mapID)) {
     lines.push(`\t[${e.mapID}] = {`);
+    lines.push(...pendingLine(e, "\t\t"));
     lines.push(`\t\tname = ${luaString(e.name)},`);
     lines.push(`\t\tshort = ${luaString(e.short)},`);
     lines.push(`\t\tfull = ${luaString(e.full)},`);
@@ -110,6 +125,7 @@ export function emitSubzones(entries, zoneNames, lang = BASE_LOCALE) {
     lines.push(`\t[${mapID}] = {`);
     for (const e of zoneEntries) {
       lines.push(`\t\t[${luaString(e.key)}] = {`);
+      lines.push(...pendingLine(e, "\t\t\t"));
       lines.push(`\t\t\tname = ${luaString(e.name)},`);
       lines.push(`\t\t\tshort = ${luaString(e.short)},`);
       lines.push(`\t\t\tfull = ${luaString(e.full)},`);

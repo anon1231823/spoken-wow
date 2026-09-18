@@ -17,7 +17,7 @@ import { readFile } from "node:fs/promises";
 
 import { BASE_LOCALE, isLocale } from "../lib/locales.mjs";
 import { zonesLua, subzonesLua } from "../lib/loredata.mjs";
-import { loadEraAreas } from "../lib/era.mjs";
+import { loadClientAreas } from "../lib/era.mjs";
 import { emitZones, emitSubzones } from "./lua.mjs";
 import { isEnabled, readCurrent, writeCorpus } from "./store.mjs";
 import { close } from "../voice/db.mjs";
@@ -49,13 +49,31 @@ async function main() {
   }
 
   // The database keeps every line ever scraped, including places the wiki's
-  // categories offered that the Era client cannot report (Cataclysm and later).
-  // Those rows stay as history; the addon only ships what the client can ask for.
-  const era = await loadEraAreas();
-  const rows = allRows.filter((row) => row.kind !== "subzone" || era.keys.has(row.key));
-  const notInEra = allRows.length - rows.length;
-  if (notInEra) {
-    console.log(`leaving ${notInEra} line(s) behind: not in the Era client (build ${era.build})`);
+  // categories offered that no client can report (Cataclysm and later). Those rows stay
+  // as history; the addon only ships what a client can ask for -- either client, since
+  // it ships for both, which is why this is the union and not the Era seed alone.
+  const client = await loadClientAreas();
+  const rows = allRows.filter((row) => row.kind !== "subzone" || client.keys.has(row.key));
+  const unreachable = allRows.length - rows.length;
+  if (unreachable) {
+    console.log(
+      `leaving ${unreachable} line(s) behind: no client can report them ` +
+        `(builds ${client.builds.join(", ")})`,
+    );
+  }
+
+  // A 'discovered' row is a place the client has and nobody has written about yet. It
+  // ships anyway, with empty text and a `pending` marker, because a place the player can
+  // stand in and see named on the map is worth listing even before anyone has described
+  // it: the addon says "not written yet" where it would otherwise say nothing at all, and
+  // the subzone shows up in the zone's list rather than being invisible.
+  //
+  // The marker is what keeps that honest. validate.mjs fails on an entry with empty text,
+  // correctly, because for every other origin an empty line is a broken one -- so pending
+  // is the exemption it checks for, not a special case for the word "discovered".
+  const unwritten = rows.filter((row) => !row.full.trim() || !row.short.trim()).length;
+  if (unwritten) {
+    console.log(`${unwritten} line(s) ship as pending: discovered, not written yet`);
   }
 
   const edited = rows.filter((row) => row.origin === "edited").length;

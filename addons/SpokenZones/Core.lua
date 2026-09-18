@@ -154,6 +154,23 @@ function SpokenZones:GetMapName(mapID)
 	return entry and entry.name or nil
 end
 
+-- A place the client can name that nobody has written about yet. The corpus ships these
+-- so the addon can list the subzone and say so, rather than leaving a place the player is
+-- standing in absent from the panel entirely.
+--
+-- The empty-string check is not belt and braces: in Lua "" is truthy, so every
+-- `entry.full or entry.short or fallback` in the UI would render a blank body for one of
+-- these. Ask this instead of asking whether the entry exists.
+function SpokenZones:IsPending(entry)
+	if not entry then
+		return false
+	end
+	if entry.pending then
+		return true
+	end
+	return (entry.full or "") == "" and (entry.short or "") == ""
+end
+
 function SpokenZones:GetLore(mapID)
 	if not mapID then
 		return nil

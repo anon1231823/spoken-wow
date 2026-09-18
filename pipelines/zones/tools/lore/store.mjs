@@ -76,9 +76,17 @@ export async function readHistory(lineId) {
 // An entry with no text is not a diagnosable failure later on: it ships an addon that
 // is simply silent in that subzone, which is the failure this project is least able to
 // notice by itself.
+//
+// A 'discovered' entry is the one exception, and it is one because it answers that
+// objection rather than dodging it: the client says the place exists, nobody has written
+// it yet, and the addon names it and says so out loud. Silence is what the marker exists
+// to prevent. Any other origin arriving with no text is still the bug this guard was
+// written for -- a scrape that came back empty, an edit that blanked a line.
 function assertComplete(entries) {
   for (const e of entries) {
-    if (!e.full) throw new Error(`refusing to write: ${lineIdFor(e)} has no text`);
+    if (!e.full && e.origin !== "discovered") {
+      throw new Error(`refusing to write: ${lineIdFor(e)} has no text`);
+    }
   }
 }
 

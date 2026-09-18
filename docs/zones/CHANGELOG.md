@@ -3,6 +3,18 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
+## 2.0.2 — 2026-09-18
+
+Places the client knows but nobody has written about yet now appear in the panel.
+
+- The **Forever** client (1.60.1) adds zones and subzones vanilla never had. Five zones --
+  Mount Hyjal, Zephras Isle, Darkspear Islands, Riverglades and Shen'dralas -- and 91
+  subzones are now listed by name.
+- They have no lore yet. Selecting one says so rather than showing an empty panel, and the
+  play button stays dark until there is something to read. Lore is being written; it will
+  arrive in a later release without you needing to reinstall anything.
+- Everything already written is unchanged.
+
 ## 2.0.1 — 2026-09-18
 
 - **A fresh install no longer raises the client's "blocked from an action only available to the
