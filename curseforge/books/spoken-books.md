@@ -2,7 +2,7 @@
 project: 1701514
 slug: spoken-books
 name: Spoken Books
-summary: Books, letters and notes read aloud. Open a book and it narrates — following you as you turn the pages, and stopping when you close it.
+summary: Books, letters and notes read aloud. Open a book and it narrates — following you as you turn the pages, and reading on after you close it.
 categories:
   - Miscellaneous
   - Roleplay
@@ -13,7 +13,7 @@ addonReadme: addons/SpokenBooks/README.md
 
 **Every book in the world, read aloud.** One of the Spoken addons, narrating through the [Spoken Player](https://www.curseforge.com/wow/addons/spoken-player) it shares with Spoken Quests and Spoken Zones — your addon manager installs it alongside.
 
-Open a book and it starts reading. Turn the page and it follows you. Close it and it stops. Letters and notes in your bags work the same way, and so do the plaques and gravestones out in the world.
+Open a book and it starts reading. Turn the page and it follows you. Close it and it reads on — shut the book, get back on the road, and hear the rest of it. `/spb stop` when you have heard enough. Letters and notes in your bags work the same way, and so do the plaques and gravestones out in the world.
 
 ## What it reads
 

@@ -93,8 +93,11 @@ function SpokenBooks:SyncTo(pageId)
 	return self:PlayFrom(pageId)
 end
 
---- The book was closed. Narration goes with it: a book is read while it is open, and a
---- voice carrying on over a closed frame is describing something nobody is looking at.
+--- Stop this source, and only this source: the queue may be carrying a quest line that has
+--- nothing to do with a book.
+---
+--- Reached by `/spb stop` and by SyncTo rebuilding, not by closing the frame -- a book
+--- carries on being read after it is shut.
 function SpokenBooks:StopReading()
 	if self.source then
 		self.source:StopAll()

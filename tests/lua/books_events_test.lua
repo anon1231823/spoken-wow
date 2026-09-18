@@ -66,10 +66,13 @@ Expect("...and remembers where the reader is", B.lastPage, 262)
 -- what the client actually does and what makes `/spb read` afterwards a no-op.
 stub.ClosePage()
 stub.FireEvent("ITEM_TEXT_CLOSED")
-Expect("closing the book stops narration", #QueuedPages(), 0)
-Expect("...and forgets the page", B.lastPage, nil)
+Expect("closing the book does not stop narration", #QueuedPages(), 3)
+Expect("...but forgets the page, because there is no page on screen", B.lastPage, nil)
 
 ---------------------------------------------------------------- mail, through the events
+-- Stopped by hand, which closing the frame above no longer does: this section is about what
+-- mail queues, not about the book still being read behind it.
+B:StopReading()
 stub.ShowPage({ title = "A letter", number = 1, text = REGISTRY_1, creator = "Somebody" })
 stub.FireEvent("ITEM_TEXT_READY")
 Expect("mail queues nothing", #QueuedPages(), 0)

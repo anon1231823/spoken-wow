@@ -51,6 +51,13 @@ end
 --- Registers this addon with the player. Returns the source, or nil when there is no
 --- player to register with -- which is not an error: the addon loads, and says so.
 function SpokenBooks:SetupSource()
+	-- PLAYER_ENTERING_WORLD fires again on every loading screen, and a second registration
+	-- would hand back a source the playlist is not holding -- so a book queued before a zone
+	-- change could no longer be stopped by the one this addon kept.
+	if self.source then
+		return self.source
+	end
+
 	if not self:PlayerAvailable() then
 		self.compatible = false
 		return nil
@@ -69,8 +76,10 @@ function SpokenBooks:SetupSource()
 		-- one, queueing a four-page book keeps the first page and the last and silently
 		-- discards the middle, which is how this was found.
 		--
-		-- Nothing accumulates regardless: closing the book stops this source, and turning to
-		-- a page that is not queued rebuilds from there.
+		-- Nothing accumulates regardless, even though closing the book no longer stops this
+		-- source: turning to -- or opening -- a page that is not already queued rebuilds this
+		-- source's queue from there, so what waits behind the voice is one book and never a
+		-- session's worth of them.
 		queueLimit = nil,
 		-- Durations come from a generated lookup and are exact, so the gap only has to
 		-- separate two pages of prose rather than absorb a bad measurement.
@@ -87,6 +96,18 @@ function SpokenBooks:SetupSource()
 	-- draws nothing, which looks like a rendering bug rather than a missing declaration.
 	if Spoken.RegisterBullet then
 		Spoken:RegisterBullet("book", [[Interface\AddOns\SpokenPlayer\Textures\Book]], 14)
+	end
+
+	-- What puts this addon in the player's menu beside the other two. There is one minimap
+	-- button for all of Spoken and it lists what each source contributed, so a source that
+	-- contributes no entry is absent from that menu however correctly it registered --
+	-- indistinguishable, to a reader, from an addon that did not load.
+	--
+	-- No settings entry to go with it, unlike quests and zones: this addon has no options
+	-- panel, and its two switches are `/spb autoplay` and `/spb whole`.
+	if Spoken.Minimap then
+		Spoken.Minimap:AddEntry("books", { id = "Read", text = "Read this book", order = 1,
+			onClick = function() SpokenBooks:ReadOrExplain() end })
 	end
 
 	return self.source

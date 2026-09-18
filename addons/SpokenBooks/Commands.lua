@@ -15,6 +15,22 @@ local function Toggle(key, label)
 	Print("%s %s", label, SpokenBooksDB[key] and "enabled" or "disabled")
 end
 
+--- Read the page in front of the reader, or say why nothing happened.
+---
+--- Deliberate, so it works with autoplay off: that is the whole point of the setting, and a
+--- command that respected it would leave no way to start narration.
+---
+--- Shared with the player's menu entry rather than inlined in the slash command, because a
+--- reason only one of the two printed would make the other look broken.
+function SpokenBooks:ReadOrExplain()
+	if self:ReadCurrent() > 0 then
+		return
+	end
+	Print(self:HasAudio(self.lastPage or -1)
+		and "nothing to read -- open a book first"
+		or self:DescribeMissingAudio())
+end
+
 local function Status()
 	local data = SpokenBooks:Data()
 	local books, pages = 0, 0
@@ -48,13 +64,7 @@ SlashCmdList["SPOKENBOOKS"] = function(msg)
 	elseif cmd == "whole" or cmd == "book" then
 		Toggle("readWholeBook", "reading the whole book")
 	elseif cmd == "read" or cmd == "play" then
-		-- Deliberate, so it works with autoplay off: that is the whole point of the
-		-- setting, and a command that respected it would leave no way to start narration.
-		if SpokenBooks:ReadCurrent() == 0 then
-			Print(SpokenBooks:HasAudio(SpokenBooks.lastPage or -1)
-				and "nothing to read -- open a book first"
-				or SpokenBooks:DescribeMissingAudio())
-		end
+		SpokenBooks:ReadOrExplain()
 	elseif cmd == "stop" then
 		SpokenBooks:StopReading()
 		Print("stopped")

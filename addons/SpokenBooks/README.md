@@ -2,7 +2,7 @@
 
 **Every book in the world, read aloud.** One of the Spoken addons, narrating through the [Spoken Player](https://www.curseforge.com/wow/addons/spoken-player) it shares with Spoken Quests and Spoken Zones — your addon manager installs it alongside.
 
-Open a book and it starts reading. Turn the page and it follows you. Close it and it stops. Letters and notes in your bags work the same way, and so do the plaques and gravestones out in the world.
+Open a book and it starts reading. Turn the page and it follows you. Close it and it reads on — shut the book, get back on the road, and hear the rest of it. `/spb stop` when you have heard enough. Letters and notes in your bags work the same way, and so do the plaques and gravestones out in the world.
 
 ## What it reads
 

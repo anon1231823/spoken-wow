@@ -94,9 +94,11 @@ Expect("turning to the last queued page also changes nothing", B:SyncTo(265), 0)
 B:SyncTo(2810)
 Expect("opening another book rebuilds the queue from there", Same(QueuedPages(), { 2810 }), true)
 
----------------------------------------------------------------- closing the book
+---------------------------------------------------------------- stopping by hand
+-- What `/spb stop` reaches. Closing the frame does not come here: a book carries on being
+-- read after it is shut.
 B:StopReading()
-Expect("closing the book stops its narration", #QueuedPages(), 0)
+Expect("stopping drops this source's narration", #QueuedPages(), 0)
 
 ---------------------------------------------------------------- reading one page only
 SpokenBooksDB.readWholeBook = false

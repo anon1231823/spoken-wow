@@ -1,6 +1,14 @@
--- The client's book frame, wired to the playlist.
+-- The client's book frame, wired to the playlist -- and the login that wires the addon up
+-- at all.
 --
--- Three events, the same three on all three targets:
+-- ADDON_LOADED is where the saved variables become readable: SpokenBooksDB is nil until the
+-- client has restored it, so Commands.lua indexing it before then is an error rather than a
+-- default. PLAYER_ENTERING_WORLD is where the source is claimed, late on purpose -- the
+-- player addon builds its API at its own load, and waiting for the world is what the zones
+-- addon does for the same reason. Without both, every function below returns 0 on a missing
+-- source and the addon is silent while looking installed.
+--
+-- Three book events, the same three on all three targets:
 --
 --   ITEM_TEXT_BEGIN    the frame is opening; the text is not there yet
 --   ITEM_TEXT_READY    a page's words are available, on open AND on every page turn
@@ -16,6 +24,8 @@ local ADDON_NAME, SpokenBooks = ...
 local frame = CreateFrame("Frame")
 SpokenBooks.eventFrame = frame
 
+frame:RegisterEvent("ADDON_LOADED")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 frame:RegisterEvent("ITEM_TEXT_BEGIN")
 frame:RegisterEvent("ITEM_TEXT_READY")
 frame:RegisterEvent("ITEM_TEXT_CLOSED")
@@ -44,19 +54,37 @@ function SpokenBooks:OnTextReady()
 	return self:SyncTo(pageId)
 end
 
+--- The frame is gone. Narration is not: a reader who has heard three pages of a journal and
+--- shuts it to carry on walking is still listening, and cutting the voice off mid-sentence
+--- to enforce "a book is read while it is open" loses the rest of a book they asked for.
+--- `/spb stop` is how you stop, and opening anything else rebuilds from there.
+---
+--- The page is still forgotten, because it is the page *on screen* and there is no longer
+--- one. That is what keeps `/spb read` with no book open a no-op rather than a re-reading of
+--- whatever was last closed.
 function SpokenBooks:OnTextClosed()
 	self.lastPage = nil
-	self:StopReading()
 end
 
-frame:SetScript("OnEvent", function(_, event)
+frame:SetScript("OnEvent", function(_, event, arg1)
 	-- 1.12's frames call OnEvent with the event in the global `event` rather than as an
-	-- argument. Reading through whichever exists is what the other two addons do.
+	-- argument, and its payload in `arg1` the same way. Reading through whichever exists is
+	-- what the other two addons do. The frame itself is the upvalue rather than the first
+	-- argument, which 1.12 passes in the global `this` and not at all.
 	local name = event or _G.event
+	local payload = arg1 or _G.arg1
 	if name == "ITEM_TEXT_READY" then
 		SpokenBooks:OnTextReady()
 	elseif name == "ITEM_TEXT_CLOSED" then
 		SpokenBooks:OnTextClosed()
+	elseif name == "ADDON_LOADED" then
+		-- Every addon's load fires this; only this addon's own restores SpokenBooksDB.
+		if payload == ADDON_NAME then
+			SpokenBooks:InitDB()
+			frame:UnregisterEvent("ADDON_LOADED")
+		end
+	elseif name == "PLAYER_ENTERING_WORLD" then
+		SpokenBooks:SetupSource()
 	end
 end)
 

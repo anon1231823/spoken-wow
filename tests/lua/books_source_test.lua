@@ -30,6 +30,38 @@ local function Boot()
     return env, B
 end
 
+---------------------------------------------------------------- wired up by the client
+-- Boot() above calls InitDB and SetupSource by hand, which is how an addon that called
+-- neither passed this whole file while being mute in game: no login event reached them, so
+-- no source was ever claimed and every page lookup returned 0 against a nil source. This
+-- section boots a copy the way the client does -- load the files, then fire the events --
+-- and runs first, so it is the only books copy alive while it fires them.
+--
+-- Its own loader, because LoadBooks above is deliberately the two files this file's other
+-- sections need: Events.lua is what creates the frame the events arrive at, and without it
+-- firing them reaches nothing and the test passes for the wrong reason.
+stub.SetClient("11509"); stub.ResetSound(); stub.ResetTimers()
+_G.SpokenBooksDB = nil
+local bootEnv = stub.LoadSpoken(SPOKEN)
+bootEnv.Addon:Enable()
+local B0 = {}
+for _, file in ipairs({ "Checksum", "Core", "Reader", "Audio", "Playlist", "Events", "Commands" }) do
+    assert(loadfile(BOOKS .. file .. ".lua"))("SpokenBooks", B0)
+end
+
+stub.FireEvent("ADDON_LOADED", "SomebodyElse")
+Expect("another addon's load leaves the saved variables alone", SpokenBooksDB, nil)
+
+stub.FireEvent("ADDON_LOADED", "SpokenBooks")
+Expect("the addon's own ADDON_LOADED writes the defaults", SpokenBooksDB.autoplay, true)
+Expect("...and claims no source yet, because the player may not have loaded", B0.source, nil)
+
+stub.FireEvent("PLAYER_ENTERING_WORLD")
+Expect("entering the world claims the source", _G.Spoken:GetSource("books"), B0.source)
+local claimed = B0.source
+stub.FireEvent("PLAYER_ENTERING_WORLD")
+Expect("...and a second loading screen does not replace it", B0.source, claimed)
+
 local env, B = Boot()
 local Spoken = _G.Spoken
 
