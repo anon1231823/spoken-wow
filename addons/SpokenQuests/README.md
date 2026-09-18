@@ -18,12 +18,12 @@ Modern Classic clients also use `C_GossipInfo`. The original compatibility code 
 - Uses `C_GossipInfo` on every modern Classic branch, including Burning Crusade.
 - Targets Classic Era 11509 and Burning Crusade 20506.
 - Temporarily permits the old Vanilla Data TOC while loading it, then restores the player's addon-version setting.
-- Reports data-module load failures in `/vo diagnostics` and in the no-sound-pack popup.
+- Reports data-module load failures in `/spq diagnostics` and in the no-sound-pack popup.
 - Falls back to the Data module's title/NPC/text index when the current client reports quest ID `0` during `QUEST_DETAIL`.
 - Uses current sound-channel semantics; Master playback no longer incorrectly depends on the SFX toggle.
 - Keeps synchronous quest-text events away from immediate handlers because Classic Era can expose the previous quest's globals during those callbacks.
 - Coalesces and briefly defers NPC greeting event/frame signals so Blizzard can populate the new NPC and gossip text before lookup.
-- Installs a `GetQuestID()` polling fallback and standalone `/voread` command before any optional AceEvent or Blizzard-frame hook, so a rejected registration cannot stop quest narration initialization.
+- Installs a `GetQuestID()` polling fallback and standalone `/spqread` command before any optional AceEvent or Blizzard-frame hook, so a rejected registration cannot stop quest narration initialization.
 - Uses AceTimer polling instead of a newly created frame's `OnUpdate`, debounces until the quest panel has finished populating, and retries premature dispatches instead of permanently marking them as handled.
 - Captures automatic polling errors as `auto-watcher-error` diagnostics instead of allowing AceAddon's safe-call behavior to hide them.
 - Polls `GetQuestID()` ten times per second for responsive automatic playback. The release build contains no polling trace buffer or verbose automatic-playback logging.
@@ -31,7 +31,7 @@ Modern Classic clients also use `C_GossipInfo`. The original compatibility code 
 - Prioritizes visible reward/progress panels over retained detail panels so turning in a quest cannot replay its acceptance text or wrong player-gender variant.
 - Loads the large Vanilla lookup tables one second after entering the world, outside AceAddon's shared login callback, for clients with stricter script-time limits such as Hardcore.
 - Treats legacy Blizzard settings-panel and AceGUI construction as optional on Classic Era 1.15.9. Any settings failure is logged, but automatic polling, quest events, slash commands, data loading, and playback continue initializing.
-- Guards every optional quest-event registration/hook and reports failures as `Bridge warning` lines in `/vo diagnostics`.
+- Guards every optional quest-event registration/hook and reports failures as `Bridge warning` lines in `/spq diagnostics`.
 - Uses a distinct Ace addon/config/minimap identity, so accidentally enabling the original player does not cause the old duplicate-addon crash. It disables that player for the next login.
 - Restores quest-progress voice lines and refreshes the bundled libraries from the maintained 1.4.7 player fork.
 
@@ -49,12 +49,12 @@ Disable the old **AI VoiceOver** player (`AI_VoiceOver`). Do not disable or rena
 At the character screen, enable **VoiceOver Redux**. Log in and run:
 
 ```text
-/vo diagnostics
+/spq diagnostics
 ```
 
 The expected final line is `1 detected, 1 loaded`. If the old player was enabled at the same time, reload once after the new addon disables it.
 
-If the module loads but quests remain silent, run `/vo test`. This plays a short known Vanilla sound through the configured channel. While a quest is visible, use the standalone `/voread` command; it does not depend on AceConsole's `/vo` parser. Then run `/vo diagnostics`; the `Last runtime stage` line distinguishes a missing quest ID, hidden handler error, absent Data entry, paused queue, disabled channel, rejected file, and successful playback. Any optional API registration failures are printed as `Bridge warning` lines.
+If the module loads but quests remain silent, run `/spq test`. This plays a short known Vanilla sound through the configured channel. While a quest is visible, use the standalone `/spqread` command; it does not depend on AceConsole's `/spq` parser. Then run `/spq diagnostics`; the `Last runtime stage` line distinguishes a missing quest ID, hidden handler error, absent Data entry, paused queue, disabled channel, rejected file, and successful playback. Any optional API registration failures are printed as `Bridge warning` lines.
 
 NPC greeting repetition is controlled by **NPC Greeting Playback Frequency**. The default **Once per Quest NPC** choice is remembered per character across revisits and logins; select **Always** if greetings should replay whenever the NPC is opened.
 

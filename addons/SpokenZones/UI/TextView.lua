@@ -1,4 +1,4 @@
--- ZoneLore -- a scrolling block of wrapped text, with a scrollbar.
+-- SpokenZones -- a scrolling block of wrapped text, with a scrollbar.
 --
 -- Shared by the world map panel and the standalone lore window so both scroll
 -- and wrap identically.
@@ -9,7 +9,7 @@
 -- plumbing can be verified without launching the game. A track and a thumb are
 -- fully deterministic, and the wheel keeps working regardless.
 
-local ADDON_NAME, ZoneLore = ...
+local ADDON_NAME, SpokenZones = ...
 
 local SCROLL_STEP = 28
 local BAR_WIDTH = 6
@@ -129,7 +129,7 @@ end
 
 -- Anchor the returned view's `frame` yourself. Width is read at SetText time, so
 -- it copes with the frame being resized after creation.
-function ZoneLore:CreateTextView(parent)
+function SpokenZones:CreateTextView(parent)
 	local view = setmetatable({}, TextView)
 	view.range = 0
 
@@ -197,7 +197,7 @@ function TextView:SetText(str)
 
 	local fontPath = GameFontHighlight:GetFont()
 	if fontPath then
-		self.text:SetFont(fontPath, ZoneLore:Get("fontSize"), "")
+		self.text:SetFont(fontPath, SpokenZones:Get("fontSize"), "")
 	end
 
 	self.child:SetHeight((self.text:GetStringHeight() or 0) + 8)

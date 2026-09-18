@@ -88,7 +88,7 @@ def test_a_title_reads_as_the_project_it_ships_to():
 
 
 def test_a_family_names_a_whole_set_of_packs_at_once():
-    # The HQ packs are the same four cut the same way at a different quality, and their
-    # CurseForge projects are named for the family rather than per pack - so the family is a
-    # parameter and not five more constants to keep in step.
-    assert pack_title("horde", "Spoken Quests HQ Audio") == "Spoken Quests HQ Audio: Horde"
+    # A set of packs built together is named together, and its CurseForge projects are named
+    # for the family rather than per pack - so the family is a parameter and not five more
+    # constants to keep in step. One family ships today; a language pack would be the next.
+    assert pack_title("horde", "Spoken Quests Audio deDE") == "Spoken Quests Audio deDE: Horde"

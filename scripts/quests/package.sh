@@ -100,7 +100,7 @@ for toc in "$SRC"/*.toc; do
 done
 
 # Environment.lua carries the same version as a literal, because it loads before the addon has
-# any metadata API to ask. /vo diagnostics prints it, so a stale one misreports every bug
+# any metadata API to ask. /spq diagnostics prints it, so a stale one misreports every bug
 # report filed against it.
 env_version="$(sed -n 's/.*AddonVersion = "\([^"]*\)".*/\1/p' "$SRC/Environment.lua" | head -1)"
 if [ "$env_version" != "$version" ]; then

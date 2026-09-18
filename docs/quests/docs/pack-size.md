@@ -6,7 +6,7 @@ record of what was tried and what each option actually costs, so the next person
 not re-run the experiment.
 
 **What was chosen.** `make package-audio` ships `ogg-q-1-22k` — Ogg Vorbis at 22.05 kHz — and
-`make package-audio-hq` builds `ogg-q0-44k`, the same codec without the downsample, about
+`make package-audio-complete` builds `ogg-q0-44k`, the same codec without the downsample, about
 1.3 GB. The first pack built this way, 1.1.0, is **599 MB of module and a 564 MB zip** over
 11,189 clips, against 1.5 GB for the mp3 pack it replaces. The rest of this file is the
 evidence behind that, and the encodes that were rejected.
@@ -68,7 +68,7 @@ before the API saw it, so the audio now ships as four addons — Alliance, Horde
 and Gossip — which partition it exactly, and a player installing their side plus Shared lands
 near half of what the whole thing costs. A fifth project carries a few kilobytes declaring the
 four as dependencies, since one folder holding everything cannot be uploaded at all. The
-full-bandwidth `VoiceOverReduxAudioHQ` is built by hand for distribution outside CurseForge.
+full-bandwidth `SpokenQuestsAudioComplete` is built by hand for distribution outside CurseForge.
 
 That makes the size question two questions. This file is about how many bytes a *line* costs,
 and the split is about how many lines a *player* needs; both were worth doing, and the second
@@ -97,7 +97,7 @@ that produce it and nothing else:
 | Profile | Encoder flags | Built by |
 | --- | --- | --- |
 | `ogg-q-1-22k` | `oggenc -q -1 --resample 22050` | `make package-audio` |
-| `ogg-q0-44k` | `oggenc -q 0` | `make package-audio-hq`, as one `VoiceOverReduxAudioHQ` folder |
+| `ogg-q0-44k` | `oggenc -q 0` | `make package-audio`, and `package-audio-complete` as one `SpokenQuestsAudioComplete` folder |
 | `vbr-v6` | `ffmpeg -codec:a libmp3lame -q:a 6` | what shipped before this |
 | `copy` | none — the masters | `ENCODE=copy make package-audio` |
 

@@ -145,7 +145,7 @@ async function main() {
         + "(unreachable in-game) -- run node tools/voice/build-lookup.mjs");
     }
 
-    // Keys in the table must be exactly what ZoneLore:NormaliseAreaKey produces,
+    // Keys in the table must be exactly what SpokenZones:NormaliseAreaKey produces,
     // or the lookup silently misses.
     const validKeys = new Set(entries.filter((e) => e.key).map((e) => `${e.mapID}:${e.key}`));
     let currentMap = null;
@@ -178,6 +178,8 @@ async function main() {
 loadEnvFile()
   .then(main)
   .catch((err) => {
-    console.error(`error: ${err.message}`);
+    // err.stack, not err.message: a thrown non-Error and a rejected promise carrying one
+    // both print an empty message, which reports a failure while hiding every word of it.
+    console.error(`error: ${err?.stack || err}`);
     process.exit(1);
   });

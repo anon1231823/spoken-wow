@@ -17,7 +17,7 @@
     "`aliases` maps a name the CLIENT reports to the wiki page title, for cases",
     "where normalisation is not enough to make them meet. Normalisation already",
     "handles case, a leading 'the', and apostrophes, so 'The Bulwark' finds the",
-    "page titled 'Bulwark' with no alias needed. Use `/zl debug` in-game to see",
+    "page titled 'Bulwark' with no alias needed. Use `/spz debug` in-game to see",
     "the raw name the client reports for an area."
   ],
   "zones": {

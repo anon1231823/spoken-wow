@@ -1,31 +1,31 @@
--- ZoneLore -- Core: namespace, saved variables, events, zone resolution.
+-- SpokenZones -- Core: namespace, saved variables, events, zone resolution.
 -- Client targets: WoW Classic Era 1.15.9 (11509) and Anniversary 2.5.6 (20506).
 -- The two share a uiMapID space, so nothing here branches on the client.
 
-local ADDON_NAME, ZoneLore = ...
+local ADDON_NAME, SpokenZones = ...
 
 -- C_AddOns is the modern home of GetAddOnMetadata; the global is the older one.
 -- Reading through whichever exists costs a line and removes a whole class of
 -- load-time failure on a client this addon has not been run on.
 local GetAddOnMeta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
 
-ZoneLore.name = ADDON_NAME
-ZoneLore.version = GetAddOnMeta(ADDON_NAME, "Version") or "dev"
+SpokenZones.name = ADDON_NAME
+SpokenZones.version = GetAddOnMeta(ADDON_NAME, "Version") or "dev"
 
 -- Populated by Data/<language>/Zones.lua and Subzones.lua (both generated),
--- through ZoneLore:RegisterLoreData. Declared here so every other file can rely
+-- through SpokenZones:RegisterLoreData. Declared here so every other file can rely
 -- on the tables existing even when a data file is empty or failed to load.
-ZoneLore.Zones = ZoneLore.Zones or {}
-ZoneLore.Subzones = ZoneLore.Subzones or {}
+SpokenZones.Zones = SpokenZones.Zones or {}
+SpokenZones.Subzones = SpokenZones.Subzones or {}
 
 -- The subzone the player clicked on the world map, or nil to show zone lore:
 -- { mapID = <parent uiMapID>, areaName = <client name>, entry = <lore> }
-ZoneLore.selected = nil
+SpokenZones.selected = nil
 
 -- Callbacks fired when the lore shown to the player should change. UI modules
 -- register into this rather than each hooking WorldMapFrame independently.
-ZoneLore.mapChangedCallbacks = {}
-ZoneLore.zoneChangedCallbacks = {}
+SpokenZones.mapChangedCallbacks = {}
+SpokenZones.zoneChangedCallbacks = {}
 
 local defaults = {
 	showMapPanel = true,
@@ -40,7 +40,7 @@ local defaults = {
 	autoplay = true,
 	autoplaySubzones = true,
 	-- Off, because it replaces the client's own record of what a character has
-	-- discovered with one ZoneLore keeps itself. Only a character who explored
+	-- discovered with one SpokenZones keeps itself. Only a character who explored
 	-- before installing the addon needs that; see Autoplay.lua.
 	autoplayExplored = false,
 	-- Off, so Read means "read along". Stopping discards the queue as well, which
@@ -65,7 +65,7 @@ local defaults = {
 
 local PREFIX = "|cff66bbffSpoken Zones|r: "
 
-function ZoneLore:Print(fmt, ...)
+function SpokenZones:Print(fmt, ...)
 	local msg = select("#", ...) > 0 and fmt:format(...) or fmt
 	DEFAULT_CHAT_FRAME:AddMessage(PREFIX .. msg)
 end
@@ -77,7 +77,18 @@ end
 -- Merge defaults into the saved table without clobbering stored values, so new
 -- options added in later versions appear for existing users. Runtime reads and
 -- writes go straight to SpokenZonesDB.
+-- Whether the client handed back anything it saved. Read before the tables below are
+-- created, because creating one is what makes the question unanswerable afterwards.
+--
+-- False means one of two things: a first run, or a client that does not restore saved
+-- variables at all. The 1.60.1 beta is the second - it writes both files correctly every
+-- logout and never reads either back, for any addon, which leaves every feature that
+-- remembers something across a login repeating itself. Autoplay's login greeting is the
+-- one a player hears; see SeedLoginArea.
 local function InitConfig()
+	SpokenZones.savedVariablesRestored =
+		type(SpokenZonesDB) == "table" or type(SpokenZonesCharDB) == "table"
+
 	if type(SpokenZonesDB) ~= "table" then
 		SpokenZonesDB = {}
 	end
@@ -95,11 +106,11 @@ local function InitConfig()
 		SpokenZonesDB.audioPack = { enUS = SpokenZonesDB.audioPack }
 	end
 
-	ZoneLore.db = SpokenZonesDB
+	SpokenZones.db = SpokenZonesDB
 end
 
 -- Safe before ADDON_LOADED has run.
-function ZoneLore:Get(key)
+function SpokenZones:Get(key)
 	if SpokenZonesDB == nil then
 		return defaults[key]
 	end
@@ -110,7 +121,7 @@ function ZoneLore:Get(key)
 	return value
 end
 
-function ZoneLore:Set(key, value)
+function SpokenZones:Set(key, value)
 	SpokenZonesDB[key] = value
 end
 
@@ -119,19 +130,19 @@ end
 --------------------------------------------------------------------------------
 
 -- The uiMapID the world map is currently displaying (nil if the map is not up).
-function ZoneLore:GetDisplayedMapID()
+function SpokenZones:GetDisplayedMapID()
 	return WorldMapFrame and WorldMapFrame.mapID
 end
 
 -- The uiMapID the player is physically standing in.
-function ZoneLore:GetPlayerMapID()
+function SpokenZones:GetPlayerMapID()
 	return C_Map.GetBestMapForUnit("player")
 end
 
 -- Prefer the client's own zone name over the name baked into the generated data,
 -- so Era-specific naming (e.g. "The Barrens" rather than retail's "Northern
 -- Barrens") is always correct regardless of what the wiki page was titled.
-function ZoneLore:GetMapName(mapID)
+function SpokenZones:GetMapName(mapID)
 	if not mapID then
 		return nil
 	end
@@ -143,7 +154,7 @@ function ZoneLore:GetMapName(mapID)
 	return entry and entry.name or nil
 end
 
-function ZoneLore:GetLore(mapID)
+function SpokenZones:GetLore(mapID)
 	if not mapID then
 		return nil
 	end
@@ -153,7 +164,7 @@ end
 -- Walks up the map hierarchy looking for an ancestor that does have lore, so a
 -- dungeon or micro-map falls back to its parent zone instead of showing nothing.
 -- Returns the entry and the mapID it was found on.
-function ZoneLore:GetLoreWithFallback(mapID)
+function SpokenZones:GetLoreWithFallback(mapID)
 	local id, hops = mapID, 0
 	while id and hops < 6 do
 		local entry = self.Zones[id]
@@ -181,7 +192,7 @@ end
 -- This must stay in step with normaliseKey in tools/lib/wiki.mjs.
 --------------------------------------------------------------------------------
 
-function ZoneLore:NormaliseAreaKey(name)
+function SpokenZones:NormaliseAreaKey(name)
 	if type(name) ~= "string" then
 		return nil
 	end
@@ -216,7 +227,7 @@ end
 -- Falls through to the normalised name when there is no alias. That covers an
 -- English client, and every place whose name Blizzard left in English -- which
 -- is around one subzone in eight for German, and all of them for Italian.
-function ZoneLore:ResolveAreaKey(name)
+function SpokenZones:ResolveAreaKey(name)
 	if type(name) ~= "string" then
 		return nil
 	end
@@ -249,9 +260,9 @@ end
 -- collision, and nothing here can reproduce it.
 --------------------------------------------------------------------------------
 
-ZoneLore.SITE_URL = "https://lore.rusty.one"
+SpokenZones.SITE_URL = "https://lore.rusty.one"
 
-function ZoneLore:ReportURL(mapID, areaKey)
+function SpokenZones:ReportURL(mapID, areaKey)
 	if not mapID then
 		return nil
 	end
@@ -267,8 +278,8 @@ function ZoneLore:ReportURL(mapID, areaKey)
 end
 
 -- Returns the lore entry and the key that was looked up. The key is returned
--- even on a miss so /zl debug can report what failed to match.
-function ZoneLore:GetSubzoneLore(parentMapID, areaName)
+-- even on a miss so /spz debug can report what failed to match.
+function SpokenZones:GetSubzoneLore(parentMapID, areaName)
 	local key = self:ResolveAreaKey(areaName)
 	if not key then
 		return nil, nil
@@ -281,7 +292,7 @@ function ZoneLore:GetSubzoneLore(parentMapID, areaName)
 	return zoneTable[key], key
 end
 
-function ZoneLore:IsZoneMap(mapID)
+function SpokenZones:IsZoneMap(mapID)
 	local info = mapID and C_Map.GetMapInfo(mapID)
 	if not info then
 		return false
@@ -291,7 +302,7 @@ function ZoneLore:IsZoneMap(mapID)
 end
 
 -- Subzone name under a normalised canvas position, or nil.
-function ZoneLore:GetAreaNameAt(mapID, x, y)
+function SpokenZones:GetAreaNameAt(mapID, x, y)
 	if not (MapUtil and MapUtil.FindBestAreaNameAtMouse) then
 		return nil
 	end
@@ -307,7 +318,7 @@ end
 --
 -- Returns kind ("zone"|"subzone"), display name, lore entry, and the resolved
 -- uiMapID for the "zone" case. Returns nil when nothing is resolvable.
-function ZoneLore:ResolveAt(mapID, x, y)
+function SpokenZones:ResolveAt(mapID, x, y)
 	if not mapID or not x or not y then
 		return nil
 	end
@@ -336,14 +347,14 @@ function ZoneLore:ResolveAt(mapID, x, y)
 	return nil
 end
 
-function ZoneLore:SelectSubzone(mapID, areaName, entry)
+function SpokenZones:SelectSubzone(mapID, areaName, entry)
 	self.selected = { mapID = mapID, areaName = areaName, entry = entry }
 	if self.RefreshPanel then
 		self:RefreshPanel()
 	end
 end
 
-function ZoneLore:ClearSubzone()
+function SpokenZones:ClearSubzone()
 	if not self.selected then
 		return
 	end
@@ -357,11 +368,11 @@ end
 -- Callback dispatch
 --------------------------------------------------------------------------------
 
-function ZoneLore:OnMapChanged(fn)
+function SpokenZones:OnMapChanged(fn)
 	table.insert(self.mapChangedCallbacks, fn)
 end
 
-function ZoneLore:OnZoneChanged(fn)
+function SpokenZones:OnZoneChanged(fn)
 	table.insert(self.zoneChangedCallbacks, fn)
 end
 
@@ -369,7 +380,7 @@ local function Dispatch(list, ...)
 	for i = 1, #list do
 		local ok, err = pcall(list[i], ...)
 		if not ok then
-			ZoneLore:Print("|cffff5555error|r: %s", tostring(err))
+			SpokenZones:Print("|cffff5555error|r: %s", tostring(err))
 		end
 	end
 end
@@ -389,37 +400,37 @@ local function SetupHooks()
 	-- Map is showing a different zone. Covers both player-driven navigation and
 	-- programmatic SetMapID calls; OnMapChanged is the single funnel for both.
 	hooksecurefunc(WorldMapFrame, "OnMapChanged", function()
-		Dispatch(ZoneLore.mapChangedCallbacks, WorldMapFrame.mapID)
+		Dispatch(SpokenZones.mapChangedCallbacks, WorldMapFrame.mapID)
 	end)
 
 	WorldMapFrame:HookScript("OnShow", function()
-		Dispatch(ZoneLore.mapChangedCallbacks, WorldMapFrame.mapID)
+		Dispatch(SpokenZones.mapChangedCallbacks, WorldMapFrame.mapID)
 	end)
 
-	if ZoneLore.SetupMapPanel then
-		ZoneLore:SetupMapPanel()
+	if SpokenZones.SetupMapPanel then
+		SpokenZones:SetupMapPanel()
 	end
-	if ZoneLore.SetupSubzoneClicks then
-		ZoneLore:SetupSubzoneClicks()
+	if SpokenZones.SetupSubzoneClicks then
+		SpokenZones:SetupSubzoneClicks()
 	end
-	if ZoneLore.SetupHoverPreview then
-		ZoneLore:SetupHoverPreview()
+	if SpokenZones.SetupHoverPreview then
+		SpokenZones:SetupHoverPreview()
 	end
-	if ZoneLore.SetupLoreWindow then
-		ZoneLore:SetupLoreWindow()
+	if SpokenZones.SetupLoreWindow then
+		SpokenZones:SetupLoreWindow()
 	end
-	if ZoneLore.SetupMinimapButton then
-		ZoneLore:SetupMinimapButton()
+	if SpokenZones.SetupMinimapButton then
+		SpokenZones:SetupMinimapButton()
 	end
 	-- Before autoplay: it registers its combat hold on the source this creates.
-	if ZoneLore.SetupAudio then
-		ZoneLore:SetupAudio()
+	if SpokenZones.SetupAudio then
+		SpokenZones:SetupAudio()
 	end
-	if ZoneLore.SetupAutoplay then
-		ZoneLore:SetupAutoplay()
+	if SpokenZones.SetupAutoplay then
+		SpokenZones:SetupAutoplay()
 	end
-	if ZoneLore.SetupOptions then
-		ZoneLore:SetupOptions()
+	if SpokenZones.SetupOptions then
+		SpokenZones:SetupOptions()
 	end
 end
 
@@ -437,7 +448,18 @@ events:SetScript("OnEvent", function(self, event, arg1)
 			-- stay enabled. Its variables were copied at load, so this is safe now.
 			local disable = (C_AddOns and C_AddOns.DisableAddOn) or DisableAddOn
 			local info = (C_AddOns and C_AddOns.GetAddOnInfo) or GetAddOnInfo
-			if disable and info and info("ZoneLore") then
+			-- The literal folder name, not the addon's own: this disables the tombstone
+			-- left behind by the rename. Renaming it with the namespace would have the
+			-- addon disable itself on first login.
+			--
+			-- DoesAddOnExist, not the truthiness of GetAddOnInfo: Camelot answers for a
+			-- folder that is not installed by handing the name straight back, so the old
+			-- test disabled ZoneLore on every login of a client that has never had it -
+			-- visible as `ZoneLore: disabled` in a fresh AddOns.txt. SpokenQuests was
+			-- already fixed the same way; this is the same client and the same trap.
+			local exists = C_AddOns and C_AddOns.DoesAddOnExist
+			local installed = exists and exists("ZoneLore") or (not exists and info and info("ZoneLore"))
+			if disable and installed then
 				pcall(disable, "ZoneLore")
 			end
 			self:UnregisterEvent("ADDON_LOADED")
@@ -445,21 +467,21 @@ events:SetScript("OnEvent", function(self, event, arg1)
 	elseif event == "PLAYER_ENTERING_WORLD" then
 		SetupHooks()
 		-- Once the world is up, so every addon waiting on the player has registered.
-		if ZoneLore.PromptForPlayer then
-			ZoneLore:PromptForPlayer()
+		if SpokenZones.PromptForPlayer then
+			SpokenZones:PromptForPlayer()
 		end
 		-- Said every login, not once: an override you have forgotten you enabled
 		-- turns every gap in an unfinished translation into a bug report nobody
 		-- can reproduce.
-		if ZoneLore:IsPreviewingLanguage() then
-			ZoneLore:Print(
-				"|cffffcc00previewing unfinished languages|r -- reading %s. /zl lang off to stop",
-				ZoneLore:GetLanguage()
+		if SpokenZones:IsPreviewingLanguage() then
+			SpokenZones:Print(
+				"|cffffcc00previewing unfinished languages|r -- reading %s. /spz lang off to stop",
+				SpokenZones:GetLanguage()
 			)
 		end
 		self:UnregisterEvent("PLAYER_ENTERING_WORLD")
 	else
-		Dispatch(ZoneLore.zoneChangedCallbacks, ZoneLore:GetPlayerMapID())
+		Dispatch(SpokenZones.zoneChangedCallbacks, SpokenZones:GetPlayerMapID())
 	end
 end)
 
@@ -504,8 +526,8 @@ local function CmdDump()
 	DumpMapTree(1414, out, seen, 0)  -- Kalimdor
 	DumpMapTree(1415, out, seen, 0)  -- Eastern Kingdoms
 	SpokenZonesDB.dump = out
-	ZoneLore:Print("dumped %d maps to SpokenZonesDB.dump. Run /reload, then:", #out)
-	ZoneLore:Print("  node tools/seed-from-dump.mjs")
+	SpokenZones:Print("dumped %d maps to SpokenZonesDB.dump. Run /reload, then:", #out)
+	SpokenZones:Print("  node tools/seed-from-dump.mjs")
 end
 
 -- Cross-check the generated data against the live client. Catches wrong uiMapIDs
@@ -513,74 +535,74 @@ end
 local function CmdVerify()
 	local total, missing, mismatched = 0, 0, 0
 	local ids = {}
-	for mapID in pairs(ZoneLore.Zones) do
+	for mapID in pairs(SpokenZones.Zones) do
 		table.insert(ids, mapID)
 	end
 	table.sort(ids)
 
 	for i = 1, #ids do
 		local mapID = ids[i]
-		local entry = ZoneLore.Zones[mapID]
+		local entry = SpokenZones.Zones[mapID]
 		total = total + 1
 		local info = C_Map.GetMapInfo(mapID)
 		if not info then
 			missing = missing + 1
-			ZoneLore:Print("|cffff5555%d|r (%s): no such map on this client", mapID, tostring(entry.name))
+			SpokenZones:Print("|cffff5555%d|r (%s): no such map on this client", mapID, tostring(entry.name))
 		elseif entry.name and info.name ~= entry.name then
 			mismatched = mismatched + 1
-			ZoneLore:Print("|cffffcc00%d|r: data says %q, client says %q", mapID, entry.name, info.name)
+			SpokenZones:Print("|cffffcc00%d|r: data says %q, client says %q", mapID, entry.name, info.name)
 		end
 	end
 
-	ZoneLore:Print("verified %d entries: %d unknown to client, %d name mismatches", total, missing, mismatched)
+	SpokenZones:Print("verified %d entries: %d unknown to client, %d name mismatches", total, missing, mismatched)
 	if missing == 0 and mismatched == 0 then
-		ZoneLore:Print("|cff55ff55all entries resolve correctly|r")
+		SpokenZones:Print("|cff55ff55all entries resolve correctly|r")
 	end
 end
 
 local function CmdStatus()
-	local playerMap = ZoneLore:GetPlayerMapID()
-	local shownMap = ZoneLore:GetDisplayedMapID()
+	local playerMap = SpokenZones:GetPlayerMapID()
+	local shownMap = SpokenZones:GetDisplayedMapID()
 
 	local zoneCount = 0
-	for _ in pairs(ZoneLore.Zones) do
+	for _ in pairs(SpokenZones.Zones) do
 		zoneCount = zoneCount + 1
 	end
 
 	local subzoneZones, subzoneCount = 0, 0
-	for _, tbl in pairs(ZoneLore.Subzones) do
+	for _, tbl in pairs(SpokenZones.Subzones) do
 		subzoneZones = subzoneZones + 1
 		for _ in pairs(tbl) do
 			subzoneCount = subzoneCount + 1
 		end
 	end
 
-	ZoneLore:Print(
+	SpokenZones:Print(
 		"v%s -- %d zones, %d subzones across %d zones",
-		ZoneLore.version, zoneCount, subzoneCount, subzoneZones
+		SpokenZones.version, zoneCount, subzoneCount, subzoneZones
 	)
 	-- Both axes, always, because almost every "it shows nothing" report is one of
 	-- the two being something other than what was assumed.
-	local aliases = ZoneLore.Aliases[ZoneLore.clientLocale]
+	local aliases = SpokenZones.Aliases[SpokenZones.clientLocale]
 	local aliasCount = 0
 	if aliases then
 		for _ in pairs(aliases) do
 			aliasCount = aliasCount + 1
 		end
 	end
-	ZoneLore:Print(
+	SpokenZones:Print(
 		"reading %s on a %s client -- %d area name aliases",
-		ZoneLore:GetLanguage(), ZoneLore.clientLocale, aliasCount
+		SpokenZones:GetLanguage(), SpokenZones.clientLocale, aliasCount
 	)
 
-	ZoneLore:Print("player is in: %s (uiMapID %s)", tostring(ZoneLore:GetMapName(playerMap)), tostring(playerMap))
-	ZoneLore:Print("map is showing: %s (uiMapID %s)", tostring(ZoneLore:GetMapName(shownMap)), tostring(shownMap))
+	SpokenZones:Print("player is in: %s (uiMapID %s)", tostring(SpokenZones:GetMapName(playerMap)), tostring(playerMap))
+	SpokenZones:Print("map is showing: %s (uiMapID %s)", tostring(SpokenZones:GetMapName(shownMap)), tostring(shownMap))
 
-	local entry = ZoneLore:GetLore(playerMap)
+	local entry = SpokenZones:GetLore(playerMap)
 	if entry then
-		ZoneLore:Print("lore for current zone: %d characters", #(entry.full or ""))
+		SpokenZones:Print("lore for current zone: %d characters", #(entry.full or ""))
 	else
-		ZoneLore:Print("|cffffcc00no lore recorded for the current zone|r")
+		SpokenZones:Print("|cffffcc00no lore recorded for the current zone|r")
 	end
 
 	-- Report the subzone the player is standing in. This exercises the same
@@ -588,9 +610,9 @@ local function CmdStatus()
 	-- name mismatch can be spotted just by walking around.
 	local subZone = GetSubZoneText()
 	if subZone and subZone ~= "" then
-		local subEntry, key = ZoneLore:GetSubzoneLore(playerMap, subZone)
-		local raw = ZoneLore:NormaliseAreaKey(subZone)
-		ZoneLore:Print(
+		local subEntry, key = SpokenZones:GetSubzoneLore(playerMap, subZone)
+		local raw = SpokenZones:NormaliseAreaKey(subZone)
+		SpokenZones:Print(
 			'standing in subzone "%s" -> key "%s"%s -> %s',
 			subZone, tostring(key),
 			-- Naming the alias step only when it fired keeps the common line short
@@ -600,39 +622,39 @@ local function CmdStatus()
 		)
 	end
 
-	if ZoneLore.DescribeAutoplay then
-		ZoneLore:DescribeAutoplay()
+	if SpokenZones.DescribeAutoplay then
+		SpokenZones:DescribeAutoplay()
 	end
 
-	local waiting = ZoneLore:QueueLength()
+	local waiting = SpokenZones:QueueLength()
 	if waiting > 0 then
-		ZoneLore:Print("queue: %d waiting", waiting)
+		SpokenZones:Print("queue: %d waiting", waiting)
 	end
 
-	local pack = ZoneLore:GetActiveAudioPack()
+	local pack = SpokenZones:GetActiveAudioPack()
 	if pack then
-		ZoneLore:Print("sound pack: %s -- %s", pack.addon, ZoneLore:GetAudioPackLabel(pack))
+		SpokenZones:Print("sound pack: %s -- %s", pack.addon, SpokenZones:GetAudioPackLabel(pack))
 	else
-		ZoneLore:Print("|cffffcc00no sound pack installed|r -- install ZoneLoreAudio to hear the lore")
+		SpokenZones:Print("|cffffcc00no sound pack installed|r -- install Spoken Zones Audio to hear the lore")
 	end
 
-	if ZoneLore:Get("debug") then
-		ZoneLore:Print("|cff66bbffdebug mode is on|r")
+	if SpokenZones:Get("debug") then
+		SpokenZones:Print("|cff66bbffdebug mode is on|r")
 	end
 end
 
--- What /zl play narrates: the subzone the player is standing in if it has lore,
+-- What /spz play narrates: the subzone the player is standing in if it has lore,
 -- otherwise the zone. The same "more specific answer wins" preference the lore
 -- window applies when it opens.
 local function CurrentAudioTarget()
-	local _, resolved = ZoneLore:GetLoreWithFallback(ZoneLore:GetPlayerMapID())
+	local _, resolved = SpokenZones:GetLoreWithFallback(SpokenZones:GetPlayerMapID())
 	if not resolved then
 		return nil, nil
 	end
 
 	local subZone = GetSubZoneText()
 	if subZone and subZone ~= "" then
-		local entry, key = ZoneLore:GetSubzoneLore(resolved, subZone)
+		local entry, key = SpokenZones:GetSubzoneLore(resolved, subZone)
 		if entry then
 			return resolved, key
 		end
@@ -644,35 +666,38 @@ end
 local function CmdPlay()
 	local mapID, key = CurrentAudioTarget()
 	if not mapID then
-		ZoneLore:Print("|cffffcc00no lore for where you are standing|r")
+		SpokenZones:Print("|cffffcc00no lore for where you are standing|r")
 		return
 	end
 
-	if not ZoneLore:IsVoiceEnabled() then
-		ZoneLore:Print("|cffffcc00narration is turned off|r -- /zl voice to turn it on")
+	if not SpokenZones:IsVoiceEnabled() then
+		SpokenZones:Print("|cffffcc00narration is turned off|r -- /spz voice to turn it on")
 		return
 	end
 
-	if not ZoneLore:PlayLore(mapID, key) then
+	if not SpokenZones:PlayLore(mapID, key) then
 		return
 	end
 
 	-- Nothing to report when PlayLore returned false above: it has already said why.
-	local what = key or ZoneLore:GetMapName(mapID) or tostring(mapID)
-	ZoneLore:Print("playing lore for %s", what)
+	local what = key or SpokenZones:GetMapName(mapID) or tostring(mapID)
+	SpokenZones:Print("playing lore for %s", what)
 end
 
--- `/zl audio` lists installed sound packs; `/zl audio <folder>` switches to one.
+-- `/spz audio` lists installed sound packs; `/spz audio <folder>` switches to one.
 -- Worth a command of its own because having two tiers installed at once is the
 -- case where the addon's behaviour is otherwise invisible: both play, and only
 -- the disk footprint differs.
 local function CmdAudioPack(arg)
-	local packs = ZoneLore:GetAudioPacks()
+	local packs = SpokenZones:GetAudioPacks()
 	if #packs == 0 then
 		-- Any pack would do -- packs are interchangeable across languages -- so an
 		-- empty list really does mean nothing is installed.
-		ZoneLore:Print("|cffffcc00no sound pack installed|r")
-		ZoneLore:Print("  install ZoneLoreAudio (128 kbps) or ZoneLoreAudio64 (64 kbps) alongside ZoneLore")
+		SpokenZones:Print("|cffffcc00no sound pack installed|r")
+		-- Named by CurseForge project, not by folder: a player with the pre-rename pack has a
+		-- ZoneLoreAudio folder, and saying that name sends them looking for a project that no
+		-- longer exists.
+		SpokenZones:Print("  install Spoken Zones Audio alongside Spoken Zones")
 		return
 	end
 
@@ -681,32 +706,32 @@ local function CmdAudioPack(arg)
 		-- listing and retyping it, and "zoneloreaudiohq" is the same request.
 		for i = 1, #packs do
 			if packs[i].addon:lower() == arg:lower() then
-				ZoneLore:SetActiveAudioPack(packs[i].addon)
-				ZoneLore:Print("now playing from %s -- %s", packs[i].addon, ZoneLore:GetAudioPackLabel(packs[i]))
+				SpokenZones:SetActiveAudioPack(packs[i].addon)
+				SpokenZones:Print("now playing from %s -- %s", packs[i].addon, SpokenZones:GetAudioPackLabel(packs[i]))
 				return
 			end
 		end
-		ZoneLore:Print('|cffffcc00"%s" is not an installed sound pack|r', arg)
+		SpokenZones:Print('|cffffcc00"%s" is not an installed sound pack|r', arg)
 		return
 	end
 
-	local active = ZoneLore:GetActiveAudioPack()
-	ZoneLore:Print("sound packs:")
+	local active = SpokenZones:GetActiveAudioPack()
+	SpokenZones:Print("sound packs:")
 	for i = 1, #packs do
 		local pack = packs[i]
-		ZoneLore:Print(
+		SpokenZones:Print(
 			"  %s %s -- %s, v%s",
 			pack == active and "|cff66bbff*|r" or " ",
-			pack.addon, ZoneLore:GetAudioPackLabel(pack), tostring(pack.packVersion)
+			pack.addon, SpokenZones:GetAudioPackLabel(pack), tostring(pack.packVersion)
 		)
 	end
 	if #packs > 1 then
-		ZoneLore:Print("  /zl audio <name> to switch")
+		SpokenZones:Print("  /spz audio <name> to switch")
 	end
 end
 
--- `/zl lang` lists the languages that can be read; `/zl lang <code>` switches;
--- `/zl lang <code> force` and `/zl lang off` turn the preview override on and
+-- `/spz lang` lists the languages that can be read; `/spz lang <code>` switches;
+-- `/spz lang <code> force` and `/spz lang off` turn the preview override on and
 -- off. The override exists so an unfinished translation can be looked at in the
 -- game rather than only in the explorer, and it is deliberately not in Options:
 -- a player who finds it by accident is a player reading half-English screens.
@@ -714,25 +739,25 @@ local function CmdLanguage(arg)
 	local code, modifier = (arg or ""):match("^(%S*)%s*(%S*)$")
 
 	if code == "off" then
-		ZoneLore:SetLanguagePreview(false)
-		ZoneLore:Print("language preview off -- /reload to go back to a finished language")
+		SpokenZones:SetLanguagePreview(false)
+		SpokenZones:Print("language preview off -- /reload to go back to a finished language")
 		return
 	end
 
 	if code and code ~= "" then
-		local locale = ZoneLore:GetLocaleInfo(code)
+		local locale = SpokenZones:GetLocaleInfo(code)
 		-- Matched case-insensitively against the codes, since "dede" is the same
 		-- request as "deDE" and nobody remembers Blizzard's capitalisation.
 		if not locale then
-			for i = 1, #ZoneLore.LOCALES do
-				if ZoneLore.LOCALES[i].code:lower() == code:lower() then
-					locale = ZoneLore.LOCALES[i]
+			for i = 1, #SpokenZones.LOCALES do
+				if SpokenZones.LOCALES[i].code:lower() == code:lower() then
+					locale = SpokenZones.LOCALES[i]
 				end
 			end
 		end
 
 		if not locale then
-			ZoneLore:Print('|cffffcc00"%s" is not a WoW language code|r -- /zl lang to list', code)
+			SpokenZones:Print('|cffffcc00"%s" is not a WoW language code|r -- /spz lang to list', code)
 			return
 		end
 
@@ -740,125 +765,129 @@ local function CmdLanguage(arg)
 		-- on before the attempt -- but it must not survive a refusal, or the one
 		-- remaining refusal (no fonts) leaves the override stuck on and every
 		-- login printing the preview warning for a switch that never happened.
-		local wasPreviewing = ZoneLore:IsPreviewingLanguage()
+		local wasPreviewing = SpokenZones:IsPreviewingLanguage()
 		if modifier == "force" then
-			ZoneLore:SetLanguagePreview(true)
+			SpokenZones:SetLanguagePreview(true)
 		end
 
-		if not ZoneLore:SetLanguage(locale.code) then
+		if not SpokenZones:SetLanguage(locale.code) then
 			if modifier == "force" then
-				ZoneLore:SetLanguagePreview(wasPreviewing)
+				SpokenZones:SetLanguagePreview(wasPreviewing)
 			end
-			if not ZoneLore:CanRenderLanguage(locale.code) then
-				ZoneLore:Print(
+			if not SpokenZones:CanRenderLanguage(locale.code) then
+				SpokenZones:Print(
 					"|cffffcc00this client has no fonts for %s|r -- it would draw as boxes",
 					locale.name
 				)
 			else
-				ZoneLore:Print(
-					"|cffffcc00%s is not finished yet|r -- /zl lang %s force to preview it anyway",
+				SpokenZones:Print(
+					"|cffffcc00%s is not finished yet|r -- /spz lang %s force to preview it anyway",
 					locale.name, locale.code
 				)
 			end
 			return
 		end
 
-		ZoneLore:Print("language set to %s -- |cffffcc00/reload to apply|r", locale.name)
+		SpokenZones:Print("language set to %s -- |cffffcc00/reload to apply|r", locale.name)
 		return
 	end
 
-	local selectable = ZoneLore:GetSelectableLanguages()
-	ZoneLore:Print("languages:")
+	local selectable = SpokenZones:GetSelectableLanguages()
+	SpokenZones:Print("languages:")
 	for i = 1, #selectable do
 		local locale = selectable[i]
-		ZoneLore:Print(
+		SpokenZones:Print(
 			"  %s %s -- %s",
-			locale.code == ZoneLore:GetLanguage() and "|cff66bbff*|r" or " ",
+			locale.code == SpokenZones:GetLanguage() and "|cff66bbff*|r" or " ",
 			locale.code, locale.name
 		)
 	end
-	if ZoneLore:GetLanguagePreference() == nil then
-		ZoneLore:Print("  following the client (%s)", ZoneLore.clientLocale)
+	if SpokenZones:GetLanguagePreference() == nil then
+		SpokenZones:Print("  following the client (%s)", SpokenZones.clientLocale)
 	end
 	if #selectable > 1 then
-		ZoneLore:Print("  /zl lang <code> to switch")
+		SpokenZones:Print("  /spz lang <code> to switch")
 	end
 end
 
 local function CmdHelp()
-	local L = ZoneLore.L
-	ZoneLore:Print(L.CMD_HEADING)
+	local L = SpokenZones.L
+	SpokenZones:Print(L.CMD_HEADING)
 	for _, key in ipairs({
 		"CMD_STATUS", "CMD_OPTIONS", "CMD_WINDOW", "CMD_PANEL", "CMD_HOVER",
 		"CMD_PLAY", "CMD_STOP", "CMD_VOICE", "CMD_AUTOPLAY", "CMD_AUDIO",
 		"CMD_LANG", "CMD_DISCOVER", "CMD_FORGET", "CMD_BAR", "CMD_MINIMAP",
 		"CMD_DEBUG", "CMD_VERIFY", "CMD_DUMP",
 	}) do
-		ZoneLore:Print(L[key])
+		SpokenZones:Print(L[key])
 	end
 end
 
-_G.SLASH_ZONELORE1 = "/zonelore"
-_G.SLASH_ZONELORE2 = "/zl"
-SlashCmdList["ZONELORE"] = function(msg)
+-- /spokenzones and /spz, matching /spoken and /sp on the player and /spokenquests and
+-- /spq on Spoken Quests. The pre-rename /zonelore and /zl are not registered: the addon
+-- answers to one name, and a command that still worked would keep the retired one alive
+-- in macros and in what players tell each other.
+_G.SLASH_SPOKENZONES1 = "/spokenzones"
+_G.SLASH_SPOKENZONES2 = "/spz"
+SlashCmdList["SPOKENZONES"] = function(msg)
 	local cmd = (msg or ""):lower():match("^%s*(%S*)")
 	if cmd == "dump" then
 		CmdDump()
 	elseif cmd == "verify" then
 		CmdVerify()
 	elseif cmd == "panel" then
-		local enabled = not ZoneLore:Get("showMapPanel")
-		ZoneLore:Set("showMapPanel", enabled)
-		ZoneLore:Print("world map panel %s", enabled and "enabled" or "disabled")
-		Dispatch(ZoneLore.mapChangedCallbacks, ZoneLore:GetDisplayedMapID())
+		local enabled = not SpokenZones:Get("showMapPanel")
+		SpokenZones:Set("showMapPanel", enabled)
+		SpokenZones:Print("world map panel %s", enabled and "enabled" or "disabled")
+		Dispatch(SpokenZones.mapChangedCallbacks, SpokenZones:GetDisplayedMapID())
 	elseif cmd == "options" or cmd == "config" or cmd == "opt" then
-		if ZoneLore.OpenOptions then
-			ZoneLore:OpenOptions()
+		if SpokenZones.OpenOptions then
+			SpokenZones:OpenOptions()
 		end
 	elseif cmd == "window" or cmd == "w" then
-		if ZoneLore.ToggleLoreWindow then
-			ZoneLore:ToggleLoreWindow()
+		if SpokenZones.ToggleLoreWindow then
+			SpokenZones:ToggleLoreWindow()
 		end
 	elseif cmd == "minimap" then
-		if ZoneLore.ToggleMinimapButton then
-			local enabled = ZoneLore:ToggleMinimapButton()
-			ZoneLore:Print("minimap button %s", enabled and "shown" or "hidden")
+		if SpokenZones.ToggleMinimapButton then
+			local enabled = SpokenZones:ToggleMinimapButton()
+			SpokenZones:Print("minimap button %s", enabled and "shown" or "hidden")
 		end
 	elseif cmd == "hover" then
-		local enabled = not ZoneLore:Get("showHoverPreview")
-		ZoneLore:Set("showHoverPreview", enabled)
-		if not enabled and ZoneLore.HideHoverPreview then
-			ZoneLore.HideHoverPreview()
+		local enabled = not SpokenZones:Get("showHoverPreview")
+		SpokenZones:Set("showHoverPreview", enabled)
+		if not enabled and SpokenZones.HideHoverPreview then
+			SpokenZones.HideHoverPreview()
 		end
-		ZoneLore:Print("hover preview %s", enabled and "enabled" or "disabled")
+		SpokenZones:Print("hover preview %s", enabled and "enabled" or "disabled")
 	elseif cmd == "play" then
 		CmdPlay()
 	elseif cmd == "stop" then
-		ZoneLore:StopLore()
-		ZoneLore:Print("narration stopped")
+		SpokenZones:StopLore()
+		SpokenZones:Print("narration stopped")
 	elseif cmd == "voice" then
-		local enabled = not ZoneLore:Get("voiceEnabled")
-		ZoneLore:Set("voiceEnabled", enabled)
+		local enabled = not SpokenZones:Get("voiceEnabled")
+		SpokenZones:Set("voiceEnabled", enabled)
 		if not enabled then
-			ZoneLore:StopLore()
+			SpokenZones:StopLore()
 		end
-		ZoneLore:NotifyAudioChanged()
-		ZoneLore:Print("narration %s", enabled and "enabled" or "disabled")
+		SpokenZones:NotifyAudioChanged()
+		SpokenZones:Print("narration %s", enabled and "enabled" or "disabled")
 	elseif cmd == "audio" then
 		CmdAudioPack((msg or ""):match("^%s*%S+%s+(.-)%s*$"))
 	elseif cmd == "lang" or cmd == "language" then
 		CmdLanguage((msg or ""):match("^%s*%S+%s+(.-)%s*$"))
 	elseif cmd == "autoplay" then
-		local enabled = not ZoneLore:Get("autoplay")
-		ZoneLore:Set("autoplay", enabled)
+		local enabled = not SpokenZones:Get("autoplay")
+		SpokenZones:Set("autoplay", enabled)
 		if not enabled then
-			ZoneLore:StopLore()
+			SpokenZones:StopLore()
 		end
-		ZoneLore:Print("autoplay %s", enabled and "enabled" or "disabled")
+		SpokenZones:Print("autoplay %s", enabled and "enabled" or "disabled")
 	elseif cmd == "forget" then
-		if ZoneLore.ForgetAutoplayHistory then
-			ZoneLore:ForgetAutoplayHistory()
-			ZoneLore:Print("this character's narration history is cleared -- the "
+		if SpokenZones.ForgetAutoplayHistory then
+			SpokenZones:ForgetAutoplayHistory()
+			SpokenZones:Print("this character's narration history is cleared -- the "
 				.. "greeting returns on next login, and every area counts as unheard again")
 		end
 	elseif cmd == "discover" then
@@ -871,17 +900,17 @@ SlashCmdList["ZONELORE"] = function(msg)
 				areaName = GetZoneText()
 			end
 		end
-		ZoneLore:Print('simulating discovery of "%s"', tostring(areaName))
-		ZoneLore:OnAreaDiscovered(areaName)
+		SpokenZones:Print('simulating discovery of "%s"', tostring(areaName))
+		SpokenZones:OnAreaDiscovered(areaName)
 	elseif cmd == "bar" then
-		if ZoneLore.ResetPlayerPosition then
-			ZoneLore:ResetPlayerPosition()
-			ZoneLore:Print("player moved back to the middle of the screen")
+		if SpokenZones.ResetPlayerPosition then
+			SpokenZones:ResetPlayerPosition()
+			SpokenZones:Print("player moved back to the middle of the screen")
 		end
 	elseif cmd == "debug" then
-		local enabled = not ZoneLore:Get("debug")
-		ZoneLore:Set("debug", enabled)
-		ZoneLore:Print("debug mode %s", enabled and "on -- click the map to see area names" or "off")
+		local enabled = not SpokenZones:Get("debug")
+		SpokenZones:Set("debug", enabled)
+		SpokenZones:Print("debug mode %s", enabled and "on -- click the map to see area names" or "off")
 	elseif cmd == "help" then
 		CmdHelp()
 	else

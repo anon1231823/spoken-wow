@@ -182,7 +182,7 @@ local SlashCommands = {
             desc = "Narrate the quest panel that is currently visible",
             dropdownHidden = true,
             func = function(info)
-                if not Addon:ReadVisibleQuest("/vo read") then
+                if not Addon:ReadVisibleQuest("/spq read") then
                     print("|cFFFF4040Spoken Quests: no visible quest detail, progress, reward, or greeting panel was found.|r")
                 end
             end
@@ -323,7 +323,7 @@ end
 
 ---Initialization of opens panel
 --- Play a known line the way a real one goes: through the player, on the configured
---- channel. Called by `/vo test` and by the button on the settings panel, so the two
+--- channel. Called by `/spq test` and by the button on the settings panel, so the two
 --- cannot answer differently.
 function Options:RunSelfTest()
             local soundData = {
@@ -429,11 +429,15 @@ function Options:Initialize()
         AceConfig = Addon
     end
     RunOptionalStep("AceConfig slash registration", function()
-        AceConfig:RegisterOptionsTable("SpokenQuests", self.table, "vo")
+        -- A table, not a string: AceConfig registers each as a slash command for the same
+        -- options table. The pre-rename "vo" is not among them: the addon answers to one
+        -- name, and a command that still worked would keep the retired one alive in macros
+        -- and in what players tell each other.
+        AceConfig:RegisterOptionsTable("SpokenQuests", self.table, { "spokenquests", "spq" })
     end)
     RunOptionalStep("settings panel", function()
         -- One canvas panel of sections rather than a Blizzard category per group. The
-        -- table above still backs every /vo command and still fills the window below,
+        -- table above still backs every /spq command and still fills the window below,
         -- which is where profiles and the pack manager live.
         SettingsPanel:Setup()
     end)

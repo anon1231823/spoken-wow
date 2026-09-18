@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Builds the ZoneLore sound packs, one zip per quality tier.
+# Builds the Spoken Zones sound pack.
 #
-#   ./scripts/package-audio.sh                 # both English tiers
+#   ./scripts/package-audio.sh                 # the English pack
 #   ./scripts/package-audio.sh standard        # just the 64kbps one
 #   ./scripts/package-audio.sh high            # just the 128kbps one
 #   LOCALE=deDE ./scripts/package-audio.sh     # the German pack, VBR only
@@ -42,6 +42,15 @@ LOCALE="${LOCALE:-enUS}"
 # packaging run that checked English's manifest against another language's files
 # would pass by looking at neither.
 export SPOKEN_ZONES_LANG="$LOCALE"
+
+# The Node steps below read the manifest from Postgres when DATABASE_URL is set, and
+# pipelines/zones/.env points it at the droplet -- so packaging on a laptop with no tunnel up
+# failed with ECONNREFUSED from a step called "checking the lookup table against the files".
+#
+# Defined-but-empty is what env.mjs reads as "use the committed files": an already-set variable
+# wins over .env. ${DATABASE_URL-} keeps an explicit setting, including one make passed in, and
+# supplies the empty default when there is none.
+export DATABASE_URL="${DATABASE_URL-}"
 
 # The masters live in the language's own pack folder; English's are the high tier
 # it already publishes. Kept in step with packFolder() in tools/lib/locales.mjs:
@@ -94,20 +103,28 @@ JOBS="${JOBS:-$( (command -v nproc >/dev/null 2>&1 && nproc) || sysctl -n hw.ncp
 # published, which is the reason not to invent one now.
 tier_folder() {
   if [[ "$LOCALE" != "enUS" ]]; then basename "$SRC"; return; fi
-  case "$1" in standard) echo "ZoneLoreAudio64";; high) echo "ZoneLoreAudio";; esac
+  case "$1" in standard) echo "ZoneLoreAudio64";; high) echo "SpokenZonesAudio";; esac
 }
 tier_bitrate()  { case "$1" in standard) echo "64";; high) echo "128";; esac; }
 tier_encoding() { case "$1" in standard) echo "vbr-v6";; high) echo "copy";; esac; }
-# The folder names above are frozen -- a renamed pack folder is a re-download of every
-# clip in it -- so the title is the only place a player reads the current name.
+# The high tier was renamed from ZoneLoreAudio with the projects: a pack reads its own folder
+# name out of the loader, so nothing breaks, and the re-download it costs is one the release
+# doing the rename costs anyway. ZoneLoreAudio64 keeps its name because it is retired.
 tier_title() {
   if [[ "$LOCALE" != "enUS" ]]; then echo "Spoken Zones Audio $LOCALE"; return; fi
   case "$1" in standard) echo "Spoken Zones Audio 64";; high) echo "Spoken Zones Audio";; esac
 }
 
-# English publishes both tiers; every other language publishes the small one only.
+# One tier per language, now that the 64 kbps English pack is retired: two qualities meant
+# two CurseForge projects, two folder names and a question at install time that the answer
+# "take the bigger one" always won. ZoneLoreAudio64 stays published so existing installs keep
+# working and is never uploaded to again.
+#
+# `standard` is still reachable by naming it, and is still what a non-English pack ships:
+# a language has one tier, and its folder carries no bitrate marker because there is nothing
+# to tell it apart from.
 if [[ "$LOCALE" == "enUS" ]]; then
-  tiers=("standard" "high")
+  tiers=("high")
 else
   tiers=("standard")
 fi
@@ -139,8 +156,8 @@ fi
 
 # The language is set by rewriting this line, so a .toc without it would ship a
 # pack that reports itself as English and plays under English text only.
-if ! grep -q '^## X-ZoneLore-Language:' "$TOC"; then
-  echo "error: $TOC has no '## X-ZoneLore-Language:' line to rewrite" >&2
+if ! grep -q '^## X-SpokenZones-Language:' "$TOC"; then
+  echo "error: $TOC has no '## X-SpokenZones-Language:' line to rewrite" >&2
   exit 1
 fi
 
@@ -159,22 +176,24 @@ node "$REPO/pipelines/zones/tools/voice/validate-audio.mjs"
 
 # Each tier ships the README for its own CurseForge page, so the description a
 # player read before downloading is the file they end up with.
-node "$REPO/pipelines/zones/tools/descriptions.mjs" --write >/dev/null
+node "$REPO/scripts/descriptions.mjs" --write >/dev/null
 # A language with no CurseForge page of its own ships the English description
 # rather than nothing: the page it was downloaded from is the honest fallback
 # until somebody writes one for it.
+# Named by CurseForge slug, which is what descriptions.mjs writes the files out as -- not by
+# folder, which still carries the pre-rename name.
+#
+# The retired 64 kbps page is gone, so every tier without a page of its own falls back to the
+# one shipping description rather than to a page nobody maintains.
 tier_readme() {
   local path
   if [[ "$LOCALE" != "enUS" ]]; then
     path="$REPO/dist/descriptions/$(echo "$(tier_folder "$1")" | tr '[:upper:]' '[:lower:]').md"
-    [[ -f "$path" ]] || path="$REPO/dist/descriptions/zoneloreaudio64.md"
+    [[ -f "$path" ]] || path="$REPO/dist/descriptions/spoken-zones-audio.md"
     echo "$path"
     return
   fi
-  case "$1" in
-    standard) echo "$REPO/dist/descriptions/zoneloreaudio64.md";;
-    high)     echo "$REPO/dist/descriptions/zoneloreaudio.md";;
-  esac
+  echo "$REPO/dist/descriptions/spoken-zones-audio.md"
 }
 
 # Transcoding needs ffmpeg, but only for the tiers that are not a straight copy.
@@ -226,9 +245,9 @@ for tier in "${tiers[@]}"; do
   sed -i.bak \
     -e "s|^## IconTexture:.*|## IconTexture: Interface\\\\AddOns\\\\$folder\\\\Textures\\\\AddonIcon.tga|" \
     -e "s|^## Title:.*|## Title: $title|" \
-    -e "s|^## X-ZoneLore-Quality:.*|## X-ZoneLore-Quality: $tier|" \
-    -e "s|^## X-ZoneLore-Bitrate:.*|## X-ZoneLore-Bitrate: $bitrate|" \
-    -e "s|^## X-ZoneLore-Language:.*|## X-ZoneLore-Language: $LOCALE|" \
+    -e "s|^## X-SpokenZones-Quality:.*|## X-SpokenZones-Quality: $tier|" \
+    -e "s|^## X-SpokenZones-Bitrate:.*|## X-SpokenZones-Bitrate: $bitrate|" \
+    -e "s|^## X-SpokenZones-Language:.*|## X-SpokenZones-Language: $LOCALE|" \
     "$staging/$folder/$folder.toc"
   rm -f "$staging/$folder/$folder.toc.bak"
 

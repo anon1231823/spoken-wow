@@ -24,9 +24,9 @@ import { luaString } from "../lib/wiki.mjs";
  */
 function guard(lang) {
   return [
-    "local _, ZoneLore = ...",
+    "local _, SpokenZones = ...",
     "",
-    `if not ZoneLore:ShouldLoadLanguage("${lang}") then`,
+    `if not SpokenZones:ShouldLoadLanguage("${lang}") then`,
     "\treturn",
     "end",
     "",
@@ -34,7 +34,7 @@ function guard(lang) {
 }
 
 /**
- * addon/ZoneLore/Data/<lang>/Zones.lua.
+ * addon/SpokenZones/Data/<lang>/Zones.lua.
  *
  * @param entries {name, short, full, source, mapID}[] -- any order; sorted here, because
  *   a data file whose order depends on how the rows came back is a diff on every export.
@@ -62,12 +62,12 @@ export function emitZones(entries, lang = BASE_LOCALE) {
     lines.push("\t},");
   }
 
-  lines.push("}", "", `ZoneLore:RegisterLoreData("${lang}", "zones", zones)`, "");
+  lines.push("}", "", `SpokenZones:RegisterLoreData("${lang}", "zones", zones)`, "");
   return lines.join("\n");
 }
 
 /**
- * addon/ZoneLore/Data/<lang>/Subzones.lua.
+ * addon/SpokenZones/Data/<lang>/Subzones.lua.
  *
  * @param entries {mapID, key, name, short, full, source}[]
  * @param zoneNames Map<mapID, string> for the per-zone comment. A subzone row carries
@@ -85,7 +85,7 @@ export function emitSubzones(entries, zoneNames, lang = BASE_LOCALE) {
     '-- leading "the " removed, apostrophes dropped, punctuation collapsed to',
     '-- single spaces. The client reports "The Bulwark" where the wiki titles the',
     '-- page "Bulwark", so both sides are reduced to the same key at lookup time',
-    "-- via ZoneLore:NormaliseAreaKey.",
+    "-- via SpokenZones:NormaliseAreaKey.",
     "--",
     "-- Every language is keyed by the ENGLISH name: a place is one place whatever",
     "-- it is called, and a non-English client gets from its own name to this key",
@@ -119,6 +119,6 @@ export function emitSubzones(entries, zoneNames, lang = BASE_LOCALE) {
     lines.push("\t},");
   }
 
-  lines.push("}", "", `ZoneLore:RegisterLoreData("${lang}", "subzones", subzones)`, "");
+  lines.push("}", "", `SpokenZones:RegisterLoreData("${lang}", "subzones", subzones)`, "");
   return lines.join("\n");
 }

@@ -174,7 +174,10 @@ function Addon:Enable()
     -- Through _G, not bare. Every file here runs inside a private environment whose
     -- metatable falls back to _G: reads fall through, writes do not. A bare assignment
     -- lands in the environment, and the client never hears of the command.
+    -- One scheme across the three addons: the long name and a two-or-three letter short
+    -- form. /sp here, /spq for quests, /spz for zones.
     _G.SLASH_SPOKEN1 = "/spoken"
+    _G.SLASH_SPOKEN2 = "/sp"
     SlashCmdList.SPOKEN = function(input)
         local command = strlower(strtrim(input or ""))
         if command == "play" or command == "pause" or command == "" then

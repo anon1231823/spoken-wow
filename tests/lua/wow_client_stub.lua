@@ -337,6 +337,9 @@ _G.DEFAULT_CHAT_FRAME = { AddMessage = function() end }
 world.inCombat = false
 function _G.UnitAffectingCombat() return world.inCombat end
 function _G.GetSubZoneText() return world.subZone or "" end
+-- Defaults to 1: the login greeting's one exception is a brand-new character, so a test
+-- that says nothing about the level is testing that case.
+function _G.UnitLevel() return world.playerLevel or 1 end
 _G.C_Map = {
     GetMapInfo = function(id) return { mapType = 3 } end,
     GetBestMapForUnit = function() return world.playerMapID or 1411 end,
@@ -654,14 +657,14 @@ function M.ResetTimers()
 end
 
 --- Load the zones addon's playback files the way the client would -- each chunk receives
---- the addon name and the shared table as varargs -- against a hand-built ZoneLore table
+--- the addon name and the shared table as varargs -- against a hand-built SpokenZones table
 --- carrying the few Core.lua facts Audio.lua and Autoplay.lua read. Returns that table.
-function M.LoadZones(addonDirectory, ZoneLore)
+function M.LoadZones(addonDirectory, SpokenZones)
     for _, file in ipairs({ "Audio", "UI/ReportButton", "Autoplay" }) do
         local chunk = assert(loadfile(addonDirectory .. file .. ".lua"))
-        chunk("SpokenZones", ZoneLore)
+        chunk("SpokenZones", SpokenZones)
     end
-    return ZoneLore
+    return SpokenZones
 end
 
 --- Reset every piece of sound state a test can observe.

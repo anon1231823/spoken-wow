@@ -37,7 +37,7 @@ install -d -o deploy -g deploy -m 755 \
 #   voices/           clone clips: an ElevenLabs voice cannot be exported, so these are
 #                     the only way to remake one
 #   audio-previews/   rendered pronunciation previews, each one paid for
-#   downloads/        the HQ sound pack, served straight off disk by nginx
+#   downloads/        the complete sound pack, served straight off disk by nginx
 #
 # downloads/ is a directory of its own rather than shared/ itself because nginx aliases it:
 # shared/ holds app.env, and aliasing a directory that contains secrets is one chmod away

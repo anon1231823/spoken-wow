@@ -2,7 +2,7 @@
 # Build the data module from transcoded copies of the audio store, and zip it.
 #
 #   make package-audio                 # the four shipping packs, Ogg Vorbis, into dist/
-#   make package-audio-hq              # every line in one folder at full bandwidth
+#   make package-audio-complete        # every line in one folder, for the site
 #   make package-audio VERSION=1.4.0   # the version written into the .toc
 #   ENCODE=copy make package-audio     # the masters, untranscoded, for a listening check
 #   JOBS=1 make package-audio          # serial, when a failing encode needs readable output
@@ -12,12 +12,15 @@
 # asks a player to download three gigabytes for audio most of them hear once per
 # quest. docs/pack-size.md measures every encode that was considered.
 #
-# THE SHIPPING PACK IS OGG VORBIS AT 22.05 kHz. Vorbis is worth 1.3-1.5x over LAME
-# at these rates, and speech survives an 11 kHz ceiling, which together take 3.2 GB
-# to 0.6 GB - the difference between a pack people download and one they do not.
-# `ogg-q0-44k` keeps the full bandwidth for anyone who would rather have it, at
-# 1.3 GB, and it is what package-audio-hq builds. Both are VBR: the bits follow the
-# voice instead of padding silence to a constant rate.
+# THE SHIPPING PACK IS OGG VORBIS AT 44.1 kHz (`ogg-q0-44k`), which make passes in:
+# 3.2 GB of masters become ~1.3 GB, split five ways. Vorbis is worth 1.3-1.5x over
+# LAME at these rates, and it is VBR, so the bits follow the voice instead of padding
+# silence to a constant rate.
+#
+# A 22.05 kHz downsample halves that again and speech survives an 11 kHz ceiling, so
+# it shipped as a second family for a while. It is retired - one family is one set of
+# projects, one set of folder names and one answer to "which do I install" - and the
+# profile stays available here for anyone measuring. docs/pack-size.md has the numbers.
 #
 # The masters stay in audio/ untouched, so raising the shipped quality later is a
 # re-run of this script rather than a second purchase from ElevenLabs, which bills
@@ -43,10 +46,22 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO"
 
-STORE="${STORE:-audio}"
-DIST="${DIST:-dist}"
-MODULE="${MODULE:-VoiceOverReduxAudio}"
-VERSION="${VERSION:-1.2.1}"
+# The Python half of this project lives under pipelines/quests/, and both of its entry points
+# resolve their own defaults -- the corpus, the ignore list, the factions export -- relative to
+# that directory. So the paths here are absolute and the two commands below are run from there,
+# rather than every default being restated as a flag that would go stale one at a time.
+QUESTS="$REPO/pipelines/quests"
+
+STORE="${STORE:-$QUESTS/audio}"
+DIST="${DIST:-$REPO/dist}"
+# The shipping packs' folder prefix, which every pack suffix is appended to. Renaming it renames
+# the folder players install, which is safe here only because nothing stores a path built from
+# it - DataModules composes one at play time from the folder the client reports - and costs a
+# re-download the next release was going to cost anyway. It was VoiceOverReduxHQAudio until the
+# projects were renamed; DataModules:availableModules has to be kept in step with it, since that
+# is how the player recognises an installed pack.
+MODULE="${MODULE:-SpokenQuestsAudio}"
+VERSION="${VERSION:-2.0.0}"
 # Which packs to build; each becomes MODULE plus the suffix tts_cli/factions.py gives it.
 #
 # The four that ship. 'all' - one folder holding every line - is deliberately not among them:
@@ -54,22 +69,22 @@ VERSION="${VERSION:-1.2.1}"
 # meta addon from scripts/package-meta.sh instead. Build it with PACKS=all when you want the
 # whole thing in one folder locally, which is also the fast way to try an encode change.
 PACKS="${PACKS:-alliance horde shared gossip}"
-ENCODE="${ENCODE:-ogg-q-1-22k}"
+ENCODE="${ENCODE:-ogg-q0-44k}"
 ZIP="${ZIP:-1}"
 # Distinguishes the zips of two profiles built from the same module name, so one profile's
 # build does not overwrite another's in dist/.
 LABEL="${LABEL:-}"
 # Names the addon folder outright, instead of MODULE plus the pack's suffix. Only meaningful
-# when building a single pack, and it exists for the HQ build: one folder holding every line at
-# full bandwidth, which is a thing of its own rather than a bigger copy of the All pack.
+# when building a single pack, and it exists for the complete build: one folder holding every
+# line, which is a thing of its own rather than a bigger copy of the All pack.
 MODULE_NAME="${MODULE_NAME:-}"
 TITLE="${TITLE:-}"
 # The family a build belongs to: MODULE is the folder every pack's suffix is appended to, and
-# TITLE_FAMILY the words before the colon in every title. The HQ packs are the same four cut
-# the same way at a different quality, so they are a family of their own -
-# VoiceOverReduxHQAudioAlliance, "Spoken Quests HQ Audio: Alliance" - rather than a variant
-# spelled onto the end of each name. A folder per quality, because two packs under one name
-# would have an addon manager updating a player from the quality they chose into the other.
+# TITLE_FAMILY the words before the colon in every title. Both are parameters because a set of
+# packs built together is named together - a second encode once, a language pack next - and a
+# set needs a folder and projects of its own rather than a variant spelled onto the end of each
+# name, since two packs under one project would have an addon manager updating a player from
+# the one they chose into the other.
 TITLE_FAMILY="${TITLE_FAMILY:-}"
 # kbps above which an mp3 is worth re-encoding as an mp3. See tools/plan_transcode.py.
 THRESHOLD="${THRESHOLD:-80}"
@@ -83,9 +98,13 @@ THRESHOLD="${THRESHOLD:-80}"
 # misses. Keying on mtime would be cheaper and wrong - `make pull` copies the
 # droplet's timestamps, so a freshly pulled take can be older than the entry it
 # ought to replace.
-CACHE_ROOT="${CACHE_ROOT:-audio-transcoded}"
+CACHE_ROOT="${CACHE_ROOT:-$QUESTS/audio-transcoded}"
 
-PYTHON="${PYTHON:-$([ -x .venv/bin/python ] && echo .venv/bin/python || command -v python3)}"
+PYTHON="${PYTHON:-$([ -x "$QUESTS/.venv/bin/python" ] && echo "$QUESTS/.venv/bin/python" || command -v python3)}"
+# tts_cli is a package in the pipeline directory rather than something installed into the venv,
+# and Python puts the *script's* directory on sys.path, not the working one - so `python -c` and
+# `python tools/x.py` both miss it however this script is invoked.
+export PYTHONPATH="$QUESTS${PYTHONPATH:+:$PYTHONPATH}"
 JOBS="${JOBS:-$( (command -v nproc >/dev/null 2>&1 && nproc) || sysctl -n hw.ncpu 2>/dev/null || echo 4 )}"
 
 # Each profile is a format, the flags that produce it, and nothing else. FORMAT is what the
@@ -125,8 +144,8 @@ staging="$(mktemp -d)"
 trap 'rm -f "$plan"; rm -rf "$staging"' EXIT
 
 echo "planning..."
-"$PYTHON" tools/plan_transcode.py --store "$STORE" --format "$FORMAT" \
-  --threshold "$THRESHOLD" > "$plan"
+(cd "$QUESTS" && "$PYTHON" tools/plan_transcode.py --store "$STORE" --format "$FORMAT" \
+  --threshold "$THRESHOLD") > "$plan"
 count="$(wc -l <"$plan" | tr -d ' ')"
 
 # Directories first in one pass, so placing the clips below is a flat run of cp rather
@@ -258,8 +277,8 @@ for pack in $PACKS; do
 
   echo
   echo "building $module ($pack)"
-  "$PYTHON" cli-main.py build --store "$staging" --dist "$DIST" --module "$module" \
-    --version "$VERSION" --pack "$pack" ${title:+--module-title "$title"}
+  (cd "$QUESTS" && "$PYTHON" cli-main.py build --store "$staging" --dist "$DIST" \
+    --module "$module" --version "$VERSION" --pack "$pack" ${title:+--module-title "$title"})
 
   echo "  module size: $(du -sh "$DIST/$module" | cut -f1)  (store: $(du -sh "$STORE" | cut -f1))"
 

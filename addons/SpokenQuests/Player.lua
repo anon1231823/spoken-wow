@@ -235,7 +235,7 @@ function Player:Enqueue(soundData)
     end
 
     if Spoken:IsPaused() then
-        Debug:Record("queue-paused", "The voiceover is queued, but playback is paused; run /vo play")
+        Debug:Record("queue-paused", "The voiceover is queued, but playback is paused; run /spq play")
     end
     return true
 end

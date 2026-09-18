@@ -87,5 +87,5 @@ jobs:
       # validate.mjs is what asserts no square bracket survives into spoken text -- the one
       # normalisation rule that is not cosmetic, since eleven_v3 reads [...] as a tag.
       - run: node pipelines/zones/tools/validate.mjs
-      - run: node pipelines/zones/tools/descriptions.mjs --check
+      - run: node scripts/descriptions.mjs --check
       - run: node pipelines/zones/tools/locale/check-strings.mjs

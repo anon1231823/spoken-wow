@@ -7,7 +7,7 @@
         web push push-dry pull pull-dry audio-status ssh-check pull-manifest \
         db-push db-pull bootstrap deploy-scripts releases rollback logs \
         icon lore-import lore-export lore-check lore-sheet lore-upload lore-upload-dry lore-rewrite aliases languages locale-check \
-        release release-dry descriptions descriptions-check descriptions-published
+        release release-dry
 
 # The \# escapes are required: an unescaped # starts a make comment, even
 # inside a $(shell ...) call.
@@ -20,19 +20,13 @@ help: ## Show this help
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-package: check ## Build dist/ZoneLore-<version>.zip for upload
+package: check ## Build dist/SpokenZones-<version>.zip for upload
 	@./scripts/zones/package.sh
 
-check: validate lint locale-check descriptions-check ## Run every pre-package check
+check: validate lint locale-check ## Run every pre-package check
 
-descriptions: ## Regenerate the addon READMEs and dist/descriptions/ from curseforge/zones/
-	@node pipelines/zones/tools/descriptions.mjs --write
-
-descriptions-check: ## Confirm the addon READMEs match curseforge/zones/
-	@node pipelines/zones/tools/descriptions.mjs
-
-descriptions-published: ## Record the current descriptions as pasted into the site
-	@node pipelines/zones/tools/descriptions.mjs --published
+# descriptions, descriptions-check and descriptions-published moved to the root Makefile when
+# the generator grew to cover every project's pages rather than only this one's.
 
 validate: ## Sanity-check the generated Lua data files
 	@node pipelines/zones/tools/validate.mjs
@@ -77,6 +71,16 @@ clean: ## Remove build output
 # an import or a lookup rebuild at another language's files.
 VOICE_LANG = SPOKEN_ZONES_LANG=$(or $(LOCALE),enUS)
 
+# The manifest comes from Postgres when DATABASE_URL is set and from the committed files
+# otherwise, and pipelines/zones/.env sets it to the droplet -- so a laptop with no tunnel up
+# gets ECONNREFUSED out of every audio target, which is not a failure anyone reading
+# "validate the sound pack" expects.
+#
+# Passing it empty is what env.mjs documents as "use the files": an already-set variable always
+# wins over .env. Defined-but-empty counts, so this is the default and
+# `make zones-package-audio DATABASE_URL=postgres://...` still reads the database.
+VOICE_DB = DATABASE_URL=$(DATABASE_URL)
+
 voice: ## Dry run over every voiceline (costs nothing; LOCALE=deDE for another language)
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/generate.mjs --all
 
@@ -88,10 +92,10 @@ sample: ## Generate two sample lines to pipelines/zones/audio-samples/ (SPENDS C
 
 lookup: ## Rebuild the addon's audio lookup table (exports the manifest first)
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/export-manifest.mjs
-	@$(VOICE_LANG) node pipelines/zones/tools/voice/build-lookup.mjs
+	@$(VOICE_LANG) $(VOICE_DB) node pipelines/zones/tools/voice/build-lookup.mjs
 
-validate-audio: ## Check manifest, files on disk and lookup table agree
-	@$(VOICE_LANG) node pipelines/zones/tools/voice/validate-audio.mjs
+validate-audio: ## Check manifest, files on disk and lookup table agree (DATABASE_URL=... to use the droplet)
+	@$(VOICE_LANG) $(VOICE_DB) node pipelines/zones/tools/voice/validate-audio.mjs
 
 #-------------------------------------------------------------------------------
 # The explorer's database
@@ -206,7 +210,13 @@ web: ## Run the voiceline explorer at localhost:3000
 # resolves to the droplet today; override with the IP if it is ever pointed at a CDN,
 # which would not proxy SSH:  make push DROPLET=deploy@188.166.37.175
 DROPLET     ?= deploy@rusty.one
-REMOTE_ROOT ?= /srv/zonelore
+
+# /srv/spoken, not /srv/zonelore. The cutover has run: the sounds and the take history live
+# under /srv/spoken/shared (symlinks into the block volume at /mnt/voice/spoken) and the
+# `spoken` pm2 app serves them, while `zonelore` is stopped. The old tree still holds a
+# complete copy, so rsync against it succeeds and reports nothing wrong -- which is exactly
+# why this is worth stating. deploy/zones/ still describes the frozen tree on purpose.
+REMOTE_ROOT ?= /srv/spoken
 
 # The same key ../wow-voiceover uses for the same droplet, and the same reason for
 # -o IdentitiesOnly=yes: ~/.ssh/config here has a `Host *` block naming IdentityFile,
@@ -232,13 +242,15 @@ RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)
 
 # One language per transfer, LOCALE=deDE, defaulting to English. The paths mirror
 # soundsDir()/manifestPath() in pipelines/zones/tools/voice/store.mjs: English keeps the names the
-# droplet already has (shared/Sounds, shared/manifest.json), and another language
+# droplet already has (shared/sounds, shared/manifest.json), and another language
 # lives beside them under its pack folder and a suffixed manifest. pipelines/zones/audio-history/
 # nests every language under one tree, so it moves whole regardless of LOCALE.
 LANG_CODE := $(or $(LOCALE),enUS)
 ifeq ($(LANG_CODE),enUS)
 LOCAL_SOUNDS  := addons/SpokenZonesAudio/Sounds/
-REMOTE_SOUNDS_DIR := Sounds
+# Lowercase on the new store, where it was shared/Sounds on /srv/zonelore. The volume is
+# case-sensitive, so the old spelling is a new empty directory rather than an error.
+REMOTE_SOUNDS_DIR := sounds
 MANIFEST_FILE := manifest.json
 else
 LOCAL_SOUNDS  := addons/SpokenZonesAudio_$(LANG_CODE)/Sounds/
@@ -405,7 +417,7 @@ rollback: ## Roll back to the previous release (or RELEASE=<name>)
 logs: ## Tail the droplet's application log
 	@$(SSH) $(DROPLET) 'pm2 logs zonelore --lines 100'
 
-package-audio: validate-audio ## Build both sound-pack zips (standard + high)
+package-audio: validate-audio ## Build the sound-pack zip
 	@./scripts/zones/package-audio.sh
 
 release-dry: ## Show what `make release` would upload to CurseForge

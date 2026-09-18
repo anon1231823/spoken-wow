@@ -5,9 +5,9 @@ several addons.
 
 | Addon | Voices | Status |
 |---|---|---|
-| **Spoken** | nothing — it *is* the player: the queue, the frame, the minimap button | being extracted |
-| **SpokenQuests** | quest dialogue and NPC gossip | shipping, was VoiceOver Redux |
-| **SpokenZones** | zone and subzone lore | shipping, was ZoneLore |
+| **Spoken** | nothing — it *is* the player: the queue, the frame, the minimap button | published as Spoken Player, id 1700375 |
+| **SpokenQuests** | quest dialogue and NPC gossip | shipping, renamed from VoiceOver Redux |
+| **SpokenZones** | zone and subzone lore | shipping, renamed from ZoneLore |
 | **SpokenBooks** | books, letters and other in-world texts | planned |
 
 Every feature addon plays through `SpokenPlayer`, so a player who installs two of

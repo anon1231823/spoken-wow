@@ -4,7 +4,7 @@ setfenv(1, VoiceOver)
 -- UI/Layout.lua, the file every Spoken addon carries a copy of so the three panels read
 -- alike.
 --
--- The AceConfig table is not replaced. It still backs every `/vo` command, and it still
+-- The AceConfig table is not replaced. It still backs every `/spq` command, and it still
 -- fills the window OpenConfigWindow shows -- which is where profiles and the sound-pack
 -- manager live, both of them AceGUI's to draw. What changed is that the settings a player
 -- actually changes are sections on one panel rather than entries in a tree.

@@ -2,9 +2,9 @@
 # Uploads built zips to CurseForge through the author API.
 #
 #   ./scripts/release.sh --dry-run        # say what would be sent, send nothing
-#   ./scripts/release.sh                  # all three projects
-#   ./scripts/release.sh zonelore         # just the addon
-#   ./scripts/release.sh audio audio64    # just the sound packs
+#   ./scripts/release.sh                  # both projects
+#   ./scripts/release.sh zones            # just the addon
+#   ./scripts/release.sh audio            # just the sound pack
 #
 # Needs CURSEFORGE_TOKEN in the environment or in .env. Generate one at
 # https://authors-old.curseforge.com/account/api-tokens -- it is an author token
@@ -35,6 +35,9 @@ API="https://wow.curseforge.com/api"
 # uploaded, which is the failure mode to want.
 GAME_VERSION_ERA="${GAME_VERSION_ERA:-1.15.9}"
 GAME_VERSION_ANNIVERSARY="${GAME_VERSION_ANNIVERSARY:-2.5.6}"
+# The 1.60.1 Forever client, which is CurseForge's name for the one whose TOC suffix is
+# _Camelot. Both addons declare interface 16001 and load there.
+GAME_VERSION_FOREVER="${GAME_VERSION_FOREVER:-1.60.1}"
 
 # CurseForge's own channel, which is not the same thing as the beta disclaimer in
 # the descriptions. Marking these "beta" would keep most addon managers from
@@ -49,33 +52,42 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 # it fails on the empty project id below -- which is the failure to want, because
 # the alternative is uploading a German pack over the English project.
 target_project() { case "$1" in
-  zonelore) echo "1636521";;
+  zones)    echo "1636521";;
   audio)    echo "1636532";;
-  audio64)  echo "1636548";;
 esac; }
 target_addon() { case "$1" in
-  zonelore) echo "SpokenZones";;
-  audio)    echo "ZoneLoreAudio";;
-  audio64)  echo "ZoneLoreAudio";;   # both packs are versioned from the one tree
+  zones)    echo "SpokenZones";;
+  audio)    echo "SpokenZonesAudio";;
 esac; }
 target_zip() { case "$1" in
-  zonelore) echo "SpokenZones";;
-  audio)    echo "ZoneLoreAudio";;
-  audio64)  echo "ZoneLoreAudio64";;
+  zones)    echo "SpokenZones";;
+  audio)    echo "SpokenZonesAudio";;
+esac; }
+# The project's slug, which is neither the folder nor the zip name: the folders keep the names
+# they were published under and the slugs were changed with the rename. Used for the link
+# printed after an upload, so a wrong one here is a dead link and nothing worse.
+target_slug() { case "$1" in
+  zones)    echo "spoken-zones";;
+  audio)    echo "spoken-zones-audio";;
 esac; }
 # Which clients each file is offered to. Every zip built from 0.3.1 onwards carries
-# a .toc for both clients, so all three are filed against both. Files uploaded
+# a .toc for both clients, so both are filed against both. Files uploaded
 # before that are Era-only and stay filed as they were -- a file offered to a
 # client it cannot load on is worse than one that is simply absent there.
-# Required dependencies by CurseForge slug: the addon needs the player it speaks through.
+# Required dependencies by CurseForge slug. The addon needs the player it speaks through, and
+# the pack needs the addon: it is data, inert without something to read it, and a manager that
+# installs it alone leaves a player several hundred megabytes heavier and no louder.
+#
+# It also makes the pair upgrade together, which is what lets a pack register itself under one
+# name only - see the ONE REGISTRY note in tools/voice/build-lookup.mjs.
 target_dependencies() { case "$1" in
-  zonelore) echo "spoken-player";;
+  zones)    echo "spoken-player";;
+  audio)    echo "spoken-zones";;
 esac; }
 
 target_game_versions() { case "$1" in
-  zonelore) echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
-  audio)    echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
-  audio64)  echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
+  zones)    echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY $GAME_VERSION_FOREVER";;
+  audio)    echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY $GAME_VERSION_FOREVER";;
 esac; }
 
 dry_run=""
@@ -83,12 +95,12 @@ targets=()
 for arg in "$@"; do
   case "$arg" in
     --dry-run|-n) dry_run=1;;
-    zonelore|audio|audio64) targets+=("$arg");;
-    *) echo "error: unknown argument '$arg' (expected: zonelore, audio, audio64, --dry-run)" >&2; exit 1;;
+    zones|audio) targets+=("$arg");;
+    *) echo "error: unknown argument '$arg' (expected: zones, audio, --dry-run)" >&2; exit 1;;
   esac
 done
 if (( ${#targets[@]} == 0 )); then
-  targets=("zonelore" "audio" "audio64")
+  targets=("zones" "audio")
 fi
 
 command -v curl >/dev/null || { echo "error: curl is required" >&2; exit 1; }
@@ -135,7 +147,7 @@ resolve_game_version() {
 }
 
 echo "resolving game versions..."
-for name in $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY; do
+for name in $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY $GAME_VERSION_FOREVER; do
   echo "  $name -> id $(resolve_game_version "$name")"
 done
 
@@ -205,8 +217,7 @@ for target in "${targets[@]}"; do
   # Built with node rather than a heredoc: the changelog is markdown containing
   # quotes, backticks and newlines, and hand-escaping it into JSON is how a
   # release ends up with a mangled changelog nobody notices for a month.
-  # The addon requires the player; the packs require nothing. By slug, which must be an
-  # approved project or the upload fails with errorCode 1018.
+  # By slug, which must name an approved project or the upload fails with errorCode 1018.
   dependencies="$(target_dependencies "$target")"
   metadata="$(node -e '
     const [changelog, releaseType, gameVersionIds, displayName, dependencies] = process.argv.slice(1);
@@ -224,6 +235,7 @@ for target in "${targets[@]}"; do
   echo "  file:     $zip_path ($size)"
   echo "  version:  $version   release type: $RELEASE_TYPE   game versions: $game_version_names"
   echo "  changelog: $(echo "$changelog" | head -1) ..."
+  [[ -n "$dependencies" ]] && echo "  requires: $(echo $dependencies)"
 
   if [[ -n "$dry_run" ]]; then
     echo "  dry run -- not uploading"
@@ -262,7 +274,7 @@ for target in "${targets[@]}"; do
 
   file_id="$(node -e 'process.stdout.write(String(JSON.parse(process.argv[1]).id ?? "?"))' "$response")"
   echo "  uploaded -- file id $file_id"
-  echo "  https://www.curseforge.com/wow/addons/$zip_name/files/$file_id"
+  echo "  https://www.curseforge.com/wow/addons/$(target_slug "$target")/files/$file_id"
 done
 
 #-- descriptions --------------------------------------------------------------
@@ -271,7 +283,7 @@ done
 # from what was last pasted, and say so at the moment somebody is already looking
 # at the project pages.
 echo
-stale="$(node "$REPO/pipelines/zones/tools/descriptions.mjs" --drift)"
+stale="$(node "$REPO/scripts/descriptions.mjs" --drift --group=zones)"
 if [[ -n "$stale" ]]; then
   echo "descriptions that differ from what was last pasted into the site:"
   echo "$stale" | while IFS=$'\t' read -r slug why; do

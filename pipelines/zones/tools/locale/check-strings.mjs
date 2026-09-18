@@ -3,7 +3,7 @@
 //
 //   node tools/locale/check-strings.mjs
 //
-// addon/ZoneLore/Locale/enUS.lua is the key set: every string the interface can
+// addon/SpokenZones/Locale/enUS.lua is the key set: every string the interface can
 // show, named. A translation is a file of the same keys with different values,
 // and anything it leaves out falls back to English at runtime.
 //

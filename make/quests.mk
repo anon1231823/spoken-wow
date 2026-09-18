@@ -11,7 +11,15 @@
 # freshly pushed audio invisible. An IP rather than a hostname keeps this working if the
 # name is ever pointed at a CDN, which would not proxy SSH.
 DROPLET      ?= deploy@188.166.37.175
-REMOTE_ROOT  := /srv/voiceover
+
+# /srv/spoken, not /srv/voiceover. The cutover has run: the audio store, the voices and the
+# take history live under /srv/spoken/shared (symlinks into the block volume at
+# /mnt/voice/spoken), the `spoken` pm2 app is what serves them, and `voiceover` is stopped.
+# Pointing these at the old tree is not an error rsync can report -- it finds a complete,
+# consistent store there and syncs happily against a site nobody is using, which is how a
+# fortnight of regenerated takes went unnoticed. deploy/quests/ still describes the frozen
+# tree on purpose; that is the deployment, not the store.
+REMOTE_ROOT  := /srv/spoken
 REMOTE_AUDIO := $(REMOTE_ROOT)/shared/audio/
 REMOTE_VOICES := $(REMOTE_ROOT)/shared/voices/
 REMOTE_HISTORY := $(REMOTE_ROOT)/shared/audio-history/
@@ -30,7 +38,13 @@ JOBS    ?=
 
 IGNORED_JSON := pipelines/quests/corpus/ignored.json
 IGNORED_LIST := .rsync-ignored
-PYTHON       ?= $(shell [ -x .venv/bin/python ] && echo .venv/bin/python || command -v python3)
+# The pipeline's own interpreter, and its own directory: cli-main.py and the venv are under
+# pipelines/quests/, while every path in this file is relative to the repo root because the
+# dispatcher runs it from there. Resolving .venv/bin/python against the root found nothing,
+# fell back to the system python3, and every push/pull target died in its preflight on a
+# cli-main.py that was never there -- the one thing the merge moved and this did not follow.
+QUESTS_DIR   := pipelines/quests
+PYTHON       ?= $(shell [ -x $(QUESTS_DIR)/.venv/bin/python ] && echo $(abspath $(QUESTS_DIR)/.venv/bin/python) || command -v python3)
 
 # macOS ships openrsync as /usr/bin/rsync, which reports itself as "2.6.9 compatible" and
 # rejects --info. Prefer a real rsync 3.x anywhere on PATH.
@@ -57,7 +71,8 @@ RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)
 
 # Fail with an explanation rather than an rsync usage dump or a silent no-op reload.
 define preflight
-	@$(PYTHON) cli-main.py ignored-files --ignored $(IGNORED_JSON) > $(IGNORED_LIST) \
+	@$(PYTHON) $(QUESTS_DIR)/cli-main.py ignored-files --corpus $(QUESTS_DIR)/corpus/corpus.json.gz \
+	  --ignored $(IGNORED_JSON) > $(IGNORED_LIST) \
 	  || { echo "could not derive $(IGNORED_LIST) from $(IGNORED_JSON)"; exit 1; }
 	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. macOS ships openrsync, which lacks --info."; \
 	                        echo "Install one:  brew install rsync"; exit 1; }
@@ -70,9 +85,9 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
         pull-history push-history history-status pull-ignores package package-audio \
-        package-audio-hq package-audio-hq-split package-meta package-meta-hq push-hq \
+        package-audio-complete package-meta push-complete \
         downloads-status \
-        factions release release-standard release-hq \
+        factions release release-audio \
         release-dry deploy-scripts \
         rollback releases \
         ssh-check
@@ -209,59 +224,47 @@ history-status: ## Compare take count and size on both sides
 # nothing else and each need their own vendored Ace3 in it. Only the first goes to CurseForge;
 # the GitHub release workflow publishes all four.
 #
-# `package-audio` transcodes the store to Ogg Vorbis at 22.05 kHz and builds it into five
-# packs - Alliance, Horde, the quests both sides share, gossip, and one holding everything -
-# zipping each. 3.2 GB of masters become 157 + 155 + 144 + 145 MB, or 601 MB together. Its own
-# header explains every choice; VERSION goes into each TOC, PACKS=all builds only the complete
-# one, ENCODE=copy skips the transcode to hear the masters in game, JOBS=1 makes a failing
-# encode readable.
+# `package-audio` builds the store into five packs - Alliance, Horde, the quests both sides
+# share, gossip, and one holding everything - and zips each. Ogg Vorbis at the full 44.1 kHz,
+# around 300 MB a pack. Its own header explains every choice; VERSION goes into each TOC,
+# PACKS=all builds only the complete one, ENCODE=copy skips the transcode to hear the masters
+# in game, JOBS=1 makes a failing encode readable.
 #
-# `package-audio-hq` is the same pack without the downsample: full 44.1 kHz, 1.3 GB, for
-# anyone who would rather spend the bandwidth. Only the zip name distinguishes them, so
-# building one after the other leaves both zips and the second one's module in dist/.
-# docs/pack-size.md is where the two encodes were measured against everything else.
+# ONE PACK FORMAT. A second set at half the size shipped alongside these for a while, five
+# CurseForge projects of its own, because an addon manager installs a project's newest file and
+# one project holding two formats would move a player out of the one they picked. That is over:
+# those five projects stay published and are never uploaded to again, and nothing here builds
+# them. docs/pack-size.md is where every encode that was considered was measured.
 
 package: ## Zip the player addon into dist/: one Blizzard zip, one per legacy client
 	@./scripts/quests/package.sh
 
-package-audio: ## Transcode, build and zip the sound pack into dist/ (VERSION=1.4.0)
-	@VERSION=$(VERSION) ENCODE=$(ENCODE) JOBS=$(JOBS) ./scripts/quests/package-audio.sh
-
-# The HQ pack: every line in one folder, Ogg Vorbis at the full 44.1 kHz, ~1.3 GB. Not a
-# CurseForge release - it is over the upload ceiling and always will be - so it is built when
-# somebody wants to distribute it themselves, and it is a folder of its own rather than a
-# fatter copy of a shipping pack, so installing it beside them is possible but pointless.
-
-package-audio-hq: ## Build the full-bandwidth pack, every line in one folder (~1.3 GB)
-	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
-	  MODULE_NAME=VoiceOverReduxAudioHQ TITLE="Spoken Quests Audio: HQ" \
+package-audio: ## Transcode, build and zip the five sound packs into dist/ (VERSION=1.4.0)
+	@VERSION=$(VERSION) ENCODE=$(if $(ENCODE),$(ENCODE),ogg-q0-44k) MODULE=SpokenQuestsAudio \
 	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
-# The same audio split the same four ways, at full bandwidth: VoiceOverReduxAudioAllianceHQ and
-# friends. Each lands around 300 MB, which is under CurseForge's ceiling - unlike the one-folder
-# HQ pack - so these can have projects of their own when there are projects to give them.
-#
-# A folder per quality rather than a second file on the standard pack's project: an addon
-# manager installs a project's newest file, so sharing a name would move a player from the
-# quality they picked into the other one.
+# Every line in one folder rather than split five ways, ~1.3 GB. Not a CurseForge release - it
+# is over the upload ceiling and always will be - so it is built for people who would rather
+# take one download, and it is a folder of its own rather than a fatter copy of a shipping pack,
+# so installing it beside them is possible but pointless. The site hosts it: `push-complete`
+# below, under the one current name -- see the note there.
 
-package-audio-hq-split: ## The four packs at full bandwidth (~300 MB each)
-	@VERSION=$(VERSION) ENCODE=ogg-q0-44k MODULE=VoiceOverReduxHQAudio \
-	  TITLE_FAMILY="Spoken Quests HQ Audio" JOBS=$(JOBS) ./scripts/quests/package-audio.sh
-
-package-meta-hq: ## Zip the meta addon for the HQ family
-	@VERSION=$(VERSION) NAME=VoiceOverReduxHQAudio \
-	  TITLE="Spoken Quests HQ Audio: All" VARIANT=" at full bandwidth" \
-	  ./scripts/quests/package-meta.sh
+package-audio-complete: ## Build the whole corpus as one folder for the site (~1.3 GB)
+	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
+	  MODULE_NAME=SpokenQuestsAudioComplete TITLE="Spoken Quests Audio: Complete" \
+	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
 # The "install everything" addon, which installs nothing itself: a few kilobytes declaring the
 # four packs as CurseForge dependencies, because the complete pack is too big to upload. Its
 # header explains the rest; release.sh sends the dependency list with the file.
+#
+# NAME is the bare pack-family folder, which the split packs leave free, and which release.sh
+# uploads as audio-all.
 
 package-meta: ## Zip the meta addon that pulls in all four packs
-	@VERSION=$(VERSION) ./scripts/quests/package-meta.sh
+	@VERSION=$(VERSION) NAME=SpokenQuestsAudio ./scripts/quests/package-meta.sh
 
-# The HQ pack's home, since it is too big for CurseForge: nginx serves
+# The complete pack's home, since it is too big for CurseForge: nginx serves
 # /srv/voiceover/shared/downloads/ straight off disk (see deploy/quests/nginx-voiceover.conf), and
 # this puts a freshly built zip there.
 #
@@ -269,12 +272,18 @@ package-meta: ## Zip the meta addon that pulls in all four packs
 # built fails here instead of uploading whatever zip is oldest in dist/. -latest.zip is a
 # symlink repointed after the copy: the published URL never changes, and it never points at a
 # half-transferred file because rsync writes to a temporary name and renames.
+#
+# ONE NAME. The pack was published as VoiceOverReduxAudioHQ-latest.zip before the rename, and
+# that URL is not kept alive: the descriptions that carried it are being re-pasted with the
+# current one, and the pack itself is re-downloaded this release whatever its name.
 
+# What nginx-spoken.conf serves at /downloads/. voiceover.rusty.one is a redirect vhost now,
+# so a zip pushed into the old tree would land in a directory nothing answers from.
 REMOTE_DOWNLOADS := $(REMOTE_ROOT)/shared/downloads
 
-push-hq: ## Upload the built HQ pack to the site's downloads directory
+push-complete: ## Upload the built complete pack to the site's downloads directory
 	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. brew install rsync"; exit 1; }
-	@v=$$(sed -n 's/^## Version:[[:space:]]*//p' dist/VoiceOverReduxAudioHQ/VoiceOverReduxAudioHQ.toc 2>/dev/null | head -1); 	[ -n "$$v" ] || { echo "No HQ module built. Run: make package-audio-hq"; exit 1; }; 	zip=dist/VoiceOverReduxAudioHQ-$$v.zip; 	[ -f "$$zip" ] || { echo "$$zip is missing. Run: make package-audio-hq"; exit 1; }; 	echo "==> $$zip -> $(DROPLET):$(REMOTE_DOWNLOADS)/"; 	$(RSYNC) -a --human-readable --info=progress2 -e "$(SSH)" "$$zip" $(DROPLET):$(REMOTE_DOWNLOADS)/; 	$(SSH) $(DROPLET) "ln -sfn VoiceOverReduxAudioHQ-$$v.zip $(REMOTE_DOWNLOADS)/VoiceOverReduxAudioHQ-latest.zip"; 	echo "==> https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip"
+	@v=$$(sed -n 's/^## Version:[[:space:]]*//p' dist/SpokenQuestsAudioComplete/SpokenQuestsAudioComplete.toc 2>/dev/null | head -1); 	[ -n "$$v" ] || { echo "No complete module built. Run: make package-audio-complete"; exit 1; }; 	zip=dist/SpokenQuestsAudioComplete-$$v.zip; 	[ -f "$$zip" ] || { echo "$$zip is missing. Run: make package-audio-complete"; exit 1; }; 	echo "==> $$zip -> $(DROPLET):$(REMOTE_DOWNLOADS)/"; 	$(RSYNC) -a --human-readable --info=progress2 -e "$(SSH)" "$$zip" $(DROPLET):$(REMOTE_DOWNLOADS)/; 	$(SSH) $(DROPLET) "ln -sfn SpokenQuestsAudioComplete-$$v.zip $(REMOTE_DOWNLOADS)/SpokenQuestsAudioComplete-latest.zip"; 	echo "==> https://spoken.rusty.one/downloads/SpokenQuestsAudioComplete-latest.zip"
 
 downloads-status: ## List what the site is offering for download
 	@$(SSH) $(DROPLET) 'ls -lh $(REMOTE_DOWNLOADS)/'
@@ -299,14 +308,11 @@ release-dry: ## Show what `make release` would upload to CurseForge
 release: ## Upload the built zips to CurseForge (needs CURSEFORGE_TOKEN)
 	@./scripts/quests/release.sh
 
-# One family at a time, for when only that family was rebuilt. `release` does all eleven.
-# The meta addon comes last in both, since CurseForge resolves its dependencies at upload time.
+# The packs alone, for when the audio was rebuilt and the player was not. The meta addon comes
+# last, since CurseForge resolves its dependencies at upload time.
 
-release-standard: ## Upload the standard packs and their meta addon
+release-audio: ## Upload the four packs and their meta addon
 	@./scripts/quests/release.sh audio-alliance audio-horde audio-shared audio-gossip audio-all
-
-release-hq: ## Upload the HQ packs and their meta addon
-	@./scripts/quests/release.sh hq-alliance hq-horde hq-shared hq-gossip hq-all
 
 # --- the ignore list ------------------------------------------------------------------
 #

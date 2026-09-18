@@ -1,10 +1,10 @@
--- ZoneLore -- the lore panel docked to the side of the world map.
+-- SpokenZones -- the lore panel docked to the side of the world map.
 --
 -- Shows lore for the zone the map is displaying, or for a subzone the player
 -- clicked (see UI/SubzoneClick.lua), with a link back to the zone.
 
-local ADDON_NAME, ZoneLore = ...
-local L = ZoneLore.L
+local ADDON_NAME, SpokenZones = ...
+local L = SpokenZones.L
 
 local PADDING = 16
 local INFO_LINE_HEIGHT = 16
@@ -25,9 +25,9 @@ local panel, header, infoLine, body, footer, audioButton, reportButton
 --------------------------------------------------------------------------------
 
 local function BuildPanel()
-	local width = ZoneLore:Get("panelWidth")
+	local width = SpokenZones:Get("panelWidth")
 
-	panel = CreateFrame("Frame", "ZoneLorePanel", WorldMapFrame, "BackdropTemplate")
+	panel = CreateFrame("Frame", "SpokenZonesPanel", WorldMapFrame, "BackdropTemplate")
 	panel:SetWidth(width)
 	panel:SetFrameStrata(WorldMapFrame:GetFrameStrata())
 	panel:SetFrameLevel(WorldMapFrame:GetFrameLevel() + 10)
@@ -46,7 +46,7 @@ local function BuildPanel()
 	header:SetJustifyH("LEFT")
 	header:SetWordWrap(true)
 
-	audioButton = ZoneLore:CreateAudioButton(panel)
+	audioButton = SpokenZones:CreateAudioButton(panel)
 	audioButton:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -PADDING, -(PADDING - 2))
 
 	-- One fixed-height slot under the header, used either as a caption or as the
@@ -60,7 +60,7 @@ local function BuildPanel()
 	infoLine.text:SetAllPoints()
 	infoLine.text:SetJustifyH("LEFT")
 	infoLine:SetScript("OnClick", function()
-		ZoneLore:ClearSubzone()
+		SpokenZones:ClearSubzone()
 	end)
 	infoLine:SetScript("OnEnter", function(self)
 		if self:IsEnabled() then
@@ -73,7 +73,7 @@ local function BuildPanel()
 		end
 	end)
 
-	reportButton = ZoneLore:CreateReportButton(panel)
+	reportButton = SpokenZones:CreateReportButton(panel)
 	reportButton:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -PADDING, PADDING - 6)
 
 	footer = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
@@ -82,13 +82,13 @@ local function BuildPanel()
 	footer:SetJustifyH("LEFT")
 	footer:SetText("Lore: warcraft.wiki.gg (CC BY-SA 4.0)")
 
-	body = ZoneLore:CreateTextView(panel)
+	body = SpokenZones:CreateTextView(panel)
 	body.frame:SetPoint("TOPLEFT", infoLine, "BOTTOMLEFT", 0, -6)
 	-- Cleared against the button rather than the credit line: the button is the
 	-- taller of the two, so it is the one that decides where the text has to stop.
 	body.frame:SetPoint("BOTTOMRIGHT", reportButton, "TOPRIGHT", 0, 6)
 
-	ZoneLore.panel = panel
+	SpokenZones.panel = panel
 end
 
 --------------------------------------------------------------------------------
@@ -97,7 +97,7 @@ end
 
 local function ApplyAnchors()
 	panel:ClearAllPoints()
-	if ZoneLore:Get("panelSide") == "LEFT" then
+	if SpokenZones:Get("panelSide") == "LEFT" then
 		panel:SetPoint("TOPRIGHT", WorldMapFrame, "TOPLEFT", -2, 0)
 		panel:SetPoint("BOTTOMRIGHT", WorldMapFrame, "BOTTOMLEFT", -2, 0)
 	else
@@ -113,7 +113,7 @@ end
 -- Maximised, the map fills the screen and a side panel would sit off-screen, so
 -- the panel only shows in windowed mode.
 local function ShouldShow()
-	if not ZoneLore:Get("showMapPanel") then
+	if not SpokenZones:Get("showMapPanel") then
 		return false
 	end
 	if WorldMapFrame.IsMaximized and WorldMapFrame:IsMaximized() then
@@ -148,7 +148,7 @@ local function Refresh(mapID)
 		return
 	end
 
-	mapID = mapID or ZoneLore:GetDisplayedMapID()
+	mapID = mapID or SpokenZones:GetDisplayedMapID()
 	if not mapID then
 		panel:Hide()
 		return
@@ -156,14 +156,14 @@ local function Refresh(mapID)
 
 	panel:Show()
 
-	local zoneName = ZoneLore:GetMapName(mapID) or ("uiMapID " .. tostring(mapID))
+	local zoneName = SpokenZones:GetMapName(mapID) or ("uiMapID " .. tostring(mapID))
 
 	-- A selection only applies to the map it was made on; navigating elsewhere
 	-- drops it. Checking here rather than on the map-changed callback keeps this
 	-- independent of the order modules register their callbacks.
-	local selected = ZoneLore.selected
+	local selected = SpokenZones.selected
 	if selected and selected.mapID ~= mapID then
-		ZoneLore.selected = nil
+		SpokenZones.selected = nil
 		selected = nil
 	end
 
@@ -178,7 +178,7 @@ local function Refresh(mapID)
 		-- the reported name reaches the corpus key only through the alias table,
 		-- and normalising a non-Latin name yields nil -- which would silently
 		-- retarget both buttons at the zone's lore.
-		local key = ZoneLore:ResolveAreaKey(selected.areaName)
+		local key = SpokenZones:ResolveAreaKey(selected.areaName)
 		audioButton:SetTarget(mapID, key)
 		reportButton:SetTarget(mapID, key)
 		return
@@ -186,14 +186,14 @@ local function Refresh(mapID)
 
 	header:SetText(zoneName)
 
-	local entry, foundOn = ZoneLore:GetLoreWithFallback(mapID)
+	local entry, foundOn = SpokenZones:GetLoreWithFallback(mapID)
 	if entry then
 		-- Fallback hit an ancestor (a dungeon or micro-map inheriting its zone's
 		-- lore); say so rather than silently mislabelling the text.
 		if foundOn ~= mapID then
-			SetCaption("lore for " .. (ZoneLore:GetMapName(foundOn) or "parent zone"))
+			SetCaption("lore for " .. (SpokenZones:GetMapName(foundOn) or "parent zone"))
 		else
-			local subzones = ZoneLore.Subzones[mapID]
+			local subzones = SpokenZones.Subzones[mapID]
 			if subzones and next(subzones) then
 				SetCaption("click a subzone on the map for more")
 			else
@@ -214,26 +214,26 @@ local function Refresh(mapID)
 	end
 end
 
-function ZoneLore:RefreshPanel()
-	Refresh(ZoneLore:GetDisplayedMapID())
+function SpokenZones:RefreshPanel()
+	Refresh(SpokenZones:GetDisplayedMapID())
 end
 
 -- Re-apply width, side and font after an options change. TextView re-wraps itself
 -- when the width actually changes, via its OnSizeChanged.
-function ZoneLore:ApplyPanelOptions()
+function SpokenZones:ApplyPanelOptions()
 	if not panel then
 		return
 	end
-	panel:SetWidth(ZoneLore:Get("panelWidth"))
+	panel:SetWidth(SpokenZones:Get("panelWidth"))
 	ApplyAnchors()
-	Refresh(ZoneLore:GetDisplayedMapID())
+	Refresh(SpokenZones:GetDisplayedMapID())
 end
 
 --------------------------------------------------------------------------------
 -- Setup
 --------------------------------------------------------------------------------
 
-function ZoneLore:SetupMapPanel()
+function SpokenZones:SetupMapPanel()
 	if panel then
 		return
 	end
@@ -248,7 +248,7 @@ function ZoneLore:SetupMapPanel()
 			return
 		end
 		ApplyAnchors()
-		Refresh(ZoneLore:GetDisplayedMapID())
+		Refresh(SpokenZones:GetDisplayedMapID())
 	end
 
 	hooksecurefunc(WorldMapFrame, "Maximize", Relayout)
@@ -258,9 +258,9 @@ function ZoneLore:SetupMapPanel()
 		hooksecurefunc(WorldMapFrame, "OnFrameSizeChanged", Relayout)
 	end
 
-	ZoneLore:OnMapChanged(function(mapID)
+	SpokenZones:OnMapChanged(function(mapID)
 		Refresh(mapID)
 	end)
 
-	Refresh(ZoneLore:GetDisplayedMapID())
+	Refresh(SpokenZones:GetDisplayedMapID())
 end

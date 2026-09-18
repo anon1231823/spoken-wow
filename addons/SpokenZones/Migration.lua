@@ -20,6 +20,7 @@ end
 
 if type(ZoneLoreDB) == "table" and not (type(SpokenZonesDB) == "table" and SpokenZonesDB.migratedFrom) then
 	SpokenZonesDB = DeepCopy(ZoneLoreDB)
+	-- The name migrated FROM, which is a record and not a reference to this addon.
 	SpokenZonesDB.migratedFrom = "ZoneLore"
 	if type(ZoneLoreCharDB) == "table" then
 		SpokenZonesCharDB = DeepCopy(ZoneLoreCharDB)

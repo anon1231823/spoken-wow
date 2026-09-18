@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Rebuilds a candidate tools/seed/zones.json from a live client map dump.
 //
-//   in-game:  /zl dump   then  /reload
+//   in-game:  /spz dump   then  /reload
 //   here:     node tools/seed-from-dump.mjs [--write]
 //
 // Without --write it only reports differences against the current seed, which is
@@ -39,7 +39,7 @@ async function findSavedVariables() {
   if (candidates.length === 0) {
     throw new Error(
       "no ZoneLore.lua in any account's SavedVariables.\n" +
-        "Run `/zl dump` then `/reload` in-game first."
+        "Run `/spz dump` then `/reload` in-game first."
     );
   }
   return candidates[0];
@@ -49,7 +49,7 @@ async function findSavedVariables() {
 function parseDump(lua) {
   const start = lua.indexOf('["dump"]');
   if (start < 0) {
-    throw new Error('no ["dump"] key found -- run `/zl dump` then `/reload` in-game');
+    throw new Error('no ["dump"] key found -- run `/spz dump` then `/reload` in-game');
   }
 
   const maps = [];

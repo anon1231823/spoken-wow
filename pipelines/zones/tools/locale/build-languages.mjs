@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Writes addon/ZoneLore/Data/Languages.lua: what each language covers, and
+// Writes addon/SpokenZones/Data/Languages.lua: what each language covers, and
 // whether it is finished enough to offer to players.
 //
 //   node tools/locale/build-languages.mjs
@@ -79,9 +79,9 @@ export async function buildLanguages() {
     "--",
     `-- Measured against English: ${baseTotal} lore lines, ${strings.get(BASE_LOCALE).total} interface strings.`,
     "",
-    "local _, ZoneLore = ...",
+    "local _, SpokenZones = ...",
     "",
-    "ZoneLore.Languages = {",
+    "SpokenZones.Languages = {",
   ];
 
   for (const row of rows) {

@@ -16,7 +16,7 @@ export const CACHE = join(ROOT, "pipelines/zones/tools/cache");
 export const API = "https://warcraft.wiki.gg/api.php";
 export const WIKI = "https://warcraft.wiki.gg/wiki/";
 export const USER_AGENT =
-  "ZoneLore-addon-build/0.1 (WoW Classic Era addon; +https://warcraft.wiki.gg/wiki/Special:MyPage)";
+  "SpokenZones-addon-build/0.1 (WoW Classic Era addon; +https://warcraft.wiki.gg/wiki/Special:MyPage)";
 export const THROTTLE_MS = 500;
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

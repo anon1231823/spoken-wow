@@ -1,4 +1,4 @@
--- ZoneLore -- narrate an area when the player discovers it.
+-- SpokenZones -- narrate an area when the player discovers it.
 --
 -- The trigger is the game's own discovery, the moment it prints "Discovered
 -- Durotar". Nothing else comes close:
@@ -14,14 +14,14 @@
 -- semantics this feature wanted.
 --
 -- The cost of leaning on it is that a character who explored Azeroth before
--- installing ZoneLore already spent every discovery it will ever get, and so is
+-- installing SpokenZones already spent every discovery it will ever get, and so is
 -- narrated nothing at all. The `autoplayExplored` option answers that by keeping
 -- the record here instead -- see "Per-character record" below -- and narrating on
 -- zone change rather than on discovery. It is off by default, and on a fresh
 -- character it changes nothing observable: the discovery message still arrives
 -- first and marks the area heard, leaving the override with nothing to say.
 
-local ADDON_NAME, ZoneLore = ...
+local ADDON_NAME, SpokenZones = ...
 
 -- The queue itself is the Spoken player's, shared with every other route to a clip
 -- and with every other Spoken addon. This file decides what deserves narrating and
@@ -40,7 +40,7 @@ local ADDON_NAME, ZoneLore = ...
 
 local patterns = nil
 
--- How many of the two message forms this client actually defines. Reported by /zl,
+-- How many of the two message forms this client actually defines. Reported by /spz,
 -- so "the feature cannot work here" is distinguishable from "nothing has been
 -- discovered yet" without another character.
 local formCount = 0
@@ -125,18 +125,18 @@ local function HoldReason(item)
 	if not item.autoplay then
 		return nil
 	end
-	if not ZoneLore:Get("autoplay") or not ZoneLore:IsVoiceEnabled() then
-		return ZoneLore.L.QUEUE_HELD_OFF
+	if not SpokenZones:Get("autoplay") or not SpokenZones:IsVoiceEnabled() then
+		return SpokenZones.L.QUEUE_HELD_OFF
 	end
 	if UnitAffectingCombat("player") then
-		return ZoneLore.L.QUEUE_HELD_COMBAT
+		return SpokenZones.L.QUEUE_HELD_COMBAT
 	end
 	-- A starting-zone cinematic is the one moment a new character is guaranteed to
 	-- be discovering things, so narrating over it is the likeliest collision there
 	-- is.
 	if (CinematicFrame and CinematicFrame:IsShown())
 		or (MovieFrame and MovieFrame:IsShown()) then
-		return ZoneLore.L.QUEUE_HELD_CINEMATIC
+		return SpokenZones.L.QUEUE_HELD_CINEMATIC
 	end
 	return nil
 end
@@ -144,7 +144,7 @@ end
 -- A continent is never autoplayed.
 --
 -- "Eastern Kingdoms" and "Kalimdor" are lore in their own right and the map panel and
--- /zl play will read them on request, but they are not somewhere a character arrives:
+-- /spz play will read them on request, but they are not somewhere a character arrives:
 -- every player who ever logs in is standing on one, so autoplaying them means every new
 -- character is greeted with the history of a landmass rather than with the valley it
 -- woke up in. They reach the queue by accident anyway -- GetLoreWithFallback climbs the
@@ -176,8 +176,8 @@ local function Enqueue(mapID, areaKey)
 	-- A subzone of a continent is not a thing, so the guard applies to the zone-level
 	-- entries only -- but those are the ones that carry the continent lore.
 	if not areaKey and not IsAutoplayableMap(mapID) then
-		if ZoneLore:Get("debug") then
-			ZoneLore:Print("autoplay: %s is a continent -- not queued", tostring(ZoneLore:GetMapName(mapID)))
+		if SpokenZones:Get("debug") then
+			SpokenZones:Print("autoplay: %s is a continent -- not queued", tostring(SpokenZones:GetMapName(mapID)))
 		end
 		return false
 	end
@@ -185,14 +185,14 @@ local function Enqueue(mapID, areaKey)
 	-- An entry the installed pack cannot narrate never enters the queue. PlayLore
 	-- would refuse it anyway, but silently queueing it would spend one of three slots
 	-- on nothing and make the Next button count clips that will not play.
-	if not ZoneLore:HasAudio(mapID, areaKey) then
-		if ZoneLore:Get("debug") then
-			ZoneLore:Print("autoplay: no clip for %s/%s -- not queued", tostring(mapID), tostring(areaKey))
+	if not SpokenZones:HasAudio(mapID, areaKey) then
+		if SpokenZones:Get("debug") then
+			SpokenZones:Print("autoplay: no clip for %s/%s -- not queued", tostring(mapID), tostring(areaKey))
 		end
 		return false
 	end
 
-	local item = ZoneLore:NewLoreSound(mapID, areaKey)
+	local item = SpokenZones:NewLoreSound(mapID, areaKey)
 	if not item then
 		return false
 	end
@@ -204,7 +204,7 @@ local function Enqueue(mapID, areaKey)
 	-- The queue refuses a duplicate of its own accord: the login greeting and a
 	-- real discovery message can name the same area, and an area on a zone border
 	-- can be announced twice. Narrating it twice in a row is worse than missing it.
-	return ZoneLore:EnqueueLore(item)
+	return SpokenZones:EnqueueLore(item)
 end
 
 --------------------------------------------------------------------------------
@@ -245,24 +245,24 @@ local function HeardSet()
 	return db.heard
 end
 
-function ZoneLore:HasHeard(mapID, areaKey)
+function SpokenZones:HasHeard(mapID, areaKey)
 	if not mapID then
 		return false
 	end
 	return HeardSet()[HeardKey(mapID, areaKey)] == true
 end
 
--- Called by ZoneLore:PlayLore once a clip is confirmed started, whatever asked for
+-- Called by SpokenZones:PlayLore once a clip is confirmed started, whatever asked for
 -- it. That is what keeps a discovery and a zone change landing together from
 -- narrating the same area twice.
-function ZoneLore:MarkHeard(mapID, areaKey)
+function SpokenZones:MarkHeard(mapID, areaKey)
 	if not mapID then
 		return
 	end
 	HeardSet()[HeardKey(mapID, areaKey)] = true
 end
 
-function ZoneLore:HeardCount()
+function SpokenZones:HeardCount()
 	local count = 0
 	for _ in pairs(HeardSet()) do
 		count = count + 1
@@ -280,25 +280,25 @@ end
 -- which is exactly why the record above has to exist.
 
 local function NarrateUnheard()
-	if not ZoneLore:Get("autoplayExplored") then
+	if not SpokenZones:Get("autoplayExplored") then
 		return
 	end
-	if not ZoneLore:Get("autoplay") or not ZoneLore:IsVoiceEnabled() then
+	if not SpokenZones:Get("autoplay") or not SpokenZones:IsVoiceEnabled() then
 		return
 	end
 
-	local _, mapID = ZoneLore:GetLoreWithFallback(ZoneLore:GetPlayerMapID())
+	local _, mapID = SpokenZones:GetLoreWithFallback(SpokenZones:GetPlayerMapID())
 	if not mapID then
 		return
 	end
 
 	-- The zone first: entering a new zone at one of its subzones leaves both
 	-- unheard, and the wider piece is the one that sets up the other.
-	if not ZoneLore:HasHeard(mapID, nil) and ZoneLore:GetLore(mapID) then
+	if not SpokenZones:HasHeard(mapID, nil) and SpokenZones:GetLore(mapID) then
 		Enqueue(mapID, nil)
 	end
 
-	if not ZoneLore:Get("autoplaySubzones") then
+	if not SpokenZones:Get("autoplaySubzones") then
 		return
 	end
 
@@ -307,8 +307,8 @@ local function NarrateUnheard()
 		return
 	end
 
-	local entry, key = ZoneLore:GetSubzoneLore(mapID, subZone)
-	if entry and key and not ZoneLore:HasHeard(mapID, key) then
+	local entry, key = SpokenZones:GetSubzoneLore(mapID, subZone)
+	if entry and key and not SpokenZones:HasHeard(mapID, key) then
 		Enqueue(mapID, key)
 	end
 end
@@ -339,18 +339,38 @@ local LOGIN_SEED_ATTEMPTS = 8
 -- queue. False means "ask again shortly".
 local function SeedLoginArea(attempt)
 	local db = CharDB()
-	local debugOn = ZoneLore:Get("debug")
+	local debugOn = SpokenZones:Get("debug")
 
 	if db.greeted then
 		return true
 	end
-	if not ZoneLore:Get("autoplay") or not ZoneLore:IsVoiceEnabled() then
+
+	-- A client that restored nothing cannot remember a greeting either. db.greeted was
+	-- written last session and came back empty, so without this the greeting is not a
+	-- greeting: it narrates the current zone at every single login, forever.
+	--
+	-- Level 1 is the exception, because it is the case this whole function exists for -- a
+	-- character standing in the valley it woke up in, which the client never announces. A
+	-- new character on a client that cannot remember hears it once per login while it is
+	-- level 1 and never again; every other character hears nothing rather than everything.
+	--
+	-- Evidence rather than a client check: it clears itself the day the client starts
+	-- restoring saved variables, and it also covers an installation where the WTF folder is
+	-- unwritable, which looks identical from in here.
+	if not SpokenZones.savedVariablesRestored and (UnitLevel("player") or 1) > 1 then
+		if debugOn then
+			SpokenZones:Print("greeting: the client restored no saved variables -- skipping, "
+				.. "since nothing here can remember having greeted this character")
+		end
+		return true
+	end
+	if not SpokenZones:Get("autoplay") or not SpokenZones:IsVoiceEnabled() then
 		-- Deliberately without setting the flag, so turning autoplay on later still
 		-- greets on the next login rather than having silently used up its turn.
 		if debugOn then
-			ZoneLore:Print("greeting: autoplay %s, voice %s -- nothing to do",
-				ZoneLore:Get("autoplay") and "on" or "off",
-				ZoneLore:IsVoiceEnabled() and "on" or "off")
+			SpokenZones:Print("greeting: autoplay %s, voice %s -- nothing to do",
+				SpokenZones:Get("autoplay") and "on" or "off",
+				SpokenZones:IsVoiceEnabled() and "on" or "off")
 		end
 		return true
 	end
@@ -358,30 +378,30 @@ local function SeedLoginArea(attempt)
 	-- Every step of the resolution, because a greeting that says nothing is
 	-- indistinguishable from a greeting that never ran -- and reproducing either costs a
 	-- fresh character.
-	local playerMap = ZoneLore:GetPlayerMapID()
-	local _, mapID = ZoneLore:GetLoreWithFallback(playerMap)
+	local playerMap = SpokenZones:GetPlayerMapID()
+	local _, mapID = SpokenZones:GetLoreWithFallback(playerMap)
 	if debugOn then
-		ZoneLore:Print("greeting %d: player map %s (%s), resolved %s (%s), subzone \"%s\"",
-			attempt or 0, tostring(playerMap), tostring(ZoneLore:GetMapName(playerMap)),
-			tostring(mapID), tostring(mapID and ZoneLore:GetMapName(mapID)),
+		SpokenZones:Print("greeting %d: player map %s (%s), resolved %s (%s), subzone \"%s\"",
+			attempt or 0, tostring(playerMap), tostring(SpokenZones:GetMapName(playerMap)),
+			tostring(mapID), tostring(mapID and SpokenZones:GetMapName(mapID)),
 			tostring(GetSubZoneText()))
 	end
 	if not mapID then
 		return false
 	end
 
-	-- The subzone is the more specific answer, the same preference /zl play and the
+	-- The subzone is the more specific answer, the same preference /spz play and the
 	-- lore window both apply.
 	local subZone = GetSubZoneText()
-	if subZone and subZone ~= "" and ZoneLore:Get("autoplaySubzones") then
-		local entry, key = ZoneLore:GetSubzoneLore(mapID, subZone)
+	if subZone and subZone ~= "" and SpokenZones:Get("autoplaySubzones") then
+		local entry, key = SpokenZones:GetSubzoneLore(mapID, subZone)
 		if entry and key and Enqueue(mapID, key) then
 			db.greeted = true
 			return true
 		end
 	end
 
-	if ZoneLore:GetLore(mapID) and Enqueue(mapID, nil) then
+	if SpokenZones:GetLore(mapID) and Enqueue(mapID, nil) then
 		db.greeted = true
 		return true
 	end
@@ -390,7 +410,7 @@ local function SeedLoginArea(attempt)
 	-- Both are worth another look, and the flag stays unset so a later login still
 	-- greets if this one never resolves.
 	if debugOn then
-		ZoneLore:Print("greeting %d: nothing queued for map %s -- retrying", attempt or 0, tostring(mapID))
+		SpokenZones:Print("greeting %d: nothing queued for map %s -- retrying", attempt or 0, tostring(mapID))
 	end
 	return false
 end
@@ -398,7 +418,7 @@ end
 -- Everything this character is remembered for: the greeting it has had, and the
 -- areas it has been narrated. Lets both be tested without rolling another
 -- character, and lets a player hear the lot again.
-function ZoneLore:ForgetAutoplayHistory()
+function SpokenZones:ForgetAutoplayHistory()
 	local db = CharDB()
 	db.greeted = nil
 	db.heard = nil
@@ -412,14 +432,14 @@ end
 -- Trials into open Durotar -- is what "discovered a zone" means. Everything else
 -- the client announces is a subzone.
 local function IsZoneDiscovery(areaName, mapID)
-	local zoneName = ZoneLore:GetMapName(mapID)
+	local zoneName = SpokenZones:GetMapName(mapID)
 	if not zoneName then
 		return false
 	end
-	return ZoneLore:NormaliseAreaKey(areaName) == ZoneLore:NormaliseAreaKey(zoneName)
+	return SpokenZones:NormaliseAreaKey(areaName) == SpokenZones:NormaliseAreaKey(zoneName)
 end
 
-function ZoneLore:OnAreaDiscovered(areaName)
+function SpokenZones:OnAreaDiscovered(areaName)
 	if not areaName or areaName == "" then
 		return
 	end
@@ -496,7 +516,7 @@ local function TextFrom(...)
 	return nil
 end
 
-function ZoneLore:SetupAutoplay()
+function SpokenZones:SetupAutoplay()
 	local frame = CreateFrame("Frame")
 	for _, event in ipairs(DISCOVERY_EVENTS) do
 		frame:RegisterEvent(event)
@@ -506,12 +526,12 @@ function ZoneLore:SetupAutoplay()
 		local message = TextFrom(...)
 		local area = AreaFromMessage(message)
 		if area then
-			ZoneLore:OnAreaDiscovered(area)
-		elseif message and ZoneLore:Get("debug") then
+			SpokenZones:OnAreaDiscovered(area)
+		elseif message and SpokenZones:Get("debug") then
 			-- Under debug only, and for every watched event rather than one of
 			-- them. If a discovery ever stops being recognised, this is the line
 			-- that shows which event carried it and what it actually said.
-			ZoneLore:Print("|cff888888%s: %s|r", event, message)
+			SpokenZones:Print("|cff888888%s: %s|r", event, message)
 		end
 	end)
 
@@ -545,7 +565,7 @@ end
 
 -- Reports whether the client defined the strings this feature is built on, so a
 -- silent failure can be told apart from "nothing has been discovered yet".
-function ZoneLore:DescribeAutoplay()
+function SpokenZones:DescribeAutoplay()
 	DiscoveryPatterns()
 	local found = formCount
 	if found == 0 then

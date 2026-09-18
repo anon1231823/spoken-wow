@@ -1,23 +1,35 @@
+---
+project: 1660199
+slug: spoken-quests-audio-shared
+name: Spoken Quests Audio: Shared Quests
+summary: Quest dialogue both factions can hear, voiced. Install alongside the Alliance or Horde pack. Needs Spoken Quests.
+categories:
+  - Audio & Video
+  - Roleplay
+  - Quests & Leveling
+license: MIT
+---
+
 Voiced dialogue for the quests **both factions** can take. Neutral hubs like Booty Bay, Gadgetzan, Everlook and Ratchet live here, along with every other quest whose giver talks to either side.
 
 **Everyone wants this pack**, and on its own it is only part of the story. Pair it with your side, and with the player:
 
-1. **[VoiceOver Redux](https://www.curseforge.com/wow/addons/voiceover-redux)** — the player. Without it no pack plays.
-2. **[Spoken Quests Audio: Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance)** or **[(Horde)](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde)** — whichever side your character is on.
+1. **[Spoken Quests](https://www.curseforge.com/wow/addons/spoken-quests)** — the player. Without it no pack plays.
+2. **[Spoken Quests Audio: Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance)** or **[(Horde)](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde)** — whichever side your character is on.
 
 ## The packs
 
 | Pack | Holds | |
 | --- | --- | --- |
-| [All](https://www.curseforge.com/wow/addons/voiceover-redux-audio) | installs the four below | |
-| [Alliance](https://www.curseforge.com/wow/addons/voiceover-redux-audio-alliance) | Alliance-only quests | |
-| [Horde](https://www.curseforge.com/wow/addons/voiceover-redux-audio-horde) | Horde-only quests | |
+| [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all) | installs the four below | |
+| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests | |
+| [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests | |
 | **Shared** | quests both factions can take | **this pack** |
-| [Gossip](https://www.curseforge.com/wow/addons/voiceover-redux-audio-gossip) | NPC gossip chatter | |
+| [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) | NPC gossip chatter | |
 
 Gossip — the chatter NPCs give you when you talk to them without a quest — is optional on top.
 
-If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/voiceover-redux-audio)** instead. It holds no audio itself - it just tells your addon manager to fetch all four packs.
+If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all)** instead. It holds no audio itself - it just tells your addon manager to fetch all four packs.
 
 ## Why the pack is split
 

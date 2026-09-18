@@ -5,12 +5,12 @@
 -- falls back to English at runtime, and the shortfall is what keeps this language
 -- out of the switcher -- see tools/locale/build-languages.mjs.
 
-local _, ZoneLore = ...
+local _, SpokenZones = ...
 
-if not ZoneLore:ShouldLoadLanguage("esMX") then
+if not SpokenZones:ShouldLoadLanguage("esMX") then
 	return
 end
 
 local L = {}
 
-ZoneLore:RegisterStrings("esMX", L)
+SpokenZones:RegisterStrings("esMX", L)

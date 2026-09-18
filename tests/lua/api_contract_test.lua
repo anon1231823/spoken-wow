@@ -18,7 +18,12 @@ local Spoken = _G.Spoken
 
 ---------------------------------------------------------------- version
 Expect("API_VERSION is 1", Spoken.API_VERSION, 1)
-Expect("ADDON_VERSION matches the TOC", Spoken.ADDON_VERSION, "1.0.0")
+-- Read out of the .toc rather than written here, which is the whole claim this makes: the
+-- literal in Environment.lua loads before the addon has any metadata API, so nothing in the
+-- game checks the two agree. A hardcoded expectation only asserts that a version bump touched
+-- three files instead of two.
+local toc = assert(io.open(SPOKEN .. "SpokenPlayer.toc")):read("*a")
+Expect("ADDON_VERSION matches the TOC", Spoken.ADDON_VERSION, toc:match("## Version:%s*([^\r\n]+)"))
 Expect("IsCompatible(1)", Spoken:IsCompatible(1), true)
 Expect("not IsCompatible(2)", Spoken:IsCompatible(2), false)
 

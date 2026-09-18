@@ -3,7 +3,7 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
-## 1.0.0 — 2026-09-11
+## 2.0.0 — 2026-09-18
 
 Renamed to **Spoken Zones**, and narration now plays through the **Spoken Player** addon
 shared with Spoken Quests. Addon managers install it automatically.
@@ -18,7 +18,7 @@ shared with Spoken Quests. Addon managers install it automatically.
   line. Spoken Player's settings can hide it.
 - The Read button is gone from the player, and with it the setting that decided whether
   it stopped the narration. The lore text is still one click away on the map, in the
-  minimap menu and from `/zl`.
+  minimap menu and from `/spz`.
 - The settings panel is laid out by the same code as the other Spoken addons, so the
   three read alike and the spacing no longer varies from section to section.
 - The sound pack and the language are dropdowns rather than buttons that cycled through
@@ -29,11 +29,27 @@ shared with Spoken Quests. Addon managers install it automatically.
   speaking. Your choice carries over unless Spoken Quests also had one, which wins.
 - If Spoken Player is installed but switched off, a dialog offers to enable it and
   reload, rather than narration quietly not playing.
-- The sound packs are renamed **Spoken Zones Audio** and **Spoken Zones Audio 64** in the
-  addon list and on CurseForge. Only the titles change: the folders keep their names, so
-  neither pack is re-downloaded and both keep working.
-- A pack now announces itself in `SpokenZonesAudioPacks` as well as `ZoneLoreAudioPacks`,
-  and both are read, so a pack and an addon of either generation still find each other.
+- The sound pack is renamed **Spoken Zones Audio** in the addon list and on CurseForge.
+- A pack announces itself in `SpokenZonesAudioPacks`, and the addon still reads the old
+  `ZoneLoreAudioPacks` too, so a pack you already have keeps working. The other direction does
+  not: a 2.0.0 pack needs a 2.0.0 addon, and the two are released together.
+- **Runs on the Forever client** (1.60.1, interface 16001 — the one whose TOC suffix is
+  `_Camelot`), alongside Classic Era 1.15.9 and the 2.5.6 Anniversary client.
+- **The login greeting no longer repeats on a client that forgets.** It narrates the area a
+  new character wakes up in, once, guarded by a per-character flag — and a client that never
+  restores saved variables (the 1.60.1 beta writes them every logout and reads none of them
+  back, for any addon) made that flag always empty, so it narrated the current zone at every
+  login. It now greets only a level 1 character there, which is the case it exists for.
+- **The commands are `/spokenzones` and `/spz`**, matching `/spoken` and `/sp` on the player
+  and `/spokenquests` and `/spq` on Spoken Quests. `/zonelore` and `/zl` are retired — a macro
+  that used one has to be edited.
+- **The sound pack installs as `SpokenZonesAudio`**, where it was `ZoneLoreAudio`. Your addon
+  manager replaces the old folder; a hand-installed pack has to be deleted by hand or you keep
+  two copies of the same audio.
+- **The 64 kbps pack is retired.** It stays installable for anyone who has it and gets no
+  further updates; the 128 kbps pack is the one to install.
+- The addon and the pack carry the same version as the rest of Spoken from here on, which is
+  why this is 2.0.0 and not 1.0.0.
 
 ## 0.4.3 — 2026-08-19
 

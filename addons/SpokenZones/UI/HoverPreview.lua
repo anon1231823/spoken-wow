@@ -1,4 +1,4 @@
--- ZoneLore -- lore preview tooltip while hovering the world map.
+-- SpokenZones -- lore preview tooltip while hovering the world map.
 --
 -- Hovering a zone on a continent map, or a subzone on a zone map, shows that
 -- place's short lore at the cursor.
@@ -6,12 +6,12 @@
 -- The plan for this feature was to replace the area-label data provider's
 -- OnUpdate and pass lore as the label's `description`, which is how Leatrix_Maps
 -- shows zone levels and fishing skill. That was abandoned deliberately: only one
--- addon can own that script, ZoneLore loads after Leatrix_Maps, and winning the
+-- addon can own that script, SpokenZones loads after Leatrix_Maps, and winning the
 -- race would silently disable a feature of an addon the user already runs. A
 -- dedicated tooltip shares nothing, cannot conflict, and has far more room for
 -- prose than the label's single small description line.
 
-local ADDON_NAME, ZoneLore = ...
+local ADDON_NAME, SpokenZones = ...
 
 local THROTTLE = 0.1
 
@@ -25,7 +25,7 @@ local shownKey
 local function BuildTooltip()
 	-- Our own tooltip rather than GameTooltip: map pins own GameTooltip while
 	-- hovered, and fighting them over it causes flicker.
-	tooltip = CreateFrame("GameTooltip", "ZoneLoreHoverTooltip", UIParent, "GameTooltipTemplate")
+	tooltip = CreateFrame("GameTooltip", "SpokenZonesHoverTooltip", UIParent, "GameTooltipTemplate")
 	tooltip:SetFrameStrata("TOOLTIP")
 end
 
@@ -73,7 +73,7 @@ local function OnUpdate(self, elapsed)
 	end
 	elapsedSince = 0
 
-	if not ZoneLore:Get("showHoverPreview") then
+	if not SpokenZones:Get("showHoverPreview") then
 		return HideTooltip()
 	end
 
@@ -104,7 +104,7 @@ local function OnUpdate(self, elapsed)
 		return HideTooltip()
 	end
 
-	local kind, name, entry = ZoneLore:ResolveAt(mapID, x, y)
+	local kind, name, entry = SpokenZones:ResolveAt(mapID, x, y)
 
 	-- Nothing there, or an area we have no lore for: show nothing rather than an
 	-- empty tooltip. The panel already names the zone.
@@ -114,7 +114,7 @@ local function OnUpdate(self, elapsed)
 
 	-- On a zone map the panel is already showing this zone's lore, so previewing
 	-- the zone itself would be redundant; only subzones are worth a tooltip.
-	if kind == "zone" and ZoneLore:IsZoneMap(mapID) then
+	if kind == "zone" and SpokenZones:IsZoneMap(mapID) then
 		return HideTooltip()
 	end
 
@@ -125,13 +125,13 @@ end
 -- Setup
 --------------------------------------------------------------------------------
 
-function ZoneLore:SetupHoverPreview()
+function SpokenZones:SetupHoverPreview()
 	if driver then
 		return
 	end
 
 	if not (MapUtil and MapUtil.FindBestAreaNameAtMouse) then
-		ZoneLore:Print("|cffffcc00MapUtil.FindBestAreaNameAtMouse missing; hover preview disabled|r")
+		SpokenZones:Print("|cffffcc00MapUtil.FindBestAreaNameAtMouse missing; hover preview disabled|r")
 		return
 	end
 
@@ -143,5 +143,5 @@ function ZoneLore:SetupHoverPreview()
 
 	WorldMapFrame:HookScript("OnHide", HideTooltip)
 
-	ZoneLore.HideHoverPreview = HideTooltip
+	SpokenZones.HideHoverPreview = HideTooltip
 end

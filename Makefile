@@ -18,7 +18,8 @@
 
 LUA ?= $(shell command -v luajit || command -v lua5.1)
 
-.PHONY: help test test-player lint package-all
+.PHONY: help test test-player lint package-all \
+        descriptions descriptions-check descriptions-published
 
 help: ## Show this help
 	@printf 'Spoken\n\n'
@@ -55,15 +56,42 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@$(LUA) tests/lua/quests_options_test.lua
 	@$(LUA) tests/lua/migration_test.lua
 
+# The Python half needs its own venv:
+#
+#   cd pipelines/quests && python -m venv .venv \
+#     && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt
+#
+# tests/test_corpus.py skips itself without pandas, which is in requirements-extract.txt and
+# pinned at a version with no wheel for this Python. See docs/quests/README.md#tests.
+
 test: test-player ## Everything: both webs, the Python pipeline, the addons
 	@pnpm -r test
+	@[ -x pipelines/quests/.venv/bin/python ] || { \
+	  echo "No venv at pipelines/quests/.venv -- see the comment above 'test' in the Makefile"; \
+	  exit 1; }
 	@cd pipelines/quests && ./.venv/bin/python -m pytest -q
 
 lint: ## The checks CI gates on
 	@pnpm -r typecheck
 	@node pipelines/zones/tools/validate.mjs
-	@node pipelines/zones/tools/descriptions.mjs --check
+	@node scripts/descriptions.mjs --check
 	@node pipelines/zones/tools/locale/check-strings.mjs
+
+# The CurseForge project pages, for every addon. One tool over curseforge/*/ rather than one
+# per project: the pages are the same shape, and a second copy of this would be a second place
+# for the summary limit and the published.json convention to drift.
+#
+# `descriptions-published` is a claim, not a check -- there is no API to read a live page back,
+# so it records what you have just pasted. Run it after pasting, never before.
+
+descriptions: ## Regenerate the addon READMEs and dist/descriptions/ from curseforge/
+	@node scripts/descriptions.mjs --write
+
+descriptions-check: ## Confirm the addon READMEs match curseforge/
+	@node scripts/descriptions.mjs
+
+descriptions-published: ## Record the current descriptions as pasted into the site
+	@node scripts/descriptions.mjs --published
 
 package-all: ## Build every addon zip: the player, quests, zones
 	@./scripts/spoken/package.sh

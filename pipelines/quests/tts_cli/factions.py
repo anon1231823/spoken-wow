@@ -41,8 +41,7 @@ PACK_SUFFIXES = {
 }
 
 #: The half of a title that names the pack. What comes before it is the family - see
-#: pack_title - because the same four packs ship at more than one quality, each family with
-#: CurseForge projects of its own.
+#: pack_title - which is a parameter because a set of packs built together is named together.
 PACK_LABELS = {
     "all": "All",
     "alliance": "Alliance",
@@ -51,16 +50,15 @@ PACK_LABELS = {
     "gossip": "Gossip",
 }
 
-#: The family every pack belongs to unless told otherwise. The HQ builds pass their own.
+#: The family every pack belongs to unless told otherwise, which is every shipping build.
 DEFAULT_TITLE_FAMILY = "Spoken Quests Audio"
 
 
 def pack_title(pack: str, family: str = DEFAULT_TITLE_FAMILY) -> str:
     """What the AddOns list shows, which is also what the CurseForge project is called.
 
-    The folder names differ by a suffix nobody reads, so this is what a player actually tells
-    the packs apart by - and a player running the standard Alliance pack and the HQ one wants
-    to see which is which.
+    The folder names differ by a suffix nobody reads, and they still carry the name the packs
+    were published under, so this is what a player actually tells them apart by.
     """
     return f"{family}: {PACK_LABELS[pack]}"
 

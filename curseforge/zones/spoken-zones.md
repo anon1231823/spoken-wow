@@ -1,6 +1,6 @@
 ---
 project: 1636521
-slug: zonelore
+slug: spoken-zones
 name: Spoken Zones
 summary: Formerly ZoneLore. Zone lore on the world map. Open the map and read the story of the zone you're looking at, or click any subzone for its own. Every zone and subzone, optionally narrated.
 categories:
@@ -23,7 +23,7 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 - **World map panel** — the current zone's lore beside the map. Dock it left or right, resize it, set the font size.
 - **Subzone lore** — click any named area on the map to read about it.
 - **Hover preview** — point at a subzone for the first lines in a tooltip, without disturbing the panel.
-- **Lore window** — browse zones without opening the map, from the minimap button or `/zl window`.
+- **Lore window** — browse zones without opening the map, from the minimap button or `/spz window`.
 - **Narration** — a play button beside the lore; what is being read, and what is waiting, shows in the Spoken player with Read and Report beside it.
 - **Autoplay** — walking into an area you've never discovered narrates it once, tracked per character. Already explored the world? A setting narrates those areas too, still once each.
 - **Works on non-English clients** — subzone lore is found by the name your client reports, so a German, French, Spanish, Portuguese, Russian, Korean or Chinese client reaches it too. The lore text itself is English for now.
@@ -40,7 +40,7 @@ Two packs, the same voicelines — and there are a lot of them — differing onl
 | **Spoken Zones Audio** | 128 kbps | ~450 MB |
 | **Spoken Zones Audio 64** | VBR mono | ~220 MB |
 
-Install Spoken Zones Audio unless the download is a problem, in which case Spoken Zones Audio 64 is half the size and close to transparent for speech. With both installed Spoken Zones plays the higher-quality one; `/zl audio` lists what you have and switches between them.
+Install Spoken Zones Audio unless the download is a problem, in which case Spoken Zones Audio 64 is half the size and close to transparent for speech. With both installed Spoken Zones plays the higher-quality one; `/spz audio` lists what you have and switches between them.
 
 ### The voice
 
@@ -48,19 +48,21 @@ As of 0.3.0 every line is recorded with a new narrator, and NPC and place names 
 
 ## Commands
 
+`/spokenzones`, or `/spz` for short.
+
 ```
-/zl              status for the current zone and subzone
-/zl options      open the settings panel
-/zl window       open the browsable lore window
-/zl panel        toggle the world map panel
-/zl hover        toggle the hover preview tooltip
-/zl play         read the current lore aloud
-/zl voice        toggle narration on or off
-/zl audio        list sound packs, or switch between them
-/zl lang         list languages, or switch between them
-/zl autoplay     toggle narrating areas as you discover them
-/zl minimap      show or hide the minimap button
-/zl help         the full list
+/spz              status for the current zone and subzone
+/spz options      open the settings panel
+/spz window       open the browsable lore window
+/spz panel        toggle the world map panel
+/spz hover        toggle the hover preview tooltip
+/spz play         read the current lore aloud
+/spz voice        toggle narration on or off
+/spz audio        list sound packs, or switch between them
+/spz lang         list languages, or switch between them
+/spz autoplay     toggle narrating areas as you discover them
+/spz minimap      show or hide the minimap button
+/spz help         the full list
 ```
 
 ## Compatibility

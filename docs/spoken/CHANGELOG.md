@@ -1,9 +1,17 @@
 # Changelog — Spoken Player
 
-## 1.0.0 — 2026-09-11
+## 2.0.0 — 2026-09-18
 
 The player every Spoken addon speaks through: one queue, one window, one minimap button.
 
+- **Runs on the Forever client** (1.60.1, interface 16001 — the one whose TOC suffix is
+  `_Camelot`), alongside Classic Era 1.15.9 and the 2.5.6 Anniversary client.
+- **`/sp` is a short form of `/spoken`**, matching `/spq` for Spoken Quests and `/spz` for
+  Spoken Zones. One scheme across the three addons.
+- **Every Spoken addon carries the same version from here on.** This is the player's first
+  release, so 2.0.0 is a number it never earned on its own — it is Spoken Quests', and the
+  three addons ship together and are supported together. A player comparing two of them
+  should not have to work out which numbering each follows.
 - Extracted from VoiceOver Redux and ZoneLore, which each carried their own copy.
 - One FIFO across every addon; nothing interrupts. Gossip yields to quest dialogue at the door.
 - Narration held through combat no longer blocks a quest line queued behind it.

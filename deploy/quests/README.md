@@ -283,21 +283,27 @@ psql "$(grep ^DATABASE_URL /srv/voiceover/shared/app.env | cut -d= -f2-)" \
 Every role after this one is handed out from `/admin`, which will not let an admin demote
 themselves.
 
-## Serving the HQ sound pack
+## Serving the complete sound pack
 
-The HQ pack is 1.2 GB, which CurseForge will not take, so the site hosts it:
+The complete pack is 1.2 GB, which CurseForge will not take, so the site hosts it:
 
 ```
-https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip
+https://spoken.rusty.one/downloads/SpokenQuestsAudioComplete-latest.zip
 ```
+
+**This one part has already moved.** `make quests-push-complete` uploads into
+`/srv/spoken/shared/downloads/`, not this tree's, because voiceover.rusty.one is a redirect
+vhost now and `/downloads/` is answered from the new site. The `location /downloads/` block
+in `nginx-voiceover.conf` below is what the frozen tree still has; the live one is in
+`deploy/web/nginx-spoken.conf`.
 
 `shared/downloads/` holds the versioned zips, and `-latest.zip` is a symlink to the current
 one — so the published URL never changes and never has to be edited anywhere it was pasted.
-`make push-hq` copies a freshly built zip up and repoints the symlink afterwards, which is the
-order that matters: rsync writes to a temporary name and renames, so the link is never pointing
-at a half-transferred file.
+`make quests-push-complete` copies a freshly built zip up and repoints the symlink afterwards,
+which is the order that matters: rsync writes to a temporary name and renames, so the link is
+never pointing at a half-transferred file.
 
-nginx serves that directory off disk (`location /downloads/` in `nginx-voiceover.conf`) rather
+nginx serves that directory off disk (a `location /downloads/` block) rather
 than proxying to Next.js — a gigabyte through the app would occupy a worker for the length of
 every download and buy nothing. Static files also answer `Range` on their own, so an
 interrupted download resumes.

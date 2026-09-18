@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Writes addon/ZoneLore/Data/<locale>/Aliases.lua for every non-English locale.
+// Writes addon/SpokenZones/Data/<locale>/Aliases.lua for every non-English locale.
 //
 //   node tools/locale/build-aliases.mjs               # pinned build
 //   node tools/locale/build-aliases.mjs --build 1.15.9.69109
@@ -11,7 +11,7 @@
 // before these tables existed. AreaTable carries both names against one ID, so
 // the mapping is a join, not a translation, and costs nothing to produce.
 //
-// Keyed by the RAW client name rather than a normalised one. ZoneLore's
+// Keyed by the RAW client name rather than a normalised one. SpokenZones's
 // normalisation reduces a name to [a-z0-9 ] to reconcile the wiki's punctuation
 // with the client's, and that is exactly wrong here: "Дун Морог" normalises to
 // nothing at all. AreaTable is the table the client reads its names out of, so
@@ -45,12 +45,12 @@ function emitAliases(locale, aliases, build) {
     "-- corpus is stored under. Built by joining AreaTable's localized and English",
     `-- strings on their shared ID, from client build ${build}.`,
     "--",
-    "-- Keyed by the raw client name: ZoneLore:NormaliseAreaKey reduces a name to",
+    "-- Keyed by the raw client name: SpokenZones:NormaliseAreaKey reduces a name to",
     "-- [a-z0-9 ], which erases a Cyrillic or Chinese name entirely.",
     "",
-    "local _, ZoneLore = ...",
+    "local _, SpokenZones = ...",
     "",
-    `if not ZoneLore:ShouldLoadAliases("${locale}") then`,
+    `if not SpokenZones:ShouldLoadAliases("${locale}") then`,
     "\treturn",
     "end",
     "",
@@ -61,7 +61,7 @@ function emitAliases(locale, aliases, build) {
     lines.push(`\t[${luaString(name)}] = ${luaString(aliases.get(name))},`);
   }
 
-  lines.push("}", "", `ZoneLore:RegisterAliases("${locale}", aliases)`, "");
+  lines.push("}", "", `SpokenZones:RegisterAliases("${locale}", aliases)`, "");
   return lines.join("\n");
 }
 

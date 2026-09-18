@@ -12,6 +12,15 @@ Renamed to **Spoken Quests**, and the player extracted into the **Spoken Player*
 every Spoken addon speaks through. Addon managers install it automatically; the 1.12, 2.4.3
 and 3.3.5 zips carry it inside.
 
+- **Runs on the Forever client** (1.60.1, interface 16001 — the one whose TOC suffix is
+  `_Camelot`), alongside Classic Era 1.15.9 and the 2.5.6 Anniversary client.
+- **The commands are `/spokenquests` and `/spq`**, matching `/spoken` and `/sp` on the player
+  and `/spokenzones` and `/spz` on Spoken Zones. `/vo` and `/voread` are retired — a macro that
+  used one has to be edited, and `/voread` is `/spqread` now.
+- The sound packs are **Spoken Quests Audio** now, and their folders moved with them:
+  `SpokenQuestsAudioAlliance` and friends, where they were `VoiceOverReduxHQAudio*`. Your
+  addon manager replaces the old folders; a hand-installed pack has to be deleted by hand,
+  or you keep two copies of the same audio.
 - Settings migrate on first login from the old VoiceOverRedux folder, which this release
   replaces with a tombstone that can be deleted afterwards.
 - One queue with ZoneLore: quest lines and zone narration wait their turn behind each other,
@@ -19,7 +28,7 @@ and 3.3.5 zips carry it inside.
 - The player frame, minimap button, sound channel and pause are Spoken Player's settings now.
 - The settings are sections on one panel rather than a category per branch of an options
   tree. The sound packs you have, the ones you do not, and your profile are all on it,
-  rather than behind a button that opened a second window. Every `/vo` command is
+  rather than behind a button that opened a second window. Every `/spq` command is
   unchanged, and the old window is still there for the clients with no settings panel.
 - Choices are dropdowns again rather than buttons that cycled through the options.
 - Report is an icon in the player's top right corner rather than a button beside the
@@ -78,6 +87,23 @@ zip they already had.
 
 The sound packs are unchanged: install the same ones, and the player loads them even where the
 client calls them out of date.
+
+## 2.0.0 — sound packs
+
+**The dwarves were re-recorded.** Every dwarf line is regenerated with a reworked accent —
+the old one drifted between takes and landed somewhere that was not Scottish and not
+anything else either.
+
+- **Runs on the Forever client** (1.60.1, interface 16001 — the one whose TOC suffix is
+  `_Camelot`), alongside Classic Era 1.15.9 and the 2.5.6 Anniversary client.
+- **The packs are renamed and so are their folders**: Spoken Quests Audio: Alliance, Horde,
+  Shared Quests and Gossip, installing as `SpokenQuestsAudio*`. Your addon manager replaces
+  the old `VoiceOverReduxHQAudio*` folders. If you installed by hand, delete the old ones —
+  otherwise you keep two copies of several hundred megabytes each, and the player sees both.
+- **One pack format.** The downsampled 22.05 kHz packs are retired; these are the
+  full-bandwidth ones, ~300 MB a pack. The five retired projects stay installable and get no
+  further updates.
+- Every pack carries the same version as Spoken Quests from here on.
 
 ## 1.2.1 — sound packs
 

@@ -1,11 +1,23 @@
+---
+project: 1700375
+slug: spoken-player
+name: Spoken Player
+summary: The voice player every Spoken addon speaks through: one queue, one window, one minimap button.
+categories:
+  - Audio & Video
+  - Roleplay
+  - Miscellaneous
+license: MIT
+---
+
 **The voice player every Spoken addon speaks through.** One queue, one window, one minimap button — whichever Spoken addons you install.
 
 This addon plays nothing by itself. It is installed automatically as a dependency of:
 
 | Addon | Voices |
 | --- | --- |
-| [Spoken Quests](https://www.curseforge.com/wow/addons/voiceover-redux) | quest dialogue and NPC gossip (formerly VoiceOver Redux) |
-| [Spoken Zones](https://www.curseforge.com/wow/addons/zonelore) | zone and subzone lore (formerly ZoneLore) |
+| [Spoken Quests](https://www.curseforge.com/wow/addons/spoken-quests) | quest dialogue and NPC gossip (formerly VoiceOver Redux) |
+| [Spoken Zones](https://www.curseforge.com/wow/addons/spoken-zones) | zone and subzone lore (formerly ZoneLore) |
 
 Install one of those and your addon manager brings Spoken Player with it. Installing by hand? Get this too, or the addons above will load and tell you what is missing.
 
@@ -21,7 +33,7 @@ Install one of those and your addon manager brings Spoken Player with it. Instal
 Game Menu → Options → AddOns → **Spoken**, or `/spoken options`. Each Spoken addon keeps its own settings beside it. On first login the window position, scale and lock, the minimap button and the sound channel are carried over from VoiceOver Redux or ZoneLore.
 
 ```
-/spoken              play/pause
+/spoken, /sp         play/pause
 /spoken stop         clear the queue
 /spoken skip         skip the current line
 /spoken options      settings

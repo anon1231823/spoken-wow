@@ -1,11 +1,11 @@
--- ZoneLore -- detect clicks on a subzone of the displayed world map.
+-- SpokenZones -- detect clicks on a subzone of the displayed world map.
 --
 -- Subzones have no uiMapID, so C_Map.GetMapInfoAtPosition cannot see them; it
 -- only reports child *maps*. MapUtil.FindBestAreaNameAtMouse is the API that
 -- resolves a cursor position to an area name, and it is present on 11509
 -- (Leatrix_Maps calls it on this client).
 
-local ADDON_NAME, ZoneLore = ...
+local ADDON_NAME, SpokenZones = ...
 
 -- Normalised-coordinate slop allowed between mouse-down and mouse-up before the
 -- gesture counts as a map drag rather than a click. IsPanning() is unreliable by
@@ -22,24 +22,24 @@ local function HandleClick(x, y)
 
 	-- On a continent or world map a click is navigation to a child zone; leave
 	-- that to Blizzard's own handlers rather than hijacking it.
-	if not ZoneLore:IsZoneMap(mapID) then
+	if not SpokenZones:IsZoneMap(mapID) then
 		return
 	end
 
-	local areaName = ZoneLore:GetAreaNameAt(mapID, x, y)
-	local debug = ZoneLore:Get("debug")
+	local areaName = SpokenZones:GetAreaNameAt(mapID, x, y)
+	local debug = SpokenZones:Get("debug")
 
 	if not areaName then
 		if debug then
-			ZoneLore:Print("no area under cursor on map %d", mapID)
+			SpokenZones:Print("no area under cursor on map %d", mapID)
 		end
 		return
 	end
 
-	local entry, key = ZoneLore:GetSubzoneLore(mapID, areaName)
+	local entry, key = SpokenZones:GetSubzoneLore(mapID, areaName)
 
 	if debug then
-		ZoneLore:Print(
+		SpokenZones:Print(
 			'area "%s" -> key "%s" -> %s',
 			areaName,
 			tostring(key),
@@ -48,19 +48,19 @@ local function HandleClick(x, y)
 	end
 
 	if entry then
-		ZoneLore:SelectSubzone(mapID, areaName, entry)
+		SpokenZones:SelectSubzone(mapID, areaName, entry)
 	end
 end
 
-function ZoneLore:SetupSubzoneClicks()
+function SpokenZones:SetupSubzoneClicks()
 	local container = WorldMapFrame and WorldMapFrame.ScrollContainer
 	if not container then
-		ZoneLore:Print("|cffffcc00WorldMapFrame.ScrollContainer missing; subzone clicks disabled|r")
+		SpokenZones:Print("|cffffcc00WorldMapFrame.ScrollContainer missing; subzone clicks disabled|r")
 		return
 	end
 
 	if not (MapUtil and MapUtil.FindBestAreaNameAtMouse) then
-		ZoneLore:Print("|cffffcc00MapUtil.FindBestAreaNameAtMouse missing; subzone clicks disabled|r")
+		SpokenZones:Print("|cffffcc00MapUtil.FindBestAreaNameAtMouse missing; subzone clicks disabled|r")
 		return
 	end
 

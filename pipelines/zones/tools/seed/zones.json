@@ -2,7 +2,7 @@
   "_comment": [
     "uiMapID -> warcraft.wiki.gg page. `name` is the expected Classic Era zone name;",
     "`wiki` is the page title to scrape (defaults to `name` when omitted).",
-    "Verify against the live client in-game with `/zl verify`, and regenerate this",
+    "Verify against the live client in-game with `/spz verify`, and regenerate this",
     "file from a client dump with `node tools/seed-from-dump.mjs`."
   ],
 

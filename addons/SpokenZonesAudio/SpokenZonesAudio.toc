@@ -1,9 +1,9 @@
 ## Interface: 11509, 20506, 16001
 ## Title: Spoken Zones Audio
 ## Notes: Narrated zone lore for Spoken Zones. Install alongside Spoken Zones.|n|cffffcc00Beta:|r a proof-of-concept voice, being redesigned and re-generated.
-## Version: 0.3.3
+## Version: 2.0.0
 ## Author: rusty
-## IconTexture: Interface\AddOns\ZoneLoreAudio\Textures\AddonIcon.tga
+## IconTexture: Interface\AddOns\SpokenZonesAudio\Textures\AddonIcon.tga
 ## X-License: Audio generated with ElevenLabs from warcraft.wiki.gg lore text (CC BY-SA 4.0).
 ## X-Credits: Lore text sourced from warcraft.wiki.gg contributors (CC BY-SA 4.0).
 
@@ -12,15 +12,15 @@
 # 128kbps master every shipped tier is transcoded from, so it describes itself as
 # the high tier. Data/Sounds.lua reads these back at load time and reports them
 # to ZoneLore, which is how two tiers installed side by side can be told apart.
-## X-ZoneLore-Quality: high
-## X-ZoneLore-Bitrate: 128
+## X-SpokenZones-Quality: high
+## X-SpokenZones-Bitrate: 128
 
 # The language this pack narrates, read back the same way. ZoneLore plays only
 # packs matching the language it is showing text in: an English voice reading
 # under German prose is worse than the silence it would replace.
-## X-ZoneLore-Language: enUS
+## X-SpokenZones-Language: enUS
 
-# Defines the ZoneLoreAudioPacks registry entry that ZoneLore reads. No dependency
-# is declared in either direction: ZoneLore reads its lore without narrating when
+# Defines the SpokenZonesAudioPacks registry entry that Spoken Zones reads. No dependency
+# is declared in either direction: Spoken Zones reads its lore without narrating when
 # no pack is present, and a pack is inert without it.
 Data/Sounds.lua

@@ -1,4 +1,4 @@
--- ZoneLore -- narrated lore playback.
+-- SpokenZones -- narrated lore playback.
 --
 -- This file knows what a lore entry sounds like -- which pack narrates it, where
 -- the file is, how long it runs -- and hands that to the Spoken player, which owns
@@ -21,7 +21,7 @@
 -- When several packs are installed the player picks one; unpicked,
 -- the language being read wins, then the client's own locale.
 
-local ADDON_NAME, ZoneLore = ...
+local ADDON_NAME, SpokenZones = ...
 
 -- THERE IS NO STAND-IN CLIP. A line with no audio in the installed pack plays
 -- nothing and says why.
@@ -64,20 +64,20 @@ local DEFAULT_CHANNEL = "Dialog"
 -- same entry agrees on its glyph without polling. Bridged from the player's own
 -- AUDIO_CHANGED in SetupAudio, so a change caused by another addon's clip -- ours
 -- finishing because theirs started -- reaches these listeners too.
-ZoneLore.audioChangedCallbacks = {}
+SpokenZones.audioChangedCallbacks = {}
 
-function ZoneLore:OnAudioChanged(fn)
+function SpokenZones:OnAudioChanged(fn)
 	table.insert(self.audioChangedCallbacks, fn)
 end
 
 -- Public because toggling the feature off has to refresh every button too, not
 -- just the transitions that start and stop a clip.
-function ZoneLore:NotifyAudioChanged()
+function SpokenZones:NotifyAudioChanged()
 	local list = self.audioChangedCallbacks
 	for i = 1, #list do
 		local ok, err = pcall(list[i])
 		if not ok then
-			ZoneLore:Print("|cffff5555error|r: %s", tostring(err))
+			SpokenZones:Print("|cffff5555error|r: %s", tostring(err))
 		end
 	end
 end
@@ -93,12 +93,12 @@ local warnedNoPlayer = false
 -- installed. Said once, on the first thing that would have made a sound: a missing
 -- dependency that stays silent is the bug report nobody can reproduce.
 local function Source()
-	if ZoneLore.source then
-		return ZoneLore.source
+	if SpokenZones.source then
+		return SpokenZones.source
 	end
 	if not warnedNoPlayer then
 		warnedNoPlayer = true
-		ZoneLore:Print("|cffffcc00the Spoken player addon is not installed|r -- lore cannot be read aloud without it")
+		SpokenZones:Print("|cffffcc00the Spoken player addon is not installed|r -- lore cannot be read aloud without it")
 	end
 	return nil
 end
@@ -158,7 +158,7 @@ end
 
 --- Raise the dialog, if the player is installed and disabled and nobody has raised it yet.
 --- Returns whether this call was the one that raised it.
-function ZoneLore:PromptForPlayer()
+function SpokenZones:PromptForPlayer()
 	if rawget(_G, "Spoken") or rawget(_G, "SpokenPlayerPrompted") then
 		return false
 	end
@@ -196,7 +196,7 @@ function ZoneLore:PromptForPlayer()
 	return true
 end
 
-function ZoneLore:SetupAudio()
+function SpokenZones:SetupAudio()
 	if self.source then
 		return
 	end
@@ -226,15 +226,15 @@ function ZoneLore:SetupAudio()
 	end
 
 	Spoken:RegisterCallback("AUDIO_CHANGED", function()
-		ZoneLore:NotifyAudioChanged()
+		SpokenZones:NotifyAudioChanged()
 	end)
 
 	Spoken.Minimap:AddEntry("zones", { id = "lore", text = "Open lore window", order = 1,
-		onClick = function() ZoneLore:ToggleLoreWindow() end })
+		onClick = function() SpokenZones:ToggleLoreWindow() end })
 	Spoken.Minimap:AddEntry("zones", { id = "settings", text = "Spoken Zones settings", order = 2,
-		onClick = function() ZoneLore:OpenOptions() end })
+		onClick = function() SpokenZones:OpenOptions() end })
 	if Spoken.AddSettingsLink then
-		Spoken:AddSettingsLink("Spoken Zones settings", function() ZoneLore:OpenOptions() end)
+		Spoken:AddSettingsLink("Spoken Zones settings", function() SpokenZones:OpenOptions() end)
 	end
 end
 
@@ -253,12 +253,12 @@ local warnedFormat = {}
 -- Every pack is listed whatever it narrates -- packs are interchangeable, and an
 -- English pack under German text beats silence. Pass `lang` only to
 -- narrow the answer to one language.
-function ZoneLore:GetAudioPacks(lang)
+function SpokenZones:GetAudioPacks(lang)
 	local packs = {}
-	-- Two generations of the registry, newest first. ZoneLoreAudioPacks is what every
-	-- shipped pack writes into; a pack built from now on writes into both, so that the
-	-- same zip is also found by an older release of this addon. Both are keyed by folder
-	-- name, so a pack in both is seen once.
+	-- Two generations of the registry, newest first. ZoneLoreAudioPacks is what every pack
+	-- published before the rename writes into, and those files are on players' disks and
+	-- cannot be changed, so reading it is permanent. Packs built from now on write only
+	-- SpokenZonesAudioPacks. Both are keyed by folder name, so a pack in both is seen once.
 	local seen = {}
 	local found = false
 
@@ -344,7 +344,7 @@ end
 -- kept per content language, so picking the English pack while reading German
 -- does not overrule the German pack once one is installed and German is no
 -- longer what is being read.
-function ZoneLore:GetActiveAudioPack()
+function SpokenZones:GetActiveAudioPack()
 	local packs = self:GetAudioPacks()
 	if #packs == 0 then
 		return nil
@@ -368,7 +368,7 @@ end
 
 -- Switches packs. Returns false when the name is not an installed pack, so the
 -- caller can say so rather than storing a preference that resolves to nothing.
-function ZoneLore:SetActiveAudioPack(name)
+function SpokenZones:SetActiveAudioPack(name)
 	local packs = self:GetAudioPacks()
 	for i = 1, #packs do
 		if packs[i].addon == name then
@@ -386,10 +386,10 @@ function ZoneLore:SetActiveAudioPack(name)
 	return false
 end
 
--- "high (128 kbps)" -- for the options dropdown and /zl audio. The language is
+-- "high (128 kbps)" -- for the options dropdown and /spz audio. The language is
 -- named only when it is not the one being read, which is the case worth pointing
 -- at: a pack that is installed but will never play.
-function ZoneLore:GetAudioPackLabel(pack)
+function SpokenZones:GetAudioPackLabel(pack)
 	if not pack then
 		return "none"
 	end
@@ -409,16 +409,16 @@ end
 -- Lookup
 --------------------------------------------------------------------------------
 
-function ZoneLore:IsVoiceEnabled()
+function SpokenZones:IsVoiceEnabled()
 	return self:Get("voiceEnabled") and true or false
 end
 
 -- Path and duration for a lore entry. `areaKey` is a canonical subzone key (see
--- ZoneLore:NormaliseAreaKey), or nil for the zone itself.
+-- SpokenZones:NormaliseAreaKey), or nil for the zone itself.
 --
 -- Duration comes from the generated lookup because there is no way to ask the
 -- client how long a sound file is; without one the button could never reset itself.
-function ZoneLore:GetAudioClip(mapID, areaKey)
+function SpokenZones:GetAudioClip(mapID, areaKey)
 	if not mapID then
 		return nil, nil
 	end
@@ -443,7 +443,7 @@ end
 
 -- The button the player shows under a lore clip: this addon's own Report, told which
 -- entry it now stands beside. There is no Read button. The text is reached from the map,
--- the minimap menu and /zl, and a button on the player that opened a window over the very
+-- the minimap menu and /spz, and a button on the player that opened a window over the very
 -- thing being read was one way too many.
 local ACTIONS = {
 	{
@@ -464,9 +464,9 @@ local ACTIONS = {
 			if not clip then
 				return
 			end
-			local url = ZoneLore:ReportURL(clip.mapID, clip.areaKey)
+			local url = SpokenZones:ReportURL(clip.mapID, clip.areaKey)
 			if url then
-				ZoneLore:ShowCopyLink(url,
+				SpokenZones:ShowCopyLink(url,
 					"Copy this address and open it in your browser to report a problem with this entry.")
 			end
 		end,
@@ -480,7 +480,7 @@ local ACTIONS = {
 -- The key is the line id the website and the generation pipeline use -- z:{mapID} or
 -- s:{mapID}:{key} -- and it is frozen: it is what the player dedups on, what a report
 -- names, and what audio-history is keyed by.
-function ZoneLore:NewLoreSound(mapID, areaKey)
+function SpokenZones:NewLoreSound(mapID, areaKey)
 	local path, length, pack, fileName = self:GetAudioClip(mapID, areaKey)
 	if not path then
 		return nil
@@ -511,8 +511,8 @@ function ZoneLore:NewLoreSound(mapID, areaKey)
 		-- areas on silence. Only the autoplayExplored option reads it; see
 		-- Autoplay.lua.
 		startCallback = function(item)
-			if ZoneLore.MarkHeard then
-				ZoneLore:MarkHeard(item.mapID, item.areaKey)
+			if SpokenZones.MarkHeard then
+				SpokenZones:MarkHeard(item.mapID, item.areaKey)
 			end
 		end,
 	}
@@ -520,7 +520,7 @@ end
 
 -- Appends a clip for a producer -- autoplay -- which waits its turn. Returns whether
 -- it was admitted; the player refuses duplicates and silence of its own accord.
-function ZoneLore:EnqueueLore(item)
+function SpokenZones:EnqueueLore(item)
 	local source = Source()
 	if not source or not item then
 		return false
@@ -528,7 +528,7 @@ function ZoneLore:EnqueueLore(item)
 	return source:Enqueue(item) ~= nil
 end
 
-function ZoneLore:HasAudio(mapID, areaKey)
+function SpokenZones:HasAudio(mapID, areaKey)
 	return self:GetAudioClip(mapID, areaKey) ~= nil
 end
 
@@ -536,7 +536,7 @@ end
 -- pack" from "your pack does not cover this line": the first is a download, the
 -- second is nothing they can do, and telling them apart is the whole point of
 -- saying anything at all.
-function ZoneLore:DescribeMissingAudio()
+function SpokenZones:DescribeMissingAudio()
 	if #self:GetAudioPacks() == 0 then
 		return "no sound pack installed -- get Spoken Zones Audio to hear the lore read aloud"
 	end
@@ -550,11 +550,11 @@ end
 -- The head of the player's queue if it is one of ours, else nil.
 local function OurHead()
 	local Spoken = _G.Spoken
-	if not ZoneLore.source or not Spoken then
+	if not SpokenZones.source or not Spoken then
 		return nil
 	end
 	local head = Spoken:GetCurrent()
-	if head and head.source == ZoneLore.source then
+	if head and head.source == SpokenZones.source then
 		return head
 	end
 	return nil
@@ -564,7 +564,7 @@ end
 -- unstarted while a gate holds it -- waiting out a pull, say -- and a button
 -- reading "Stop" over an entry that has made no sound would stop a queue instead
 -- of a clip. The player's IsPlaying is the liveness test, not presence at the head.
-function ZoneLore:IsPlayingLore(mapID, areaKey)
+function SpokenZones:IsPlayingLore(mapID, areaKey)
 	local head = OurHead()
 	if not head or not _G.Spoken:IsPlaying() then
 		return false
@@ -575,14 +575,14 @@ function ZoneLore:IsPlayingLore(mapID, areaKey)
 	return head.mapID == mapID and head.areaKey == areaKey
 end
 
-function ZoneLore:IsPaused()
+function SpokenZones:IsPaused()
 	local head = OurHead()
 	return head ~= nil and _G.Spoken:IsPaused()
 end
 
 -- What the floating controls are controlling: mapID, areaKey, isPaused. Nil when
 -- nothing of ours is playing or paused, which is also what hides the controls.
-function ZoneLore:GetNowPlaying()
+function SpokenZones:GetNowPlaying()
 	-- Deliberately not "whatever is at the head". An entry held by a gate sits
 	-- there making no sound, and controls offering Pause over silence would be
 	-- lying; the queue list is what shows a held entry. So: playing, or paused.
@@ -596,7 +596,7 @@ end
 
 -- How many of our entries are waiting behind the one playing. Drives the Next
 -- button. Ours only: a quest line queued behind a discovery is not lore waiting.
-function ZoneLore:QueueLength()
+function SpokenZones:QueueLength()
 	local Spoken = _G.Spoken
 	if not self.source or not Spoken then
 		return 0
@@ -612,7 +612,7 @@ function ZoneLore:QueueLength()
 end
 
 -- A readable name for an entry, for the controls to label what is playing.
-function ZoneLore:GetAudioLabel(mapID, areaKey)
+function SpokenZones:GetAudioLabel(mapID, areaKey)
 	if not mapID then
 		return ""
 	end
@@ -627,8 +627,8 @@ end
 -- The player asking for silence, as opposed to playback being reset on the way to
 -- starting something else. Stop has to mean stop, not skip to the next discovered
 -- area -- and it means *lore*: another Spoken addon's clips are left alone.
-function ZoneLore:StopLore()
-	local source = ZoneLore.source
+function SpokenZones:StopLore()
+	local source = SpokenZones.source
 	if source then
 		source:StopAll()
 	end
@@ -636,7 +636,7 @@ end
 
 -- Ends the current clip while leaving the backlog alone, so whatever is waiting
 -- starts. Distinct from StopLore, which is the player asking for silence.
-function ZoneLore:SkipLore()
+function SpokenZones:SkipLore()
 	if not OurHead() then
 		return false
 	end
@@ -644,24 +644,24 @@ function ZoneLore:SkipLore()
 end
 
 -- Pause is the player's, not this addon's: pausing lore pauses whatever is speaking.
-function ZoneLore:PauseLore()
+function SpokenZones:PauseLore()
 	return _G.Spoken and _G.Spoken:Pause() or false
 end
 
-function ZoneLore:ResumeLore()
+function SpokenZones:ResumeLore()
 	return _G.Spoken and _G.Spoken:Resume() or false
 end
 
-function ZoneLore:TogglePauseLore()
+function SpokenZones:TogglePauseLore()
 	return _G.Spoken and _G.Spoken:TogglePause() or false
 end
 
 -- Plays this entry now, ahead of anything waiting. Pressing Play has always meant
--- now in ZoneLore, so this front-inserts rather than appending; producers such as
+-- now in SpokenZones, so this front-inserts rather than appending; producers such as
 -- autoplay append instead.
-function ZoneLore:PlayLore(mapID, areaKey)
+function SpokenZones:PlayLore(mapID, areaKey)
 	if not self:IsVoiceEnabled() then
-		ZoneLore:NotifyAudioChanged()
+		SpokenZones:NotifyAudioChanged()
 		return false
 	end
 
@@ -675,9 +675,9 @@ function ZoneLore:PlayLore(mapID, areaKey)
 		-- Said out loud, because this is the case players used to experience as
 		-- "the narration is about the wrong zone". Autoplay never reaches here --
 		-- it refuses to queue an entry with no clip -- so this only speaks when
-		-- somebody asked for this line by clicking Play or typing /zl play.
+		-- somebody asked for this line by clicking Play or typing /spz play.
 		self:Print("|cffffcc00%s|r", self:DescribeMissingAudio())
-		ZoneLore:NotifyAudioChanged()
+		SpokenZones:NotifyAudioChanged()
 		return false
 	end
 
@@ -689,7 +689,7 @@ function ZoneLore:PlayLore(mapID, areaKey)
 end
 
 -- Play if this entry is not already playing, stop if it is. What the button does.
-function ZoneLore:ToggleLore(mapID, areaKey)
+function SpokenZones:ToggleLore(mapID, areaKey)
 	if self:IsPlayingLore(mapID, areaKey) then
 		self:StopLore()
 		return false
