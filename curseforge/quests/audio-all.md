@@ -7,7 +7,7 @@ You still need the player: [Spoken Quests](https://www.curseforge.com/wow/addons
 | Pack | Holds | |
 | --- | --- | --- |
 | **All** | installs the four below | **this page** |
-| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio) | Alliance-only quests | |
+| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests | |
 | [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests | |
 | [Shared Quests](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) | quests both factions can take | |
 | [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) | NPC gossip chatter | |

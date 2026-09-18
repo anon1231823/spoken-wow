@@ -20,7 +20,7 @@ Nothing to do. Your settings carry over on the first login, and the old `VoiceOv
 | Pack | Holds |
 | --- | --- |
 | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all) | installs the four below |
-| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio) | Alliance-only quests |
+| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests |
 | [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests |
 | [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) | quests both factions can take |
 | [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) | NPC gossip chatter |

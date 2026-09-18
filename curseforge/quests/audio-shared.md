@@ -3,14 +3,14 @@ Voiced dialogue for the quests **both factions** can take. Neutral hubs like Boo
 **Everyone wants this pack**, and on its own it is only part of the story. Pair it with your side, and with the player:
 
 1. **[Spoken Quests](https://www.curseforge.com/wow/addons/spoken-quests)** — the player. Without it no pack plays.
-2. **[Spoken Quests Audio: Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio)** or **[(Horde)](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde)** — whichever side your character is on.
+2. **[Spoken Quests Audio: Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance)** or **[(Horde)](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde)** — whichever side your character is on.
 
 ## The packs
 
 | Pack | Holds | |
 | --- | --- | --- |
 | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all) | installs the four below | |
-| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio) | Alliance-only quests | |
+| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests | |
 | [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests | |
 | **Shared** | quests both factions can take | **this pack** |
 | [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) | NPC gossip chatter | |

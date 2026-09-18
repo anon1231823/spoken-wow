@@ -8,14 +8,13 @@ Markdown mode — paste the file into it.
 | `../spoken/spoken.md` | Spoken Player | 1700375 | `spoken-player` |
 | `player.md` | Spoken Quests (was VoiceOver Redux) | 1655859 | `spoken-quests` |
 | `audio-all.md` | Spoken Quests Audio: All | 1660196 | `spoken-quests-audio-all` |
-| `audio-alliance.md` | Spoken Quests Audio: Alliance | 1660197 | `spoken-quests-audio` |
+| `audio-alliance.md` | Spoken Quests Audio: Alliance | 1660197 | `spoken-quests-audio-alliance` |
 | `audio-horde.md` | Spoken Quests Audio: Horde | 1660198 | `spoken-quests-audio-horde` |
 | `audio-shared.md` | Spoken Quests Audio: Shared Quests | 1660199 | `spoken-quests-audio-shared` |
 | `audio-gossip.md` | Spoken Quests Audio: Gossip | 1660202 | `spoken-quests-audio-gossip` |
 
-**Alliance holds the bare `spoken-quests-audio` slug**, which reads like the family and is not:
-the meta addon is `spoken-quests-audio-all`. Both were read off the live projects rather than
-derived from the pattern, which is exactly the case this table exists for.
+The slugs follow the projects' names, `-all` included: the meta addon is the "All" pack as far
+as a player is concerned, so it is the one project whose slug names a pack that holds no audio.
 
 **Five more projects exist and are retired.** 1655867, 1658236, 1658237, 1658239 and 1658235 held
 the downsampled packs, back when the audio shipped at two qualities. They stay published so that

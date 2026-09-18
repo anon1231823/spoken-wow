@@ -5,14 +5,14 @@ Innkeepers, guards, faction quartermasters and the rest saying their piece out l
 **You need the player and at least one quest pack for any of this to work:**
 
 1. **[Spoken Quests](https://www.curseforge.com/wow/addons/spoken-quests)** — the player. Without it no pack plays.
-2. Your quest audio — **[Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio)** or **[Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde)**, plus **[Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared)**.
+2. Your quest audio — **[Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance)** or **[Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde)**, plus **[Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared)**.
 
 ## The packs
 
 | Pack | Holds | |
 | --- | --- | --- |
 | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all) | installs the four below | |
-| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio) | Alliance-only quests | |
+| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests | |
 | [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests | |
 | [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) | quests both factions can take | |
 | **Gossip** | NPC gossip chatter | **this pack** |

@@ -10,7 +10,7 @@ Voiced dialogue for the quests only a Horde character can take.
 | Pack | Holds | |
 | --- | --- | --- |
 | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all) | installs the four below | |
-| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio) | Alliance-only quests | |
+| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests | |
 | **Horde** | Horde-only quests | **this pack** |
 | [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) | quests both factions can take | |
 | [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) | NPC gossip chatter | |
