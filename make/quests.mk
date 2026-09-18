@@ -239,7 +239,7 @@ package-audio: ## Transcode, build and zip the five sound packs into dist/ (VERS
 # is over the upload ceiling and always will be - so it is built for people who would rather
 # take one download, and it is a folder of its own rather than a fatter copy of a shipping pack,
 # so installing it beside them is possible but pointless. The site hosts it: `push-complete`
-# below, which keeps the old published URL alive as a second symlink.
+# below, under the one current name -- see the note there.
 
 package-audio-complete: ## Build the whole corpus as one folder for the site (~1.3 GB)
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
@@ -269,7 +269,12 @@ package-meta: ## Zip the meta addon that pulls in all four packs
 # that URL is not kept alive: the descriptions that carried it are being re-pasted with the
 # current one, and the pack itself is re-downloaded this release whatever its name.
 
-REMOTE_DOWNLOADS := $(REMOTE_ROOT)/shared/downloads
+# Under /srv/spoken, not REMOTE_ROOT: this is the one target here whose output is served
+# rather than read by the pipeline. voiceover.rusty.one is a redirect vhost now, so
+# /downloads/ is answered from /srv/spoken/shared/downloads (nginx-spoken.conf), and a zip
+# pushed into the old tree would be uploaded to a directory nothing serves. The audio store
+# above stays where it is until cutover-audio has moved it -- see make/web.mk.
+REMOTE_DOWNLOADS := /srv/spoken/shared/downloads
 
 push-complete: ## Upload the built complete pack to the site's downloads directory
 	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. brew install rsync"; exit 1; }
