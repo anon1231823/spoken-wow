@@ -10,7 +10,7 @@
 import { noApiKeyMessage } from "@/lib/no-api-key";
 
 /** Which section a job belongs to. Mirrors Source in lib/generation/queue.ts. */
-export type Source = "quests" | "zones";
+export type Source = "quests" | "zones" | "books";
 
 export type FailureKind =
   | "quota"
@@ -229,7 +229,12 @@ export type QueuedBatch = { batchId: string; queued: number; skipped: number };
  * queue the batch" would send them looking in the wrong place.
  */
 export async function queueBatch(
-  request: { source: "quests"; filters: URLSearchParams } | { source: "zones"; lineIds: string[] },
+  request:
+    | { source: "quests"; filters: URLSearchParams }
+    // Both id-driven sections, for the same reason: their explorers already hold the set
+    // of ids the visitor was shown, and quoting one set while queueing another is the
+    // failure the quote exists to prevent.
+    | { source: "zones" | "books"; lineIds: string[] },
   label: string,
 ): Promise<QueuedBatch | { error: string } | null> {
   try {
@@ -239,7 +244,7 @@ export async function queueBatch(
       body: JSON.stringify(
         request.source === "quests"
           ? { source: "quests", filters: request.filters.toString(), label }
-          : { source: "zones", lineIds: request.lineIds, label },
+          : { source: request.source, lineIds: request.lineIds, label },
       ),
     });
     const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;

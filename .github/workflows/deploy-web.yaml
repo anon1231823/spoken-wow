@@ -19,6 +19,9 @@ on:
       # The zones half is COMPILED INTO the bundle -- lib/zones/tools.ts imports it -- so a
       # change here is a change to the app, not merely to a script beside it.
       - "pipelines/zones/**"
+      # The books half is the same arrangement: lib/books/tools.ts imports its text and
+      # naming modules, so what normalises a page and what hashes it ship in the bundle.
+      - "pipelines/books/**"
       # The lore corpus lives in the database, but the Lua the addon ships is exported from
       # it and the deploy seeds CI's throwaway database from those files.
       - "addons/SpokenZones/Data/**"

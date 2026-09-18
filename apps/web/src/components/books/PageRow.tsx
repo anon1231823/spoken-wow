@@ -1,0 +1,205 @@
+"use client";
+
+import { ChevronDownIcon, PlayIcon } from "lucide-react";
+import { useState } from "react";
+
+import RegenerateButton from "@/components/RegenerateButton";
+import { materialName } from "@/lib/books/filters";
+import type { ResultLine } from "@/lib/books/search";
+import { cn } from "@/lib/utils";
+
+export type RowState =
+  | { phase: "busy" }
+  | { phase: "done"; version: number }
+  | { phase: "error"; message: string };
+
+type Props = {
+  line: ResultLine;
+  current: boolean;
+  /** Editor and up: the regenerate control. */
+  canRegenerate: boolean;
+  /**
+   * How many rows this book occupies here, or 0 when this is not its first row.
+   *
+   * The count is the run in THIS result page, not `line.pageCount`: a filter can show three
+   * pages of a twenty-page journal, and paging can split a book across two screens. A
+   * rowspan longer than the rows beneath it pushes every following row one column right.
+   */
+  groupRows: number;
+  state?: RowState;
+  onPlay: (line: ResultLine) => void;
+  onRegenerate: (line: ResultLine) => void;
+  /** Narrowing to this book, from its name. */
+  onSelectBook: (line: ResultLine) => void;
+};
+
+// The same colour discipline as the other two explorers: red is only ever a real problem,
+// amber is something that has drifted, grey is a fact about the row.
+const STATE_STYLE = {
+  missing: "text-destructive",
+  stale: "text-amber-300",
+  current: "text-muted-foreground",
+} as const;
+
+const STATE_LABEL = {
+  missing: "no audio",
+  stale: "audio outdated",
+  current: "",
+} as const;
+
+export function PageRow({
+  line,
+  current,
+  canRegenerate,
+  groupRows,
+  state,
+  onPlay,
+  onRegenerate,
+  onSelectBook,
+}: Props) {
+  const playable = line.state !== "missing";
+  const [expanded, setExpanded] = useState(false);
+
+  /**
+   * Clicking the row shows the whole page, but only when the click meant that.
+   *
+   * Two things it must not swallow: a click that landed on a control is that control's
+   * business, and a click ending a drag over the prose is somebody copying it -- which is
+   * half of what this cell is for on a page of a book.
+   */
+  function toggleFromRow(event: React.MouseEvent<HTMLTableRowElement>) {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest("button, a, input, textarea, select, [role='dialog']")) return;
+    if (!window.getSelection()?.isCollapsed) return;
+    setExpanded((open) => !open);
+  }
+
+  return (
+    <tr
+      data-line-key={line.id}
+      onClick={toggleFromRow}
+      className={cn(
+        "border-border/60 border-b align-top transition-colors",
+        "hover:bg-muted/60",
+        current && "bg-muted",
+        // The first row of a book carries the heavier rule, so the books stay legible as
+        // blocks once their name is written only once.
+        groupRows > 0 && "border-t-border border-t",
+      )}
+    >
+      {/* Written once per book and spanning its pages, the way the zone column reads as one
+          zone rather than as the same word forty times. Only on the run's first row: the
+          rows beneath it have no cell here at all. */}
+      {groupRows > 0 && (
+        <>
+          <td rowSpan={groupRows} className="border-border/60 border-r px-2 py-2">
+            <button
+              className="hover:text-foreground block max-w-full text-left font-medium break-words underline-offset-2 hover:underline"
+              title={`Show only ${line.title}`}
+              onClick={() => onSelectBook(line)}
+            >
+              {line.title}
+            </button>
+          </td>
+
+          <td
+            rowSpan={groupRows}
+            className="text-muted-foreground border-border/60 border-r px-2 py-2 text-xs"
+          >
+            <div>{line.ownerKind === "object" ? "in the world" : "carried"}</div>
+            <div>{materialName(line.material)}</div>
+            <div>{line.pageCount === 1 ? "1 page" : `${line.pageCount} pages`}</div>
+            {/* Which object or item opens it. More than one is common, and two objects
+                sharing a name is exactly why the addon needs a checksum. */}
+            <div className="mt-1 font-mono break-words opacity-70">
+              {line.ownerIds.join(", ")}
+            </div>
+          </td>
+        </>
+      )}
+
+      <td className="text-muted-foreground px-2 py-2 text-xs whitespace-nowrap">
+        {line.pageCount > 1 ? `${line.pageNumber} / ${line.pageCount}` : "—"}
+      </td>
+
+      {/* The prose is plain markup rather than a button's label, which is what makes it
+          selectable: text inside a <button> cannot reliably be dragged over and copied.
+          That is why playing needs a control of its own. */}
+      <td className="p-0">
+        <div className="flex w-full min-w-0 items-start gap-2 px-2 py-2">
+          <button
+            aria-current={current}
+            disabled={!playable}
+            onClick={() => onPlay(line)}
+            title={playable ? `${line.file}.mp3` : undefined}
+            aria-label={`Play page ${line.pageNumber} of ${line.title}`}
+            className={cn(
+              "mt-px shrink-0 rounded-sm p-0.5",
+              "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
+              playable
+                ? "text-muted-foreground hover:text-foreground cursor-pointer"
+                : "text-muted-foreground/30 cursor-default",
+              current && "text-foreground",
+            )}
+          >
+            <PlayIcon className="size-3.5" />
+          </button>
+
+          <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "clamp-2")}>
+            {line.text}
+          </span>
+
+          {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle
+              needs a real control. It doubles as the only thing saying rows expand. */}
+          <button
+            aria-expanded={expanded}
+            aria-label={expanded ? "Collapse this page" : "Show the whole page"}
+            title={expanded ? "Collapse" : "Show the whole page"}
+            onClick={() => setExpanded((open) => !open)}
+            className={cn(
+              "text-muted-foreground hover:text-foreground mt-px shrink-0 cursor-pointer rounded-sm p-0.5",
+              "focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
+            )}
+          >
+            <ChevronDownIcon
+              className={cn("size-3.5 transition-transform", expanded && "rotate-180")}
+            />
+          </button>
+        </div>
+      </td>
+
+      {/* Audio, in a column of its own rather than floated into the prose: the point of a
+          column is that it lines up down the page, and "which of these has no clip yet" is
+          the question this screen is most often asked. */}
+      <td className="px-2 py-2 text-xs whitespace-nowrap">
+        {state?.phase === "error" ? (
+          <span className="text-destructive">{state.message}</span>
+        ) : state?.phase === "done" ? (
+          <span className="text-emerald-400">v{state.version}</span>
+        ) : !line.generatable ? (
+          // Why this page is silent, rather than leaving it looking merely un-narrated. It
+          // is in the corpus because the game has it.
+          <span className="text-muted-foreground italic">{line.skipReason}</span>
+        ) : (
+          <span className={STATE_STYLE[line.state]}>
+            {STATE_LABEL[line.state] || `v${line.take?.version ?? 1}`}
+          </span>
+        )}
+      </td>
+
+      <td className="text-muted-foreground px-2 py-2 text-right text-xs whitespace-nowrap">
+        {line.chars}
+      </td>
+
+      <td className="px-2 py-2">
+        {canRegenerate && (
+          <RegenerateButton
+            onClick={() => onRegenerate(line)}
+            busy={state?.phase === "busy"}
+            blocked={line.generatable ? null : `this page cannot be voiced: ${line.skipReason}`}
+          />
+        )}
+      </td>
+    </tr>
+  );
+}

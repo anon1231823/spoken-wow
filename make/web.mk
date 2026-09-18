@@ -13,7 +13,8 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help dev build typecheck test bootstrap deploy-scripts releases rollback logs \
-        ssh-check store cutover-audio migrate-legacy migrate-legacy-dry migrate-lines migrate-reports migrate-verdicts
+        ssh-check store cutover-audio migrate-legacy migrate-legacy-dry migrate-lines \
+        migrate-books migrate-reports migrate-verdicts
 
 APP := @spoken/web
 
@@ -135,6 +136,40 @@ migrate-lines: ## Copy the zones corpus, flags and takes onto the droplet (rerun
 # re-copying them replaces them with themselves and this can be run whenever it is useful.
 # Accounts, sealed keys and reports cannot be: accounts merge into rows this database
 # already has, and reports are never deduplicated. Those move once, at the cutover, below.
+
+#-------------------------------------------------------------------------------
+# The books corpus
+#
+# Its own path, because books cannot be seeded the way the other two are. The quests corpus
+# ships inside the release as a committed file and the zones one is imported from the other
+# droplet's database; books is extracted from a vmangos MySQL that exists only on a
+# maintainer's machine, so the rows travel from there or not at all.
+#
+# THE DROPLET CANNOT RE-SEED ITSELF. If this table is ever lost there, it comes back from a
+# local extract and this target -- which is the reason it is a target rather than a command
+# somebody remembers.
+#-------------------------------------------------------------------------------
+
+# The native local Postgres, not a container: the books pipeline writes to whatever
+# DATABASE_URL names, and this is where it has been run.
+LOCAL_DB ?= postgres://localhost/spoken_quests_dev
+
+# pg_dump 16.10 and later wrap output in \restrict / \unrestrict, psql meta-commands that
+# an older psql fails on. Both clusters are ours, so strip them rather than requiring the
+# droplet's psql to match this one. Same reasoning as make/zones.mk's UNRESTRICT.
+UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
+
+migrate-books: ## Copy the local books corpus onto the droplet (REPLACES book_line)
+	@echo "local:"
+	@psql "$(LOCAL_DB)" -c 'select count(*) as rows, count(*) filter (where "isCurrent") as live, count(distinct "bookId") as books from "book_line"'
+	@echo "droplet:"
+	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" 		-c "select count(*) as rows, count(*) filter (where \"isCurrent\") as live, count(distinct \"bookId\") as books from \"book_line\""'
+	@printf 'Replace the droplet book_line with the local one? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
+	@( echo 'begin;'; 	   echo 'truncate "book_line";'; 	   pg_dump "$(LOCAL_DB)" --data-only --table=book_line | $(UNRESTRICT); 	   echo 'select setval(pg_get_serial_sequence('"'"'book_line'"'"', '"'"'id'"'"'), coalesce(max("id"), 1)) from "book_line";'; 	   echo 'commit;' ) 	  | $(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 -q'
+	@echo "==> pushed"
+
+# The sequence is reset in the same transaction, because --data-only does not carry it and
+# the next edit saved through the site would collide with an id the dump already used.
 
 migrate-reports: ## Copy both sections' reports onto the droplet (rerunnable, pre-cutover)
 	@$(call remote-import,--reports)

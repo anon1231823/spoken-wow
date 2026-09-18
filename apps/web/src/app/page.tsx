@@ -6,9 +6,9 @@ export const metadata: Metadata = { title: "Spoken" };
 /**
  * The front door.
  *
- * Two sections, named by what they voice rather than by which project they came from: a
- * visitor does not know that one of these used to be at voiceover.rusty.one and the other
- * at lore.rusty.one, and should not have to.
+ * Three sections, named by what they voice rather than by which project they came from: a
+ * visitor does not know that one of these used to be at voiceover.rusty.one and another at
+ * lore.rusty.one, and should not have to.
  */
 const SECTIONS = [
   {
@@ -27,6 +27,14 @@ const SECTIONS = [
       "Written rather than extracted: scraped from the wiki, and correctable here.",
     detail: "1,353 lines · one narrator",
   },
+  {
+    href: "/books",
+    title: "Books and notes",
+    blurb:
+      "Every book, letter, note and plaque the game will show you, page by page. " +
+      "Blizzard's words again, read by the narrator rather than by the NPC who hands them over.",
+    detail: "1,191 pages · 404 books",
+  },
 ];
 
 export default function Page() {
@@ -38,7 +46,9 @@ export default function Page() {
         line the addons ship, search for the one you heard, and tell us when one is wrong.
       </p>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/* Three columns once there is room, so the third card does not sit alone on a row
+          of its own. Two below that, one on a phone. */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {SECTIONS.map((section) => (
           <Link
             key={section.href}

@@ -8,7 +8,7 @@ several addons.
 | **Spoken** | nothing — it *is* the player: the queue, the frame, the minimap button | published as Spoken Player, id 1700375 |
 | **SpokenQuests** | quest dialogue and NPC gossip | shipping, renamed from VoiceOver Redux |
 | **SpokenZones** | zone and subzone lore | shipping, renamed from ZoneLore |
-| **SpokenBooks** | books, letters and other in-world texts | planned |
+| **SpokenBooks** | books, letters and other in-world texts | corpus and site section built, addon next |
 
 Every feature addon plays through `SpokenPlayer`, so a player who installs two of
 them gets one queue and one window rather than two of each. Addon managers
@@ -19,11 +19,11 @@ clients have no manager to do it for them.
 
 ```
 addons/      the player, the feature addons, and the sound packs
-apps/web     the site: spoken.rusty.one, with a quests section and a zones one
+apps/web     the site: spoken.rusty.one, with quests, zones and books sections
 apps/web-zones
              the site it absorbed, kept until the cutover
 pipelines/   corpus extraction and voiceline generation
-             quests/ is Python, zones/ is Node
+             quests/ is Python, zones/ and books/ are Node
 deploy/      one directory per deployment; web/ is the live one
 packages/    shared TypeScript
 tests/lua/   the luajit addon harness
@@ -39,6 +39,7 @@ docs/        each project's own prose, until it is merged
 make web-<target>       # see make/web.mk   -- the site and its droplet
 make quests-<target>    # see make/quests.mk
 make zones-<target>     # see make/zones.mk
+make books-<target>     # see make/books.mk
 make test-player        # the Lua harness, all addons
 ```
 

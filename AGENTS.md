@@ -12,12 +12,14 @@ Four things share one tree, and they are not equally finished:
    `SpokenZonesAudio` is a sound pack. `addons/vendor/` holds upstream's
    addons as a diff baseline and nothing builds them.
 2. `apps/` — `web` is the site being built: one domain, `spoken.rusty.one`, with a
-   quests section and a zones section. `web-zones` is the site it is absorbing, and
+   quests section, a zones section and a books section. `web-zones` is the site it is absorbing, and
    stays until the cutover so its code can be read beside the port of it.
-3. `pipelines/` — `quests/` is Python, `zones/` is Node. Also scheduled to
-   merge, onto TypeScript. The zones half is not merely a CLI any more: the site
-   imports it (`apps/web/src/lib/zones/tools.ts`) and webpack compiles it into
-   the bundle, so a change there is a change to the site.
+3. `pipelines/` — `quests/` is Python, `zones/` and `books/` are Node. Also
+   scheduled to merge, onto TypeScript. The zones half is not merely a CLI any
+   more: the site imports it (`apps/web/src/lib/zones/tools.ts`) and webpack
+   compiles it into the bundle, so a change there is a change to the site. The
+   books half is the same arrangement, reading page text out of the vmangos
+   world DB that `quests/` already provisions — see `docs/books/`.
 4. `packages/` — where the shared TypeScript will live. Empty for now.
 5. `deploy/` — one directory per deployment. `web/` is the live one; `quests/`
    and `zones/` describe the two frozen sites and are kept matching them.
@@ -33,11 +35,11 @@ describe what is *running*, not what the code says: leave them matching the
 droplet. A hotfix to either site is a dispatch against the `legacy-freeze` tag.
 
 **Filenames and line ids are frozen.** `q:33:accept`, `g:{md5}`, `z:{mapID}`,
-`s:{mapID}:{key}` and their paths on disk do not change. Renaming one means
+`s:{mapID}:{key}`, `b:{pageTextID}` and their paths on disk do not change. Renaming one means
 re-shipping a sound pack every user has already downloaded and invalidating
 the take history that records what produced each file.
 
-**Do not merge the two Makefiles.** They collide on a dozen target names.
+**Do not merge the Makefiles.** They collide on a dozen target names.
 Each target is commented with the failure it exists to prevent — read the
 comment before changing one, and note that several `push`/`pull` targets
 rsync with `--delete` against directories holding audio that cannot be

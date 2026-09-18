@@ -158,6 +158,19 @@ module.exports = {
         // deleted five deploys later.
         SPOKEN_ZONES_MANIFEST: `${SHARED}/manifest.json`,
 
+        //--------------------------------------------------------------------------
+        // Books
+        //--------------------------------------------------------------------------
+
+        // The book page clips. Empty at first -- nothing has been narrated yet -- but the
+        // variable has to be set from the first deploy: lib/books/audio.ts falls back to a
+        // path inside the release, and a release directory is deleted five deploys later.
+        SPOKEN_BOOKS_AUDIO: `${SHARED}/books`,
+
+        // Superseded book takes, beside the other two sections' and separate from them.
+        // Each pipeline numbers versions independently and they share no filenames.
+        SPOKEN_BOOKS_AUDIO_HISTORY: `${SHARED}/audio-history/books`,
+
         // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, SPOKEN_SECRET_KEY and
         // ELEVENLABS_DICTIONARY_ID.
         ...readSecrets(),

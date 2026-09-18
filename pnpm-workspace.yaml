@@ -1,4 +1,5 @@
 packages:
   - apps/*
   - pipelines/zones
+  - pipelines/books
   - packages/*

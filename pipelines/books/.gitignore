@@ -1,0 +1,9 @@
+# The extract's intermediate output. book_line is the corpus; this is only what the
+# importer read on the way there, and it is reproducible from the dump in minutes.
+corpus/extract.json
+
+# Generated narration, and the takes it replaced. Audio lives outside git for the reason
+# the root .gitignore gives at length: these are either irreplaceable or were paid for, and
+# a release path that could regenerate them is not the same as one that has them.
+audio/
+audio-history/
