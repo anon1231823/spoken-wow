@@ -210,7 +210,13 @@ web: ## Run the voiceline explorer at localhost:3000
 # resolves to the droplet today; override with the IP if it is ever pointed at a CDN,
 # which would not proxy SSH:  make push DROPLET=deploy@188.166.37.175
 DROPLET     ?= deploy@rusty.one
-REMOTE_ROOT ?= /srv/zonelore
+
+# /srv/spoken, not /srv/zonelore. The cutover has run: the sounds and the take history live
+# under /srv/spoken/shared (symlinks into the block volume at /mnt/voice/spoken) and the
+# `spoken` pm2 app serves them, while `zonelore` is stopped. The old tree still holds a
+# complete copy, so rsync against it succeeds and reports nothing wrong -- which is exactly
+# why this is worth stating. deploy/zones/ still describes the frozen tree on purpose.
+REMOTE_ROOT ?= /srv/spoken
 
 # The same key ../wow-voiceover uses for the same droplet, and the same reason for
 # -o IdentitiesOnly=yes: ~/.ssh/config here has a `Host *` block naming IdentityFile,
@@ -236,13 +242,15 @@ RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)
 
 # One language per transfer, LOCALE=deDE, defaulting to English. The paths mirror
 # soundsDir()/manifestPath() in pipelines/zones/tools/voice/store.mjs: English keeps the names the
-# droplet already has (shared/Sounds, shared/manifest.json), and another language
+# droplet already has (shared/sounds, shared/manifest.json), and another language
 # lives beside them under its pack folder and a suffixed manifest. pipelines/zones/audio-history/
 # nests every language under one tree, so it moves whole regardless of LOCALE.
 LANG_CODE := $(or $(LOCALE),enUS)
 ifeq ($(LANG_CODE),enUS)
 LOCAL_SOUNDS  := addons/SpokenZonesAudio/Sounds/
-REMOTE_SOUNDS_DIR := Sounds
+# Lowercase on the new store, where it was shared/Sounds on /srv/zonelore. The volume is
+# case-sensitive, so the old spelling is a new empty directory rather than an error.
+REMOTE_SOUNDS_DIR := sounds
 MANIFEST_FILE := manifest.json
 else
 LOCAL_SOUNDS  := addons/SpokenZonesAudio_$(LANG_CODE)/Sounds/

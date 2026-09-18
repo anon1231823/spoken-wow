@@ -11,7 +11,15 @@
 # freshly pushed audio invisible. An IP rather than a hostname keeps this working if the
 # name is ever pointed at a CDN, which would not proxy SSH.
 DROPLET      ?= deploy@188.166.37.175
-REMOTE_ROOT  := /srv/voiceover
+
+# /srv/spoken, not /srv/voiceover. The cutover has run: the audio store, the voices and the
+# take history live under /srv/spoken/shared (symlinks into the block volume at
+# /mnt/voice/spoken), the `spoken` pm2 app is what serves them, and `voiceover` is stopped.
+# Pointing these at the old tree is not an error rsync can report -- it finds a complete,
+# consistent store there and syncs happily against a site nobody is using, which is how a
+# fortnight of regenerated takes went unnoticed. deploy/quests/ still describes the frozen
+# tree on purpose; that is the deployment, not the store.
+REMOTE_ROOT  := /srv/spoken
 REMOTE_AUDIO := $(REMOTE_ROOT)/shared/audio/
 REMOTE_VOICES := $(REMOTE_ROOT)/shared/voices/
 REMOTE_HISTORY := $(REMOTE_ROOT)/shared/audio-history/
@@ -269,12 +277,9 @@ package-meta: ## Zip the meta addon that pulls in all four packs
 # that URL is not kept alive: the descriptions that carried it are being re-pasted with the
 # current one, and the pack itself is re-downloaded this release whatever its name.
 
-# Under /srv/spoken, not REMOTE_ROOT: this is the one target here whose output is served
-# rather than read by the pipeline. voiceover.rusty.one is a redirect vhost now, so
-# /downloads/ is answered from /srv/spoken/shared/downloads (nginx-spoken.conf), and a zip
-# pushed into the old tree would be uploaded to a directory nothing serves. The audio store
-# above stays where it is until cutover-audio has moved it -- see make/web.mk.
-REMOTE_DOWNLOADS := /srv/spoken/shared/downloads
+# What nginx-spoken.conf serves at /downloads/. voiceover.rusty.one is a redirect vhost now,
+# so a zip pushed into the old tree would land in a directory nothing answers from.
+REMOTE_DOWNLOADS := $(REMOTE_ROOT)/shared/downloads
 
 push-complete: ## Upload the built complete pack to the site's downloads directory
 	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. brew install rsync"; exit 1; }
