@@ -185,7 +185,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Valley_of_Trials",
 		},
 	},
-	-- Mulgore: 18 subzones
+	-- Mulgore: 22 subzones
 	[1412] = {
 		["baeldun digsite"] = {
 			name = "Bael'dun Digsite",
@@ -205,11 +205,32 @@ local subzones = {
 			full = "Brambleblade Ravine cuts into the northeastern edge of Red Cloud Mesa, home to the Bristleback quilboars. At the back of the ravine, in a large hut, dwells their chief, Sharptusk Thornmantle, whose leadership has drawn tauren attacks meant to break the quilboar raids at their source.",
 			source = "https://warcraft.wiki.gg/wiki/Brambleblade_Ravine",
 		},
+		["camp gevrek"] = {
+			pending = true,
+			name = "Camp Gev'rek",
+			short = "",
+			full = "",
+			source = "",
+		},
 		["camp narache"] = {
 			name = "Camp Narache",
 			short = "Camp Narache sits at the northern edge of the Red Cloud Mesa, a small circle of tents belonging to the Hawkwind Tribe, in southern Mulgore.",
 			full = "Camp Narache sits at the northern edge of the Red Cloud Mesa, a small circle of tents belonging to the Hawkwind Tribe, in southern Mulgore. Wounded braves rest in the main tent, and around the center of the village the tribe's teachers keep to a quiet circle, paying their respects to Greatmother Hawkwind.",
 			source = "https://warcraft.wiki.gg/wiki/Camp_Narache",
+		},
+		["galak camp"] = {
+			pending = true,
+			name = "Galak Camp",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["gloomrise"] = {
+			pending = true,
+			name = "Gloomrise",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["golden plains"] = {
 			name = "Golden Plains",
@@ -252,6 +273,13 @@ local subzones = {
 			short = "The Rolling Plains open out south of Bloodhoof Village, running toward the border of the Barrens. Wolves and cougars move through the grass alongside kodo and tallstriders.",
 			full = "The Rolling Plains open out south of Bloodhoof Village, running toward the border of the Barrens. Wolves and cougars move through the grass alongside kodo and tallstriders.\n\nUnlike the rest of Mulgore, the plains are not sealed off: centaur outriders have found a way through here, ranging where no other centaur tread. In the eastern reaches, a nest of Windfury harpies has taken hold.",
 			source = "https://warcraft.wiki.gg/wiki/Rolling_Plains",
+		},
+		["skywatcher plateau"] = {
+			pending = true,
+			name = "Skywatcher Plateau",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["stonebull lake"] = {
 			name = "Stonebull Lake",
@@ -485,7 +513,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Wailing_Caverns",
 		},
 	},
-	-- Alterac Mountains: 5 subzones
+	-- Alterac Mountains: 7 subzones
 	[1416] = {
 		["dalaran"] = {
 			name = "Dalaran",
@@ -499,11 +527,25 @@ local subzones = {
 			full = "A small farm and manor stands at the western edge of the Uplands, where the ground meets the Misty Shore and a harbor opens onto Lordamere Lake.\n\nHere lives Aliden, and with him his mistress Elysa. She wears a necklace that once belonged to Taretha Foxton.",
 			source = "https://warcraft.wiki.gg/wiki/Dandred's_Fold",
 		},
+		["eventide"] = {
+			pending = true,
+			name = "The Eventide",
+			short = "",
+			full = "",
+			source = "",
+		},
 		["lordamere internment camp"] = {
 			name = "Lordamere Internment Camp",
 			short = "Lordamere Internment Camp sits on a hill above the Dalaran Crater, the only internment camp raised in the Alterac Mountains, held under the watch of Dalaranian forces.",
 			full = "Lordamere Internment Camp sits on a hill above the Dalaran Crater, the only internment camp raised in the Alterac Mountains, held under the watch of Dalaranian forces.\n\nHere, on their way to Dalaran, Prince Arthas Menethil and Lady Jaina Proudmoore once slipped past the guard patrols and watchtowers under cover of night to look upon the orcs held within. What they saw split them. Jaina looked on the orc females and their infants and felt her certainty falter into doubt and remorse. Arthas felt none of it, and held that the camps were necessary regardless. Neither was seen. They left the way they came, and the disagreement between them went with them.\n\nWarden Belamoore commands the garrison now, studying the Bloodstone Artifacts brought to her by Kegan Darkmar and his comrades.",
 			source = "https://warcraft.wiki.gg/wiki/Lordamere_Internment_Camp",
+		},
+		["old dalaran ruins"] = {
+			pending = true,
+			name = "Old Dalaran Ruins",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["ruins of alterac"] = {
 			name = "Ruins of Alterac",
@@ -785,7 +827,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Tainted_Scar",
 		},
 	},
-	-- Tirisfal Glades: 28 subzones
+	-- Tirisfal Glades: 31 subzones
 	[1420] = {
 		["agamand family crypt"] = {
 			name = "Agamand Family Crypt",
@@ -804,6 +846,13 @@ local subzones = {
 			short = "The Balnir Farmstead lies northeast of the ruined capital, its fences broken and its stables empty but for wandering Scourge.",
 			full = "The Balnir Farmstead lies northeast of the ruined capital, its fences broken and its stables empty but for wandering Scourge.\n\nThe Balnir family once ran this land, breeding the great white horses that the royal house of Lordaeron rode as mounts. On the day Capital City fell, the Scourge came for the farmstead and killed the whole family, leaving only their haunted ground behind.\n\nThe snapdragons once tended in the farm's garden still grow wild there, and word has reached the living that the corruption of the Plaguelands may have crept into them. Scourge that slip past the Bulwark gather in numbers around the ruined farm.",
 			source = "https://warcraft.wiki.gg/wiki/Balnir_Farmstead",
+		},
+		["bandarion keep"] = {
+			pending = true,
+			name = "Bandarion Keep",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["brightwater lake"] = {
 			name = "Brightwater Lake",
@@ -913,6 +962,13 @@ local subzones = {
 			full = "The Shadow Grave stands at the top of the slope within the Deathknell Graves, high among the mountains of Tirisfal. A worn path winds down from its entrance to Deathknell below.",
 			source = "https://warcraft.wiki.gg/wiki/Shadow_Grave",
 		},
+		["shadowvale"] = {
+			pending = true,
+			name = "Shadowvale",
+			short = "",
+			full = "",
+			source = "",
+		},
 		["solliden farmstead"] = {
 			name = "Solliden Farmstead",
 			short = "The pumpkin fields of Solliden are one of the few patches of ground in Tirisfal where the old life has not been swallowed by plague or undeath.",
@@ -942,6 +998,13 @@ local subzones = {
 			short = "Venomweb Vale was once green, thick with deer and rabbit, before it became what it is now: a valley overrun with poisonous spiders, led by the rare and deadly Sri'skulk, whose webs have replaced the grass and given the vale its name.",
 			full = "Venomweb Vale was once green, thick with deer and rabbit, before it became what it is now: a valley overrun with poisonous spiders, led by the rare and deadly Sri'skulk, whose webs have replaced the grass and given the vale its name. Darkhounds prowl the north near the Scarlet Encampment, held by Lieutenant Sanders.",
 			source = "https://warcraft.wiki.gg/wiki/Venomweb_Vale",
+		},
+		["whispering forest"] = {
+			pending = true,
+			name = "Whispering Forest",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["whispering gardens"] = {
 			name = "Whispering Gardens",
@@ -1550,7 +1613,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Western_Strand",
 		},
 	},
-	-- The Hinterlands: 20 subzones
+	-- The Hinterlands: 21 subzones
 	[1425] = {
 		["aerie peak"] = {
 			name = "Aerie Peak",
@@ -1599,6 +1662,13 @@ local subzones = {
 			short = "Jintha'Alor rises in terraces above the Hinterlands, second in size among the forest troll cities only to Zul'Aman.",
 			full = "Jintha'Alor rises in terraces above the Hinterlands, second in size among the forest troll cities only to Zul'Aman. It was raised in the days of the Amani Empire and takes its name from Jintha, one of the Amani's ancient leaders.\n\nThe city belongs to the Vilebranch tribe, who have turned its heights into a fortress of sacrifice. Vile Priestess Hexx rules there in service to Hakkar the Soulflayer, and the Vilebranch prey without mercy on the weaker Revantusk tribe to feed their god's hunger. Elder Torntusk of the Revantusk was taken in one such raid and is held captive within the city still; his guard captain, Huntsman Malkhor, was captured in the same attack and executed, his remains thrown to the wolves and oozes kept within the walls.\n\nThe Wildhammer clan and the Revantusk tribe, bound by shared grievance against the Vilebranch, have laid siege to the city together, seeking to end its raids and win vengeance for their dead.",
 			source = "https://warcraft.wiki.gg/wiki/Jintha'Alor",
+		},
+		["martsirt"] = {
+			pending = true,
+			name = "Martsirt",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["overlook cliffs"] = {
 			name = "Overlook Cliffs",
@@ -1673,7 +1743,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Zun'watha",
 		},
 	},
-	-- Dun Morogh: 25 subzones
+	-- Dun Morogh: 26 subzones
 	[1426] = {
 		["amberstill ranch"] = {
 			name = "Amberstill Ranch",
@@ -1764,6 +1834,13 @@ local subzones = {
 			short = "In the deep vaults beneath Ironforge Mountain in northern Dun Morogh, the dwarves have kept their capital since the days their ancestors first delved from Uldaman and turned west.",
 			full = "In the deep vaults beneath Ironforge Mountain in northern Dun Morogh, the dwarves have kept their capital since the days their ancestors first delved from Uldaman and turned west. It is the oldest home of their people, built around the Great Forge, and it stands as the seat of the Kingdom of Khaz Modan under the rule of King Magni Bronzebeard.\n\nThe city is a fortress as much as a capital, cut in concentric rings that sink deeper into the rock the further one descends, its passageways narrow, its chambers vast and echoing. Unlike the cities of the humans and night elves, Ironforge is wholly a cavern, floor and ceiling alike hewn stone. Fires burn in every hearth, and the halls are loud with hammers, laughter, and trade, for the dwarves have never been a quiet people even underground.\n\nGnomes from the ruins of their own city have found shelter within Ironforge's walls, given a quarter of their own by King Magni's grant, where they labor and plan in a district they have made their own.",
 			source = "https://warcraft.wiki.gg/wiki/Ironforge",
+		},
+		["ironforge submarine facility"] = {
+			pending = true,
+			name = "Ironforge Submarine Facility",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["kharanos"] = {
 			name = "Kharanos",
@@ -1895,7 +1972,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Thorium_Point",
 		},
 	},
-	-- Burning Steppes: 11 subzones
+	-- Burning Steppes: 12 subzones
 	[1428] = {
 		["blackrock mountain"] = {
 			name = "Blackrock Mountain",
@@ -1945,6 +2022,13 @@ local subzones = {
 			full = "A tall tower of scorched stone rises at the eastern end of Black Tooth Hovel, its surface blackened as though fire itself had climbed it and stopped. Nothing grows near it, and nothing else here stands so high.",
 			source = "https://warcraft.wiki.gg/wiki/Pillar_of_Ash",
 		},
+		["poachers den"] = {
+			pending = true,
+			name = "Poacher's Den",
+			short = "",
+			full = "",
+			source = "",
+		},
 		["ruins of thaurissan"] = {
 			name = "Ruins of Thaurissan",
 			short = "Once these ashen flats in the Burning Steppes were green, and the city here bore the name of its founder: Thaurissan City, capital of the Dark Iron clan, exiled from Ironforge and led south by Sorcerer-Thane Thaurissan during the War of the Three Hammers.",
@@ -1964,7 +2048,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Terror_Wing_Path",
 		},
 	},
-	-- Elwynn Forest: 23 subzones
+	-- Elwynn Forest: 24 subzones
 	[1429] = {
 		["brackwell pumpkin patch"] = {
 			name = "Brackwell Pumpkin Patch",
@@ -2055,6 +2139,13 @@ local subzones = {
 			short = "Northshire Valley lies closed in on every side but one, its mountains impenetrable, its only pass to the south sealed behind thick stone walls and a watched gate.",
 			full = "Northshire Valley lies closed in on every side but one, its mountains impenetrable, its only pass to the south sealed behind thick stone walls and a watched gate. A river cuts through the quiet of it, winding down toward Crystal Lake, past the abbey and the vineyard rows that give the place its air of peace.\n\nThat peace was not always so certain. During the Second War, Northshire Abbey stood as the headquarters of Cho'gall's Twilight's Hammer clan, sworn to Gul'dan's cause, and its walls sheltered orcish war-councils rather than novices and farmers.\n\nNow Marshal McBride commands the abbey's garrison and answers for the whole of Northshire's safety, though the valley is not wholly settled even under his watch. Wolves press in from Duskwood in numbers no one can account for, kobolds burrow through Echo Ridge Mine.",
 			source = "https://warcraft.wiki.gg/wiki/Northshire_Valley",
+		},
+		["northshire valley camelot"] = {
+			pending = true,
+			name = "Northshire Valley - Camelot",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["northshire vineyards"] = {
 			name = "Northshire Vineyards",
@@ -2888,7 +2979,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Westfall_Lighthouse",
 		},
 	},
-	-- Wetlands: 23 subzones
+	-- Wetlands: 26 subzones
 	[1437] = {
 		["angerfang encampment"] = {
 			name = "Angerfang Encampment",
@@ -2932,6 +3023,20 @@ local subzones = {
 			full = "The Dragonmaw Gates are guarded by the red dragonflight under the drake Axtroz, who holds the way against those who seek to reach Grim Batol.",
 			source = "https://warcraft.wiki.gg/wiki/Dragonmaw_Gates",
 		},
+		["dragonmaw retreat"] = {
+			pending = true,
+			name = "Dragonmaw Retreat",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["drunken dwarf"] = {
+			pending = true,
+			name = "The Drunken Dwarf",
+			short = "",
+			full = "",
+			source = "",
+		},
 		["dun algaz"] = {
 			name = "Dun Algaz",
 			short = "The tunnel through Dun Algaz is older than the quarrel that split the dwarves. When the War of the Three Hammers drove the Wildhammers from Ironforge, it was through this pass that they made their retreat.",
@@ -2943,6 +3048,13 @@ local subzones = {
 			short = "Dun Modr stands south of Thandol Span, an old dwarven city long since fallen into ruin, its blacksmith and its brewery-inn still standing amid wreckage the Dark Iron dwarves now claim as their own.",
 			full = "Dun Modr stands south of Thandol Span, an old dwarven city long since fallen into ruin, its blacksmith and its brewery-inn still standing amid wreckage the Dark Iron dwarves now claim as their own.\n\nDuring the Second War the orcish Horde seized the ruins and built an outpost there, using it to beat back Alliance troops and raid the farmlands round about, a vital staging ground for their armies. Stromgarde warriors struck out from the island citadel of Tol Barad to break that outpost, laying siege and driving the orcs south to their secondary hold at Dun Algaz. The Horde struck back, retook Dun Modr, and turned their strength even against Tol Barad itself. Only when the Horde broke at Capital City did Anduin Lothar drive them back through Thandol Span into Khaz Modan, and Dun Modr passed to the Alliance.\n\nThat peace did not last. With Ironforge's soldiers spent in wars fought far from home, the Dark Iron dwarves tore through Thandol Span, and Dun Modr fell soon after under the warlock Balgaras the Foul, who now holds the city his people have claimed as their own.",
 			source = "https://warcraft.wiki.gg/wiki/Dun_Modr",
+		},
+		["excavation site wetlands"] = {
+			pending = true,
+			name = "Excavation Site: Wetlands",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["green belt"] = {
 			name = "Green Belt",
@@ -3476,7 +3588,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Zoram'gar_Outpost",
 		},
 	},
-	-- Thousand Needles: 20 subzones
+	-- Thousand Needles: 21 subzones
 	[1441] = {
 		["camp ethok"] = {
 			name = "Camp E'thok",
@@ -3537,6 +3649,13 @@ local subzones = {
 			short = "The Rustmaul Dig Site lies in the Shimmering Flats, its trenches left mid-work. The Explorers' League had come here to uncover old ruins, working the ground in the shadow of a cave that held a nest of silithid.",
 			full = "The Rustmaul Dig Site lies in the Shimmering Flats, its trenches left mid-work. The Explorers' League had come here to uncover old ruins, working the ground in the shadow of a cave that held a nest of silithid.\n\nThe digging stopped before it was finished. The trenches stand open and empty, the tools of the dwarves abandoned where they were left, and the cave beneath the site remains home to the silithid that dwell there still.",
 			source = "https://warcraft.wiki.gg/wiki/Rustmaul_Dig_Site",
+		},
+		["scalding ridge"] = {
+			pending = true,
+			name = "Scalding Ridge",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["screeching canyon"] = {
 			name = "Screeching Canyon",
@@ -4292,7 +4411,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Zul'Farrak",
 		},
 	},
-	-- Azshara: 26 subzones
+	-- Azshara: 30 subzones
 	[1447] = {
 		["bay of storms"] = {
 			name = "Bay of Storms",
@@ -4311,6 +4430,13 @@ local subzones = {
 			short = "The Bitter Reaches lie in northeastern Azshara, thick with hippogryphs, oozes, and chimaerae. Along the northern edge, mountain giants have driven off the lesser wildlife and claimed the ground for themselves.",
 			full = "The Bitter Reaches lie in northeastern Azshara, thick with hippogryphs, oozes, and chimaerae. Along the northern edge, mountain giants have driven off the lesser wildlife and claimed the ground for themselves.",
 			source = "https://warcraft.wiki.gg/wiki/Bitter_Reaches",
+		},
+		["blackmaw hold"] = {
+			pending = true,
+			name = "Blackmaw Hold",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["forlorn ridge"] = {
 			name = "Forlorn Ridge",
@@ -4347,6 +4473,20 @@ local subzones = {
 			short = "The Legashi satyr hold their encampment in northern Azshara, east of Ursolan.",
 			full = "The Legashi satyr hold their encampment in northern Azshara, east of Ursolan.\n\nHere Archmage Xylem once found a grimoire, a discovery that drew notice to this otherwise unremarkable camp of fel-touched creatures.",
 			source = "https://warcraft.wiki.gg/wiki/Legash_Encampment",
+		},
+		["legashi encampment"] = {
+			pending = true,
+			name = "Legashi Encampment",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["legashi stronghold"] = {
+			pending = true,
+			name = "Legashi Stronghold",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["ravencrest monument"] = {
 			name = "Ravencrest Monument",
@@ -4431,6 +4571,13 @@ local subzones = {
 			short = "The hill above the Legash camps belongs to blood elves, its slopes broken into small fortified stations under Magus Rimtori.",
 			full = "The hill above the Legash camps belongs to blood elves, its slopes broken into small fortified stations under Magus Rimtori. She struck a bargain with the Horde, promising a share of whatever her expedition unearthed in exchange for gold and steel to protect it. The bargain did not hold. Rimtori took the funding and gave nothing back, and word of the betrayal has spread until vengeance is said to be owed her and her followers in kind.\n\nRimtori herself is rarely at the camp, given over to exploring Azshara under a guard of her own choosing, leaving Magister Hawkhelm to hold the hill in her absence. What the two of them are truly after is not gold. On one of the camp's ridges lies a Kaldorei Tome of Summoning, a thing capable of calling demons into the world, and its presence there marks the expedition for what it is: not a hunt for treasure, but something darker dressed as one.",
 			source = "https://warcraft.wiki.gg/wiki/Thalassian_Base_Camp",
+		},
+		["thalassian vanguard camp"] = {
+			pending = true,
+			name = "Thalassian Vanguard Camp",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["tower of eldara"] = {
 			name = "Tower of Eldara",
@@ -4562,7 +4709,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Timbermaw_Hold",
 		},
 	},
-	-- Un'Goro Crater: 9 subzones
+	-- Un'Goro Crater: 12 subzones
 	[1449] = {
 		["fire plume ridge"] = {
 			name = "Fire Plume Ridge",
@@ -4606,11 +4753,32 @@ local subzones = {
 			full = "The marsh spreads across the southeastern reach of Un'Goro Crater, a low sprawl of standing water and rank growth that greets most who first descend into the crater from Tanaris, since any other approach is treacherous. Raptors move through the reeds in great numbers, some carrying poison in their bite.\n\nBlue power crystals can be found here, and their presence has worked into the marsh itself, seeping into the raptors that hunt through the wet ground and leaving its mark on them.\n\nOn a mound rising from the water, Torwa Pathfinder keeps watch, having come to the spot by canoe from elsewhere in the crater.",
 			source = "https://warcraft.wiki.gg/wiki/Marshlands",
 		},
+		["pillar of assimilation"] = {
+			pending = true,
+			name = "Pillar of Assimilation",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["shapers terrace"] = {
+			pending = true,
+			name = "The Shaper's Terrace",
+			short = "",
+			full = "",
+			source = "",
+		},
 		["slithering scar"] = {
 			name = "Slithering Scar",
 			short = "The Slithering Scar spreads across the southern reach of Un'Goro Crater, a hive of the Gorishi sect.",
 			full = "The Slithering Scar spreads across the southern reach of Un'Goro Crater, a hive of the Gorishi sect.\n\nThe hive once had a queen, summoned by disturbing the Gorishi Silithid Crystal within.",
 			source = "https://warcraft.wiki.gg/wiki/Slithering_Scar",
+		},
+		["stomping grounds"] = {
+			pending = true,
+			name = "Stomping Grounds",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["terror run"] = {
 			name = "Terror Run",
@@ -4880,7 +5048,7 @@ local subzones = {
 			source = "https://warcraft.wiki.gg/wiki/Winterfall_Village",
 		},
 	},
-	-- Stormwind City: 3 subzones
+	-- Stormwind City: 4 subzones
 	[1453] = {
 		["champions hall"] = {
 			name = "Champions' Hall",
@@ -4893,6 +5061,13 @@ local subzones = {
 			short = "King Magni Bronzebeard did not build the Deeprun Tram out of comfort.",
 			full = "King Magni Bronzebeard did not build the Deeprun Tram out of comfort. In the years after the Second War, as Stormwind labored to rebuild itself from ruin, Magni grew impatient with how slowly Ironforge's aid reached his human allies, and uneasy at how slowly dwarven soldiers could reach them should war come again. He turned to High Tinker Gelbin Mekkatorque, Azeroth's most esteemed engineer, and set him to the problem. Mekkatorque's answer was a railway driven beneath the earth itself, linking the two capitals directly.\n\nThe builders met a subterranean lake beneath the tunnel's path, and did not divert around it. The tram runs through it still, its enclosed tracks passing beneath the water rather than beside it.\n\nGnomes tend the tram daily, keeping its two sets of triple wagons running fast and smooth between Ironforge and Stormwind, free to all who cross the underground platforms.",
 			source = "https://warcraft.wiki.gg/wiki/Deeprun_Tram",
+		},
+		["stormwind harbor"] = {
+			pending = true,
+			name = "Stormwind Harbor",
+			short = "",
+			full = "",
+			source = "",
 		},
 		["valley of heroes"] = {
 			name = "Valley of Heroes",
@@ -4998,6 +5173,483 @@ local subzones = {
 			short = "Above the buried city, the palace of Lordaeron still stands, its halls open to the sky, its gardens gone to ruin. Here the great kingdom of the Alliance died, and here its ghosts have never quite left.",
 			full = "Above the buried city, the palace of Lordaeron still stands, its halls open to the sky, its gardens gone to ruin. Here the great kingdom of the Alliance died, and here its ghosts have never quite left.\n\nIt was Arthas Menethil who ended it. The prince returned home at the head of an army raised against his own people, welcomed through these gates by bells and cheering before anyone understood what he had become. He found his father, King Terenas, waiting in the throne room, and killed him there. Standing over the body, he spoke words that still echo in that room to any who linger: that the kingdom would fall, and from its ashes a new order would rise to shake the world. It was no idle boast. Within days the city and its people were slaughtered, and Lordaeron belonged to the Scourge.\n\nWalk the courtyard still and, it is said, one can hear what the stone remembers: hushed voices, the clang of welcoming bells, a murmur from the throne room that never quite fades. Those who can see beyond the veil say the citizens of Lordaeron still walk there, unaware that their kingdom is gone.",
 			source = "https://warcraft.wiki.gg/wiki/Ruins_of_Lordaeron",
+		},
+	},
+	-- Mount Hyjal: 10 subzones
+	[2482] = {
+		["cradle of tranquility"] = {
+			pending = true,
+			name = "Cradle of Tranquility",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["daegun"] = {
+			pending = true,
+			name = "Dae'gun",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["elderwild"] = {
+			pending = true,
+			name = "Elderwild",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["felblood scar"] = {
+			pending = true,
+			name = "Felblood Scar",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["malornes retreat"] = {
+			pending = true,
+			name = "Malorne's Retreat",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["mount hyjal"] = {
+			pending = true,
+			name = "Mount Hyjal",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["mournings rest"] = {
+			pending = true,
+			name = "Mourning's Rest",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["shrine of aviana"] = {
+			pending = true,
+			name = "Shrine of Aviana",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["summit of eternity"] = {
+			pending = true,
+			name = "Summit of Eternity",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["tainted foothills"] = {
+			pending = true,
+			name = "Tainted Foothills",
+			short = "",
+			full = "",
+			source = "",
+		},
+	},
+	-- Zephras Isle: 28 subzones
+	[2521] = {
+		["bandit hideout"] = {
+			pending = true,
+			name = "Bandit Hideout",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["east pylon watchtower"] = {
+			pending = true,
+			name = "East Pylon Watchtower",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["fairweather stables"] = {
+			pending = true,
+			name = "Fairweather Stables",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["falaath village"] = {
+			pending = true,
+			name = "Falaath Village",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["gustberry lowlands"] = {
+			pending = true,
+			name = "Gustberry Lowlands",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["nightclaw cavern"] = {
+			pending = true,
+			name = "Nightclaw Cavern",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["overlook standing stones"] = {
+			pending = true,
+			name = "Overlook Standing Stones",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["rise of spirits"] = {
+			pending = true,
+			name = "Rise of Spirits",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["rohashi spires"] = {
+			pending = true,
+			name = "Rohashi Spires",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["ruins of banaethal"] = {
+			pending = true,
+			name = "Ruins of Ban'aethal",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["sanctum of storms"] = {
+			pending = true,
+			name = "Sanctum of Storms",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["shadowgale forest"] = {
+			pending = true,
+			name = "Shadowgale Forest",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["shendar highlands"] = {
+			pending = true,
+			name = "Shen'dar Highlands",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["shendar village"] = {
+			pending = true,
+			name = "Shen'dar Village",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["shriekling den"] = {
+			pending = true,
+			name = "Shriekling Den",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["shrine of akir"] = {
+			pending = true,
+			name = "Shrine of Akir",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["skywall"] = {
+			pending = true,
+			name = "Skywall",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["thendal cave"] = {
+			pending = true,
+			name = "Thendal Cave",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["thendal grove"] = {
+			pending = true,
+			name = "Thendal Grove",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["thendal standing stones"] = {
+			pending = true,
+			name = "Thendal Standing Stones",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["thendal village"] = {
+			pending = true,
+			name = "Thendal Village",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["valanaar"] = {
+			pending = true,
+			name = "Valanaar",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["valanaar skydocks"] = {
+			pending = true,
+			name = "Valanaar Skydocks",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["west pylon watchtower"] = {
+			pending = true,
+			name = "West Pylon Watchtower",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["windfield orchard"] = {
+			pending = true,
+			name = "Windfield Orchard",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["windsong lake"] = {
+			pending = true,
+			name = "Windsong Lake",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["windsong standing stones"] = {
+			pending = true,
+			name = "Windsong Standing Stones",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["zephras isle"] = {
+			pending = true,
+			name = "Zephras Isle",
+			short = "",
+			full = "",
+			source = "",
+		},
+	},
+	-- Darkspear Islands: 3 subzones
+	[2524] = {
+		["abandoned tower"] = {
+			pending = true,
+			name = "Abandoned Tower",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["darkspear islands"] = {
+			pending = true,
+			name = "Darkspear Islands",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["shipwreck cove"] = {
+			pending = true,
+			name = "Shipwreck Cove",
+			short = "",
+			full = "",
+			source = "",
+		},
+	},
+	-- Riverglades: 19 subzones
+	[2548] = {
+		["ashwoods fall"] = {
+			pending = true,
+			name = "Ashwood's Fall",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["bolderok"] = {
+			pending = true,
+			name = "Bolder'ok",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["bristle hills"] = {
+			pending = true,
+			name = "Bristle Hills",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["eastwind shore"] = {
+			pending = true,
+			name = "Eastwind Shore",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["elbrims farm"] = {
+			pending = true,
+			name = "Elbrim's Farm",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["farholde keep"] = {
+			pending = true,
+			name = "Farholde Keep",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["forlorn pit"] = {
+			pending = true,
+			name = "Forlorn Pit",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["kroldok stronghold"] = {
+			pending = true,
+			name = "Krol'dok Stronghold",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["meadowsbrook"] = {
+			pending = true,
+			name = "Meadowsbrook",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["powderfuse port"] = {
+			pending = true,
+			name = "Powderfuse Port",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["riverglades"] = {
+			pending = true,
+			name = "Riverglades",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["rogmar"] = {
+			pending = true,
+			name = "Rog'mar",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["southern watch"] = {
+			pending = true,
+			name = "Southern Watch",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["sunnyglade"] = {
+			pending = true,
+			name = "Sunnyglade",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["terrals watch"] = {
+			pending = true,
+			name = "Terral's Watch",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["turners logging camp"] = {
+			pending = true,
+			name = "Turner's Logging Camp",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["twilights shroud"] = {
+			pending = true,
+			name = "Twilight's Shroud",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["wheelers grange"] = {
+			pending = true,
+			name = "Wheeler's Grange",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["windstead"] = {
+			pending = true,
+			name = "Windstead",
+			short = "",
+			full = "",
+			source = "",
+		},
+	},
+	-- Shen'dralas: 6 subzones
+	[2652] = {
+		["bristleback retreat"] = {
+			pending = true,
+			name = "Bristleback Retreat",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["evenshades overlook"] = {
+			pending = true,
+			name = "Evenshade's Overlook",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["forlorn gardens"] = {
+			pending = true,
+			name = "Forlorn Gardens",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["magram front"] = {
+			pending = true,
+			name = "Magram Front",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["outcast hideaway"] = {
+			pending = true,
+			name = "Outcast Hideaway",
+			short = "",
+			full = "",
+			source = "",
+		},
+		["shendralas"] = {
+			pending = true,
+			name = "Shen'dralas",
+			short = "",
+			full = "",
+			source = "",
 		},
 	},
 }

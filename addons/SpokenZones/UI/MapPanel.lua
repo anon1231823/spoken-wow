@@ -172,6 +172,15 @@ local function Refresh(mapID)
 		-- the map ("The Bulwark"), over the wiki page title ("Bulwark").
 		header:SetText(selected.areaName or selected.entry.name or "")
 		SetBackLink(zoneName)
+		if SpokenZones:IsPending(selected.entry) then
+			-- Named, listed, and honest about the rest. Both buttons are cleared: there is
+			-- no clip to play and nothing written to report on.
+			SetBody("|cff888888" .. L.LORE_NOT_WRITTEN:format(
+				selected.areaName or selected.entry.name or "") .. "|r")
+			audioButton:SetTarget(nil, nil)
+			reportButton:SetTarget(nil, nil)
+			return
+		end
 		SetBody(selected.entry.full or selected.entry.short or "")
 		-- Audio and the report link are both keyed by the canonical form, not the
 		-- name the client reported. Resolve, not Normalise: on a localized client
@@ -199,6 +208,13 @@ local function Refresh(mapID)
 			else
 				SetCaption("")
 			end
+		end
+		if SpokenZones:IsPending(entry) then
+			SetBody("|cff888888" .. L.LORE_NOT_WRITTEN:format(
+				SpokenZones:GetMapName(foundOn) or zoneName) .. "|r")
+			audioButton:SetTarget(nil, nil)
+			reportButton:SetTarget(nil, nil)
+			return
 		end
 		SetBody(entry.full or entry.short or "")
 		-- foundOn, not mapID: a dungeon showing its parent zone's text should read

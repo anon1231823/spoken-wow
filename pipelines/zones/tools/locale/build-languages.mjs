@@ -35,13 +35,30 @@ const OUT_PATH = join(DATA, "Languages.lua");
 // CurseForge, or the reverse on a fresh clone.
 const AUDIO_PUBLISHED = new Set([BASE_LOCALE]);
 
+// Pending entries are places the client can name that nobody has written, in any
+// language. Counting them would say English is complete when 96 of its lines are empty,
+// and would hand every other language a target it cannot translate: there is nothing
+// there to translate. They are not lore yet, so they are not lore here.
+//
+// The marker leads its entry, so it is the line after the `[key] = {` that opens one.
+function countEntries(src, openRe) {
+  const lines = src.split("\n");
+  let count = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (!openRe.test(lines[i])) continue;
+    if (/^\t+pending = true,$/.test(lines[i + 1] ?? "")) continue;
+    count++;
+  }
+  return count;
+}
+
 async function countLore(lang) {
   const zones = await readFile(join(DATA, lang, "Zones.lua"), "utf8").catch(() => null);
   if (zones === null) return { zones: 0, subzones: 0 };
   const subzones = await readFile(join(DATA, lang, "Subzones.lua"), "utf8").catch(() => "");
   return {
-    zones: (zones.match(/^\t\[\d+\] = \{$/gm) || []).length,
-    subzones: (subzones.match(/^\t\t\[".*"\] = \{$/gm) || []).length,
+    zones: countEntries(zones, /^\t\[\d+\] = \{$/),
+    subzones: countEntries(subzones, /^\t\t\[".*"\] = \{$/),
   };
 }
 

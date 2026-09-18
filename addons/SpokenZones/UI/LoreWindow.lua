@@ -11,6 +11,8 @@
 
 local ADDON_NAME, SpokenZones = ...
 
+local L = SpokenZones.L
+
 local WINDOW_WIDTH = 720
 local WINDOW_HEIGHT = 460
 local LIST_WIDTH = 210
@@ -114,6 +116,12 @@ local function ShowEntry()
 		if entry then
 			header:SetText(entry.name or key)
 			subheader:SetText("in " .. (SpokenZones:GetMapName(mapID) or ""))
+			if SpokenZones:IsPending(entry) then
+				body:SetText("|cff888888" .. L.LORE_NOT_WRITTEN:format(entry.name or key) .. "|r")
+				audioButton:SetTarget(nil, nil)
+				reportButton:SetTarget(nil, nil)
+				return
+			end
 			body:SetText(entry.full or entry.short or "")
 			-- Rows are already keyed by the canonical form, so this needs no
 			-- normalising -- unlike the map panel, which starts from a client name.
@@ -127,9 +135,15 @@ local function ShowEntry()
 	header:SetText(SpokenZones:GetMapName(mapID) or (entry and entry.name) or tostring(mapID))
 	local subKeys = SubzoneKeys(mapID)
 	subheader:SetText(subKeys and (#subKeys .. " subzones") or "")
-	body:SetText(entry and (entry.full or entry.short) or "|cff888888No lore recorded.|r")
-	audioButton:SetTarget(entry and mapID or nil, nil)
-	reportButton:SetTarget(entry and mapID or nil, nil)
+	local pending = SpokenZones:IsPending(entry)
+	if pending then
+		body:SetText("|cff888888" .. L.LORE_NOT_WRITTEN:format(
+			SpokenZones:GetMapName(mapID) or entry.name or tostring(mapID)) .. "|r")
+	else
+		body:SetText(entry and (entry.full or entry.short) or "|cff888888No lore recorded.|r")
+	end
+	audioButton:SetTarget(entry and not pending and mapID or nil, nil)
+	reportButton:SetTarget(entry and not pending and mapID or nil, nil)
 end
 
 --------------------------------------------------------------------------------
