@@ -20,7 +20,8 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./src/*"],
-      "@tools/*": ["../../pipelines/zones/tools/*"]
+      "@tools/*": ["../../pipelines/zones/tools/*"],
+      "@books-tools/*": ["../../pipelines/books/tools/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
