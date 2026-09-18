@@ -178,6 +178,8 @@ async function main() {
 loadEnvFile()
   .then(main)
   .catch((err) => {
-    console.error(`error: ${err.message}`);
+    // err.stack, not err.message: a thrown non-Error and a rejected promise carrying one
+    // both print an empty message, which reports a failure while hiding every word of it.
+    console.error(`error: ${err?.stack || err}`);
     process.exit(1);
   });
