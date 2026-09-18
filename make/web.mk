@@ -165,11 +165,22 @@ migrate-books: ## Copy the local books corpus onto the droplet (REPLACES book_li
 	@echo "droplet:"
 	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" 		-c "select count(*) as rows, count(*) filter (where \"isCurrent\") as live, count(distinct \"bookId\") as books from \"book_line\""'
 	@printf 'Replace the droplet book_line with the local one? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	@( echo 'begin;'; 	   echo 'truncate "book_line";'; 	   pg_dump "$(LOCAL_DB)" --data-only --table=book_line | $(UNRESTRICT); 	   echo 'select setval(pg_get_serial_sequence('"'"'book_line'"'"', '"'"'id'"'"'), coalesce(max("id"), 1)) from "book_line";'; 	   echo 'commit;' ) 	  | $(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 -q'
+	@( echo 'begin;'; \
+	   echo 'truncate "book_line";'; \
+	   pg_dump "$(LOCAL_DB)" --data-only --table=book_line | $(UNRESTRICT); \
+	   echo 'select setval(pg_get_serial_sequence('"'"'public.book_line'"'"', '"'"'id'"'"'), coalesce(max("id"), 1)) from public."book_line";'; \
+	   echo 'commit;' ) \
+	  | $(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 -q'
 	@echo "==> pushed"
 
 # The sequence is reset in the same transaction, because --data-only does not carry it and
 # the next edit saved through the site would collide with an id the dump already used.
+#
+# SCHEMA-QUALIFIED, and that is not style. pg_dump's preamble runs
+# `set_config('search_path', '', false)`, so every unqualified name after it fails to
+# resolve -- the dump's own statements say public.book_line for exactly this reason. Left
+# bare, this line aborts the transaction and rolls the whole load back, while the sequence
+# it was fixing keeps its new value, because sequences are not transactional.
 
 migrate-reports: ## Copy both sections' reports onto the droplet (rerunnable, pre-cutover)
 	@$(call remote-import,--reports)
