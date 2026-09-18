@@ -24,6 +24,7 @@ import {
   type Source,
 } from "./queue";
 import { regenerateLine, type RegenerateResult } from "./regenerate";
+import { regenerateBookLine } from "@/lib/books/regenerate";
 import { publish as publishZones, regenerateZoneLine } from "@/lib/zones/regenerate";
 import { readSettings } from "./settings";
 import { generationStatus } from "./status";
@@ -114,18 +115,23 @@ export type Worker = {
 };
 
 export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}): Worker {
-  // Zones has no generator here yet; its jobs cannot be enqueued until it does, so a claim
-  // for one would be a bug rather than a state to handle - and it fails as one, loudly and
-  // fatally, rather than being handed to the quests generator and asked for a line id that
-  // corpus has never heard of.
+  // A source with no generator cannot have its jobs claimed, and a claim for one is a bug
+  // rather than a state to handle - it fails as one, loudly, rather than being handed to
+  // the quests generator and asked for a line id that corpus has never heard of. The
+  // Record is total on purpose: adding a source to the type and forgetting it here is a
+  // type error, which is how books arrived without a silent gap.
   const generators: Record<Source, Generator | null> = {
     quests: options.regenerate?.quests ?? regenerateLine,
     zones: options.regenerate?.zones ?? regenerateZoneLine,
+    books: options.regenerate?.books ?? regenerateBookLine,
   };
 
   // Only the sources that actually generated something this drain. Publishing for a
   // section nobody touched would rewrite a table for no reason, and doing it on a drain
   // that generated nothing at all -- which is every idle tick -- would do it forever.
+  // Books has no entry: its addon and the Lua lookup that would need rebuilding do not
+  // exist yet. When they do, the export goes here beside the zones one -- per drain, not
+  // per line, because it rewrites the whole table.
   const afterDrain: Partial<Record<Source, () => Promise<void>>> = options.afterDrain ?? {
     zones: () => publishZones(),
   };

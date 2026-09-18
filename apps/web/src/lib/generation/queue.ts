@@ -19,7 +19,7 @@ import { db } from "@/lib/db";
 export type JobState = "pending" | "running" | "done" | "failed" | "cancelled";
 
 /** Which corpus a batch is against, and so which generator its jobs go to. */
-export type Source = "quests" | "zones";
+export type Source = "quests" | "zones" | "books";
 
 /**
  * One unit of work, in terms both sections can express.

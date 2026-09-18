@@ -25,6 +25,7 @@ import { searchContext } from "@/lib/issues/context";
 import { batchJobs, matchingLines } from "@/lib/search";
 import { filtersFromParams, needsDates, needsStale } from "@/lib/search-request";
 import { ensureQueueRunning, queueWorker } from "@/lib/generation/boot";
+import { catalogue as bookCatalogue, BASE_LANG as BOOKS_LANG } from "@/lib/books/catalogue";
 import { catalogue as zoneCatalogue } from "@/lib/zones/catalogue";
 import { BASE_LANG } from "@/lib/zones/lang";
 
@@ -53,9 +54,9 @@ export async function POST(request: NextRequest) {
 
   // Absent means quests, so a client that predates the second section keeps working.
   const source = body.source === undefined ? "quests" : body.source;
-  if (source !== "quests" && source !== "zones") {
+  if (source !== "quests" && source !== "zones" && source !== "books") {
     return NextResponse.json(
-      { error: "source must be 'quests' or 'zones'", kind: "bad-request" },
+      { error: "source must be 'quests', 'zones' or 'books'", kind: "bad-request" },
       { status: 400 },
     );
   }
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
   const label = typeof body.label === "string" && body.label ? body.label : "a search";
 
   if (source === "zones") return queueZones(body.lineIds, label, session.user.id);
+  if (source === "books") return queueBooks(body.lineIds, label, session.user.id);
 
   if (typeof body.filters !== "string") {
     return NextResponse.json(
@@ -146,6 +148,55 @@ async function queueZones(
 
   const batchId = await createBatch(label, userId, "zones");
   const { queued, skipped } = await enqueue(batchId, jobs, "zones");
+
+  queueWorker()?.nudge();
+
+  return NextResponse.json({ batchId, queued, skipped });
+}
+
+/**
+ * A books batch, from the ids the explorer selected.
+ *
+ * The pages are looked up in the corpus rather than trusted from the body, exactly as the
+ * zones half does: what is queued is what exists, and an id nobody recognises is dropped
+ * rather than becoming a job that can only fail. The 88 unvoiceable pages are dropped for
+ * the same reason -- they are in the corpus because the game has them, not because anyone
+ * can narrate them.
+ */
+async function queueBooks(
+  lineIds: unknown,
+  label: string,
+  userId: string,
+): Promise<NextResponse> {
+  if (!Array.isArray(lineIds) || lineIds.some((id) => typeof id !== "string")) {
+    return NextResponse.json(
+      { error: "lineIds is required, as an array of strings", kind: "bad-request" },
+      { status: 400 },
+    );
+  }
+
+  const wanted = new Set(lineIds as string[]);
+  const jobs = (await bookCatalogue(BOOKS_LANG))
+    .filter((page) => wanted.has(page.id) && page.generatable && page.spoken.trim() !== "")
+    .map((page) => ({
+      lineId: page.id,
+      file: page.file,
+      // There is no NPC here either. The column is a label for the progress readout, and
+      // a book's title plus its page number is what names a page on screen.
+      npcName: page.pageCount > 1 ? `${page.title} (${page.pageNumber}/${page.pageCount})` : page.title,
+      preview: page.spoken.slice(0, 120),
+      characters: page.spoken.length,
+    }));
+
+  if (jobs.length === 0) {
+    return NextResponse.json(
+      { error: "nothing to regenerate", kind: "bad-request" },
+      { status: 400 },
+    );
+  }
+
+  const batchId = await createBatch(label, userId, "books");
+  const { queued, skipped } = await enqueue(batchId, jobs, "books");
 
   queueWorker()?.nudge();
 
