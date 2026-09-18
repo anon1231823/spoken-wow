@@ -16,7 +16,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help db extract import export lookup deploy deploy-copy status remove \
-        pull pull-dry sounds db-pull package-audio icon test
+        pull pull-dry sounds db-pull package package-audio release-dry release icon test
 
 PIPELINE := pipelines/books
 QUESTS   := pipelines/quests
@@ -109,6 +109,9 @@ sounds: ## Copy the narration into addons/SpokenBooksAudio/Sounds
 	@$(RSYNC) -a $(LOCAL_BOOKS) addons/SpokenBooksAudio/Sounds/
 	@echo "==> $$(find addons/SpokenBooksAudio/Sounds -name '*.mp3' | wc -l | tr -d ' ') mp3 in addons/SpokenBooksAudio/Sounds"
 
+package: ## Zip the addon into dist/ (for a release)
+	@./scripts/books/package.sh
+
 # STORED, NOT DEFLATED. The payload is mp3, which is already compressed: deflate spends
 # minutes on 450 MB to save well under a percent. -0 makes this a container rather than a
 # compressor, which is all it needs to be.
@@ -160,3 +163,17 @@ remove: ## Uninstall the addon from every client
 
 test: ## The pipeline's unit tests
 	@pnpm --filter @spoken/books-pipeline test
+
+#-------------------------------------------------------------------------------
+# The release
+#
+# Two CurseForge projects, uploaded by scripts/books/release.sh. Both zips have to be built
+# first: the release script refuses a target whose zip is missing rather than uploading a
+# stale one it found in dist/.
+#-------------------------------------------------------------------------------
+
+release-dry: ## Show what `make books-release` would upload to CurseForge
+	@./scripts/books/release.sh --dry-run
+
+release: ## Upload the built zips to CurseForge (needs CURSEFORGE_TOKEN)
+	@./scripts/books/release.sh

@@ -1,7 +1,7 @@
 # Books
 
 Every book, letter, note and plaque World of Warcraft will show you, extracted from the
-vmangos world database, reviewable at `/books` on the site, and — once the addon exists —
+vmangos world database, reviewable at `/books` on the site, and
 read aloud in game by **SpokenBooks**.
 
 ## Where the words come from, and why not from anywhere else
@@ -55,7 +55,7 @@ them.
 | `import` | that file | `book_line` rows | the same maintainer |
 | review | `book_line` | corrected text | anyone, at `/books` |
 | generate | `book_line` | mp3s and `take` rows | anyone with an ElevenLabs key |
-| export | `book_line` | `addons/SpokenBooks/Data/*.lua` | *not built yet — phase 3* |
+| export | `book_line` | `addons/SpokenBooks/Data/Books.lua` | a maintainer, before a release |
 
 ## Running it locally
 
@@ -205,11 +205,28 @@ The two CurseForge projects:
 | Spoken Books | 1701514 | `spoken-books` |
 | Spoken Books Audio | 1701520 | `spoken-books-audio` |
 
-There is no `scripts/books/release.sh` yet. When there is, those ids belong in its
-`target_project()` the way the quests and zones ones do — and an unknown target must fail
-rather than default, for the reason `docs/quests/CLAUDE.md` gives: an id left in that
-function is an id something eventually uploads to, and uploading a books pack over another
-project is not recoverable from this side.
+Cutting one:
+
+```bash
+make books-package                 # -> dist/SpokenBooks-<version>.zip
+make books-package-audio           # -> dist/SpokenBooksAudio-<version>.zip
+make books-release-dry             # what would be uploaded, uploading nothing
+make books-release                 # needs CURSEFORGE_TOKEN
+```
+
+The version is the `## Version:` line in each `.toc`, and the release notes are the matching
+`## <version>` section of `docs/books/CHANGELOG.md` — a version with no section there fails
+before anything is sent. `scripts/books/release.sh` carries the two ids in
+`target_project()`, and an unknown target fails on the empty id rather than defaulting, for
+the reason `docs/quests/CLAUDE.md` gives: an id left in that function is an id something
+eventually uploads to, and uploading a books pack over another project is not recoverable
+from this side.
+
+The addon uploads before the pack, because the pack declares it as a required dependency and
+CurseForge resolves a `relations` slug at upload time — against an *approved* project. Both
+projects are new, so the first release is the one that can meet that gate late: if
+`spoken-books` is still in moderation the pack's upload is rejected with errorCode 1018, and
+the fix is to send the pack again once the project is approved.
 
 The project pages themselves are `curseforge/books/*.md`; paste
 `dist/descriptions/<slug>.md` after `make descriptions`, then record it with

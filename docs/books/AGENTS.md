@@ -10,10 +10,10 @@ Repo-wide conventions are in the root `AGENTS.md` and still apply. These are thi
 - vmangos page ids are server-authoritative and do not renumber, which is why they are safe
   to freeze.
 
-## The table is the corpus; the Lua will be an export of it
+## The table is the corpus; the Lua is an export of it
 
-`book_line` is what the site reads and what an editor changes. When the addon arrives, its
-`Data/*.lua` is generated from this table and committed, so the addon and its sound pack
+`book_line` is what the site reads and what an editor changes. The addon's
+`Data/Books.lua` is generated from this table and committed, so the addon and its sound pack
 still build on a clone with no Postgres. Nothing on the site may read those files: it would
 show whatever was last exported rather than what the table says.
 
@@ -44,8 +44,8 @@ from the order MySQL returned the owners in.
 
 ## Mail is not a book
 
-`ItemTextFrame` serves mail as well as books. When the addon is written, a letter with a
-creator, or the frame opened underneath `MailFrame`, must be skipped — otherwise it reads
+`ItemTextFrame` serves mail as well as books. A letter with a
+creator, or the frame opened underneath `MailFrame`, is skipped — otherwise it reads
 the player's own post aloud.
 
 ## The droplet's copy of Sounds.lua is ephemeral
