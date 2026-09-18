@@ -6,6 +6,14 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 2.0.3 — player
+
+- **Greetings are remembered at every NPC, not only the ones with quests.** The default was
+  Once per Quest NPC, which silenced a repeat where the NPC had a quest to offer or hand in
+  and nowhere else — so the innkeepers, vendors and flight masters a player greets a hundred
+  times said the same line every time. The default is Once per NPC now. The old setting is
+  still in the options, and a profile that chose one keeps it.
+
 ## 2.0.2 — player
 
 - **A new icon in the AddOns list**: a gold exclamation mark on the Spoken shield, the same

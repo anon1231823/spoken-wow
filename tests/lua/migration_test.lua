@@ -92,7 +92,7 @@ Expect("a later login keeps the new table", VO.Addon.db.profile.Audio.GossipFreq
 Clean()
 VO = stub.LoadQuests(QUESTS, SPOKEN)
 VO.Addon:OnInitialize()
-Expect("fresh install: defaults", VO.Addon.db.profile.Audio.GossipFrequency, 2)
+Expect("fresh install: defaults", VO.Addon.db.profile.Audio.GossipFrequency, VO.Enums.GossipFrequency.OncePerNPC)
 Expect("fresh install: nothing recorded", _G.SpokenQuestsDB.global.migratedFrom, nil)
 
 ---------------------------------------------------------------- the zones addon adopts ZoneLoreDB

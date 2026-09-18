@@ -143,7 +143,12 @@ local defaults = {
         -- The frame, the minimap button, the sound channel's legacy music-channel
         -- workaround and the paused flag are the Spoken player's settings now.
         Audio = {
-            GossipFrequency = Enums.GossipFrequency.OncePerQuestNPC,
+            -- Once per NPC rather than once per quest NPC, which upstream defaulted to:
+            -- that setting only silences a repeat where the NPC has a quest, so every
+            -- innkeeper, vendor and flight master said the same line on every visit --
+            -- the greeting a player hears most often is exactly the one it did not
+            -- remember. A profile that stored a choice of its own keeps it.
+            GossipFrequency = Enums.GossipFrequency.OncePerNPC,
             -- The sound channel and the muting of the client's own NPC dialogue used to
             -- live here. They describe how anything is played rather than what this addon
             -- reads, so they are the player's settings now; Spoken's Migrate lifts them.
