@@ -267,7 +267,7 @@ function SpokenZones:ReportURL(mapID, areaKey)
 end
 
 -- Returns the lore entry and the key that was looked up. The key is returned
--- even on a miss so /zl debug can report what failed to match.
+-- even on a miss so /spz debug can report what failed to match.
 function SpokenZones:GetSubzoneLore(parentMapID, areaName)
 	local key = self:ResolveAreaKey(areaName)
 	if not key then
@@ -456,7 +456,7 @@ events:SetScript("OnEvent", function(self, event, arg1)
 		-- can reproduce.
 		if SpokenZones:IsPreviewingLanguage() then
 			SpokenZones:Print(
-				"|cffffcc00previewing unfinished languages|r -- reading %s. /zl lang off to stop",
+				"|cffffcc00previewing unfinished languages|r -- reading %s. /spz lang off to stop",
 				SpokenZones:GetLanguage()
 			)
 		end
@@ -624,7 +624,7 @@ local function CmdStatus()
 	end
 end
 
--- What /zl play narrates: the subzone the player is standing in if it has lore,
+-- What /spz play narrates: the subzone the player is standing in if it has lore,
 -- otherwise the zone. The same "more specific answer wins" preference the lore
 -- window applies when it opens.
 local function CurrentAudioTarget()
@@ -652,7 +652,7 @@ local function CmdPlay()
 	end
 
 	if not SpokenZones:IsVoiceEnabled() then
-		SpokenZones:Print("|cffffcc00narration is turned off|r -- /zl voice to turn it on")
+		SpokenZones:Print("|cffffcc00narration is turned off|r -- /spz voice to turn it on")
 		return
 	end
 
@@ -665,7 +665,7 @@ local function CmdPlay()
 	SpokenZones:Print("playing lore for %s", what)
 end
 
--- `/zl audio` lists installed sound packs; `/zl audio <folder>` switches to one.
+-- `/spz audio` lists installed sound packs; `/spz audio <folder>` switches to one.
 -- Worth a command of its own because having two tiers installed at once is the
 -- case where the addon's behaviour is otherwise invisible: both play, and only
 -- the disk footprint differs.
@@ -706,12 +706,12 @@ local function CmdAudioPack(arg)
 		)
 	end
 	if #packs > 1 then
-		SpokenZones:Print("  /zl audio <name> to switch")
+		SpokenZones:Print("  /spz audio <name> to switch")
 	end
 end
 
--- `/zl lang` lists the languages that can be read; `/zl lang <code>` switches;
--- `/zl lang <code> force` and `/zl lang off` turn the preview override on and
+-- `/spz lang` lists the languages that can be read; `/spz lang <code>` switches;
+-- `/spz lang <code> force` and `/spz lang off` turn the preview override on and
 -- off. The override exists so an unfinished translation can be looked at in the
 -- game rather than only in the explorer, and it is deliberately not in Options:
 -- a player who finds it by accident is a player reading half-English screens.
@@ -737,7 +737,7 @@ local function CmdLanguage(arg)
 		end
 
 		if not locale then
-			SpokenZones:Print('|cffffcc00"%s" is not a WoW language code|r -- /zl lang to list', code)
+			SpokenZones:Print('|cffffcc00"%s" is not a WoW language code|r -- /spz lang to list', code)
 			return
 		end
 
@@ -761,7 +761,7 @@ local function CmdLanguage(arg)
 				)
 			else
 				SpokenZones:Print(
-					"|cffffcc00%s is not finished yet|r -- /zl lang %s force to preview it anyway",
+					"|cffffcc00%s is not finished yet|r -- /spz lang %s force to preview it anyway",
 					locale.name, locale.code
 				)
 			end
@@ -786,7 +786,7 @@ local function CmdLanguage(arg)
 		SpokenZones:Print("  following the client (%s)", SpokenZones.clientLocale)
 	end
 	if #selectable > 1 then
-		SpokenZones:Print("  /zl lang <code> to switch")
+		SpokenZones:Print("  /spz lang <code> to switch")
 	end
 end
 
@@ -803,9 +803,14 @@ local function CmdHelp()
 	end
 end
 
-_G.SLASH_ZONELORE1 = "/zonelore"
-_G.SLASH_ZONELORE2 = "/zl"
-SlashCmdList["ZONELORE"] = function(msg)
+-- /spokenzones and /spz are the addon's own; /zonelore and /spz are what it answered to
+-- before the rename and stay registered, because a slash command lives in players' macros
+-- and chat habits and costs nothing to keep.
+_G.SLASH_SPOKENZONES1 = "/spokenzones"
+_G.SLASH_SPOKENZONES2 = "/spz"
+_G.SLASH_SPOKENZONES3 = "/zonelore"
+_G.SLASH_SPOKENZONES4 = "/spz"
+SlashCmdList["SPOKENZONES"] = function(msg)
 	local cmd = (msg or ""):lower():match("^%s*(%S*)")
 	if cmd == "dump" then
 		CmdDump()

@@ -79,7 +79,7 @@ function Addon:ShowMissingDataModulePopup()
     local details = next(loadDetails) and ("|n|nDetected but not loaded:|n" .. table.concat(loadDetails, "|n")) or ""
     StaticPopupDialogs["VOICEOVER_NO_REGISTERED_DATA_MODULES"] =
     {
-        text = [[Spoken Quests|n|nNo usable sound packs were loaded.|n|nKeep a sound pack installed beside this addon - "VoiceOverReduxAudio", or the older "AI_VoiceOverData_Vanilla". Run "/vo diagnostics" for details.]] .. details,
+        text = [[Spoken Quests|n|nNo usable sound packs were loaded.|n|nKeep a sound pack installed beside this addon - "VoiceOverReduxAudio", or the older "AI_VoiceOverData_Vanilla". Run "/spq diagnostics" for details.]] .. details,
         button1 = OKAY,
         timeout = 0,
         whileDead = 1,
@@ -387,7 +387,7 @@ function Addon:OnInitialize()
 
         -- A synchronous Classic quest event can expose the previous quest's
         -- globals briefly while switching NPCs. Do not replay the most recent
-        -- quest key during that transition; /vo read remains an explicit way
+        -- quest key during that transition; /spq read remains an explicit way
         -- to replay it.
         if key == state.lastHandledKey and GetTime() - state.lastHandledAt < 5 then
             state.completedKey = key
@@ -448,9 +448,10 @@ function Addon:OnInitialize()
     end
 
     local slashInstalled, slashError = pcall(function()
-        _G.SLASH_VOICEOVERCONTINUEDREAD1 = "/voread"
-        _G.SlashCmdList.VOICEOVERCONTINUEDREAD = function()
-            self:ReadVisibleQuest("/voread")
+        _G.SLASH_SPOKENQUESTSREAD1 = "/spqread"
+        _G.SLASH_SPOKENQUESTSREAD2 = "/voread"
+        _G.SlashCmdList.SPOKENQUESTSREAD = function()
+            self:ReadVisibleQuest("/spqread")
         end
     end)
     if not slashInstalled then

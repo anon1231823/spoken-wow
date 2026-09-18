@@ -386,7 +386,7 @@ function SpokenZones:SetActiveAudioPack(name)
 	return false
 end
 
--- "high (128 kbps)" -- for the options dropdown and /zl audio. The language is
+-- "high (128 kbps)" -- for the options dropdown and /spz audio. The language is
 -- named only when it is not the one being read, which is the case worth pointing
 -- at: a pack that is installed but will never play.
 function SpokenZones:GetAudioPackLabel(pack)
@@ -675,7 +675,7 @@ function SpokenZones:PlayLore(mapID, areaKey)
 		-- Said out loud, because this is the case players used to experience as
 		-- "the narration is about the wrong zone". Autoplay never reaches here --
 		-- it refuses to queue an entry with no clip -- so this only speaks when
-		-- somebody asked for this line by clicking Play or typing /zl play.
+		-- somebody asked for this line by clicking Play or typing /spz play.
 		self:Print("|cffffcc00%s|r", self:DescribeMissingAudio())
 		SpokenZones:NotifyAudioChanged()
 		return false

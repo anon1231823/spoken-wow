@@ -14,6 +14,9 @@ and 3.3.5 zips carry it inside.
 
 - **Runs on the Forever client** (1.60.1, interface 16001 — the one whose TOC suffix is
   `_Camelot`), alongside Classic Era 1.15.9 and the 2.5.6 Anniversary client.
+- **The commands are `/spokenquests` and `/spq`**, matching `/spoken` and `/sp` on the player
+  and `/spokenzones` and `/spz` on Spoken Zones. `/vo` and `/voread` still work, so nothing in
+  your macros breaks.
 - The sound packs are **Spoken Quests Audio** now, and their folders moved with them:
   `SpokenQuestsAudioAlliance` and friends, where they were `VoiceOverReduxHQAudio*`. Your
   addon manager replaces the old folders; a hand-installed pack has to be deleted by hand,

@@ -1,6 +1,6 @@
 -- SpokenZones -- standalone, browsable lore window.
 --
--- Opened from the minimap button or /zl window. Independent of WorldMapFrame, so
+-- Opened from the minimap button or /spz window. Independent of WorldMapFrame, so
 -- it works with the map closed.
 --
 -- The left column is an accordion: all zones, with the selected zone's subzones

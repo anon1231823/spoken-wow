@@ -144,7 +144,7 @@ end
 -- A continent is never autoplayed.
 --
 -- "Eastern Kingdoms" and "Kalimdor" are lore in their own right and the map panel and
--- /zl play will read them on request, but they are not somewhere a character arrives:
+-- /spz play will read them on request, but they are not somewhere a character arrives:
 -- every player who ever logs in is standing on one, so autoplaying them means every new
 -- character is greeted with the history of a landmass rather than with the valley it
 -- woke up in. They reach the queue by accident anyway -- GetLoreWithFallback climbs the
@@ -370,7 +370,7 @@ local function SeedLoginArea(attempt)
 		return false
 	end
 
-	-- The subzone is the more specific answer, the same preference /zl play and the
+	-- The subzone is the more specific answer, the same preference /spz play and the
 	-- lore window both apply.
 	local subZone = GetSubZoneText()
 	if subZone and subZone ~= "" and SpokenZones:Get("autoplaySubzones") then

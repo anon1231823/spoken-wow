@@ -29,7 +29,7 @@ because they are a large download. Two tiers with identical content:
 `ZoneLoreAudio64` is no longer built or uploaded: one quality is one project, one
 folder and one answer to "which do I install". It stays published for anyone who
 has it. Both can still be installed at once — Spoken Zones plays the
-higher-bitrate one and `/zl audio` switches; see "Sound packs are
+higher-bitrate one and `/spz audio` switches; see "Sound packs are
 self-describing" below for how it decides.
 
 Player-facing documentation lives in `addon/ZoneLore/README.md` and
@@ -342,7 +342,7 @@ implementations stay in step and that every generated key is already canonical �
 a non-canonical key would be silently unreachable.
 
 If a client name still misses, `tools/seed/subzones.json` has an `aliases` section
-mapping a client-reported name to a wiki page title. Use `/zl debug` in-game to
+mapping a client-reported name to a wiki page title. Use `/spz debug` in-game to
 see the raw name.
 
 ### Post-vanilla subzones are kept on purpose
@@ -402,7 +402,7 @@ A player who never chose reads their client's language the day it becomes ready;
 one who picked English keeps English. That is why the stored preference is absent
 rather than `"enUS"` by default — the two are different answers.
 
-`/zl lang <code> force` previews an unfinished language and warns on every login
+`/spz lang <code> force` previews an unfinished language and warns on every login
 while it is set. It is not in the options panel: a player who finds it by accident
 is a player reading half-English screens and reporting it as a bug.
 
@@ -562,7 +562,7 @@ and forms that predate the axis still land where they always did.
 ## Hover preview
 
 Hovering a zone on a continent map, or a subzone on a zone map, shows that place's
-`short` lore in a tooltip at the cursor. `/zl hover` toggles it.
+`short` lore in a tooltip at the cursor. `/spz hover` toggles it.
 
 It deliberately shows nothing when there is no lore for what is under the cursor,
 and nothing for the zone you are already looking at, since the panel is showing
@@ -593,7 +593,7 @@ the cursor is over a pin and Blizzard's tooltip should be the only one showing.
 A minimap button (LibDBIcon) is the entry point that does not need the world map
 open. Its tooltip shows lore for wherever the player is standing -- the subzone if
 there is one, otherwise the zone. **Left-click** opens the lore window,
-**right-click** opens the settings panel. `/zl minimap` hides or shows it.
+**right-click** opens the settings panel. `/spz minimap` hides or shows it.
 
 Right-click was originally a world-map-panel toggle, which is also an options
 checkbox and a slash command — three ways to reach one setting, and none of them
@@ -630,14 +630,14 @@ not start at angle 0 underneath other addons' buttons. ZoneLore's own
 ## Narration
 
 Every lore description carries a **Play** button — top-right of the world map
-panel and of the lore window. `/zl play` narrates wherever the player is standing,
+panel and of the lore window. `/spz play` narrates wherever the player is standing,
 preferring the subzone over the zone when the subzone has lore of its own.
 
 Audio ships in **separate sound-pack addons**, all of them optional. ZoneLore
 looks up a clip in whichever pack is active — see "Sound packs are
 self-describing" — and where there is no clip there is no sound: the Play button
 does not appear, autoplay does not queue the entry, and asking for it by hand says
-whether the pack is missing or merely does not cover that line. `/zl audio`
+whether the pack is missing or merely does not cover that line. `/spz audio`
 reports which packs are installed.
 
 **Nothing stands in for missing audio.** A placeholder clip used to — a quest line
@@ -663,7 +663,7 @@ voice ships:
 | `web/src/lib/beta.ts` | the **beta** badge beside the logo on lore.rusty.one |
 
 **Descriptions only, in the addon.** Nothing in the client says any of this out
-loud: not `/zl audio`, not the options panel, and nothing at login or on first
+loud: not `/spz audio`, not the options panel, and nothing at login or on first
 playback. A player who has installed the pack has already read the description
 that came with it, and an addon that repeats its own caveat into chat is an addon
 that talks over the thing it is apologising for.
@@ -677,7 +677,7 @@ to do something about it.
 ### Autoplay on discovery
 
 On by default: **the game's own discovery is the trigger** — the moment it prints
-"Discovered Durotar", that zone's lore plays. `/zl autoplay` toggles it, and `/zl`
+"Discovered Durotar", that zone's lore plays. `/spz autoplay` toggles it, and `/spz`
 reports whether the feature can work at all on this client.
 
 Subzones are included, and are most of what fires — a walk across Elwynn sets off
@@ -704,7 +704,7 @@ sessions, and announces it at precisely the right instant. There is no reason to
 reimplement that, and no way to reimplement it correctly.
 
 The consequence is that a character who has already explored the world will never
-autoplay anything — the discoveries have all happened. `/zl discover [area]`
+autoplay anything — the discoveries have all happened. `/spz discover [area]`
 simulates one, which is the only way to test this without rolling an alt.
 
 #### The spawn area, which is never announced
@@ -722,7 +722,7 @@ visit instead of being told about one. The cinematic needs no special handling �
 the greeting queues immediately and the queue holds it until the intro ends.
 
 The flag is set *after* the enabled check, so turning autoplay on later still
-greets rather than having silently spent its turn. `/zl forget` clears it.
+greets rather than having silently spent its turn. `/spz forget` clears it.
 
 Because the greeting and a real discovery message can name the same area, and an
 area on a zone border can be announced twice, the queue rejects a duplicate of
@@ -749,8 +749,8 @@ Their payloads are not shaped alike: `CHAT_MSG_*` put the text first, `UI_*_MESS
 put a numeric message type first and the text second. Rather than encode that per
 event, the handler takes whichever argument is a string.
 
-`/zl` reports how many of the two message forms the client defined; zero means the
-feature cannot fire and says so, rather than being silently dead. With `/zl debug`
+`/spz` reports how many of the two message forms the client defined; zero means the
+feature cannot fire and says so, rather than being silently dead. With `/spz debug`
 on, every message arriving on any of the four events is printed with the event that
 carried it — which is what to look at if discoveries are not being recognised.
 
@@ -762,15 +762,15 @@ back into The Den proves nothing, and neither does any character that has alread
 been played. This is the single easiest way to mistake the feature for broken.
 
 ```
-/zl discover              pretend to discover the subzone you are standing in
-/zl discover The Den      pretend to discover a named area
+/spz discover              pretend to discover the subzone you are standing in
+/spz discover The Den      pretend to discover a named area
 ```
 
 That runs the same path a real discovery takes, short of the message parsing. To
-exercise the parsing itself, turn on `/zl debug` and walk into genuinely unexplored
+exercise the parsing itself, turn on `/spz debug` and walk into genuinely unexplored
 ground; every message on the four watched events is printed with its event name.
 
-`/zl forget` clears the greeting flag, so the spawn-area greeting can be heard
+`/spz forget` clears the greeting flag, so the spawn-area greeting can be heard
 again on the next login without rolling another character.
 
 #### Queue
@@ -828,7 +828,7 @@ Before this, a held discovery was indistinguishable from a discovery that failed
 While anything is playing or queued, a movable frame appears: a portrait, the zone
 above the area being narrated, the backlog under that, and **Read** and **Report**
 beside it. Clicking the portrait pauses. Drag it by the handle on the portrait's
-corner; `/zl bar` brings it back to the middle of the screen; the options panel
+corner; `/spz bar` brings it back to the middle of the screen; the options panel
 turns it off.
 
 It is ported from `VoiceOverRedux`, the quest-voiceover addon, and is deliberately
@@ -845,7 +845,7 @@ fallback is the only case here, and everything the model brought with it — the
 It exists because the Play buttons are attached to a description, so they are only
 reachable while that description is on screen — and narration deliberately outlives
 both panels. Without this frame, closing the map would leave a clip running with no
-way to stop it short of `/zl stop`.
+way to stop it short of `/spz stop`.
 
 **Pause restarts from the beginning.** The client can start and stop a sound file
 and nothing in between: there is no seek, and no way to ask how far into a clip
@@ -860,10 +860,10 @@ There used to be a small Pause/Stop widget anchored below the minimap, with Stop
 relabelling itself to "Next" whenever the backlog was non-empty and right-click
 reserved for stopping outright. The player supersedes it: the backlog is now
 listed rather than counted in a tooltip, so skipping one entry is clicking that
-entry and stopping everything is `/zl stop`, and neither needs a button that means
+entry and stopping everything is `/spz stop`, and neither needs a button that means
 two things depending on state.
 
-`/zl bar` kept its name — it is what people type when a frame has ended up
+`/spz bar` kept its name — it is what people type when a frame has ended up
 somewhere unreachable — but now recentres the player rather than reanchoring it to
 the minimap.
 
@@ -876,7 +876,7 @@ narration running.
 Stopping when the entry scrolls out of view reads well as a rule and is wrong in
 practice — the intended use is to start a zone's lore, close the map and walk,
 which that rule would cut off immediately. The button always reflects the entry in
-front of it, so stopping is one click, or `/zl stop`.
+front of it, so stopping is one click, or `/spz stop`.
 
 ### Why the button resets itself from recorded data
 
@@ -1327,7 +1327,7 @@ There is no prune command yet.
 
 ## Options
 
-`/zl options`, or Game Menu -> Options -> AddOns -> ZoneLore. Registered with
+`/spz options`, or Game Menu -> Options -> AddOns -> ZoneLore. Registered with
 `Settings.RegisterCanvasLayoutCategory`, which exists on 11509 -- Leatrix_Maps,
 Leatrix_Plus, Leatrix_Sounds, Syndicator and Baganator all use it.
 `InterfaceOptions_AddCategory` is the legacy-only path and is deliberately not
@@ -1393,43 +1393,43 @@ everything else.
 To check it against your own client:
 
 ```
-in-game:  /zl dump      then  /reload
+in-game:  /spz dump      then  /reload
 here:     node tools/seed-from-dump.mjs           # report differences
           node tools/seed-from-dump.mjs --write   # rewrite the seed from the client
 ```
 
-`/zl verify` does a lighter version of the same check entirely in-game.
+`/spz verify` does a lighter version of the same check entirely in-game.
 
 ## Verifying in-game
 
 ```
 /console scriptErrors 1     surface Lua errors (do this first)
-/zl                         status for the current zone and subzone
-/zl verify                  check all 49 entries against this client
-/zl panel                   toggle the world map panel
-/zl options                 open the settings panel
-/zl window                  open the browsable lore window
-/zl hover                   toggle the hover preview tooltip
-/zl play                    narrate the lore for where you are standing
-/zl stop                    stop the narration
-/zl voice                   turn narration on or off
-/zl audio                   list sound packs, or switch with /zl audio <name>
-/zl autoplay                toggle narrating areas as you discover them
-/zl discover [area]         pretend to discover an area (dev)
-/zl forget                  replay the login greeting on next login (dev)
-/zl bar                     move the player back to the middle of the screen
-/zl minimap                 show or hide the minimap button
-/zl debug                   report area names on map click
-/zl dump                    enumerate the map tree (dev)
+/spz                         status for the current zone and subzone
+/spz verify                  check all 49 entries against this client
+/spz panel                   toggle the world map panel
+/spz options                 open the settings panel
+/spz window                  open the browsable lore window
+/spz hover                   toggle the hover preview tooltip
+/spz play                    narrate the lore for where you are standing
+/spz stop                    stop the narration
+/spz voice                   turn narration on or off
+/spz audio                   list sound packs, or switch with /spz audio <name>
+/spz autoplay                toggle narrating areas as you discover them
+/spz discover [area]         pretend to discover an area (dev)
+/spz forget                  replay the login greeting on next login (dev)
+/spz bar                     move the player back to the middle of the screen
+/spz minimap                 show or hide the minimap button
+/spz debug                   report area names on map click
+/spz dump                    enumerate the map tree (dev)
 ```
 
 Before logging in, `python3 tools/lua-syntax-check.py` balances block keywords and
 delimiters across the addon's Lua. It is not a parser and cannot catch typos or
 runtime errors, but a missing `end` otherwise costs a relog to find.
 
-For subzones, `/zl debug` then clicking around a Tirisfal or Silverpine map prints
+For subzones, `/spz debug` then clicking around a Tirisfal or Silverpine map prints
 the raw area name, the key it normalised to, and whether lore was found — which is
-how to spot a name that needs an alias. `/zl` on its own also reports the subzone
+how to spot a name that needs an alias. `/spz` on its own also reports the subzone
 you are standing in via `GetSubZoneText()`, so mismatches can be found just by
 walking around with the map closed.
 

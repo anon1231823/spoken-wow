@@ -53,7 +53,7 @@ function SpokenZones:SetupOptions()
 	end
 
 	if not (Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory) then
-		SpokenZones:Print("|cffffcc00Settings API missing; options panel unavailable (use /zl help)|r")
+		SpokenZones:Print("|cffffcc00Settings API missing; options panel unavailable (use /spz help)|r")
 		return
 	end
 
@@ -135,7 +135,7 @@ function SpokenZones:SetupOptions()
 		"The game announces a discovery once per character, ever -- so a character "
 			.. "who already explored Azeroth is never narrated anything. Tick this "
 			.. "and Spoken Zones keeps its own record instead, still one clip per area "
-			.. "per character. /zl forget clears it.",
+			.. "per character. /spz forget clears it.",
 		Get("autoplayExplored"), Set("autoplayExplored"))
 	layout:Outdent()
 	-- The list is read when the menu opens rather than captured here: packs cannot be
@@ -170,7 +170,7 @@ function SpokenZones:SetupOptions()
 	layout:Section("Language")
 	-- Only finished languages are offered. A player choosing from a list has no way to
 	-- know that half a translation is missing, and would report the English that shows
-	-- through as a bug; /zl lang <code> force is how an unfinished one gets looked at.
+	-- through as a bug; /spz lang <code> force is how an unfinished one gets looked at.
 	local langNote
 	local function DescribeLanguage()
 		local available = SpokenZones:GetSelectableLanguages()

@@ -16,7 +16,7 @@
 --
 --   UI/SoundQueueUI.lua  every label and tooltip
 --   UI/MapPanel.lua      the two sentences that were built by concatenation
---   Core.lua             the /zl command list
+--   Core.lua             the /spz command list
 
 local _, SpokenZones = ...
 
@@ -62,24 +62,24 @@ L.NO_LORE_FOR = "No lore recorded for %1$s yet."
 -- Slash commands
 --------------------------------------------------------------------------------
 
-L.CMD_HEADING = "commands:"
-L.CMD_STATUS = "  /zl            -- status for the current zone and subzone"
-L.CMD_OPTIONS = "  /zl options    -- open the settings panel"
-L.CMD_WINDOW = "  /zl window     -- open the browsable lore window"
-L.CMD_PANEL = "  /zl panel      -- toggle the world map panel"
-L.CMD_HOVER = "  /zl hover      -- toggle the hover preview tooltip"
-L.CMD_PLAY = "  /zl play       -- read the current lore aloud"
-L.CMD_STOP = "  /zl stop       -- stop the narration"
-L.CMD_VOICE = "  /zl voice      -- toggle narration on or off"
-L.CMD_AUTOPLAY = "  /zl autoplay   -- toggle narrating areas as you discover them"
-L.CMD_AUDIO = "  /zl audio      -- list sound packs, or switch with /zl audio <name>"
-L.CMD_LANG = "  /zl lang       -- list languages, or switch with /zl lang <code>"
-L.CMD_DISCOVER = "  /zl discover   -- pretend to discover an area (dev)"
-L.CMD_FORGET = "  /zl forget     -- forget what this character has been narrated"
-L.CMD_BAR = "  /zl bar        -- move the player back to the middle of the screen"
-L.CMD_MINIMAP = "  /zl minimap    -- show or hide the minimap button"
-L.CMD_DEBUG = "  /zl debug      -- report area names on map click"
-L.CMD_VERIFY = "  /zl verify     -- check data against this client"
-L.CMD_DUMP = "  /zl dump       -- enumerate the map tree (dev)"
+L.CMD_HEADING = "commands (/spokenzones, or /spz):"
+L.CMD_STATUS = "  /spz            -- status for the current zone and subzone"
+L.CMD_OPTIONS = "  /spz options    -- open the settings panel"
+L.CMD_WINDOW = "  /spz window     -- open the browsable lore window"
+L.CMD_PANEL = "  /spz panel      -- toggle the world map panel"
+L.CMD_HOVER = "  /spz hover      -- toggle the hover preview tooltip"
+L.CMD_PLAY = "  /spz play       -- read the current lore aloud"
+L.CMD_STOP = "  /spz stop       -- stop the narration"
+L.CMD_VOICE = "  /spz voice      -- toggle narration on or off"
+L.CMD_AUTOPLAY = "  /spz autoplay   -- toggle narrating areas as you discover them"
+L.CMD_AUDIO = "  /spz audio      -- list sound packs, or switch with /spz audio <name>"
+L.CMD_LANG = "  /spz lang       -- list languages, or switch with /spz lang <code>"
+L.CMD_DISCOVER = "  /spz discover   -- pretend to discover an area (dev)"
+L.CMD_FORGET = "  /spz forget     -- forget what this character has been narrated"
+L.CMD_BAR = "  /spz bar        -- move the player back to the middle of the screen"
+L.CMD_MINIMAP = "  /spz minimap    -- show or hide the minimap button"
+L.CMD_DEBUG = "  /spz debug      -- report area names on map click"
+L.CMD_VERIFY = "  /spz verify     -- check data against this client"
+L.CMD_DUMP = "  /spz dump       -- enumerate the map tree (dev)"
 
 SpokenZones:RegisterStrings("enUS", L)

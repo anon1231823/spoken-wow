@@ -267,7 +267,7 @@ end
 -- all does. Falling back would put English prose under a German heading, which
 -- reads as a translation somebody did badly rather than one nobody has done -- and
 -- the readiness gate means a language on offer has no holes to fall through
--- anyway. See SpokenZones.Languages and the /zl lang preview override.
+-- anyway. See SpokenZones.Languages and the /spz lang preview override.
 function SpokenZones:ShouldLoadLanguage(code)
 	return code == self.language
 end

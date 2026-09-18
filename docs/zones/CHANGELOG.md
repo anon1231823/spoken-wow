@@ -34,6 +34,9 @@ shared with Spoken Quests. Addon managers install it automatically.
   and both are read, so a pack and an addon of either generation still find each other.
 - **Runs on the Forever client** (1.60.1, interface 16001 — the one whose TOC suffix is
   `_Camelot`), alongside Classic Era 1.15.9 and the 2.5.6 Anniversary client.
+- **The commands are `/spokenzones` and `/spz`**, matching `/spoken` and `/sp` on the player
+  and `/spokenquests` and `/spq` on Spoken Quests. `/zonelore` and `/zl` still work, so nothing
+  in your macros breaks.
 - **The sound pack installs as `SpokenZonesAudio`**, where it was `ZoneLoreAudio`. Your addon
   manager replaces the old folder; a hand-installed pack has to be deleted by hand or you keep
   two copies of the same audio.
