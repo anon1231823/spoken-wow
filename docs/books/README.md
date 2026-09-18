@@ -141,10 +141,18 @@ queued pages would otherwise strand the narration on the page they turned away f
 
 **The panel and the button are the two files this addon reads books without.**
 `UI/Options.lua` registers a settings canvas the way the zones panel does, and
-`UI/PlayButton.lua` hangs Play/Stop off the book window — outside its top-right corner,
-because the inside of `ItemTextFrame` is Blizzard's and its art changes with the page's
-material. `Events.lua` guards both calls, so a partial install still narrates. Every switch
-on the panel is also a `/spb` command, which is what a client with no Settings API gets.
+`UI/PlayButton.lua` puts Play/Stop on the book window's page row. `Events.lua` guards both
+calls, so a partial install still narrates. Every switch on the panel is also a `/spb`
+command, which is what a client with no Settings API gets.
+
+**The button is anchored to `ItemTextPrevPageButton`, not to the page number.**
+`ItemTextFrame.xml` in `Gethe/wow-ui-source` gives that arrow 32×32 centred 75 right and 41
+down from the frame's top-left — identically in the Classic frame Era and Anniversary load
+and the Mainline one Forever loads, so one anchor covers all three. `ItemTextCurrentPage`
+looks like the obvious neighbour and is not: it is a 192-wide centred FontString whose left
+edge sits back under that same arrow, so anchoring to it would stack the button on top of
+Blizzard's. The arrow is hidden on page one and disabled on the last page; a hidden widget
+keeps its anchors, so the button holds its spot throughout.
 
 `UI/Layout.lua` is the fourth copy of a file that must stay byte-identical across
 SpokenPlayer, SpokenQuests, SpokenZones and SpokenBooks;

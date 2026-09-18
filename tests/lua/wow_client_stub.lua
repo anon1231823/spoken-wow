@@ -132,9 +132,17 @@ local function Widget(kind, name)
     -- Recorded rather than swallowed by the catch-all below: where a control sits is what
     -- a settings panel is, and a panel whose rows drift apart has no other symptom.
     function w:SetPoint(point, a, b, c, d)
-        local x, y
-        if type(a) == "number" then x, y = a, b else x, y = c, d end
-        self.anchor = { point = point, x = x, y = y }
+        local x, y, relativeTo, relativePoint
+        if type(a) == "number" then
+            x, y = a, b
+        else
+            -- What it was anchored TO, not just where: a button placed against one of the
+            -- client's own widgets is making a claim about that widget, and the claim is
+            -- what a test has to be able to read back.
+            relativeTo, relativePoint, x, y = a, b, c, d
+        end
+        self.anchor = { point = point, x = x, y = y,
+            relativeTo = relativeTo, relativePoint = relativePoint }
         return self
     end
     function w:ClearAllPoints() self.anchor = nil end
@@ -374,6 +382,16 @@ function _G.ItemTextGetMaterial() return world.itemTextMaterial end
 -- rebuilding its button against a frame the client never replaces.
 _G.ItemTextFrame = MakeFrame("ItemTextFrame")
 _G.ItemTextFrame:Hide()
+
+-- The page arrows, because they are what an addon anchors to on that row. Both frames in
+-- Gethe/wow-ui-source -- Classic for Era and Anniversary, Mainline for Forever -- give this
+-- one the same size and the same place: 32x32, centred 75 right and 41 down from the frame's
+-- top-left corner.
+_G.ItemTextPrevPageButton = Widget("Button", "ItemTextPrevPageButton")
+_G.ItemTextPrevPageButton:SetParent(_G.ItemTextFrame)
+_G.ItemTextPrevPageButton:SetWidth(32)
+_G.ItemTextPrevPageButton:SetHeight(32)
+_G.ItemTextPrevPageButton:SetPoint("CENTER", _G.ItemTextFrame, "TOPLEFT", 75, -41)
 
 --- Put a page on screen, as ITEM_TEXT_READY would find it.
 function M.ShowPage(page)

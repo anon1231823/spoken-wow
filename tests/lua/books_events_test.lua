@@ -147,6 +147,15 @@ B:SetupPlayButton()
 local button = B.playButton
 Expect("the book frame carries a button", button ~= nil, true)
 
+-- On the page row, against the previous-page arrow. Anchored off the frame's corner first,
+-- where it read as floating beside the book rather than belonging to it -- and the page
+-- number is no good to anchor to either, being a 192-wide centred FontString whose left edge
+-- is back under that same arrow.
+Expect("...on the page row, not off the corner", button.anchor.relativeTo,
+    _G.ItemTextPrevPageButton)
+Expect("...just past the arrow", button.anchor.point .. "/" .. button.anchor.relativePoint,
+    "LEFT/RIGHT")
+
 -- ITEM_TEXT_CLOSED is not handled for the button on purpose: it is the frame's child and
 -- goes with it. What is asserted here is the branch the addon does own -- asked to refresh
 -- with no page on screen, it hides rather than leaving Stop offered for a book nobody has

@@ -10,11 +10,22 @@
 -- one. SpokenPlayer carries QuestLogPlayButton.blp, but it is that addon's file and this one
 -- must work with the player absent.
 --
--- ANCHORED OUTSIDE THE FRAME, off its top-right corner. The inside of ItemTextFrame is
--- Blizzard's: the page buttons sit along the bottom, the close button in the corner, and the
--- material -- Parchment, Stone, Bronze, Marble, Silver -- changes the art behind all of it.
--- Which interior spot is free cannot be settled without opening one book of every material
--- in three clients, while just outside the edge cannot collide with any of them.
+-- ON THE PAGE ROW, between the page arrows and the page number. Hung outside the frame's
+-- corner first, which put it in no book at all -- a button floating beside the window rather
+-- than part of it.
+--
+-- Anchored to ItemTextPrevPageButton's right edge, and that is the placement rather than a
+-- guess: ItemTextFrame.xml in Gethe/wow-ui-source gives that button 32x32 centred 75 right
+-- and 41 down from the frame's top-left, identically in the Classic frame that Era and
+-- Anniversary load and the Mainline one Forever loads. One anchor, three clients, no shims.
+--
+-- NOT anchored to the page number, which is what "beside the counter" would suggest.
+-- ItemTextCurrentPage is a 192-wide FontString centred on the row: the digit you can see
+-- sits in the middle of it, but its left edge is back under the previous-page arrow, so
+-- anchoring there would put this button on top of one of Blizzard's.
+--
+-- The arrow is hidden on page one and disabled on the last page. Neither moves it: a hidden
+-- widget keeps its anchors, so the button holds the same spot through a whole book.
 
 local ADDON_NAME, SpokenBooks = ...
 
@@ -66,9 +77,18 @@ function SpokenBooks:SetupPlayButton()
 	local button = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	button:SetWidth(BUTTON_WIDTH)
 	button:SetHeight(BUTTON_HEIGHT)
-	button:SetPoint("TOPLEFT", frame, "TOPRIGHT", -2, -28)
 	button:SetText("Play")
 	button:Hide()
+
+	local arrow = _G.ItemTextPrevPageButton
+	if arrow then
+		button:SetPoint("LEFT", arrow, "RIGHT", 4, 0)
+	else
+		-- A client whose book frame is built some other way. The numbers are the same row,
+		-- measured from the corner the arrow is measured from, so the button lands where it
+		-- would have anyway rather than in a corner of its own.
+		button:SetPoint("LEFT", frame, "TOPLEFT", 95, -41)
+	end
 
 	button:SetScript("OnClick", function()
 		local pageId = SpokenBooks:PageOnScreen()
