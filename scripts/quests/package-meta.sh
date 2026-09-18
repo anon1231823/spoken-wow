@@ -31,7 +31,7 @@ cd "$REPO"
 
 NAME="${NAME:-VoiceOverReduxAudio}"
 DIST="${DIST:-$REPO/dist}"
-VERSION="${VERSION:-1.2.1}"
+VERSION="${VERSION:-2.0.0}"
 ZIP="${ZIP:-1}"
 # What this stub is called and which packs it describes. A set of packs built together needs a
 # stub of its own, because the stub is a CurseForge project like any other; release.sh holds the

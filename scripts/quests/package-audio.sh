@@ -55,7 +55,7 @@ DIST="${DIST:-dist}"
 # projects were renamed; DataModules:availableModules has to be kept in step with it, since that
 # is how the player recognises an installed pack.
 MODULE="${MODULE:-SpokenQuestsAudio}"
-VERSION="${VERSION:-1.2.1}"
+VERSION="${VERSION:-2.0.0}"
 # Which packs to build; each becomes MODULE plus the suffix tts_cli/factions.py gives it.
 #
 # The four that ship. 'all' - one folder holding every line - is deliberately not among them:

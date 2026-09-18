@@ -35,6 +35,9 @@ API="https://wow.curseforge.com/api"
 # uploaded, which is the failure mode to want.
 GAME_VERSION_ERA="${GAME_VERSION_ERA:-1.15.9}"
 GAME_VERSION_ANNIVERSARY="${GAME_VERSION_ANNIVERSARY:-2.5.6}"
+# The 1.60.1 Forever client, which is CurseForge's name for the one whose TOC suffix is
+# _Camelot. Both addons declare interface 16001 and load there.
+GAME_VERSION_FOREVER="${GAME_VERSION_FOREVER:-1.60.1}"
 
 # CurseForge's own channel, which is not the same thing as the beta disclaimer in
 # the descriptions. Marking these "beta" would keep most addon managers from
@@ -77,8 +80,8 @@ target_dependencies() { case "$1" in
 esac; }
 
 target_game_versions() { case "$1" in
-  zones)    echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
-  audio)    echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY";;
+  zones)    echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY $GAME_VERSION_FOREVER";;
+  audio)    echo "$GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY $GAME_VERSION_FOREVER";;
 esac; }
 
 dry_run=""
@@ -138,7 +141,7 @@ resolve_game_version() {
 }
 
 echo "resolving game versions..."
-for name in $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY; do
+for name in $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY $GAME_VERSION_FOREVER; do
   echo "  $name -> id $(resolve_game_version "$name")"
 done
 

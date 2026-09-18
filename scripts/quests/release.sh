@@ -42,15 +42,17 @@ API="https://wow.curseforge.com/api"
 # hardcoded as numeric ids, because those ids are undocumented and would be mystery constants
 # the first time they needed changing.
 #
-# Era and the 2.5.6 Anniversary client only. The zip carries _Wrath and _Mainline TOCs as
-# well, but nothing here has been run on those clients, and a file offered to a client it
-# misbehaves on is worse than one that is simply absent there.
+# Era, the 2.5.6 Anniversary client and the 1.60.1 Forever client (CurseForge's name for the
+# one whose TOC suffix is _Camelot). The zip carries _Wrath and _Mainline TOCs as well, but
+# nothing here has been run on those clients, and a file offered to a client it misbehaves on
+# is worse than one that is simply absent there.
 #
 # The 1.12, 2.4.3 and 3.3.5 zips package.sh also builds are deliberately not uploaded here:
 # CurseForge has no game version to file them against. They go out on the GitHub release that
 # .github/workflows/release-player.yaml publishes from a tag.
 GAME_VERSION_ERA="${GAME_VERSION_ERA:-1.15.9}"
 GAME_VERSION_ANNIVERSARY="${GAME_VERSION_ANNIVERSARY:-2.5.6}"
+GAME_VERSION_FOREVER="${GAME_VERSION_FOREVER:-1.60.1}"
 
 # CurseForge's own channel. Marking these "beta" would keep most addon managers from offering
 # them to players on the default channel.
@@ -197,7 +199,7 @@ resolve_game_version() {
 
 echo "resolving game versions..."
 game_version_ids=""
-for name in $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY; do
+for name in $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY $GAME_VERSION_FOREVER; do
   id="$(resolve_game_version "$name")"
   echo "  $name -> id $id"
   game_version_ids="$game_version_ids $id"
@@ -311,7 +313,7 @@ upload_target() {
 
   echo "  file:      $zip_path ($size)"
   echo "  version:   $version   release type: $RELEASE_TYPE"
-  echo "  clients:   $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY"
+  echo "  clients:   $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY $GAME_VERSION_FOREVER"
   echo "  changelog: $(echo "$changelog" | head -1) ($(echo "$changelog" | wc -l | tr -d ' ') lines)"
   [[ -n "$dependencies" ]] && echo "  requires:  $(echo $dependencies)"
 

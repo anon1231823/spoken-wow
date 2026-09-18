@@ -1,7 +1,7 @@
 ## Interface: 11509, 20506, 16001
 ## Title: Spoken Zones Audio
 ## Notes: Narrated zone lore for Spoken Zones. Install alongside Spoken Zones.|n|cffffcc00Beta:|r a proof-of-concept voice, being redesigned and re-generated.
-## Version: 0.3.3
+## Version: 2.0.0
 ## Author: rusty
 ## IconTexture: Interface\AddOns\SpokenZonesAudio\Textures\AddonIcon.tga
 ## X-License: Audio generated with ElevenLabs from warcraft.wiki.gg lore text (CC BY-SA 4.0).

@@ -3,7 +3,7 @@
 Notable changes to ZoneLore and its sound packs. Both are versioned together:
 see [Compatibility](#compatibility) below.
 
-## 1.0.0 — 2026-09-11
+## 2.0.0 — 2026-09-18
 
 Renamed to **Spoken Zones**, and narration now plays through the **Spoken Player** addon
 shared with Spoken Quests. Addon managers install it automatically.
@@ -29,11 +29,18 @@ shared with Spoken Quests. Addon managers install it automatically.
   speaking. Your choice carries over unless Spoken Quests also had one, which wins.
 - If Spoken Player is installed but switched off, a dialog offers to enable it and
   reload, rather than narration quietly not playing.
-- The sound packs are renamed **Spoken Zones Audio** and **Spoken Zones Audio 64** in the
-  addon list and on CurseForge. Only the titles change: the folders keep their names, so
-  neither pack is re-downloaded and both keep working.
+- The sound pack is renamed **Spoken Zones Audio** in the addon list and on CurseForge.
 - A pack now announces itself in `SpokenZonesAudioPacks` as well as `ZoneLoreAudioPacks`,
   and both are read, so a pack and an addon of either generation still find each other.
+- **Runs on the Forever client** (1.60.1, interface 16001 — the one whose TOC suffix is
+  `_Camelot`), alongside Classic Era 1.15.9 and the 2.5.6 Anniversary client.
+- **The sound pack installs as `SpokenZonesAudio`**, where it was `ZoneLoreAudio`. Your addon
+  manager replaces the old folder; a hand-installed pack has to be deleted by hand or you keep
+  two copies of the same audio.
+- **The 64 kbps pack is retired.** It stays installable for anyone who has it and gets no
+  further updates; the 128 kbps pack is the one to install.
+- The addon and the pack carry the same version as the rest of Spoken from here on, which is
+  why this is 2.0.0 and not 1.0.0.
 
 ## 0.4.3 — 2026-08-19
 
