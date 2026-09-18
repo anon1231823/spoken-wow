@@ -7,9 +7,9 @@
 -- rebuilt from there.
 --
 -- Queuing the WHOLE book rather than the page on screen is the difference between reading
--- along and pressing play twenty times. It is also why the source's queueLimit is 1: the
--- player admits the next page only as the current one finishes, so a reader who closes the
--- book has one clip to stop rather than nineteen.
+-- along and pressing play twenty times. It is also why this source is registered with NO
+-- queue limit, which Core.lua sets out: a cap of one keeps a four-page book's first page and
+-- its last and silently discards the middle.
 
 local ADDON_NAME, SpokenBooks = ...
 
@@ -49,6 +49,28 @@ function SpokenBooks:IsQueued(pageId)
 	return false
 end
 
+--- Whether any page of `book` is still queued or speaking.
+---
+--- Asked by the read-once rule, which must not refuse the book it is in the middle of
+--- reading: a reader who jumps past the queued pages is still inside the book that was
+--- already counted as read, and a refusal there would strand the narration on the page they
+--- turned away from. Walks the book rather than trusting a remembered "currently reading",
+--- which nothing clears when a queue drains on its own.
+function SpokenBooks:IsNarrating(book)
+	local data = self:Data()
+	local entry = book and data and data.books[book]
+	if not entry then
+		return false
+	end
+
+	for _, id in ipairs(entry.pages) do
+		if self:IsQueued(id) then
+			return true
+		end
+	end
+	return false
+end
+
 --- Queue this page and the rest of its book. Returns how many clips were admitted.
 ---
 --- A page the installed pack has no clip for is skipped rather than queued silent: the
@@ -70,6 +92,15 @@ function SpokenBooks:PlayFrom(pageId)
 			queued = queued + 1
 		end
 	end
+
+	-- Read, as far as this character is concerned, the moment a page of it is admitted --
+	-- whether autoplay queued it or the reader pressed play. Recorded even with readOnce
+	-- off, so turning the setting on remembers what was heard before rather than starting
+	-- from a blank slate.
+	if queued > 0 then
+		self:MarkBookRead(self:PlaceOf(pageId))
+	end
+
 	return queued
 end
 

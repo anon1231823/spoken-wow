@@ -11,7 +11,9 @@ The tablets in a dungeon, the ledgers in a town hall, the note on a corpse, the 
 - **Whole books, in order** — opening the first page queues the rest, so you read along rather than pressing play again at every turn. `/spb whole` narrates only the page in front of you instead.
 - **It follows your page turns** — turn to a page it was already going to read and nothing restarts; jump somewhere else and it picks up from there.
 - **Your mail is never read.** The game shows letters and books in the same window, so the addon checks: anything with a sender, or anything opened at your mailbox, stays silent. Your post is yours.
-- **Autoplay, on by default** — opening a book is already a deliberate act. `/spb autoplay` if you disagree.
+- **Autoplay, on by default** — opening a book is already a deliberate act. Turn it off and nothing starts by itself.
+- **A Play button on the book itself** — beside the window, whenever there is something to hear. It is how you read a book with autoplay off, and it turns into Stop while that book is being read.
+- **Or hear each book only once** — turn it on and a book you have already heard is not read to you again. What you have read is remembered per character, so an alt walking into the same library hears it fresh, and a button in the settings forgets it all if you want the library back.
 
 ## Narration needs the sound pack
 
@@ -25,17 +27,22 @@ Without the pack it loads, stays quiet, and `/spb status` tells you what is miss
 - **The words are the ones vanilla shipped.** On WoW: Forever, a book that has been rewritten since will not be recognised, and the addon stays quiet rather than reading you the old version.
 - **Some readings still land wrong.** Reports decide what gets re-recorded first.
 
-## Commands
+## Settings
 
-`/spokenbooks`, or `/spb` for short.
+Game Menu → Options → AddOns → **Spoken Books**, or the Spoken minimap button. Everything on the panel is a command as well, so nothing here is out of reach on a client whose settings window will not open.
 
 ```
 /spb read        read the page in front of you, whatever autoplay says
 /spb stop        stop reading
 /spb autoplay    read a book as soon as it opens (on by default)
 /spb whole       read the whole book, or only the page on screen
+/spb once        read each book only once (off by default)
+/spb forget      forget what this character has read, so it is all new again
+/spb settings    open the panel
 /spb status      what is known, what is narrated, and which pack is doing it
 ```
+
+`/spokenbooks` is the long form of `/spb`.
 
 ## Clients
 

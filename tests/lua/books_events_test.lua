@@ -25,7 +25,8 @@ local REGISTRY_2 = "Magistrate Rutherford Burnside\nAll debts settled.\n\nBlacks
 
 local function LoadBooks()
     local SpokenBooks = {}
-    for _, file in ipairs({ "Checksum", "Core", "Reader", "Audio", "Playlist", "Events", "Commands" }) do
+    for _, file in ipairs({ "Checksum", "Core", "Reader", "Audio", "Playlist",
+        "UI/PlayButton", "Events", "Commands" }) do
         local chunk = assert(loadfile(BOOKS .. file .. ".lua"))
         chunk("SpokenBooks", SpokenBooks)
     end
@@ -106,6 +107,74 @@ stub.ClosePage()
 stub.FireEvent("ITEM_TEXT_CLOSED")
 SlashCmdList["SPOKENBOOKS"]("read")
 Expect("/spb read with no book open queues nothing", #QueuedPages(), 0)
+
+---------------------------------------------------------------- reading each book only once
+B:StopReading()
+SpokenBooksCharDB.read = {}
+SpokenBooksDB.readOnce = true
+local REGISTRY = B:PlaceOf(261)
+
+-- Opened at page 2, so page 1 is a page of this book the queue does not cover.
+stub.ShowPage({ title = "Hillsbrad Town Registry", number = 2, text = REGISTRY_2, hasNext = true })
+stub.FireEvent("ITEM_TEXT_READY")
+Expect("a book this character has not read is read", #QueuedPages(), 2)
+Expect("...and counts as read from the moment it starts", SpokenBooksCharDB.read[REGISTRY], true)
+
+stub.ShowPage({ title = "Hillsbrad Town Registry", number = 1, text = REGISTRY_1, hasNext = true })
+stub.FireEvent("ITEM_TEXT_READY")
+Expect("turning back inside the book being read still follows the reader", #QueuedPages(), 3)
+
+-- Stopped and opened again, which is the case the setting exists for.
+B:StopReading()
+stub.ClosePage()
+stub.FireEvent("ITEM_TEXT_CLOSED")
+stub.ShowPage({ title = "Hillsbrad Town Registry", number = 1, text = REGISTRY_1, hasNext = true })
+stub.FireEvent("ITEM_TEXT_READY")
+Expect("a book already read is not read again", #QueuedPages(), 0)
+
+B:ReadCurrent()
+Expect("...but asking for it still reads it", #QueuedPages(), 3)
+
+B:StopReading()
+Expect("forgetting the record empties it", B:ForgetRead() >= 1, true)
+stub.FireEvent("ITEM_TEXT_READY")
+Expect("...so the same book is read again", #QueuedPages(), 3)
+SpokenBooksDB.readOnce = false
+
+---------------------------------------------------------------- the button on the book frame
+B:StopReading()
+B:SetupPlayButton()
+local button = B.playButton
+Expect("the book frame carries a button", button ~= nil, true)
+
+-- ITEM_TEXT_CLOSED is not handled for the button on purpose: it is the frame's child and
+-- goes with it. What is asserted here is the branch the addon does own -- asked to refresh
+-- with no page on screen, it hides rather than leaving Stop offered for a book nobody has
+-- open. (The stub tracks visibility per widget, so a hidden parent would not show here.)
+stub.ClosePage()
+stub.FireEvent("ITEM_TEXT_CLOSED")
+B:RefreshPlayButton()
+Expect("...hidden when there is no page to read", button:IsShown(), false)
+
+stub.ShowPage({ title = "Hillsbrad Town Registry", number = 1, text = REGISTRY_1, hasNext = true })
+stub.FireEvent("ITEM_TEXT_READY")
+Expect("shown on a page the pack can narrate", button:IsShown(), true)
+Expect("...offering Stop while that book is being read", button:GetText(), "Stop")
+
+button.scripts.OnClick(button)
+Expect("pressing it stops the book", #QueuedPages(), 0)
+Expect("...and offers to start it again", button:GetText(), "Play")
+
+button.scripts.OnClick(button)
+Expect("pressing it again reads the book", #QueuedPages(), 3)
+Expect("...whatever autoplay and read-once say", button:GetText(), "Stop")
+
+-- Mail is not a book, and a button on a letter would be an invitation to read somebody's
+-- post aloud.
+B:StopReading()
+stub.ShowPage({ title = "A letter", number = 1, text = REGISTRY_1, creator = "Somebody" })
+stub.FireEvent("ITEM_TEXT_READY")
+Expect("no button on mail", button:IsShown(), false)
 
 print(Failures() == 0 and "All books event tests passed" or (Failures() .. " failed"))
 os.exit(Failures() == 0 and 0 or 1)

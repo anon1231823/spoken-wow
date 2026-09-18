@@ -45,9 +45,17 @@ local function Status()
 
 	Print("%d books, %d pages known; %d narrated by %d pack%s", books, pages, clips,
 		#packs, #packs == 1 and "" or "s")
-	Print("autoplay %s, whole book %s",
+	local read = 0
+	for _ in pairs(SpokenBooksCharDB and SpokenBooksCharDB.read or {}) do read = read + 1 end
+
+	Print("autoplay %s, whole book %s, read once %s",
 		SpokenBooksDB.autoplay and "on" or "off",
-		SpokenBooksDB.readWholeBook and "on" or "off")
+		SpokenBooksDB.readWholeBook and "on" or "off",
+		SpokenBooksDB.readOnce and "on" or "off")
+	-- Said whether or not read-once is on, because the count is what makes `/spb forget`
+	-- make sense, and because a reader turning the setting on wants to know what it will
+	-- already consider read.
+	Print("%d book%s read on this character", read, read == 1 and "" or "s")
 	if #packs == 0 then
 		Print(SpokenBooks:DescribeMissingAudio())
 	end
@@ -63,6 +71,19 @@ SlashCmdList["SPOKENBOOKS"] = function(msg)
 		Toggle("autoplay", "autoplay")
 	elseif cmd == "whole" or cmd == "book" then
 		Toggle("readWholeBook", "reading the whole book")
+	elseif cmd == "once" then
+		Toggle("readOnce", "reading each book only once")
+	elseif cmd == "forget" then
+		local count = SpokenBooks:ForgetRead()
+		Print("forgot %d book%s; they will be read again", count, count == 1 and "" or "s")
+	elseif cmd == "settings" or cmd == "options" then
+		-- Guarded because UI/Options.lua is the one file here that a client can do without:
+		-- everything it offers is also a command on this list.
+		if SpokenBooks.OpenOptions then
+			SpokenBooks:OpenOptions()
+		else
+			Print("no settings panel on this client -- every switch is on this list")
+		end
 	elseif cmd == "read" or cmd == "play" then
 		SpokenBooks:ReadOrExplain()
 	elseif cmd == "stop" then
@@ -71,6 +92,6 @@ SlashCmdList["SPOKENBOOKS"] = function(msg)
 	elseif cmd == "status" then
 		Status()
 	else
-		Print("/spb read | stop | autoplay | whole | status")
+		Print("/spb read | stop | autoplay | whole | once | forget | settings | status")
 	end
 end

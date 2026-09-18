@@ -368,6 +368,13 @@ function _G.ItemTextGetCreator() return world.itemTextCreator end
 function _G.ItemTextHasNextPage() return world.itemTextHasNext and true or false end
 function _G.ItemTextGetMaterial() return world.itemTextMaterial end
 
+-- The frame itself, not just its getters: an addon that hangs a button on the book window
+-- needs something to parent it to. One of the client's own frames, created here so
+-- ResetFrames keeps it -- an addon that lost the book window between tests would be
+-- rebuilding its button against a frame the client never replaces.
+_G.ItemTextFrame = MakeFrame("ItemTextFrame")
+_G.ItemTextFrame:Hide()
+
 --- Put a page on screen, as ITEM_TEXT_READY would find it.
 function M.ShowPage(page)
     world.itemText = page.text
@@ -375,12 +382,14 @@ function M.ShowPage(page)
     world.itemTextPage = page.number or 1
     world.itemTextCreator = page.creator
     world.itemTextHasNext = page.hasNext or false
+    _G.ItemTextFrame:Show()
 end
 
 --- Close it, as ITEM_TEXT_CLOSED leaves things.
 function M.ClosePage()
     world.itemText, world.itemTextItem, world.itemTextCreator = nil, nil, nil
     world.itemTextPage, world.itemTextHasNext = 1, false
+    _G.ItemTextFrame:Hide()
 end
 function _G.GetGreetingText() return world.greetingText or "" end
 function _G.GetNumGossipActiveQuests() return 0 end

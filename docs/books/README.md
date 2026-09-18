@@ -125,6 +125,31 @@ you turn pages; turning to a queued page changes nothing, and turning elsewhere 
 from there. The source has no queue limit, unlike zones: a cap trims the oldest waiting
 clip, which on a four-page book keeps the first page and the last and discards the middle.
 
+**Two saved-variable tables, on purpose.** `SpokenBooksDB` is account-wide and holds the
+three switches — autoplay, whole-book, read-once. `SpokenBooksCharDB` is per character and
+holds only what that character has been read, keyed by book id. Settings are how you like
+the addon to behave; having read something is a thing a character did, so an alt walking
+into the same library hears it fresh.
+
+**Read-once marks a book when narration starts, not when it ends.** The addon is never told
+that a clip finished — the player owns the queue — so "finished" could only be inferred
+from a queue that `/spb stop` or a zone change can empty early. The rule refuses autoplay
+only: `/spb read` and the Play button go straight to the playlist, because a reader pressing
+play has asked again in so many words. It also does not refuse the book it is in the middle
+of reading, which is what `SpokenBooks:IsNarrating` is for — a reader who jumps past the
+queued pages would otherwise strand the narration on the page they turned away from.
+
+**The panel and the button are the two files this addon reads books without.**
+`UI/Options.lua` registers a settings canvas the way the zones panel does, and
+`UI/PlayButton.lua` hangs Play/Stop off the book window — outside its top-right corner,
+because the inside of `ItemTextFrame` is Blizzard's and its art changes with the page's
+material. `Events.lua` guards both calls, so a partial install still narrates. Every switch
+on the panel is also a `/spb` command, which is what a client with no Settings API gets.
+
+`UI/Layout.lua` is the fourth copy of a file that must stay byte-identical across
+SpokenPlayer, SpokenQuests, SpokenZones and SpokenBooks;
+`pipelines/quests/tests/test_package.py` is what enforces that.
+
 ### Installing it in a client
 
 ```bash

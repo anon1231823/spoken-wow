@@ -51,6 +51,16 @@ function SpokenBooks:OnTextReady()
 		return 0
 	end
 
+	-- Read once, and this character has read this one. Only autoplay is refused: `/spb read`
+	-- and the button on the frame go straight to SyncTo, because a reader who presses play
+	-- has asked for this book again in so many words.
+	if SpokenBooksDB.readOnce then
+		local book = self:PlaceOf(pageId)
+		if self:HasReadBook(book) and not self:IsNarrating(book) then
+			return 0
+		end
+	end
+
 	return self:SyncTo(pageId)
 end
 
@@ -75,6 +85,14 @@ frame:SetScript("OnEvent", function(_, event, arg1)
 	local payload = arg1 or _G.arg1
 	if name == "ITEM_TEXT_READY" then
 		SpokenBooks:OnTextReady()
+		-- After, not before: the button's label is "Stop" only once the page has queued, and
+		-- built here as well as at login so a client that makes ItemTextFrame late still
+		-- gets one. The button needs no hiding on ITEM_TEXT_CLOSED -- it is the frame's
+		-- child and goes with it.
+		if SpokenBooks.SetupPlayButton then
+			SpokenBooks:SetupPlayButton()
+			SpokenBooks:RefreshPlayButton()
+		end
 	elseif name == "ITEM_TEXT_CLOSED" then
 		SpokenBooks:OnTextClosed()
 	elseif name == "ADDON_LOADED" then
@@ -85,6 +103,19 @@ frame:SetScript("OnEvent", function(_, event, arg1)
 		end
 	elseif name == "PLAYER_ENTERING_WORLD" then
 		SpokenBooks:SetupSource()
+		-- Both guarded, and for the same reason: UI/PlayButton.lua and UI/Options.lua are
+		-- the two files this addon reads books without. The .toc loads them, so a guard here
+		-- is not about the shipped addon -- it is what keeps narration working when one of
+		-- them is missing, and what lets a test load the wiring without the UI.
+		if SpokenBooks.SetupPlayButton then
+			SpokenBooks:SetupPlayButton()
+		end
+		-- The panel is registered here rather than at ADDON_LOADED because the Settings API
+		-- is what the client offers late, and because a panel nobody opens costs nothing to
+		-- build once the world is up.
+		if SpokenBooks.SetupOptions then
+			SpokenBooks:SetupOptions()
+		end
 	end
 end)
 

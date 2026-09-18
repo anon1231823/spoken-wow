@@ -31,6 +31,9 @@ local defaults = {
 	-- Whole book rather than the page on screen. A twenty-page journal read one button
 	-- press at a time is a worse experience than one that reads on while you turn pages.
 	readWholeBook = true,
+	-- Off, because a reader who has not asked for it should hear a book whenever they open
+	-- it. On, a book is narrated the first time it is opened and stays quiet after that.
+	readOnce = false,
 }
 
 function SpokenBooks:InitDB()
@@ -40,7 +43,51 @@ function SpokenBooks:InitDB()
 			SpokenBooksDB[key] = value
 		end
 	end
+
+	-- What has been heard is the character's, not the account's: the settings above are how
+	-- you like the addon to behave and belong to you, while "I have read this" is something
+	-- a particular character did. An alt walking into the same library hears it fresh.
+	SpokenBooksCharDB = SpokenBooksCharDB or {}
+	SpokenBooksCharDB.read = SpokenBooksCharDB.read or {}
+
 	return SpokenBooksDB
+end
+
+--- Whether this character has already been read `book` -- the book key from PlaceOf, not a
+--- page. Answers false for a nil book so the caller does not have to check twice.
+function SpokenBooks:HasReadBook(book)
+	if not book or not SpokenBooksCharDB then
+		return false
+	end
+	return SpokenBooksCharDB.read[book] == true
+end
+
+--- Remember that this character has heard `book`.
+---
+--- Called when narration STARTS rather than when it finishes. The addon is not told when a
+--- clip ends -- the player owns the queue -- so "finished" would have to be inferred from a
+--- queue that a zone change or `/spb stop` can empty early, and a book abandoned halfway
+--- would count as read anyway. Starting is the moment this addon actually observes.
+function SpokenBooks:MarkBookRead(book)
+	if not book or not SpokenBooksCharDB then
+		return
+	end
+	SpokenBooksCharDB.read[book] = true
+end
+
+--- Forget everything this character has heard, and say how much that was. What `/spb forget`
+--- and the settings panel's button reach: a reader who turns the setting on, then wants the
+--- library back, has no other way to undo it.
+function SpokenBooks:ForgetRead()
+	local count = 0
+	if not SpokenBooksCharDB then
+		return count
+	end
+	for _ in pairs(SpokenBooksCharDB.read) do
+		count = count + 1
+	end
+	SpokenBooksCharDB.read = {}
+	return count
 end
 
 --- Whether the player addon is present and speaks a version this addon understands.
@@ -103,11 +150,16 @@ function SpokenBooks:SetupSource()
 	-- contributes no entry is absent from that menu however correctly it registered --
 	-- indistinguishable, to a reader, from an addon that did not load.
 	--
-	-- No settings entry to go with it, unlike quests and zones: this addon has no options
-	-- panel, and its two switches are `/spb autoplay` and `/spb whole`.
 	if Spoken.Minimap then
 		Spoken.Minimap:AddEntry("books", { id = "Read", text = "Read this book", order = 1,
 			onClick = function() SpokenBooks:ReadOrExplain() end })
+		Spoken.Minimap:AddEntry("books", { id = "Options", text = "Spoken Books settings",
+			order = 2, onClick = function() SpokenBooks:OpenOptions() end })
+	end
+
+	if Spoken.AddSettingsLink then
+		Spoken:AddSettingsLink("Spoken Books settings",
+			function() SpokenBooks:OpenOptions() end)
 	end
 
 	return self.source
