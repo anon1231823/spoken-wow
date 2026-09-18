@@ -15,6 +15,15 @@ setfenv(1, VoiceOver) must be added to every .lua file to allow it to work withi
 and this Environment file must be loaded before all others
 ]]
 
+-- THE GLOBAL STAYS VoiceOver, whatever the addon is called. It is not a leftover: every sound
+-- pack calls into the player through it, and those calls are Lua baked into files already on
+-- players' disks -- `if not VoiceOver or not VoiceOver.DataModules then return end` and
+-- `VoiceOver.DataModules:Register(...)`, from tts_cli/build.py. A rebuilt pack could follow a
+-- rename; a pack built for upstream AI VoiceOver could not, and DataModules deliberately keeps
+-- reading those. Renaming this would make every pack this project did not build inert forever.
+--
+-- The DataModule TOC key is being renamed, and is not a counter-example: a key is data, so
+-- both spellings can be looked for. A call target is not -- the pack names the symbol.
 local _G = getfenv(0)
 local previousEnvironment = rawget(_G, "VoiceOver")
 
