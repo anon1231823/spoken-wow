@@ -73,10 +73,13 @@ export function sourceFolder(locale) {
  *
  * Other languages ship one VBR tier, so their folder carries no bitrate marker -- if a
  * second tier is ever wanted for a language, it needs a suffix and this rule gets an
- * exception, not a rewrite. Their folders keep the ZoneLoreAudio_ prefix, which is also
- * the directory name on the droplet (make/zones.mk:REMOTE_SOUNDS_DIR); renaming those is a
- * move of several hundred megabytes on a server for no gain, since no language pack has a
- * CurseForge project yet.
+ * exception, not a rewrite.
+ *
+ * This agreed with scripts/zones/package-audio.sh only by accident until now: that script
+ * names a language's folder after its source directory, which the merge renamed, while this
+ * still said ZoneLoreAudio_<locale>. Nothing caught it because no language pack has shipped.
+ * The droplet directory is a third name again (make/zones.mk:REMOTE_SOUNDS_DIR) and stays
+ * put -- it is a path on a server holding audio, not something a player installs.
  *
  * THE FULL LOCALE CODE, never a truncation: "es" would make esES and esMX one
  * folder, and the collision would be silent -- take filenames are identical
@@ -87,7 +90,7 @@ export function packFolder(locale, tier = "standard") {
   if (locale === BASE_LOCALE) {
     return tier === "high" ? "SpokenZonesAudio" : "ZoneLoreAudio64";
   }
-  return "ZoneLoreAudio_" + locale;
+  return "SpokenZonesAudio_" + locale;
 }
 
 /** The tiers a language is packaged at. See packFolder for why English differs. */
