@@ -74,9 +74,15 @@ esac; }
 # a .toc for both clients, so both are filed against both. Files uploaded
 # before that are Era-only and stay filed as they were -- a file offered to a
 # client it cannot load on is worse than one that is simply absent there.
-# Required dependencies by CurseForge slug: the addon needs the player it speaks through.
+# Required dependencies by CurseForge slug. The addon needs the player it speaks through, and
+# the pack needs the addon: it is data, inert without something to read it, and a manager that
+# installs it alone leaves a player several hundred megabytes heavier and no louder.
+#
+# It also makes the pair upgrade together, which is what lets a pack register itself under one
+# name only - see the ONE REGISTRY note in tools/voice/build-lookup.mjs.
 target_dependencies() { case "$1" in
   zones)    echo "spoken-player";;
+  audio)    echo "spoken-zones";;
 esac; }
 
 target_game_versions() { case "$1" in
@@ -211,8 +217,7 @@ for target in "${targets[@]}"; do
   # Built with node rather than a heredoc: the changelog is markdown containing
   # quotes, backticks and newlines, and hand-escaping it into JSON is how a
   # release ends up with a mangled changelog nobody notices for a month.
-  # The addon requires the player; the packs require nothing. By slug, which must be an
-  # approved project or the upload fails with errorCode 1018.
+  # By slug, which must name an approved project or the upload fails with errorCode 1018.
   dependencies="$(target_dependencies "$target")"
   metadata="$(node -e '
     const [changelog, releaseType, gameVersionIds, displayName, dependencies] = process.argv.slice(1);
@@ -230,6 +235,7 @@ for target in "${targets[@]}"; do
   echo "  file:     $zip_path ($size)"
   echo "  version:  $version   release type: $RELEASE_TYPE   game versions: $game_version_names"
   echo "  changelog: $(echo "$changelog" | head -1) ..."
+  [[ -n "$dependencies" ]] && echo "  requires: $(echo $dependencies)"
 
   if [[ -n "$dry_run" ]]; then
     echo "  dry run -- not uploading"
