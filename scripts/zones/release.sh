@@ -58,7 +58,7 @@ target_addon() { case "$1" in
 esac; }
 target_zip() { case "$1" in
   zones)    echo "SpokenZones";;
-  audio)    echo "ZoneLoreAudio";;
+  audio)    echo "SpokenZonesAudio";;
 esac; }
 # The project's slug, which is neither the folder nor the zip name: the folders keep the names
 # they were published under and the slugs were changed with the rename. Used for the link

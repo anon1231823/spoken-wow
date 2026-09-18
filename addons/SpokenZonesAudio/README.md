@@ -12,7 +12,9 @@ The **lore text** was rewritten in the same release to describe the world as a v
 
 ## Installing
 
-Install **Spoken Zones** first; this pack is inert without it. Extract into `Interface/AddOns` and leave the folder name as shipped — the folder is called `ZoneLoreAudio`, the name it was published under, and Spoken Zones finds packs by folder name.
+Install **Spoken Zones** first; this pack is inert without it. Extract into `Interface/AddOns` and leave the folder name as shipped — Spoken Zones finds packs by folder name.
+
+The folder is `SpokenZonesAudio` as of this release; it was `ZoneLoreAudio` before, so your addon manager replaces the old folder rather than adding to it. If you installed by hand, delete the old one.
 
 There was a second, smaller pack at 64 kbps. It is retired: it stays installable for anyone who has it, and gets no further updates. This one is the pack to install.
 

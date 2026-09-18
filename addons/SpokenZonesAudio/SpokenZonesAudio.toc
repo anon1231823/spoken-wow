@@ -3,7 +3,7 @@
 ## Notes: Narrated zone lore for Spoken Zones. Install alongside Spoken Zones.|n|cffffcc00Beta:|r a proof-of-concept voice, being redesigned and re-generated.
 ## Version: 0.3.3
 ## Author: rusty
-## IconTexture: Interface\AddOns\ZoneLoreAudio\Textures\AddonIcon.tga
+## IconTexture: Interface\AddOns\SpokenZonesAudio\Textures\AddonIcon.tga
 ## X-License: Audio generated with ElevenLabs from warcraft.wiki.gg lore text (CC BY-SA 4.0).
 ## X-Credits: Lore text sourced from warcraft.wiki.gg contributors (CC BY-SA 4.0).
 

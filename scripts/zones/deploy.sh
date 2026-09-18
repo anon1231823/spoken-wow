@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Makes addon/ZoneLore and addon/ZoneLoreAudio visible to a WoW client.
+# Makes addons/SpokenZones and addons/SpokenZonesAudio visible to a WoW client.
 #
 #   ./scripts/deploy.sh          # symlink (edits are live, just /reload in-game)
 #   ./scripts/deploy.sh --copy   # rsync a real copy instead
@@ -15,9 +15,9 @@
 # behind in the one you were not thinking about.
 #
 # Symlinking is preferred: no re-run needed after each edit. If the client's
-# AddOns list does not show ZoneLore, fall back to --copy and re-run per change.
+# AddOns list does not show Spoken Zones, fall back to --copy and re-run per change.
 #
-# Both addons are handled together. ZoneLoreAudio is optional to the player but
+# Both addons are handled together. The sound pack is optional to the player but
 # not to development: symlinking it means a generation run lands in the client
 # without a redeploy, exactly as an edit to a .lua does.
 #
@@ -28,7 +28,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WOW="/Applications/World of Warcraft"
-NAMES=(ZoneLore ZoneLoreAudio)
+NAMES=(SpokenZones SpokenZonesAudio)
 
 # Client key -> the flavour directory Blizzard installs it under.
 CLIENTS=(era anniversary)

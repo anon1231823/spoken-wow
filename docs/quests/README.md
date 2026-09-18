@@ -163,27 +163,30 @@ downsample halves that again and speech survives the 11 kHz ceiling it imposes �
 second set of packs for a while and is retired, because one format is one set of projects and one
 answer to "which do I install".
 
-`make package-audio-complete` builds the same audio as one `VoiceOverReduxAudioHQ` folder, ~1.3 GB.
+`make package-audio-complete` builds the same audio as one `SpokenQuestsAudioComplete` folder, ~1.3 GB.
 It is **not a CurseForge release**: it is far over the upload ceiling and always will be. The site
 hosts it instead — `make push-complete` puts a built zip in `shared/downloads/` on the droplet and
 repoints
-[`/downloads/VoiceOverReduxAudioHQ-latest.zip`](https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip),
-a symlink, so the published URL never changes. See `deploy/README.md`.
+[`/downloads/SpokenQuestsAudioComplete-latest.zip`](https://spoken.rusty.one/downloads/SpokenQuestsAudioComplete-latest.zip),
+a symlink, so the published URL never changes. It repoints the old
+`VoiceOverReduxAudioHQ-latest.zip` at the same file as well, because that name is in
+descriptions and forum posts this repository cannot edit. See `deploy/README.md`.
 
 **The packs ship as five CurseForge projects** — four packs and a meta addon:
 
 | | |
 | --- | --- |
-| Folders | `VoiceOverReduxHQAudio…` |
+| Folders | `SpokenQuestsAudio…` |
 | Titles | `Spoken Quests Audio: Alliance` |
 | Encode | `ogg-q0-44k`, ~300 MB a pack |
 | Built by | `make package-audio` + `package-meta` |
 
 The five projects the retired packs used stay published and are never uploaded to again, so
 `MODULE` and `TITLE_FAMILY` in `scripts/quests/package-audio.sh` have one set of packs to name.
-The folder names are the ones the packs were published under and do not change: `DataModules`
-matches an installed pack by folder name, so renaming one is a 300 MB re-download *and* a player
-being offered a pack they already have.
+The folders were `VoiceOverReduxHQAudio…` until the rename. Renaming them is safe because
+nothing stores a path built from a folder name — `DataModules` composes one at play time from
+the folder the client reports — but `availableModules` in `DataModules.lua` has to move with
+them, since that is how an installed pack is recognised.
 
 `docs/pack-size.md` is where every encode was measured, along with the dead ends (deduplication, silence trimming, harder zip
 compression — all worth nothing).

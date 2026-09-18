@@ -48,12 +48,13 @@ cd "$REPO"
 
 STORE="${STORE:-audio}"
 DIST="${DIST:-dist}"
-# The shipping packs' folder prefix. The name is the one they were published under, and stays
-# that way whatever the projects are called: it is the path every player who has a pack already
-# holds on disk, and DataModules matches an installed pack by exactly this name. A rename is
-# 1.3 GB re-downloaded to move files that are already correct, and every one of those players
-# told they are missing a pack they have.
-MODULE="${MODULE:-VoiceOverReduxHQAudio}"
+# The shipping packs' folder prefix, which every pack suffix is appended to. Renaming it renames
+# the folder players install, which is safe here only because nothing stores a path built from
+# it - DataModules composes one at play time from the folder the client reports - and costs a
+# re-download the next release was going to cost anyway. It was VoiceOverReduxHQAudio until the
+# projects were renamed; DataModules:availableModules has to be kept in step with it, since that
+# is how the player recognises an installed pack.
+MODULE="${MODULE:-SpokenQuestsAudio}"
 VERSION="${VERSION:-1.2.1}"
 # Which packs to build; each becomes MODULE plus the suffix tts_cli/factions.py gives it.
 #

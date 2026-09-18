@@ -23,7 +23,7 @@ because they are a large download. Two tiers with identical content:
 
 | Folder | Bitrate | Zip |
 |---|---|---|
-| `ZoneLoreAudio` | 128 kbps (the masters) | ~790 MB |
+| `SpokenZonesAudio` | 128 kbps (the masters) | ~790 MB |
 | `ZoneLoreAudio64` | 64 kbps mono | ~400 MB — **retired** |
 
 `ZoneLoreAudio64` is no longer built or uploaded: one quality is one project, one
@@ -1097,7 +1097,7 @@ the masters; every shipped tier is derived from them.
 
 ### Sound packs are self-describing
 
-A tier is an addon folder of its own — `ZoneLoreAudio` at 128kbps,
+A tier is an addon folder of its own — `SpokenZonesAudio` at 128kbps,
 `ZoneLoreAudio64` at 64 — rather than two files under one project. One project
 with two files would mean the addon manager silently "updating" a player from the
 tier they chose to whichever file is newest, which is a 400MB surprise.
@@ -1449,7 +1449,7 @@ do not touch a voiceline, and the packs should not re-upload 400MB for a Lua fix
 
 ```sh
 make package                    # dist/SpokenZones-<version>.zip
-make package-audio              # dist/ZoneLoreAudio-<v>.zip
+make package-audio              # dist/SpokenZonesAudio-<v>.zip
 ```
 
 `make package` refuses to build from a dirty `addon/` tree, so a zip can always be
@@ -1491,7 +1491,7 @@ happens. `GAME_VERSION_ERA=` and `GAME_VERSION_ANNIVERSARY=` override them.
 
 Which clients each file is offered to is `target_game_versions()` in the script.
 The addon and the VBR pack carry a `.toc` for both clients and are filed against
-both; `ZoneLoreAudio` is filed against Era alone, because the published zip
+both; the sound pack is filed against Era alone, because the published zip
 predates the second `.toc` and a file offered to a client it cannot load on is
 worse than one that is simply absent there.
 

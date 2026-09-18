@@ -60,10 +60,10 @@ and `.github/workflows/release-addons.yaml` the same links, so a slug that chang
 in all four. The project names are the addons' `## Title` too - `tts_cli/factions.py:pack_title` -
 so a player sees the same name in the AddOns list as on the site.
 
-**The folder names did not change with them.** The packs ship as `VoiceOverReduxHQAudio*` and the
-zones pack as `ZoneLoreAudio`, because a renamed folder is a re-download of every clip in it, and
-because the player finds packs by folder name. Old name on disk, current name everywhere a player
-reads one.
+**The folder names moved with them.** The packs ship as `SpokenQuestsAudio*` and the zones pack as
+`SpokenZonesAudio`, where they were `VoiceOverReduxHQAudio*` and `ZoneLoreAudio`. A renamed folder
+is a re-download of every clip in it, which the release doing the renaming costs anyway; what it
+is not is a broken path, because nothing stores one built from a folder name.
 
 **These are pasted by hand and the site is the live copy.** There is no API for descriptions —
 `scripts/release.sh` uploads files and nothing else, deliberately, because a script that

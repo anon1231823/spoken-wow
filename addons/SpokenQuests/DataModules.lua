@@ -87,10 +87,12 @@ DataModules =
 
     --- Stores modules known to exist to present the player with information on how to download or update them
     ---@type AvailableDataModule[]
-    -- AddonName is the folder on disk, which is what EnumerateAddons keys presentModules by -
-    -- so these are the names the packs were published under and cannot be renamed without
-    -- telling every player who has one that they are missing it. The titles and the URLs are
-    -- the current names; the folders are the old ones and stay that way.
+    -- AddonName is the folder on disk, which is what EnumerateAddons keys presentModules by, so
+    -- these have to be the folder names the packs ship under and not their titles. They were
+    -- VoiceOverReduxHQAudio* until the rename, and moved with it: a pack's folder can be renamed
+    -- because nothing resolves a path from a baked-in name - DataModules composes it from
+    -- METADATA.AddonName at play time - and every pack is re-downloaded on the next release
+    -- anyway, which is the only cost a rename has.
     --
     -- The sound pack ships in five pieces, so this is a menu rather than a single answer: a
     -- player picks their side plus the shared quests, or takes the complete pack. Only shown
@@ -99,35 +101,35 @@ DataModules =
     -- theirs is noise.
     availableModules = {
         {
-            AddonName = "VoiceOverReduxHQAudioAll",
+            AddonName = "SpokenQuestsAudioAll",
             Title = "Spoken Quests Audio: All",
             ContentVersion = "1.2.1",
             RelevantAboveVersion = 0,
             URL = "https://www.curseforge.com/wow/addons/spoken-quests-audio-all",
         },
         {
-            AddonName = "VoiceOverReduxHQAudioAlliance",
+            AddonName = "SpokenQuestsAudioAlliance",
             Title = "Spoken Quests Audio: Alliance",
             ContentVersion = "1.2.1",
             RelevantAboveVersion = 0,
             URL = "https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance",
         },
         {
-            AddonName = "VoiceOverReduxHQAudioHorde",
+            AddonName = "SpokenQuestsAudioHorde",
             Title = "Spoken Quests Audio: Horde",
             ContentVersion = "1.2.1",
             RelevantAboveVersion = 0,
             URL = "https://www.curseforge.com/wow/addons/spoken-quests-audio-horde",
         },
         {
-            AddonName = "VoiceOverReduxHQAudioShared",
+            AddonName = "SpokenQuestsAudioShared",
             Title = "Spoken Quests Audio: Shared Quests",
             ContentVersion = "1.2.1",
             RelevantAboveVersion = 0,
             URL = "https://www.curseforge.com/wow/addons/spoken-quests-audio-shared",
         },
         {
-            AddonName = "VoiceOverReduxHQAudioGossip",
+            AddonName = "SpokenQuestsAudioGossip",
             Title = "Spoken Quests Audio: Gossip",
             ContentVersion = "1.2.1",
             RelevantAboveVersion = 0,

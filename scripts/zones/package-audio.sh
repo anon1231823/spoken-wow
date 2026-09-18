@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the ZoneLore sound packs, one zip per quality tier.
+# Builds the Spoken Zones sound pack.
 #
 #   ./scripts/package-audio.sh                 # the English pack
 #   ./scripts/package-audio.sh standard        # just the 64kbps one
@@ -94,12 +94,13 @@ JOBS="${JOBS:-$( (command -v nproc >/dev/null 2>&1 && nproc) || sysctl -n hw.ncp
 # published, which is the reason not to invent one now.
 tier_folder() {
   if [[ "$LOCALE" != "enUS" ]]; then basename "$SRC"; return; fi
-  case "$1" in standard) echo "ZoneLoreAudio64";; high) echo "ZoneLoreAudio";; esac
+  case "$1" in standard) echo "ZoneLoreAudio64";; high) echo "SpokenZonesAudio";; esac
 }
 tier_bitrate()  { case "$1" in standard) echo "64";; high) echo "128";; esac; }
 tier_encoding() { case "$1" in standard) echo "vbr-v6";; high) echo "copy";; esac; }
-# The folder names above are frozen -- a renamed pack folder is a re-download of every
-# clip in it -- so the title is the only place a player reads the current name.
+# The high tier was renamed from ZoneLoreAudio with the projects: a pack reads its own folder
+# name out of the loader, so nothing breaks, and the re-download it costs is one the release
+# doing the rename costs anyway. ZoneLoreAudio64 keeps its name because it is retired.
 tier_title() {
   if [[ "$LOCALE" != "enUS" ]]; then echo "Spoken Zones Audio $LOCALE"; return; fi
   case "$1" in standard) echo "Spoken Zones Audio 64";; high) echo "Spoken Zones Audio";; esac

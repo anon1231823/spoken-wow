@@ -89,19 +89,19 @@ esac; }
 # corpus in one zip comes back 413, so that project ships a few kilobytes declaring the other
 # four packs as required dependencies, and the manager fetches them.
 #
-# The folder names still say VoiceOverReduxHQAudio, and stay that way. They are the paths every
-# player who installed one of these packs already has on disk, and DataModules matches an
-# installed pack by exactly this name - so a rename is both a re-download of 300 MB per pack and
-# a player being offered a pack they already have. The name is historical in both halves and
-# that costs nothing: nobody reads a folder name, and every title and page says Spoken Quests.
+# The packs were VoiceOverReduxHQAudio* until the rename and moved with it. A pack's folder can
+# be renamed because nothing stores a path built from it: DataModules composes one from the
+# folder the client reports at play time, and the zones packs read their own name out of the
+# loader. The cost is that every player re-downloads the pack, which the next release makes them
+# do regardless.
 target_zip_name() { case "$1" in
   spoken)         echo "SpokenPlayer";;
   player)         echo "SpokenQuests";;
-  audio-all)      echo "VoiceOverReduxHQAudio";;
-  audio-alliance) echo "VoiceOverReduxHQAudioAlliance";;
-  audio-horde)    echo "VoiceOverReduxHQAudioHorde";;
-  audio-shared)   echo "VoiceOverReduxHQAudioShared";;
-  audio-gossip)   echo "VoiceOverReduxHQAudioGossip";;
+  audio-all)      echo "SpokenQuestsAudio";;
+  audio-alliance) echo "SpokenQuestsAudioAlliance";;
+  audio-horde)    echo "SpokenQuestsAudioHorde";;
+  audio-shared)   echo "SpokenQuestsAudioShared";;
+  audio-gossip)   echo "SpokenQuestsAudioGossip";;
 esac; }
 
 # Where a version comes from, which is not the same question for the player and a pack.

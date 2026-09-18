@@ -225,28 +225,29 @@ package: ## Zip the player addon into dist/: one Blizzard zip, one per legacy cl
 	@./scripts/quests/package.sh
 
 package-audio: ## Transcode, build and zip the five sound packs into dist/ (VERSION=1.4.0)
-	@VERSION=$(VERSION) ENCODE=$(if $(ENCODE),$(ENCODE),ogg-q0-44k) MODULE=VoiceOverReduxHQAudio \
+	@VERSION=$(VERSION) ENCODE=$(if $(ENCODE),$(ENCODE),ogg-q0-44k) MODULE=SpokenQuestsAudio \
 	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
 # Every line in one folder rather than split five ways, ~1.3 GB. Not a CurseForge release - it
 # is over the upload ceiling and always will be - so it is built for people who would rather
 # take one download, and it is a folder of its own rather than a fatter copy of a shipping pack,
 # so installing it beside them is possible but pointless. The site hosts it: `push-complete`
-# below, and the published URL carries the folder name, so the folder cannot be renamed.
+# below, which keeps the old published URL alive as a second symlink.
 
 package-audio-complete: ## Build the whole corpus as one folder for the site (~1.3 GB)
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
-	  MODULE_NAME=VoiceOverReduxAudioHQ TITLE="Spoken Quests Audio: Complete" \
+	  MODULE_NAME=SpokenQuestsAudioComplete TITLE="Spoken Quests Audio: Complete" \
 	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
 # The "install everything" addon, which installs nothing itself: a few kilobytes declaring the
 # four packs as CurseForge dependencies, because the complete pack is too big to upload. Its
 # header explains the rest; release.sh sends the dependency list with the file.
 #
-# NAME is the shipping family's folder, which release.sh uploads as audio-all.
+# NAME is the bare pack-family folder, which the split packs leave free, and which release.sh
+# uploads as audio-all.
 
 package-meta: ## Zip the meta addon that pulls in all four packs
-	@VERSION=$(VERSION) NAME=VoiceOverReduxHQAudio ./scripts/quests/package-meta.sh
+	@VERSION=$(VERSION) NAME=SpokenQuestsAudio ./scripts/quests/package-meta.sh
 
 # The complete pack's home, since it is too big for CurseForge: nginx serves
 # /srv/voiceover/shared/downloads/ straight off disk (see deploy/quests/nginx-voiceover.conf), and
@@ -256,12 +257,17 @@ package-meta: ## Zip the meta addon that pulls in all four packs
 # built fails here instead of uploading whatever zip is oldest in dist/. -latest.zip is a
 # symlink repointed after the copy: the published URL never changes, and it never points at a
 # half-transferred file because rsync writes to a temporary name and renames.
+#
+# TWO SYMLINKS, because the pack folder was renamed and the old URL was not. Descriptions and
+# forum posts point at VoiceOverReduxAudioHQ-latest.zip, and deploy/web/nginx-spoken.conf calls
+# that path frozen; it now points at the same file as the current name. Dropping it would break
+# links this repository cannot edit.
 
 REMOTE_DOWNLOADS := $(REMOTE_ROOT)/shared/downloads
 
 push-complete: ## Upload the built complete pack to the site's downloads directory
 	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. brew install rsync"; exit 1; }
-	@v=$$(sed -n 's/^## Version:[[:space:]]*//p' dist/VoiceOverReduxAudioHQ/VoiceOverReduxAudioHQ.toc 2>/dev/null | head -1); 	[ -n "$$v" ] || { echo "No complete module built. Run: make package-audio-complete"; exit 1; }; 	zip=dist/VoiceOverReduxAudioHQ-$$v.zip; 	[ -f "$$zip" ] || { echo "$$zip is missing. Run: make package-audio-complete"; exit 1; }; 	echo "==> $$zip -> $(DROPLET):$(REMOTE_DOWNLOADS)/"; 	$(RSYNC) -a --human-readable --info=progress2 -e "$(SSH)" "$$zip" $(DROPLET):$(REMOTE_DOWNLOADS)/; 	$(SSH) $(DROPLET) "ln -sfn VoiceOverReduxAudioHQ-$$v.zip $(REMOTE_DOWNLOADS)/VoiceOverReduxAudioHQ-latest.zip"; 	echo "==> https://voiceover.rusty.one/downloads/VoiceOverReduxAudioHQ-latest.zip"
+	@v=$$(sed -n 's/^## Version:[[:space:]]*//p' dist/SpokenQuestsAudioComplete/SpokenQuestsAudioComplete.toc 2>/dev/null | head -1); 	[ -n "$$v" ] || { echo "No complete module built. Run: make package-audio-complete"; exit 1; }; 	zip=dist/SpokenQuestsAudioComplete-$$v.zip; 	[ -f "$$zip" ] || { echo "$$zip is missing. Run: make package-audio-complete"; exit 1; }; 	echo "==> $$zip -> $(DROPLET):$(REMOTE_DOWNLOADS)/"; 	$(RSYNC) -a --human-readable --info=progress2 -e "$(SSH)" "$$zip" $(DROPLET):$(REMOTE_DOWNLOADS)/; 	$(SSH) $(DROPLET) "ln -sfn SpokenQuestsAudioComplete-$$v.zip $(REMOTE_DOWNLOADS)/SpokenQuestsAudioComplete-latest.zip; ln -sfn SpokenQuestsAudioComplete-$$v.zip $(REMOTE_DOWNLOADS)/VoiceOverReduxAudioHQ-latest.zip"; 	echo "==> https://spoken.rusty.one/downloads/SpokenQuestsAudioComplete-latest.zip"
 
 downloads-status: ## List what the site is offering for download
 	@$(SSH) $(DROPLET) 'ls -lh $(REMOTE_DOWNLOADS)/'
