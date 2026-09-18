@@ -13,12 +13,16 @@
 # Language.lua which language to build a table for, and it can only answer that
 # early because ZoneLoreDB is already populated. Without this line every player
 # silently reads English.
-## OptionalDeps: SpokenPlayer, ZoneLore, ZoneLoreAudio, ZoneLoreAudio64
+## OptionalDeps: SpokenPlayer, ZoneLore, SpokenZonesAudio, ZoneLoreAudio, ZoneLoreAudio64
 # Spoken is the player this addon speaks through. Optional here so a hand-installed
 # copy without it loads and says what is missing rather than failing to load at
 # all; addon managers install it from the CurseForge dependency. The packs are not
-# a registration mechanism either -- they register themselves into ZoneLoreAudioPacks
+# a registration mechanism either -- they register themselves into SpokenZonesAudioPacks
 # and Audio.lua walks that on demand -- so this list is load order only.
+#
+# Both pack folder names are listed: SpokenZonesAudio is what ships now, ZoneLoreAudio
+# what a player installed before the rename, and ZoneLoreAudio64 the retired smaller
+# tier. A name here that nobody has installed costs nothing.
 ## IconTexture: Interface\AddOns\SpokenZones\Textures\AddonIcon.tga
 ## X-License: Addon code MIT. Zone lore text from warcraft.wiki.gg, CC BY-SA 4.0.
 ## X-Credits: Lore text sourced from warcraft.wiki.gg contributors (CC BY-SA 4.0).
