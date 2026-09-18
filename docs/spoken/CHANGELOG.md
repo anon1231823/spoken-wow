@@ -1,5 +1,12 @@
 # Changelog — Spoken Player
 
+## 2.0.3 — 2026-09-18
+
+- **The minimap button's texture is DXT5, like every other texture Spoken ships.** The
+  palettized BLP the 2.0.2 button used is legal by the format's own rules, but the Classic
+  beta client asserts inside its image decoder the moment it loads one and takes the game
+  down. The mark is unchanged; only the encoding is.
+
 ## 2.0.2 — 2026-09-18
 
 - **The minimap button wears the play triangle.** It carried a crest inherited from VoiceOver
