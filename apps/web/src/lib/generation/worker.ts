@@ -24,7 +24,7 @@ import {
   type Source,
 } from "./queue";
 import { regenerateLine, type RegenerateResult } from "./regenerate";
-import { regenerateBookLine } from "@/lib/books/regenerate";
+import { publish as publishBooks, regenerateBookLine } from "@/lib/books/regenerate";
 import { publish as publishZones, regenerateZoneLine } from "@/lib/zones/regenerate";
 import { readSettings } from "./settings";
 import { generationStatus } from "./status";
@@ -129,11 +129,12 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
   // Only the sources that actually generated something this drain. Publishing for a
   // section nobody touched would rewrite a table for no reason, and doing it on a drain
   // that generated nothing at all -- which is every idle tick -- would do it forever.
-  // Books has no entry: its addon and the Lua lookup that would need rebuilding do not
-  // exist yet. When they do, the export goes here beside the zones one -- per drain, not
-  // per line, because it rewrites the whole table.
+  // Per drain rather than per line for both: each rewrites its whole lookup table, and
+  // doing that per take would be the slowest part of a run otherwise spent waiting on
+  // ElevenLabs. Quests has no entry because its addon reads the corpus it already ships.
   const afterDrain: Partial<Record<Source, () => Promise<void>>> = options.afterDrain ?? {
     zones: () => publishZones(),
+    books: () => publishBooks(),
   };
   const generated = new Set<Source>();
   const budget = options.budget ?? currentBudget;

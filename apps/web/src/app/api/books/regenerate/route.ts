@@ -10,11 +10,13 @@
  * ('b:1381'), and round-tripping that through a dynamic segment is encoding risk for no
  * benefit.
  *
- * NOTHING IS PUBLISHED AFTERWARDS, unlike the zones route. The books addon and the Lua
- * lookup it would resolve clips through do not exist yet; when they do, the export belongs
- * here and in the worker's afterDrain, together.
+ * The lookup is rebuilt afterwards, as the zones route rebuilds its own: the addon resolves
+ * every clip through Data/Sounds.lua, so a take that is not in it is unreachable. A batch
+ * publishes once when the queue drains; a single page has no drain to wait for, and leaving
+ * it until the next batch would make one-off regeneration the one path whose result the
+ * addon cannot play.
  */
-import { regenerateBookLine } from "@/lib/books/regenerate";
+import { publish, regenerateBookLine } from "@/lib/books/regenerate";
 import { requireApiKey, requireRegenerate } from "@/lib/generation/authz";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +42,10 @@ export async function POST(request: Request) {
       { status: result.failure.status },
     );
   }
+
+  await publish().catch((error: unknown) => {
+    console.error("books: could not rebuild the lookup after a single regeneration", error);
+  });
 
   return Response.json(result);
 }
