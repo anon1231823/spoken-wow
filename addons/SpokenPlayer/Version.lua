@@ -15,6 +15,10 @@ Version.IsRetailVanilla         = Version.IsAnyRetail and WOW_PROJECT_ID == WOW_
 Version.IsRetailBurningCrusade  = Version.IsAnyRetail and WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC or nil
 Version.IsRetailWrath           = Version.IsAnyRetail and WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC or nil
 Version.IsRetailMainline        = Version.IsAnyRetail and WOW_PROJECT_ID == WOW_PROJECT_MAINLINE or nil
+-- The "WoW Forever" beta client: vanilla content on the modern engine, answering
+-- WOW_PROJECT_MAINLINE with an interface number of its own (16001) two orders of
+-- magnitude below the live one, so the comparison holds for its later builds too.
+Version.IsCamelot               = Version.IsRetailMainline and Version.Interface < 100000 or nil
 
 function Version:IsBelowLegacyVersion(version)
     return self.IsAnyLegacy and self.Interface < version or nil
