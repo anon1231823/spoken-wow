@@ -84,6 +84,12 @@ datagrip
 # and a trailing slash matches only a real directory, leaving the link to be committed.
 /addons/SpokenZonesAudio/Sounds
 
+# The books narration, in the pack folder the client loads. Same rule and same reason as
+# the zones pack above, including the missing trailing slash: a test client is pointed at
+# this pack by symlinking it, and a trailing slash matches only a real directory, leaving
+# the link to be committed. Filled by `make books-pull && make books-sounds`.
+/addons/SpokenBooksAudio/Sounds
+
 # Voice samples for checking the model before a bulk run.
 /pipelines/zones/audio-samples/
 

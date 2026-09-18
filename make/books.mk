@@ -15,7 +15,8 @@
 # reads like a missing dump.
 
 .DEFAULT_GOAL := help
-.PHONY: help db extract import export lookup deploy deploy-copy status remove test
+.PHONY: help db extract import export lookup deploy deploy-copy status remove \
+        pull pull-dry sounds db-pull test
 
 PIPELINE := pipelines/books
 QUESTS   := pipelines/quests
@@ -38,6 +39,75 @@ export: ## book_line -> addons/SpokenBooks/Data/Books.lua (needs DATABASE_URL)
 
 lookup: ## take -> addons/SpokenBooksAudio/Data/Sounds.lua (needs DATABASE_URL)
 	@node $(PIPELINE)/tools/build-lookup.mjs
+
+#-------------------------------------------------------------------------------
+# The narration
+#
+# Generation happens on the droplet -- that is where the site runs and where the queue
+# spends the credits -- so the masters live there and come here to be packaged and to be
+# listened to in a client. Audio is not in git; see the root .gitignore.
+#-------------------------------------------------------------------------------
+
+DROPLET     ?= deploy@188.166.37.175
+DEPLOY_KEY  ?= ~/.ssh/id_rusty.one
+SSH         := ssh -i $(DEPLOY_KEY) -o IdentitiesOnly=yes
+REMOTE_BOOKS := /srv/spoken/shared/books/
+LOCAL_BOOKS  := pipelines/books/audio/
+
+# macOS ships openrsync as /usr/bin/rsync, which reports itself as "2.6.9 compatible" and
+# rejects --info. Prefer a real rsync 3.x anywhere on PATH.
+RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(command -v rsync); do \
+	[ -x "$$r" ] && "$$r" --version 2>/dev/null | head -1 | grep -q 'version 3' && { echo "$$r"; exit 0; }; \
+	done)
+
+# No --delete, unlike the zones targets. Nothing here is irreplaceable in the way a hand
+# imported store is -- every clip can be cut again -- but a mirror that silently removes
+# local files is still the wrong default for a directory somebody may have pulled a subset
+# into. Stale files cost disk; deleted ones cost credits.
+RSYNC_OPTS := -az --info=stats1,progress2 --human-readable
+
+LOCAL_DB ?= postgres://localhost/spoken_quests_dev
+
+# pg_dump 16.10 and later wrap their output in \restrict / \unrestrict, psql meta-commands
+# an older psql fails on. Both clusters are ours, so strip them. Same as make/zones.mk.
+UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
+
+db-pull: ## Copy the droplet's books takes into the local database (REPLACES them)
+	@printf 'Replace the LOCAL books takes with the droplet ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
+	@( echo 'begin;'; \
+	   echo 'delete from "take" where "source" = '"'"'books'"'"';'; \
+	   $(SSH) $(DROPLET) 'set -a; . /srv/spoken/shared/app.env; set +a; pg_dump "$$DATABASE_URL" --data-only --table=take --inserts' \
+	     | grep -E "VALUES \([0-9]+, .books.," | $(UNRESTRICT); \
+	   echo 'commit;' ) \
+	  | psql "$(LOCAL_DB)" -v ON_ERROR_STOP=1 -q
+	@psql "$(LOCAL_DB)" -tAc "select count(*) || ' books takes locally' from take where source = 'books'"
+	@echo "==> rebuild the pack's table with:  make books-lookup"
+
+# Filtered with grep rather than a WHERE clause because pg_dump has no such option. --inserts
+# puts each row on a line of its own, so the section's rows can be selected out of the dump
+# without parsing SQL; --rows-per-insert would batch them across lines and cut statements in
+# half, and a COPY-format dump could not be filtered at all.
+#
+# The pattern matches the source column by position -- id, then source -- rather than the
+# word appearing anywhere in a row, and spells the quotes as `.` so that no single quote has
+# to survive make's expansion and two levels of shell. Written with real quotes it silently
+# matched nothing, which looks exactly like a droplet with no takes on it.
+
+pull-dry: ## Preview what `make books-pull` would fetch
+	@$(RSYNC) $(RSYNC_OPTS) --dry-run -e "$(SSH)" $(DROPLET):$(REMOTE_BOOKS) $(LOCAL_BOOKS)
+
+pull: ## Fetch the narration from the droplet into pipelines/books/audio
+	@mkdir -p $(LOCAL_BOOKS)
+	@$(RSYNC) $(RSYNC_OPTS) -e "$(SSH)" $(DROPLET):$(REMOTE_BOOKS) $(LOCAL_BOOKS)
+	@echo "==> pulled. Put it where the addon reads it with:  make books-sounds"
+
+# The pack folder the client loads, filled from the store. A copy rather than a symlink to
+# the store directory, because the client follows neither into a folder it does not own --
+# and the pack is what gets zipped for release.
+sounds: ## Copy the narration into addons/SpokenBooksAudio/Sounds
+	@mkdir -p addons/SpokenBooksAudio/Sounds
+	@$(RSYNC) -a $(LOCAL_BOOKS) addons/SpokenBooksAudio/Sounds/
+	@echo "==> $$(find addons/SpokenBooksAudio/Sounds -name '*.mp3' | wc -l | tr -d ' ') mp3 in addons/SpokenBooksAudio/Sounds"
 
 deploy: ## Symlink the addon into a client (CLIENT=era|anniversary|forever)
 	@./scripts/books/deploy.sh
