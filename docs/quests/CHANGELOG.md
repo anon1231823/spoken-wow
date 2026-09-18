@@ -6,6 +6,17 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 2.0.1 — player
+
+- **A first login no longer warns about an addon you never installed.** This release carries a
+  placeholder folder under the old `VoiceOverRedux` name, so that your settings from before the
+  rename keep loading until they have been migrated — and the addon was reading its own
+  placeholder as a second, competing voiceover player. A fresh install opened with a dialog
+  naming it, and with the client's own "blocked from an action only available to the Blizzard
+  UI" dialog behind that, raised by the attempt to switch the folder off. An older player is
+  reported and switched off only when it is really loaded and reading quests.
+- An older player you had already switched off yourself is no longer described as enabled.
+
 ## 2.0.0 — player
 
 Renamed to **Spoken Quests**, and the player extracted into the **Spoken Player** addon that

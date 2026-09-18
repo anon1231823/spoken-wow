@@ -793,9 +793,24 @@ Use `SpokenQuests/` on a current client. Upstream `AI_VoiceOver/` calls
 `GetNumAddOns`, `GetAddOnMetadata` and `LoadAddOn`, which Blizzard moved to `C_AddOns` in
 10.2 and removed in 11.0.2, so on Classic Era 1.15.9 it errors while enumerating and the
 sound pack never registers. Install one player, never two — two copies fight over the same
-`VoiceOverDB` and the same sound queue. `SpokenQuests` disables any it finds, by AceAddon
-name for the session and by folder for the next login, and that list names both `AI_VoiceOver`
-and this project's own former folder `AI_VoiceOver_Continued`: a rename uninstalls nothing.
+`VoiceOverDB` and the same sound queue. `SUPERSEDED_PLAYERS` at the top of `VoiceOver.lua`
+pairs every name this lineage has run under with the folder it installs into — upstream's
+`AI_VoiceOver`, this project's own `AI_VoiceOver_Continued` and `VoiceOverRedux`, since a
+rename uninstalls nothing — and each one found is stopped by AceAddon name for the session
+and disabled by folder for the next login.
+
+**A player counts as a duplicate when it has registered, not when its folder is present.**
+The folder proves nothing: the tombstone this release ships under `VoiceOverRedux` holds one
+`.toc` and no code, and it arrives inside this addon's own zip, so a fresh install opened
+with a dialog about
+an addon nobody had installed — and, behind it, the client's own *blocked from an action only
+available to the Blizzard UI* dialog, because enabling and disabling addons is reserved for
+Blizzard's UI on current clients and `DisableAddOn` had been called on a folder with nothing
+to disable. Asking AceAddon answers the question that matters, which is whether the old
+player's code is running; the same test is why an old install the player switched off
+themselves is no longer described to them as enabled. `DisableAddOn` is called through `pcall`
+for the same reason: a client that refuses it raises an error along with that dialog, and the
+quest hooks after it still have to be installed.
 
 **The rename.** The player was `AI_VoiceOver_Continued` and the pack `AI_VoiceOverData_Vanilla`
 until this project had diverged far enough from upstream that carrying its name was

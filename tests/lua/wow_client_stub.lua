@@ -395,8 +395,10 @@ function _G.StaticPopup_Show(key, ...)
     return dialog
 end
 
---- Addons enabled and UI reloads a scenario asked for.
-M.enabledAddOns, M.reloads = {}, 0
+--- Addons enabled or disabled and UI reloads a scenario asked for. Disabling is recorded
+--- rather than ignored because current clients refuse it to an addon, so an addon asking for
+--- it when it has nothing to disable is a bug a test should be able to see.
+M.enabledAddOns, M.disabledAddOns, M.reloads = {}, {}, 0
 function _G.EnableAddOn(addon) table.insert(M.enabledAddOns, addon) end
 function _G.ReloadUI() M.reloads = M.reloads + 1 end
 _G.SlashCmdList = {}
@@ -502,6 +504,7 @@ end
 function M.ResetUIActions()
     for i = #M.popups, 1, -1 do M.popups[i] = nil end
     for i = #M.enabledAddOns, 1, -1 do M.enabledAddOns[i] = nil end
+    for i = #M.disabledAddOns, 1, -1 do M.disabledAddOns[i] = nil end
     M.reloads = 0
     for key in pairs(_G.StaticPopupDialogs) do _G.StaticPopupDialogs[key] = nil end
 end
@@ -542,7 +545,7 @@ function _G.GetAddOnMetadata(addon, key)
 end
 function _G.IsAddOnLoadOnDemand() return false end
 function _G.GetAddOnEnableState() return 2 end
-function _G.DisableAddOn() end
+function _G.DisableAddOn(addon) table.insert(M.disabledAddOns, addon) end
 function _G.LoadAddOn() return true end
 
 local libs = {}
@@ -576,15 +579,29 @@ local function EmbedTimers(addon)
 end
 libs["AceTimer-3.0"] = { Embed = function(_, target) return EmbedTimers(target) end }
 
+-- The addons registered with AceAddon, by name. SpokenQuests asks after the players of its
+-- own lineage here and stops the ones it finds, so a scenario describing an old install has
+-- to register it before loading the addon: see M.SetLoadedPlayers.
+M.aceAddons = {}
 libs["AceAddon-3.0"] = {
-    GetAddon = function() return nil end,
+    GetAddon = function(_, name) return M.aceAddons[name] end,
     NewAddon = function(_, name)
         local addon = EmbedTimers({ name = name })
         function addon:RegisterEvent() end
         function addon:UnregisterEvent() end
+        M.aceAddons[name] = addon
         return addon
     end,
 }
+
+--- The old players a scenario has loaded, by AceAddon name, replacing any from the last one.
+--- Each records the Disable call the way the real addon's own would be asked to stop.
+function M.SetLoadedPlayers(names)
+    M.aceAddons = {}
+    for _, name in ipairs(names or {}) do
+        M.aceAddons[name] = { name = name, Disable = function(self) self.stopped = true end }
+    end
+end
 
 local function DeepCopy(value)
     if type(value) ~= "table" then return value end

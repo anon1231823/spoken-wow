@@ -444,22 +444,32 @@ events:SetScript("OnEvent", function(self, event, arg1)
 	if event == "ADDON_LOADED" then
 		if arg1 == ADDON_NAME then
 			InitConfig()
-			-- The old folder is a TOC-only tombstone or the real old addon; neither may
-			-- stay enabled. Its variables were copied at load, so this is safe now.
+			-- The old folder may hold the real old addon, which must not narrate over this
+			-- one. Its variables were copied at load, so disabling it is safe now.
 			local disable = (C_AddOns and C_AddOns.DisableAddOn) or DisableAddOn
 			local info = (C_AddOns and C_AddOns.GetAddOnInfo) or GetAddOnInfo
-			-- The literal folder name, not the addon's own: this disables the tombstone
-			-- left behind by the rename. Renaming it with the namespace would have the
-			-- addon disable itself on first login.
+			local meta = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+			-- The literal folder name, not this addon's own: what may still be installed
+			-- under it is the addon this one was renamed from. Writing the namespace here
+			-- instead would have the addon disable itself on first login.
 			--
 			-- DoesAddOnExist, not the truthiness of GetAddOnInfo: Camelot answers for a
 			-- folder that is not installed by handing the name straight back, so the old
 			-- test disabled ZoneLore on every login of a client that has never had it -
-			-- visible as `ZoneLore: disabled` in a fresh AddOns.txt. SpokenQuests was
-			-- already fixed the same way; this is the same client and the same trap.
+			-- visible as `ZoneLore: disabled` in a fresh AddOns.txt. SpokenQuests met the
+			-- same trap on the same client, and asks AceAddon which players registered
+			-- instead; this addon is not an Ace addon and has no such register to ask.
 			local exists = C_AddOns and C_AddOns.DoesAddOnExist
 			local installed = exists and exists("ZoneLore") or (not exists and info and info("ZoneLore"))
-			if disable and installed then
+			-- The tombstone this release ships under the old name is not the old addon: one
+			-- .toc, no code, there only to keep ZoneLoreDB loading for Migration.lua. Current
+			-- clients reserve enabling and disabling an addon for their own UI and answer with
+			-- their own "blocked from an action only available to the Blizzard UI" dialog, so
+			-- disabling a folder that cannot narrate spends that dialog for nothing - and on a
+			-- fresh install the folder came out of this addon's own zip. X-Spoken-Tombstone is
+			-- a field this project invented, so only a .toc it wrote can be carrying it.
+			local tombstone = meta and meta("ZoneLore", "X-Spoken-Tombstone") == "1"
+			if disable and installed and not tombstone then
 				pcall(disable, "ZoneLore")
 			end
 			self:UnregisterEvent("ADDON_LOADED")

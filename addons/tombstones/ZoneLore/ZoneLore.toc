@@ -6,4 +6,11 @@
 ## SavedVariablesPerCharacter: ZoneLoreCharDB
 ## LoadSavedVariablesFirst: true
 ## X-Part-Of: Spoken
+## X-Spoken-Tombstone: 1
 # A tombstone: no Lua at all. See tombstones/VoiceOverRedux/VoiceOverRedux.toc.
+#
+# X-Spoken-Tombstone is read by SpokenZones/Core.lua, which disables the old ZoneLore folder
+# so it cannot narrate over the new addon. This folder holds no code to narrate with, and the
+# client raises a dialog of its own at every attempt to disable an addon, so it says here that
+# it is the placeholder rather than the addon. A .toc released before this field existed
+# cannot carry it, which is what makes the answer trustworthy.
