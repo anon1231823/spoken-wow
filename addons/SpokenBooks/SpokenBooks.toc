@@ -10,8 +10,7 @@
 # managers install it from the CurseForge dependency. The pack is not a registration
 # mechanism either -- it registers itself into SpokenBooksAudioPacks and Audio.lua walks
 # that on demand -- so this list is load order only.
-# No IconTexture yet: the addon list reads a TGA or BLP and there is no books icon
-# drawn. A line pointing at a file that does not exist is worse than none.
+## IconTexture: Interface\AddOns\SpokenBooks\Textures\AddonIcon.tga
 ## X-License: Addon code MIT. Book text is Blizzard's, extracted from the game.
 
 Checksum.lua

@@ -16,7 +16,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help db extract import export lookup deploy deploy-copy status remove \
-        pull pull-dry sounds db-pull package-audio test
+        pull pull-dry sounds db-pull package-audio icon test
 
 PIPELINE := pipelines/books
 QUESTS   := pipelines/quests
@@ -133,6 +133,18 @@ package-audio: ## Zip the sound pack into dist/ (for another machine, or a relea
 	   "$$(unzip -Z1 "$$zip_path" | grep -c '\.mp3$$')" \
 	   "$$(du -h "$$zip_path" | cut -f1)"; \
 	 shasum -a 256 "$$zip_path"
+
+# The in-game addon list reads a TGA or BLP, never the PNG or SVG in
+# pipelines/books/assets/, so the icon is converted and committed -- an addon must build
+# with no ffmpeg on the machine. Borrowed from the zones pipeline rather than copied: the
+# script takes a source and a destination and knows nothing about which project it serves.
+#
+# Both addons carry the same icon: they install as a pair, and two icons would imply they
+# are alternatives to each other.
+icon: ## Rebuild both addons' AddonIcon.tga from pipelines/books/assets (needs ffmpeg)
+	@python3 pipelines/zones/tools/make-icon.py pipelines/books/assets/spoken-books-512.png addons/SpokenBooks/Textures/AddonIcon.tga
+	@cp addons/SpokenBooks/Textures/AddonIcon.tga addons/SpokenBooksAudio/Textures/AddonIcon.tga
+	@echo "==> copied to addons/SpokenBooksAudio/Textures/AddonIcon.tga"
 
 deploy: ## Symlink the addon into a client (CLIENT=era|anniversary|forever)
 	@./scripts/books/deploy.sh

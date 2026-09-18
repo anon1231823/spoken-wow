@@ -3,7 +3,7 @@
 ## Notes: Narrated books, letters and notes for Spoken Books. Install alongside Spoken Books.
 ## Version: 1.0.0
 ## Author: rusty
-# No IconTexture yet; see the note in SpokenBooks.toc.
+## IconTexture: Interface\AddOns\SpokenBooksAudio\Textures\AddonIcon.tga
 ## X-License: Audio generated with ElevenLabs from book text extracted from the game.
 
 # The tier this folder is, read back by Data/Sounds.lua and reported to Spoken Books, which
