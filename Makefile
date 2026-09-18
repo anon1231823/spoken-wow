@@ -10,6 +10,7 @@
 #     make quests-package        ->  make -f make/quests.mk package
 #     make zones-release-dry     ->  make -f make/zones.mk  release-dry
 #     make web-dev               ->  make -f make/web.mk    dev
+#     make books-extract         ->  make -f make/books.mk  extract
 #
 # Both .mk files use paths relative to the repo root, so they must be run from
 # here -- which is what the pattern rules below guarantee.
@@ -25,7 +26,8 @@ help: ## Show this help
 	@printf 'Spoken\n\n'
 	@printf '  make quests-<target>   see make/quests.mk  (make quests-help)\n'
 	@printf '  make zones-<target>    see make/zones.mk   (make zones-help)\n'
-	@printf '  make web-<target>      see make/web.mk     (make web-help)\n\n'
+	@printf '  make web-<target>      see make/web.mk     (make web-help)\n'
+	@printf '  make books-<target>    see make/books.mk   (make books-help)\n\n'
 	@printf 'Repo-wide:\n'
 	@grep -E '^[a-z-]+:.*?## ' $(firstword $(MAKEFILE_LIST)) \
 	  | sed 's/:.*## /|/' | awk -F'|' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -38,6 +40,9 @@ zones-%:
 
 web-%:
 	@$(MAKE) --no-print-directory -f make/web.mk $*
+
+books-%:
+	@$(MAKE) --no-print-directory -f make/books.mk $*
 
 test-player: ## Run the addons' Lua tests (needs luajit)
 	@[ -n "$(LUA)" ] || { echo "No luajit found: brew install luajit"; exit 1; }
