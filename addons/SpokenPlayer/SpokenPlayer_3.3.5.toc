@@ -1,7 +1,7 @@
 ## Interface: 30300
 ## Title: Spoken Player
 ## Notes: The voice player every Spoken addon speaks through, for 3.3.5 servers.
-## Version: 2.0.1
+## Version: 2.0.2
 ## SavedVariables: SpokenPlayerDB
 ## OptionalDeps: VoiceOverRedux, ZoneLore
 # The renamed addons' tombstones. Migrate() runs on this addon's ADDON_LOADED and reads

@@ -1,5 +1,13 @@
 # Changelog — Spoken Player
 
+## 2.0.2 — 2026-09-18
+
+- **The minimap button wears the play triangle.** It carried a crest inherited from VoiceOver
+  Redux that, at the size the minimap draws, was a brown smudge. The button is the one place
+  every Spoken addon is reached from, and it now shows the same mark as the AddOns list — the
+  gold triangle on the dark field, without the shield frame, since the minimap draws a frame
+  of its own around it.
+
 ## 2.0.1 — 2026-09-18
 
 - **A new icon in the AddOns list**: a gold play triangle on the Spoken shield. Spoken Quests
