@@ -147,14 +147,17 @@ B:SetupPlayButton()
 local button = B.playButton
 Expect("the book frame carries a button", button ~= nil, true)
 
--- On the page row, against the previous-page arrow. Anchored off the frame's corner first,
--- where it read as floating beside the book rather than belonging to it -- and the page
--- number is no good to anchor to either, being a 192-wide centred FontString whose left edge
--- is back under that same arrow.
-Expect("...on the page row, not off the corner", button.anchor.relativeTo,
-    _G.ItemTextPrevPageButton)
-Expect("...just past the arrow", button.anchor.point .. "/" .. button.anchor.relativePoint,
-    "LEFT/RIGHT")
+-- On the page, bottom right. Twice it was on the strip above the page instead -- off the
+-- frame's corner, then beside the previous-page arrow -- and that row has no free space: the
+-- arrows carry PREV and NEXT labels on their inner edges, and ItemTextCurrentPage is a
+-- 192-wide FontString reaching back under the left arrow. The scrollbar hangs outside the
+-- page's right edge, so this corner is clear of it too.
+Expect("...on the page, not on the row above it", button.anchor.relativeTo,
+    _G.ItemTextScrollFrame)
+Expect("...in its bottom-right corner",
+    button.anchor.point .. "/" .. button.anchor.relativePoint, "BOTTOMRIGHT/BOTTOMRIGHT")
+Expect("...inset, so it sits on the parchment rather than over its edge",
+    button.anchor.x < 0 and button.anchor.y > 0, true)
 
 -- ITEM_TEXT_CLOSED is not handled for the button on purpose: it is the frame's child and
 -- goes with it. What is asserted here is the branch the addon does own -- asked to refresh

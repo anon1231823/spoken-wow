@@ -10,22 +10,27 @@
 -- one. SpokenPlayer carries QuestLogPlayButton.blp, but it is that addon's file and this one
 -- must work with the player absent.
 --
--- ON THE PAGE ROW, between the page arrows and the page number. Hung outside the frame's
--- corner first, which put it in no book at all -- a button floating beside the window rather
--- than part of it.
+-- ON THE PAGE, in its bottom-right corner. Two placements came before it and both were on
+-- the strip of frame above the page: outside the top-right corner, where it read as floating
+-- beside the book rather than belonging to it, and then beside the previous-page arrow.
 --
--- Anchored to ItemTextPrevPageButton's right edge, and that is the placement rather than a
--- guess: ItemTextFrame.xml in Gethe/wow-ui-source gives that button 32x32 centred 75 right
--- and 41 down from the frame's top-left, identically in the Classic frame that Era and
--- Anniversary load and the Mainline one Forever loads. One anchor, three clients, no shims.
+-- THAT ROW HAS NO FREE SPACE, which is the reason this one is not on it. Reading the
+-- measurements out of ItemTextFrame.xml in Gethe/wow-ui-source: the arrows are 32x32 centred
+-- 75 in from the left and 23 in from the right; each carries a PREV / NEXT FontString
+-- anchored to its inner edge, so the labels eat the space either side of them; and
+-- ItemTextCurrentPage, which looks like the free middle, is a 192-wide FontString centred
+-- across the row -- the digit you see sits in the middle of it while its left edge reaches
+-- back under the previous-page arrow. Every part of that row is spoken for once a book has
+-- more than one page, which the frame does not show you while you are looking at page one.
 --
--- NOT anchored to the page number, which is what "beside the counter" would suggest.
--- ItemTextCurrentPage is a 192-wide FontString centred on the row: the digit you can see
--- sits in the middle of it, but its left edge is back under the previous-page arrow, so
--- anchoring there would put this button on top of one of Blizzard's.
+-- ItemTextScrollFrame is the page itself, and the scrollbar hangs OUTSIDE its right edge:
+-- the bar's textures anchor TOPLEFT to the frame's TOPRIGHT. So its bottom-right corner is
+-- on the parchment, clear of the bar and clear of both arrows. Present and named the same in
+-- the Classic frame Era and Anniversary load and the Mainline one Forever loads, so this
+-- stays one anchor for three clients with no shims.
 --
--- The arrow is hidden on page one and disabled on the last page. Neither moves it: a hidden
--- widget keeps its anchors, so the button holds the same spot through a whole book.
+-- A long page's last line runs under the button. The alternative is a row where the button
+-- collides with one of Blizzard's own controls on page two of every book.
 
 local ADDON_NAME, SpokenBooks = ...
 
@@ -80,14 +85,20 @@ function SpokenBooks:SetupPlayButton()
 	button:SetText("Play")
 	button:Hide()
 
-	local arrow = _G.ItemTextPrevPageButton
-	if arrow then
-		button:SetPoint("LEFT", arrow, "RIGHT", 4, 0)
+	local page = _G.ItemTextScrollFrame
+	if page then
+		button:SetPoint("BOTTOMRIGHT", page, "BOTTOMRIGHT", -6, 6)
+		-- The parchment is a texture layer of ItemTextFrame and a child frame always draws
+		-- over its parent's layers, but the page text lives in this scroll frame, which is
+		-- this button's SIBLING -- and siblings draw in frame-level order.
+		if button.SetFrameLevel and page.GetFrameLevel then
+			button:SetFrameLevel(page:GetFrameLevel() + 2)
+		end
 	else
-		-- A client whose book frame is built some other way. The numbers are the same row,
-		-- measured from the corner the arrow is measured from, so the button lands where it
-		-- would have anyway rather than in a corner of its own.
-		button:SetPoint("LEFT", frame, "TOPLEFT", 95, -41)
+		-- A client whose book frame is built some other way. Derived from the same file, so
+		-- it lands where the corner would be rather than somewhere invented: the page is
+		-- anchored 33 in from the frame's top-right and 63 down, and is 355 tall.
+		button:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", -39, -412)
 	end
 
 	button:SetScript("OnClick", function()

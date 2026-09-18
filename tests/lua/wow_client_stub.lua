@@ -383,15 +383,22 @@ function _G.ItemTextGetMaterial() return world.itemTextMaterial end
 _G.ItemTextFrame = MakeFrame("ItemTextFrame")
 _G.ItemTextFrame:Hide()
 
--- The page arrows, because they are what an addon anchors to on that row. Both frames in
--- Gethe/wow-ui-source -- Classic for Era and Anniversary, Mainline for Forever -- give this
--- one the same size and the same place: 32x32, centred 75 right and 41 down from the frame's
--- top-left corner.
+-- The page itself and the arrow above it, because those are what an addon anchors to.
+-- Sized and placed as both frames in Gethe/wow-ui-source do -- Classic for Era and
+-- Anniversary, Mainline for Forever, which agree on all of this: the arrow 32x32 centred 75
+-- right and 41 down from the top-left corner, the page 280x355 anchored 33 in from the
+-- top-right and 63 down.
 _G.ItemTextPrevPageButton = Widget("Button", "ItemTextPrevPageButton")
 _G.ItemTextPrevPageButton:SetParent(_G.ItemTextFrame)
 _G.ItemTextPrevPageButton:SetWidth(32)
 _G.ItemTextPrevPageButton:SetHeight(32)
 _G.ItemTextPrevPageButton:SetPoint("CENTER", _G.ItemTextFrame, "TOPLEFT", 75, -41)
+
+_G.ItemTextScrollFrame = Widget("ScrollFrame", "ItemTextScrollFrame")
+_G.ItemTextScrollFrame:SetParent(_G.ItemTextFrame)
+_G.ItemTextScrollFrame:SetWidth(280)
+_G.ItemTextScrollFrame:SetHeight(355)
+_G.ItemTextScrollFrame:SetPoint("TOPRIGHT", _G.ItemTextFrame, "TOPRIGHT", -33, -63)
 
 --- Put a page on screen, as ITEM_TEXT_READY would find it.
 function M.ShowPage(page)

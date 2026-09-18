@@ -145,14 +145,18 @@ queued pages would otherwise strand the narration on the page they turned away f
 calls, so a partial install still narrates. Every switch on the panel is also a `/spb`
 command, which is what a client with no Settings API gets.
 
-**The button is anchored to `ItemTextPrevPageButton`, not to the page number.**
-`ItemTextFrame.xml` in `Gethe/wow-ui-source` gives that arrow 32×32 centred 75 right and 41
-down from the frame's top-left — identically in the Classic frame Era and Anniversary load
-and the Mainline one Forever loads, so one anchor covers all three. `ItemTextCurrentPage`
-looks like the obvious neighbour and is not: it is a 192-wide centred FontString whose left
-edge sits back under that same arrow, so anchoring to it would stack the button on top of
-Blizzard's. The arrow is hidden on page one and disabled on the last page; a hidden widget
-keeps its anchors, so the button holds its spot throughout.
+**The button is anchored to `ItemTextScrollFrame` — the page — in its bottom-right corner,
+and not to anything on the row above it.** That row looks empty on page one and is not:
+`ItemTextFrame.xml` in `Gethe/wow-ui-source` gives the two arrows a `PREV` and a `NEXT`
+FontString anchored to their inner edges, and `ItemTextCurrentPage` is a 192-wide FontString
+centred across the row whose left edge reaches back under the left arrow. A book with more
+than one page fills all of it. The scrollbar hangs outside the page's right edge — its
+textures anchor `TOPLEFT` to the frame's `TOPRIGHT` — so the page's own corner is clear of
+that too. Both the Classic frame (Era, Anniversary) and the Mainline one (Forever) name and
+place all of this identically, so one anchor covers three clients.
+
+The cost is that a full page's last line runs under the button; the alternative was
+colliding with one of Blizzard's controls on page two of every book.
 
 `UI/Layout.lua` is the fourth copy of a file that must stay byte-identical across
 SpokenPlayer, SpokenQuests, SpokenZones and SpokenBooks;
