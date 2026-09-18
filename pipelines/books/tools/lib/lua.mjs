@@ -6,8 +6,8 @@
 // at and what follows it, so that is all this carries.
 //
 // A page is found by title, page number and a checksum of its text. Title and number alone
-// are not enough: objects 179547 and 179548 are both named "A Dusty Tome" and hold
-// different text. The checksum alone is enough only when it is unique corpus-wide, which is
+// are not enough: seven different books are called "Decoded Twilight Text" and each holds
+// different words. The checksum alone is enough only when it is unique corpus-wide, which is
 // what `loose` records -- a fallback for a client whose object name does not match ours.
 
 import { pageChecksum } from "./naming.mjs";
@@ -45,7 +45,14 @@ export function booksLua(entries) {
     if (!index.has(entry.title)) index.set(entry.title, new Map());
     const byNumber = index.get(entry.title);
     if (!byNumber.has(entry.pageNumber)) byNumber.set(entry.pageNumber, new Map());
-    byNumber.get(entry.pageNumber).set(checksums.get(entry.pageId), entry.pageId);
+    const byChecksum = byNumber.get(entry.pageNumber);
+    const sum = checksums.get(entry.pageId);
+    // First writer wins, and the rows arrive sorted, so the lowest book keeps the slot.
+    // Four books are called "Inscribed Kodo Leather" and hold identical text: nothing on
+    // screen distinguishes them, so the addon cannot either and the narration is the same
+    // either way. Overwriting instead would make the answer depend on row order, which is
+    // the kind of thing that changes under a re-extract and moves audio for no reason.
+    if (!byChecksum.has(sum)) byChecksum.set(sum, entry.pageId);
   }
 
   // checksum -> pageId, for checksums no other page shares. An ambiguous one is dropped

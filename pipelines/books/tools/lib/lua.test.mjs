@@ -55,3 +55,16 @@ test("the output is sorted, so a re-export diffs only where the corpus moved", (
   const shuffled = [entries[2], entries[1], entries[0]];
   assert.equal(booksLua(shuffled), booksLua(entries));
 });
+
+test("pages that are indistinguishable on screen resolve to the lowest book, deterministically", () => {
+  // "Inscribed Kodo Leather" is four different books holding identical text. Nothing on
+  // screen tells them apart -- same title, same page number, same words -- so the addon
+  // cannot either, and the narration is the same whichever it picks. What matters is that
+  // it picks the same one every time rather than whichever row was written last.
+  const identical = [
+    { pageId: 40, bookId: 40, pageNumber: 1, pageCount: 1, title: "Inscribed Kodo Leather", text: "Same." },
+    { pageId: 30, bookId: 30, pageNumber: 1, pageCount: 1, title: "Inscribed Kodo Leather", text: "Same." },
+  ];
+  const lua = booksLua(identical);
+  assert.match(lua, new RegExp(`\\[1\\] = \\{ \\[${pageChecksum("Same.")}\\] = 30 \\}`));
+});

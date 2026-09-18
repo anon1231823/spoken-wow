@@ -15,7 +15,7 @@
 # reads like a missing dump.
 
 .DEFAULT_GOAL := help
-.PHONY: help db extract import test
+.PHONY: help db extract import export lookup test
 
 PIPELINE := pipelines/books
 QUESTS   := pipelines/quests
@@ -32,6 +32,12 @@ extract: ## vmangos -> pipelines/books/corpus/extract.json
 
 import: ## corpus/extract.json -> book_line (needs DATABASE_URL)
 	@node $(PIPELINE)/tools/import.mjs
+
+export: ## book_line -> addons/SpokenBooks/Data/Books.lua (needs DATABASE_URL)
+	@node $(PIPELINE)/tools/export.mjs
+
+lookup: ## take -> addons/SpokenBooksAudio/Data/Sounds.lua (needs DATABASE_URL)
+	@node $(PIPELINE)/tools/build-lookup.mjs
 
 test: ## The pipeline's unit tests
 	@pnpm --filter @spoken/books-pipeline test
