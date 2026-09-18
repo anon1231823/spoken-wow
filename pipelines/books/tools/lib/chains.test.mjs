@@ -81,3 +81,38 @@ test("text, spoken text and voiceability come along per page", () => {
   assert.equal(entries[0].generatable, false);
   assert.equal(entries[0].skipReason, "substitution");
 });
+
+test("a page already inside another book is not emitted twice", () => {
+  // vmangos has exactly this: page 265 is page 4 of the Hillsbrad Town Registry and also
+  // the whole of a deprecated test item, whose chain starts inside the real book.
+  const overlapping = [
+    { entry: 261, text: "One.", nextPage: 262 },
+    { entry: 262, text: "Two.", nextPage: 265 },
+    { entry: 265, text: "Three.", nextPage: 0 },
+  ];
+  const { entries, shared } = buildBooks({
+    pages: overlapping,
+    owners: [
+      { kind: "item", id: 3686, name: "Deprecated TEST", firstPage: 265, material: 1 },
+      { kind: "item", id: 3657, name: "Town Registry", firstPage: 261, material: 1 },
+    ],
+  });
+  assert.equal(entries.filter((e) => e.pageId === 265).length, 1);
+  assert.deepEqual(shared, [265]);
+});
+
+test("the book that owns a shared page is the one with the lower first page, whatever the owner order", () => {
+  const overlapping = [
+    { entry: 261, text: "One.", nextPage: 265 },
+    { entry: 265, text: "Two.", nextPage: 0 },
+  ];
+  const owners = [
+    { kind: "item", id: 3686, name: "Deprecated TEST", firstPage: 265, material: 1 },
+    { kind: "item", id: 3657, name: "Town Registry", firstPage: 261, material: 1 },
+  ];
+  for (const order of [owners, [...owners].reverse()]) {
+    const { entries } = buildBooks({ pages: overlapping, owners: order });
+    assert.equal(entries.find((e) => e.pageId === 265).title, "Town Registry");
+    assert.equal(entries.find((e) => e.pageId === 265).pageNumber, 2);
+  }
+});

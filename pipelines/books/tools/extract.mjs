@@ -30,14 +30,17 @@ const connection = await mysql.createConnection({
 
 try {
   const world = await readWorld(connection, Number(process.env.BOOKS_PATCH ?? PATCH));
-  const { entries, orphans } = buildBooks(world);
+  const { entries, orphans, shared } = buildBooks(world);
 
   await mkdir(dirname(OUT), { recursive: true });
-  await writeFile(OUT, `${JSON.stringify({ entries, orphans }, null, 2)}\n`);
+  await writeFile(OUT, `${JSON.stringify({ entries, orphans, shared }, null, 2)}\n`);
 
   const books = new Set(entries.map((entry) => entry.bookId));
   const silent = entries.filter((entry) => !entry.generatable);
-  console.log(`${entries.length} pages, ${books.size} books, ${orphans.length} orphaned pages`);
+  console.log(
+    `${entries.length} pages, ${books.size} books, ${orphans.length} orphaned pages, ` +
+      `${shared.length} pages claimed by a second chain`,
+  );
   console.log(`${silent.length} pages cannot be voiced: ${summarise(silent)}`);
   console.log(`wrote ${OUT}`);
 } finally {
