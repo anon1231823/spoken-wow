@@ -43,6 +43,15 @@ LOCALE="${LOCALE:-enUS}"
 # would pass by looking at neither.
 export SPOKEN_ZONES_LANG="$LOCALE"
 
+# The Node steps below read the manifest from Postgres when DATABASE_URL is set, and
+# pipelines/zones/.env points it at the droplet -- so packaging on a laptop with no tunnel up
+# failed with ECONNREFUSED from a step called "checking the lookup table against the files".
+#
+# Defined-but-empty is what env.mjs reads as "use the committed files": an already-set variable
+# wins over .env. ${DATABASE_URL-} keeps an explicit setting, including one make passed in, and
+# supplies the empty default when there is none.
+export DATABASE_URL="${DATABASE_URL-}"
+
 # The masters live in the language's own pack folder; English's are the high tier
 # it already publishes. Kept in step with packFolder() in tools/lib/locales.mjs:
 # the full locale code, because a truncation would give esES and esMX one folder.

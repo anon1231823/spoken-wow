@@ -71,6 +71,16 @@ clean: ## Remove build output
 # an import or a lookup rebuild at another language's files.
 VOICE_LANG = SPOKEN_ZONES_LANG=$(or $(LOCALE),enUS)
 
+# The manifest comes from Postgres when DATABASE_URL is set and from the committed files
+# otherwise, and pipelines/zones/.env sets it to the droplet -- so a laptop with no tunnel up
+# gets ECONNREFUSED out of every audio target, which is not a failure anyone reading
+# "validate the sound pack" expects.
+#
+# Passing it empty is what env.mjs documents as "use the files": an already-set variable always
+# wins over .env. Defined-but-empty counts, so this is the default and
+# `make zones-package-audio DATABASE_URL=postgres://...` still reads the database.
+VOICE_DB = DATABASE_URL=$(DATABASE_URL)
+
 voice: ## Dry run over every voiceline (costs nothing; LOCALE=deDE for another language)
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/generate.mjs --all
 
@@ -82,10 +92,10 @@ sample: ## Generate two sample lines to pipelines/zones/audio-samples/ (SPENDS C
 
 lookup: ## Rebuild the addon's audio lookup table (exports the manifest first)
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/export-manifest.mjs
-	@$(VOICE_LANG) node pipelines/zones/tools/voice/build-lookup.mjs
+	@$(VOICE_LANG) $(VOICE_DB) node pipelines/zones/tools/voice/build-lookup.mjs
 
-validate-audio: ## Check manifest, files on disk and lookup table agree
-	@$(VOICE_LANG) node pipelines/zones/tools/voice/validate-audio.mjs
+validate-audio: ## Check manifest, files on disk and lookup table agree (DATABASE_URL=... to use the droplet)
+	@$(VOICE_LANG) $(VOICE_DB) node pipelines/zones/tools/voice/validate-audio.mjs
 
 #-------------------------------------------------------------------------------
 # The explorer's database
