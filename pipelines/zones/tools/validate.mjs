@@ -15,7 +15,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ROOT, normaliseKey } from "./lib/wiki.mjs";
-import { loadEraAreas } from "./lib/era.mjs";
+import { loadClientAreas } from "./lib/era.mjs";
 import { BASE_LOCALE, CODES } from "./lib/locales.mjs";
 import { slugFor } from "./voice/naming.mjs";
 
@@ -66,11 +66,25 @@ const note = (msg) => problems.push(msg);
 // Every generated field line, at any nesting depth.
 const FIELD = /^\t+(name|short|full|source) = "(.*)",$/;
 
+// A place the client has that nobody has written about yet. It leads its entry, so a
+// single forward pass knows the empty fields below it are deliberate.
+const PENDING = /^\t+pending = true,$/;
+const ENTRY_OPEN = /^\t+\[("?[^\]]*"?)\] = \{$/;
+
 function checkStrings(src, label) {
   let fields = 0;
+  let pending = false;
 
   src.split("\n").forEach((line, i) => {
     const lineNo = i + 1;
+    if (ENTRY_OPEN.test(line)) {
+      pending = false;
+      return;
+    }
+    if (PENDING.test(line)) {
+      pending = true;
+      return;
+    }
     if (!/^\t+\w+ = /.test(line)) return;
 
     const m = line.match(FIELD);
@@ -103,7 +117,9 @@ function checkStrings(src, label) {
       }
     }
 
-    if ((field === "full" || field === "short") && bodyText.trim().length === 0) {
+    // Empty text is a broken entry for every origin but one: a pending entry is a place
+    // the addon names and says nothing about, on purpose.
+    if ((field === "full" || field === "short") && bodyText.trim().length === 0 && !pending) {
       note(`${label}:${lineNo}: ${field} is empty`);
     }
 
@@ -162,7 +178,7 @@ if (!languages.includes(BASE_LOCALE)) {
   note(`Data/${BASE_LOCALE}/ is missing -- English is the fallback corpus and is not optional`);
 }
 
-const era = await loadEraAreas();
+const client = await loadClientAreas();
 const corpora = new Map();
 
 for (const lang of languages) {
@@ -233,8 +249,11 @@ for (const lang of languages) {
   // post-vanilla place the wiki category slipped in, or a name the client would
   // never hand to the lookup -- unreachable either way.
   for (const key of subKeys) {
-    if (!era.keys.has(key)) {
-      note(`${sLabel}: "${key}" is not an area in the Era client (build ${era.build})`);
+    if (!client.keys.has(key)) {
+      note(
+        `${sLabel}: "${key}" is not an area in any supported client ` +
+          `(builds ${client.builds.join(", ")})`,
+      );
     }
   }
 
