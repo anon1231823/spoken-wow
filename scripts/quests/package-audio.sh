@@ -46,8 +46,14 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO"
 
-STORE="${STORE:-audio}"
-DIST="${DIST:-dist}"
+# The Python half of this project lives under pipelines/quests/, and both of its entry points
+# resolve their own defaults -- the corpus, the ignore list, the factions export -- relative to
+# that directory. So the paths here are absolute and the two commands below are run from there,
+# rather than every default being restated as a flag that would go stale one at a time.
+QUESTS="$REPO/pipelines/quests"
+
+STORE="${STORE:-$QUESTS/audio}"
+DIST="${DIST:-$REPO/dist}"
 # The shipping packs' folder prefix, which every pack suffix is appended to. Renaming it renames
 # the folder players install, which is safe here only because nothing stores a path built from
 # it - DataModules composes one at play time from the folder the client reports - and costs a
@@ -92,9 +98,13 @@ THRESHOLD="${THRESHOLD:-80}"
 # misses. Keying on mtime would be cheaper and wrong - `make pull` copies the
 # droplet's timestamps, so a freshly pulled take can be older than the entry it
 # ought to replace.
-CACHE_ROOT="${CACHE_ROOT:-audio-transcoded}"
+CACHE_ROOT="${CACHE_ROOT:-$QUESTS/audio-transcoded}"
 
-PYTHON="${PYTHON:-$([ -x .venv/bin/python ] && echo .venv/bin/python || command -v python3)}"
+PYTHON="${PYTHON:-$([ -x "$QUESTS/.venv/bin/python" ] && echo "$QUESTS/.venv/bin/python" || command -v python3)}"
+# tts_cli is a package in the pipeline directory rather than something installed into the venv,
+# and Python puts the *script's* directory on sys.path, not the working one - so `python -c` and
+# `python tools/x.py` both miss it however this script is invoked.
+export PYTHONPATH="$QUESTS${PYTHONPATH:+:$PYTHONPATH}"
 JOBS="${JOBS:-$( (command -v nproc >/dev/null 2>&1 && nproc) || sysctl -n hw.ncpu 2>/dev/null || echo 4 )}"
 
 # Each profile is a format, the flags that produce it, and nothing else. FORMAT is what the
@@ -134,8 +144,8 @@ staging="$(mktemp -d)"
 trap 'rm -f "$plan"; rm -rf "$staging"' EXIT
 
 echo "planning..."
-"$PYTHON" tools/plan_transcode.py --store "$STORE" --format "$FORMAT" \
-  --threshold "$THRESHOLD" > "$plan"
+(cd "$QUESTS" && "$PYTHON" tools/plan_transcode.py --store "$STORE" --format "$FORMAT" \
+  --threshold "$THRESHOLD") > "$plan"
 count="$(wc -l <"$plan" | tr -d ' ')"
 
 # Directories first in one pass, so placing the clips below is a flat run of cp rather
@@ -267,8 +277,8 @@ for pack in $PACKS; do
 
   echo
   echo "building $module ($pack)"
-  "$PYTHON" cli-main.py build --store "$staging" --dist "$DIST" --module "$module" \
-    --version "$VERSION" --pack "$pack" ${title:+--module-title "$title"}
+  (cd "$QUESTS" && "$PYTHON" cli-main.py build --store "$staging" --dist "$DIST" \
+    --module "$module" --version "$VERSION" --pack "$pack" ${title:+--module-title "$title"})
 
   echo "  module size: $(du -sh "$DIST/$module" | cut -f1)  (store: $(du -sh "$STORE" | cut -f1))"
 
