@@ -170,3 +170,20 @@ end
 function SpokenBooks:Data()
 	return _G.SpokenBooksData
 end
+
+--- Where a report goes. The books section is on the new domain from the start, unlike the
+--- quests and zones addons, which point at the two frozen sites they shipped with.
+SpokenBooks.SITE_URL = "https://spoken.rusty.one"
+
+--- The page to send a reader to when they want to complain about a page or its narration.
+---
+--- Built from the page id alone, and that is the whole reason the address has this shape:
+--- the id is frozen -- `b:{pageTextID}` per docs/books/AGENTS.md -- so the addon can build
+--- the link from what it already has, with no per-page table to ship and nothing to escape.
+--- The zones landing page makes the same trade with its {mapID}/{slug} path.
+function SpokenBooks:ReportURL(pageId)
+	if type(pageId) ~= "number" then
+		return nil
+	end
+	return format("%s/books/r/%d", self.SITE_URL, pageId)
+end

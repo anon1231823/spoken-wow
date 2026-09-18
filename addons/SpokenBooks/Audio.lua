@@ -32,6 +32,41 @@ function SpokenBooks:GetAudioPacks()
 	return packs
 end
 
+-- The buttons the player shows under a book clip: Report, and nothing else. There is no Read
+-- button here, unlike the zones strip -- the page is already open on screen, and a button
+-- that re-read what the reader is looking at would answer a question nobody asked.
+--
+-- One table, shared by every clip. The player tells the button which clip it now stands
+-- beside; the action holds no state of its own.
+local ACTIONS = {
+	{
+		id = "report",
+		-- An icon in the corner rather than a word beside the line, as the zones action is.
+		-- The bug icon postdates the three private-server clients, where the texture is
+		-- simply missing and the button would be a blank square; `text` is what those draw
+		-- instead.
+		icon = [[Interface\HelpFrame\HelpIcon-Bug]],
+		text = "R",
+		anchor = "topright",
+		tooltip = function(tooltip)
+			tooltip:SetText("Report a problem")
+			tooltip:AddLine("A bad reading, a mispronounced name, narration that does not "
+				.. "match the page -- this gives you a link to say so.", 1, 0.8, 0.2, true)
+		end,
+		onClick = function(clip)
+			if not clip then
+				return
+			end
+			local url = SpokenBooks:ReportURL(clip.pageId)
+			if url and SpokenBooks.ShowCopyLink then
+				SpokenBooks:ShowCopyLink(url,
+					"Copy this address and open it in your browser to report a problem with "
+						.. "this page.")
+			end
+		end,
+	},
+}
+
 --- The clip for a page, as the player's queue wants it, or nil when no pack carries it.
 function SpokenBooks:ClipFor(pageId)
 	local place = self:Data() and self:Data().pages[pageId]
@@ -60,6 +95,7 @@ function SpokenBooks:ClipFor(pageId)
 						or nil,
 					bullet = "book",
 					portrait = { kind = "texture", texture = BOOK_TEXTURE },
+					actions = ACTIONS,
 				},
 			}
 		end

@@ -29,7 +29,7 @@ _G.SpokenBooksAudioPacks = {
 
 local function LoadBooks()
     local SpokenBooks = {}
-    for _, file in ipairs({ "Checksum", "Core", "Reader", "Audio", "Playlist" }) do
+    for _, file in ipairs({ "Checksum", "Core", "Reader", "Audio", "Playlist", "UI/CopyLink" }) do
         local chunk = assert(loadfile(BOOKS .. file .. ".lua"))
         chunk("SpokenBooks", SpokenBooks)
     end
@@ -74,6 +74,27 @@ Expect("...carrying the recorded duration", clip.length, 30.5)
 Expect("...titled with the book", clip.present.header, "Hillsbrad Town Registry")
 Expect("...and numbered, because this book has more than one page", clip.present.label, "Page 1 of 4")
 Expect("a page the pack does not carry has no clip", B:ClipFor(263), nil)
+
+---------------------------------------------------------------- reporting a bad reading
+local report = clip.present.actions and clip.present.actions[1]
+Expect("every clip carries a report action", report and report.id, "report")
+Expect("...drawn as the bug icon the other addons use", report and report.icon,
+    [[Interface\HelpFrame\HelpIcon-Bug]])
+Expect("...with a letter for the clients whose art predates it", report and report.text, "R")
+
+-- Built from the page id alone, which docs/books/AGENTS.md freezes as b:{pageTextID}. That
+-- is what lets the addon address a page with no per-page table and nothing to escape.
+Expect("the report address names the page", B:ReportURL(261),
+    "https://spoken.rusty.one/books/r/261")
+Expect("...and is nothing at all without one", B:ReportURL(nil), nil)
+
+-- The client cannot open a browser, so pressing it can only offer the address to copy.
+local before = table.getn(stub.popups)
+report.onClick(clip)
+Expect("pressing it raises one popup", table.getn(stub.popups), before + 1)
+Expect("...saying what the address is for",
+    string.find(stub.popups[table.getn(stub.popups)].args[1] or "", "report a problem") ~= nil,
+    true)
 
 ---------------------------------------------------------------- reading a book
 Expect("a book lists the pages from here on", Same(B:PagesFrom(262), { 262, 263, 265 }), true)

@@ -158,6 +158,23 @@ place all of this identically, so one anchor covers three clients.
 The cost is that a full page's last line runs under the button; the alternative was
 colliding with one of Blizzard's controls on page two of every book.
 
+**Every clip carries a Report action**, the bug icon the quests and zones clips use, falling
+back to an "R" on the three private-server clients where that texture does not exist. The
+client cannot open a browser or post anywhere, so pressing it raises a popup holding one
+selectable address — `UI/CopyLink.lua`, the same shape the zones addon carries, and not
+shared with it because two addons cannot own one StaticPopup id.
+
+The address is `https://spoken.rusty.one/books/r/{pageTextID}`, built from the page id
+alone. That is deliberate: the id is frozen, so the addon can address any page with no
+per-page table to ship and nothing to escape — the trade the zones landing page makes with
+its `{mapID}/{slug}` path.
+
+> **The landing page does not exist yet.** `apps/web/src/app/books/` is the explorer and
+> nothing else; `quests/r` and `zones/r` have their routes and books does not, so the link
+> above currently 404s. What it needs is the zones page's shape — the page's text, its
+> current take to listen to, and `<ReportForm source="books" …>` — plus a lookup by page id
+> in `lib/books/catalogue.ts`, which today can only load the whole corpus.
+
 `UI/Layout.lua` is the fourth copy of a file that must stay byte-identical across
 SpokenPlayer, SpokenQuests, SpokenZones and SpokenBooks;
 `pipelines/quests/tests/test_package.py` is what enforces that.

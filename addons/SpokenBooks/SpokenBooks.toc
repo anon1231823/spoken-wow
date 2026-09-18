@@ -26,6 +26,7 @@ Playlist.lua
 UI/Layout.lua
 UI/Options.lua
 UI/PlayButton.lua
+UI/CopyLink.lua
 Events.lua
 Commands.lua
 
