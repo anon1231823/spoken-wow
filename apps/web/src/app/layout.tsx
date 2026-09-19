@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Geist } from "next/font/google";
+import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
 import UserMenu from "@/components/UserMenu";
@@ -21,8 +22,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <header className="border-b">
           <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-3 px-5">
-            <Link href="/" className="text-sm font-medium">
-              Spoken
+            <Link href="/" aria-label="Spoken">
+              {/* Intrinsic 1024x187; height is what the header constrains, so the
+                  width below is that ratio and only exists to stop the reflow. */}
+              <Image
+                src="/logo.png"
+                alt="Spoken"
+                width={142}
+                height={26}
+                priority
+                className="h-[26px] w-auto"
+              />
             </Link>
             <UserMenu />
           </div>
