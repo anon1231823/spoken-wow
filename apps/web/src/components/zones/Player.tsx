@@ -1,7 +1,6 @@
 "use client";
 
 import AudioPlayer from "@/components/AudioPlayer";
-import { BASE_LANG, type Lang } from "@/lib/zones/lang";
 import type { ResultLine } from "@/lib/zones/search";
 
 /**
@@ -14,15 +13,12 @@ type Props = {
   line: ResultLine | null;
   /** Take version, used only to bust the browser cache after a regeneration. */
   version?: number;
-  /** Which language's narration to fetch. The file path itself carries none. */
-  lang?: Lang;
   audioRef: React.RefObject<HTMLAudioElement | null>;
 };
 
-export function Player({ line, version, lang = BASE_LANG, audioRef }: Props) {
+export function Player({ line, version, audioRef }: Props) {
   const query = new URLSearchParams();
   if (version !== undefined) query.set("v", String(version));
-  if (lang !== BASE_LANG) query.set("lang", lang);
 
   // A line with no take has nothing to play, and passing a src that 404s would leave the
   // transport enabled over silence.

@@ -43,7 +43,6 @@ import * as elevenModule from "@tools/voice/elevenlabs.mjs";
 import * as exportModule from "@tools/voice/export-manifest.mjs";
 import * as lookupModule from "@tools/voice/build-lookup.mjs";
 import * as wikiModule from "@tools/lib/wiki.mjs";
-import * as areaNamesModule from "@tools/lib/area-names.mjs";
 
 /** What generation recorded for a line. Mirrors a manifest record, and so a current take. */
 export type TakeRecord = {
@@ -72,11 +71,10 @@ export const assignFiles = namingModule.assignFiles as (
 
 export const textHash = namingModule.textHash as (spoken: string) => string;
 
-// Functions rather than constants, because this process serves every language at once and a
-// path resolved at import could only ever name one of them. The CLI, which runs one language
-// per process, calls them with no argument.
-export const soundsDir = storeModule.soundsDir as (lang?: string) => string;
-export const historyDir = storeModule.historyDir as (lang?: string) => string;
+// Functions rather than constants: each reads an environment override the droplet sets,
+// and a path resolved at import would be fixed before the process had one.
+export const soundsDir = storeModule.soundsDir as () => string;
+export const historyDir = storeModule.historyDir as () => string;
 
 export const toSpokenText = normaliseModule.toSpokenText as (
   text: string,
@@ -90,16 +88,6 @@ export const loadPronunciation = normaliseModule.loadPronunciation as () => Prom
 // rather than reimplemented here, so a line edited in the explorer and a line scraped from
 // the wiki get the same summary from the same prose.
 export const makeShort = wikiModule.makeShort as (full: string, limit?: number) => string;
-
-/** What each locale's client calls every place: see tools/lib/area-names.mjs. */
-export type AreaNames = Record<string, Map<string, string>>;
-export const loadAreaNames = areaNamesModule.loadAreaNames as () => Promise<AreaNames>;
-export const areaName = areaNamesModule.areaName as (
-  names: AreaNames,
-  lang: string,
-  entry: { kind: string; key: string | null; name: string },
-  englishName?: string,
-) => string;
 
 /**
  * What synthesize() needs to know, assembled per request rather than read from a file.
@@ -132,7 +120,6 @@ export const synthesize = elevenModule.synthesize as (
 export const writeAudio = storeModule.writeAudio as (
   file: string,
   buffer: Buffer,
-  lang?: string,
 ) => Promise<string>;
 export const durationOf = storeModule.durationOf as (path: string) => Promise<number>;
 export const insertTake = storeModule.insertTake as (
@@ -140,12 +127,10 @@ export const insertTake = storeModule.insertTake as (
   record: TakeRecord,
   origin: "imported" | "generated",
   settings?: Record<string, unknown> | null,
-  lang?: string,
 ) => Promise<number>;
 export const restoreTake = storeModule.restoreTake as (
   file: string,
   archiveVersion: number,
-  lang?: string,
 ) => Promise<string>;
 
 // What the addon actually ships, rebuilt after a batch drains rather than after every line:
@@ -153,9 +138,8 @@ export const restoreTake = storeModule.restoreTake as (
 // of a run that is otherwise waiting on ElevenLabs.
 export const exportManifest = exportModule.exportManifest as (options?: {
   check?: boolean;
-  lang?: string;
 }) => Promise<{ skipped: boolean; changed: boolean; count: number }>;
-export const buildLookup = lookupModule.buildLookup as (lang?: string) => Promise<{
+export const buildLookup = lookupModule.buildLookup as () => Promise<{
   zones: number;
   subzones: number;
   missingFiles: number;

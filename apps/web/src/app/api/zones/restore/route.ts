@@ -8,13 +8,12 @@
 import { requireRegenerate } from "@/lib/generation/authz";
 import { archivedVersions } from "@/lib/zones/audio";
 import { catalogue } from "@/lib/zones/catalogue";
-import { BASE_LANG } from "@/lib/zones/lang";
 import { publish, restoreZoneTake } from "@/lib/zones/regenerate";
 
 export const dynamic = "force-dynamic";
 
 async function fileOf(lineId: string): Promise<string | undefined> {
-  return (await catalogue(BASE_LANG)).find((entry) => entry.id === lineId)?.file;
+  return (await catalogue()).find((entry) => entry.id === lineId)?.file;
 }
 
 export async function GET(request: Request) {
@@ -27,7 +26,7 @@ export async function GET(request: Request) {
   const file = await fileOf(lineId);
   if (!file) return Response.json({ error: `unknown lineId ${lineId}` }, { status: 404 });
 
-  return Response.json({ versions: await archivedVersions(file, BASE_LANG) });
+  return Response.json({ versions: await archivedVersions(file) });
 }
 
 export async function POST(request: Request) {
@@ -46,7 +45,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const version = await restoreZoneTake(body.lineId, body.version, BASE_LANG);
+    const version = await restoreZoneTake(body.lineId, body.version);
     await publish().catch((error: unknown) => {
       console.error("zones: could not rebuild the lookup after a restore", error);
     });

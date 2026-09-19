@@ -17,7 +17,6 @@ import { join } from "node:path";
 import { parseRange } from "@/lib/range";
 import { streamOf } from "@/lib/stream";
 import { isAddressable, soundsDir } from "@/lib/zones/audio";
-import { BASE_LANG } from "@/lib/zones/lang";
 
 export const dynamic = "force-dynamic";
 
@@ -26,13 +25,12 @@ export async function GET(
   context: { params: Promise<{ path: string[] }> },
 ) {
   const rel = (await context.params).path.join("/");
-  const lang = BASE_LANG;
 
-  if (!(await isAddressable(rel, lang))) {
+  if (!(await isAddressable(rel))) {
     return new Response("bad audio path", { status: 400 });
   }
 
-  const file = join(soundsDir(lang), rel);
+  const file = join(soundsDir(), rel);
   const info = await stat(file).catch(() => null);
   if (!info) {
     // A gap, not an error: the explorer already knows which lines have no audio and

@@ -45,12 +45,12 @@ afterAll(closeDb);
 describe("the catalogue stamp", () => {
   it("moves when a line is edited, which inserts a version", async () => {
     await insert(1, true, "the first text");
-    const before = await catalogueStamp("enUS");
+    const before = await catalogueStamp();
 
     await db().query(`update "lore_line" set "isCurrent" = false where "lineId" = $1`, [lineId]);
     await insert(2, true, "the second text");
 
-    expect(await catalogueStamp("enUS")).not.toBe(before);
+    expect(await catalogueStamp()).not.toBe(before);
   });
 
   /**
@@ -61,7 +61,7 @@ describe("the catalogue stamp", () => {
   it("moves when a version is restored, which inserts nothing", async () => {
     const first = await insert(1, false, "the first text");
     await insert(2, true, "the second text");
-    const before = await catalogueStamp("enUS");
+    const before = await catalogueStamp();
 
     // Two statements, as restoreLore does it: the partial unique index is checked as each
     // row updates, so one statement flipping both would momentarily have two current rows
@@ -70,32 +70,22 @@ describe("the catalogue stamp", () => {
     await db().query(`update "lore_line" set "isCurrent" = false where "lineId" = $1`, [lineId]);
     await db().query(`update "lore_line" set "isCurrent" = true where "id" = $1`, [first]);
 
-    expect(await catalogueStamp("enUS")).not.toBe(before);
+    expect(await catalogueStamp()).not.toBe(before);
   });
 
   /** Nothing in the app deletes, but `make zones-lore-import` and a hand-run scrape can. */
   it("moves when a version is deleted", async () => {
     await insert(1, false, "the first text");
     await insert(2, true, "the second text");
-    const before = await catalogueStamp("enUS");
+    const before = await catalogueStamp();
 
     await db().query(`delete from "lore_line" where "lineId" = $1 and "version" = 1`, [lineId]);
 
-    expect(await catalogueStamp("enUS")).not.toBe(before);
+    expect(await catalogueStamp()).not.toBe(before);
   });
 
   it("does not move when nothing changed", async () => {
     await insert(1, true, "the first text");
-    expect(await catalogueStamp("enUS")).toBe(await catalogueStamp("enUS"));
-  });
-
-  /** A language is its own corpus: writing German must not rebuild the English catalogue. */
-  it("is per language", async () => {
-    await insert(1, true, "the english text");
-    const before = await catalogueStamp("deDE");
-
-    await db().query(`update "lore_line" set "full" = 'edited' where "lineId" = $1`, [lineId]);
-
-    expect(await catalogueStamp("deDE")).toBe(before);
+    expect(await catalogueStamp()).toBe(await catalogueStamp());
   });
 });

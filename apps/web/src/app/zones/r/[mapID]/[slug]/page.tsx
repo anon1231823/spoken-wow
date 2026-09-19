@@ -5,7 +5,6 @@ import { notFound } from "next/navigation";
 import ReportForm from "@/components/ReportForm";
 import { audioRelPath } from "@/lib/zones/audio";
 import { isCorpusEmpty, lineByPath, loadContext } from "@/lib/zones/catalogue";
-import { BASE_LANG } from "@/lib/zones/lang";
 
 /**
  * One zone line, and the form to complain about it.
@@ -29,7 +28,7 @@ type Params = { mapID: string; slug: string };
 
 async function resolve({ mapID, slug }: Params) {
   try {
-    return await lineByPath(Number(mapID), slug, BASE_LANG);
+    return await lineByPath(Number(mapID), slug);
   } catch (error) {
     // An unseeded corpus names no lines, so no address resolves to one. The page a player
     // arriving from the game should see is the same one an unknown place gives them.
@@ -61,7 +60,7 @@ export default async function Page({ params }: { params: Promise<Params> }) {
   // The current take is the only thing here that is not derivable from committed files,
   // and it answers one question: is there narration to listen to before complaining about
   // it.
-  const take = (await loadContext(BASE_LANG)).takes.get(entry.id);
+  const take = (await loadContext()).takes.get(entry.id);
 
   return (
     <main className="mx-auto max-w-6xl px-5 pt-8 pb-24">

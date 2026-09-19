@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 
-import { BASE_LANG, langName, type Lang } from "@/lib/zones/lang";
 import type { ResultLine } from "@/lib/zones/search";
 
 // Rewriting a line, and putting an earlier wording back.
@@ -28,14 +27,12 @@ type Version = {
 
 type Props = {
   line: ResultLine | null;
-  /** Which language is being written. English edits the lore; anything else translates it. */
-  lang?: Lang;
   onClose: () => void;
   /** Told the new text so the row can update without a reload. */
   onSaved: (line: ResultLine, full: string) => void;
 };
 
-export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) {
+export function LoreDialog({ line, onClose, onSaved }: Props) {
   const dialog = useRef<HTMLDialogElement | null>(null);
   const [text, setText] = useState("");
   const [note, setNote] = useState("");
@@ -63,7 +60,6 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
 
     let cancelled = false;
     const params = new URLSearchParams({ lineId: line.id });
-    if (lang !== BASE_LANG) params.set("lang", lang);
 
     fetch(`/api/zones/lore?${params}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("could not load history"))))
@@ -79,7 +75,7 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
     return () => {
       cancelled = true;
     };
-  }, [lang, line]);
+  }, [line]);
 
   const save = useCallback(async () => {
     if (!line) return;
@@ -94,7 +90,6 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
         full: text,
         note: note.trim() || null,
         expectedVersion: baseVersion,
-        lang,
       }),
     }).catch(() => null);
 
@@ -108,7 +103,7 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
 
     onSaved(line, text.trim());
     onClose();
-  }, [baseVersion, lang, line, note, onClose, onSaved, text]);
+  }, [baseVersion, line, note, onClose, onSaved, text]);
 
   const restore = useCallback(
     async (version: number) => {
@@ -119,7 +114,7 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
       const res = await fetch("/api/zones/lore", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ lineId: line.id, version, lang }),
+        body: JSON.stringify({ lineId: line.id, version }),
       }).catch(() => null);
 
       setBusy(false);
@@ -133,7 +128,7 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
       onSaved(line, data.version.full);
       onClose();
     },
-    [lang, line, onClose, onSaved],
+    [line, onClose, onSaved],
   );
 
   if (!line) return null;
@@ -150,20 +145,6 @@ export function LoreDialog({ line, lang = BASE_LANG, onClose, onSaved }: Props) 
       <p className="mb-3 text-xs text-muted-foreground">
         {line.zoneName} · {line.file}
       </p>
-
-      {line.english !== undefined && (
-        <div className="mb-3">
-          <div className="mb-1 text-xs tracking-wide text-muted-foreground uppercase">
-            English — {langName(lang)} translation below
-          </div>
-          {/* Read-only, and always shown when translating: the English is the source
-              text, and a translator working from memory of what the row said is how a
-              paragraph quietly loses a sentence. */}
-          <p className="max-h-40 overflow-y-auto rounded border border-border bg-background p-2 text-sm whitespace-pre-wrap text-muted-foreground">
-            {line.english}
-          </p>
-        </div>
-      )}
 
       <textarea
         autoFocus

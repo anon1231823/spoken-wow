@@ -74,9 +74,6 @@ export function decorate(entry: CatalogueEntry, context: SearchContext): ResultL
     take: take ?? null,
     flag: context.flags.get(entry.id) ?? null,
     reportsOpen: context.reports.get(entry.id) ?? 0,
-    ...(entry.english === undefined
-      ? {}
-      : { english: entry.english, translated: entry.translated ?? false }),
   };
 }
 

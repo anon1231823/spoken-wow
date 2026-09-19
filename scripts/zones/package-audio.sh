@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # Builds the Spoken Zones sound pack.
 #
-#   ./scripts/package-audio.sh                 # the English pack
+#   ./scripts/package-audio.sh                 # the pack
 #   ./scripts/package-audio.sh standard        # just the 64kbps one
 #   ./scripts/package-audio.sh high            # just the 128kbps one
-#   LOCALE=deDE ./scripts/package-audio.sh     # the German pack, VBR only
 #
 # Two tiers exist because this is a ~790MB download at the source bitrate, which
 # is a lot to ask for narration that is mostly listened to once per zone. The
@@ -25,23 +24,10 @@
 # Each tier ships as its own addon folder so a player can install both and switch
 # between them in-game. They share one generated Data/Sounds.lua, which reads its
 # own folder name and tier out of the .toc at load time -- see build-lookup.mjs.
-#
-# ONE LANGUAGE PER RUN, and only English gets two tiers. A language is a tenfold
-# multiplication of everything expensive here -- generation credits, a CurseForge
-# project, a several-hundred-megabyte upload -- so a second tier for a language is
-# a decision to take when somebody asks for it, not a default. LOCALE picks the
-# language; unset means English, which is every run so far.
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-LOCALE="${LOCALE:-enUS}"
-
-# Exported, not just used here: the validate-audio and descriptions runs below are
-# Node processes that resolve their own manifest and Sounds paths from it, and a
-# packaging run that checked English's manifest against another language's files
-# would pass by looking at neither.
-export SPOKEN_ZONES_LANG="$LOCALE"
 
 # The Node steps below read the manifest from Postgres when DATABASE_URL is set, and
 # pipelines/zones/.env points it at the droplet -- so packaging on a laptop with no tunnel up
@@ -52,14 +38,9 @@ export SPOKEN_ZONES_LANG="$LOCALE"
 # supplies the empty default when there is none.
 export DATABASE_URL="${DATABASE_URL-}"
 
-# The masters live in the language's own pack folder; English's are the high tier
-# it already publishes. Kept in step with packFolder() in tools/lib/locales.mjs:
-# the full locale code, because a truncation would give esES and esMX one folder.
-if [[ "$LOCALE" == "enUS" ]]; then
-  SRC="$REPO/addons/SpokenZonesAudio"
-else
-  SRC="$REPO/addons/SpokenZonesAudio_$LOCALE"
-fi
+# The masters are the high tier the project already publishes. Kept in step with
+# packFolder() in tools/lib/locales.mjs.
+SRC="$REPO/addons/SpokenZonesAudio"
 TOC="$SRC/$(basename "$SRC").toc"
 SOUNDS="$SRC/Sounds"
 DIST="$REPO/dist"
@@ -96,13 +77,7 @@ JOBS="${JOBS:-$( (command -v nproc >/dev/null 2>&1 && nproc) || sysctl -n hw.ncp
 # tier_encoding names the ffmpeg recipe AND the cache directory, so changing the
 # recipe automatically starts a fresh cache instead of serving entries cut with
 # the old one. "copy" means no transcode.
-#
-# A non-English pack ships one tier and so carries no bitrate marker in its name:
-# there is nothing to tell it apart from. If a second tier is ever wanted for a
-# language, it needs a suffix of its own -- and a rename of what is already
-# published, which is the reason not to invent one now.
 tier_folder() {
-  if [[ "$LOCALE" != "enUS" ]]; then basename "$SRC"; return; fi
   case "$1" in standard) echo "ZoneLoreAudio64";; high) echo "SpokenZonesAudio";; esac
 }
 tier_bitrate()  { case "$1" in standard) echo "64";; high) echo "128";; esac; }
@@ -111,32 +86,19 @@ tier_encoding() { case "$1" in standard) echo "vbr-v6";; high) echo "copy";; esa
 # name out of the loader, so nothing breaks, and the re-download it costs is one the release
 # doing the rename costs anyway. ZoneLoreAudio64 keeps its name because it is retired.
 tier_title() {
-  if [[ "$LOCALE" != "enUS" ]]; then echo "Spoken Zones Audio $LOCALE"; return; fi
   case "$1" in standard) echo "Spoken Zones Audio 64";; high) echo "Spoken Zones Audio";; esac
 }
 
-# One tier per language, now that the 64 kbps English pack is retired: two qualities meant
-# two CurseForge projects, two folder names and a question at install time that the answer
-# "take the bigger one" always won. ZoneLoreAudio64 stays published so existing installs keep
-# working and is never uploaded to again.
-#
-# `standard` is still reachable by naming it, and is still what a non-English pack ships:
-# a language has one tier, and its folder carries no bitrate marker because there is nothing
-# to tell it apart from.
-if [[ "$LOCALE" == "enUS" ]]; then
-  tiers=("high")
-else
-  tiers=("standard")
-fi
+# One tier, now that the 64 kbps pack is retired: two qualities meant two CurseForge
+# projects, two folder names and a question at install time that the answer "take the
+# bigger one" always won. ZoneLoreAudio64 stays published so existing installs keep
+# working and is never uploaded to again. `standard` is still reachable by naming it.
+tiers=("high")
 
 if [[ $# -gt 0 ]]; then
   for arg in "$@"; do
     if [[ -z "$(tier_bitrate "$arg")" ]]; then
       echo "error: unknown tier '$arg' (expected: standard, high)" >&2
-      exit 1
-    fi
-    if [[ "$LOCALE" != "enUS" && "$arg" != "standard" ]]; then
-      echo "error: $LOCALE ships the standard tier only -- see the header of this script" >&2
       exit 1
     fi
   done
@@ -186,13 +148,6 @@ node "$REPO/scripts/descriptions.mjs" --write >/dev/null
 # The retired 64 kbps page is gone, so every tier without a page of its own falls back to the
 # one shipping description rather than to a page nobody maintains.
 tier_readme() {
-  local path
-  if [[ "$LOCALE" != "enUS" ]]; then
-    path="$REPO/dist/descriptions/$(echo "$(tier_folder "$1")" | tr '[:upper:]' '[:lower:]').md"
-    [[ -f "$path" ]] || path="$REPO/dist/descriptions/spoken-zones-audio.md"
-    echo "$path"
-    return
-  fi
   echo "$REPO/dist/descriptions/spoken-zones-audio.md"
 }
 
@@ -247,7 +202,7 @@ for tier in "${tiers[@]}"; do
     -e "s|^## Title:.*|## Title: $title|" \
     -e "s|^## X-SpokenZones-Quality:.*|## X-SpokenZones-Quality: $tier|" \
     -e "s|^## X-SpokenZones-Bitrate:.*|## X-SpokenZones-Bitrate: $bitrate|" \
-    -e "s|^## X-SpokenZones-Language:.*|## X-SpokenZones-Language: $LOCALE|" \
+    -e "s|^## X-SpokenZones-Language:.*|## X-SpokenZones-Language: enUS|" \
     "$staging/$folder/$folder.toc"
   rm -f "$staging/$folder/$folder.toc.bak"
 

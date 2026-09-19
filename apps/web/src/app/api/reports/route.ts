@@ -19,7 +19,6 @@ import { countRecent, createReport } from "@/lib/reports/store";
 import { formatTarget, parseTarget, resolveTarget } from "@/lib/reports/target";
 import { BASE_LANG as BOOKS_LANG, pageById } from "@/lib/books/catalogue";
 import { lineByPath } from "@/lib/zones/catalogue";
-import { BASE_LANG } from "@/lib/zones/lang";
 
 export const dynamic = "force-dynamic";
 
@@ -140,7 +139,7 @@ async function zonesTarget(
   if (!raw) return null;
 
   const [mapID, slug] = raw.split("/");
-  const entry = await lineByPath(Number(mapID), slug ?? "", BASE_LANG);
+  const entry = await lineByPath(Number(mapID), slug ?? "");
   if (!entry) return null;
 
   return { lineId: entry.id, target: entry.file };

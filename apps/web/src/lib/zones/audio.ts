@@ -6,7 +6,6 @@ import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 
 import { catalogue } from "./catalogue";
-import { BASE_LANG, type Lang } from "./lang";
 import { historyDir, soundsDir } from "./tools";
 
 export { historyDir, soundsDir };
@@ -28,17 +27,17 @@ export function audioRelPath(file: string): string {
 // step with a corpus that changes, for a Set built in a millisecond from a list already in
 // memory. The zones site kept one, and it was one more cache its by-hand invalidation had
 // to remember.
-export async function addressableFiles(lang: Lang = BASE_LANG): Promise<Set<string>> {
-  return new Set((await catalogue(lang)).map((entry) => audioRelPath(entry.file)));
+export async function addressableFiles(): Promise<Set<string>> {
+  return new Set((await catalogue()).map((entry) => audioRelPath(entry.file)));
 }
 
-export async function isAddressable(relPath: string, lang: Lang = BASE_LANG): Promise<boolean> {
-  return (await addressableFiles(lang)).has(relPath);
+export async function isAddressable(relPath: string, ): Promise<boolean> {
+  return (await addressableFiles()).has(relPath);
 }
 
 /** Which archived takes exist for a line, newest first. Empty when none do. */
-export async function archivedVersions(file: string, lang: Lang = BASE_LANG): Promise<number[]> {
-  const names = await readdir(join(historyDir(lang), file)).catch(() => [] as string[]);
+export async function archivedVersions(file: string, ): Promise<number[]> {
+  const names = await readdir(join(historyDir(), file)).catch(() => [] as string[]);
   return names
     .map((name) => /^v(\d+)\.mp3$/.exec(name))
     .filter((match): match is RegExpExecArray => match !== null)

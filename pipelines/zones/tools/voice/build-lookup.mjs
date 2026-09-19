@@ -46,14 +46,14 @@ function luaPath(file) {
  * unreachable and the old duration would reset the Play button at the wrong moment.
  */
 export async function buildLookup(lang = LANG) {
-  const manifest = await loadManifest(lang);
+  const manifest = await loadManifest();
 
   const zones = new Map();      // mapID -> row
   const subzones = new Map();   // mapID -> Map(key -> row)
   let missingFiles = 0;
 
   for (const [id, record] of Object.entries(manifest)) {
-    if (!existsSync(join(soundsDir(lang), `${record.file}.mp3`))) {
+    if (!existsSync(join(soundsDir(), `${record.file}.mp3`))) {
       console.warn(`warning: ${id} is in the manifest but ${record.file}.mp3 is not on disk`);
       missingFiles++;
       continue;

@@ -27,7 +27,6 @@ import { filtersFromParams, needsDates, needsStale } from "@/lib/search-request"
 import { ensureQueueRunning, queueWorker } from "@/lib/generation/boot";
 import { catalogue as bookCatalogue, BASE_LANG as BOOKS_LANG } from "@/lib/books/catalogue";
 import { catalogue as zoneCatalogue } from "@/lib/zones/catalogue";
-import { BASE_LANG } from "@/lib/zones/lang";
 
 export const dynamic = "force-dynamic";
 
@@ -127,7 +126,7 @@ async function queueZones(
   }
 
   const wanted = new Set(lineIds as string[]);
-  const jobs = (await zoneCatalogue(BASE_LANG))
+  const jobs = (await zoneCatalogue())
     .filter((entry) => wanted.has(entry.id) && entry.spoken.trim() !== "")
     .map((entry) => ({
       lineId: entry.id,

@@ -22,7 +22,6 @@ import { classifyUpstream, failure } from "@/lib/generation/errors";
 import type { RegenerateResult } from "@/lib/generation/regenerate";
 
 import { catalogue, type CatalogueEntry } from "./catalogue";
-import { BASE_LANG, type Lang } from "./lang";
 import {
   buildLookup,
   durationOf,
@@ -84,37 +83,32 @@ async function takeFor(
  * doing that once per line would be the slowest part of a run that is otherwise waiting on
  * ElevenLabs. The queue calls it once when it drains.
  */
-export async function publish(lang: Lang = BASE_LANG): Promise<void> {
-  await exportManifest({ lang });
-  await buildLookup(lang);
+export async function publish(): Promise<void> {
+  await exportManifest();
+  await buildLookup();
 }
 
-async function entryFor(lineId: string, lang: Lang): Promise<CatalogueEntry | undefined> {
-  return (await catalogue(lang)).find((candidate) => candidate.id === lineId);
+async function entryFor(lineId: string): Promise<CatalogueEntry | undefined> {
+  return (await catalogue()).find((candidate) => candidate.id === lineId);
 }
 
 /**
  * One line, narrated and recorded.
  *
- * The signature is the queue's Generator: which line, whose provenance, whose credits. The
- * language is not a parameter because a job does not carry one -- the merged site serves
- * English, and when it serves more the job will say which, rather than this guessing.
+ * The signature is the queue's Generator: which line, whose provenance, whose credits.
  */
 export async function regenerateZoneLine(
   lineId: string,
   createdBy: string,
   options: { apiKey: string },
 ): Promise<RegenerateResult> {
-  const lang = BASE_LANG;
 
-  const entry = await entryFor(lineId, lang);
+  const entry = await entryFor(lineId);
   if (!entry) {
     return { ok: false, failure: { ...failure("bad-request", `no line ${lineId}`), status: 404 } };
   }
 
-  // An untranslated line has no text at all, which is deliberate: falling back to English
-  // would narrate English prose in another language's voice and record it as that
-  // language's take. Nothing to say is not a failure of this request, though, so it is a
+  // A line with no text at all is not a failure of this request, so it is a
   // bad-request rather than an upstream one.
   if (!entry.spoken.trim()) {
     return {
@@ -139,7 +133,7 @@ export async function regenerateZoneLine(
 
     // Archives the take being replaced. This is what makes a bad re-roll reversible, and
     // the reason writeAudio lives in the pipeline's store rather than in this caller.
-    const path = await writeAudio(entry.file, audio, lang);
+    const path = await writeAudio(entry.file, audio);
 
     const version = await insertTake(
       entry.id,
@@ -148,7 +142,6 @@ export async function regenerateZoneLine(
       // Unlike an imported take, this one knows exactly what it was made with, so a
       // version that sounded right can be reproduced after the settings have moved on.
       config.voiceSettings,
-      lang,
     );
 
     return {
@@ -192,9 +185,8 @@ export async function regenerateZoneLine(
 export async function restoreZoneTake(
   lineId: string,
   archiveVersion: number,
-  lang: Lang = BASE_LANG,
 ): Promise<number> {
-  const entry = await entryFor(lineId, lang);
+  const entry = await entryFor(lineId);
   if (!entry) throw new Error(`unknown lineId ${lineId}`);
 
   const { query } = await import("@/lib/db");
@@ -210,13 +202,13 @@ export async function restoreZoneTake(
     `select "spokenHash" as "textHash", "characters" as "chars", "voiceId", "modelId",
             "outputFormat", "dictionaryId", "dictionaryVersion" as "dictionaryVersionId"
        from "take"
-      where "source" = 'zones' and "lineId" = $1 and "lang" = $2 and "version" = $3`,
-    [lineId, lang, archiveVersion],
+      where "source" = 'zones' and "lineId" = $1 and "version" = $2`,
+    [lineId, archiveVersion],
   );
   const original = rows[0];
   if (!original) throw new Error(`no take at version ${archiveVersion} for ${lineId}`);
 
-  const path = await restoreTake(entry.file, archiveVersion, lang);
+  const path = await restoreTake(entry.file, archiveVersion);
 
   return insertTake(
     lineId,
@@ -237,7 +229,5 @@ export async function restoreZoneTake(
       generatedAt: new Date().toISOString(),
     },
     "generated",
-    null,
-    lang,
   );
 }

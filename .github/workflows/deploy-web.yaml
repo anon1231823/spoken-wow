@@ -162,7 +162,6 @@ jobs:
           # them, because a release missing them serves a /zones that works badly rather
           # than one that fails.
           mkdir -p "$R"/pipelines/zones/tools/seed "$R"/pipelines/zones/tools/voice
-          cp pipelines/zones/tools/seed/area-names.json "$R"/pipelines/zones/tools/seed/
           cp pipelines/zones/tools/voice/*.json "$R"/pipelines/zones/tools/voice/
 
           # Migrations ship with the release too: activate.sh runs migrate.sh against the
@@ -175,7 +174,6 @@ jobs:
           test -f "$R"/migrations/0020_take.sql
           test -f "$R"/pipelines/quests/voice/generation.json
           test -f "$R"/pipelines/quests/voice/pronunciation.json
-          test -f "$R"/pipelines/zones/tools/seed/area-names.json
           test -f "$R"/pipelines/zones/tools/voice/pronunciation.json
           du -sh "$R"
 

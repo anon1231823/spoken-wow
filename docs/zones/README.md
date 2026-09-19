@@ -356,6 +356,17 @@ no post-vanilla text, which the sentence filter handles.
 
 ### Two axes: the client's locale and the language being read
 
+> **The pipeline and the site no longer have a language axis.** The lore is English,
+> `generate.mjs` and the exporters take no language, the translation sheet round-trip
+> is gone, and the site serves one corpus with no switcher. Adding languages back is a
+> decision to take for all three addons at once rather than for this one alone.
+>
+> **The addon keeps everything it had.** `Data/<locale>/Aliases.lua`, `Data/Languages.lua`,
+> `Locale/<code>.lua` and `Language.lua` are untouched, and `make zones-aliases`,
+> `make zones-languages` and `make zones-locale-check` still maintain them. The two
+> sections below describe the halves that were removed, and are kept for when they
+> come back.
+
 These are separate, and conflating them is the failure that reads as "the addon
 just does not work in German".
 
@@ -428,6 +439,8 @@ an honest empty state that prose from another language does not improve on.
 
 ### Translations arrive as a spreadsheet
 
+> Removed. `make zones-lore-sheet`, `-lore-upload` and `-lore-upload-dry` and the two tools behind them are gone.
+
 Nothing here translates. A language's lore is written by people, either one line at a
 time in the explorer's edit dialog under that language, or in bulk through a sheet:
 
@@ -463,6 +476,8 @@ leaves in English — Italian Classic, or a name that is the same in both — re
 English, which is what that client shows on its map.
 
 ### The explorer's language switch is in the header
+
+> Removed. The site serves English and has no switcher; the language is not in the path.
 
 The corpus is edited in the explorer, so translating is something it has to be able to
 do — and the language decides more than which rows are listed. It decides which text is

@@ -1,9 +1,8 @@
 #!/usr/bin/env node
-// Writes addon/SpokenZones/Data/<lang>/{Zones,Subzones}.lua from lore_line.
+// Writes addons/SpokenZones/Data/enUS/{Zones,Subzones}.lua from lore_line.
 //
 //   node tools/lore/export.mjs           # write both files
 //   node tools/lore/export.mjs --check   # fail if the files are out of date, write nothing
-//   SPOKEN_ZONES_LANG=deDE node tools/lore/export.mjs   # a language other than English
 //
 // The counterpart to tools/voice/export-manifest.mjs, and there for the same reason: the
 // database is where the corpus is authored, and a file is what the addon ships. Between
@@ -15,7 +14,6 @@
 
 import { readFile } from "node:fs/promises";
 
-import { BASE_LOCALE, isLocale } from "../lib/locales.mjs";
 import { zonesLua, subzonesLua } from "../lib/loredata.mjs";
 import { loadClientAreas } from "../lib/era.mjs";
 import { emitZones, emitSubzones } from "./lua.mjs";
@@ -29,12 +27,6 @@ await loadEnvFile();
 const argv = process.argv.slice(2);
 const checkOnly = argv.includes("--check");
 
-const lang = process.env.SPOKEN_ZONES_LANG || BASE_LOCALE;
-if (!isLocale(lang)) {
-  console.error(`error: SPOKEN_ZONES_LANG=${lang} is not a WoW locale code.`);
-  process.exit(1);
-}
-
 async function main() {
   if (!isEnabled()) {
     console.error("error: DATABASE_URL is not set, so there is no corpus to export.");
@@ -42,9 +34,9 @@ async function main() {
     process.exit(1);
   }
 
-  const allRows = await readCurrent(lang);
+  const allRows = await readCurrent();
   if (allRows.length === 0) {
-    console.error(`error: lore_line has no ${lang} rows. Seed English with:  make lore-import`);
+    console.error("error: lore_line has no rows. Seed it with:  make zones-lore-import");
     process.exit(1);
   }
 
@@ -85,8 +77,8 @@ async function main() {
 
     const stale = [];
     for (const [path, wanted] of [
-      [zonesLua(lang), emitZones(zones, lang)],
-      [subzonesLua(lang), emitSubzones(subzones, zoneNames, lang)],
+      [zonesLua(), emitZones(zones)],
+      [subzonesLua(), emitSubzones(subzones, zoneNames)],
     ]) {
       const onDisk = await readFile(path, "utf8").catch(() => null);
       if (onDisk !== wanted) stale.push(path);
@@ -100,13 +92,13 @@ async function main() {
       return;
     }
 
-    console.log(`up to date -- ${lang}, ${rows.length} lines, ${edited} hand-edited`);
+    console.log(`up to date -- ${rows.length} lines, ${edited} hand-edited`);
     return;
   }
 
-  const written = await writeCorpus(rows, lang);
+  const written = await writeCorpus(rows);
   console.log(
-    `wrote ${written.zones} zones and ${written.subzones} subzones in ${lang} ` +
+    `wrote ${written.zones} zones and ${written.subzones} subzones ` +
       `(${edited} hand-edited)`,
   );
   console.log("\nreview with:  git diff addon/SpokenZones/Data/");

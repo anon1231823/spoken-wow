@@ -11,7 +11,6 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { BASE_LOCALE } from "./locales.mjs";
 
 // The monorepo root. Everything under the zones pipeline derives its paths from this
 // one constant.
@@ -36,16 +35,15 @@ import { BASE_LOCALE } from "./locales.mjs";
 export const ROOT =
   process.env.SPOKEN_ZONES_ROOT ||
   join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
-// One corpus per language, under its own locale directory. A language with no
-// text has no directory at all rather than a pair of empty files: the addon
-// falls back to English per line, so an empty table and a missing one mean the
-// same thing to a player, and only one of them is committed weight.
-export function zonesLua(lang = BASE_LOCALE) {
-  return join(ROOT, "addons/SpokenZones/Data", lang, "Zones.lua");
+// The corpus, under the enUS directory it has always been committed in. The directory
+// name is kept rather than flattened: the addon's TOC lists these paths, and a path in a
+// shipped TOC is not worth churning to save a level.
+export function zonesLua() {
+  return join(ROOT, "addons/SpokenZones/Data/enUS/Zones.lua");
 }
 
-export function subzonesLua(lang = BASE_LOCALE) {
-  return join(ROOT, "addons/SpokenZones/Data", lang, "Subzones.lua");
+export function subzonesLua() {
+  return join(ROOT, "addons/SpokenZones/Data/enUS/Subzones.lua");
 }
 
 // The emitter escapes exactly these, so the reader reverses exactly these.
@@ -66,8 +64,8 @@ function fields(block) {
   return out;
 }
 
-export async function readZones(lang = BASE_LOCALE) {
-  const src = await readFile(zonesLua(lang), "utf8");
+export async function readZones() {
+  const src = await readFile(zonesLua(), "utf8");
   const zones = [];
 
   // Split on the top-level "[id] = {" headers, so each block is one zone.
@@ -79,8 +77,8 @@ export async function readZones(lang = BASE_LOCALE) {
   return zones;
 }
 
-export async function readSubzones(lang = BASE_LOCALE) {
-  const src = await readFile(subzonesLua(lang), "utf8");
+export async function readSubzones() {
+  const src = await readFile(subzonesLua(), "utf8");
   const subzones = [];
 
   const zoneParts = src.split(/^\t\[(\d+)\] = \{$/m);
@@ -96,8 +94,8 @@ export async function readSubzones(lang = BASE_LOCALE) {
 }
 
 // Every voiceable entry, in a single shape. `key` is null for a zone.
-export async function readLines(lang = BASE_LOCALE) {
-  const [zones, subzones] = await Promise.all([readZones(lang), readSubzones(lang)]);
+export async function readLines() {
+  const [zones, subzones] = await Promise.all([readZones(), readSubzones()]);
   return [
     ...zones.map((z) => ({ ...z, key: null, kind: "zone" })),
     ...subzones.map((s) => ({ ...s, kind: "subzone" })),

@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 
 import { loadEnvFile } from "../lib/env.mjs";
 import * as db from "./db.mjs";
-import { LANG, loadManifest, manifestPath } from "./store.mjs";
+import {  loadManifest, manifestPath } from "./store.mjs";
 
 // The same serialisation writeManifestFile uses: sorted keys, two-space indent,
 // trailing newline. Duplicated deliberately rather than exported from store.mjs --
@@ -43,13 +43,13 @@ function serialise(manifest) {
  * rather than a stale copy of one. Failing here would make the addon build require
  * Postgres, which is the opposite of what this seam is for.
  */
-export async function exportManifest({ check = false, lang = LANG } = {}) {
+export async function exportManifest({ check = false } = {}) {
   if (!db.isEnabled()) {
     return { skipped: true, changed: false, count: 0 };
   }
 
-  const path = manifestPath(lang);
-  const manifest = await loadManifest(lang);
+  const path = manifestPath();
+  const manifest = await loadManifest();
   const next = serialise(manifest);
   const current = await readFile(path, "utf8").catch((err) => {
     if (err.code === "ENOENT") return null;

@@ -27,12 +27,7 @@ import { assignFiles, lineId, textHash } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
 // loadConfig only. The rest of elevenlabs.mjs reaches the API, and nothing here may.
 import { loadConfig } from "./elevenlabs.mjs";
-import {
-  close as closeStore,
-  currentDictionary,
-  loadManifest,
-  LANG,
-} from "./store.mjs";
+import { close as closeStore, currentDictionary, loadManifest } from "./store.mjs";
 
 //------------------------------------------------------------------------------
 // Arguments
@@ -110,7 +105,7 @@ Output:
 //------------------------------------------------------------------------------
 
 export async function buildCatalogue() {
-  const entries = await readLines(LANG);
+  const entries = await readLines();
   const rules = await loadPronunciation();
   const files = assignFiles(entries);
 
@@ -311,7 +306,7 @@ async function main() {
   // For the credit rate, which is what turns a character count into a number worth
   // reading. Only a fallback: once the manifest holds generated lines the rate is
   // measured from those instead.
-  const config = await loadConfig(LANG);
+  const config = await loadConfig();
 
   // Enforced here rather than left to the model: a bracket that reaches v3 is
   // performed rather than spoken, which is silent corruption of a paid clip.

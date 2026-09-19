@@ -19,7 +19,6 @@
  */
 import { requireRegenerate } from "@/lib/generation/authz";
 import { isKnownLine } from "@/lib/zones/catalogue";
-import { BASE_LANG } from "@/lib/zones/lang";
 import { LoreConflict, LoreMissing, loreHistory, restoreLore, saveLore } from "@/lib/zones/lore";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +40,7 @@ export async function GET(request: Request) {
   const lineId = new URL(request.url).searchParams.get("lineId");
   if (!lineId) return Response.json({ error: "lineId is required" }, { status: 400 });
 
-  return Response.json({ lineId, versions: await loreHistory(lineId, BASE_LANG) });
+  return Response.json({ lineId, versions: await loreHistory(lineId) });
 }
 
 export async function PUT(request: Request) {
@@ -77,7 +76,7 @@ export async function PUT(request: Request) {
   }
   // Same reasoning as the flags route: nothing here has a foreign key onto the catalogue,
   // so this is what stops a typo becoming a row nothing will ever show.
-  if (!(await isKnownLine(body.lineId, BASE_LANG))) {
+  if (!(await isKnownLine(body.lineId))) {
     return Response.json({ error: `unknown lineId ${body.lineId}` }, { status: 400 });
   }
 
@@ -89,7 +88,6 @@ export async function PUT(request: Request) {
       note: (body.note as string | null | undefined) ?? null,
       editedBy: session.user.id,
       expectedVersion: (body.expectedVersion as number | null | undefined) ?? null,
-      lang: BASE_LANG,
     });
     return Response.json({ lineId: body.lineId, version });
   } catch (error) {
@@ -115,7 +113,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const version = await restoreLore(body.lineId, body.version as number, BASE_LANG);
+    const version = await restoreLore(body.lineId, body.version as number);
     return Response.json({ lineId: body.lineId, version });
   } catch (error) {
     return failed(error);

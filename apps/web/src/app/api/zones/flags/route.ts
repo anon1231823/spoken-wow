@@ -12,7 +12,6 @@
 import { requireRegenerate } from "@/lib/generation/authz";
 import { query } from "@/lib/db";
 import { isKnownLine } from "@/lib/zones/catalogue";
-import { BASE_LANG } from "@/lib/zones/lang";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +22,6 @@ export async function POST(request: Request) {
   if (denied) return denied;
 
   const { lineId, status, note } = (await request.json().catch(() => ({}))) as Body;
-  const lang = BASE_LANG;
 
   if (typeof lineId !== "string" || lineId === "") {
     return Response.json({ error: "lineId is required" }, { status: 400 });
@@ -31,7 +29,7 @@ export async function POST(request: Request) {
   // Validated against the catalogue rather than trusted: line_flag has no foreign key -- a
   // line can be flagged before it has audio -- so this is the only thing stopping a typo
   // becoming a row nothing will ever show or clean up.
-  if (!(await isKnownLine(lineId, lang))) {
+  if (!(await isKnownLine(lineId))) {
     return Response.json({ error: `unknown lineId ${lineId}` }, { status: 400 });
   }
   if (status !== null && status !== "bad" && status !== "ok") {
@@ -42,13 +40,15 @@ export async function POST(request: Request) {
   }
 
   if (status === null) {
-    await query(`delete from "line_flag" where "lineId" = $1 and "lang" = $2`, [lineId, lang]);
+    await query(`delete from "line_flag" where "lineId" = $1`, [lineId]);
     return Response.json({ lineId, flag: null });
   }
 
   const rows = await query<{ status: "bad" | "ok"; note: string | null; updatedAt: Date }>(
-    `insert into "line_flag" ("lineId", "lang", "status", "note")
-     values ($1, $2, $3, $4)
+    // "lang" is left to its 'enUS' default; the conflict target still names it because
+    // that is the unique index the merge left on this table.
+    `insert into "line_flag" ("lineId", "status", "note")
+     values ($1, $2, $3)
      on conflict ("lineId", "lang") do update
        set "status" = excluded."status",
            -- A note is only overwritten when one was actually sent. Flagging a line that
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
            "note" = coalesce(excluded."note", "line_flag"."note"),
            "updatedAt" = now()
      returning "status", "note", "updatedAt"`,
-    [lineId, lang, status, note ?? null],
+    [lineId, status, note ?? null],
   );
 
   const row = rows[0];

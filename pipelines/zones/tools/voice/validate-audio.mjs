@@ -18,14 +18,11 @@ import { apiKey, downloadDictionary } from "./elevenlabs.mjs";
 import { parseDictionary, uncoveredSpellings } from "./lexicon.mjs";
 import { assignFiles, lineId } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
-import { localeInfo, sourceFolder } from "../lib/locales.mjs";
-import { currentDictionary, LANG, loadManifest, soundsDir } from "./store.mjs";
+import { BASE_LOCALE, sourceFolder } from "../lib/locales.mjs";
+import { currentDictionary, loadManifest, soundsDir } from "./store.mjs";
 
-// The lookup of the language being validated, not English's: a LOCALE=deDE
-// packaging run that checked the German manifest against the English lookup
-// would fail on a correct pack and pass on an empty one.
 // The tree's directory, not the published folder name. See sourceFolder in lib/locales.mjs.
-const LOOKUP_PATH = join(ROOT, "addons", sourceFolder(LANG), "Data/Sounds.lua");
+const LOOKUP_PATH = join(ROOT, "addons", sourceFolder(BASE_LOCALE), "Data/Sounds.lua");
 
 const problems = [];
 const notes = [];
@@ -55,20 +52,13 @@ async function mp3sOnDisk(dir, prefix = "") {
  * /lexicon, which is not something this run can do.
  */
 async function checkDictionary(spokenTexts) {
-  // The coverage check matches dictionary graphemes with Latin word boundaries and
-  // case folding (lexicon.mjs), which says nothing about Cyrillic or CJK text. Skipped
-  // rather than reported as gaps, until there is a translation to build a check on.
-  if (localeInfo(LANG)?.script !== "latin") {
-    note(`${LANG} is not Latin-script; the dictionary coverage check is Latin-only and was skipped`);
-    return;
-  }
   // The lexicon row, not a file: the dictionary this checks is the one the site
   // generates against, and a second copy of that locator is a second thing to keep
   // in step. Absent means no database or a lexicon never synced, both of which are
   // legitimate and neither of which is a packaging failure.
   const locator = await currentDictionary();
   if (!locator) {
-    note(`no synced pronunciation dictionary to check ${LANG} against; coverage unchecked`);
+    note("no synced pronunciation dictionary to check against; coverage unchecked");
     return;
   }
 
@@ -127,7 +117,7 @@ async function main() {
   }
 
   //-- manifest vs disk ------------------------------------------------------
-  const onDisk = new Set(await mp3sOnDisk(soundsDir(LANG)));
+  const onDisk = new Set(await mp3sOnDisk(soundsDir()));
   const manifestFiles = new Set(Object.values(manifest).map((r) => r.file));
 
   for (const [id, record] of Object.entries(manifest)) {

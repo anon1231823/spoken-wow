@@ -1,6 +1,6 @@
 // The zones lore catalogue, built from `lore_line`.
 //
-// SERVER ONLY. The database is the corpus; addons/SpokenZones/Data/<lang>/*.lua is an
+// SERVER ONLY. The database is the corpus; addons/SpokenZones/Data/enUS/*.lua is an
 // export of it (`make zones-lore-export`, checked by `make zones-lore-check`), so the app
 // reads the table and never the files. Reading the Lua here would mean the explorer showed
 // whatever was last exported and committed, and -- because a line only reaches the Lua
@@ -14,12 +14,9 @@ import "server-only";
 
 import { query } from "@/lib/db";
 
-import { BASE_LANG, type Lang } from "./lang";
 import { corpusRows, currentLore } from "./lore";
 import {
-  areaName,
   assignFiles,
-  loadAreaNames,
   loadPronunciation,
   textHash,
   toSpokenText,
@@ -50,18 +47,13 @@ export type CorpusEntry = {
 };
 
 /**
- * A line as the explorer shows it, which is a corpus line plus what reading it in
- * another language adds.
+ * A line as the explorer shows it.
  *
- * `english` is not the same thing as `source`: `source` is the wiki page the lore came
- * from and carries its licence, and a translation inherits it unchanged.
+ * The same thing as a corpus line today. The alias is kept because it is what every
+ * caller names, and because the two were different when the corpus could be read in
+ * more than one language.
  */
-export type CatalogueEntry = CorpusEntry & {
-  /** The English prose this line is translated from. Absent when reading English. */
-  english?: string;
-  /** Whether this language has a row for the line at all. Absent when reading English. */
-  translated?: boolean;
-};
+export type CatalogueEntry = CorpusEntry;
 
 /** The live take for a line, as the explorer needs it. */
 export type Take = {
@@ -166,53 +158,48 @@ export function isCorpusEmpty(error: unknown): boolean {
  * rules, and they are a file in the release rather than a row, so they change on a deploy
  * and a deploy restarts the process.
  *
- * Keyed by language, because this process serves every language and a single memo would
- * hand whichever was asked for first to everyone who asked afterwards.
  */
 type Memo<T> = { stamp: string; value: Promise<T> };
 
 const globalForCatalogue = globalThis as unknown as {
-  /** The English corpus, derived once: every language's overlay starts from it. */
-  zonesEnglish?: Memo<CorpusEntry[]>;
-  zonesCatalogue?: Map<Lang, Memo<CatalogueEntry[]>>;
-  zonesByPath?: Map<Lang, Memo<Map<string, CatalogueEntry>>>;
+  zonesCatalogue?: Memo<CatalogueEntry[]>;
+  zonesByPath?: Memo<Map<string, CatalogueEntry>>;
 };
 
-/** What the language's rows are, as one comparable value. See the note above. */
-async function stampOf(lang: Lang): Promise<string> {
+/** What the lore rows are, as one comparable value. See the note above. */
+async function stampOf(): Promise<string> {
   const rows = await query<{ stamp: string }>(
     `select coalesce(max("id"), 0) || ':' || count(*) || ':'
              || coalesce(sum("id") filter (where "isCurrent"), 0) as "stamp"
-       from "lore_line" where "lang" = $1`,
-    [lang],
+       from "lore_line"`,
   );
   return rows[0]?.stamp ?? "0:0:0";
 }
 
 async function memoised<T>(
-  slot: Map<Lang, Memo<T>>,
-  lang: Lang,
+  read: () => Memo<T> | undefined,
+  write: (memo: Memo<T>) => void,
   build: () => Promise<T>,
 ): Promise<T> {
-  const stamp = await stampOf(lang);
+  const stamp = await stampOf();
 
-  const existing = slot.get(lang);
+  const existing = read();
   if (existing && existing.stamp === stamp) return existing.value;
 
   const value = build();
-  slot.set(lang, { stamp, value });
+  write({ stamp, value });
   return value;
 }
 
 /**
- * Every English line, as a catalogue entry.
+ * Every line, as a catalogue entry.
  *
  * The row supplies the structure and the prose; everything else is derived exactly as
  * tools/voice/generate.mjs derives it, so a line's id, audio path and hash are the same
  * whether the explorer or the CLI worked them out.
  */
 async function buildEnglishCorpus(): Promise<CorpusEntry[]> {
-  const [rows, rules] = await Promise.all([corpusRows(BASE_LANG), loadPronunciation()]);
+  const [rows, rules] = await Promise.all([corpusRows(), loadPronunciation()]);
   if (rows.length === 0) throw new CorpusEmpty();
 
   const files = assignFiles(rows);
@@ -239,101 +226,16 @@ async function buildEnglishCorpus(): Promise<CorpusEntry[]> {
   });
 }
 
-// The same input for every language, so it is derived once per process rather than once
-// per language asked for.
-async function englishCorpus(): Promise<CorpusEntry[]> {
-  const stamp = await stampOf(BASE_LANG);
-  const existing = globalForCatalogue.zonesEnglish;
-  if (existing && existing.stamp === stamp) return existing.value;
-
-  const value = buildEnglishCorpus();
-  globalForCatalogue.zonesEnglish = { stamp, value };
-  return value;
+export function catalogue(): Promise<CatalogueEntry[]> {
+  return memoised(
+    () => globalForCatalogue.zonesCatalogue,
+    (memo) => { globalForCatalogue.zonesCatalogue = memo; },
+    buildEnglishCorpus,
+  );
 }
 
 /**
- * The English corpus with one language's rows laid over the text.
- *
- * English is always the structural source. A translation never decides which lines
- * exist -- that is the scraper's business, and a language that could add or drop a line
- * would be a corpus rather than a translation.
- *
- * A translated line has its spoken text and hash recomputed, which is what makes the
- * staleness badge honest: rewriting the prose moves the hash away from the take's
- * textHash, and the line reads "text changed" exactly as it does after a pronunciation
- * rule is added.
- */
-async function buildCatalogueFor(lang: Lang): Promise<CatalogueEntry[]> {
-  const entries = await englishCorpus();
-  if (lang === BASE_LANG) return entries;
-
-  const [overrides, rules, names] = await Promise.all([
-    currentLore(lang),
-    loadPronunciation(),
-    loadAreaNames(),
-  ]);
-
-  // Place names are the client's, not the translator's (tools/lib/area-names.mjs):
-  // every row's name, and the zone name every row carries for the dropdown and the
-  // Zone column, is what a client in this language shows on its map -- translated
-  // line or not. English falls through where the client has no other name.
-  const zoneNames = new Map<number, string>();
-  for (const entry of entries) {
-    if (entry.kind !== "zone") continue;
-    zoneNames.set(entry.mapID, areaName(names, lang, entry, entry.name));
-  }
-
-  return entries.map((entry) => {
-    const source = {
-      ...entry,
-      name: areaName(names, lang, entry, entry.name),
-      zoneName: zoneNames.get(entry.mapID) ?? entry.zoneName,
-    };
-
-    const row = overrides.get(entry.id);
-    if (!row) {
-      if (lang === BASE_LANG) return source;
-
-      // UNTRANSLATED LINES ARE EMPTY, not English.
-      //
-      // Falling back would make a language look further along than it is, and every
-      // number derived from the text would describe English: the character count, the
-      // regeneration quote, the "missing/stale/current" state. Worse, a batch would
-      // happily narrate English prose with a German voice and record it as a German
-      // take. Empty is the same answer the addon gives on a map with no lore -- a gap
-      // you can see, rather than a plausible wrong one.
-      //
-      // The English survives as `english`, which the edit dialog shows as the source
-      // text. That is the one place it is wanted.
-      return {
-        ...source,
-        full: "",
-        spoken: "",
-        hash: textHash(""),
-        english: source.full,
-        translated: false,
-      };
-    }
-
-    const spoken = toSpokenText(row.full, rules);
-    return {
-      ...source,
-      full: row.full,
-      spoken,
-      hash: textHash(spoken),
-      english: source.full,
-      translated: true,
-    };
-  });
-}
-
-export function catalogue(lang: Lang = BASE_LANG): Promise<CatalogueEntry[]> {
-  if (!globalForCatalogue.zonesCatalogue) globalForCatalogue.zonesCatalogue = new Map();
-  return memoised(globalForCatalogue.zonesCatalogue, lang, () => buildCatalogueFor(lang));
-}
-
-/**
- * The stamp for a language, exposed so a writer can prove it moved.
+ * The corpus stamp, exposed so a writer can prove it moved.
  *
  * There is deliberately no invalidate function. The zones site had one, called after every
  * save, and it was correct only because its pm2 config ran a single worker: an edit saved
@@ -353,23 +255,23 @@ export { stampOf as catalogueStamp };
  *
  * Memoised like catalogue() and addressableFiles(), and for the same reason.
  */
-function linesByPath(lang: Lang): Promise<Map<string, CatalogueEntry>> {
-  if (!globalForCatalogue.zonesByPath) globalForCatalogue.zonesByPath = new Map();
-  return memoised(globalForCatalogue.zonesByPath, lang, async () =>
-    new Map((await catalogue(lang)).map((entry) => [entry.file, entry])),
+function linesByPath(): Promise<Map<string, CatalogueEntry>> {
+  return memoised(
+    () => globalForCatalogue.zonesByPath,
+    (memo) => { globalForCatalogue.zonesByPath = memo; },
+    async () => new Map((await catalogue()).map((entry) => [entry.file, entry])),
   );
 }
 
 export async function lineByPath(
   mapID: number,
   slug: string,
-  lang: Lang = BASE_LANG,
 ): Promise<CatalogueEntry | undefined> {
   if (!Number.isInteger(mapID)) return undefined;
-  return (await linesByPath(lang)).get(`${mapID}/${slug}`);
+  return (await linesByPath()).get(`${mapID}/${slug}`);
 }
 
-export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext> {
+export async function loadContext(): Promise<SearchContext> {
   const [takeRows, flagRows, reportRows] = await Promise.all([
     query<{
       lineId: string;
@@ -385,12 +287,9 @@ export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext
       generatedAt: Date;
       takes: string;
     }>(
-      // Scoped in three ways, and each one matters. By source, because the take table
-      // holds both sections and the two name files by their own frozen rules. By
-      // language, because a take is current per language -- an unscoped read would
-      // collide two rows into one Map entry. And the count by both, or it would report
-      // every language's takes as this one's, offering a restore of a clip in a language
-      // nobody is looking at.
+      // Scoped by source, because the take table holds all three sections and each
+      // names files by its own frozen rules. The "lang" column stays on that shared
+      // table and every zones row carries 'enUS'; nothing here selects on it.
       //
       // The column names are the merged table's; the manifest's spelling of them lives in
       // store.mjs, which is the seam the CLI shares. See migration 0020.
@@ -399,17 +298,14 @@ export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext
               t."modelId", t."voiceId", t."createdAt" as "generatedAt",
               (select count(*) from "take" a
                 where a."source" = 'zones' and a."lineId" = t."lineId"
-                  and a."lang" = t."lang") as "takes"
+                ) as "takes"
          from "take" t
-        where t."source" = 'zones' and t."isCurrent" and t."lang" = $1`,
-      [lang],
+        where t."source" = 'zones' and t."isCurrent"`,
     ),
-    // A flag is a verdict on one language's text and audio, so the English worklist and
-    // the German one are different lists. No source column: line_flag is a zones table,
-    // and a lineId in it is always 'z:' or 's:'. See migration 0023.
+    // No source column: line_flag is a zones table, and a lineId in it is always 'z:'
+    // or 's:'. See migration 0023.
     query<{ lineId: string; status: "bad" | "ok"; note: string | null; updatedAt: Date }>(
-      `select "lineId", "status", "note", "updatedAt" from "line_flag" where "lang" = $1`,
-      [lang],
+      `select "lineId", "status", "note", "updatedAt" from "line_flag"`,
     ),
     // Grouped in the database rather than counted here: the resolved rows are the ones
     // that accumulate, and there is no reason to carry them across the wire to drop them.
@@ -418,9 +314,7 @@ export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext
       `select "lineId", count(*)::int as "open"
          from "report"
         where "source" = 'zones' and "status" = 'open' and "lineId" is not null
-          and "lang" = $1
         group by "lineId"`,
-      [lang],
     ),
   ]);
 
@@ -462,16 +356,16 @@ export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext
  * only thing standing between a typo and a row nothing will ever show or clean up. Every
  * route that accepts a lineId from outside calls it.
  */
-export async function isKnownLine(lineId: string, lang: Lang = BASE_LANG): Promise<boolean> {
-  const entries = await catalogue(lang);
+export async function isKnownLine(lineId: string): Promise<boolean> {
+  const entries = await catalogue();
   return entries.some((entry) => entry.id === lineId);
 }
 
 /** The zone dropdown's options, derived from the catalogue rather than hardcoded. */
 export type ZoneFacet = { mapID: number; name: string; lines: number };
 
-export async function zoneFacets(lang: Lang = BASE_LANG): Promise<ZoneFacet[]> {
-  const entries = await catalogue(lang);
+export async function zoneFacets(): Promise<ZoneFacet[]> {
+  const entries = await catalogue();
   const counts = new Map<number, ZoneFacet>();
 
   for (const entry of entries) {

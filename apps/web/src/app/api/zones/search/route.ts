@@ -6,7 +6,6 @@
  */
 import { catalogue, isCorpusEmpty, loadContext } from "@/lib/zones/catalogue";
 import { filtersFromParams, PAGE_SIZE } from "@/lib/zones/filters";
-import { BASE_LANG } from "@/lib/zones/lang";
 import { search } from "@/lib/zones/search";
 
 export const dynamic = "force-dynamic";
@@ -32,14 +31,12 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const filters = filtersFromParams(params);
   // English, until the site has a language selector again. The library below takes a
-  // language throughout; this is the edge that decides which one. See lib/zones/lang.ts.
-  const lang = BASE_LANG;
   const page = Math.max(1, Number(params.get("page")) || 1);
 
   let entries;
   let context;
   try {
-    [entries, context] = await Promise.all([catalogue(lang), loadContext(lang)]);
+    [entries, context] = await Promise.all([catalogue(), loadContext()]);
   } catch (error) {
     if (isCorpusEmpty(error)) return corpusEmpty(error);
     throw error;

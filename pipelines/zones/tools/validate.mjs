@@ -394,18 +394,8 @@ for (const lang of languages) {
     );
   }
 
-  // The site keeps its own copy: the list has to be a value on the client, while
-  // lib/locales.mjs reaches the filesystem. A language present here and missing there
-  // is one nobody can pick; the reverse is one that cannot be built for.
-  const langTs = await readFile(join(ROOT, "apps/web/src/lib/zones/lang.ts"), "utf8");
-  const webCodes = [...langTs.matchAll(/\{ code: "(\w+)"/g)].map((m) => m[1]);
-  if (webCodes.join(",") !== CODES.join(",")) {
-    note(
-      `web/src/lib/lang.ts LOCALES and lib/locales.mjs LOCALES have drifted:\n` +
-        `      web: ${webCodes.join(" ")}\n` +
-        `      JS:  ${CODES.join(" ")}`
-    );
-  }
+  // The site is not compared here any more: it serves English only and keeps no
+  // locale list of its own. The addon's list is still the one this guards.
 }
 
 //------------------------------------------------------------------------------

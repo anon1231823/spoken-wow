@@ -3,7 +3,6 @@ import { Suspense } from "react";
 
 import { Explorer } from "@/components/zones/Explorer";
 import { isCorpusEmpty, zoneFacets } from "@/lib/zones/catalogue";
-import { BASE_LANG } from "@/lib/zones/lang";
 
 export const metadata: Metadata = { title: "Zones · Spoken" };
 
@@ -21,7 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function Page() {
   let zones;
   try {
-    zones = await zoneFacets(BASE_LANG);
+    zones = await zoneFacets();
   } catch (error) {
     // Said on the page rather than thrown at it. Between a fresh deployment and its
     // cutover this section has no rows yet, and a stack trace is the wrong way to tell

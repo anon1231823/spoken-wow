@@ -6,7 +6,7 @@
         status remove clean voice voice-zones lookup import export \
         push push-dry pull pull-dry audio-status ssh-check pull-manifest \
         db-push db-pull \
-        icon lore-import lore-export lore-check lore-sheet lore-upload lore-upload-dry lore-rewrite aliases languages locale-check \
+        icon lore-import lore-export lore-check lore-rewrite aliases languages locale-check \
         release release-dry
 
 # The \# escapes are required: an unescaped # starts a make comment, even
@@ -66,11 +66,10 @@ clean: ## Remove build output
 # "Generating voicelines".
 #-------------------------------------------------------------------------------
 
-# Every voice target takes LOCALE=deDE and defaults to English, the same way the lore
-# targets do (see the LOCALE note there): pinned here rather than inherited, so a
-# SPOKEN_ZONES_LANG left in the shell from an earlier run cannot quietly point a report,
-# an import or a lookup rebuild at another language's files.
-VOICE_LANG = SPOKEN_ZONES_LANG=$(or $(LOCALE),enUS)
+# The pipeline takes no language: the lore is English and the tools say so themselves.
+# The addon keeps its locale data -- alias tables and interface strings, both keyed by
+# CLIENT locale -- and `make zones-aliases` and `make zones-languages` still maintain it.
+VOICE_LANG =
 
 # The manifest comes from Postgres when DATABASE_URL is set and from the committed files
 # otherwise, and pipelines/zones/.env sets it to the droplet -- so a laptop with no tunnel up
@@ -103,10 +102,10 @@ validate-audio: ## Check manifest, files on disk and lookup table agree (DATABAS
 # belong to apps/web now; see make/web.mk and deploy/web/README.md.
 #-------------------------------------------------------------------------------
 
-import: ## Seed the database from pipelines/zones/tools/voice/manifest[.<locale>].json (idempotent; LOCALE=deDE)
+import: ## Seed the database from pipelines/zones/tools/voice/manifest.json (idempotent)
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/import-manifest.mjs
 
-export: ## Write pipelines/zones/tools/voice/manifest[.<locale>].json from the database (LOCALE=deDE)
+export: ## Write pipelines/zones/tools/voice/manifest.json from the database
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/export-manifest.mjs
 
 #-------------------------------------------------------------------------------
@@ -122,32 +121,16 @@ export: ## Write pipelines/zones/tools/voice/manifest[.<locale>].json from the d
 lore-import: ## Seed lore_line from the committed Lua data files (idempotent)
 	@node pipelines/zones/tools/lore/import.mjs
 
-# LOCALE, not LANG: make inherits LANG from the shell, where it is already set to
-# something like en_US.UTF-8, and the export would be handed that as a locale code.
-lore-export: ## Write addons/SpokenZones/Data/<locale>/*.lua from the database (LOCALE=deDE)
-	@SPOKEN_ZONES_LANG=$(or $(LOCALE),enUS) node pipelines/zones/tools/lore/export.mjs
+lore-export: ## Write addons/SpokenZones/Data/enUS/*.lua from the database
+	@node pipelines/zones/tools/lore/export.mjs
 
 lore-check: ## Confirm the committed Lua matches the database
-	@SPOKEN_ZONES_LANG=$(or $(LOCALE),enUS) node pipelines/zones/tools/lore/export.mjs --check
+	@node pipelines/zones/tools/lore/export.mjs --check
 
 # Translations arrive as a spreadsheet, not through a model: a sheet goes out with the
 # English beside the blanks and comes back filled in. Both are free. The upload
 # follows the scraper's rules -- unchanged text records nothing, and a hand edit made
 # in the explorer is never overwritten -- so a re-upload is always safe to run.
-lore-sheet: ## Write the CSV a translator fills in (LOCALE=deDE, OUT=dist/lore-deDE.csv)
-	@SPOKEN_ZONES_LANG=$(LOCALE) node pipelines/zones/tools/lore/translation-sheet.mjs $(or $(OUT),dist/lore-$(LOCALE).csv)
-
-lore-upload-dry: ## Say what uploading a filled sheet would record (LOCALE=deDE FILE=...)
-	@SPOKEN_ZONES_LANG=$(LOCALE) node pipelines/zones/tools/lore/upload-translations.mjs $(FILE) --dry-run
-
-lore-upload: ## Record a filled sheet as that language's lore (LOCALE=deDE FILE=...)
-	@SPOKEN_ZONES_LANG=$(LOCALE) node pipelines/zones/tools/lore/upload-translations.mjs $(FILE)
-
-# Unlike every other target here, this one spends money: it sends each of a zone's
-# articles to Claude. There is no free form of it -- the report *is* the model's
-# output -- so the target is the dry run, which writes dist/ and nothing else, and
-# committing the result means running the script directly with one --variant and no
-# --dry-run. Responses are cached on disk, so re-running a zone is free.
 lore-rewrite: ## Rewrite one zone's lore from the full wiki article (ZONE=1420, costs credits)
 	@test -n "$(ZONE)" || { echo "usage: make lore-rewrite ZONE=1420"; exit 1; }
 	@node pipelines/zones/tools/rewrite-lore.mjs --zone $(ZONE) --variant both --dry-run
@@ -208,23 +191,12 @@ RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(comman
 # -e is not optional: without it rsync spawns a plain ssh that cannot authenticate.
 RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)"
 
-# One language per transfer, LOCALE=deDE, defaulting to English. The paths mirror
-# soundsDir()/manifestPath() in pipelines/zones/tools/voice/store.mjs: English keeps the names the
-# droplet already has (shared/sounds, shared/manifest.json), and another language
-# lives beside them under its pack folder and a suffixed manifest. pipelines/zones/audio-history/
-# nests every language under one tree, so it moves whole regardless of LOCALE.
-LANG_CODE := $(or $(LOCALE),enUS)
-ifeq ($(LANG_CODE),enUS)
+# The paths mirror soundsDir()/manifestPath() in pipelines/zones/tools/voice/store.mjs.
 LOCAL_SOUNDS  := addons/SpokenZonesAudio/Sounds/
 # Lowercase on the new store, where it was shared/Sounds on /srv/zonelore. The volume is
 # case-sensitive, so the old spelling is a new empty directory rather than an error.
 REMOTE_SOUNDS_DIR := sounds
 MANIFEST_FILE := manifest.json
-else
-LOCAL_SOUNDS  := addons/SpokenZonesAudio_$(LANG_CODE)/Sounds/
-REMOTE_SOUNDS_DIR := ZoneLoreAudio_$(LANG_CODE)
-MANIFEST_FILE := manifest.$(LANG_CODE).json
-endif
 REMOTE_SOUNDS  := $(DROPLET):$(REMOTE_ROOT)/shared/$(REMOTE_SOUNDS_DIR)/
 REMOTE_HISTORY := $(DROPLET):$(REMOTE_ROOT)/shared/audio-history/
 
@@ -245,47 +217,46 @@ ssh-check: require-droplet ## Confirm the droplet is reachable and set up
 	$(preflight)
 	@$(SSH) $(DROPLET) 'echo "ok: $$(hostname)"; ls -d $(REMOTE_ROOT)/bin $(REMOTE_ROOT)/shared 2>/dev/null || echo "missing tree - run: make bootstrap"'
 
-push-dry: ## Preview what `make push` would send to the droplet (LOCALE=deDE)
+push-dry: ## Preview what `make push` would send to the droplet
 	$(preflight)
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(LOCAL_SOUNDS) $(REMOTE_SOUNDS)
 
 # --delete propagates local deletions, and the droplet is where regeneration happens
 # through the UI, so it can be the newer side. `make pull` first if in doubt: this is a
 # second copy of the audio, not a backup.
-push: require-droplet ## Send one language's audio store to the droplet (DESTRUCTIVE: --delete; LOCALE=deDE)
+push: require-droplet ## Send the audio store to the droplet (DESTRUCTIVE: --delete)
 	$(preflight)
-	@echo "==> dry run ($(LANG_CODE): local -> $(DROPLET))"
+	@echo "==> dry run (local -> $(DROPLET))"
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(LOCAL_SOUNDS) $(REMOTE_SOUNDS) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@$(RSYNC) $(RSYNC_OPTS) $(LOCAL_SOUNDS) $(REMOTE_SOUNDS)
 	@[ -d pipelines/zones/audio-history ] && $(RSYNC) $(RSYNC_OPTS) pipelines/zones/audio-history/ $(REMOTE_HISTORY) || true
 	@echo "==> pushed"
 
-pull-dry: ## Preview what `make pull` would change locally (LOCALE=deDE)
+pull-dry: ## Preview what `make pull` would change locally
 	$(preflight)
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE_SOUNDS) $(LOCAL_SOUNDS)
 
-pull: require-droplet ## Fetch one language's audio store from the droplet (DESTRUCTIVE: --delete; LOCALE=deDE)
+pull: require-droplet ## Fetch the audio store from the droplet (DESTRUCTIVE: --delete)
 	$(preflight)
-	@echo "==> dry run ($(LANG_CODE): $(DROPLET) -> local)"
+	@echo "==> dry run ($(DROPLET) -> local)"
 	@echo "    --delete will REMOVE local files the droplet does not have."
 	@mkdir -p $(LOCAL_SOUNDS)
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE_SOUNDS) $(LOCAL_SOUNDS) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@$(RSYNC) $(RSYNC_OPTS) $(REMOTE_SOUNDS) $(LOCAL_SOUNDS)
 	@[ -d pipelines/zones/audio-history ] && $(RSYNC) $(RSYNC_OPTS) $(REMOTE_HISTORY) pipelines/zones/audio-history/ || true
-	@echo "==> pulled. Rebuild the lookup table with:  make db-pull && make lookup LOCALE=$(LANG_CODE)"
-	@echo "    then package it with:  make package-audio LOCALE=$(LANG_CODE)"
+	@echo "==> pulled. Rebuild the lookup table with:  make db-pull && make lookup"
+	@echo "    then package it with:  make package-audio"
 
 # The one file the droplet writes that git wants back. The manifest is an export of the
 # droplet's database, so `make db-pull` is the better route for it; this is the one that
 # works when you only want the file.
-pull-manifest: require-droplet ## Fetch the droplet's exported manifest[.<locale>].json (LOCALE=deDE)
+pull-manifest: require-droplet ## Fetch the droplet's exported manifest.json
 	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/$(MANIFEST_FILE) pipelines/zones/tools/voice/$(MANIFEST_FILE)
 	@echo "==> fetched. Review with: git diff pipelines/zones/tools/voice/$(MANIFEST_FILE)"
 
-audio-status: require-droplet ## What is on disk locally and on the droplet (LOCALE=deDE)
-	@echo "$(LANG_CODE)"
+audio-status: require-droplet ## What is on disk locally and on the droplet
 	@printf 'local     live      %5s mp3  %s\n' \
 		"$$(find $(LOCAL_SOUNDS) -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
 		"$$(du -sh $(LOCAL_SOUNDS) 2>/dev/null | cut -f1)"
