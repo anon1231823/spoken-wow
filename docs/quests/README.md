@@ -886,6 +886,33 @@ quest ID drops to 0 with nothing dispatched for the dialog. It is a fallback, no
 dispatcher: a dialog the player clicks through is dispatched by the watcher as before and its
 snapshot is discarded.
 
+`tests/lua/quest_overlay_test.lua` covers the other thing the quest UI owes a player: the play
+button beside each quest in the quest log. There are two quest logs to draw it in. The old one
+is a named frame with numbered title rows (`QuestLogTitle1`…), redrawn through `QuestLog_Update`
+— what Classic Era and the private-server clients have, and what `QuestOverlayUI` was written
+against. The Forever client reports itself as mainline and draws the modern map-attached log
+instead: no `QuestLogFrame`, no `QuestLog_Update`, no `GetQuestLogTitle`, and rows that come
+out of `QuestScrollFrame.titleFramePool` with no names at all. `Compatibility.lua` therefore
+replaces `QuestOverlayUI:Update` where that pool exists — feature-detected, not keyed to a
+client — walking the pooled rows and hooking `QuestLogQuests_Update`, which is that log's
+`QuestLog_Update`. The blank prefix the old log's buttons indent a title with is not available
+there: that title wraps into a height the layout has already decided, and a prefix re-wraps it
+inside a row too short to hold the extra line. So the button is anchored instead — left of the
+title, in the inset the row leaves at its left, and beside the tracking checkbox at the other
+end of the row when "Quest objectives" is on and the client is drawing its own icon in that
+inset. The objective icons are how that is detected: they are pooled beside the rows rather
+than parented to them, so the row's own icon is the 20-pixel button carrying the row's quest ID
+that is not the play button.
+
+That log's details view gets a button of its own, beside Back, which says `Play` and says
+`Stop` while it is reading. The list's buttons cannot follow a quest into it — a frame has one
+parent — so it is a single button rebound to whichever quest the panel shows, hung off the same
+header strip the Back button is on (a button parented to the details frame itself draws its
+artwork under the border art and arrives as a floating label) and mirrored off that button for
+its size and its line. `QuestOverlayUI:BindPlayButton` is what both kinds of button share; a
+button that says what it does in words rather than in a texture carries a `setPlayState` of its
+own, which is what `SetPlayButtonState` calls instead of swapping the icon.
+
 The web suite runs against a **real Postgres**, because the invariants it protects — archive
 the current take before anything overwrites it, never hand the same file to two jobs — live in
 schema constraints rather than in code. It reads `DATABASE_URL` from the environment or from

@@ -15,6 +15,17 @@ carries that version. The heading says which.
   through the dialog themselves. The globals are now recorded when the client fires the
   event, and the watcher reads that record when the dialog closes with nothing dispatched
   for it.
+- **The play button is back in the quest log on the Forever client.** That client reports
+  itself as mainline and draws the modern map-attached quest log, which has no
+  `QuestLogFrame`, no `QuestLog_Update` and no named title rows — everything the overlay
+  walked to find a quest to put a button beside, so it drew nothing and said nothing. It
+  walks the rows that log pools instead. The button sits left of the quest's title, and
+  moves to the other end of the row, beside the tracking checkbox, when "Quest objectives"
+  is on and the client's own icon has that corner.
+- **A quest's details have a Play button too**, on the Forever client's quest log: a button
+  beside Back that reads the quest aloud and says Stop while it is reading. The buttons in
+  the list cannot follow a quest into its details view — a frame has one parent — so this
+  is one button, rebound to whichever quest the panel is showing.
 
 ## 2.0.3 — player
 

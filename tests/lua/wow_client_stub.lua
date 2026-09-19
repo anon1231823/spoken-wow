@@ -146,6 +146,12 @@ local function Widget(kind, name)
         return self
     end
     function w:ClearAllPoints() self.anchor = nil end
+    function w:GetNumPoints() return self.anchor and 1 or 0 end
+    function w:GetPoint()
+        local anchor = self.anchor
+        if not anchor then return end
+        return anchor.point, anchor.relativeTo, anchor.relativePoint, anchor.x, anchor.y
+    end
     function w:GetStringWidth() return #tostring(self.text or "") * 7 end
     function w:GetTop() return 100 end
     function w:GetBottom() return 0 end
@@ -157,6 +163,10 @@ local function Widget(kind, name)
     function w:GetID() return self.id end
     function w:SetParent(p) self.parent = p end
     function w:GetParent() return self.parent end
+    -- What a frame was built with, and what hangs off it: the quest log's play buttons find
+    -- the client's own objective icon by walking the list's children and asking both.
+    function w:GetObjectType() return self.frameType or self.kind end
+    function w:GetChildren() return unpack(self.children) end
     function w:GetFrameLevel() return 1 end
     function w:SetTexture(t) self.texture = t; return true end
     function w:GetTexture() return self.texture end
@@ -174,9 +184,29 @@ local function Widget(kind, name)
     function w:GetPushedTexture() self.pushedTexture = self.pushedTexture or Widget("Texture"); return self.pushedTexture end
     function w:SetHighlightTexture(t) self.highlightTexture = self.highlightTexture or Widget("Texture"); self.highlightTexture:SetTexture(t) end
     function w:GetHighlightTexture() self.highlightTexture = self.highlightTexture or Widget("Texture"); return self.highlightTexture end
+    function w:SetDisabledTexture(t) self.disabledTexture = self.disabledTexture or Widget("Texture"); self.disabledTexture:SetTexture(t) end
+    function w:GetDisabledTexture() self.disabledTexture = self.disabledTexture or Widget("Texture"); return self.disabledTexture end
+    -- Recorded rather than swallowed by the catch-all: a play button the client draws greyed
+    -- out is a quest with no audio, and that is the whole of what the button says.
+    function w:Enable() self.enabled = true end
+    function w:Disable() self.enabled = false end
+    function w:IsEnabled() return self.enabled ~= false end
     function w:SetChecked(v) self.checked = v end
     function w:GetChecked() return self.checked end
     function w:GetFont() return "Fonts\\FRIZQT__.TTF", 12 end
+    -- Real objects rather than the catch-all's no-op: with hooks running, the player's
+    -- fade-in builds an animation group and then drives it, and a nil there is an error.
+    function w:CreateAnimationGroup(n)
+        local group = Widget("AnimationGroup", n)
+        group.parent = self
+        return group
+    end
+    function w:CreateAnimation(kind, n)
+        local animation = Widget("Animation", n)
+        animation.animationType = kind
+        animation.parent = self
+        return animation
+    end
     function w:SetCreature(idv) self.creature = idv; self.model = "creature/" .. tostring(idv) end
     function w:ClearModel() self.creature = nil; self.model = nil end
     -- Only the one this client has. Model:GetModel returned a path and was removed; the
@@ -196,7 +226,7 @@ local function Widget(kind, name)
         -- reaches the same handler on every client.
         local previousThis, previousArg = _G.this, _G.arg1
         _G.this, _G.arg1 = self, "LeftButton"
-        local fn = self.scripts.OnClick
+        local fn = self.enabled ~= false and self.scripts.OnClick
         if fn then fn(self, "LeftButton") end
         for _, h in ipairs(self.hooks.OnClick or {}) do h(self, "LeftButton") end
         _G.this, _G.arg1 = previousThis, previousArg
@@ -252,6 +282,9 @@ local _G = _G
 -- reports no interface version at all, which is exactly what Version.lua keys on.
 local CLIENTS = {
     ["20506"] = { "2.5.6", "60000", 20506, 5 },
+    -- The Forever client: a mainline-flavoured client carrying vanilla content, and the one
+    -- whose quest log is the modern map-attached one rather than the named QuestLogFrame.
+    ["16001"] = { "1.60.1", "69913", 16001, 1 },
     ["11509"] = { "1.15.9", "69109", 11509, 2 },
     ["1.12"]  = { "1.12.1", "5875", nil, nil },
     ["2.4.3"] = { "2.4.3", "8606", 20400, nil },
@@ -262,6 +295,7 @@ function M.SetClient(label)
     _G.GetBuildInfo = function() return c[1], c[2], "Jan 1 2026", c[3] end
     _G.WOW_PROJECT_ID = c[4]
     if c[4] == nil then _G.Settings = nil else _G.Settings = M.modernSettings end
+    _G.C_GossipInfo = c[4] ~= nil and M.gossipAPI or nil
     -- The private-server clients have no context-menu API worth using either, which is
     -- what makes the player draw its own menu there.
     -- Model frames answered GetModel on the private-server clients and answer
@@ -366,6 +400,13 @@ _G.C_Timer = {
 }
 _G.ERR_ZONE_EXPLORED = "Discovered %s."
 function _G.GetGossipText() return world.gossipText or "" end
+--- The namespaced gossip API. SetClient hands it to the clients that have one.
+M.gossipAPI = {
+    GetText = function() return world.gossipText or "" end,
+    GetNumActiveQuests = function() return 0 end,
+    GetNumAvailableQuests = function() return 0 end,
+    GetOptions = function() return {} end,
+}
 
 -- The book UI, which is the same API on all three targets: Era, Anniversary and Forever.
 -- ItemTextFrame serves mail as well as books, which is why a test can set a creator.
@@ -421,7 +462,23 @@ function _G.GetNumGossipActiveQuests() return 0 end
 function _G.GetNumGossipAvailableQuests() return 0 end
 function _G.GetGossipOptions() return end
 _G.ERR_ZONE_EXPLORED_XP = "Discovered %s: %d experience gained."
-function _G.hooksecurefunc() return true end
+--- The real semantics: the original runs, then the hook, with the same arguments. A no-op
+--- stood here, so nothing an addon installed through it ever ran - and the quest log play
+--- button is drawn entirely from one of these hooks.
+---@overload fun(name: string, hook: function)
+function _G.hooksecurefunc(owner, name, hook)
+    if hook == nil then
+        owner, name, hook = _G, owner, name
+    end
+    local original = owner[name]
+    assert(type(original) == "function", "hooksecurefunc: " .. tostring(name) .. " is not a function")
+    owner[name] = function(...)
+        local results = { original(...) }
+        hook(...)
+        return unpack(results)
+    end
+    return true
+end
 function _G.IsLoggedIn() return true end
 function _G.GetLocale() return "enUS" end
 M.print = print
@@ -758,6 +815,80 @@ function M.ResetSound()
     end
 end
 
+--- The quest log of a client that draws the modern map-attached one: no QuestLogFrame, no
+--- QuestLog_Update and no GetQuestLogTitle, rows out of an unnamed frame pool, and one
+--- global function that redraws the list. `quests` is a list of { questID, title, level }.
+function M.SetModernQuestLog(quests)
+    local scroll = _G.CreateFrame("ScrollFrame", "QuestScrollFrame")
+    scroll.Contents = _G.CreateFrame("Frame", nil, scroll)
+
+    local active = {}
+    scroll.titleFramePool = {
+        active = active,
+        EnumerateActive = function(self)
+            local index = 0
+            return function()
+                index = index + 1
+                return self.active[index]
+            end
+        end,
+    }
+
+    local titles = {}
+    for _, quest in ipairs(quests) do
+        local row = _G.CreateFrame("Button", nil, scroll.Contents)
+        row.questID = quest.questID
+        row.Text = row:CreateFontString()
+        -- The row's own text carries the level prefix the quest log draws with it.
+        row.Text:SetText(format("[%d] %s", quest.level or 1, quest.title))
+        row.Checkbox = _G.CreateFrame("Frame", nil, row)
+        table.insert(active, row)
+        titles[quest.questID] = quest.title
+    end
+
+    -- The details view the list opens a quest into, and the one function that opens it.
+    local map = _G.CreateFrame("Frame", "QuestMapFrame")
+    map.DetailsFrame = _G.CreateFrame("Frame", nil, map)
+    map.DetailsFrame.BackFrame = _G.CreateFrame("Frame", nil, map.DetailsFrame)
+    -- The strip's own button, which is what anything else put on that line is measured against.
+    map.DetailsFrame.BackFrame.BackButton = _G.CreateFrame("Button", nil, map.DetailsFrame.BackFrame)
+    map.DetailsFrame.BackFrame.BackButton:SetSize(90, 22)
+    map.DetailsFrame.BackFrame.BackButton:SetPoint("LEFT", map.DetailsFrame.BackFrame, "LEFT", 11, 4)
+    function _G.QuestMapFrame_ShowQuestDetails(questID)
+        map.DetailsFrame.questID = questID
+    end
+
+    _G.C_QuestLog = {
+        GetTitleForQuestID = function(questID) return titles[questID] end,
+        GetNumQuestLogEntries = function() return getn(active) end,
+    }
+    -- What the client redraws the list through, and what the overlay hooks.
+    _G.QuestLogQuests_Update = function() end
+
+    M.questLogRows = active
+    M.questLogPOIButtons = {}
+    return scroll
+end
+
+--- The objective icons the quest log draws beside its rows when "Quest objectives" is on:
+--- one small button per quest, pooled beside the rows rather than parented to them.
+function M.SetQuestLogPOIIcons(shown)
+    for _, poiButton in ipairs(M.questLogPOIButtons or {}) do
+        poiButton:Hide()
+    end
+    M.questLogPOIButtons = {}
+    if not shown then
+        return
+    end
+    for _, row in ipairs(M.questLogRows or {}) do
+        local poiButton = _G.CreateFrame("Button", nil, row:GetParent())
+        poiButton.questID = row.questID
+        poiButton:SetSize(20, 20)
+        poiButton:SetPoint("TOPLEFT", row, "TOPLEFT", 6, -4)
+        table.insert(M.questLogPOIButtons, poiButton)
+    end
+end
+
 --- Load the quests addon against this stub, on top of a booted Spoken player, and return
 --- its private environment. The three UI modules the dispatch path touches but which
 --- decide nothing about which line is read are stubbed with answer-everything tables.
@@ -774,6 +905,16 @@ function M.LoadQuests(addonDirectory, spokenDirectory)
         "DataModules", "ReportButton", "Player", "VoiceOver" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
+    return VO, env
+end
+
+--- The quests addon with its real quest log overlay and its compatibility branches, which
+--- LoadQuests stubs out: what draws the play button beside a quest in the quest log. Build
+--- the client's quest log first - the overlay branches are chosen as Compatibility loads.
+function M.LoadQuestsOverlay(addonDirectory, spokenDirectory)
+    local VO, env = M.LoadQuests(addonDirectory, spokenDirectory)
+    dofile(addonDirectory .. "QuestOverlayUI.lua")
+    dofile(addonDirectory .. "Compatibility.lua")
     return VO, env
 end
 
