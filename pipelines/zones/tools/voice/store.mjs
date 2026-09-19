@@ -77,8 +77,6 @@ export function soundsDir(lang = LANG) {
   return join(ROOT, "addons", sourceFolder(lang), "Sounds");
 }
 
-export const SAMPLES_DIR = join(ROOT, "pipelines/zones/audio-samples");
-
 // A sibling of Sounds/, never a subdirectory: validate-audio.mjs walks Sounds/ and
 // would report every archived take as an mp3 with no manifest entry. The same
 // reasoning is written down at ../wow-voiceover/web/src/lib/paths.ts:53.
@@ -191,6 +189,31 @@ async function loadFromDatabase(lang) {
     manifest[row.lineId] = record;
   }
   return manifest;
+}
+
+/**
+ * Which pronunciation dictionary, and which version of it, the site is generating
+ * against right now.
+ *
+ * Read from the lexicon row rather than from ElevenLabs, for the same reason the
+ * manifest is read from the "take" table: the database is what the generation path
+ * acts on, so it is the honest answer to "what would a line be cut with today".
+ * Asking the API would also mean this module needed a credential, and the commands
+ * that call it are the ones deliberately without one.
+ *
+ * Null when there is no database, or when the lexicon has never synced -- a row that
+ * Postgres has and ElevenLabs does not is a legitimate state, and "unknown" is not
+ * "changed". Callers decide what to do about it; comparing against null would mark
+ * all 1353 lines as drifted, which is the opposite of useful.
+ */
+export async function currentDictionary() {
+  if (!db.isEnabled()) return null;
+  const { rows } = await db.query(
+    `select "dictionaryId", "versionId" from "pronunciation_lexicon" where "id"`,
+  );
+  const row = rows[0];
+  if (!row?.dictionaryId || !row.versionId) return null;
+  return { dictionaryId: row.dictionaryId, versionId: row.versionId };
 }
 
 //------------------------------------------------------------------------------

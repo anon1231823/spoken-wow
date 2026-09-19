@@ -1,45 +1,38 @@
 #!/usr/bin/env node
 //
-// Selects lore lines and, on request, synthesizes them into the audio addon.
+// Selects lore lines and reports on them. It does not synthesize anything.
 //
-//   node tools/voice/generate.mjs --all                 dry run over everything
-//   node tools/voice/generate.mjs --zone Durotar        dry run over one zone
-//   node tools/voice/generate.mjs --zone Durotar --generate
+//   node tools/voice/generate.mjs --all                 every entry
+//   node tools/voice/generate.mjs --zone Durotar        one zone and its subzones
+//   node tools/voice/generate.mjs --missing --stale     what needs work
 //
-// Dry run is the default because the direction that cannot be undone is spending
-// money, not printing. --generate without a selector refuses to run.
+// THIS COMMAND CANNOT SPEND CREDITS, and that is the point of it. Voicing a line
+// happens on the droplet, through the site: one queue, one leader holding one
+// advisory lock, one roster of voices, and a key that belongs to the signed-in
+// editor rather than to whichever laptop ran a script. A second generator here
+// would be a second answer to every one of those, and the way two of them drift
+// is already on record -- see the note at the top of store.mjs.
+//
+// What is left is the text half, which the site has no reason to own: which lines
+// exist, which are missing audio, which have had their text rewritten since they
+// were cut, and what re-cutting them would cost. Answering that needs no key, so
+// it stays runnable from a laptop with no credentials.
 
-import { mkdir, stat, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { stat } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import { loadEnvFile } from "../lib/env.mjs";
 import { readLines } from "../lib/loredata.mjs";
 import { assignFiles, lineId, textHash } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
-import {
-  apiKey,
-  fetchTier,
-  loadConfig,
-  resolveDictionary,
-  resolveVoiceId,
-  synthesize,
-} from "./elevenlabs.mjs";
-// writeAudio lives in store.mjs rather than here because it archives the take it
-// replaces, and the only correct moment for that is between "the replacement exists"
-// and "it lands on the old take's path" -- which is inside the write, not around it.
+// loadConfig only. The rest of elevenlabs.mjs reaches the API, and nothing here may.
+import { loadConfig } from "./elevenlabs.mjs";
 import {
   close as closeStore,
-  durationOf,
+  currentDictionary,
   loadManifest,
-  saveManifest,
-  writeAudio,
-  SAMPLES_DIR,
-  soundsDir,
   LANG,
 } from "./store.mjs";
-import { afterRateLimit, budgetFor, COOL_DOWN_MS, Limiter } from "./concurrency.mjs";
 
 //------------------------------------------------------------------------------
 // Arguments
@@ -56,10 +49,6 @@ function parseArgs(argv) {
     olderThan: null,
     all: false,
     limit: null,
-    generate: false,
-    force: false,
-    sample: false,
-    concurrency: null,
     list: false,
   };
 
@@ -81,10 +70,6 @@ function parseArgs(argv) {
       case "--older-than": args.olderThan = next(); break;
       case "--all": args.all = true; break;
       case "--limit": args.limit = Number(next()); break;
-      case "--generate": args.generate = true; break;
-      case "--force": args.force = true; break;
-      case "--sample": args.sample = true; break;
-      case "--concurrency": args.concurrency = Number(next()); break;
       case "--list": args.list = true; break;
       case "--help": case "-h": usage(); process.exit(0);
       default: throw new Error(`unknown argument ${arg} (try --help)`);
@@ -94,7 +79,9 @@ function parseArgs(argv) {
 }
 
 function usage() {
-  console.log(`Usage: node tools/voice/generate.mjs [selectors] [--generate]
+  console.log(`Usage: node tools/voice/generate.mjs [selectors]
+
+Reports on lore lines. Generating audio is the site's, on the droplet.
 
 Selectors (combine freely; a zone selects its subzones too):
   --zone <id|name>     repeatable, e.g. --zone 1411 --zone "The Barrens"
@@ -103,20 +90,16 @@ Selectors (combine freely; a zone selects its subzones too):
   --missing            no audio yet
   --stale              spoken text changed since it was generated
   --dictionary-drift   spoken with a pronunciation dictionary other than the
-                       one config.json pins. Never implied by --stale: a
-                       lexicon change does not alter the text, so these lines
-                       are only worth re-cutting deliberately
+                       one the lexicon currently points at. Needs DATABASE_URL,
+                       which is where that locator lives. Never implied by
+                       --stale: a lexicon change does not alter the text, so
+                       these lines are only worth re-cutting deliberately
   --older-than <date>  generated before this ISO date
   --all                every entry
   --limit <n>          cap the selection
 
-Actions:
-  (default)            dry run: counts, characters, credits, minutes
-  --generate           call ElevenLabs and write the audio
-  --force              regenerate entries that already have audio
-  --sample             two representative lines into audio-samples/, for
-                       checking the voice before committing to a bulk run
-  --concurrency <n>    override the per-plan request budget
+Output:
+  (default)            counts, characters, credits, minutes
   --list               list every selected line, however many (a selection of
                        %d or fewer lists itself)
 `.replace("%d", String(AUTO_LIST_LIMIT)));
@@ -319,154 +302,15 @@ function summarise(selected, manifest, label, config) {
 }
 
 //------------------------------------------------------------------------------
-// Audio
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// Generation
-//------------------------------------------------------------------------------
-
-async function generate(selected, args) {
-  const config = await loadConfig(LANG);
-  const key = await apiKey();
-  await resolveVoiceId(config, key, LANG);
-  await resolveDictionary(config, key);
-
-  const manifest = await loadManifest();
-  let done = 0, skipped = 0, failed = 0, characters = 0, credits = 0, creditsKnown = true;
-
-  // The plan's published limit, unless overridden. Asking the account beats a
-  // constant: the same script on a Creator key and a Scale key wants 5 and 15.
-  const tier = args.concurrency ? null : await fetchTier(key);
-  const budget = args.concurrency ?? budgetFor(tier, config.modelId);
-  const limiter = new Limiter(budget);
-
-  console.log(
-    args.concurrency
-      ? `concurrency ${budget} (from --concurrency)`
-      : `concurrency ${budget} (${tier ?? "unknown"} plan, ${config.modelId})`,
-  );
-
-  // A 429 means the published number is wrong right now -- another process on the
-  // same key, or a limit that moved. Halve and stay halved for a minute rather
-  // than retrying into a wall.
-  let rateLimitedAt = null;
-  const onRateLimit = () => {
-    const first = rateLimitedAt === null || Date.now() - rateLimitedAt > COOL_DOWN_MS;
-    rateLimitedAt = Date.now();
-    const reduced = afterRateLimit(budget, rateLimitedAt, Date.now());
-    limiter.setLimit(reduced);
-    if (first) console.log(`  rate limited -- dropping to ${reduced} for ${COOL_DOWN_MS / 1000}s`);
-    setTimeout(() => {
-      if (Date.now() - rateLimitedAt >= COOL_DOWN_MS) limiter.setLimit(budget);
-    }, COOL_DOWN_MS + 100).unref();
-  };
-
-  const tasks = selected.map((entry) =>
-    limiter.run(async () => {
-      // Audio already generated cost real money, and a re-roll is not always an
-      // improvement. ../wow-voiceover/tts_cli/synthesize.py refuses for the same
-      // reason.
-      if (existsSync(join(soundsDir(LANG), `${entry.file}.mp3`)) && !args.force) {
-        skipped++;
-        return;
-      }
-
-      try {
-        const { audio, credits: cost } = await synthesize(entry.spoken, config, key, { onRateLimit });
-        // Archives whatever this replaces, which is what makes --force reversible.
-        const path = await writeAudio(entry.file, audio);
-
-        manifest[entry.id] = {
-          file: entry.file,
-          textHash: entry.hash,
-          chars: entry.spoken.length,
-          // What ElevenLabs actually charged, not what the text length implies.
-          credits: cost,
-          durationSec: await durationOf(path),
-          bytes: (await stat(path)).size,
-          voiceId: config.voiceId,
-          modelId: config.modelId,
-          outputFormat: config.outputFormat,
-          // Recorded so a line's pronunciation can be explained later, and so a
-          // dictionary change can be told apart from a text change.
-          dictionaryId: config.dictionaryId ?? null,
-          dictionaryVersionId: config.dictionaryVersionId ?? null,
-          generatedAt: new Date().toISOString(),
-        };
-        // Written after every line, so an interrupted run keeps everything
-        // already paid for.
-        await saveManifest(manifest);
-
-        done++;
-        characters += entry.spoken.length;
-        if (cost === null) creditsKnown = false;
-        else credits += cost;
-
-        console.log(
-          `  ok  ${entry.id}  ${entry.spoken.length} chars` +
-            `${cost === null ? "" : `, ${cost} credits`}  -> ${entry.file}.mp3`,
-        );
-      } catch (err) {
-        failed++;
-        console.error(`  FAIL ${entry.id}: ${err.message}`);
-      }
-    }),
-  );
-
-  await Promise.all(tasks);
-
-  console.log(`\ngenerated ${done}, skipped ${skipped} (already present), failed ${failed}`);
-  console.log(
-    `${characters.toLocaleString()} characters` +
-      (creditsKnown
-        ? `, ${credits.toLocaleString()} credits (billed, from the character-cost header)`
-        : ", credits unknown (ElevenLabs sent no character-cost header)"),
-  );
-  if (done > 0) console.log("\nnext:  node tools/voice/build-lookup.mjs");
-  if (failed > 0) process.exitCode = 1;
-}
-
-// One long zone and one short subzone: the two cases with different risks. v3 is
-// documented as unreliable below ~250 characters, and 302 of the 1353 entries are
-// shorter than that, so the short one is the honest test.
-async function sample(catalogue) {
-  const config = await loadConfig(LANG);
-  const key = await apiKey();
-  await resolveVoiceId(config, key, LANG);
-  await resolveDictionary(config, key);
-
-  const long = catalogue
-    .filter((e) => e.kind === "zone")
-    .sort((a, b) => b.spoken.length - a.spoken.length)[0];
-  const short = catalogue
-    .filter((e) => e.kind === "subzone" && e.spoken.length < 250)
-    .sort((a, b) => a.spoken.length - b.spoken.length)[0];
-
-  await mkdir(SAMPLES_DIR, { recursive: true });
-
-  for (const entry of [long, short].filter(Boolean)) {
-    // Samples go straight to disk, not through writeAudio: they live outside the
-    // store, are never recorded as takes, and archiving one would be meaningless.
-    const path = join(SAMPLES_DIR, `${entry.id.replace(/[:\s]/g, "_")}.mp3`);
-    console.log(`sampling ${entry.id} (${entry.spoken.length} chars) -> ${path}`);
-    const { audio, credits } = await synthesize(entry.spoken, config, key);
-    await writeFile(path, audio);
-    console.log(`  ${await durationOf(path)}s${credits === null ? "" : `, ${credits} credits`}`);
-  }
-
-  console.log(`\nListen, then set voiceSettings.stability in tools/voice/config.json`);
-  console.log("and add any mispronunciations to tools/voice/pronunciation.json.");
-}
-
-//------------------------------------------------------------------------------
 // Entry point
 //------------------------------------------------------------------------------
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const catalogue = await buildCatalogue();
-  // Loaded even for a dry run, which needs the credit rate to estimate a cost.
+  // For the credit rate, which is what turns a character count into a number worth
+  // reading. Only a fallback: once the manifest holds generated lines the rate is
+  // measured from those instead.
   const config = await loadConfig(LANG);
 
   // Enforced here rather than left to the model: a bracket that reaches v3 is
@@ -477,11 +321,6 @@ async function main() {
     for (const entry of leaked.slice(0, 5)) console.error(`  ${entry.id}`);
     console.error("Eleven v3 reads brackets as performance directions. Fix tools/voice/normalise.mjs.");
     process.exit(1);
-  }
-
-  if (args.sample) {
-    await sample(catalogue);
-    return;
   }
 
   const manifest = await loadManifest();
@@ -495,11 +334,20 @@ async function main() {
     process.exit(1);
   }
 
-  // Only for the flag that cannot work without it. Every other dry run stays
-  // offline and needs no key, which is what makes the cost of a run checkable
-  // from a laptop with no credentials.
-  if (args.dictionaryDrift && config.dictionaryId && !config.dictionaryVersionId) {
-    await resolveDictionary(config, await apiKey());
+  // The locator comes from the lexicon in the database, which is what the site
+  // generates against. Asking ElevenLabs for it instead would put a credential back
+  // in this command's hands for the sake of one selector.
+  if (args.dictionaryDrift) {
+    const locator = await currentDictionary();
+    if (!locator) {
+      console.error(
+        "error: --dictionary-drift needs DATABASE_URL, and a lexicon that has been " +
+          "synced to ElevenLabs at least once. That locator is what a take is compared against.",
+      );
+      process.exit(1);
+    }
+    config.dictionaryId = locator.dictionaryId;
+    config.dictionaryVersionId = locator.versionId;
   }
 
   const selected = select(catalogue, args, manifest, config);
@@ -508,16 +356,9 @@ async function main() {
     return;
   }
 
-  if (!args.generate) {
-    listSelection(selected, manifest, config, args);
-    summarise(selected, manifest, "would generate", config);
-    console.log("\nThis was a dry run. Add --generate to spend credits.");
-    return;
-  }
-
-  summarise(selected, manifest, "generating", config);
-  console.log("");
-  await generate(selected, args);
+  listSelection(selected, manifest, config, args);
+  summarise(selected, manifest, "would generate", config);
+  console.log("\nTo cut these, select them on /zones and regenerate there.");
 }
 
 // Only when run as a script. buildCatalogue and select are imported by

@@ -164,7 +164,7 @@ fi
 count="$(find "$SOUNDS" -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')"
 if [[ "$count" -eq 0 ]]; then
   echo "error: no mp3 files in $SOUNDS" >&2
-  echo "       Generate some first:  node pipelines/zones/tools/voice/generate.mjs --all --generate" >&2
+  echo "       Generate some first, on the site, then:  make zones-pull" >&2
   exit 1
 fi
 

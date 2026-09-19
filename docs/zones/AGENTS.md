@@ -11,10 +11,10 @@ short of actions clearly beyond it.
 
 Scope expansion is expensive here specifically:
 
-- `make zones-sample`, and any `pipelines/zones/tools/voice/generate.mjs` run carrying `--generate`,
-  **spend real ElevenLabs credits**. The bare targets are dry runs and cost
-  nothing. Adding `--generate` is the user's call, never a judgment call made
-  mid-task.
+- **Nothing in this repository can spend ElevenLabs credits.** Voicing a line
+  happens on the droplet, through the site. `generate.mjs` reports on lines and
+  cannot cut one; keep it that way, and do not reintroduce a generation flag as a
+  convenience.
 - `make zones-push`, `make zones-pull`, `make zones-db-push`, `make zones-db-pull` are destructive
   (`rsync --delete`, table replacement). Confirm before running one.
 - `addons/SpokenZones/Data/*.lua` and `addons/SpokenZonesAudio/Data/Sounds.lua` are

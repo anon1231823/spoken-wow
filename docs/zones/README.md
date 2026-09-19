@@ -904,12 +904,8 @@ written into the `ZoneLoreAudio` addon. **1353 lines, 672,550 characters — abo
 408,000 credits and 14.4 hours of audio** on this plan (see "Characters are not
 credits" below).
 
-```sh
-cp .env.example .env    # then put your ELEVENLABS_API_KEY in it
-```
-
-Everything below is a **dry run** until `--generate` is added, because the
-direction that cannot be undone is spending money, not printing.
+None of it needs a key: reporting on lines is offline work, which is what makes the
+cost of a run checkable from a laptop with no credentials.
 
 ```sh
 node tools/voice/generate.mjs --all                     # what the whole corpus costs
@@ -938,29 +934,30 @@ Selectors combine, and a `--zone` takes an id or a name (`--zone 1411`,
 `--zone "The Barrens"`) and pulls in that zone's subzones. `--missing` is anything
 with no audio, `--stale` anything whose **spoken** text has changed since it was
 made, `--older-than <date>` anything generated before then, `--limit n` caps it.
+`--dictionary-drift` is the one that needs `DATABASE_URL`: the dictionary a take is
+compared against is the `pronunciation_lexicon` row, which is what the site
+generates with.
 
-### The order to actually run it in
+### Where the cutting happens
 
-```sh
-node tools/voice/generate.mjs --sample                  # 2 lines, then listen
-node tools/voice/generate.mjs --zone Durotar --generate # 44 lines, then listen in-game
-node tools/voice/build-lookup.mjs && node tools/voice/validate-audio.mjs
-./scripts/zones/deploy.sh                                     # symlinks ZoneLoreAudio too
+Not here. `generate.mjs` answers which lines exist, which are missing audio, which
+have had their text rewritten since they were cut, and what re-cutting them would
+cost. Turning that into audio is the site's: select the lines on `/zones` and
+regenerate, which queues them against the signed-in editor's own ElevenLabs key.
 
-node tools/voice/generate.mjs --all --zones-only --generate   # 49 lines, 58k chars
-node tools/voice/generate.mjs --all --generate                # the remaining ~614k
-```
+One generator, on one box, is deliberate. It is what keeps the shared queue's
+advisory lock meaningful, what keeps every take recorded with the voice and
+dictionary version it was actually made with, and what stops a laptop spending
+against an account it happens to hold a key for.
 
-Staging costs nothing extra — ElevenLabs bills per character either way — and it
-is the only thing standing between a bad `stability` setting and 672k characters
-of narration nobody has heard. `--sample` deliberately renders one long zone *and*
-one entry under 250 characters, because v3 is documented as unreliable below that
-length and **305 of the 1353 entries are shorter**.
+Stage anyway — a zone, listen, then the rest. ElevenLabs bills per character either
+way, so nothing is saved by going straight to a full run, and the short entries are
+the ones to hear first: v3 is documented as unreliable below 250 characters and
+**305 of the 1353 entries are shorter**.
 
-Generation never overwrites existing audio without `--force`: a clip already made
-cost real money and a re-roll is not always an improvement. Files are written to a
-temp name and renamed, and the manifest is written after every line, so an
-interrupted run keeps everything already paid for.
+After a batch the site publishes it: `exportManifest()` then `buildLookup()`, so
+`manifest.json` and the addon's lookup table are already in step by the time you
+pull the audio down with `make zones-pull`.
 
 ### How long a full run takes
 

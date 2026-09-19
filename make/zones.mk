@@ -3,7 +3,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy \
-        status remove clean voice voice-zones lookup sample import export \
+        status remove clean voice voice-zones lookup import export \
         push push-dry pull pull-dry audio-status ssh-check pull-manifest \
         db-push db-pull \
         icon lore-import lore-export lore-check lore-sheet lore-upload lore-upload-dry lore-rewrite aliases languages locale-check \
@@ -61,13 +61,14 @@ clean: ## Remove build output
 #-------------------------------------------------------------------------------
 # Voicelines
 #
-# Every target here that costs money says so and needs --generate spelled out;
-# the bare ones are all dry runs. See README "Generating voicelines".
+# None of these can spend a credit. They report on lines, build the addon's lookup
+# table and check it; cutting audio is the site's, on the droplet. See README
+# "Generating voicelines".
 #-------------------------------------------------------------------------------
 
 # Every voice target takes LOCALE=deDE and defaults to English, the same way the lore
 # targets do (see the LOCALE note there): pinned here rather than inherited, so a
-# SPOKEN_ZONES_LANG left in the shell from an earlier run cannot quietly point a dry run,
+# SPOKEN_ZONES_LANG left in the shell from an earlier run cannot quietly point a report,
 # an import or a lookup rebuild at another language's files.
 VOICE_LANG = SPOKEN_ZONES_LANG=$(or $(LOCALE),enUS)
 
@@ -81,14 +82,11 @@ VOICE_LANG = SPOKEN_ZONES_LANG=$(or $(LOCALE),enUS)
 # `make zones-package-audio DATABASE_URL=postgres://...` still reads the database.
 VOICE_DB = DATABASE_URL=$(DATABASE_URL)
 
-voice: ## Dry run over every voiceline (costs nothing; LOCALE=deDE for another language)
+voice: ## Report on every voiceline: what is missing, stale, and what it would cost
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/generate.mjs --all
 
-voice-zones: ## Dry run over the 49 zone lines (costs nothing)
+voice-zones: ## The same, over the 49 zone lines only
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/generate.mjs --all --zones-only
-
-sample: ## Generate two sample lines to pipelines/zones/audio-samples/ (SPENDS CREDITS)
-	@$(VOICE_LANG) node pipelines/zones/tools/voice/generate.mjs --sample
 
 lookup: ## Rebuild the addon's audio lookup table (exports the manifest first)
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/export-manifest.mjs

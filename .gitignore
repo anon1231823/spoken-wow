@@ -88,9 +88,6 @@ datagrip
 # the link to be committed. Filled by `make books-pull && make books-sounds`.
 /addons/SpokenBooksAudio/Sounds
 
-# Voice samples for checking the model before a bulk run.
-/pipelines/zones/audio-samples/
-
 # Transcoded sound-pack clips, keyed by the checksum of the master they came from.
 # A build cache: scripts/zones/package-audio.sh refills it, and prunes entries whose
 # master has been re-cut. Outside dist/ so `make clean` does not cost a five-minute
