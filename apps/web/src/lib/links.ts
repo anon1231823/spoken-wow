@@ -13,6 +13,10 @@ import type { Source } from "@/lib/reports/reports";
 /** Which field a free-text query is matched against. Mirrors LineFilters["filter"]. */
 type Scope = "any" | "npc" | "quest" | "text";
 
+/** Mirrors zones' PageFilters["field"], and books' - two different sets under one name. */
+type ZoneScope = "any" | "name" | "zone" | "text";
+type BookScope = "any" | "title" | "text";
+
 /**
  * The quests explorer, narrowed.
  *
@@ -29,12 +33,27 @@ export function questsHref(options: { q?: string; filter?: Scope; finding?: numb
   return params.size ? `/quests?${params}` : "/quests";
 }
 
-/** The zones explorer, narrowed to one zone. */
-export function zonesHref(options: { q?: string; mapID?: number } = {}): string {
+/**
+ * The zones explorer, narrowed to one zone or to a search.
+ *
+ * `field` is this section's name for what quests calls `filter`: three filter vocabularies,
+ * three modules, and a link that used the other section's param name would render the whole
+ * corpus and report no error at all.
+ */
+export function zonesHref(options: { q?: string; mapID?: number; field?: ZoneScope } = {}): string {
   const params = new URLSearchParams();
   if (options.mapID !== undefined) params.set("zone", String(options.mapID));
   if (options.q !== undefined) params.set("q", options.q);
+  if (options.field !== undefined) params.set("field", options.field);
   return params.size ? `/zones?${params}` : "/zones";
+}
+
+/** The books explorer, narrowed. `field` as in zonesHref: books says `field` too. */
+export function booksHref(options: { q?: string; field?: BookScope } = {}): string {
+  const params = new URLSearchParams();
+  if (options.q !== undefined) params.set("q", options.q);
+  if (options.field !== undefined) params.set("field", options.field);
+  return params.size ? `/books?${params}` : "/books";
 }
 
 /**

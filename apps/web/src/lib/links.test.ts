@@ -9,7 +9,14 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { explorerHref, lexiconHref, questsHref, reportHref, zonesHref } from "./links";
+import {
+  booksHref,
+  explorerHref,
+  lexiconHref,
+  questsHref,
+  reportHref,
+  zonesHref,
+} from "./links";
 
 describe("reportHref", () => {
   it("sends a triager to the landing page each section serves", () => {
@@ -55,6 +62,25 @@ describe("zonesHref", () => {
     // filtersFromParams reads `zone`, not `mapID`.
     expect(zonesHref({ mapID: 1411 })).toBe("/zones?zone=1411");
     expect(zonesHref()).toBe("/zones");
+  });
+
+  it("scopes a search with `field`, which is what this section reads", () => {
+    // NOT `filter`: that is the quests name, and zones would ignore it and search
+    // everything - an unnarrowed list that reports no error.
+    const href = zonesHref({ q: "Gnomeregan", field: "text" });
+    const params = new URLSearchParams(href.slice(href.indexOf("?")));
+    expect(params.get("q")).toBe("Gnomeregan");
+    expect(params.get("field")).toBe("text");
+  });
+});
+
+describe("booksHref", () => {
+  it("addresses the section, scoped the way books reads it", () => {
+    expect(booksHref()).toBe("/books");
+    const href = booksHref({ q: "R&D #2", field: "text" });
+    const params = new URLSearchParams(href.slice(href.indexOf("?")));
+    expect(params.get("q")).toBe("R&D #2");
+    expect(params.get("field")).toBe("text");
   });
 });
 
