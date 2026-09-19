@@ -125,6 +125,10 @@ export function matching(lines: ResultLine[], filters: LineFilters = {}): Result
   // complained about, as opposed to what an editor has already judged.
   if (filters.reports === "open") out = out.filter((l) => l.reportsOpen > 0);
 
+  // An id the catalogue no longer carries matches nothing rather than everything: a report
+  // about a line that has since been dropped must not read as "here it is".
+  if (filters.line) out = out.filter((l) => l.id === filters.line);
+
   if (filters.modelId) out = out.filter((l) => l.take?.modelId === filters.modelId);
 
   if (filters.generatedAfter) {

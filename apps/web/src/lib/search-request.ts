@@ -51,6 +51,7 @@ export function filtersFromParams(params: URLSearchParams): LineFilters {
     // one matches nothing, which is the honest answer to "show me lines with this finding".
     issueCategory: params.get("issue") || undefined,
     finding: Number(params.get("finding")) || undefined,
+    line: params.get("line") || undefined,
     overridden: params.get("overridden") === "1",
     // Absent means hidden, like progress text: the useful default view is the corpus minus
     // the lines nobody will ever voice.

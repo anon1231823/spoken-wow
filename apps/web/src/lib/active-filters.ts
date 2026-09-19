@@ -33,6 +33,7 @@ export function activeFilterCount(filters: LineFilters): number {
     filters.issues,
     filters.issueCategory,
     filters.finding,
+    filters.line,
     filters.overridden || undefined,
     filters.ignored || undefined,
     filters.outdated || undefined,

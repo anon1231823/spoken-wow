@@ -69,6 +69,14 @@ export type LineFilters = {
    * The finding already knows which lines it is about, so this asks it rather than guessing.
    */
   finding?: number;
+  /**
+   * One line by its id, which is how a report reaches the corpus.
+   *
+   * Not unique, and the filter does not pretend otherwise: a gossip lineId is a hash of the
+   * text, so every NPC of that race and gender saying it carries the same one. A report
+   * about such a line is a report about all of them, and the triager wants to see the set.
+   */
+  line?: string;
   /** Lines whose spoken text has been rewritten by hand. */
   overridden?: boolean;
   /**
@@ -346,6 +354,7 @@ export function matchingLines(
     issues,
     issueCategory,
     finding,
+    line: lineId,
     overridden,
     outdated = false,
     ignored = false,
@@ -400,6 +409,9 @@ export function matchingLines(
   // An unknown id matches nothing rather than everything: "show me this finding's lines" has
   // no honest answer for a finding that is not there, and the whole corpus is the wrong one.
   if (finding) lines = lines.filter((line) => findingLines?.has(line.lineId) ?? false);
+  // Same rule as `finding`: an id the corpus no longer carries matches nothing rather than
+  // everything, because a report about a dropped line must not read as "here it is".
+  if (lineId) lines = lines.filter((line) => line.lineId === lineId);
   // Absent `stale` means nobody asked for it, so nothing matches rather than everything: the
   // honest answer to "which audio is out of date?" without the data is none, not all.
   if (outdated) lines = lines.filter((line) => stale?.has(audioRelPath(line)) ?? false);

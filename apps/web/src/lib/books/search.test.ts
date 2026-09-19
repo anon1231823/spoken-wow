@@ -85,6 +85,14 @@ describe("matching", () => {
     expect(matching(lines, { bookId: 20 }).map((l) => l.id)).toEqual(["b:20"]);
   });
 
+  it("selects one page by its id, which is how a report links here", () => {
+    expect(matching(lines, { line: "b:20" }).map((l) => l.id)).toEqual(["b:20"]);
+  });
+
+  it("matches nothing for an id the corpus no longer carries", () => {
+    expect(matching(lines, { line: "b:99999" })).toEqual([]);
+  });
+
   it("filters out the pages that cannot be voiced", () => {
     const silent = decorate(page({ id: "b:30", pageId: 30, generatable: false, skipReason: "substitution" }), EMPTY_CONTEXT);
     expect(matching([...lines, silent], { voiceable: true }).map((l) => l.id)).toEqual(["b:10", "b:20"]);

@@ -68,12 +68,16 @@ export async function countRecent(ip: string, withinMs: number): Promise<number>
 export async function listReports(
   status: Status | "all",
   source: Source | "all" = "all",
+  category: Category | "all" = "all",
   limit = 500,
 ): Promise<Report[]> {
   const where: string[] = [];
   const params: unknown[] = [limit];
   if (status !== "all") where.push(`"status" = $${params.push(status)}`);
   if (source !== "all") where.push(`"source" = $${params.push(source)}`);
+  // Across sources on purpose: "everyone who says a word is being read wrong" is one
+  // worklist, and which corpus each of them was playing does not change the fix.
+  if (category !== "all") where.push(`"category" = $${params.push(category)}`);
 
   const { rows } = await db().query<Report>(
     `select ${COLUMNS}

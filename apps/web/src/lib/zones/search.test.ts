@@ -106,6 +106,16 @@ describe("matching", () => {
     expect(matching(lines, { short: true }).map((l) => l.id)).toEqual(["s:1411:razor hill"]);
   });
 
+  it("selects one line by its id, which is how a report links here", () => {
+    expect(matching(lines, { line: "s:1411:razor hill" }).map((l) => l.id)).toEqual([
+      "s:1411:razor hill",
+    ]);
+  });
+
+  it("matches nothing for an id the catalogue no longer carries", () => {
+    expect(matching(lines, { line: "z:99999" })).toHaveLength(0);
+  });
+
   /** A hand-edited URL should narrow nothing rather than match nothing. */
   it("ignores a filter that selects a value no line has", () => {
     expect(matching(lines, { mapID: 99999 })).toHaveLength(0);
