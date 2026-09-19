@@ -62,7 +62,6 @@ datagrip
 /pipelines/quests/voice/npc-lines/
 
 /pipelines/quests/tools/.lines_cache.pkl
-/addons/vendor/AI_VoiceOver/AI_VoiceOver.toc
 
 # The hiccup scan's output. One command rebuilds it from a corpus that is committed, and it
 # exists to be filled in while reviewing - a committed copy would conflict with every
