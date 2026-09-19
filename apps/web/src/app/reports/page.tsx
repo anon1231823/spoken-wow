@@ -5,7 +5,14 @@ import { notFound } from "next/navigation";
 import ReportTable from "@/components/ReportTable";
 import { auth } from "@/lib/auth";
 import { canRegenerate } from "@/lib/permissions";
-import { isSource, isStatus, type Source, type Status } from "@/lib/reports/reports";
+import {
+  isCategory,
+  isSource,
+  isStatus,
+  type Category,
+  type Source,
+  type Status,
+} from "@/lib/reports/reports";
 import { listReports } from "@/lib/reports/store";
 
 export const metadata: Metadata = { title: "Reports · Spoken" };
@@ -16,7 +23,7 @@ export const dynamic = "force-dynamic";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; source?: string }>;
+  searchParams: Promise<{ view?: string; source?: string; category?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -24,12 +31,15 @@ export default async function Page({
   // learning the page exists, and these rows hold prose written by strangers.
   if (!session || !canRegenerate(session.user.role)) notFound();
 
-  const { view, source: rawSource } = await searchParams;
+  const { view, source: rawSource, category: rawCategory } = await searchParams;
   const status: Status | "all" = isStatus(view) ? view : view === "all" ? "all" : "open";
   // Both by default: a report is a person waiting for an answer, and which corpus it is
   // about does not change how long they have been waiting.
   const source: Source | "all" = isSource(rawSource) ? rawSource : "all";
-  const reports = await listReports(status, source);
+  // Unknown reads as "all" rather than as a filter nothing matches, which would look like
+  // an empty queue - the same bargain every explorer's filter parser makes.
+  const category: Category | "all" = isCategory(rawCategory) ? rawCategory : "all";
+  const reports = await listReports(status, source, category);
 
   return (
     <main className="mx-auto max-w-6xl px-5 pt-6 pb-24">
@@ -40,7 +50,13 @@ export default async function Page({
         Nothing here starts a job on its own.
       </p>
 
-      <ReportTable initial={reports} view={status} source={source} canRegenerate />
+      <ReportTable
+        initial={reports}
+        view={status}
+        source={source}
+        category={category}
+        canRegenerate
+      />
     </main>
   );
 }

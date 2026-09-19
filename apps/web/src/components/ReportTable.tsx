@@ -13,8 +13,10 @@
  */
 import { Play } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import FilterChip from "@/components/FilterChip";
 import QuestsPlayer from "@/components/Player";
 import ReportDetail from "@/components/ReportDetail";
 import { Player as BooksPlayer } from "@/components/books/Player";
@@ -25,9 +27,11 @@ import { explorerHref, reportHref } from "@/lib/links";
 import type { ResultLine as BookLine } from "@/lib/books/search";
 import { searchPath, type SourceLine } from "@/lib/reports/detail";
 import {
+  CATEGORIES,
   CATEGORY_COLUMN,
   SOURCE_LABELS,
   STATUS_LABELS,
+  type Category,
   type Report,
   type Source,
   type Status,
@@ -51,6 +55,12 @@ const SOURCE_VIEWS: { value: Source | "all"; label: string }[] = [
   { value: "books", label: "Books" },
 ];
 
+/** The complaint dropdown's options, in the order the report form offers them. */
+const CATEGORY_OPTIONS = CATEGORIES.map((category) => ({
+  value: category,
+  label: CATEGORY_COLUMN[category],
+}));
+
 /** The day and the clock time, short enough to sit in a column. */
 function when(at: string): string {
   return new Date(at).toLocaleString(undefined, {
@@ -70,11 +80,13 @@ export default function ReportTable({
   initial,
   view,
   source,
+  category,
   canRegenerate,
 }: {
   initial: Report[];
   view: Status | "all";
   source: Source | "all";
+  category: Category | "all";
   /** Whether this visitor may spend credits from the panel below a row. */
   canRegenerate: boolean;
 }) {
@@ -86,6 +98,7 @@ export default function ReportTable({
    * and the table sat unchanged until somebody reloaded the page - which is the bug this
    * shape exists to make impossible. See lib/reports/rows.ts.
    */
+  const router = useRouter();
   const [resolved, setResolved] = useState<Record<number, Report>>({});
   const [busy, setBusy] = useState<number | null>(null);
   const [open, setOpen] = useState<number | null>(null);
@@ -190,7 +203,7 @@ export default function ReportTable({
         {VIEWS.map((option) => (
           <Link
             key={option.value}
-            href={`/reports?view=${option.value}&source=${source}`}
+            href={`/reports?view=${option.value}&source=${source}&category=${category}`}
             className={option.value === view ? "font-semibold" : "text-muted-foreground"}
           >
             {option.label}
@@ -204,12 +217,24 @@ export default function ReportTable({
         {SOURCE_VIEWS.map((option) => (
           <Link
             key={option.value}
-            href={`/reports?view=${view}&source=${option.value}`}
+            href={`/reports?view=${view}&source=${option.value}&category=${category}`}
             className={option.value === source ? "font-semibold" : "text-muted-foreground"}
           >
             {option.label}
           </Link>
         ))}
+
+        {/* A dropdown rather than a third row of links: six complaints and an "any" would
+            be seven more words in a row that already carries eight. It writes to the URL
+            like the links do, so a narrowed queue is still shareable and reloadable. */}
+        <FilterChip
+          label="complaint"
+          value={category === "all" ? undefined : category}
+          options={CATEGORY_OPTIONS}
+          onChange={(next) =>
+            router.push(`/reports?view=${view}&source=${source}&category=${next ?? "all"}`)
+          }
+        />
       </nav>
 
       {reports.length === 0 ? (

@@ -141,6 +141,26 @@ describe("the two sources", () => {
     expect(mine(await listReports("open", "zones"))[0]?.source).toBe("zones");
   });
 
+  it("narrows to one complaint, across sources", async () => {
+    // The body carries this run's marker, because a Report never carries the ip it was
+    // filed from and the table holds rows from every other run besides.
+    await createReport(submission({ body: `${ip} said it wrong` }));
+    await createReport(submission({ category: "wrong_voice", body: `${ip} wrong voice` }));
+    await createReport(
+      submission({ source: "zones", target: null, category: "wrong_voice", body: `${ip} zone` }),
+    );
+
+    const mine = (reports: Awaited<ReturnType<typeof listReports>>) =>
+      reports.filter((report) => report.body.startsWith(ip));
+
+    const voice = await listReports("open", "all", "wrong_voice");
+    expect(voice.every((report) => report.category === "wrong_voice")).toBe(true);
+    // Two of the three are wrong_voice and they come from different sources: the complaint
+    // filter narrows across the corpora rather than within one.
+    expect(mine(voice)).toHaveLength(2);
+    expect(mine(await listReports("open", "all", "pronunciation"))).toHaveLength(1);
+  });
+
   /** The zones side reaches its report page with the line already known, so it has none. */
   it("stores a report with no target at all", async () => {
     await createReport(submission({ source: "zones", lineId: "z:1411", target: null }));
