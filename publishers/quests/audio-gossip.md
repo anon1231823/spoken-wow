@@ -1,6 +1,7 @@
 ---
 curseforge: 1660202
 wago: XKqA45Ky
+release: quests-audio-gossip
 slug: spoken-quests-audio-gossip
 name: Spoken Quests Audio: Gossip
 summary: NPC gossip chatter, voiced. Optional extra for any of the quest packs. Needs Spoken Quests.
@@ -24,7 +25,9 @@ Innkeepers, guards, faction quartermasters and the rest saying their piece out l
 
 | Pack | Holds | |
 | --- | --- | --- |
+<!-- only:curseforge -->
 | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all) | installs the four below | |
+<!-- /only -->
 | [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests | |
 | [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests | |
 | [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) | quests both factions can take | |
@@ -32,7 +35,12 @@ Innkeepers, guards, faction quartermasters and the rest saying their piece out l
 
 Gossip is not split by faction: an NPC greets whoever walks up, so one pack serves both sides.
 
+<!-- only:wago -->
+This pack is not installable from Wago: at several hundred megabytes it is over the upload limit here, so the link above is its GitHub release. Download it, unzip it into `Interface/AddOns`, and the addon finds it.
+<!-- /only -->
+<!-- only:curseforge -->
 If you would rather have one install and not think about it, take **[All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all)** instead. It holds no audio itself - it just tells your addon manager to fetch all four packs, this one included.
+<!-- /only -->
 
 ## What this is
 

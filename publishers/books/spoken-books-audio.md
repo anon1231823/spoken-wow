@@ -1,6 +1,7 @@
 ---
 curseforge: 1701520
 wago: qGZOrvNd
+release: books-audio
 slug: spoken-books-audio
 name: Spoken Books Audio
 summary: The narration for Spoken Books: books, letters and notes read aloud. Data only — install it beside Spoken Books.
@@ -18,7 +19,14 @@ One clip per page, covering every readable book, letter, note and plaque in the 
 
 ## Installing
 
-Install this beside Spoken Books; your addon manager will offer it. There is one version of the audio — one folder, and one answer to "which do I install".
+<!-- only:wago -->
+**This pack is not installable from Wago.** At 452 MB it is over the upload limit here, so the file lives in its [GitHub release](https://github.com/rusty-key/spoken-wow/releases?q=books-audio), and on CurseForge. Unzip it into `Interface/AddOns`, beside Spoken Books.
+<!-- /only -->
+<!-- only:curseforge -->
+Install this beside Spoken Books; your addon manager will offer it.
+<!-- /only -->
+
+There is one version of the audio — one folder, and one answer to "which do I install".
 
 ## The voice
 

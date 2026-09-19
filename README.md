@@ -6,13 +6,15 @@ several addons.
 | Addon | Voices | Install | Audio packs |
 |---|---|---|---|
 | **Spoken** | nothing — it *is* the player: the queue, the frame, the minimap button | [CurseForge](https://www.curseforge.com/wow/addons/spoken-player) · [Wago](https://addons.wago.io/addons/spoken-player) | — |
-| **SpokenQuests** | quest dialogue and NPC gossip | [CurseForge](https://www.curseforge.com/wow/addons/spoken-quests) · [Wago](https://addons.wago.io/addons/spoken-quests) | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all), or [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) · [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) · [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) · [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) |
-| **SpokenZones** | zone and subzone lore | [CurseForge](https://www.curseforge.com/wow/addons/spoken-zones) · [Wago](https://addons.wago.io/addons/spoken-zones) | [Spoken Zones Audio](https://www.curseforge.com/wow/addons/spoken-zones-audio) |
-| **SpokenBooks** | books, letters and other in-world texts | [CurseForge](https://www.curseforge.com/wow/addons/spoken-books) · [Wago](https://addons.wago.io/addons/spoken-books) | [Spoken Books Audio](https://www.curseforge.com/wow/addons/spoken-books-audio) |
+| **SpokenQuests** | quest dialogue and NPC gossip | [CurseForge](https://www.curseforge.com/wow/addons/spoken-quests) · [Wago](https://addons.wago.io/addons/spoken-quests) | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all), or [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) · [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) · [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) · [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) — also on [GitHub](https://github.com/rusty-key/spoken-wow/releases?q=audio) |
+| **SpokenZones** | zone and subzone lore | [CurseForge](https://www.curseforge.com/wow/addons/spoken-zones) · [Wago](https://addons.wago.io/addons/spoken-zones) | [CurseForge](https://www.curseforge.com/wow/addons/spoken-zones-audio) · [GitHub](https://github.com/rusty-key/spoken-wow/releases?q=zones-audio) |
+| **SpokenBooks** | books, letters and other in-world texts | [CurseForge](https://www.curseforge.com/wow/addons/spoken-books) · [Wago](https://addons.wago.io/addons/spoken-books) | [CurseForge](https://www.curseforge.com/wow/addons/spoken-books-audio) · [GitHub](https://github.com/rusty-key/spoken-wow/releases?q=books-audio) |
 
-The addons are on both stores under the same slugs. **The sound packs are CurseForge only**:
-each is 300–450 MB and Wago's upload endpoint refuses a body that size, so the pack links
-above go to CurseForge whichever store the addon beside them came from.
+The addons are on both stores under the same slugs. **The sound packs are not on Wago**: each
+is 280–452 MB and that upload endpoint refuses a file this size, so a pack comes from
+CurseForge or from a GitHub release — one tag per pack, `<pack>/vX.Y.Z`, cut by
+`scripts/audio-github-release.sh` from the machine that built the audio, since the audio is
+outside git and no runner can rebuild it.
 
 A feature addon speaks; its audio pack holds the lines. Neither does anything alone,
 so install both.

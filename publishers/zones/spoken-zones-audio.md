@@ -1,6 +1,7 @@
 ---
 curseforge: 1636532
 wago: b6mvD9KP
+release: zones-audio
 slug: spoken-zones-audio
 name: Spoken Zones Audio
 summary: Formerly ZoneLoreAudio. The narration for Spoken Zones: every zone and subzone read aloud.
@@ -24,6 +25,10 @@ The **lore text** was rewritten in the same release to describe the world as a v
 
 ## Installing
 
+<!-- only:wago -->
+**This pack is not installable from Wago.** At 448 MB it is over the upload limit here, so the file lives in its [GitHub release](https://github.com/rusty-key/spoken-wow/releases?q=zones-audio), and on CurseForge.
+
+<!-- /only -->
 Install **Spoken Zones** first; this pack is inert without it. Extract into `Interface/AddOns` and leave the folder name as shipped — Spoken Zones finds packs by folder name.
 
 The folder is `SpokenZonesAudio` as of this release; it was `ZoneLoreAudio` before, so your addon manager replaces the old folder rather than adding to it. If you installed by hand, delete the old one.

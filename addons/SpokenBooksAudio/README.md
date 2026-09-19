@@ -6,7 +6,9 @@ One clip per page, covering every readable book, letter, note and plaque in the 
 
 ## Installing
 
-Install this beside Spoken Books; your addon manager will offer it. There is one version of the audio — one folder, and one answer to "which do I install".
+Install this beside Spoken Books; your addon manager will offer it.
+
+There is one version of the audio — one folder, and one answer to "which do I install".
 
 ## The voice
 

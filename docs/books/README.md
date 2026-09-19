@@ -242,4 +242,6 @@ into Wago, then record it with `make descriptions-published`.
 
 `make books-release` sends each zip to both stores. The pack goes to CurseForge alone: at
 452 MB it meets a 413 from Cloudflare before Wago sees it, which `scripts/lib/wago.sh` says
-in as many words.
+in as many words. `make audio-release` then publishes it as a GitHub release under
+`books-audio/vX.Y.Z`, which is where the Wago page for Spoken Books sends anyone looking for
+the narration.

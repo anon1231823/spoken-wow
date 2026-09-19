@@ -53,8 +53,52 @@ const WAGO_OUT_DIR = join(ROOT, "dist/descriptions-wago");
 const CURSEFORGE_ADDON_URL = "https://www.curseforge.com/wow/addons/";
 const WAGO_ADDON_URL = "https://addons.wago.io/addons/";
 
-function forWago(body) {
-  return body.split(CURSEFORGE_ADDON_URL).join(WAGO_ADDON_URL);
+// Where a project that is not on Wago is offered instead. The sound packs are 280-452 MB and
+// Wago's upload endpoint refuses a file that size, so their Wago projects hold no files: a
+// link to one is a page a player can reach and download nothing from, which is worse than no
+// link. Those slugs point at the pack's GitHub releases instead, which is where it is, and
+// the query rather than a tag so the link does not go stale the next time the audio is built.
+const GITHUB_RELEASES_URL = "https://github.com/rusty-key/spoken-wow/releases?q=";
+
+// slug -> the URL the Wago copy should use, for pages whose frontmatter names a `release:`
+// tag prefix. Everything else is rewritten to the Wago page of the same slug.
+function wagoUrls(pages) {
+  const urls = new Map();
+  for (const page of pages) {
+    if (page.meta.release) urls.set(page.meta.slug, GITHUB_RELEASES_URL + page.meta.release);
+  }
+  return urls;
+}
+
+// STORE-CONDITIONAL PROSE, for the few sentences that are not true on both stores. A block
+// between `<!-- only:wago -->` and `<!-- /only -->` survives only in the Wago copy, and
+// `only:curseforge` only in the CurseForge one; everything outside a block is shared, which
+// is nearly all of it.
+//
+// It exists because the meta pack is a CurseForge mechanism: `audio-all` holds no audio and
+// works by declaring the four packs as required dependencies, which CurseForge resolves per
+// upload and Wago has no field for. Telling a Wago player to "take All and your manager
+// fetches the rest" is telling them to install an empty folder. Link rewriting cannot fix a
+// sentence, so the sentence itself is per store.
+//
+// Deliberately blunt: no nesting, no conditions beyond the two store names. A page that needs
+// more than a paragraph of difference is two pages, and should say so by being two pages.
+// Two shapes, because a block is either whole lines or part of a sentence, and getting the
+// newlines wrong shows up as a blank row in the middle of a markdown table.
+const ONLY_LINES =
+  /^[ \t]*<!--\s*only:(curseforge|wago)\s*-->[ \t]*\r?\n([\s\S]*?)^[ \t]*<!--\s*\/only\s*-->[ \t]*\r?\n/gm;
+const ONLY_INLINE = /<!--\s*only:(curseforge|wago)\s*-->([\s\S]*?)<!--\s*\/only\s*-->/g;
+
+function forStore(body, store) {
+  const keep = (_, named, inner) => (named === store ? inner : "");
+  return body.replace(ONLY_LINES, keep).replace(ONLY_INLINE, keep);
+}
+
+function forWago(body, urls) {
+  return forStore(body, "wago").replace(
+    new RegExp(`${CURSEFORGE_ADDON_URL}([a-z0-9-]+)`, "g"),
+    (_, slug) => urls.get(slug) ?? WAGO_ADDON_URL + slug,
+  );
 }
 
 const GENERATED_NOTE =
@@ -177,7 +221,7 @@ async function loadGroups() {
 // Identical by construction; the note only appears in the generated README, since
 // an HTML comment in the form would be pasted into the page.
 function readmeFor(page) {
-  return `${GENERATED_NOTE.replace("%s", page.path)}\n\n${page.body}`;
+  return `${GENERATED_NOTE.replace("%s", page.path)}\n\n${forStore(page.body, "curseforge")}`;
 }
 
 // Which descriptions have been pasted into the site, and at what content. The
@@ -267,9 +311,13 @@ async function main() {
   if (write) {
     await mkdir(OUT_DIR, { recursive: true });
     await mkdir(WAGO_OUT_DIR, { recursive: true });
+    // Built from every page, not from the ones being written: --group=zones still has to know
+    // that spoken-quests-audio-horde is a pack, or a zones-only run would link it to a Wago
+    // page holding nothing.
+    const urls = wagoUrls(all.flatMap((g) => g.pages));
     for (const page of pages) {
-      await writeFile(join(OUT_DIR, `${page.meta.slug}.md`), page.body);
-      await writeFile(join(WAGO_OUT_DIR, `${page.meta.slug}.md`), forWago(page.body));
+      await writeFile(join(OUT_DIR, `${page.meta.slug}.md`), forStore(page.body, "curseforge"));
+      await writeFile(join(WAGO_OUT_DIR, `${page.meta.slug}.md`), forWago(page.body, urls));
     }
     console.log(
       `wrote ${pages.length} description(s) to dist/descriptions/ and dist/descriptions-wago/`,

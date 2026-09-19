@@ -34,6 +34,10 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 
 The voice audio is a large download, so it ships separately. **Spoken Zones works fine without one** — you read rather than listen. Without a pack the Play button simply doesn't appear, and nothing is narrated.
 
+<!-- only:wago -->
+The pack is too large for Wago's uploader, so it is downloaded from its [GitHub release](https://github.com/rusty-key/spoken-wow/releases?q=zones-audio) (or from CurseForge) and unzipped into `Interface/AddOns`.
+
+<!-- /only -->
 Two packs, the same voicelines — and there are a lot of them — differing only in quality:
 
 | Pack | Bitrate | Download |

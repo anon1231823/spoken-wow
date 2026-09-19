@@ -5,6 +5,7 @@ export const metadata: Metadata = { title: "Spoken" };
 
 const CURSEFORGE = "https://www.curseforge.com/wow/addons";
 const WAGO = "https://addons.wago.io/addons";
+const GITHUB_RELEASES = "https://github.com/rusty-key/spoken-wow/releases?q=";
 
 /**
  * The front door.
@@ -22,11 +23,24 @@ const WAGO = "https://addons.wago.io/addons";
  * invalid HTML that browsers resolve by closing the outer one early.
  *
  * TWO STORES, AND NOT EVERY ADDON IS ON BOTH. The slugs are identical on CurseForge and
- * Wago, so one slug addresses both -- but a sound pack is 300-450 MB and Wago's upload
- * endpoint refuses anything that size, so the packs are CurseForge-only and say so here
- * rather than offering a Wago link that 404s. `wago: false` is that fact, not a preference.
+ * Wago, so one slug addresses both -- but a sound pack is 280-452 MB and Wago's upload
+ * endpoint refuses a file that size. Those rows carry `release`, the pack's tag prefix on
+ * GitHub, and link there instead: a player who installed the addon from Wago still has
+ * somewhere to get its audio. The link is the releases query rather than a tag, so it does
+ * not go stale the next time the audio is built.
  */
-const SECTIONS = [
+/** A project as it is offered: on the two stores, or on GitHub when a store will not host it. */
+type Addon = { slug: string; label: string; wago?: boolean; release?: string };
+
+const SECTIONS: {
+  href: string;
+  icon: string;
+  title: string;
+  blurb: string;
+  detail: string;
+  addons: Addon[];
+  addonsNote?: string;
+}[] = [
   {
     href: "/quests",
     icon: "/icons/quests.svg",
@@ -38,6 +52,8 @@ const SECTIONS = [
     addons: [
       { slug: "spoken-quests", label: "Spoken Quests", wago: true },
       { slug: "spoken-quests-audio-all", label: "Audio: All", wago: true },
+      // The four split packs are on the All page and on GitHub; the All project itself is a
+      // stub that only an addon manager resolves, so it has no release of its own.
     ],
     // The other four packs are Alliance, Horde, Shared and Gossip. They are listed on the
     // All pack's own page, which is where somebody choosing between them should be reading
@@ -54,7 +70,7 @@ const SECTIONS = [
     detail: "1,353 lines · one narrator",
     addons: [
       { slug: "spoken-zones", label: "Spoken Zones", wago: true },
-      { slug: "spoken-zones-audio", label: "Spoken Zones Audio", wago: false },
+      { slug: "spoken-zones-audio", label: "Spoken Zones Audio", release: "zones-audio" },
     ],
   },
   {
@@ -67,7 +83,7 @@ const SECTIONS = [
     detail: "1,191 pages · 404 books",
     addons: [
       { slug: "spoken-books", label: "Spoken Books", wago: true },
-      { slug: "spoken-books-audio", label: "Spoken Books Audio", wago: false },
+      { slug: "spoken-books-audio", label: "Spoken Books Audio", release: "books-audio" },
     ],
   },
 ];
@@ -135,6 +151,19 @@ export default function Page() {
                         className="hover:text-foreground underline underline-offset-2"
                       >
                         Wago
+                      </a>
+                    </>
+                  )}
+                  {addon.release && (
+                    <>
+                      <span className="px-1.5">·</span>
+                      <a
+                        href={`${GITHUB_RELEASES}${addon.release}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-foreground underline underline-offset-2"
+                      >
+                        GitHub
                       </a>
                     </>
                   )}

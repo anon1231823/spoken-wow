@@ -30,14 +30,20 @@ Nothing to do. Your settings carry over on the first login, and the old `VoiceOv
 
 ## Pick a sound pack
 
+<!-- only:wago -->
+The packs are hundreds of megabytes each, which is more than Wago's uploader takes, so they are downloaded and unzipped into `Interface/AddOns` by hand:
+
+<!-- /only -->
 | Pack | Holds |
 | --- | --- |
+<!-- only:curseforge -->
 | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all) | installs the four below |
+<!-- /only -->
 | [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests |
 | [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests |
 | [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) | quests both factions can take |
 | [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) | NPC gossip chatter |
 
-An Alliance player wants Alliance + Shared, a Horde player Horde + Shared, and Gossip on top if they want NPC chatter. Anyone who would rather not choose can take All, which holds no audio itself and simply pulls the four packs in as dependencies.
+An Alliance player wants Alliance + Shared, a Horde player Horde + Shared, and Gossip on top if they want NPC chatter.<!-- only:curseforge --> Anyone who would rather not choose can take All, which holds no audio itself and simply pulls the four packs in as dependencies.<!-- /only -->
 
-The player finds whatever packs are installed and plays from all of them, so adding Gossip later, or switching from the split packs to All, needs nothing but the install.
+The player finds whatever packs are installed and plays from all of them, so adding Gossip later needs nothing but the install.

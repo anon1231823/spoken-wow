@@ -20,7 +20,8 @@
 LUA ?= $(shell command -v luajit || command -v lua5.1)
 
 .PHONY: help test test-player lint package-all \
-        descriptions descriptions-check descriptions-published
+        descriptions descriptions-check descriptions-published \
+        audio-release audio-release-dry
 
 help: ## Show this help
 	@printf 'Spoken\n\n'
@@ -89,14 +90,14 @@ lint: ## The checks CI gates on
 	@node scripts/descriptions.mjs --check
 	@node pipelines/zones/tools/locale/check-strings.mjs
 
-# The CurseForge project pages, for every addon. One tool over publishers/*/ rather than one
+# The store project pages, for every addon. One tool over publishers/*/ rather than one
 # per project: the pages are the same shape, and a second copy of this would be a second place
 # for the summary limit and the published.json convention to drift.
 #
 # `descriptions-published` is a claim, not a check -- there is no API to read a live page back,
 # so it records what you have just pasted. Run it after pasting, never before.
 
-descriptions: ## Regenerate the addon READMEs and dist/descriptions/ from publishers/
+descriptions: ## Regenerate the addon READMEs and dist/descriptions*/ from publishers/
 	@node scripts/descriptions.mjs --write
 
 descriptions-check: ## Confirm the addon READMEs match publishers/
@@ -104,6 +105,20 @@ descriptions-check: ## Confirm the addon READMEs match publishers/
 
 descriptions-published: ## Record the current descriptions as pasted into the site
 	@node scripts/descriptions.mjs --published
+
+# The sound packs' third channel. CurseForge takes them and Wago does not -- 280-452 MB a
+# pack, and that upload endpoint answers 413 -- so a player who installed an addon from Wago
+# gets its audio from a GitHub release instead.
+#
+# Not part of .github/workflows/release-addons.yaml, and it cannot be: that workflow builds
+# its zips on the runner, and the audio is outside git. This uploads what the machine that
+# generated it already has in dist/.
+
+audio-release-dry: ## Show which pack releases `make audio-release` would cut
+	@./scripts/audio-github-release.sh --dry-run
+
+audio-release: ## Publish the built sound packs as GitHub releases (needs gh)
+	@./scripts/audio-github-release.sh
 
 package-all: ## Build every addon zip: the player, quests, zones
 	@./scripts/spoken/package.sh

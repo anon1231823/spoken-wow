@@ -11,7 +11,12 @@ categories:
 license: MIT
 ---
 
+<!-- only:curseforge -->
 **Install this and get the lot.** It holds no audio itself — it is a few kilobytes that pulls in all four sound packs as dependencies, so your addon manager fetches them for you.
+<!-- /only -->
+<!-- only:wago -->
+**This project does nothing on Wago.** It is a few kilobytes that names the four sound packs as required dependencies, which only CurseForge resolves — Wago's uploads carry no dependency list, so nothing is fetched for you here. Take the four packs from the links below instead; they are GitHub releases, because a pack is several hundred megabytes and over Wago's upload limit.
+<!-- /only -->
 
 You still need the player: [Spoken Quests](https://www.curseforge.com/wow/addons/spoken-quests). That addon speaks the lines, the packs are the lines, and neither does anything alone.
 
@@ -19,7 +24,12 @@ You still need the player: [Spoken Quests](https://www.curseforge.com/wow/addons
 
 | Pack | Holds | |
 | --- | --- | --- |
+<!-- only:curseforge -->
 | **All** | installs the four below | **this page** |
+<!-- /only -->
+<!-- only:wago -->
+| **All** | this page, and it resolves nothing here | **this page** |
+<!-- /only -->
 | [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests | |
 | [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests | |
 | [Shared Quests](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) | quests both factions can take | |
@@ -27,7 +37,9 @@ You still need the player: [Spoken Quests](https://www.curseforge.com/wow/addons
 
 Most players want less than this. An Alliance character only ever hears Alliance + Shared Quests, a Horde character Horde + Shared Quests, and Gossip is optional chatter on top — so picking two packs saves a large download of dialogue your character can never reach.
 
+<!-- only:curseforge -->
 **Downloading the zip by hand gets you the stub and nothing else.** Dependencies are something the CurseForge app and WowUp resolve; a manual download cannot. Install the four packs directly in that case.
+<!-- /only -->
 
 ## Why the audio is split at all
 

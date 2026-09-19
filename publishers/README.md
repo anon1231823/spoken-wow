@@ -98,13 +98,20 @@ so a player sees the same name in the AddOns list as on the site.
 is a re-download of every clip in it, which the release doing the renaming costs anyway; what it
 is not is a broken path, because nothing stores one built from a folder name.
 
-**The sound packs are CurseForge-only, and not by choice.** Wago's version endpoint sits
-behind Cloudflare, which refuses a body of a few hundred megabytes with a 413 before Wago
-sees it -- the same wall the complete quests pack meets on CurseForge. Every pack is 300-450 MB,
-so `scripts/*/release.sh` uploads the addons to both stores and the packs to CurseForge alone,
-and the Wago pages say in words where the audio comes from. The Wago ids for the pack projects
-are listed above anyway: the projects exist, and the day that endpoint takes a larger file they
-are what it uploads to.
+**The sound packs are not on Wago, and not by choice.** Wago's version endpoint sits behind
+Cloudflare, which refuses a body of a few hundred megabytes with a 413 before Wago sees it --
+the same wall the complete quests pack meets on CurseForge. Every pack is 280-452 MB, so
+`scripts/*/release.sh` uploads the addons to both stores and the packs to CurseForge alone.
+The Wago ids for the pack projects are listed above anyway: the projects exist, and the day
+that endpoint takes a larger file they are what it uploads to.
+
+**So the packs have a third channel**, `scripts/audio-github-release.sh` (`make audio-release`),
+one GitHub release per pack under `<pack>/vX.Y.Z` — the ceiling there is 2 GB a file. It runs
+from the machine that built the audio rather than in CI, because the audio is outside git and
+no runner can rebuild it. A pack page's `release:` line names its tag prefix, and that is what
+makes the Wago copy of every page linking that pack point at the GitHub releases for it
+instead of at a Wago project holding no files. The link is the releases query rather than a
+tag, so it survives the next audio build.
 
 **These are pasted by hand and the site is the live copy.** There is no API for descriptions —
 `release.sh` uploads files and nothing else, deliberately, because a script that rewrote project
