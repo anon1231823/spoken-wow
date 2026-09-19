@@ -1,5 +1,6 @@
 ---
 project: 1636521
+wago: mNw7b5No
 slug: spoken-zones
 name: Spoken Zones
 summary: Formerly ZoneLore. Zone lore on the world map. Open the map and read the story of the zone you're looking at, or click any subzone for its own. Every zone and subzone, optionally narrated.

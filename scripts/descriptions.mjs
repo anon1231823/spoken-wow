@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// curseforge/<project>/*.md -> the addon READMEs, and dist/descriptions/ for pasting.
+// curseforge/<project>/*.md -> the addon READMEs, and dist/descriptions*/ for pasting.
 //
 //   node scripts/descriptions.mjs              # check that everything is in step
 //   node scripts/descriptions.mjs --write      # regenerate
@@ -40,6 +40,22 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const CURSEFORGE_DIR = join(ROOT, "curseforge");
 const OUT_DIR = join(ROOT, "dist/descriptions");
+
+// The same bodies with their cross-links pointed at Wago, for pasting into the Wago pages.
+// TWO STORES, ONE TEXT. A page links to its sibling projects, and a link is only correct on
+// the store it was written for: a player reading the Wago page for Spoken Zones should be
+// offered the Wago page for its sound pack, not sent to a site where their addon manager
+// cannot install it. The alternative -- a second copy of every body -- is two files to edit
+// and one of them silently stale, which is the failure the single source here exists to
+// prevent. The slugs are identical on both stores, so this is one substitution and nothing
+// per project to keep in step.
+const WAGO_OUT_DIR = join(ROOT, "dist/descriptions-wago");
+const CURSEFORGE_ADDON_URL = "https://www.curseforge.com/wow/addons/";
+const WAGO_ADDON_URL = "https://addons.wago.io/addons/";
+
+function forWago(body) {
+  return body.split(CURSEFORGE_ADDON_URL).join(WAGO_ADDON_URL);
+}
 
 const GENERATED_NOTE =
   "<!-- GENERATED from curseforge/%s by scripts/descriptions.mjs. Do not edit by hand. -->";
@@ -85,7 +101,7 @@ function parseFrontmatter(text, file) {
   return { meta, body: text.slice(end + 5).trim() + "\n" };
 }
 
-const REQUIRED = ["project", "slug", "name", "summary", "categories", "license"];
+const REQUIRED = ["project", "wago", "slug", "name", "summary", "categories", "license"];
 
 // CurseForge's summary field. Enforced here rather than discovered in the form,
 // where the failure is a truncated sentence nobody re-reads.
@@ -124,6 +140,15 @@ async function loadGroups() {
       }
       if (!/^\d+$/.test(meta.project)) {
         throw new Error(`${name}/${file}: 'project' should be the numeric CurseForge project id`);
+      }
+      // Wago's ids are eight alphanumeric characters and case matters -- QN53yXKB is not
+      // qn53yxkb. Checked here because the upload endpoint is /projects/<id>/version: a
+      // mistyped id is a 404 in the middle of a release, or worse, somebody else's project.
+      if (!/^[A-Za-z0-9]{8}$/.test(meta.wago)) {
+        throw new Error(
+          `${name}/${file}: 'wago' should be the 8-character Wago project id, from the ` +
+            `project's page in https://addons.wago.io/developers`,
+        );
       }
 
       pages.push({ group: name, file, path: `${name}/${file}`, meta, body });
@@ -239,10 +264,14 @@ async function main() {
 
   if (write) {
     await mkdir(OUT_DIR, { recursive: true });
+    await mkdir(WAGO_OUT_DIR, { recursive: true });
     for (const page of pages) {
       await writeFile(join(OUT_DIR, `${page.meta.slug}.md`), page.body);
+      await writeFile(join(WAGO_OUT_DIR, `${page.meta.slug}.md`), forWago(page.body));
     }
-    console.log(`wrote ${pages.length} description(s) to dist/descriptions/`);
+    console.log(
+      `wrote ${pages.length} description(s) to dist/descriptions/ and dist/descriptions-wago/`,
+    );
   }
 
   if (drift.length) {
@@ -256,7 +285,8 @@ async function main() {
     for (const group of groups) {
       for (const page of group.pages) {
         console.log(
-          `     ${page.meta.slug} (${page.meta.project}): summary ${page.meta.summary.length}/${SUMMARY_LIMIT} chars`,
+          `     ${page.meta.slug} (CurseForge ${page.meta.project}, Wago ${page.meta.wago}): ` +
+            `summary ${page.meta.summary.length}/${SUMMARY_LIMIT} chars`,
         );
       }
     }

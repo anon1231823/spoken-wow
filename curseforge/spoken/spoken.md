@@ -1,5 +1,6 @@
 ---
 project: 1700375
+wago: QN53yXKB
 slug: spoken-player
 name: Spoken Player
 summary: The voice player every Spoken addon speaks through: one queue, one window, one minimap button.

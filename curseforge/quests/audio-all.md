@@ -1,5 +1,6 @@
 ---
 project: 1660196
+wago: ANzkpD64
 slug: spoken-quests-audio-all
 name: Spoken Quests Audio: All
 summary: Every quest and gossip line, voiced. The whole pack in one install. Needs Spoken Quests.
