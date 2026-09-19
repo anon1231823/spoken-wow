@@ -82,6 +82,11 @@ describe("detailOf", () => {
     expect(detailOf("quests", { ...questLine, hasAudio: false } as QuestLine).audioSrc).toBeNull();
   });
 
+  it("reads a rewritten quest line as what it now says, not what the corpus says", () => {
+    const rewritten = { ...questLine, override: "Those kobolds are a nuisance." } as QuestLine;
+    expect(detailOf("quests", rewritten).text).toBe("Those kobolds are a nuisance.");
+  });
+
   it("busts the cache with the take a regeneration just wrote", () => {
     expect(detailOf("zones", zoneLine, 7).audioSrc).toBe("/api/zones/audio/1411/razor-hill.mp3?v=7");
   });

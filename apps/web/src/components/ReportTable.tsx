@@ -383,6 +383,13 @@ export default function ReportTable({
                         onRegenerated={(version) =>
                           setVersions((current) => ({ ...current, [key]: version }))
                         }
+                        onOverridden={(text) =>
+                          setLines((current) => {
+                            const known = current[key];
+                            if (!known) return current;
+                            return { ...current, [key]: { ...known, override: text } };
+                          })
+                        }
                       />
                     </td>
                   </tr>

@@ -63,7 +63,9 @@ function questDetail(line: QuestLine, version?: number): LineDetail {
   return {
     heading: line.questTitle ?? line.npcName,
     context: [line.npcName, who, line.voice].filter(Boolean).join(" · "),
-    text: line.text,
+    // The override when there is one: it is what the next take will say, and a panel that
+    // showed the corpus text would report a rewrite as having changed nothing.
+    text: line.override ?? line.text,
     audioSrc: line.hasAudio ? audio("quests", line.audioPath, version) : null,
     lineId: line.lineId,
   };
