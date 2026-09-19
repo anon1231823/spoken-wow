@@ -162,7 +162,7 @@ locale-check: ## Report per-language string coverage, and check Languages.lua is
 #-------------------------------------------------------------------------------
 # The droplet
 #
-# The site is deployed by GitHub Actions on every push to main. Everything here is the
+# The site is deployed by GitHub Actions on every push to master. Everything here is the
 # half CI does not do: the audio store and the database contents. See deploy/web/README.md.
 #
 #   make push              ~700MB of mp3s, the first time and after a local bulk run

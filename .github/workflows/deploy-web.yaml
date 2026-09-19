@@ -6,7 +6,7 @@ name: Deploy Spoken
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     # Addon-only commits should not redeploy the site. The paths below are exactly what
     # ends up inside a release.
     paths:
