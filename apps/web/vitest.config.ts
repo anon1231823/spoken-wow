@@ -3,29 +3,35 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
- * Read .env.local the way `next dev` does.
+ * Read the .env files the way `next dev` does, root first and .env.local over it.
  *
  * Vitest does not, and history.test.ts needs DATABASE_URL: it exercises the version table
  * against a real Postgres, because the constraints that keep its ordering honest live in the
  * schema rather than in the code. CI sets DATABASE_URL in the job environment, and a real
  * environment variable wins over anything read here.
+ *
+ * Both files, because DATABASE_URL is shared with the pipelines and lives in the repo root's
+ * .env now; next.config.ts loads the same pair in the same order, and .env.local holds only
+ * what is the site's alone.
  */
 function localEnv(): Record<string, string> {
-  const file = path.resolve(__dirname, ".env.local");
-  if (!fs.existsSync(file)) return {};
+  const values = new Map<string, string>();
 
-  return Object.fromEntries(
-    fs
-      .readFileSync(file, "utf8")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("#") && line.includes("="))
-      .map((line) => {
-        const at = line.indexOf("=");
-        return [line.slice(0, at), line.slice(at + 1).replace(/^["']|["']$/g, "")];
-      })
-      .filter(([key]) => !(key in process.env)),
-  );
+  for (const file of [
+    path.resolve(__dirname, "..", "..", ".env"),
+    path.resolve(__dirname, ".env.local"),
+  ]) {
+    if (!fs.existsSync(file)) continue;
+
+    for (const raw of fs.readFileSync(file, "utf8").split("\n")) {
+      const line = raw.trim();
+      if (!line || line.startsWith("#") || !line.includes("=")) continue;
+      const at = line.indexOf("=");
+      values.set(line.slice(0, at), line.slice(at + 1).replace(/^["']|["']$/g, ""));
+    }
+  }
+
+  return Object.fromEntries([...values].filter(([key]) => !(key in process.env)));
 }
 
 export default defineConfig({

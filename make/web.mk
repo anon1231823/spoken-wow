@@ -32,7 +32,7 @@ help: ## Show this help
 # Local
 #------------------------------------------------------------------------------
 
-dev: ## Run the site locally (needs a Postgres; see apps/web/.env.example)
+dev: ## Run the site locally (needs a Postgres; see .env.example and apps/web/.env.example)
 	@pnpm --filter $(APP) dev
 
 build: ## Production build, as CI does it

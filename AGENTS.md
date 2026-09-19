@@ -13,8 +13,9 @@ Four things share one tree, and they are not equally finished:
 2. `apps/` — `web` is the site: one domain, `spoken.rusty.one`, with a quests
    section, a zones section and a books section. It is the merge of two sites
    that came before it; their names are redirect vhosts now.
-3. `pipelines/` — `quests/` is Python, `zones/` and `books/` are Node. Also
-   scheduled to merge, onto TypeScript. The zones half is not merely a CLI any
+3. `pipelines/` — `quests/` is Python, `zones/` and `books/` are Node, and `lib/` is the
+   handful of plain `.mjs` modules both Node halves share, starting with the `.env` reader.
+   The three are also scheduled to merge, onto TypeScript. The zones half is not merely a CLI any
    more: the site imports it (`apps/web/src/lib/zones/tools.ts`) and webpack
    compiles it into the bundle, so a change there is a change to the site. The
    books half is the same arrangement, reading page text out of the vmangos
@@ -42,6 +43,14 @@ Each target is commented with the failure it exists to prevent — read the
 comment before changing one, and note that several `push`/`pull` targets
 rsync with `--delete` against directories holding audio that cannot be
 regenerated.
+
+**Shared credentials live in the repo-root `.env`.** One ElevenLabs key, one CurseForge
+token, one `DATABASE_URL`, one vmangos `MYSQL_*` block, read by `pipelines/lib/env.mjs`,
+`tts_cli/env_vars.py`, `apps/web/next.config.ts` and the three `scripts/*/release.sh`. A
+`pipelines/<name>/.env` is read after it and wins, and is for what is that pipeline's alone.
+Copying a shared variable back into one is how the three copies that came before drifted:
+zones held a stale ElevenLabs key, books held a `MYSQL_*` block nothing read, and
+`scripts/books/release.sh` searched all three files to find the one CurseForge token.
 
 **Audio lives outside git.** Several directories are irreplaceable rather
 than merely large; `.gitignore` says which, and why, for each one.

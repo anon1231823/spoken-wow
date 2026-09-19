@@ -45,10 +45,13 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
    Add `-r requirements-dev.txt` to run the tests.
-3. Copy `.env.example` to `.env` and fill in your ElevenLabs API key:
+3. Copy the repo root's `.env.example` to `.env` and fill in your ElevenLabs API key:
 ```bash
-cp .env.example .env
+cp ../../.env.example ../../.env
 ```
+   That one file holds what this pipeline shares with the others — the ElevenLabs key, the
+   vmangos `MYSQL_*` block, the CurseForge token. `pipelines/quests/.env` still exists for
+   anything that is this pipeline's alone, and is read after it.
 
 That's it. The committed corpus already contains every line's text, voice and metadata.
 
@@ -296,7 +299,7 @@ that goes out is the one you tested. Seven projects, one per target: `spoken`
 and `audio-alliance` / `audio-horde` / `audio-shared` / `audio-gossip`. A target with no id
 fails the run rather than uploading a Horde pack over the Alliance project — which is also why
 the five retired downsampled projects have no id here at all. It needs
-`CURSEFORGE_TOKEN` in `.env` — an *author* token from
+`CURSEFORGE_TOKEN` in the repo root's `.env` — an *author* token from
 [authors-old.curseforge.com](https://authors-old.curseforge.com/account/api-tokens), tied to
 the account rather than a project, so one covers both.
 

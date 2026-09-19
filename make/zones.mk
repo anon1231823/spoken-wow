@@ -72,8 +72,8 @@ clean: ## Remove build output
 VOICE_LANG =
 
 # The manifest comes from Postgres when DATABASE_URL is set and from the committed files
-# otherwise, and pipelines/zones/.env sets it to the droplet -- so a laptop with no tunnel up
-# gets ECONNREFUSED out of every audio target, which is not a failure anyone reading
+# otherwise, and the repo-root .env sets it -- so a laptop whose Postgres is not running gets
+# ECONNREFUSED out of every audio target, which is not a failure anyone reading
 # "validate the sound pack" expects.
 #
 # Passing it empty is what env.mjs documents as "use the files": an already-set variable always

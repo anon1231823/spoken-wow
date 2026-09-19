@@ -16,7 +16,7 @@
 # projects the other set used stay published so existing installs keep working, and are never
 # uploaded to again - which is why no target names them.
 #
-# Needs CURSEFORGE_TOKEN in the environment or in .env. Generate one at
+# Needs CURSEFORGE_TOKEN in the environment or in the repo-root .env. Generate one at
 # https://authors-old.curseforge.com/account/api-tokens -- it is an author token tied to your
 # account rather than to a project, so one token covers both.
 #
@@ -159,15 +159,16 @@ fi
 command -v curl >/dev/null || { echo "error: curl is required" >&2; exit 1; }
 command -v node >/dev/null || { echo "error: node is required (for JSON handling)" >&2; exit 1; }
 
-# .env is the same file the pipeline reads its ElevenLabs key from, so the token has one
-# obvious home rather than living only in a shell history.
-if [[ -z "${CURSEFORGE_TOKEN:-}" && -f "$REPO/pipelines/quests/.env" ]]; then
-  CURSEFORGE_TOKEN="$(sed -n 's/^CURSEFORGE_TOKEN=//p' "$REPO/pipelines/quests/.env" | head -1 | tr -d '\r"')"
+# The token is account-wide -- it uploads all six projects -- so it lives once, in the
+# repo-root .env alongside the other shared credentials, rather than in a shell history or
+# in a copy per pipeline.
+if [[ -z "${CURSEFORGE_TOKEN:-}" && -f "$REPO/.env" ]]; then
+  CURSEFORGE_TOKEN="$(sed -n 's/^CURSEFORGE_TOKEN=//p' "$REPO/.env" | head -1 | tr -d '\r"')"
 fi
 if [[ -z "${CURSEFORGE_TOKEN:-}" ]]; then
   echo "error: CURSEFORGE_TOKEN is not set" >&2
   echo "       Generate one at https://authors-old.curseforge.com/account/api-tokens" >&2
-  echo "       then put CURSEFORGE_TOKEN=... in .env, or export it." >&2
+  echo "       then put CURSEFORGE_TOKEN=... in the repo root's .env, or export it." >&2
   exit 1
 fi
 

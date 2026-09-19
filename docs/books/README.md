@@ -66,15 +66,22 @@ droplet.
 orb start
 make books-db                 # the vmangos MySQL, which pipelines/quests provisions
 make books-extract            # -> pipelines/books/corpus/extract.json
-DATABASE_URL='postgres://localhost/spoken_quests_dev' make books-import
+make books-import
 pnpm --filter @spoken/web dev # /books
 ```
 
-The extract connects with `BOOKS_MYSQL_HOST`, `BOOKS_MYSQL_PORT`, `BOOKS_MYSQL_USER`,
-`BOOKS_MYSQL_PASSWORD` and `BOOKS_MYSQL_DATABASE`, defaulting to the quests
-`docker-compose.yml` values. The prefix is not decoration: a bare `MYSQL_PASSWORD` exported
-by some other project turns this into an access-denied error that reads exactly like a dump
-that was never loaded, which is a afternoon nobody needs twice.
+`DATABASE_URL` and the vmangos connection both come from the repo root's `.env`; copy
+`.env.example` to `.env` there once and every pipeline reads it.
+
+The extract connects with `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` and
+`MYSQL_DATABASE` — the same five the quests extract reads, because it is the same dump —
+defaulting to the quests `docker-compose.yml` values. Those names used to be `BOOKS_`-prefixed
+here, and the hazard the prefix guarded against has not gone away: a bare `MYSQL_PASSWORD`
+exported by some other project turns this into an access-denied error that reads exactly like
+a dump that was never loaded, which is an afternoon nobody needs twice. What replaced the
+prefix is `loadEnv(..., { override: MYSQL_VARS })` in `tools/extract.mjs`: the file wins over
+the shell for those five, exactly as `tts_cli/env_vars.py` has always loaded its own with
+`override=True`.
 
 If the dump has never been loaded on this machine, the quests pipeline's bootstrap does it
 — it fetches vmangos `db_latest` and loads `mangos.sql`. Once, and slowly.

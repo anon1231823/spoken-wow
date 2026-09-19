@@ -9,10 +9,11 @@
 # by both extracts -- a second copy is hundreds of megabytes and another thing to keep in
 # step with a dump refresh.
 #
-# The connection is configured through BOOKS_MYSQL_*, not MYSQL_*, for the reason
-# tts_cli/env_vars.py loads its .env with override=True: generic names are exported by
-# other projects, and an ambient MYSQL_PASSWORD turns this into an access-denied error that
-# reads like a missing dump.
+# The connection is configured through MYSQL_*, in the repo-root .env, the same five
+# variables the quests extract reads -- one dump, one set of credentials. tools/extract.mjs
+# loads that file over the shell for those five, for the reason tts_cli/env_vars.py loads
+# its own with override=True: generic names are exported by other projects, and an ambient
+# MYSQL_PASSWORD turns this into an access-denied error that reads like a missing dump.
 
 .DEFAULT_GOAL := help
 .PHONY: help db extract import export lookup deploy deploy-copy status remove \

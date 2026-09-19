@@ -10,22 +10,33 @@ import { dirname } from "node:path";
 
 import mysql from "mysql2/promise";
 
+import { loadEnv, MYSQL_VARS } from "../../lib/env.mjs";
 import { readWorld, PATCH } from "./lib/world.mjs";
 import { buildBooks } from "./lib/chains.mjs";
 
 const OUT = new URL("../corpus/extract.json", import.meta.url).pathname;
 
-// BOOKS_-PREFIXED, NOT MYSQL_. tts_cli/env_vars.py loads its .env with override=True and
-// says why: generic names like MYSQL_PASSWORD are exported by other projects, and an
-// ambient one turns "connect to the local vmangos" into an access-denied error that looks
-// like the dump is missing. One such variable was already exported on the machine this was
-// written on. The defaults are the quests pipeline's docker-compose values.
+// MYSQL_*, the same names the quests pipeline reads, out of the same repo-root .env. It is
+// one vmangos dump and one set of credentials; two spellings of them was a way for the two
+// extracts to disagree about which database they were reading.
+//
+// These names used to be BOOKS_-prefixed, and the reason is still live: generic names like
+// MYSQL_PASSWORD are exported by other projects, and an ambient one turns "connect to the
+// local vmangos" into an access-denied error that looks like the dump is missing. One such
+// variable was already exported on the machine this was written on. What makes the prefix
+// unnecessary is loadEnv: this file now reads .env rather than relying on whatever the
+// shell happens to export, exactly as tts_cli/env_vars.py has with override=True.
+//
+// THE LOAD HAS TO COME FIRST. The defaults below are the quests pipeline's docker-compose
+// values, and they are what an unread .env silently falls back to.
+await loadEnv("books", { override: MYSQL_VARS });
+
 const connection = await mysql.createConnection({
-  host: process.env.BOOKS_MYSQL_HOST ?? "127.0.0.1",
-  port: Number(process.env.BOOKS_MYSQL_PORT ?? 3306),
-  user: process.env.BOOKS_MYSQL_USER ?? "root",
-  password: process.env.BOOKS_MYSQL_PASSWORD ?? "wow",
-  database: process.env.BOOKS_MYSQL_DATABASE ?? "mangos",
+  host: process.env.MYSQL_HOST ?? "127.0.0.1",
+  port: Number(process.env.MYSQL_PORT ?? 3306),
+  user: process.env.MYSQL_USER ?? "root",
+  password: process.env.MYSQL_PASSWORD ?? "wow",
+  database: process.env.MYSQL_DATABASE ?? "mangos",
 });
 
 try {

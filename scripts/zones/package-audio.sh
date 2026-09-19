@@ -29,9 +29,9 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
-# The Node steps below read the manifest from Postgres when DATABASE_URL is set, and
-# pipelines/zones/.env points it at the droplet -- so packaging on a laptop with no tunnel up
-# failed with ECONNREFUSED from a step called "checking the lookup table against the files".
+# The Node steps below read the manifest from Postgres when DATABASE_URL is set, and the
+# repo-root .env sets it -- so packaging on a laptop whose Postgres is not running failed
+# with ECONNREFUSED from a step called "checking the lookup table against the files".
 #
 # Defined-but-empty is what env.mjs reads as "use the committed files": an already-set variable
 # wins over .env. ${DATABASE_URL-} keeps an explicit setting, including one make passed in, and

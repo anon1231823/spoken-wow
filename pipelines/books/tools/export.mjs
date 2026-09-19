@@ -9,7 +9,13 @@ import { dirname } from "node:path";
 
 import pg from "pg";
 
+import { loadEnv } from "../../lib/env.mjs";
 import { booksLua } from "./lib/lua.mjs";
+
+// The repo-root .env holds the shared credentials, this pipeline's .env whatever is its
+// own; neither is read unless a command like this one asks for it, because lib/ is
+// compiled into the site and its paths would be the build machine's.
+await loadEnv("books");
 
 const OUT = new URL("../../../addons/SpokenBooks/Data/Books.lua", import.meta.url).pathname;
 const LANG = "enUS";

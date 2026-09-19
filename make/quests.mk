@@ -295,7 +295,7 @@ downloads-status: require-droplet ## List what the site is offering for download
 # `release` uploads whatever is already in dist/ to CurseForge - it builds nothing, so the
 # zip it sends is the one you tested. The player's version comes from its .toc and the pack's
 # from the module last built, and each looks its own section up in CHANGELOG.md. Needs
-# CURSEFORGE_TOKEN in .env. Always worth a release-dry first: it resolves the game versions
+# CURSEFORGE_TOKEN in the repo-root .env. Always worth a release-dry first: it resolves the game versions
 # and prints every file and note without sending anything.
 
 # The faction split the packs are cut along. Needs the vmangos world DB up

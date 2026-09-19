@@ -1,8 +1,30 @@
 import type { NextConfig } from "next";
+import fs from "node:fs";
 import path from "node:path";
 
 // The monorepo root, two levels up from apps/web/.
 const repoRoot = path.resolve(__dirname, "..", "..");
+
+// THE REPO-ROOT .env, which Next does not load on its own: it reads .env* from the app
+// directory only, and the shared credentials -- DATABASE_URL, the CurseForge token, the
+// vmangos MySQL -- were lifted out of the per-pipeline copies into one file at the root.
+// Without this the site would need its own second copy of DATABASE_URL, which is the
+// duplication the lift removed.
+//
+// Next has already loaded .env.local by the time this file runs, so an app-level setting
+// wins: assigning only what is unset is what makes .env.local the override it reads as.
+//
+// Dev and build only. The standalone bundle never executes this file; production takes
+// the same variables from the droplet's shared/app.env, through ecosystem.config.js.
+const rootEnv = path.join(repoRoot, ".env");
+if (fs.existsSync(rootEnv)) {
+  for (const line of fs.readFileSync(rootEnv, "utf8").split("\n")) {
+    const match = line.match(/^\s*(?:export\s+)?([A-Z][A-Z0-9_]*)\s*=\s*(.*)$/);
+    if (!match) continue;
+    const value = match[2].trim().replace(/^["']|["']$/g, "");
+    if (value && process.env[match[1]] === undefined) process.env[match[1]] = value;
+  }
+}
 
 const config: NextConfig = {
   // The corpus and the audio store are read at runtime through node:fs, never bundled,
@@ -51,6 +73,10 @@ const config: NextConfig = {
   // the database password, and a release bundle is rsynced to a droplet.
   outputFileTracingExcludes: {
     "*": [
+      // THE ROOT .env. It sits at the tracing root itself, holds every shared credential,
+      // and a release bundle is rsynced to the droplet -- the same leak pipelines/quests
+      // was excluded for, one directory up.
+      "../../.env",
       "../../pipelines/quests/**",
       "../../addons/**",
       "../../curseforge/**",

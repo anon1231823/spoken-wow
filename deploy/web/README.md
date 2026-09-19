@@ -96,7 +96,7 @@ it and every collaborator pastes their key again — recoverable, but they have 
 **There is no `ELEVENLABS_API_KEY`.** Every request that reaches ElevenLabs is spent from the
 signed-in user's own account, using a key they set on `/profile`, sealed under
 `SPOKEN_SECRET_KEY`. A route asked to spend without one answers `428 no_api_key`. The Python
-CLI still reads `pipelines/quests/.env`, because it is run by one person on their own machine.
+CLI still reads the repo root's `.env`, because it is run by one person on their own machine.
 
 `BETTER_AUTH_URL` is the one worth double-checking. Better Auth validates the `Origin` header
 of every state-changing request against it, so a stale value does not fail at boot — the site

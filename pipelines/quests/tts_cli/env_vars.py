@@ -1,8 +1,19 @@
+from pathlib import Path
+
 from dotenv import load_dotenv
-# override=True so this project's .env wins over ambient shell variables. Generic
-# names like MYSQL_PASSWORD are commonly exported by other projects, and without
-# this the connection silently uses the wrong credentials.
-load_dotenv(override=True)
+
+# Two files, root first and this pipeline's own over it: the shared credentials -- the
+# ElevenLabs key, the CurseForge token, the vmangos MySQL -- live in the repo root's .env
+# now, because all three pipelines used to carry their own copy and the copies drifted.
+# pipelines/lib/env.mjs is the Node half of the same arrangement.
+#
+# override=True so the files win over ambient shell variables. Generic names like
+# MYSQL_PASSWORD are commonly exported by other projects, and without this the connection
+# silently uses the wrong credentials.
+_ROOT = Path(__file__).resolve().parents[3]
+load_dotenv(_ROOT / ".env", override=True)
+load_dotenv(_ROOT / "pipelines" / "quests" / ".env", override=True)
+
 import os
 
 MYSQL_HOST = os.getenv("MYSQL_HOST")

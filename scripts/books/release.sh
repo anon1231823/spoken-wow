@@ -6,7 +6,7 @@
 #   ./scripts/books/release.sh books       # just the addon
 #   ./scripts/books/release.sh audio       # just the sound pack
 #
-# Needs CURSEFORGE_TOKEN in the environment or in a pipeline .env. Generate one at
+# Needs CURSEFORGE_TOKEN in the environment or in the repo-root .env. Generate one at
 # https://authors-old.curseforge.com/account/api-tokens -- it is an author token tied to
 # your account rather than to a project, so the same one covers every Spoken project.
 #
@@ -94,19 +94,16 @@ fi
 command -v curl >/dev/null || { echo "error: curl is required" >&2; exit 1; }
 command -v node >/dev/null || { echo "error: node is required (for JSON handling)" >&2; exit 1; }
 
-# The token is account-wide, so it lives wherever the first pipeline to need one put it
-# rather than being copied into a third file.
-if [[ -z "${CURSEFORGE_TOKEN:-}" ]]; then
-  for env_file in "$REPO/pipelines/books/.env" "$REPO/pipelines/quests/.env" "$REPO/pipelines/zones/.env"; do
-    [[ -f "$env_file" ]] || continue
-    CURSEFORGE_TOKEN="$(sed -n 's/^CURSEFORGE_TOKEN=//p' "$env_file" | head -1 | tr -d '\r"')"
-    [[ -n "$CURSEFORGE_TOKEN" ]] && break
-  done
+# The token is account-wide -- it uploads all six projects -- so it lives once, in the
+# repo-root .env alongside the other shared credentials, rather than in a shell history or
+# in a copy per pipeline.
+if [[ -z "${CURSEFORGE_TOKEN:-}" && -f "$REPO/.env" ]]; then
+  CURSEFORGE_TOKEN="$(sed -n 's/^CURSEFORGE_TOKEN=//p' "$REPO/.env" | head -1 | tr -d '\r"')"
 fi
 if [[ -z "${CURSEFORGE_TOKEN:-}" ]]; then
   echo "error: CURSEFORGE_TOKEN is not set" >&2
   echo "       Generate one at https://authors-old.curseforge.com/account/api-tokens" >&2
-  echo "       then put CURSEFORGE_TOKEN=... in pipelines/books/.env, or export it." >&2
+  echo "       then put CURSEFORGE_TOKEN=... in the repo root's .env, or export it." >&2
   exit 1
 fi
 

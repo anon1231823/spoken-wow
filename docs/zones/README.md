@@ -82,7 +82,8 @@ pipelines/zones/tools/
   lib/wiki.mjs           shared fetching, era filter, Lua emission
   lib/sections.mjs       which article headings count as lore
   lib/loredata.mjs       reads the generated Lua data back into JS
-  lib/env.mjs            reads .env, so DATABASE_URL works as documented
+  lib/env.mjs            binds pipelines/lib/env.mjs to this pipeline: the root .env,
+                         then pipelines/zones/.env over it
   voice/generate.mjs     select and synthesize voicelines (ElevenLabs)
   voice/build-lookup.mjs manifest -> ZoneLoreAudio/Data/Sounds.lua
   voice/validate-audio.mjs  manifest, files and lookup table agree
@@ -1159,7 +1160,7 @@ sounds *wrong*, and until `web/` there was nowhere to record that you noticed. W
 which in practice means it never gets started.
 
 ```sh
-cp .env.example .env      # DATABASE_URL is already filled in; add your API key
+cp ../../.env.example ../../.env   # DATABASE_URL is already filled in; add your API key
 make zones-db-up                # Postgres on 5433, then migrations
 make zones-import               # seed from tools/voice/manifest.json (idempotent)
 make zones-web                  # http://localhost:3000
@@ -1492,7 +1493,7 @@ make zones-release                    # both projects
 ```
 
 `scripts/release.sh` posts to the CurseForge author API. It needs
-`CURSEFORGE_TOKEN` in `.env` — an account-wide token from
+`CURSEFORGE_TOKEN` in the repo root's `.env` — an account-wide token from
 [the API tokens page](https://authors-old.curseforge.com/account/api-tokens),
 not a per-project one, so one token covers all three.
 
