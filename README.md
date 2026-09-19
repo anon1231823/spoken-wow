@@ -20,11 +20,9 @@ clients have no manager to do it for them.
 ```
 addons/      the player, the feature addons, and the sound packs
 apps/web     the site: spoken.rusty.one, with quests, zones and books sections
-apps/web-zones
-             the site it absorbed, kept until the cutover
 pipelines/   corpus extraction and voiceline generation
              quests/ is Python, zones/ and books/ are Node
-deploy/      one directory per deployment; web/ is the live one
+deploy/web   the droplet: nginx, pm2, release scripts and the runbook
 packages/    shared TypeScript
 tests/lua/   the luajit addon harness
 make/        one Makefile per project; the root Makefile dispatches
@@ -42,6 +40,10 @@ make zones-<target>     # see make/zones.mk
 make books-<target>     # see make/books.mk
 make test-player        # the Lua harness, all addons
 ```
+
+`THIRD_PARTY.md` says what in here is not this project's, and under what terms —
+the vendored Ace libraries, the game text the corpus is built from, and the wiki
+lore the zones addon ships.
 
 Read `AGENTS.md` before changing anything, and the project READMEs under
 `docs/` for what each side actually does — both are unusually detailed and
