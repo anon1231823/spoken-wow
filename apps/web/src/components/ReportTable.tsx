@@ -13,7 +13,7 @@
  */
 import { Play } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import QuestsPlayer from "@/components/Player";
 import ReportDetail from "@/components/ReportDetail";
@@ -101,6 +101,16 @@ export default function ReportTable({
   const [lines, setLines] = useState<Record<string, SourceLine | null>>({});
   /** The line the transport bar is pointed at, or null before anything has been played. */
   const [playing, setPlaying] = useState<{ source: Source; lineId: string } | null>(null);
+  /**
+   * Bumped by every press of a play button, including a second press of the same one.
+   *
+   * The start cannot happen in the handler: before the first press there is no transport
+   * bar on the page at all, so the <audio> the ref would point at does not exist yet and
+   * the click did nothing until a second one arrived to find it mounted. An effect runs
+   * after the commit that mounts it, and the counter is what makes replaying the line
+   * already loaded a change the effect can see.
+   */
+  const [pressed, setPressed] = useState(0);
   /** Takes written in this session, so the player plays the new one rather than the cache. */
   const [versions, setVersions] = useState<Record<string, number>>({});
 
@@ -145,10 +155,13 @@ export default function ReportTable({
     if (!line) return;
 
     setPlaying({ source: report.source, lineId: report.lineId });
-    // The src follows `playing`, so the element can only be started once React has
-    // committed it. Same dance as the explorers.
-    queueMicrotask(() => void audio.current?.play().catch(() => {}));
+    setPressed((count) => count + 1);
   }
+
+  useEffect(() => {
+    if (pressed === 0) return;
+    void audio.current?.play().catch(() => {});
+  }, [pressed]);
 
   async function resolve(id: number, status: Status) {
     setBusy(id);
@@ -220,9 +233,9 @@ export default function ReportTable({
               const key = report.lineId ? lineKey(report.source, report.lineId) : null;
 
               return [
-                // Every cell carries the same leading and the same padding, so the badge,
-                // the timestamp and the first line of the body all start on one baseline.
-                <tr key={report.id} className="align-top [&>td]:border-b [&>td]:py-2 [&>td]:leading-5">
+                // Every cell is one line except the body, which is clamped to two, so the
+                // row centres rather than aligning to a top edge that only one cell has.
+                <tr key={report.id} className="align-middle [&>td]:border-b [&>td]:py-2 [&>td]:leading-5">
                   <td className="text-muted-foreground pr-3 text-xs whitespace-nowrap">
                     {when(report.createdAt)}
                   </td>
