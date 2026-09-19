@@ -468,8 +468,9 @@ attribution — and it never adds or removes a line.
 
 **Place names are never translated here.** The client already names every zone and
 subzone in its own language, and `make zones-aliases` writes those names out of `AreaTable`
-into `pipelines/zones/tools/seed/area-names.json` alongside the alias tables (`pipelines/zones/tools/lib/area-names.mjs`
-reads it). The explorer names places from that table in whatever language is being
+straight into each locale's `addons/SpokenZones/Data/<locale>/Aliases.lua`
+(`pipelines/zones/tools/locale/build-aliases.mjs` does it, fetching the table per run
+rather than through a committed seed). The explorer names places from that table in whatever language is being
 read, translated line or not; a translated row is stored under the same name, so an
 exported `Subzones.lua` lists places as the client does. A place whose name the client
 leaves in English — Italian Classic, or a name that is the same in both — reads in

@@ -19,9 +19,10 @@ PM2=${PM2:-$(command -v pm2 || echo /usr/local/bin/pm2)}
 [ -f "$TARGET/apps/web/server.js" ] || { echo "activate: $TARGET has no apps/web/server.js - bad build?" >&2; exit 1; }
 [ -f "$TARGET/pipelines/quests/corpus/corpus.json.gz" ] || { echo "activate: $TARGET has no quests corpus" >&2; exit 1; }
 # The zones corpus is a table rather than a file, but the pipeline modules the app imports
-# read two files out of the release, and a release missing them serves a /zones that cannot
-# resolve a place name or apply a pronunciation rule.
-[ -f "$TARGET/pipelines/zones/tools/seed/area-names.json" ] || { echo "activate: $TARGET has no zones area names" >&2; exit 1; }
+# read one file out of the release, and a release missing it serves a /zones that cannot
+# apply a pronunciation rule. The area-name seeds used to be checked here too; they are
+# build-time inputs to the zones tools now, read by nothing the app imports, so the release
+# does not carry them.
 [ -f "$TARGET/pipelines/zones/tools/voice/pronunciation.json" ] || { echo "activate: $TARGET has no zones pronunciation rules" >&2; exit 1; }
 
 # The audio stores live on a block volume, reached through symlinks in shared/ (see

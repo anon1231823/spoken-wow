@@ -156,13 +156,13 @@ jobs:
           mkdir -p "$R"/pipelines/quests/voice
           cp pipelines/quests/voice/*.json "$R"/pipelines/quests/voice/
 
-          # THE TWO FILES THE ZONES PIPELINE READS AT RUNTIME. Its modules resolve paths
-          # from SPOKEN_ZONES_ROOT, which points at the release: the area names decide what
-          # a place is called in each client's language, and pronunciation.json decides
-          # what is actually sent to ElevenLabs. activate.sh refuses a release without
-          # them, because a release missing them serves a /zones that works badly rather
-          # than one that fails.
-          mkdir -p "$R"/pipelines/zones/tools/seed "$R"/pipelines/zones/tools/voice
+          # THE FILES THE ZONES PIPELINE READS AT RUNTIME. Its modules resolve paths from
+          # SPOKEN_ZONES_ROOT, which points at the release, and pronunciation.json decides
+          # what is actually sent to ElevenLabs. activate.sh refuses a release without it,
+          # because a release missing it serves a /zones that works badly rather than one
+          # that fails. The tools/seed area names are not among these: they are inputs to
+          # the zones CLIs, and nothing the app imports opens them.
+          mkdir -p "$R"/pipelines/zones/tools/voice
           cp pipelines/zones/tools/voice/*.json "$R"/pipelines/zones/tools/voice/
 
           # Migrations ship with the release too: activate.sh runs migrate.sh against the
