@@ -117,7 +117,8 @@ Match a document's length to what the task needs. Cover the substance; skip
 filler sections, redundant summaries, and boilerplate.
 
 `README.md`, `CHANGELOG.md`, and the two player-facing `addon/*/README.md` files
-are what the world reads — the addon READMEs are the CurseForge descriptions.
+are what the world reads — the addon READMEs are the store descriptions, the same
+body that goes to CurseForge and to Wago.
 They are prose, with headings that state a decision ("Port 5433, not 5432",
 "Characters are not credits") and a paragraph on why. Match that. A new section
 is warranted by a decision worth recording, not by space to fill.

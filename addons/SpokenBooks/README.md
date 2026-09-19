@@ -1,4 +1,4 @@
-<!-- GENERATED from curseforge/books/spoken-books.md by scripts/descriptions.mjs. Do not edit by hand. -->
+<!-- GENERATED from publishers/books/spoken-books.md by scripts/descriptions.mjs. Do not edit by hand. -->
 
 **Every book in the world, read aloud.** One of the Spoken addons, narrating through the [Spoken Player](https://www.curseforge.com/wow/addons/spoken-player) it shares with Spoken Quests and Spoken Zones — your addon manager installs it alongside.
 

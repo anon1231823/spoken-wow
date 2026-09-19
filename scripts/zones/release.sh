@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
-# Uploads built zips to CurseForge through the author API.
+# Uploads built zips to CurseForge and to Wago Addons.
 #
-#   ./scripts/release.sh --dry-run        # say what would be sent, send nothing
-#   ./scripts/release.sh                  # both projects
-#   ./scripts/release.sh zones            # just the addon
-#   ./scripts/release.sh audio            # just the sound pack
+#   ./scripts/zones/release.sh --dry-run        # say what would be sent, send nothing
+#   ./scripts/zones/release.sh                  # both projects, both stores
+#   ./scripts/zones/release.sh zones            # just the addon
+#   ./scripts/zones/release.sh audio            # just the sound pack
+#   ./scripts/zones/release.sh --store=wago     # one store only; --store=curseforge for the other
 #
-# Needs CURSEFORGE_TOKEN in the environment or in the repo-root .env. Generate one at
+# TWO STORES, ONE RELEASE. The same zip goes to both by default: a file that exists on one
+# store and not the other is how the two drift into being different addons.
+#
+# Needs CURSEFORGE_TOKEN and WAGO_TOKEN in the environment or in the repo-root .env. Generate one at
 # https://authors-old.curseforge.com/account/api-tokens -- it is an author token
 # tied to your account, not to a project, so the same one covers all three.
 #
@@ -20,6 +24,10 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST="$REPO/dist"
+
+# The Wago half, which is the same for every project and so lives in one file.
+# shellcheck source=../lib/wago.sh
+source "$REPO/scripts/lib/wago.sh"
 
 # Site-relative API, per game. WoW projects are not reachable through another
 # game's subdomain even with a valid token.
@@ -51,9 +59,16 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 # by hand before it can be released. Until its id is written down here, releasing
 # it fails on the empty project id below -- which is the failure to want, because
 # the alternative is uploading a German pack over the English project.
-target_project() { case "$1" in
+target_curseforge() { case "$1" in
   zones)    echo "1636521";;
   audio)    echo "1636532";;
+esac; }
+# The Wago project id for the same project: eight alphanumeric characters, from the project's
+# entry in https://addons.wago.io/developers, and also in the page frontmatter under
+# publishers/zones/ where scripts/descriptions.mjs checks it.
+target_wago() { case "$1" in
+  zones)    echo "mNw7b5No";;
+  audio)    echo "b6mvD9KP";;
 esac; }
 target_addon() { case "$1" in
   zones)    echo "SpokenZones";;
@@ -91,14 +106,21 @@ target_game_versions() { case "$1" in
 esac; }
 
 dry_run=""
+stores="curseforge wago"
 targets=()
 for arg in "$@"; do
   case "$arg" in
+    --store=both)       stores="curseforge wago";;
+    --store=curseforge) stores="curseforge";;
+    --store=wago)       stores="wago";;
     --dry-run|-n) dry_run=1;;
     zones|audio) targets+=("$arg");;
-    *) echo "error: unknown argument '$arg' (expected: zones, audio, --dry-run)" >&2; exit 1;;
+    *) echo "error: unknown argument '$arg' (expected: zones, audio, --store=..., --dry-run)" >&2; exit 1;;
   esac
 done
+
+# Asked once, answered at each of the places below that only concern one store.
+store_has() { [[ " $stores " == *" $1 "* ]]; }
 if (( ${#targets[@]} == 0 )); then
   targets=("zones" "audio")
 fi
@@ -109,15 +131,21 @@ command -v node >/dev/null || { echo "error: node is required (for JSON handling
 # The token is account-wide -- it uploads all six projects -- so it lives once, in the
 # repo-root .env alongside the other shared credentials, rather than in a shell history or
 # in a copy per pipeline.
-if [[ -z "${CURSEFORGE_TOKEN:-}" && -f "$REPO/.env" ]]; then
-  CURSEFORGE_TOKEN="$(sed -n 's/^CURSEFORGE_TOKEN=//p' "$REPO/.env" | head -1 | tr -d '\r"')"
+if store_has curseforge; then
+  if [[ -z "${CURSEFORGE_TOKEN:-}" && -f "$REPO/.env" ]]; then
+    CURSEFORGE_TOKEN="$(sed -n 's/^CURSEFORGE_TOKEN=//p' "$REPO/.env" | head -1 | tr -d '\r"')"
+  fi
+  if [[ -z "${CURSEFORGE_TOKEN:-}" ]]; then
+    echo "error: CURSEFORGE_TOKEN is not set" >&2
+    echo "       Generate one at https://authors-old.curseforge.com/account/api-tokens" >&2
+    echo "       then put CURSEFORGE_TOKEN=... in the repo root's .env, or export it." >&2
+    exit 1
+  fi
 fi
-if [[ -z "${CURSEFORGE_TOKEN:-}" ]]; then
-  echo "error: CURSEFORGE_TOKEN is not set" >&2
-  echo "       Generate one at https://authors-old.curseforge.com/account/api-tokens" >&2
-  echo "       then put CURSEFORGE_TOKEN=... in the repo root's .env, or export it." >&2
-  exit 1
-fi
+
+# Checked before the first upload rather than at it: a missing token should stop a release
+# before half of it has gone out, not between the addon and its sound pack.
+store_has wago && wago_require_token
 
 api_get() {
   curl -fsSL -H "X-Api-Token: $CURSEFORGE_TOKEN" "$API/$1"
@@ -128,10 +156,13 @@ api_get() {
 # name matching anything other than exactly one version is fatal. An unknown name
 # here is the failure that otherwise produces a file uploaded against the wrong
 # client, which players discover as "the addon does not appear in my AddOns list".
-versions_json="$(api_get "game/versions")" || {
-  echo "error: could not list game versions -- is the token valid?" >&2
-  exit 1
-}
+versions_json=""
+if store_has curseforge; then
+  versions_json="$(api_get "game/versions")" || {
+    echo "error: could not list game versions -- is the token valid?" >&2
+    exit 1
+  }
+fi
 
 resolve_game_version() {
   node -e '
@@ -147,10 +178,12 @@ resolve_game_version() {
   ' "$1" "$versions_json"
 }
 
-echo "resolving game versions..."
-for name in $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY $GAME_VERSION_FOREVER; do
-  echo "  $name -> id $(resolve_game_version "$name")"
-done
+if store_has curseforge; then
+  echo "resolving game versions..."
+  for name in $GAME_VERSION_ERA $GAME_VERSION_ANNIVERSARY $GAME_VERSION_FOREVER; do
+    echo "  $name -> id $(resolve_game_version "$name")"
+  done
+fi
 
 #-- the changelog -------------------------------------------------------------
 # The section of CHANGELOG.md for the version being uploaded, so the release
@@ -190,15 +223,15 @@ changelog_for() {
 
 #-- upload --------------------------------------------------------------------
 for target in "${targets[@]}"; do
-  project="$(target_project "$target")"
+  project="$(target_curseforge "$target")"
   addon="$(target_addon "$target")"
   zip_name="$(target_zip "$target")"
 
   # Checked rather than assumed: a target added here without its project id would
   # otherwise POST to CurseForge's /projects//upload-file and fail somewhere less
   # legible, or worse, land on whatever project the API resolved.
-  if [[ -z "$project" ]]; then
-    echo "error: no CurseForge project id for '$target' -- create the project and add its id to target_project()" >&2
+  if store_has curseforge && [[ -z "$project" ]]; then
+    echo "error: no CurseForge project id for '$target' -- create the project and add its id to target_curseforge()" >&2
     exit 1
   fi
 
@@ -207,7 +240,7 @@ for target in "${targets[@]}"; do
   zip_path="$DIST/$zip_name-$version.zip"
 
   echo
-  echo "=== $target -> project $project ==="
+  echo "=== $target -> $stores ==="
 
   if [[ ! -f "$zip_path" ]]; then
     echo "error: $zip_path does not exist -- run make package / make package-audio first" >&2
@@ -217,77 +250,96 @@ for target in "${targets[@]}"; do
   changelog="$(changelog_for "$version" "$target")"
   size="$(du -h "$zip_path" | cut -f1)"
 
-  game_version_names="$(target_game_versions "$target")"
-  game_version_ids=""
-  for name in $game_version_names; do
-    game_version_ids="$game_version_ids $(resolve_game_version "$name")"
-  done
-
-  # One file can carry versions from more than one client. If CurseForge ever
-  # rejects the pair (Era and Anniversary are different game-version *types*),
-  # the fix is to upload the same zip once per id rather than to drop one of them.
-  #
-  # Built with node rather than a heredoc: the changelog is markdown containing
-  # quotes, backticks and newlines, and hand-escaping it into JSON is how a
-  # release ends up with a mangled changelog nobody notices for a month.
-  # By slug, which must name an approved project or the upload fails with errorCode 1018.
-  dependencies="$(target_dependencies "$target")"
-  metadata="$(node -e '
-    const [changelog, releaseType, gameVersionIds, displayName, dependencies] = process.argv.slice(1);
-    const slugs = dependencies.trim().split(/\s+/).filter(Boolean);
-    process.stdout.write(JSON.stringify({
-      changelog,
-      changelogType: "markdown",
-      displayName,
-      gameVersions: gameVersionIds.trim().split(/\s+/).map(Number),
-      releaseType,
-      ...(slugs.length ? { relations: { projects: slugs.map((slug) => ({ slug, type: "requiredDependency" })) } } : {}),
-    }));
-  ' "$changelog" "$RELEASE_TYPE" "$game_version_ids" "$zip_name $version" "$dependencies")"
-
-  echo "  file:     $zip_path ($size)"
-  echo "  version:  $version   release type: $RELEASE_TYPE   game versions: $game_version_names"
+  echo "  file:      $zip_path ($size)"
+  echo "  version:   $version   release type: $RELEASE_TYPE"
   echo "  changelog: $(echo "$changelog" | head -1) ..."
-  [[ -n "$dependencies" ]] && echo "  requires: $(echo $dependencies)"
 
-  if [[ -n "$dry_run" ]]; then
-    echo "  dry run -- not uploading"
-    continue
-  fi
+  if store_has curseforge; then
+    game_version_names="$(target_game_versions "$target")"
+    game_version_ids=""
+    for name in $game_version_names; do
+      game_version_ids="$game_version_ids $(resolve_game_version "$name")"
+    done
 
-  # --progress-bar because the packs are hundreds of megabytes and a silent curl
-  # for six minutes is indistinguishable from a hang.
-  #
-  # Deliberately not -f: on a rejection the API explains itself in the response
-  # body, and -f discards exactly that, leaving "curl: (56) error 400" as the only
-  # evidence of a release that will not go out. The status code is appended on its
-  # own line instead, and split back off below.
-  #
-  # --form-string for the metadata, never -F: -F reads `;` in a value as the start
-  # of a `;type=` parameter and silently truncates there, so a changelog with a
-  # semicolon in it arrives as invalid JSON and the API rejects the whole release.
-  # The file part stays -F, which is what makes @ mean "read this file".
-  response="$(curl -sS --progress-bar -w '\n%{http_code}' \
-    -H "X-Api-Token: $CURSEFORGE_TOKEN" \
-    --form-string "metadata=$metadata" \
-    -F "file=@$zip_path" \
-    "$API/projects/$project/upload-file")" || {
-      echo "error: could not reach CurseForge for $target" >&2
+    # One file can carry versions from more than one client. If CurseForge ever
+    # rejects the pair (Era and Anniversary are different game-version *types*),
+    # the fix is to upload the same zip once per id rather than to drop one of them.
+    #
+    # Built with node rather than a heredoc: the changelog is markdown containing
+    # quotes, backticks and newlines, and hand-escaping it into JSON is how a
+    # release ends up with a mangled changelog nobody notices for a month.
+    # By slug, which must name an approved project or the upload fails with errorCode 1018.
+    dependencies="$(target_dependencies "$target")"
+    metadata="$(node -e '
+      const [changelog, releaseType, gameVersionIds, displayName, dependencies] = process.argv.slice(1);
+      const slugs = dependencies.trim().split(/\s+/).filter(Boolean);
+      process.stdout.write(JSON.stringify({
+        changelog,
+        changelogType: "markdown",
+        displayName,
+        gameVersions: gameVersionIds.trim().split(/\s+/).map(Number),
+        releaseType,
+        ...(slugs.length ? { relations: { projects: slugs.map((slug) => ({ slug, type: "requiredDependency" })) } } : {}),
+      }));
+    ' "$changelog" "$RELEASE_TYPE" "$game_version_ids" "$zip_name $version" "$dependencies")"
+
+    echo "  curse:     project $project, game versions $game_version_names"
+    [[ -n "$dependencies" ]] && echo "  requires:  $(echo $dependencies)"
+
+    if [[ -n "$dry_run" ]]; then
+      echo "  dry run -- not uploading to CurseForge"
+    else
+
+    # --progress-bar because the packs are hundreds of megabytes and a silent curl
+    # for six minutes is indistinguishable from a hang.
+    #
+    # Deliberately not -f: on a rejection the API explains itself in the response
+    # body, and -f discards exactly that, leaving "curl: (56) error 400" as the only
+    # evidence of a release that will not go out. The status code is appended on its
+    # own line instead, and split back off below.
+    #
+    # --form-string for the metadata, never -F: -F reads `;` in a value as the start
+    # of a `;type=` parameter and silently truncates there, so a changelog with a
+    # semicolon in it arrives as invalid JSON and the API rejects the whole release.
+    # The file part stays -F, which is what makes @ mean "read this file".
+    response="$(curl -sS --progress-bar -w '\n%{http_code}' \
+      -H "X-Api-Token: $CURSEFORGE_TOKEN" \
+      --form-string "metadata=$metadata" \
+      -F "file=@$zip_path" \
+      "$API/projects/$project/upload-file")" || {
+        echo "error: could not reach CurseForge for $target" >&2
+        exit 1
+      }
+
+    status="${response##*$'\n'}"
+    response="${response%$'\n'*}"
+
+    if [[ "$status" != 2* ]]; then
+      echo "error: upload failed for $target -- HTTP $status" >&2
+      echo "$response" >&2
       exit 1
-    }
+    fi
 
-  status="${response##*$'\n'}"
-  response="${response%$'\n'*}"
-
-  if [[ "$status" != 2* ]]; then
-    echo "error: upload failed for $target -- HTTP $status" >&2
-    echo "$response" >&2
-    exit 1
+    file_id="$(node -e 'process.stdout.write(String(JSON.parse(process.argv[1]).id ?? "?"))' "$response")"
+    echo "  uploaded -- file id $file_id"
+    echo "  https://www.curseforge.com/wow/addons/$(target_slug "$target")/files/$file_id"
+    fi
   fi
 
-  file_id="$(node -e 'process.stdout.write(String(JSON.parse(process.argv[1]).id ?? "?"))' "$response")"
-  echo "  uploaded -- file id $file_id"
-  echo "  https://www.curseforge.com/wow/addons/$(target_slug "$target")/files/$file_id"
+  # The Wago upload, after the CurseForge one and not conditional on it: the two stores refuse
+  # files for different reasons, and a file one store will not take is still a file the other
+  # should have.
+  if store_has wago; then
+    if [[ -n "$dry_run" ]]; then
+      echo "  wago:      project $(target_wago "$target") -- dry run, not uploading"
+    else
+      wago_upload "$(target_wago "$target")" "$zip_path" "$zip_name $version" "$changelog" \
+        "$(target_slug "$target")" || {
+          echo "  wago upload failed for $target" >&2
+          exit 1
+        }
+    fi
+  fi
 done
 
 #-- descriptions --------------------------------------------------------------

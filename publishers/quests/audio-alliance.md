@@ -1,5 +1,6 @@
 ---
-project: 1660197
+curseforge: 1660197
+wago: 5NR8mJK3
 slug: spoken-quests-audio-alliance
 name: Spoken Quests Audio: Alliance
 summary: Alliance-only quest dialogue, voiced. Pair it with the Shared pack. Needs Spoken Quests.

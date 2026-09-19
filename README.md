@@ -3,12 +3,16 @@
 Voiced dialogue, lore and text for World of Warcraft Classic. One platform,
 several addons.
 
-| Addon | Voices | Audio packs |
-|---|---|---|
-| **[Spoken](https://www.curseforge.com/wow/addons/spoken-player)** | nothing — it *is* the player: the queue, the frame, the minimap button | — |
-| **[SpokenQuests](https://www.curseforge.com/wow/addons/spoken-quests)** | quest dialogue and NPC gossip | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all), or [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) · [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) · [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) · [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) |
-| **[SpokenZones](https://www.curseforge.com/wow/addons/spoken-zones)** | zone and subzone lore | [Spoken Zones Audio](https://www.curseforge.com/wow/addons/spoken-zones-audio) |
-| **[SpokenBooks](https://www.curseforge.com/wow/addons/spoken-books)** | books, letters and other in-world texts | [Spoken Books Audio](https://www.curseforge.com/wow/addons/spoken-books-audio) |
+| Addon | Voices | Install | Audio packs |
+|---|---|---|---|
+| **Spoken** | nothing — it *is* the player: the queue, the frame, the minimap button | [CurseForge](https://www.curseforge.com/wow/addons/spoken-player) · [Wago](https://addons.wago.io/addons/spoken-player) | — |
+| **SpokenQuests** | quest dialogue and NPC gossip | [CurseForge](https://www.curseforge.com/wow/addons/spoken-quests) · [Wago](https://addons.wago.io/addons/spoken-quests) | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all), or [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) · [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) · [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) · [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) |
+| **SpokenZones** | zone and subzone lore | [CurseForge](https://www.curseforge.com/wow/addons/spoken-zones) · [Wago](https://addons.wago.io/addons/spoken-zones) | [Spoken Zones Audio](https://www.curseforge.com/wow/addons/spoken-zones-audio) |
+| **SpokenBooks** | books, letters and other in-world texts | [CurseForge](https://www.curseforge.com/wow/addons/spoken-books) · [Wago](https://addons.wago.io/addons/spoken-books) | [Spoken Books Audio](https://www.curseforge.com/wow/addons/spoken-books-audio) |
+
+The addons are on both stores under the same slugs. **The sound packs are CurseForge only**:
+each is 300–450 MB and Wago's upload endpoint refuses a body that size, so the pack links
+above go to CurseForge whichever store the addon beside them came from.
 
 A feature addon speaks; its audio pack holds the lines. Neither does anything alone,
 so install both.

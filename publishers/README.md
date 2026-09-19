@@ -1,11 +1,19 @@
-# CurseForge project pages
+# Publishers
 
-The description of each project, as markdown, one file per project. The frontmatter is
-everything the submission form asks for besides the body; the body is the description.
-CurseForge's editor has a Markdown mode — paste `dist/descriptions/<slug>.md` into it.
+The description of each project, as markdown, one file per project, for every store the
+addons are published on. **Two of them**: CurseForge and Wago Addons, which carry the same
+eleven projects under the same slugs, and this directory is the source for both sets of
+pages. It was `curseforge/` while there was only one store, and the frontmatter still names
+each store's own project id separately -- `curseforge:` and `wago:` -- because the ids are
+the one thing the two do not share.
 
-`scripts/descriptions.mjs` reads every directory under `curseforge/`, writes the paste-ready
-bodies into `dist/descriptions/`, regenerates any README a page names in `addonReadme`, and
+The frontmatter is everything either submission form asks for besides the body; the body is the
+description. Both editors have a Markdown mode — paste `dist/descriptions/<slug>.md` into
+CurseForge and `dist/descriptions-wago/<slug>.md` into Wago.
+
+`scripts/descriptions.mjs` reads every directory under `publishers/`, writes the paste-ready
+bodies into `dist/descriptions/` and, with their cross-links pointed at Wago, into
+`dist/descriptions-wago/`, regenerates any README a page names in `addonReadme`, and
 tracks which pages have been pasted:
 
 ```
@@ -17,19 +25,25 @@ make descriptions-published    # record the current pages as pasted, AFTER pasti
 Each directory keeps its own `published.json`, and a release prints the pages in its own group
 that have moved on since they were last pasted.
 
-| File | Project | id | Slug |
-| --- | --- | --- | --- |
-| `spoken/spoken.md` | Spoken Player | 1700375 | `spoken-player` |
-| `quests/player.md` | Spoken Quests (was VoiceOver Redux) | 1655859 | `spoken-quests` |
-| `quests/audio-all.md` | Spoken Quests Audio: All | 1660196 | `spoken-quests-audio-all` |
-| `quests/audio-alliance.md` | Spoken Quests Audio: Alliance | 1660197 | `spoken-quests-audio-alliance` |
-| `quests/audio-horde.md` | Spoken Quests Audio: Horde | 1660198 | `spoken-quests-audio-horde` |
-| `quests/audio-shared.md` | Spoken Quests Audio: Shared Quests | 1660199 | `spoken-quests-audio-shared` |
-| `quests/audio-gossip.md` | Spoken Quests Audio: Gossip | 1660202 | `spoken-quests-audio-gossip` |
-| `zones/spoken-zones.md` | Spoken Zones (was ZoneLore) | 1636521 | `spoken-zones` |
-| `zones/spoken-zones-audio.md` | Spoken Zones Audio | 1636532 | `spoken-zones-audio` |
-| `books/spoken-books.md` | Spoken Books | 1701514 | `spoken-books` |
-| `books/spoken-books-audio.md` | Spoken Books Audio | 1701520 | `spoken-books-audio` |
+ONE BODY, TWO SETS OF LINKS. A page links to its sibling projects, and a link is only right on
+the store it is read on: a player on the Wago page for Spoken Zones should be offered the Wago
+page for its sound pack, not sent somewhere their addon manager cannot install from. The
+slugs are identical on both stores, so the Wago copy is the same text with one substitution --
+which is why there is one file per project here and not two.
+
+| File | Project | CurseForge id | Wago id | Slug |
+| --- | --- | --- | --- | --- |
+| `spoken/spoken.md` | Spoken Player | 1700375 | QN53yXKB | `spoken-player` |
+| `quests/player.md` | Spoken Quests (was VoiceOver Redux) | 1655859 | aN0XPlNj | `spoken-quests` |
+| `quests/audio-all.md` | Spoken Quests Audio: All | 1660196 | ANzkpD64 | `spoken-quests-audio-all` |
+| `quests/audio-alliance.md` | Spoken Quests Audio: Alliance | 1660197 | 5NR8mJK3 | `spoken-quests-audio-alliance` |
+| `quests/audio-horde.md` | Spoken Quests Audio: Horde | 1660198 | vNAg3OKo | `spoken-quests-audio-horde` |
+| `quests/audio-shared.md` | Spoken Quests Audio: Shared Quests | 1660199 | QNlz3YKe | `spoken-quests-audio-shared` |
+| `quests/audio-gossip.md` | Spoken Quests Audio: Gossip | 1660202 | XKqA45Ky | `spoken-quests-audio-gossip` |
+| `zones/spoken-zones.md` | Spoken Zones (was ZoneLore) | 1636521 | mNw7b5No | `spoken-zones` |
+| `zones/spoken-zones-audio.md` | Spoken Zones Audio | 1636532 | b6mvD9KP | `spoken-zones-audio` |
+| `books/spoken-books.md` | Spoken Books | 1701514 | qGYZnRNg | `spoken-books` |
+| `books/spoken-books-audio.md` | Spoken Books Audio | 1701520 | qGZOrvNd | `spoken-books-audio` |
 
 The slugs follow the projects' names, `-all` included: the meta addon is the "All" pack as far
 as a player is concerned, so it is the one project whose slug names a pack that holds no audio.
@@ -53,7 +67,7 @@ prose, headings, comments, new identifiers - it reads as a name the project stil
 
 **Spoken Player is the project everything else depends on**, and it had to exist *and be
 approved* before any upload could name it: the errorCode 1018 gate below. It was created first
-for that reason and its id is in `target_project()` in `scripts/quests/release.sh`. Every Spoken
+for that reason and its id is in `target_curseforge()` in `scripts/quests/release.sh`. Every Spoken
 addon declares it in `relations`, which is what makes addon managers install it.
 
 `audio-all` is the odd one: that project ships a **meta addon** rather than audio, because the
@@ -84,11 +98,25 @@ so a player sees the same name in the AddOns list as on the site.
 is a re-download of every clip in it, which the release doing the renaming costs anyway; what it
 is not is a broken path, because nothing stores one built from a folder name.
 
+**The sound packs are CurseForge-only, and not by choice.** Wago's version endpoint sits
+behind Cloudflare, which refuses a body of a few hundred megabytes with a 413 before Wago
+sees it -- the same wall the complete quests pack meets on CurseForge. Every pack is 300-450 MB,
+so `scripts/*/release.sh` uploads the addons to both stores and the packs to CurseForge alone,
+and the Wago pages say in words where the audio comes from. The Wago ids for the pack projects
+are listed above anyway: the projects exist, and the day that endpoint takes a larger file they
+are what it uploads to.
+
 **These are pasted by hand and the site is the live copy.** There is no API for descriptions —
 `release.sh` uploads files and nothing else, deliberately, because a script that rewrote project
 pages each release could quietly undo an edit made in the web UI. So these files are the source
 to edit and re-paste, and `published.json` records what you say you pasted rather than anything
 read back off the site.
+
+The Wago project id is the `wago:` line in the same frontmatter, eight alphanumeric characters
+off the project's entry in <https://addons.wago.io/developers>. `scripts/descriptions.mjs`
+checks its shape and the release scripts carry the same ids in `target_wago()`, so an id that
+changes has to change in both -- the same arrangement, and the same hazard, as the CurseForge
+ids beside them.
 
 The summary — the one-line preview, separate from the description — is the `summary:` line in
 each page's frontmatter, where the 255-character limit is checked. It used to be listed here,

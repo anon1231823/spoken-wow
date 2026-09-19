@@ -89,17 +89,17 @@ lint: ## The checks CI gates on
 	@node scripts/descriptions.mjs --check
 	@node pipelines/zones/tools/locale/check-strings.mjs
 
-# The CurseForge project pages, for every addon. One tool over curseforge/*/ rather than one
+# The CurseForge project pages, for every addon. One tool over publishers/*/ rather than one
 # per project: the pages are the same shape, and a second copy of this would be a second place
 # for the summary limit and the published.json convention to drift.
 #
 # `descriptions-published` is a claim, not a check -- there is no API to read a live page back,
 # so it records what you have just pasted. Run it after pasting, never before.
 
-descriptions: ## Regenerate the addon READMEs and dist/descriptions/ from curseforge/
+descriptions: ## Regenerate the addon READMEs and dist/descriptions/ from publishers/
 	@node scripts/descriptions.mjs --write
 
-descriptions-check: ## Confirm the addon READMEs match curseforge/
+descriptions-check: ## Confirm the addon READMEs match publishers/
 	@node scripts/descriptions.mjs
 
 descriptions-published: ## Record the current descriptions as pasted into the site

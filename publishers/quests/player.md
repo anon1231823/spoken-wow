@@ -1,5 +1,6 @@
 ---
-project: 1655859
+curseforge: 1655859
+wago: aN0XPlNj
 slug: spoken-quests
 name: Spoken Quests
 summary: Quest and gossip dialogue, voiced. Needs a Spoken Quests Audio pack. Formerly VoiceOver Redux.

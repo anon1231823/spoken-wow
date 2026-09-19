@@ -4,6 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = { title: "Spoken" };
 
 const CURSEFORGE = "https://www.curseforge.com/wow/addons";
+const WAGO = "https://addons.wago.io/addons";
 
 /**
  * The front door.
@@ -16,9 +17,14 @@ const CURSEFORGE = "https://www.curseforge.com/wow/addons";
  * list show, so somebody arriving from either recognises what they came for. They are the
  * exported SVGs from pipelines/*, copied into public/icons/ -- see the note there.
  *
- * The CurseForge links sit BELOW the card rather than inside it, and that is structural
+ * The store links sit BELOW the card rather than inside it, and that is structural
  * rather than aesthetic: the card is one big anchor, and an anchor inside an anchor is
  * invalid HTML that browsers resolve by closing the outer one early.
+ *
+ * TWO STORES, AND NOT EVERY ADDON IS ON BOTH. The slugs are identical on CurseForge and
+ * Wago, so one slug addresses both -- but a sound pack is 300-450 MB and Wago's upload
+ * endpoint refuses anything that size, so the packs are CurseForge-only and say so here
+ * rather than offering a Wago link that 404s. `wago: false` is that fact, not a preference.
  */
 const SECTIONS = [
   {
@@ -30,8 +36,8 @@ const SECTIONS = [
       "in between. Extracted from the game, voiced per race, gender and flavour.",
     detail: "17,507 lines · 54 voices",
     addons: [
-      { slug: "spoken-quests", label: "Spoken Quests" },
-      { slug: "spoken-quests-audio-all", label: "Audio: All" },
+      { slug: "spoken-quests", label: "Spoken Quests", wago: true },
+      { slug: "spoken-quests-audio-all", label: "Audio: All", wago: true },
     ],
     // The other four packs are Alliance, Horde, Shared and Gossip. They are listed on the
     // All pack's own page, which is where somebody choosing between them should be reading
@@ -47,8 +53,8 @@ const SECTIONS = [
       "Written rather than extracted: scraped from the wiki, and correctable here.",
     detail: "1,353 lines · one narrator",
     addons: [
-      { slug: "spoken-zones", label: "Spoken Zones" },
-      { slug: "spoken-zones-audio", label: "Spoken Zones Audio" },
+      { slug: "spoken-zones", label: "Spoken Zones", wago: true },
+      { slug: "spoken-zones-audio", label: "Spoken Zones Audio", wago: false },
     ],
   },
   {
@@ -60,8 +66,8 @@ const SECTIONS = [
       "Blizzard's words again, read by the narrator rather than by the NPC who hands them over.",
     detail: "1,191 pages · 404 books",
     addons: [
-      { slug: "spoken-books", label: "Spoken Books" },
-      { slug: "spoken-books-audio", label: "Spoken Books Audio" },
+      { slug: "spoken-books", label: "Spoken Books", wago: true },
+      { slug: "spoken-books-audio", label: "Spoken Books Audio", wago: false },
     ],
   },
 ];
@@ -104,21 +110,36 @@ export default function Page() {
             </Link>
 
             <div className="mt-2 px-1 text-xs">
-              <p className="text-muted-foreground">
-                {section.addons.map((addon, index) => (
-                  <span key={addon.slug}>
-                    {index > 0 && <span className="px-1.5">·</span>}
-                    <a
-                      href={`${CURSEFORGE}/${addon.slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="hover:text-foreground underline underline-offset-2"
-                    >
-                      {addon.label}
-                    </a>
-                  </span>
-                ))}
-              </p>
+              {/* One row per addon, the name plain and the stores beside it. The name used to
+                  be the CurseForge link itself, which stopped working the moment there were
+                  two stores: a single anchor cannot say "this addon, over there, twice". */}
+              {section.addons.map((addon) => (
+                <p key={addon.slug} className="text-muted-foreground">
+                  {addon.label}
+                  <span className="px-1.5">·</span>
+                  <a
+                    href={`${CURSEFORGE}/${addon.slug}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-foreground underline underline-offset-2"
+                  >
+                    CurseForge
+                  </a>
+                  {addon.wago && (
+                    <>
+                      <span className="px-1.5">·</span>
+                      <a
+                        href={`${WAGO}/${addon.slug}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="hover:text-foreground underline underline-offset-2"
+                      >
+                        Wago
+                      </a>
+                    </>
+                  )}
+                </p>
+              ))}
               {section.addonsNote && (
                 <p className="text-muted-foreground/70 mt-1">{section.addonsNote}</p>
               )}

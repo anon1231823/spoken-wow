@@ -1,9 +1,9 @@
 ## Download
 
 ### Player addon
-| Client | GitHub Direct Link | Curse Link |
+| Client | GitHub Direct Link | Addon stores |
 | ----- | ------------------ | ---------- |
-| Blizzard clients (Classic Era, Anniversary, Wrath, retail) | [GitHub ZIP Download]({{ github_zip_download_blizz }}) | [Curse]({{ curse_link_blizz }}) |
+| Blizzard clients (Classic Era, Anniversary, Wrath, retail) | [GitHub ZIP Download]({{ github_zip_download_blizz }}) | [Curse]({{ curse_link_blizz }}) · [Wago]({{ wago_link_blizz }}) |
 | 1.12 (private Vanilla servers & Turtle) | [GitHub ZIP Download]({{ github_zip_download_112 }}) | - |
 | 2.4.3 (private TBC servers) | [GitHub ZIP Download]({{ github_zip_download_243 }}) | - |
 | 3.3.5 (private WotLK servers) | [GitHub ZIP Download]({{ github_zip_download_335 }}) | - |

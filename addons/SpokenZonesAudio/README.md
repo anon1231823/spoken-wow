@@ -1,4 +1,4 @@
-<!-- GENERATED from curseforge/zones/spoken-zones-audio.md by scripts/descriptions.mjs. Do not edit by hand. -->
+<!-- GENERATED from publishers/zones/spoken-zones-audio.md by scripts/descriptions.mjs. Do not edit by hand. -->
 
 Narrated zone lore for **[Spoken Zones](https://www.curseforge.com/wow/addons/spoken-zones)** (formerly ZoneLore), at full 128 kbps quality. This addon is data only — it does nothing on its own.
 

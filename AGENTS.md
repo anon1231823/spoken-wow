@@ -45,7 +45,7 @@ rsync with `--delete` against directories holding audio that cannot be
 regenerated.
 
 **Shared credentials live in the repo-root `.env`.** One ElevenLabs key, one CurseForge
-token, one `DATABASE_URL`, one vmangos `MYSQL_*` block, read by `pipelines/lib/env.mjs`,
+token, one Wago token, one `DATABASE_URL`, one vmangos `MYSQL_*` block, read by `pipelines/lib/env.mjs`,
 `tts_cli/env_vars.py`, `apps/web/next.config.ts` and the three `scripts/*/release.sh`. A
 `pipelines/<name>/.env` is read after it and wins, and is for what is that pipeline's alone.
 Copying a shared variable back into one is how the three copies that came before drifted:

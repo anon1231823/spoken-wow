@@ -76,7 +76,7 @@ endef
         pull-history push-history history-status pull-ignores package package-audio \
         package-audio-complete package-meta push-complete icon \
         downloads-status \
-        factions release release-audio \
+        factions release release-audio release-wago release-curse \
         release-dry
 
 help: ## Show this help
@@ -306,10 +306,10 @@ downloads-status: require-droplet ## List what the site is offering for download
 factions: ## Re-export pipelines/quests/corpus/factions.json from the world DB (needs MySQL)
 	@$(PYTHON) pipelines/quests/tools/export_factions.py
 
-release-dry: ## Show what `make release` would upload to CurseForge
+release-dry: ## Show what `make release` would upload to CurseForge and Wago
 	@./scripts/quests/release.sh --dry-run
 
-release: ## Upload the built zips to CurseForge (needs CURSEFORGE_TOKEN)
+release: ## Upload the built zips to CurseForge and Wago (needs both tokens)
 	@./scripts/quests/release.sh
 
 # The packs alone, for when the audio was rebuilt and the player was not. The meta addon comes
@@ -342,3 +342,12 @@ pull-ignores: require-droplet ## Export the ignore list from the droplet into pi
 audio-status: require-droplet ## Compare file count and size on both sides
 	@echo "local:  $$(find audio -name '*.mp3' | wc -l | tr -d ' ') files, $$(du -sh audio | cut -f1)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_AUDIO) -name "*.mp3" | wc -l | tr -d " ") files, $$(du -sh $(REMOTE_AUDIO) | cut -f1)"'
+
+# One store at a time, for the case a release half-landed: a zip CurseForge took and Wago
+# refused, or the other way round. Re-running `release` would upload the file twice to the
+# store that already has it, which each of them shows as a duplicate rather than ignoring.
+release-wago: ## Upload the built zips to Wago only (needs WAGO_TOKEN)
+	@./scripts/quests/release.sh --store=wago
+
+release-curse: ## Upload the built zips to CurseForge only (needs CURSEFORGE_TOKEN)
+	@./scripts/quests/release.sh --store=curseforge

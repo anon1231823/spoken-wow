@@ -1,4 +1,4 @@
-<!-- GENERATED from curseforge/books/spoken-books-audio.md by scripts/descriptions.mjs. Do not edit by hand. -->
+<!-- GENERATED from publishers/books/spoken-books-audio.md by scripts/descriptions.mjs. Do not edit by hand. -->
 
 Narrated books, letters and notes for **[Spoken Books](https://www.curseforge.com/wow/addons/spoken-books)**. This addon is data only — it does nothing on its own.
 

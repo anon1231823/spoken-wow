@@ -1,5 +1,6 @@
 ---
-project: 1701514
+curseforge: 1701514
+wago: qGYZnRNg
 slug: spoken-books
 name: Spoken Books
 summary: Books, letters and notes read aloud. Open a book and it narrates — following you as you turn the pages, and reading on after you close it.
