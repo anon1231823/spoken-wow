@@ -28,6 +28,8 @@ import type { ResultLine as BookLine } from "@/lib/books/search";
 import { searchPath, type SourceLine } from "@/lib/reports/detail";
 import {
   CATEGORIES,
+  SOURCES,
+  STATUSES,
   CATEGORY_COLUMN,
   SOURCE_LABELS,
   STATUS_LABELS,
@@ -41,19 +43,15 @@ import type { ResultLine as QuestLine } from "@/lib/search";
 import { cn } from "@/lib/utils";
 import type { ResultLine as ZoneLine } from "@/lib/zones/search";
 
-const VIEWS: { value: Status | "all"; label: string }[] = [
-  { value: "open", label: "Open" },
-  { value: "fixed", label: "Fixed" },
-  { value: "not_an_issue", label: "Not a problem" },
-  { value: "all", label: "All" },
-];
+const STATUS_OPTIONS = STATUSES.map((status) => ({
+  value: status,
+  label: STATUS_LABELS[status],
+}));
 
-const SOURCE_VIEWS: { value: Source | "all"; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "quests", label: "Quests" },
-  { value: "zones", label: "Zones" },
-  { value: "books", label: "Books" },
-];
+const SOURCE_OPTIONS = SOURCES.map((source) => ({
+  value: source,
+  label: SOURCE_LABELS[source],
+}));
 
 /** The complaint dropdown's options, in the order the report form offers them. */
 const CATEGORY_OPTIONS = CATEGORIES.map((category) => ({
@@ -191,6 +189,21 @@ export default function ReportTable({
     setResolved((current) => ({ ...current, [report.id]: report }));
   }
 
+  /**
+   * Move one filter and keep the other two.
+   *
+   * Undefined is "every one of them", which the URL spells `all` - the same word the page
+   * parses back, so a hand-shortened link and a chip produce the same query.
+   */
+  function go(next: { view?: string; source?: string; category?: string }) {
+    const params = new URLSearchParams({
+      view: next.view ?? (("view" in next) ? "all" : view),
+      source: next.source ?? (("source" in next) ? "all" : source),
+      category: next.category ?? (("category" in next) ? "all" : category),
+    });
+    router.push(`/reports?${params}`);
+  }
+
   const reports = applyResolutions(initial, resolved);
   const playingKey = playing ? lineKey(playing.source, playing.lineId) : null;
   const playingLine = playingKey === null ? null : (lines[playingKey] ?? null);
@@ -198,42 +211,29 @@ export default function ReportTable({
 
   return (
     <>
-      {/* Links rather than client state, so a view can be shared and reloaded. */}
-      <nav className="mb-4 flex flex-wrap items-center gap-3 text-sm">
-        {VIEWS.map((option) => (
-          <Link
-            key={option.value}
-            href={`/reports?view=${option.value}&source=${source}&category=${category}`}
-            className={option.value === view ? "font-semibold" : "text-muted-foreground"}
-          >
-            {option.label}
-          </Link>
-        ))}
-
-        <span aria-hidden className="text-muted-foreground">
-          |
-        </span>
-
-        {SOURCE_VIEWS.map((option) => (
-          <Link
-            key={option.value}
-            href={`/reports?view=${view}&source=${option.value}&category=${category}`}
-            className={option.value === source ? "font-semibold" : "text-muted-foreground"}
-          >
-            {option.label}
-          </Link>
-        ))}
-
-        {/* A dropdown rather than a third row of links: six complaints and an "any" would
-            be seven more words in a row that already carries eight. It writes to the URL
-            like the links do, so a narrowed queue is still shareable and reloadable. */}
+      {/* Three dropdowns, the same control the explorers filter with. Each writes its value
+          to the URL rather than to state, so a narrowed queue can be shared and reloaded and
+          the back button undoes a filter change. An idle chip means "every one of them":
+          /reports with nothing on it still opens on the open queue, which is why the status
+          chip arrives filled. */}
+      <nav className="mb-4 flex flex-wrap items-center gap-2">
+        <FilterChip
+          label="status"
+          value={view === "all" ? undefined : view}
+          options={STATUS_OPTIONS}
+          onChange={(next) => go({ view: next })}
+        />
+        <FilterChip
+          label="section"
+          value={source === "all" ? undefined : source}
+          options={SOURCE_OPTIONS}
+          onChange={(next) => go({ source: next })}
+        />
         <FilterChip
           label="complaint"
           value={category === "all" ? undefined : category}
           options={CATEGORY_OPTIONS}
-          onChange={(next) =>
-            router.push(`/reports?view=${view}&source=${source}&category=${next ?? "all"}`)
-          }
+          onChange={(next) => go({ category: next })}
         />
       </nav>
 
