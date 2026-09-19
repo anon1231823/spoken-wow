@@ -14,12 +14,10 @@ import { readdir } from "node:fs/promises";
 
 import { loadEnvFile } from "../lib/env.mjs";
 import { ROOT, readLines } from "../lib/loredata.mjs";
-import { apiKey, downloadDictionary } from "./elevenlabs.mjs";
-import { parseDictionary, uncoveredSpellings } from "./lexicon.mjs";
 import { assignFiles, lineId } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
 import { BASE_LOCALE, sourceFolder } from "../lib/locales.mjs";
-import { currentDictionary, loadManifest, soundsDir } from "./store.mjs";
+import { loadManifest, soundsDir } from "./store.mjs";
 
 // The tree's directory, not the published folder name. See sourceFolder in lib/locales.mjs.
 const LOOKUP_PATH = join(ROOT, "addons", sourceFolder(BASE_LOCALE), "Data/Sounds.lua");
@@ -41,55 +39,6 @@ async function mp3sOnDisk(dir, prefix = "") {
   return found;
 }
 
-/**
- * Names the shared lexicon knows, spelled here in a way none of its rules match.
- *
- * A note rather than a problem, and skipped rather than failed when there is no
- * key or no pinned dictionary: this is the only check here that needs the
- * network, and `make check` has to keep working on a machine with no
- * credentials. What it finds is not broken data either -- it is a pronunciation
- * that will come out wrong, and the fix is an entry in ../wow-voiceover's
- * /lexicon, which is not something this run can do.
- */
-async function checkDictionary(spokenTexts) {
-  // The lexicon row, not a file: the dictionary this checks is the one the site
-  // generates against, and a second copy of that locator is a second thing to keep
-  // in step. Absent means no database or a lexicon never synced, both of which are
-  // legitimate and neither of which is a packaging failure.
-  const locator = await currentDictionary();
-  if (!locator) {
-    note("no synced pronunciation dictionary to check against; coverage unchecked");
-    return;
-  }
-
-  let pls;
-  try {
-    // The rules have to come from ElevenLabs rather than from the lexicon row beside
-    // the locator. A phoneme rule is case-sensitive, so toRules() expands one entry
-    // into a rule per spelling the corpus contains -- the uploaded dictionary holds
-    // spellings the stored entries do not, and deriving the set from entries alone
-    // would report coverage gaps that are not there.
-    pls = await downloadDictionary(
-      { dictionaryId: locator.dictionaryId, dictionaryVersionId: locator.versionId },
-      await apiKey(),
-    );
-  } catch (err) {
-    note(`pronunciation dictionary not checked: ${err.message.slice(0, 120)}`);
-    return;
-  }
-
-  const uncovered = uncoveredSpellings(parseDictionary(pls), spokenTexts);
-  if (!uncovered.length) return;
-
-  const worst = uncovered.slice(0, 5).map((row) => `${row.spelling} (${row.occurrences})`);
-  note(
-    `${uncovered.length} spelling(s) of a lexicon name have no rule that matches them: ` +
-      `${worst.join(", ")}${uncovered.length > 5 ? ", ..." : ""}. ` +
-      "A phoneme rule is case-sensitive and wow-voiceover derives its spellings from its own " +
-      "corpus, so add these in that project's /lexicon.",
-  );
-}
-
 async function main() {
   const entries = await readLines();
   const rules = await loadPronunciation();
@@ -107,7 +56,6 @@ async function main() {
   }
 
   //-- the shared lexicon covers this project's spellings ---------------------
-  await checkDictionary(entries.map((e) => toSpokenText(e.full, rules)));
 
   //-- file paths are unique -------------------------------------------------
   const byFile = new Map();

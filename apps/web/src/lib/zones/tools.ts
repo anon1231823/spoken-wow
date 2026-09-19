@@ -26,9 +26,10 @@
  *     and voice settings from generation_setting, the dictionary from pronunciation_lexicon.
  *     config.json is down to a fallback credit rate for the reporting CLI.
  *
- *   verifyKey / fetchTier / listVoices / apiKey
- *     The account is read through lib/voices/elevenlabs.ts, which both sections share, and a
- *     key belongs to the signed-in user rather than to the machine.
+ *   synthesize / verifyKey / fetchTier / listVoices / apiKey
+ *     Every request to ElevenLabs is the site's, through lib/generation/tts.ts and
+ *     lib/voices/elevenlabs.ts, with a key belonging to the signed-in user rather than to
+ *     the machine. The pipeline does no generating and holds no client.
  *
  *   Limiter / afterRateLimit / budgetFor's caller
  *     Concurrency is the shared queue's, in lib/generation/concurrency.ts. Two answers to
@@ -39,7 +40,6 @@ import "server-only";
 import * as storeModule from "@tools/voice/store.mjs";
 import * as normaliseModule from "@tools/voice/normalise.mjs";
 import * as namingModule from "@tools/voice/naming.mjs";
-import * as elevenModule from "@tools/voice/elevenlabs.mjs";
 import * as exportModule from "@tools/voice/export-manifest.mjs";
 import * as lookupModule from "@tools/voice/build-lookup.mjs";
 import * as wikiModule from "@tools/lib/wiki.mjs";
@@ -88,33 +88,6 @@ export const loadPronunciation = normaliseModule.loadPronunciation as () => Prom
 // rather than reimplemented here, so a line edited in the explorer and a line scraped from
 // the wiki get the same summary from the same prose.
 export const makeShort = wikiModule.makeShort as (full: string, limit?: number) => string;
-
-/**
- * What synthesize() needs to know, assembled per request rather than read from a file.
- *
- * The same shape tools/voice/config.json has, because the CLI still reads that file and both
- * paths must produce identical audio - but every field is resolved from the database here.
- * See lib/zones/voice.ts for where each one comes from.
- */
-export type VoiceConfig = {
-  voiceName: string;
-  voiceId?: string;
-  modelId: string;
-  languageCode?: string;
-  outputFormat: string;
-  dictionaryId?: string | null;
-  dictionaryVersionId?: string | null;
-  creditRate?: number | null;
-  voiceSettings: Record<string, number | boolean>;
-};
-
-/** Throws on a non-retryable failure; retries 429 and 5xx internally. */
-export const synthesize = elevenModule.synthesize as (
-  spoken: string,
-  config: VoiceConfig,
-  key: string,
-  options?: { attempts?: number; onRateLimit?: () => void },
-) => Promise<{ audio: Buffer; credits: number | null }>;
 
 /** Archives the take being replaced, then writes. Returns the absolute path. */
 export const writeAudio = storeModule.writeAudio as (

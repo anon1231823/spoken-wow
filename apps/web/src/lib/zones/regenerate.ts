@@ -10,16 +10,21 @@
  * The result is the quests side's RegenerateResult, not an exception, because the worker
  * decides what to do next from `kind` and `fatal`: running out of credits fails every
  * remaining line identically and stops the batch, while one line whose text cannot be
- * voiced is just one line. The pipeline's synthesize() throws, so mapping its failures onto
- * that taxonomy is this module's job and the reason it exists rather than the route calling
- * the pipeline directly.
+ * voiced is just one line.
+ *
+ * THE REQUEST ITSELF IS lib/generation/tts.ts, the same client quests and books narrate
+ * through. Zones used to reach into pipelines/zones/tools/voice/elevenlabs.mjs for it,
+ * which left the repository with two ElevenLabs clients and put one of them in a pipeline
+ * that does no generating. One client means one retry policy, one failure taxonomy and one
+ * place a request's shape is decided.
  */
 import "server-only";
 
 import { stat } from "node:fs/promises";
 
-import { classifyUpstream, failure } from "@/lib/generation/errors";
+import { failure } from "@/lib/generation/errors";
 import type { RegenerateResult } from "@/lib/generation/regenerate";
+import { textToSpeech } from "@/lib/generation/tts";
 
 import { catalogue, type CatalogueEntry } from "./catalogue";
 import {
@@ -28,29 +33,19 @@ import {
   exportManifest,
   insertTake,
   restoreTake,
-  synthesize,
   writeAudio,
-  type VoiceConfig,
 } from "./tools";
-import { narratorConfig, NarratorMissing } from "./voice";
+import { narratorConfig, NarratorMissing, type VoiceConfig } from "./voice";
 
 /**
- * What the pipeline threw, as a failure the queue understands.
+ * Resolving the narrator can fail before any request is made.
  *
- * synthesize() reports an HTTP failure as `ElevenLabs returned 429: {json}`, having already
- * retried the retryable ones, so the status is recoverable from the message and worth
- * recovering: it is the difference between stopping a batch and moving to the next line.
- * Anything unrecognised is "upstream", which is not fatal -- a batch that stops on a
- * failure nobody has classified is a batch that stops for no reason anybody can act on.
+ * Only this one kind now: textToSpeech returns its own classified failure rather than
+ * throwing, so there is nothing to recover from a message.
  */
 function asFailure(error: unknown) {
   if (error instanceof NarratorMissing) return failure("voice-missing", error.message);
-
-  const message = error instanceof Error ? error.message : String(error);
-  const match = /^ElevenLabs returned (\d{3}): ([\s\S]*)$/.exec(message);
-  if (match) return classifyUpstream(Number(match[1]), match[2], "narrating this line");
-
-  return failure("upstream", message);
+  return failure("upstream", error instanceof Error ? error.message : String(error));
 }
 
 async function takeFor(
@@ -128,9 +123,26 @@ export async function regenerateZoneLine(
     return { ok: false, failure: asFailure(error) };
   }
 
-  try {
-    const { audio, credits } = await synthesize(entry.spoken, config, options.apiKey);
+  // No seed: a zone line is narrated once and re-rolled by hand if it comes out wrong,
+  // so there is nothing to reproduce bit for bit.
+  const speech = await textToSpeech(
+    {
+      voiceId: config.voiceId!,
+      text: entry.spoken,
+      modelId: config.modelId,
+      voiceSettings: config.voiceSettings,
+      seed: null,
+      dictionary:
+        config.dictionaryId && config.dictionaryVersionId
+          ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
+          : null,
+    },
+    { apiKey: options.apiKey },
+  );
+  if (!speech.ok) return { ok: false, failure: speech.failure };
+  const { audio, credits } = speech;
 
+  try {
     // Archives the take being replaced. This is what makes a bad re-roll reversible, and
     // the reason writeAudio lives in the pipeline's store rather than in this caller.
     const path = await writeAudio(entry.file, audio);

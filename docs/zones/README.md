@@ -1247,11 +1247,11 @@ what actually happens, and does it again on every request.
 
 **A role is only half of it: the credits are the editor's own.** The site holds no
 ElevenLabs key. Each editor sets theirs on `/profile`, where it is encrypted
-(AES-256-GCM, under the droplet's `ZONELORE_SECRET_KEY`) before it is stored and is never
+(AES-256-GCM, under the droplet's `SPOKEN_SECRET_KEY`) before it is stored and is never
 shown again — only its last four characters. Anyone without one is refused with a dialog
 saying so, before anything reaches ElevenLabs. An admin can see which accounts have a key
-and clear one, never read it. The CLI in `pipelines/zones/tools/` is unaffected and still reads
-`ELEVENLABS_API_KEY` from `.env`.
+and clear one, never read it. There is no second path: `pipelines/zones/tools/` holds no
+ElevenLabs client and reads no key.
 
 The one thing worth knowing here rather than there: **`pipelines/zones/tools/` paths are overridable by
 environment variable, and on the droplet all five are overridden.** Every path under

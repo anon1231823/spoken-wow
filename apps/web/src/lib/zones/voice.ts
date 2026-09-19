@@ -28,10 +28,28 @@ import "server-only";
 
 import { currentLocator } from "@/lib/generation/dictionary";
 import { NARRATOR_VOICE } from "@/lib/generation/narration";
+import { type VoiceSettings } from "@/lib/generation/config";
 import { currentConfig } from "@/lib/generation/settings";
 import { generationStatus } from "@/lib/generation/status";
 
-import type { VoiceConfig } from "./tools";
+/**
+ * What narrating one line needs, resolved per request from the database.
+ *
+ * It lived in lib/zones/tools.ts while this shape had to match the pipeline's
+ * config.json, because the pipeline held the ElevenLabs client. It does not any more --
+ * every request goes through lib/generation/tts.ts -- so the shape belongs here, beside
+ * the function that fills it.
+ */
+export type VoiceConfig = {
+  voiceName: string;
+  voiceId: string;
+  modelId: string;
+  /** Recorded against the take. The request takes the API default, which is this. */
+  outputFormat: string;
+  dictionaryId: string | null;
+  dictionaryVersionId: string | null;
+  voiceSettings: VoiceSettings;
+};
 
 /**
  * The output format every zones take is cut at.
@@ -83,7 +101,6 @@ export async function narratorConfig(apiKey: string): Promise<VoiceConfig> {
     voiceName: NARRATOR_VOICE,
     voiceId,
     modelId: config.modelId,
-    languageCode: LANGUAGE_CODE,
     outputFormat: OUTPUT_FORMAT,
     dictionaryId: dictionary?.dictionaryId ?? null,
     dictionaryVersionId: dictionary?.versionId ?? null,

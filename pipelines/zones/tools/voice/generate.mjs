@@ -18,16 +18,33 @@
 // were cut, and what re-cutting them would cost. Answering that needs no key, so
 // it stays runnable from a laptop with no credentials.
 
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadEnvFile } from "../lib/env.mjs";
-import { readLines } from "../lib/loredata.mjs";
+import { readLines, ROOT } from "../lib/loredata.mjs";
 import { assignFiles, lineId, textHash } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
-// loadConfig only. The rest of elevenlabs.mjs reaches the API, and nothing here may.
-import { loadConfig } from "./elevenlabs.mjs";
 import { close as closeStore, currentDictionary, loadManifest } from "./store.mjs";
+
+/**
+ * The fallback credit rate, from tools/voice/config.json.
+ *
+ * Read here rather than through a client module, because there is no client module: every
+ * request to ElevenLabs is the site's. This is the whole of what that file still holds --
+ * see its own _notes -- and it only matters until the manifest has a generated line to
+ * measure a real rate from.
+ */
+async function loadRate() {
+  const path = join(ROOT, "pipelines/zones/tools/voice/config.json");
+  try {
+    return JSON.parse(await readFile(path, "utf8"));
+  } catch (err) {
+    if (err.code === "ENOENT") return {};
+    throw err;
+  }
+}
 
 //------------------------------------------------------------------------------
 // Arguments
@@ -303,10 +320,7 @@ function summarise(selected, manifest, label, config) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const catalogue = await buildCatalogue();
-  // For the credit rate, which is what turns a character count into a number worth
-  // reading. Only a fallback: once the manifest holds generated lines the rate is
-  // measured from those instead.
-  const config = await loadConfig();
+  const config = await loadRate();
 
   // Enforced here rather than left to the model: a bracket that reaches v3 is
   // performed rather than spoken, which is silent corruption of a paid clip.

@@ -14,9 +14,10 @@ import "server-only";
 
 import { stat } from "node:fs/promises";
 
-import { classifyUpstream, failure } from "@/lib/generation/errors";
+import { failure } from "@/lib/generation/errors";
 import type { RegenerateResult } from "@/lib/generation/regenerate";
-import { synthesize, type VoiceConfig } from "@/lib/zones/tools";
+import { textToSpeech } from "@/lib/generation/tts";
+import { type VoiceConfig } from "@/lib/zones/voice";
 import { narratorConfig, NarratorMissing } from "@/lib/zones/voice";
 
 import { catalogue, BASE_LANG, type BookPage } from "./catalogue";
@@ -25,20 +26,14 @@ import { durationOf } from "./tools";
 import { insertTake, writeAudio } from "./store";
 
 /**
- * What the pipeline threw, as a failure the queue understands.
+ * Resolving the narrator can fail before any request is made.
  *
- * synthesize() reports an HTTP failure as `ElevenLabs returned 429: {json}`, having already
- * retried the retryable ones, so the status is worth recovering from the message: it is the
- * difference between stopping a batch and moving to the next page.
+ * Only this one kind now: textToSpeech returns its own classified failure rather than
+ * throwing, so there is nothing to recover from a message.
  */
 function asFailure(error: unknown) {
   if (error instanceof NarratorMissing) return failure("voice-missing", error.message);
-
-  const message = error instanceof Error ? error.message : String(error);
-  const match = /^ElevenLabs returned (\d{3}): ([\s\S]*)$/.exec(message);
-  if (match) return classifyUpstream(Number(match[1]), match[2], "narrating this page");
-
-  return failure("upstream", message);
+  return failure("upstream", error instanceof Error ? error.message : String(error));
 }
 
 async function pageFor(lineId: string, lang: string): Promise<BookPage | undefined> {
@@ -78,9 +73,25 @@ export async function regenerateBookLine(
     return { ok: false, failure: asFailure(error) };
   }
 
-  try {
-    const { audio, credits } = await synthesize(page.spoken, config, options.apiKey);
+  // No seed: a page is narrated once and re-rolled by hand if it comes out wrong.
+  const speech = await textToSpeech(
+    {
+      voiceId: config.voiceId,
+      text: page.spoken,
+      modelId: config.modelId,
+      voiceSettings: config.voiceSettings,
+      seed: null,
+      dictionary:
+        config.dictionaryId && config.dictionaryVersionId
+          ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
+          : null,
+    },
+    { apiKey: options.apiKey },
+  );
+  if (!speech.ok) return { ok: false, failure: speech.failure };
+  const { audio, credits } = speech;
 
+  try {
     // Archives the take being replaced, which is what makes a bad re-roll reversible.
     const path = await writeAudio(page.file, audio);
     const bytes = (await stat(path)).size;
@@ -94,7 +105,7 @@ export async function regenerateBookLine(
         credits,
         durationSec: await durationOf(path),
         bytes,
-        voiceId: config.voiceId ?? null,
+        voiceId: config.voiceId,
         modelId: config.modelId,
         outputFormat: config.outputFormat,
         dictionaryId: config.dictionaryId ?? null,
