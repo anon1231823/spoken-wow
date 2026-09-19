@@ -73,7 +73,7 @@ wago_upload() {
 
   if [[ -z "$project" ]]; then
     echo "error: no Wago project id -- create the project at https://addons.wago.io and" >&2
-    echo "       write its id into the page's frontmatter under curseforge/." >&2
+    echo "       write its id into the page's frontmatter under publishers/." >&2
     return 1
   fi
   if [[ ! -f "$zip_path" ]]; then
@@ -135,7 +135,7 @@ wago_upload() {
     if [[ "$status" = 413 ]]; then
       echo "       $size is over Wago's upload limit. The sound packs cannot be published" >&2
       echo "       through this endpoint; ship them on CurseForge and leave the Wago page" >&2
-      echo "       pointing there. See curseforge/README.md." >&2
+      echo "       pointing there. See publishers/README.md." >&2
     fi
     # The other failure worth naming: if the undocumented forever key is what Wago objected to,
     # the fix is to drop it rather than to go looking through the metadata for a typo.

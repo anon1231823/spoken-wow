@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// curseforge/<project>/*.md -> the addon READMEs, and dist/descriptions*/ for pasting.
+// publishers/<project>/*.md -> the addon READMEs, and dist/descriptions*/ for pasting.
 //
 //   node scripts/descriptions.mjs              # check that everything is in step
 //   node scripts/descriptions.mjs --write      # regenerate
@@ -13,14 +13,14 @@
 // pasting into a web form, and the only question is where the text being pasted
 // comes from.
 //
-// It comes from here. Each file under curseforge/ is one project page: the
+// It comes from here. Each file under publishers/ is one project page: the
 // frontmatter is everything the form asks for besides the body, and the body is
 // the description itself. Where a page names an addonReadme, the README that
 // ships inside the zip is generated from the same body, so the page a player
 // reads before installing and the file they get afterwards cannot say different
 // things.
 //
-// ONE DIRECTORY PER PROJECT GROUP, each with its own published.json: curseforge/
+// ONE DIRECTORY PER PROJECT GROUP, each with its own published.json: publishers/
 // quests/, zones/ and spoken/. They are separate because the groups are released
 // separately and their hashes should not move together, and because the groups
 // came from separate repositories and their page sets are still edited at
@@ -38,7 +38,7 @@ import { fileURLToPath } from "node:url";
 
 // The monorepo root, two levels up from scripts/.
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CURSEFORGE_DIR = join(ROOT, "curseforge");
+const PUBLISHERS_DIR = join(ROOT, "publishers");
 const OUT_DIR = join(ROOT, "dist/descriptions");
 
 // The same bodies with their cross-links pointed at Wago, for pasting into the Wago pages.
@@ -58,7 +58,7 @@ function forWago(body) {
 }
 
 const GENERATED_NOTE =
-  "<!-- GENERATED from curseforge/%s by scripts/descriptions.mjs. Do not edit by hand. -->";
+  "<!-- GENERATED from publishers/%s by scripts/descriptions.mjs. Do not edit by hand. -->";
 
 // A deliberately small YAML subset: `key: value` and `key:` followed by `- item`
 // lines. Enough for the fields below, and a parser that cannot express anything
@@ -101,24 +101,24 @@ function parseFrontmatter(text, file) {
   return { meta, body: text.slice(end + 5).trim() + "\n" };
 }
 
-const REQUIRED = ["project", "wago", "slug", "name", "summary", "categories", "license"];
+const REQUIRED = ["curseforge", "wago", "slug", "name", "summary", "categories", "license"];
 
 // CurseForge's summary field. Enforced here rather than discovered in the form,
 // where the failure is a truncated sentence nobody re-reads.
 const SUMMARY_LIMIT = 255;
 
-// Every directory under curseforge/ is a group of project pages. Discovered
+// Every directory under publishers/ is a group of project pages. Discovered
 // rather than listed, so adding a fourth addon is a directory and not an edit
 // here -- and README.md files alongside the pages are skipped by the .md filter
 // below only because they carry no frontmatter, so they are skipped by name.
 const NOT_A_PAGE = new Set(["README.md"]);
 
 async function loadGroups() {
-  const entries = await readdir(CURSEFORGE_DIR);
+  const entries = await readdir(PUBLISHERS_DIR);
   const groups = [];
 
   for (const name of entries.sort()) {
-    const dir = join(CURSEFORGE_DIR, name);
+    const dir = join(PUBLISHERS_DIR, name);
     if (!(await stat(dir)).isDirectory()) continue;
 
     const files = (await readdir(dir))
@@ -138,8 +138,10 @@ async function loadGroups() {
           `${name}/${file}: summary is ${meta.summary.length} characters, over CurseForge's ${SUMMARY_LIMIT}`,
         );
       }
-      if (!/^\d+$/.test(meta.project)) {
-        throw new Error(`${name}/${file}: 'project' should be the numeric CurseForge project id`);
+      if (!/^\d+$/.test(meta.curseforge)) {
+        throw new Error(
+          `${name}/${file}: 'curseforge' should be the numeric CurseForge project id`,
+        );
       }
       // Wago's ids are eight alphanumeric characters and case matters -- QN53yXKB is not
       // qn53yxkb. Checked here because the upload endpoint is /projects/<id>/version: a
@@ -157,7 +159,7 @@ async function loadGroups() {
     if (pages.length) groups.push({ name, dir, pages });
   }
 
-  if (groups.length === 0) throw new Error(`no project pages found under ${CURSEFORGE_DIR}`);
+  if (groups.length === 0) throw new Error(`no project pages found under ${PUBLISHERS_DIR}`);
 
   // A slug names a project, and two files claiming one would quietly overwrite
   // each other in dist/descriptions/ and share a published.json entry.
@@ -209,7 +211,7 @@ async function reportDrift(groups) {
   return stale;
 }
 
-// --group=quests limits the run to one directory under curseforge/. Only --drift uses it, and
+// --group=quests limits the run to one directory under publishers/. Only --drift uses it, and
 // only so that a release prints the pages that release is about: every project's pages are
 // tracked here now, and a zones upload listing five unpasted quests pages is noise at exactly
 // the moment somebody is working through a checklist.
@@ -223,7 +225,7 @@ async function main() {
   const only = groupFilter();
   const all = await loadGroups();
   const groups = only ? all.filter((g) => g.name === only) : all;
-  if (only && groups.length === 0) throw new Error(`no such project group: curseforge/${only}`);
+  if (only && groups.length === 0) throw new Error(`no such project group: publishers/${only}`);
   const pages = groups.flatMap((g) => g.pages);
   const drift = [];
 
@@ -258,7 +260,7 @@ async function main() {
       await writeFile(path, wanted);
       console.log(`wrote ${target}`);
     } else {
-      drift.push(`${target} is out of step with curseforge/${page.path}`);
+      drift.push(`${target} is out of step with publishers/${page.path}`);
     }
   }
 
@@ -285,7 +287,7 @@ async function main() {
     for (const group of groups) {
       for (const page of group.pages) {
         console.log(
-          `     ${page.meta.slug} (CurseForge ${page.meta.project}, Wago ${page.meta.wago}): ` +
+          `     ${page.meta.slug} (CurseForge ${page.meta.curseforge}, Wago ${page.meta.wago}): ` +
             `summary ${page.meta.summary.length}/${SUMMARY_LIMIT} chars`,
         );
       }

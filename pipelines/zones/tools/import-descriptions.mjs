@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 //
-// The live CurseForge pages -> curseforge/*.md
+// The live CurseForge pages -> publishers/*.md
 //
 //   node tools/import-descriptions.mjs            # show what would change
 //   node tools/import-descriptions.mjs --write    # write it
@@ -28,7 +28,7 @@ import { fileURLToPath } from "node:url";
 // The monorepo root, three levels up from pipelines/zones/tools/. See
 // lib/loredata.mjs for why this reaches the repo root rather than the pipeline root.
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const SOURCE_DIR = join(ROOT, "curseforge/zones");
+const SOURCE_DIR = join(ROOT, "publishers/zones");
 
 const decodeEntities = (text) =>
   text

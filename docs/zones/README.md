@@ -1522,16 +1522,19 @@ as the beta disclaimer in the descriptions: marking the files `beta` would stop
 most addon managers offering them to players on the default channel, which is the
 audience this is for. `RELEASE_TYPE=beta` overrides it.
 
-### Descriptions live in `curseforge/`, and are pasted by hand
+### Descriptions live in `publishers/`, and are pasted by hand
 
-CurseForge has **no API for project descriptions, summaries or categories** —
-`upload-file` is the only write endpoint it offers, and metadata editing is an
-open feature request rather than a thing. A project page is updated by pasting
-into a web form, so the only question is where the pasted text comes from.
+Neither store has **an API for project descriptions, summaries or categories** —
+CurseForge offers `upload-file` and nothing else, and Wago's version endpoint is
+the same shape. A project page is updated by pasting into a web form, so the only
+question is where the pasted text comes from.
 
-It comes from `curseforge/<slug>.md`. The frontmatter is everything the form asks
-for besides the body — project id, summary, categories, tags, license — and the
-body is the description. `scripts/descriptions.mjs` generates two things from it:
+It comes from `publishers/<slug>.md`. The frontmatter is everything either form asks
+for besides the body — a project id per store (`curseforge:` and `wago:`), summary,
+categories, tags, license — and the body is the description. One body serves both
+stores: `dist/descriptions/` is what CurseForge takes and `dist/descriptions-wago/`
+the same text with its cross-links rewritten to Wago, because a link is only right
+on the store it is read on. `scripts/descriptions.mjs` generates two things from it:
 
 ```sh
 make zones-descriptions          # addon READMEs + dist/descriptions/ to paste from
@@ -1543,7 +1546,7 @@ the page a player reads before installing and the file they get afterwards canno
 say different things. Those READMEs are generated files and carry the usual
 warning at the top; `make zones-check` fails if one has been edited by hand.
 
-Nothing here can read the site back, so `curseforge/published.json` records a hash
+Nothing here can read the site back, so `publishers/published.json` records a hash
 of each description at the moment it was pasted. `make zones-descriptions-published`
 says "what is in the repository is now what is on the site" — run it *after*
 pasting, since nothing can verify the claim. `scripts/release.sh` prints anything

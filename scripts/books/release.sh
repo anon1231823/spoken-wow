@@ -52,13 +52,13 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 # An unknown target falls through to an empty id and is refused below rather than
 # defaulting: an id left in this function is an id something eventually uploads to, and
 # uploading a books pack over another project is not recoverable from this side.
-target_project() { case "$1" in
+target_curseforge() { case "$1" in
   books)  echo "1701514";;
   audio)  echo "1701520";;
 esac; }
 # The Wago project id for the same project: eight alphanumeric characters, from the project's
 # entry in https://addons.wago.io/developers. They are also in each page's frontmatter under
-# curseforge/, which is where scripts/descriptions.mjs checks them -- kept here as well so
+# publishers/, which is where scripts/descriptions.mjs checks them -- kept here as well so
 # that this script needs no YAML parser to know where to upload.
 target_wago() { case "$1" in
   books)  echo "qGYZnRNg";;
@@ -112,7 +112,7 @@ done
 store_has() { [[ " $stores " == *" $1 "* ]]; }
 # The addon goes first. CurseForge resolves a relations slug at upload time, so the pack's
 # required dependency has to name a project that already exists and is approved -- see the
-# errorCode 1018 note in curseforge/README.md.
+# errorCode 1018 note in publishers/README.md.
 if (( ${#targets[@]} == 0 )); then
   targets=("books" "audio")
 fi
@@ -202,7 +202,7 @@ changelog_for() {
 
 #-- upload --------------------------------------------------------------------
 for target in "${targets[@]}"; do
-  project="$(target_project "$target")"
+  project="$(target_curseforge "$target")"
   addon="$(target_addon "$target")"
   zip_name="$(target_zip "$target")"
 
@@ -210,7 +210,7 @@ for target in "${targets[@]}"; do
   # POST to /projects//upload-file and fail somewhere less legible, or worse, land on
   # whatever project the API resolved.
   if store_has curseforge && [[ -z "$project" ]]; then
-    echo "error: no CurseForge project id for '$target' -- create the project and add its id to target_project()" >&2
+    echo "error: no CurseForge project id for '$target' -- create the project and add its id to target_curseforge()" >&2
     exit 1
   fi
 

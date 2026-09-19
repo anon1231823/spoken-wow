@@ -1,9 +1,9 @@
 ---
-project: 1660197
-wago: 5NR8mJK3
-slug: spoken-quests-audio-alliance
-name: Spoken Quests Audio: Alliance
-summary: Alliance-only quest dialogue, voiced. Pair it with the Shared pack. Needs Spoken Quests.
+curseforge: 1660199
+wago: QNlz3YKe
+slug: spoken-quests-audio-shared
+name: Spoken Quests Audio: Shared Quests
+summary: Quest dialogue both factions can hear, voiced. Install alongside the Alliance or Horde pack. Needs Spoken Quests.
 categories:
   - Audio & Video
   - Roleplay
@@ -11,21 +11,21 @@ categories:
 license: MIT
 ---
 
-Voiced dialogue for the quests only an Alliance character can take.
+Voiced dialogue for the quests **both factions** can take. Neutral hubs like Booty Bay, Gadgetzan, Everlook and Ratchet live here, along with every other quest whose giver talks to either side.
 
-**You need two more addons for this to do anything:**
+**Everyone wants this pack**, and on its own it is only part of the story. Pair it with your side, and with the player:
 
 1. **[Spoken Quests](https://www.curseforge.com/wow/addons/spoken-quests)** — the player. Without it no pack plays.
-2. **[Spoken Quests Audio: Shared Quests](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared)** — the quests both factions can take, including everything in the neutral hubs like Booty Bay and Gadgetzan. Without it an Alliance character hears only part of their quests.
+2. **[Spoken Quests Audio: Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance)** or **[(Horde)](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde)** — whichever side your character is on.
 
 ## The packs
 
 | Pack | Holds | |
 | --- | --- | --- |
 | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all) | installs the four below | |
-| **Alliance** | Alliance-only quests | **this pack** |
+| [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) | Alliance-only quests | |
 | [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) | Horde-only quests | |
-| [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) | quests both factions can take | |
+| **Shared** | quests both factions can take | **this pack** |
 | [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) | NPC gossip chatter | |
 
 Gossip — the chatter NPCs give you when you talk to them without a quest — is optional on top.
@@ -34,7 +34,7 @@ If you would rather have one install and not think about it, take **[All](https:
 
 ## Why the pack is split
 
-The whole thing is a large download, and a good part of it is dialogue your character can never reach. A quest belongs to a side when its questgiver does: an NPC hostile to the Horde and friendly to the Alliance hands out Alliance quests. Neutral givers land in the Shared pack, so their quests play for everyone.
+The whole thing is a large download, and a good part of it is dialogue your character can never reach. A quest belongs to a side when its questgiver does — hostile to the Horde means an Alliance quest, and the other way round. A giver who talks to both sides has no faction to sort by, so those quests are here, where both packs can reach them.
 
 ## What this is
 

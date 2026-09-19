@@ -1,5 +1,5 @@
 ---
-project: 1655859
+curseforge: 1655859
 wago: aN0XPlNj
 slug: spoken-quests
 name: Spoken Quests

@@ -1,5 +1,5 @@
 ---
-project: 1636521
+curseforge: 1636521
 wago: mNw7b5No
 slug: spoken-zones
 name: Spoken Zones

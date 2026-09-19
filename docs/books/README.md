@@ -224,7 +224,7 @@ make books-release                 # needs CURSEFORGE_TOKEN
 The version is the `## Version:` line in each `.toc`, and the release notes are the matching
 `## <version>` section of `docs/books/CHANGELOG.md` — a version with no section there fails
 before anything is sent. `scripts/books/release.sh` carries the two ids in
-`target_project()`, and an unknown target fails on the empty id rather than defaulting, for
+`target_curseforge()`, and an unknown target fails on the empty id rather than defaulting, for
 the reason `docs/quests/CLAUDE.md` gives: an id left in that function is an id something
 eventually uploads to, and uploading a books pack over another project is not recoverable
 from this side.
@@ -235,6 +235,11 @@ projects are new, so the first release is the one that can meet that gate late: 
 `spoken-books` is still in moderation the pack's upload is rejected with errorCode 1018, and
 the fix is to send the pack again once the project is approved.
 
-The project pages themselves are `curseforge/books/*.md`; paste
-`dist/descriptions/<slug>.md` after `make descriptions`, then record it with
-`make descriptions-published`.
+The project pages themselves are `publishers/books/*.md`, one body per project for both
+stores; after `make descriptions`, paste `dist/descriptions/<slug>.md` into CurseForge and
+`dist/descriptions-wago/<slug>.md` — the same text with its cross-links pointed at Wago —
+into Wago, then record it with `make descriptions-published`.
+
+`make books-release` sends each zip to both stores. The pack goes to CurseForge alone: at
+452 MB it meets a 413 from Cloudflare before Wago sees it, which `scripts/lib/wago.sh` says
+in as many words.

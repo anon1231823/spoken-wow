@@ -33,7 +33,7 @@
 #
 # It does not create projects or edit descriptions. There is no API for either, and a script
 # that rewrote project pages every release would be one that could quietly undo an edit made
-# in the web UI. curseforge/ holds the descriptions to paste.
+# in the web UI. publishers/ holds the descriptions to paste.
 #
 # Modelled on ../wow-lore/scripts/release.sh, which does the same job for three projects.
 set -euo pipefail
@@ -86,7 +86,7 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 #
 # THE RETIRED PROJECTS ARE DELIBERATELY ABSENT. 1655867, 1658236, 1658237, 1658239 and 1658235
 # carried the second pack format; an id left here is an id something eventually uploads to.
-target_project() { case "$1" in
+target_curseforge() { case "$1" in
   spoken)         echo "${SPOKEN_PROJECT_ID:-1700375}";;
   player)         echo "1655859";;
   audio-all)      echo "1660196";;
@@ -97,7 +97,7 @@ target_project() { case "$1" in
 esac; }
 # The Wago project id for the same project: eight alphanumeric characters, from the project's
 # entry in https://addons.wago.io/developers, and also in each page's frontmatter under
-# curseforge/ where scripts/descriptions.mjs checks it. Case matters -- QN53yXKB is not
+# publishers/ where scripts/descriptions.mjs checks it. Case matters -- QN53yXKB is not
 # qn53yxkb, and a mistyped id is a 404 in the middle of a release.
 target_wago() { case "$1" in
   spoken)         echo "QN53yXKB";;
@@ -164,7 +164,7 @@ target_version() {
 # without the addon that reads it, which is several hundred megabytes of silence otherwise.
 #
 # By slug, which is why the slugs are read off the live projects rather than guessed - see
-# curseforge/README.md. A slug that no longer resolves is a dependency silently not installed.
+# publishers/README.md. A slug that no longer resolves is a dependency silently not installed.
 target_dependencies() { case "$1" in
   player)    echo "spoken-player";;
   audio-all) echo "spoken-quests spoken-quests-audio-alliance spoken-quests-audio-horde \
@@ -316,7 +316,7 @@ upload_target() {
   local project zip_name version zip_path kind changelog size metadata response status file_id
   local dependencies
 
-  project="$(target_project "$target")"
+  project="$(target_curseforge "$target")"
   zip_name="$(target_zip_name "$target")"
   version="$(target_version "$target")"
 
@@ -325,7 +325,7 @@ upload_target() {
 
   if store_has curseforge && [[ -z "$project" ]]; then
     echo "error: no CurseForge project id for '$target' -- create the project and write its" >&2
-    echo "       id into target_project() in this script." >&2
+    echo "       id into target_curseforge() in this script." >&2
     return 1
   fi
   if [[ -z "$version" ]]; then

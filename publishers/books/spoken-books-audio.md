@@ -1,5 +1,5 @@
 ---
-project: 1701520
+curseforge: 1701520
 wago: qGZOrvNd
 slug: spoken-books-audio
 name: Spoken Books Audio

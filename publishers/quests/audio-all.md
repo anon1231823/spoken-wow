@@ -1,5 +1,5 @@
 ---
-project: 1660196
+curseforge: 1660196
 wago: ANzkpD64
 slug: spoken-quests-audio-all
 name: Spoken Quests Audio: All

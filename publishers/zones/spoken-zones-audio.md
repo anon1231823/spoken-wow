@@ -1,5 +1,5 @@
 ---
-project: 1636532
+curseforge: 1636532
 wago: b6mvD9KP
 slug: spoken-zones-audio
 name: Spoken Zones Audio

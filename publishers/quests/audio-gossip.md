@@ -1,5 +1,5 @@
 ---
-project: 1660202
+curseforge: 1660202
 wago: XKqA45Ky
 slug: spoken-quests-audio-gossip
 name: Spoken Quests Audio: Gossip

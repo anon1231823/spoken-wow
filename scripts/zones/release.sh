@@ -59,13 +59,13 @@ RELEASE_TYPE="${RELEASE_TYPE:-release}"
 # by hand before it can be released. Until its id is written down here, releasing
 # it fails on the empty project id below -- which is the failure to want, because
 # the alternative is uploading a German pack over the English project.
-target_project() { case "$1" in
+target_curseforge() { case "$1" in
   zones)    echo "1636521";;
   audio)    echo "1636532";;
 esac; }
 # The Wago project id for the same project: eight alphanumeric characters, from the project's
 # entry in https://addons.wago.io/developers, and also in the page frontmatter under
-# curseforge/zones/ where scripts/descriptions.mjs checks it.
+# publishers/zones/ where scripts/descriptions.mjs checks it.
 target_wago() { case "$1" in
   zones)    echo "mNw7b5No";;
   audio)    echo "b6mvD9KP";;
@@ -223,7 +223,7 @@ changelog_for() {
 
 #-- upload --------------------------------------------------------------------
 for target in "${targets[@]}"; do
-  project="$(target_project "$target")"
+  project="$(target_curseforge "$target")"
   addon="$(target_addon "$target")"
   zip_name="$(target_zip "$target")"
 
@@ -231,7 +231,7 @@ for target in "${targets[@]}"; do
   # otherwise POST to CurseForge's /projects//upload-file and fail somewhere less
   # legible, or worse, land on whatever project the API resolved.
   if store_has curseforge && [[ -z "$project" ]]; then
-    echo "error: no CurseForge project id for '$target' -- create the project and add its id to target_project()" >&2
+    echo "error: no CurseForge project id for '$target' -- create the project and add its id to target_curseforge()" >&2
     exit 1
   fi
 

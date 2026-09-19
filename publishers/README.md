@@ -1,16 +1,17 @@
-# Project pages
+# Publishers
 
-The description of each project, as markdown, one file per project. **Two stores now**:
-every project exists on CurseForge and on Wago Addons under the same slug, and this
-directory is the source for both pages. It keeps the name `curseforge/` because the CurseForge
-ids, the dependency slugs and the numbering are all still CurseForge's; renaming it would
-touch the Makefiles, three release scripts and every path in this file to say nothing new.
+The description of each project, as markdown, one file per project, for every store the
+addons are published on. **Two of them**: CurseForge and Wago Addons, which carry the same
+eleven projects under the same slugs, and this directory is the source for both sets of
+pages. It was `curseforge/` while there was only one store, and the frontmatter still names
+each store's own project id separately -- `curseforge:` and `wago:` -- because the ids are
+the one thing the two do not share.
 
 The frontmatter is everything either submission form asks for besides the body; the body is the
 description. Both editors have a Markdown mode — paste `dist/descriptions/<slug>.md` into
 CurseForge and `dist/descriptions-wago/<slug>.md` into Wago.
 
-`scripts/descriptions.mjs` reads every directory under `curseforge/`, writes the paste-ready
+`scripts/descriptions.mjs` reads every directory under `publishers/`, writes the paste-ready
 bodies into `dist/descriptions/` and, with their cross-links pointed at Wago, into
 `dist/descriptions-wago/`, regenerates any README a page names in `addonReadme`, and
 tracks which pages have been pasted:
@@ -66,7 +67,7 @@ prose, headings, comments, new identifiers - it reads as a name the project stil
 
 **Spoken Player is the project everything else depends on**, and it had to exist *and be
 approved* before any upload could name it: the errorCode 1018 gate below. It was created first
-for that reason and its id is in `target_project()` in `scripts/quests/release.sh`. Every Spoken
+for that reason and its id is in `target_curseforge()` in `scripts/quests/release.sh`. Every Spoken
 addon declares it in `relations`, which is what makes addon managers install it.
 
 `audio-all` is the odd one: that project ships a **meta addon** rather than audio, because the

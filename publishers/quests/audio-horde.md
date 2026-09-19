@@ -1,5 +1,5 @@
 ---
-project: 1660198
+curseforge: 1660198
 wago: vNAg3OKo
 slug: spoken-quests-audio-horde
 name: Spoken Quests Audio: Horde

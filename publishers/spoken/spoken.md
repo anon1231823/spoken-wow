@@ -1,5 +1,5 @@
 ---
-project: 1700375
+curseforge: 1700375
 wago: QN53yXKB
 slug: spoken-player
 name: Spoken Player

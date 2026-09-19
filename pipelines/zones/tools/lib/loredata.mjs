@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 // reach the repo root rather than the pipeline root because what it resolves is now
 // split across the tree -- the lore corpus lives in addons/SpokenZones/Data/, the voice
 // config in pipelines/zones/tools/voice/, the CurseForge descriptions in
-// curseforge/zones/ and the built zips in dist/. One root with full paths beats four
+// publishers/zones/ and the built zips in dist/. One root with full paths beats four
 // roots.
 //
 // The override is what makes the explorer deployable. Next bundles these modules with
