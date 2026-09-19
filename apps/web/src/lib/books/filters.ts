@@ -36,6 +36,8 @@ export type PageFilters = {
   voiceable?: boolean;
   /** 'open' selects pages carrying at least one unresolved report. */
   reports?: Reports;
+  /** One page id, which is how a report on /reports links into this explorer. */
+  line?: string;
 };
 
 export const PAGE_SIZE = 100;
@@ -69,6 +71,7 @@ export function filterParams(filters: PageFilters): URLSearchParams {
   if (filters.state) params.set("state", filters.state);
   if (filters.voiceable) params.set("voiceable", "1");
   if (filters.reports) params.set("fb", filters.reports);
+  if (filters.line) params.set("line", filters.line);
   return params;
 }
 
@@ -90,6 +93,7 @@ export function filtersFromParams(params: URLSearchParams): PageFilters {
     state: oneOf(params.get("state"), STATES),
     voiceable: params.get("voiceable") === "1" || undefined,
     reports: oneOf(params.get("fb"), REPORTS),
+    line: params.get("line") || undefined,
   };
 }
 
@@ -103,5 +107,6 @@ export function activeFilterCount(filters: PageFilters): number {
     filters.state,
     filters.voiceable,
     filters.reports,
+    filters.line,
   ].filter(Boolean).length;
 }

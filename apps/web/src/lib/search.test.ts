@@ -583,3 +583,18 @@ describe("ignored lines", () => {
     ).toBe(true);
   });
 });
+
+describe("search by line id", () => {
+  it("selects exactly the lines carrying that id", () => {
+    const sample = all({ q: "dughan", filter: "npc" })[0].lineId;
+    const found = all({ line: sample });
+    expect(found.length).toBeGreaterThan(0);
+    expect(found.every((l) => l.lineId === sample)).toBe(true);
+  });
+
+  it("matches nothing when no line carries the id", () => {
+    // What a report about a line the corpus has since dropped resolves to. The whole
+    // corpus would be the wrong answer: it reads as "here it is" for something gone.
+    expect(all({ line: "q:0:nonexistent" })).toEqual([]);
+  });
+});

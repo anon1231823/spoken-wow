@@ -58,3 +58,19 @@ export function reportHref(source: Source, target: string): string {
 export function lexiconHref(grapheme: string): string {
   return `/lexicon?${new URLSearchParams({ grapheme })}`;
 }
+
+/**
+ * An explorer, narrowed to one line.
+ *
+ * The triage counterpart of reportHref, and deliberately not it: a report's address sends a
+ * *player* to the page they filed from, while a triager wants the line in the explorer, with
+ * the audio, the text and the controls that can fix it. One param name across all three
+ * sections, because the report table cannot know which filter vocabulary it is addressing.
+ *
+ * A quests lineId is not unique - a gossip id is a hash of the text, so every NPC of that
+ * race and gender saying it shares one - and the filter is honest about that: the link lands
+ * on every line carrying the id, which is the set the report is about.
+ */
+export function explorerHref(source: Source, lineId: string): string {
+  return `/${source}?${new URLSearchParams({ line: lineId })}`;
+}

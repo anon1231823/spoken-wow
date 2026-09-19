@@ -40,7 +40,7 @@ export default async function Page({
         Nothing here starts a job on its own.
       </p>
 
-      <ReportTable initial={reports} view={status} source={source} />
+      <ReportTable initial={reports} view={status} source={source} canRegenerate />
     </main>
   );
 }

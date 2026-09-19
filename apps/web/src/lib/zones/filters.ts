@@ -34,6 +34,8 @@ export type LineFilters = {
   flag?: Flag;
   /** 'open' selects lines carrying at least one unresolved report. */
   reports?: Reports;
+  /** One catalogue id, which is how a report on /reports links into this explorer. */
+  line?: string;
   generatedBefore?: string; // YYYY-MM-DD
   generatedAfter?: string;
   /** Lines cut with a model the generation settings have since moved off. */
@@ -59,6 +61,7 @@ export function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.short) params.set("short", "1");
   if (filters.flag) params.set("flag", filters.flag);
   if (filters.reports) params.set("fb", filters.reports);
+  if (filters.line) params.set("line", filters.line);
   if (filters.generatedBefore) params.set("before", filters.generatedBefore);
   if (filters.generatedAfter) params.set("after", filters.generatedAfter);
   if (filters.modelId) params.set("model", filters.modelId);
@@ -88,6 +91,7 @@ export function filtersFromParams(params: URLSearchParams): LineFilters {
     short: params.get("short") === "1" || undefined,
     flag: oneOf(params.get("flag"), FLAGS),
     reports: oneOf(params.get("fb"), REPORTS),
+    line: params.get("line") || undefined,
     generatedBefore: before && DATE.test(before) ? before : undefined,
     generatedAfter: after && DATE.test(after) ? after : undefined,
     modelId: params.get("model") ?? undefined,
@@ -108,6 +112,7 @@ export function activeFilterCount(filters: LineFilters): number {
     filters.short,
     filters.flag,
     filters.reports,
+    filters.line,
     filters.generatedBefore,
     filters.generatedAfter,
     filters.modelId,

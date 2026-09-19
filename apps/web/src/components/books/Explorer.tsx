@@ -400,6 +400,19 @@ export function Explorer({ books }: { books: BookFacet[] }) {
         onClearAll={() => replaceQuery(new URLSearchParams())}
       />
 
+      {/* A line id has no dropdown to sit in - it arrives by link from /reports - so
+          without this the list would be narrowed with nothing on the page saying so. */}
+      {filters.line && (
+        <div className="text-muted-foreground mt-3 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs">
+          <span>
+            Showing one line: <span className="font-mono">{filters.line}</span>
+          </span>
+          <Button size="sm" variant="ghost" onClick={() => updateFilters({ line: undefined })}>
+            Show everything
+          </Button>
+        </div>
+      )}
+
       <div className="text-muted-foreground mb-2 flex items-center gap-3 text-xs">
         <span>
           {result ? result.total.toLocaleString() : "…"} pages

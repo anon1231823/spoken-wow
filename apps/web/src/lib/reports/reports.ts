@@ -47,6 +47,22 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   other: "Something else",
 };
 
+/**
+ * The same six, as a triage column rather than a sentence.
+ *
+ * The labels above are written for the player filing the report and read as complaints;
+ * in a table they wrap to four lines and push every row apart. Triage is a scan down a
+ * column, so here each one is the two words that tell them apart.
+ */
+export const CATEGORY_COLUMN: Record<Category, string> = {
+  pronunciation: "Pronunciation",
+  wrong_voice: "Wrong voice",
+  audio_quality: "Audio quality",
+  missing: "No audio",
+  wrong_text: "Wrong text",
+  other: "Other",
+};
+
 export const STATUS_LABELS: Record<Status, string> = {
   open: "Open",
   fixed: "Fixed",

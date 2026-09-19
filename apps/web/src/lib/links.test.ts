@@ -9,7 +9,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { lexiconHref, questsHref, reportHref, zonesHref } from "./links";
+import { explorerHref, lexiconHref, questsHref, reportHref, zonesHref } from "./links";
 
 describe("reportHref", () => {
   it("sends a triager to the landing page each section serves", () => {
@@ -61,5 +61,22 @@ describe("zonesHref", () => {
 describe("lexiconHref", () => {
   it("fills the grapheme in", () => {
     expect(lexiconHref("Anduin")).toBe("/lexicon?grapheme=Anduin");
+  });
+});
+
+describe("explorerHref", () => {
+  it("narrows each section's explorer to one line", () => {
+    expect(explorerHref("quests", "q:374:accept")).toBe("/quests?line=q%3A374%3Aaccept");
+    expect(explorerHref("zones", "z:1411")).toBe("/zones?line=z%3A1411");
+    expect(explorerHref("books", "b:261:1")).toBe("/books?line=b%3A261%3A1");
+  });
+
+  it("names the param each explorer reads, so the link is not a bare section", () => {
+    // The three filter vocabularies are three modules; a link that used a name only one
+    // of them reads would render the whole corpus and report no error at all.
+    for (const source of ["quests", "zones", "books"] as const) {
+      const href = explorerHref(source, "x:1");
+      expect(new URLSearchParams(href.slice(href.indexOf("?"))).get("line")).toBe("x:1");
+    }
   });
 });
