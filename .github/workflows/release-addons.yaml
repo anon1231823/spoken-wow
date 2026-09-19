@@ -9,15 +9,21 @@ name: Release addons
 #     spoken/v1.0.0   ->  addons/SpokenPlayer
 #     quests/v2.0.0   ->  addons/SpokenQuests
 #     zones/v1.0.0    ->  addons/SpokenZones
+#     books/v2.0.0    ->  addons/SpokenBooks
 #
 # Unprefixed v*.*.* tags are deliberately not matched: seventeen of them already exist
 # from the AI_VoiceOver_Continued lineage and were imported as legacy/quests/v*.
+#
+# The sound packs are not here and cannot be. Their audio lives outside git, so a runner has
+# nothing to zip; scripts/audio-github-release.sh publishes them from the machine that built
+# them, under <pack>-audio/vX.Y.Z tags this job deliberately does not match.
 on:
   push:
     tags:
       - "spoken/v*.*.*"
       - "quests/v*.*.*"
       - "zones/v*.*.*"
+      - "books/v*.*.*"
 
 jobs:
   build:
@@ -37,6 +43,7 @@ jobs:
             spoken) toc=addons/SpokenPlayer/SpokenPlayer.toc;               script=scripts/spoken/package.sh ;;
             quests) toc=addons/SpokenQuests/SpokenQuests.toc;   script=scripts/quests/package.sh ;;
             zones)  toc=addons/SpokenZones/SpokenZones.toc;     script=scripts/zones/package.sh  ;;
+            books)  toc=addons/SpokenBooks/SpokenBooks.toc;     script=scripts/books/package.sh  ;;
             *)      echo "unknown tag prefix in ${GITHUB_REF_NAME}" >&2; exit 1 ;;
           esac
           {
