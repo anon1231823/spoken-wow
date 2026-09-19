@@ -17,7 +17,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help db extract import export lookup deploy deploy-copy status remove \
-        pull pull-dry sounds db-pull package package-audio release-dry release icon test
+        pull pull-dry sounds db-pull package package-audio release-dry release release-wago release-curse icon test
 
 PIPELINE := pipelines/books
 QUESTS   := pipelines/quests
@@ -171,8 +171,17 @@ test: ## The pipeline's unit tests
 # stale one it found in dist/.
 #-------------------------------------------------------------------------------
 
-release-dry: ## Show what `make books-release` would upload to CurseForge
+release-dry: ## Show what `make books-release` would upload to CurseForge and Wago
 	@./scripts/books/release.sh --dry-run
 
-release: ## Upload the built zips to CurseForge (needs CURSEFORGE_TOKEN)
+release: ## Upload the built zips to CurseForge and Wago (needs both tokens)
 	@./scripts/books/release.sh
+
+# One store at a time, for the case a release half-landed: a zip CurseForge took and Wago
+# refused, or the other way round. Re-running `release` would upload the file twice to the
+# store that already has it, which each of them shows as a duplicate rather than ignoring.
+release-wago: ## Upload the built zips to Wago only (needs WAGO_TOKEN)
+	@./scripts/books/release.sh --store=wago
+
+release-curse: ## Upload the built zips to CurseForge only (needs CURSEFORGE_TOKEN)
+	@./scripts/books/release.sh --store=curseforge

@@ -7,7 +7,7 @@
         push push-dry pull pull-dry audio-status ssh-check pull-manifest \
         db-push db-pull \
         icon lore-import lore-export lore-check lore-rewrite aliases languages locale-check \
-        release release-dry
+        release release-dry release-wago release-curse
 
 # The \# escapes are required: an unescaped # starts a make comment, even
 # inside a $(shell ...) call.
@@ -325,8 +325,17 @@ db-pull: require-droplet ## Copy the droplet's takes, flags and lore into the lo
 package-audio: validate-audio ## Build the sound-pack zip
 	@./scripts/zones/package-audio.sh
 
-release-dry: ## Show what `make release` would upload to CurseForge
+release-dry: ## Show what `make release` would upload to CurseForge and Wago
 	@./scripts/zones/release.sh --dry-run
 
-release: ## Upload the built zips to CurseForge (needs CURSEFORGE_TOKEN)
+release: ## Upload the built zips to CurseForge and Wago (needs both tokens)
 	@./scripts/zones/release.sh
+
+# One store at a time, for the case a release half-landed: a zip CurseForge took and Wago
+# refused, or the other way round. Re-running `release` would upload the file twice to the
+# store that already has it, which each of them shows as a duplicate rather than ignoring.
+release-wago: ## Upload the built zips to Wago only (needs WAGO_TOKEN)
+	@./scripts/zones/release.sh --store=wago
+
+release-curse: ## Upload the built zips to CurseForge only (needs CURSEFORGE_TOKEN)
+	@./scripts/zones/release.sh --store=curseforge
