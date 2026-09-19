@@ -12,7 +12,7 @@ import type { EffectiveLexicon } from "@/lib/generation/dictionary";
 import { PREVIEW_MODES, type PreviewMode } from "@/lib/generation/preview-modes";
 import type { CacheState } from "@/lib/generation/preview";
 import { Toaster, useToast } from "@/components/ui/toast";
-import { questsHref } from "@/lib/links";
+import { booksHref, questsHref, zonesHref } from "@/lib/links";
 import {
   honoursPhonemes,
   kindOf,
@@ -53,13 +53,24 @@ const OK_FILTERS: { value: OkFilter; label: string }[] = [
 ];
 
 /**
- * Where this name is spoken, in the explorer.
+ * Where this name is spoken, in each explorer.
  *
- * `filter=text` is the explorer's "Line text only", which is the question being asked here:
- * not which NPC is called Gnomeregan, but which lines say it. The URL is the explorer's own
- * source of truth for a search, so this is a working deep link rather than a page that
- * arrives blank and has to be retyped into.
+ * A name is said in all three corpora, and a respelling that suits a quest line suits the
+ * zone intro and the book page too - so all three are one click away rather than only the
+ * one this page happened to link to first.
+ *
+ * The text-only scope is the question being asked here: not which NPC is called Gnomeregan,
+ * but which lines say it. It is `filter` in quests and `field` in the other two - three
+ * filter vocabularies, three modules - which is why each link goes through its own helper.
+ * The URL is each explorer's own source of truth for a search, so these are working deep
+ * links rather than pages that arrive blank and have to be retyped into.
  */
+const SECTIONS = [
+  { letter: "Q", what: "quest lines", href: (q: string) => questsHref({ q, filter: "text" }) },
+  { letter: "Z", what: "zone lore", href: (q: string) => zonesHref({ q, field: "text" }) },
+  { letter: "B", what: "book pages", href: (q: string) => booksHref({ q, field: "text" }) },
+] as const;
+
 // Starts as a respelling, not IPA. Anyone who can write IPA can switch in one click, and
 // everyone else would otherwise meet an empty box they have no way to fill.
 const BLANK: LexiconEntry = {
@@ -878,34 +889,43 @@ function Row({
             Split rather than one Button with `disabled`, because `disabled` on a Button
             rendering `asChild` styles an anchor without disabling it: the link would still
             be clickable, and would open the explorer searching for nothing. */}
-        {entry.grapheme.trim() ? (
-          <Button
-            asChild
-            size="icon"
-            variant="ghost"
-            className="text-muted-foreground size-6"
-            title={`Find lines that say ${entry.grapheme}`}
-          >
-            <a
-              href={questsHref({ q: entry.grapheme, filter: "text" })}
-              target="_blank"
-              rel="noreferrer"
-              aria-label={`Find lines that say ${entry.grapheme}`}
-            >
+        {SECTIONS.map(({ letter, what, href }) => {
+          // The letter, not three identical glasses: the three sit side by side, and which
+          // corpus each one searches is the only thing that tells them apart.
+          const glyph = (
+            <>
               <Search className="size-3" aria-hidden />
-            </a>
-          </Button>
-        ) : (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="text-muted-foreground/30 size-6"
-            disabled
-            title="Name this entry first"
-          >
-            <Search className="size-3" aria-hidden />
-          </Button>
-        )}
+              <span className="text-[10px] leading-none font-semibold">{letter}</span>
+            </>
+          );
+          const label = `Find ${what} that say ${entry.grapheme}`;
+
+          return entry.grapheme.trim() ? (
+            <Button
+              key={letter}
+              asChild
+              size="icon"
+              variant="ghost"
+              className="text-muted-foreground h-6 w-auto gap-0.5 px-1"
+              title={label}
+            >
+              <a href={href(entry.grapheme)} target="_blank" rel="noreferrer" aria-label={label}>
+                {glyph}
+              </a>
+            </Button>
+          ) : (
+            <Button
+              key={letter}
+              size="icon"
+              variant="ghost"
+              className="text-muted-foreground/30 h-6 w-auto gap-0.5 px-1"
+              disabled
+              title="Name this entry first"
+            >
+              {glyph}
+            </Button>
+          );
+        })}
 
         {PREVIEW_MODES.map((mode) => {
           // Only the pressed button waits. Disabling the whole table while one render is in
