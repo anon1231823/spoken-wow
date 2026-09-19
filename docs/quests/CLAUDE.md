@@ -92,4 +92,3 @@ Audio store and droplet plumbing are all in `make/quests.mk` (`make quests-help`
 
 **Generation settings have two layers.** `pipelines/quests/voice/generation.json` + `pipelines/quests/voice/pronunciation.json` are what the Python CLI reads and ship inside each release; the database rows edited at `/voices` override them for the web app. The lexicon has no file layer at all — it lives only in Postgres (seeded by `0008`), and the Python CLI sends no pronunciation dictionary, which is the one place the two generators diverge.
 
-`docs/zones/docs/superpowers/` holds the design documents that survived the merge; the quests half's own specs directory is gone.

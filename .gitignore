@@ -22,10 +22,10 @@ __pycache__
 /pipelines/quests/.venv/
 datagrip
 
-# Planning artifacts from the superpowers skills. Ignored on the quests side only:
-# the zones side commits its design specs, and docs/zones/docs/superpowers/specs/
-# is tracked.
-/docs/quests/docs/superpowers/
+# Planning artifacts from the superpowers skills. Specs and plans written to drive a
+# piece of work, kept locally and never committed: what they describe is either in the
+# code by now or was abandoned, and a reader cannot tell which from the document.
+superpowers/
 
 # vmangos dumps, needed only to refresh the corpus
 /pipelines/quests/sql-data
