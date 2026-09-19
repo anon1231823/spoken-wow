@@ -6,6 +6,16 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 2.0.4 — player
+
+- **Quests accepted and turned in by another addon are read again.** Leatrix Plus and the
+  auto-turn-in addons beside it answer `QUEST_DETAIL` by calling `AcceptQuest` in the same
+  frame, so the quest dialog was gone before the 10 Hz watcher could see a quest ID to
+  stabilize and nothing was ever read — the audio only played for a player who clicked
+  through the dialog themselves. The globals are now recorded when the client fires the
+  event, and the watcher reads that record when the dialog closes with nothing dispatched
+  for it.
+
 ## 2.0.3 — player
 
 - **Greetings are remembered at every NPC, not only the ones with quests.** The default was

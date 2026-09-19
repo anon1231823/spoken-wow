@@ -39,6 +39,9 @@ Addon = AceAddon:NewAddon("SpokenQuests", "AceEvent-3.0", "AceTimer-3.0")
 Addon.OnAddonLoad = {}
 local AUTO_POLL_INTERVAL = 0.1
 
+-- Store original function before EQL3 (Extended Quest Log 3) overrides it and starts prepending quest level
+local GetTitleText = GetTitleText
+
 local function IsFrameVisible(frame)
     if not frame then
         return false
@@ -54,6 +57,57 @@ end
 -- player is in a dialog, so classifying by panel alone read every interaction as an offer.
 -- The client still fires the events themselves; only Blizzard's frame stopped listening.
 local lastQuestEvent
+
+-- The quest globals as they stood when the client fired a quest event. An addon that
+-- accepts or turns in the quest from its own handler - Leatrix Plus, and the auto-turn-in
+-- addons beside it - closes the dialog in the same frame the event arrived in, so GetQuestID
+-- is back to 0 by the time the 10 Hz watcher first polls and the interaction would never be
+-- read at all. The watcher still owns dispatch: it replays this record only once the dialog
+-- has closed with nothing dispatched for it.
+local questSnapshot
+
+-- Set while a handler is being replayed from a snapshot, so it reads that instead of globals
+-- the client has already cleared.
+local questSnapshotInUse
+
+local questSnapshotText = {
+    QUEST_DETAIL = function() return GetQuestText and GetQuestText() or "" end,
+    QUEST_PROGRESS = function() return GetProgressText and GetProgressText() or "" end,
+    QUEST_COMPLETE = function() return GetRewardText and GetRewardText() or "" end,
+}
+
+local function CaptureQuestSnapshot(event)
+    local readText = questSnapshotText[event]
+    if not readText then
+        return
+    end
+    local questID = GetQuestID and GetQuestID() or 0
+    local questTitle = GetTitleText and GetTitleText() or ""
+    -- Nothing to replay, and nothing to identify a quest by either.
+    if (not questID or questID == 0) and questTitle == "" then
+        return
+    end
+    questSnapshot = {
+        event = event,
+        questID = questID,
+        title = questTitle,
+        text = readText(),
+        guid = Utils:GetNPCGUID(),
+        targetName = Utils:GetNPCName(),
+        isObjectOrItem = Utils:IsNPCObjectOrItem(),
+    }
+end
+
+-- Where a quest handler's fields come from: the live globals, or the snapshot being replayed.
+local function ReadQuestFields(readText)
+    local snapshot = questSnapshotInUse
+    if snapshot then
+        return snapshot.questID, snapshot.title, snapshot.text, snapshot.guid, snapshot.targetName,
+            snapshot.isObjectOrItem
+    end
+    return GetQuestID(), GetTitleText(), readText(), Utils:GetNPCGUID(), Utils:GetNPCName(),
+        Utils:IsNPCObjectOrItem()
+end
 
 local function GetVisibleQuestEvent()
     -- Completion and progress take priority over detail. IsVisible accounts
@@ -382,6 +436,24 @@ function Addon:OnInitialize()
             error(questID)
         end
         if not questID or questID == 0 then
+            -- The dialog is gone. If it closed with nothing dispatched for it, the event
+            -- snapshot is the whole record of the interaction, so read that before the
+            -- candidate state is cleared.
+            local snapshot = questSnapshot
+            questSnapshot = nil
+            if snapshot and not snapshot.dispatched then
+                local key = format("%s:%s:%s", snapshot.event, tostring(snapshot.questID), snapshot.title or "")
+                if key ~= state.lastHandledKey or GetTime() - state.lastHandledAt >= 5 then
+                    state.lastHandledKey = key
+                    state.lastHandledAt = GetTime()
+                    Debug:Record("auto-watcher-snapshot", format(
+                        "Reading %s quest %s from its event snapshot: the dialog closed before it could stabilize",
+                        snapshot.event, tostring(snapshot.questID)))
+                    questSnapshotInUse = snapshot
+                    self:InvokeQuestHandler(snapshot.event, "closed dialog event snapshot")
+                    questSnapshotInUse = nil
+                end
+            end
             state.candidateKey = nil
             state.candidateAge = 0
             state.retryDelay = 0
@@ -430,6 +502,9 @@ function Addon:OnInitialize()
                 state.completedKey = key
                 state.lastHandledKey = key
                 state.lastHandledAt = GetTime()
+                if questSnapshot then
+                    questSnapshot.dispatched = true
+                end
                 return
             end
         end
@@ -447,6 +522,9 @@ function Addon:OnInitialize()
                 state.completedKey = key
                 state.lastHandledKey = key
                 state.lastHandledAt = GetTime()
+                if questSnapshot then
+                    questSnapshot.dispatched = true
+                end
             end
         end
     end
@@ -522,6 +600,9 @@ function Addon:OnInitialize()
             lastQuestEvent = nil
         else
             lastQuestEvent = event
+            -- Through pcall because a snapshot is a fallback, and a client that refuses one
+            -- of these globals must not stop the event from being recorded.
+            pcall(CaptureQuestSnapshot, event)
         end
     end)
 
@@ -749,8 +830,6 @@ local function QuestSoundDataAdded(soundData)
     currentQuestSoundData = soundData
 end
 
-local GetTitleText = GetTitleText -- Store original function before EQL3 (Extended Quest Log 3) overrides it and starts prepending quest level
-
 local function ResolveQuestID(source, questID, questTitle, targetName, questText)
     if questID and questID ~= 0 then
         return questID
@@ -771,11 +850,7 @@ local function ResolveQuestID(source, questID, questTitle, targetName, questText
 end
 
 function Addon:QUEST_DETAIL()
-    local questID = GetQuestID()
-    local questTitle = GetTitleText()
-    local questText = GetQuestText()
-    local guid = Utils:GetNPCGUID()
-    local targetName = Utils:GetNPCName()
+    local questID, questTitle, questText, guid, targetName, isObjectOrItem = ReadQuestFields(GetQuestText)
 
     Debug:Record("quest-detail", format("QUEST_DETAIL: raw ID %s, title %q, NPC %q",
         tostring(questID or "nil"), questTitle or "", targetName or ""))
@@ -808,18 +883,14 @@ function Addon:QUEST_DETAIL()
         title = questTitle,
         text = questText,
         unitGUID = guid,
-        unitIsObjectOrItem = Utils:IsNPCObjectOrItem(),
+        unitIsObjectOrItem = isObjectOrItem,
         addedCallback = QuestSoundDataAdded,
     }
     Player:Enqueue(soundData)
 end
 
 function Addon:QUEST_PROGRESS()
-    local questID = GetQuestID()
-    local questTitle = GetTitleText()
-    local questText = GetProgressText()
-    local guid = Utils:GetNPCGUID()
-    local targetName = Utils:GetNPCName()
+    local questID, questTitle, questText, guid, targetName, isObjectOrItem = ReadQuestFields(GetProgressText)
 
     Debug:Record("quest-progress", format("QUEST_PROGRESS: raw ID %s, title %q, NPC %q",
         tostring(questID or "nil"), questTitle or "", targetName or ""))
@@ -840,18 +911,14 @@ function Addon:QUEST_PROGRESS()
         title = questTitle,
         text = questText,
         unitGUID = guid,
-        unitIsObjectOrItem = Utils:IsNPCObjectOrItem(),
+        unitIsObjectOrItem = isObjectOrItem,
         addedCallback = QuestSoundDataAdded,
     }
     Player:Enqueue(soundData)
 end
 
 function Addon:QUEST_COMPLETE()
-    local questID = GetQuestID()
-    local questTitle = GetTitleText()
-    local questText = GetRewardText()
-    local guid = Utils:GetNPCGUID()
-    local targetName = Utils:GetNPCName()
+    local questID, questTitle, questText, guid, targetName, isObjectOrItem = ReadQuestFields(GetRewardText)
 
     Debug:Record("quest-complete", format("QUEST_COMPLETE: raw ID %s, title %q, NPC %q",
         tostring(questID or "nil"), questTitle or "", targetName or ""))
@@ -873,7 +940,7 @@ function Addon:QUEST_COMPLETE()
         title = questTitle,
         text = questText,
         unitGUID = guid,
-        unitIsObjectOrItem = Utils:IsNPCObjectOrItem(),
+        unitIsObjectOrItem = isObjectOrItem,
         addedCallback = QuestSoundDataAdded,
     }
     Player:Enqueue(soundData)

@@ -876,6 +876,16 @@ offer, so turning a quest in replayed its accept line and the completion line ne
 all. Panels still classify an interaction when they are visible; when none is, the last quest
 event the client fired decides, and `QUEST_FINISHED` clears it.
 
+The second class is the opposite problem: an addon that answers the quest event itself. Leatrix
+Plus calls `AcceptQuest` from its own `QUEST_DETAIL` handler, and the auto-turn-in addons do
+the same with `CompleteQuest` and `GetQuestReward`, so the dialog is over in the frame it
+opened in — `GetQuestID` is back to 0 before the watcher's first poll, and the interaction was
+never read at all. The quest globals are therefore snapshotted when the client fires the event,
+which is the last moment they still describe it, and the watcher replays that snapshot when the
+quest ID drops to 0 with nothing dispatched for the dialog. It is a fallback, not a second
+dispatcher: a dialog the player clicks through is dispatched by the watcher as before and its
+snapshot is discarded.
+
 The web suite runs against a **real Postgres**, because the invariants it protects — archive
 the current take before anything overwrites it, never hand the same file to two jobs — live in
 schema constraints rather than in code. It reads `DATABASE_URL` from the environment or from
