@@ -138,9 +138,10 @@ jobs:
           # dereferencing copy detaches it from its siblings, so the bundle dies at boot
           # with "Cannot find module 'styled-jsx/package.json'". BSD cp -r dereferences.
           cp -a apps/web/.next/standalone/. "$R"/
-          # standalone does not include static assets or public/; without this the page
-          # renders unstyled. (This project has no public/.)
+          # standalone includes neither .next/static nor public/. Without the first the
+          # page renders unstyled; without the second the landing page's addon icons 404.
           cp -a apps/web/.next/static "$R"/apps/web/.next/static
+          cp -a apps/web/public "$R"/apps/web/public
 
           # The quests corpus ships inside the release so a rollback moves data and code
           # together. hiccups.json.gz rides along because it is derived from exactly this
@@ -169,6 +170,7 @@ jobs:
           cp -a apps/web/migrations "$R"/migrations
 
           test -f "$R"/apps/web/server.js
+          test -f "$R"/apps/web/public/icons/zones.svg   # public/ survived the copy
           test -L "$R"/apps/web/node_modules/next   # symlink survived the copy
           test -f "$R"/migrations/0001_auth.sql
           test -f "$R"/migrations/0020_take.sql
@@ -265,6 +267,10 @@ jobs:
           # The stylesheet must resolve, or .next/static did not make it into the release.
           css=$(curl -fsS http://127.0.0.1:3999/quests | grep -o '_next/static/css/[^"]*' | head -1)
           curl -fsS -o /dev/null "http://127.0.0.1:3999/$css"
+          # And an icon, for the same reason one directory over: public/ is copied by hand
+          # and a missing one is three broken images on the front page, which nothing else
+          # here would notice.
+          curl -fsS -o /dev/null http://127.0.0.1:3999/icons/zones.svg
           echo "bundle boots and serves"
 
       - name: Set release name
