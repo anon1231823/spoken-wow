@@ -3,17 +3,21 @@
 Voiced dialogue, lore and text for World of Warcraft Classic. One platform,
 several addons.
 
-| Addon | Voices |
-|---|---|
-| **Spoken** | nothing — it *is* the player: the queue, the frame, the minimap button |
-| **SpokenQuests** | quest dialogue and NPC gossip |
-| **SpokenZones** | zone and subzone lore |
-| **SpokenBooks** | books, letters and other in-world texts |
+| Addon | Voices | Audio packs |
+|---|---|---|
+| **[Spoken](https://www.curseforge.com/wow/addons/spoken-player)** | nothing — it *is* the player: the queue, the frame, the minimap button | — |
+| **[SpokenQuests](https://www.curseforge.com/wow/addons/spoken-quests)** | quest dialogue and NPC gossip | [All](https://www.curseforge.com/wow/addons/spoken-quests-audio-all), or [Alliance](https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance) · [Horde](https://www.curseforge.com/wow/addons/spoken-quests-audio-horde) · [Shared](https://www.curseforge.com/wow/addons/spoken-quests-audio-shared) · [Gossip](https://www.curseforge.com/wow/addons/spoken-quests-audio-gossip) |
+| **[SpokenZones](https://www.curseforge.com/wow/addons/spoken-zones)** | zone and subzone lore | [Spoken Zones Audio](https://www.curseforge.com/wow/addons/spoken-zones-audio) |
+| **[SpokenBooks](https://www.curseforge.com/wow/addons/spoken-books)** | books, letters and other in-world texts | [Spoken Books Audio](https://www.curseforge.com/wow/addons/spoken-books-audio) |
+
+A feature addon speaks; its audio pack holds the lines. Neither does anything alone,
+so install both.
 
 Every feature addon plays through `SpokenPlayer`, so a player who installs two of
 them gets one queue and one window rather than two of each. Addon managers
 install it automatically; the legacy-client zips bundle it, because those
-clients have no manager to do it for them.
+clients have no manager to do it for them. The 1.12, 2.4.3 and 3.3.5 clients have
+no CurseForge either, and take their zips from [Releases](../../releases).
 
 ## Layout
 
