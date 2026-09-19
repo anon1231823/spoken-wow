@@ -20,11 +20,11 @@
  *
  * WHAT IS DELIBERATELY NOT HERE, and was on the zones site:
  *
- *   loadConfig / saveConfig / draftConfig / resolveVoiceId / resolveDictionary
+ *   loadConfig / saveConfig / draftConfig / resolveVoiceId
  *     The narrator's voice, model and settings came from tools/voice/config.json. They come
  *     from the database now, shared with the quests side: the roster on /voices, the model
  *     and voice settings from generation_setting, the dictionary from pronunciation_lexicon.
- *     config.json becomes an export for the CLI rather than the app's source of truth.
+ *     config.json is down to a fallback credit rate for the reporting CLI.
  *
  *   verifyKey / fetchTier / listVoices / apiKey
  *     The account is read through lib/voices/elevenlabs.ts, which both sections share, and a

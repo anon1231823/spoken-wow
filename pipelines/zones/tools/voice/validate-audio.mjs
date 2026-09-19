@@ -14,12 +14,12 @@ import { readdir } from "node:fs/promises";
 
 import { loadEnvFile } from "../lib/env.mjs";
 import { ROOT, readLines } from "../lib/loredata.mjs";
-import { apiKey, downloadDictionary, loadConfig, resolveDictionary } from "./elevenlabs.mjs";
+import { apiKey, downloadDictionary } from "./elevenlabs.mjs";
 import { parseDictionary, uncoveredSpellings } from "./lexicon.mjs";
 import { assignFiles, lineId } from "./naming.mjs";
 import { hasBrackets, loadPronunciation, toSpokenText } from "./normalise.mjs";
 import { localeInfo, sourceFolder } from "../lib/locales.mjs";
-import { LANG, loadManifest, soundsDir } from "./store.mjs";
+import { currentDictionary, LANG, loadManifest, soundsDir } from "./store.mjs";
 
 // The lookup of the language being validated, not English's: a LOCALE=deDE
 // packaging run that checked the German manifest against the English lookup
@@ -62,17 +62,27 @@ async function checkDictionary(spokenTexts) {
     note(`${LANG} is not Latin-script; the dictionary coverage check is Latin-only and was skipped`);
     return;
   }
-  const config = await loadConfig(LANG).catch(() => null);
-  if (!config?.dictionaryId) {
-    note(`no pronunciation dictionary is named for ${LANG}; coverage unchecked`);
+  // The lexicon row, not a file: the dictionary this checks is the one the site
+  // generates against, and a second copy of that locator is a second thing to keep
+  // in step. Absent means no database or a lexicon never synced, both of which are
+  // legitimate and neither of which is a packaging failure.
+  const locator = await currentDictionary();
+  if (!locator) {
+    note(`no synced pronunciation dictionary to check ${LANG} against; coverage unchecked`);
     return;
   }
 
   let pls;
   try {
-    const key = await apiKey();
-    await resolveDictionary(config, key);
-    pls = await downloadDictionary(config, key);
+    // The rules have to come from ElevenLabs rather than from the lexicon row beside
+    // the locator. A phoneme rule is case-sensitive, so toRules() expands one entry
+    // into a rule per spelling the corpus contains -- the uploaded dictionary holds
+    // spellings the stored entries do not, and deriving the set from entries alone
+    // would report coverage gaps that are not there.
+    pls = await downloadDictionary(
+      { dictionaryId: locator.dictionaryId, dictionaryVersionId: locator.versionId },
+      await apiKey(),
+    );
   } catch (err) {
     note(`pronunciation dictionary not checked: ${err.message.slice(0, 120)}`);
     return;

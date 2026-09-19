@@ -35,8 +35,6 @@ const OVERRIDE_KEYS = [
   "voiceId",
   "modelId",
   "languageCode",
-  "dictionaryId",
-  "dictionaryVersionId",
   "voiceSettings",
 ];
 
@@ -84,11 +82,6 @@ export async function draftConfig(lang = BASE_LOCALE) {
     voiceName: "",
     voiceId: undefined,
     languageCode: elevenLabsCode(lang) ?? undefined,
-    // English's phoneme dictionary is English: applied to another language it
-    // rewrites words that happen to be spelled the same. A language gets its own
-    // on the pronunciation page.
-    dictionaryId: null,
-    dictionaryVersionId: undefined,
   };
   // A shallow merge, and voiceSettings is replaced rather than merged: half the
   // English settings under a different voice is not a configuration anyone chose.
@@ -202,42 +195,6 @@ export function buildPayload(spokenText, config) {
 // Pronunciation dictionary
 //------------------------------------------------------------------------------
 
-// Resolves the dictionary id to its CURRENT latest version, in memory, for this
-// run. Deliberately not written back to config.json: the lexicon lives in
-// ../wow-voiceover and this project always wants its newest version, so a pin
-// would only go stale. Within one run the version stays fixed -- resolved once,
-// used for every request -- and each take records the version it was made with,
-// which is what keeps drift knowable per line after the fact.
-export async function resolveDictionary(config, key) {
-  if (!config.dictionaryId || config.dictionaryVersionId) return;
-
-  const response = await fetch(
-    `https://api.elevenlabs.io/v1/pronunciation-dictionaries/${config.dictionaryId}`,
-    { headers: { "xi-api-key": key } },
-  );
-  if (!response.ok) {
-    throw new Error(
-      `could not read pronunciation dictionary ${config.dictionaryId} ` +
-        `(${response.status}): ${(await response.text()).slice(0, 200)}`,
-    );
-  }
-
-  const body = await response.json();
-  const version = body.latest_version_id ?? body.version_id;
-  if (!version) {
-    throw new Error(
-      `pronunciation dictionary ${config.dictionaryId} returned no version id; ` +
-        `fields were: ${Object.keys(body).join(", ")}`,
-    );
-  }
-
-  config.dictionaryVersionId = version;
-}
-
-// The resolved dictionary as ElevenLabs stores it: a PLS document, one lexeme per
-// rule. This is the only way to see what the shared lexicon actually contains --
-// it is edited in ../wow-voiceover, and nothing about it lives in this repo
-// beyond the id.
 export async function downloadDictionary(config, key) {
   const response = await fetch(
     "https://api.elevenlabs.io/v1/pronunciation-dictionaries/" +

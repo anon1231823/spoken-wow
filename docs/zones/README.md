@@ -999,6 +999,13 @@ mispronounces a word, and that claim can only be made after listening.
 > Both projects are one site now. The lexicon did not move: it is edited at
 > spoken.rusty.one/lexicon, which is the same editor under a shared roof, and the paragraph
 > below still describes why zone lore does not have one of its own.
+>
+> Two details below have since changed. **The id no longer crosses between projects as a
+> config key**: `dictionaryId` is gone from `config.json`, and both the drift selector and
+> `validate-audio.mjs` read the locator from the `pronunciation_lexicon` row, which is what
+> the site generates against. And **the version is no longer resolved per run** — the row
+> carries the version last synced to ElevenLabs, so the comparison is against what a line
+> would actually be cut with today rather than against whatever is newest at the API.
 
 #### As it was written
 
