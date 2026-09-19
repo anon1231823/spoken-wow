@@ -7,13 +7,12 @@ Repo-wide conventions. Each project also has its own, and they still apply:
 
 Four things share one tree, and they are not equally finished:
 
-1. `addons/` — the shipped Lua. `SpokenPlayer` is the player; `SpokenQuests` and
-   `SpokenZones` are feature addons that queue clips through it;
-   `SpokenZonesAudio` is a sound pack. `addons/vendor/` holds upstream's
-   addons as a diff baseline and nothing builds them.
-2. `apps/` — `web` is the site being built: one domain, `spoken.rusty.one`, with a
-   quests section, a zones section and a books section. `web-zones` is the site it is absorbing, and
-   stays until the cutover so its code can be read beside the port of it.
+1. `addons/` — the shipped Lua. `SpokenPlayer` is the player; `SpokenQuests`,
+   `SpokenZones` and `SpokenBooks` are feature addons that queue clips through
+   it; `SpokenZonesAudio` and `SpokenBooksAudio` are sound packs.
+2. `apps/` — `web` is the site: one domain, `spoken.rusty.one`, with a quests
+   section, a zones section and a books section. It is the merge of two sites
+   that came before it; their names are redirect vhosts now.
 3. `pipelines/` — `quests/` is Python, `zones/` and `books/` are Node. Also
    scheduled to merge, onto TypeScript. The zones half is not merely a CLI any
    more: the site imports it (`apps/web/src/lib/zones/tools.ts`) and webpack
@@ -21,18 +20,17 @@ Four things share one tree, and they are not equally finished:
    books half is the same arrangement, reading page text out of the vmangos
    world DB that `quests/` already provisions — see `docs/books/`.
 4. `packages/` — where the shared TypeScript will live. Empty for now.
-5. `deploy/` — one directory per deployment. `web/` is the live one; `quests/`
-   and `zones/` describe the two frozen sites and are kept matching them.
+5. `deploy/` — `web/` is the deployment: the /srv tree, the nginx vhosts, the
+   release scripts and the runbook.
 
 ## Rules that are load-bearing
 
-**The two live sites are frozen.** voiceover.rusty.one and lore.rusty.one keep
-serving the releases they have, and neither deploy workflow runs from `main` any
-more — both are dispatch-only and refuse a ref where the merge has landed. Nothing
-on this branch reaches a live site until spoken.rusty.one is stood up beside them
-and the DNS is pointed at it. That means `deploy/quests/` and `deploy/zones/`
-describe what is *running*, not what the code says: leave them matching the
-droplet. A hotfix to either site is a dispatch against the `legacy-freeze` tag.
+**The droplet is never named in the tree.** The host, the deploy user and the key
+come from the environment (`make/droplet.mk`) locally, and from repository secrets
+— `DO_HOST`, `DO_USER`, `DO_SSH_KEY`, `DO_KNOWN_HOSTS` — in CI. A hostname added
+back to a Makefile, an nginx comment or a runbook is a regression, not a
+convenience. The two pre-merge deployments are gone; `legacy-freeze` is the tag
+that still has them.
 
 **Filenames and line ids are frozen.** `q:33:accept`, `g:{md5}`, `z:{mapID}`,
 `s:{mapID}:{key}`, `b:{pageTextID}` and their paths on disk do not change. Renaming one means

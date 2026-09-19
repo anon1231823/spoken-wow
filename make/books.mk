@@ -48,9 +48,7 @@ lookup: ## take -> addons/SpokenBooksAudio/Data/Sounds.lua (needs DATABASE_URL)
 # listened to in a client. Audio is not in git; see the root .gitignore.
 #-------------------------------------------------------------------------------
 
-DROPLET     ?= deploy@188.166.37.175
-DEPLOY_KEY  ?= ~/.ssh/id_rusty.one
-SSH         := ssh -i $(DEPLOY_KEY) -o IdentitiesOnly=yes
+include make/droplet.mk
 REMOTE_BOOKS := /srv/spoken/shared/books/
 LOCAL_BOOKS  := pipelines/books/audio/
 
@@ -72,7 +70,7 @@ LOCAL_DB ?= postgres://localhost/spoken_quests_dev
 # an older psql fails on. Both clusters are ours, so strip them. Same as make/zones.mk.
 UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
 
-db-pull: ## Copy the droplet's books takes into the local database (REPLACES them)
+db-pull: require-droplet ## Copy the droplet's books takes into the local database (REPLACES them)
 	@printf 'Replace the LOCAL books takes with the droplet ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@( echo 'begin;'; \
 	   echo 'delete from "take" where "source" = '"'"'books'"'"';'; \
@@ -93,10 +91,10 @@ db-pull: ## Copy the droplet's books takes into the local database (REPLACES the
 # to survive make's expansion and two levels of shell. Written with real quotes it silently
 # matched nothing, which looks exactly like a droplet with no takes on it.
 
-pull-dry: ## Preview what `make books-pull` would fetch
+pull-dry: require-droplet ## Preview what `make books-pull` would fetch
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run -e "$(SSH)" $(DROPLET):$(REMOTE_BOOKS) $(LOCAL_BOOKS)
 
-pull: ## Fetch the narration from the droplet into pipelines/books/audio
+pull: require-droplet ## Fetch the narration from the droplet into pipelines/books/audio
 	@mkdir -p $(LOCAL_BOOKS)
 	@$(RSYNC) $(RSYNC_OPTS) -e "$(SSH)" $(DROPLET):$(REMOTE_BOOKS) $(LOCAL_BOOKS)
 	@echo "==> pulled. Put it where the addon reads it with:  make books-sounds"

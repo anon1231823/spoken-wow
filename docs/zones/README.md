@@ -1294,8 +1294,9 @@ breaks.
 
 ### Moving the audio between machines
 
-1353 mp3s, ~795MB, gitignored and never in CI. `DROPLET` defaults to
-`deploy@rusty.one`; override it for anywhere else.
+1353 mp3s, ~795MB, gitignored and never in CI. The droplet is named by the environment
+and not by the repo — `export SPOKEN_DROPLET=deploy@<host>`, or pass
+`DROPLET=deploy@<host>` for one invocation. See `make/droplet.mk`.
 
 ```sh
 make zones-audio-status     # local and droplet, side by side

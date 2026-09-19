@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - **Ids are frozen from the first release.** Line id is `b:{pageTextID}`. Audio file is `{pageTextID}`, extension-less, store-relative to the books audio root (`shared/books/` in deployment) — the spec's `books/{pageTextID}` names the path from the shared audio root. Nothing else may derive either.
-- **No droplet.** No `make web-deploy`, no `ssh`, no `rsync` to `188.166.37.175`. The two live sites stay frozen per `AGENTS.md`.
+- **No droplet.** No `make web-deploy`, no `ssh`, no `rsync` to `<the droplet>`. The two live sites stay frozen per `AGENTS.md`.
 - **Migrations are additive and forward-only**, per `deploy/quests/bin/migrate.sh`. Never edit a committed migration.
 - **The table is the authority; generated Lua is an export of it.** No site code reads addon files.
 - **`enUS` only**, but every query names its language, as `lore_line` requires.
