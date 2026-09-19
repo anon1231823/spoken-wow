@@ -87,6 +87,9 @@ jobs:
               "github_zip_download_243": f"{download}/SpokenQuests-WoW_2.4.3-{version}.zip",
               "github_zip_download_335": f"{download}/SpokenQuests-WoW_3.3.5-{version}.zip",
               "curse_link_blizz": "https://www.curseforge.com/wow/addons/spoken-quests",
+              # Wago carries the addons but not the packs: each pack is 300-450 MB and that
+              # upload endpoint answers 413, so only the player has a second store link.
+              "wago_link_blizz": "https://addons.wago.io/addons/spoken-quests",
               "curse_link_pack_alliance": "https://www.curseforge.com/wow/addons/spoken-quests-audio-alliance",
               "curse_link_pack_horde": "https://www.curseforge.com/wow/addons/spoken-quests-audio-horde",
               "curse_link_pack_shared": "https://www.curseforge.com/wow/addons/spoken-quests-audio-shared",
