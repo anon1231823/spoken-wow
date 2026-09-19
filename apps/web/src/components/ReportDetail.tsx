@@ -13,10 +13,12 @@
  */
 import { useState } from "react";
 
+import OverrideDialog from "@/components/OverrideDialog";
 import { Button } from "@/components/ui/button";
 import { detailOf, regeneratePath, type SourceLine } from "@/lib/reports/detail";
 import type { Source } from "@/lib/reports/reports";
 import { noApiKeyMessage } from "@/lib/no-api-key";
+import type { ResultLine as QuestLine } from "@/lib/search";
 
 type Props = {
   source: Source;
@@ -27,6 +29,8 @@ type Props = {
   canRegenerate: boolean;
   /** Hands the new take's version up, so the player busts its cache. */
   onRegenerated: (version: number) => void;
+  /** Hands a rewrite up, so the panel and the row read the text that will be spoken next. */
+  onOverridden: (text: string | null) => void;
 };
 
 export default function ReportDetail({
@@ -35,8 +39,10 @@ export default function ReportDetail({
   line,
   canRegenerate,
   onRegenerated,
+  onOverridden,
 }: Props) {
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,11 +115,32 @@ export default function ReportDetail({
           <Button size="sm" variant="outline" disabled={busy} onClick={() => void regenerate()}>
             {busy ? "Regenerating…" : "Regenerate"}
           </Button>
+          {/* Quests only: the override endpoint is theirs, and zones and books have no text a
+              triager may edit - their lines are the corpus itself. */}
+          {source === "quests" ? (
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => setEditing(true)}>
+              Rewrite
+            </Button>
+          ) : null}
           {done && !busy ? (
             <span className="text-muted-foreground text-xs">New take saved. Play it above.</span>
           ) : null}
           {error ? <span className="text-destructive text-xs">{error}</span> : null}
         </div>
+      ) : null}
+
+      {/* "Wrong words" and "wrong voice" are the two complaints this panel answers, so the
+          fix for the first is a press away from the fix for the second: rewrite, then
+          regenerate, without leaving the triage list. */}
+      {editing && source === "quests" ? (
+        <OverrideDialog
+          line={line as QuestLine}
+          onSaved={(_file, text) => {
+            setEditing(false);
+            onOverridden(text);
+          }}
+          onCancel={() => setEditing(false)}
+        />
       ) : null}
     </div>
   );
