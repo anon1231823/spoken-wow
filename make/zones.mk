@@ -3,9 +3,9 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy \
-        status remove clean voice voice-zones lookup sample db-up db-down migrate import export \
-        web push push-dry pull pull-dry audio-status ssh-check pull-manifest \
-        db-push db-pull bootstrap deploy-scripts releases rollback logs \
+        status remove clean voice voice-zones lookup sample import export \
+        push push-dry pull pull-dry audio-status ssh-check pull-manifest \
+        db-push db-pull \
         icon lore-import lore-export lore-check lore-sheet lore-upload lore-upload-dry lore-rewrite aliases languages locale-check \
         release release-dry
 
@@ -98,21 +98,12 @@ validate-audio: ## Check manifest, files on disk and lookup table agree (DATABAS
 	@$(VOICE_LANG) $(VOICE_DB) node pipelines/zones/tools/voice/validate-audio.mjs
 
 #-------------------------------------------------------------------------------
-# The explorer's database
+# The site's database
 #
 # Optional to the addon build: with DATABASE_URL unset every target above still
-# works against pipelines/zones/tools/voice/manifest.json. See README "The voiceline explorer".
+# works against pipelines/zones/tools/voice/manifest.json. The schema and its migrations
+# belong to apps/web now; see make/web.mk and deploy/web/README.md.
 #-------------------------------------------------------------------------------
-
-db-up: ## Start Postgres for the explorer (port 5433)
-	@docker compose up -d
-	@./scripts/zones/migrate.sh
-
-db-down: ## Stop it, keeping the data
-	@docker compose stop
-
-migrate: ## Apply any pending migrations
-	@./scripts/zones/migrate.sh
 
 import: ## Seed the database from pipelines/zones/tools/voice/manifest[.<locale>].json (idempotent; LOCALE=deDE)
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/import-manifest.mjs
@@ -187,46 +178,25 @@ locale-check: ## Report per-language string coverage, and check Languages.lua is
 	@node pipelines/zones/tools/locale/check-strings.mjs
 	@node pipelines/zones/tools/locale/build-languages.mjs --check
 
-web: ## Run the voiceline explorer at localhost:3000
-	@cd web && pnpm dev
-
 #-------------------------------------------------------------------------------
 # The droplet
 #
-# The explorer runs at https://lore.rusty.one, deployed by GitHub Actions on every
-# push to master. Everything here is the half CI does not do: the audio store, the
-# database contents, and installing the scripts CI calls. See deploy/zones/README.md.
+# The site is deployed by GitHub Actions on every push to main. Everything here is the
+# half CI does not do: the audio store and the database contents. See deploy/web/README.md.
 #
-#   make bootstrap         once, as root: user, /srv tree, database
-#   make deploy-scripts    after that, and after editing deploy/zones/bin/*
 #   make push              ~700MB of mp3s, the first time and after a local bulk run
 #   make db-push           seed the droplet's database from the local one
-#   make releases          what is deployed
-#   make rollback          undo a bad deploy
+#
+# Droplet setup, releases and rollback are make/web.mk's: one /srv/spoken tree, one
+# deploy, one place holding the guards.
 #-------------------------------------------------------------------------------
 
-# Connect as deploy, never root: pm2 daemons are per-user, so a reload over an ssh
-# session as root talks to root's empty daemon and silently does nothing. The hostname
-# resolves to the droplet today; override with the IP if it is ever pointed at a CDN,
-# which would not proxy SSH:  make push DROPLET=deploy@188.166.37.175
-DROPLET     ?= deploy@rusty.one
+include make/droplet.mk
 
-# /srv/spoken, not /srv/zonelore. The cutover has run: the sounds and the take history live
-# under /srv/spoken/shared (symlinks into the block volume at /mnt/voice/spoken) and the
-# `spoken` pm2 app serves them, while `zonelore` is stopped. The old tree still holds a
-# complete copy, so rsync against it succeeds and reports nothing wrong -- which is exactly
-# why this is worth stating. deploy/zones/ still describes the frozen tree on purpose.
-REMOTE_ROOT ?= /srv/spoken
+# /srv/spoken, not /srv/zonelore. The cutover has run: the sounds and the take history
+# live under /srv/spoken/shared (symlinks into the block volume at /mnt/voice/spoken) and
+# the `spoken` pm2 app serves them. REMOTE_ROOT is set in make/droplet.mk.
 
-# The same key ../wow-voiceover uses for the same droplet, and the same reason for
-# -o IdentitiesOnly=yes: ~/.ssh/config here has a `Host *` block naming IdentityFile,
-# which REPLACES the default identity list rather than adding to it. A bare `ssh` then
-# offers only those keys, the deploy user authorises this one, and the failure is a flat
-# "Permission denied (publickey)" that names neither the key it tried nor the one it
-# wanted. This is also the key CI authenticates with, so `make ssh-check` tests what a
-# deploy actually does.
-DEPLOY_KEY ?= ~/.ssh/id_rusty.one
-SSH        ?= ssh -i $(DEPLOY_KEY) -o IdentitiesOnly=yes
 
 # macOS ships openrsync as /usr/bin/rsync, which reports itself as "2.6.9 compatible"
 # and rejects --info. Prefer a real rsync 3.x anywhere on PATH.
@@ -273,7 +243,7 @@ define preflight
 	  exit 1;; esac
 endef
 
-ssh-check: ## Confirm the droplet is reachable and set up
+ssh-check: require-droplet ## Confirm the droplet is reachable and set up
 	$(preflight)
 	@$(SSH) $(DROPLET) 'echo "ok: $$(hostname)"; ls -d $(REMOTE_ROOT)/bin $(REMOTE_ROOT)/shared 2>/dev/null || echo "missing tree - run: make bootstrap"'
 
@@ -284,7 +254,7 @@ push-dry: ## Preview what `make push` would send to the droplet (LOCALE=deDE)
 # --delete propagates local deletions, and the droplet is where regeneration happens
 # through the UI, so it can be the newer side. `make pull` first if in doubt: this is a
 # second copy of the audio, not a backup.
-push: ## Send one language's audio store to the droplet (DESTRUCTIVE: --delete; LOCALE=deDE)
+push: require-droplet ## Send one language's audio store to the droplet (DESTRUCTIVE: --delete; LOCALE=deDE)
 	$(preflight)
 	@echo "==> dry run ($(LANG_CODE): local -> $(DROPLET))"
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(LOCAL_SOUNDS) $(REMOTE_SOUNDS) | tail -20
@@ -297,7 +267,7 @@ pull-dry: ## Preview what `make pull` would change locally (LOCALE=deDE)
 	$(preflight)
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE_SOUNDS) $(LOCAL_SOUNDS)
 
-pull: ## Fetch one language's audio store from the droplet (DESTRUCTIVE: --delete; LOCALE=deDE)
+pull: require-droplet ## Fetch one language's audio store from the droplet (DESTRUCTIVE: --delete; LOCALE=deDE)
 	$(preflight)
 	@echo "==> dry run ($(LANG_CODE): $(DROPLET) -> local)"
 	@echo "    --delete will REMOVE local files the droplet does not have."
@@ -312,11 +282,11 @@ pull: ## Fetch one language's audio store from the droplet (DESTRUCTIVE: --delet
 # The one file the droplet writes that git wants back. The manifest is an export of the
 # droplet's database, so `make db-pull` is the better route for it; this is the one that
 # works when you only want the file.
-pull-manifest: ## Fetch the droplet's exported manifest[.<locale>].json (LOCALE=deDE)
+pull-manifest: require-droplet ## Fetch the droplet's exported manifest[.<locale>].json (LOCALE=deDE)
 	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/$(MANIFEST_FILE) pipelines/zones/tools/voice/$(MANIFEST_FILE)
 	@echo "==> fetched. Review with: git diff pipelines/zones/tools/voice/$(MANIFEST_FILE)"
 
-audio-status: ## What is on disk locally and on the droplet (LOCALE=deDE)
+audio-status: require-droplet ## What is on disk locally and on the droplet (LOCALE=deDE)
 	@echo "$(LANG_CODE)"
 	@printf 'local     live      %5s mp3  %s\n' \
 		"$$(find $(LOCAL_SOUNDS) -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
@@ -355,7 +325,7 @@ PGDUMP      := docker compose exec -T postgres pg_dump -U zonelore -d zonelore -
 # droplet's psql to match the container's.
 UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
 
-db-push: ## Copy the local takes, flags and lore into the droplet's database (REPLACES them)
+db-push: require-droplet ## Copy the local takes, flags and lore into the droplet's database (REPLACES them)
 	@echo "local:"
 	@docker compose exec -T postgres psql -U zonelore -d zonelore \
 		-c 'select l."lang", (select count(*) from "voiceline_take" t where t."lang" = l."lang") as takes, (select count(*) from "line_flag" f where f."lang" = l."lang") as flags from (select "lang" from "voiceline_take" union select "lang" from "line_flag") l order by 1'
@@ -370,7 +340,7 @@ db-push: ## Copy the local takes, flags and lore into the droplet's database (RE
 	  | $(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 -q'
 	@echo "==> pushed"
 
-db-pull: ## Copy the droplet's takes, flags and lore into the local database (REPLACES them)
+db-pull: require-droplet ## Copy the droplet's takes, flags and lore into the local database (REPLACES them)
 	@printf 'Replace the LOCAL database contents with the droplet ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@( echo 'begin;'; \
 	   echo 'truncate "voiceline_take", "line_flag", "lore_line";'; \
@@ -382,40 +352,6 @@ db-pull: ## Copy the droplet's takes, flags and lore into the local database (RE
 #-------------------------------------------------------------------------------
 # Deploying
 #-------------------------------------------------------------------------------
-
-# One target rather than a documented scp-then-ssh pair, because the two halves get
-# separated: run on its own, the ssh half reports only "No such file or directory" and
-# names neither what is missing nor why.
-#
-# ROOT_SSH, not SSH: bootstrap creates the deploy user and the /srv tree, so it cannot
-# run as the user it is about to create.
-DROPLET_HOST := $(word 2,$(subst @, ,$(DROPLET)))
-
-# Plain ssh, not $(SSH): root is reached with whatever key ~/.ssh/config already offers
-# for this host -- that is how you administer the box -- whereas DEPLOY_KEY is specific
-# to the unprivileged deploy user, which this target is about to create. Override if
-# root wants a particular key:  make bootstrap ROOT_SSH_OPTS='-i ~/.ssh/other'
-ROOT_SSH_OPTS ?=
-
-bootstrap: ## One-time droplet setup, as root (idempotent)
-	@echo "==> copying deploy/zones/bootstrap.sh to root@$(DROPLET_HOST)"
-	@$(RSYNC) -a -e "ssh $(ROOT_SSH_OPTS)" deploy/zones/bootstrap.sh root@$(DROPLET_HOST):/tmp/zonelore-bootstrap.sh
-	@ssh $(ROOT_SSH_OPTS) root@$(DROPLET_HOST) 'bash /tmp/zonelore-bootstrap.sh; rm -f /tmp/zonelore-bootstrap.sh'
-
-deploy-scripts: ## Install deploy/zones/bin + ecosystem.config.js on the droplet
-	@$(RSYNC) -a -e "$(SSH)" deploy/zones/bin/ $(DROPLET):$(REMOTE_ROOT)/bin/
-	@$(RSYNC) -a -e "$(SSH)" deploy/zones/ecosystem.config.js $(DROPLET):$(REMOTE_ROOT)/shared/
-	@$(SSH) $(DROPLET) 'chmod +x $(REMOTE_ROOT)/bin/*.sh'
-	@echo "==> installed"
-
-releases: ## List releases on the droplet, marking the live one
-	@$(SSH) $(DROPLET) '$(REMOTE_ROOT)/bin/rollback.sh --list'
-
-rollback: ## Roll back to the previous release (or RELEASE=<name>)
-	@$(SSH) $(DROPLET) '$(REMOTE_ROOT)/bin/rollback.sh $(RELEASE)'
-
-logs: ## Tail the droplet's application log
-	@$(SSH) $(DROPLET) 'pm2 logs zonelore --lines 100'
 
 package-audio: validate-audio ## Build the sound-pack zip
 	@./scripts/zones/package-audio.sh

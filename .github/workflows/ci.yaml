@@ -68,11 +68,11 @@ jobs:
       - run: pnpm --filter @spoken/web typecheck
       # Several suites run against a real Postgres on purpose: the invariants they protect
       # live in schema constraints, so a mocked database would stop testing them.
-      - run: deploy/quests/bin/migrate.sh "$PWD/apps/web"
+      - run: deploy/web/bin/migrate.sh "$PWD/apps/web"
       - run: pnpm --filter @spoken/web test
 
-  web-zones:
-    name: Zones web and pipeline
+  zones-pipeline:
+    name: Zones pipeline
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -83,7 +83,6 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @spoken/web-zones typecheck
       # validate.mjs is what asserts no square bracket survives into spoken text -- the one
       # normalisation rule that is not cosmetic, since eleven_v3 reads [...] as a tag.
       - run: node pipelines/zones/tools/validate.mjs

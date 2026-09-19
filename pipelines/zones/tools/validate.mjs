@@ -394,10 +394,10 @@ for (const lang of languages) {
     );
   }
 
-  // The explorer keeps its own copy: the language selector is a client component, and
+  // The site keeps its own copy: the list has to be a value on the client, while
   // lib/locales.mjs reaches the filesystem. A language present here and missing there
   // is one nobody can pick; the reverse is one that cannot be built for.
-  const langTs = await readFile(join(ROOT, "apps/web-zones/src/lib/lang.ts"), "utf8");
+  const langTs = await readFile(join(ROOT, "apps/web/src/lib/zones/lang.ts"), "utf8");
   const webCodes = [...langTs.matchAll(/\{ code: "(\w+)"/g)].map((m) => m[1]);
   if (webCodes.join(",") !== CODES.join(",")) {
     note(

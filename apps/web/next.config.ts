@@ -53,7 +53,6 @@ const config: NextConfig = {
     "*": [
       "../../pipelines/quests/**",
       "../../addons/**",
-      "../../apps/web-zones/**",
       "../../curseforge/**",
       "../../deploy/**",
       "../../dist/**",
