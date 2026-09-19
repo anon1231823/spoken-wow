@@ -7,7 +7,7 @@ import path from "node:path";
  * under the pipeline that produces it.
  *
  * A development and test fallback only. Every export below is env-overridden in
- * production by deploy/quests/ecosystem.config.js, which points each one at either the
+ * production by deploy/web/ecosystem.config.js, which points each one at either the
  * current release or shared/; a release directory has no pipelines/ in it and never
  * reaches this line.
  */

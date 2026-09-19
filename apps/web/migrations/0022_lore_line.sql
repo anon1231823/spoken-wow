@@ -32,7 +32,7 @@
 -- English only for now, and the column is here at full strength because the rows it is
 -- importing already carry it.
 --
--- Additive and forward-only per deploy/quests/bin/migrate.sh: the table is new.
+-- Additive and forward-only per deploy/web/bin/migrate.sh: the table is new.
 
 create table "lore_line" (
   "id"        bigserial   primary key,

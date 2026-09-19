@@ -20,7 +20,7 @@
 -- Default 'quests' on both tables so the existing rows are correct without a backfill: this
 -- app's queue has only ever held quest work.
 --
--- Additive and forward-only per deploy/quests/bin/migrate.sh. The index swap is the one
+-- Additive and forward-only per deploy/web/bin/migrate.sh. The index swap is the one
 -- thing here that is not purely additive, and it is safe in both directions: the new index
 -- is strictly weaker than the old one, so a previous release still enqueueing under the old
 -- rule cannot violate it.

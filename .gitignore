@@ -71,7 +71,6 @@ datagrip
 # Design notes for work not committed to. Local thinking, not project documentation.
 /docs/quests/specs/
 
-/deploy/quests/bootstrap.sh
 
 # --- zones --------------------------------------------------------------------
 

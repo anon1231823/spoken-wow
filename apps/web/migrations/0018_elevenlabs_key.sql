@@ -23,7 +23,7 @@
 -- contributor here, and a key picker on every paid action would be a control for a
 -- problem nobody has.
 --
--- Additive and forward-only per deploy/quests/bin/migrate.sh: the table is new, so the
+-- Additive and forward-only per deploy/web/bin/migrate.sh: the table is new, so the
 -- previous release runs against this schema untouched.
 
 create table "elevenlabs_key" (

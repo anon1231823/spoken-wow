@@ -36,7 +36,7 @@
 -- and this schema has to be right before the old table can go, which it does in the cleanup
 -- after the cutover has held.
 --
--- Additive and forward-only per deploy/quests/bin/migrate.sh: the table is new.
+-- Additive and forward-only per deploy/web/bin/migrate.sh: the table is new.
 
 create table "take" (
   "id"        bigserial   primary key,

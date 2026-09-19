@@ -3,23 +3,17 @@
 # The audio store (1.1 GB, 9,456 mp3s) is gitignored and never travels through CI - it
 # moves between your machine and the droplet with rsync, only when you say so.
 #
-# Override the target host on the command line or in the environment:
-#   make push DROPLET=deploy@203.0.113.10
+# The host, the deploy user and the key come from make/droplet.mk, which reads them
+# out of the environment. Override for one invocation with DROPLET=deploy@<host>.
+include make/droplet.mk
 
-# Connect as deploy, never root: pm2 daemons are per-user, so `pm2 reload` over an ssh
-# session as root talks to root's empty daemon and silently does nothing, leaving the
-# freshly pushed audio invisible. An IP rather than a hostname keeps this working if the
-# name is ever pointed at a CDN, which would not proxy SSH.
-DROPLET      ?= deploy@188.166.37.175
 
 # /srv/spoken, not /srv/voiceover. The cutover has run: the audio store, the voices and the
 # take history live under /srv/spoken/shared (symlinks into the block volume at
 # /mnt/voice/spoken), the `spoken` pm2 app is what serves them, and `voiceover` is stopped.
 # Pointing these at the old tree is not an error rsync can report -- it finds a complete,
 # consistent store there and syncs happily against a site nobody is using, which is how a
-# fortnight of regenerated takes went unnoticed. deploy/quests/ still describes the frozen
-# tree on purpose; that is the deployment, not the store.
-REMOTE_ROOT  := /srv/spoken
+# fortnight of regenerated takes went unnoticed.
 REMOTE_AUDIO := $(REMOTE_ROOT)/shared/audio/
 REMOTE_VOICES := $(REMOTE_ROOT)/shared/voices/
 REMOTE_HISTORY := $(REMOTE_ROOT)/shared/audio-history/
@@ -52,11 +46,6 @@ RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(comman
 	[ -x "$$r" ] && "$$r" --version 2>/dev/null | head -1 | grep -q 'version 3' && { echo "$$r"; exit 0; }; \
 	done)
 
-# The key CI authenticates with, so `make ssh-check` tests what CI actually does. Every
-# droplet target uses it too: the deploy user authorises this key only, and a bare `ssh`
-# would offer whatever ~/.ssh/config names instead and be refused.
-DEPLOY_KEY ?= ~/.ssh/id_rusty.one
-SSH        := ssh -i $(DEPLOY_KEY) -o IdentitiesOnly=yes
 
 # No -z: mp3 is already compressed, so it is pure CPU for ~0 gain.
 # --delete keeps the two stores in exact correspondence, which is what makes the "missing
@@ -88,9 +77,7 @@ endef
         package-audio-complete package-meta push-complete icon \
         downloads-status \
         factions release release-audio \
-        release-dry deploy-scripts \
-        rollback releases \
-        ssh-check
+        release-dry
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -105,11 +92,11 @@ help: ## Show this help
 
 # --- audio store ----------------------------------------------------------------------
 
-push-dry: ## Preview what `make push` would change on the droplet
+push-dry: require-droplet ## Preview what `make push` would change on the droplet
 	$(preflight)
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO)
 
-pull-dry: ## Preview what `make pull` would change locally
+pull-dry: require-droplet ## Preview what `make pull` would change locally
 	$(preflight)
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) pipelines/quests/audio/
 
@@ -139,7 +126,7 @@ define freshness
 	fi
 endef
 
-push: ## Upload pipelines/quests/audio/ to the droplet (refuses to clobber newer droplet takes)
+push: require-droplet ## Upload pipelines/quests/audio/ to the droplet (refuses to clobber newer droplet takes)
 	$(preflight)
 	$(freshness)
 	@echo "==> dry run (local -> $(DROPLET))"
@@ -151,7 +138,7 @@ push: ## Upload pipelines/quests/audio/ to the droplet (refuses to clobber newer
 	@# freshness note in apps/web/src/lib/audio.ts.
 	@echo "==> pushed"
 
-pull: ## Download the droplet's audio store into pipelines/quests/audio/ (DESTRUCTIVE: --delete)
+pull: require-droplet ## Download the droplet's audio store into pipelines/quests/audio/ (DESTRUCTIVE: --delete)
 	$(preflight)
 	@echo "==> dry run ($(DROPLET) -> local)"
 	@echo "    --delete will REMOVE local files the droplet does not have."
@@ -170,20 +157,20 @@ pull: ## Download the droplet's audio store into pipelines/quests/audio/ (DESTRU
 # usually the newer side. Neither target uses --delete for that reason: these are two
 # collections being kept in sync by hand, not a mirror with an authoritative side.
 
-pull-voices: ## Fetch voice clips from the droplet (non-destructive)
+pull-voices: require-droplet ## Fetch voice clips from the droplet (non-destructive)
 	$(preflight)
 	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
 		$(DROPLET):$(REMOTE_VOICES) pipelines/quests/voice/samples/
 	@echo "==> pulled into pipelines/quests/voice/samples/"
 
-push-voices: ## Upload voice clips to the droplet (non-destructive)
+push-voices: require-droplet ## Upload voice clips to the droplet (non-destructive)
 	$(preflight)
 	@[ -d pipelines/quests/voice/samples ] || { echo "no pipelines/quests/voice/samples/ to push"; exit 1; }
 	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
 		pipelines/quests/voice/samples/ $(DROPLET):$(REMOTE_VOICES)
 	@echo "==> pushed"
 
-voices-status: ## Compare clip count and size on both sides
+voices-status: require-droplet ## Compare clip count and size on both sides
 	@echo "local:  $$(find pipelines/quests/voice/samples -type f 2>/dev/null | wc -l | tr -d ' ') clips, $$(du -sh pipelines/quests/voice/samples 2>/dev/null | cut -f1 || echo 0)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_VOICES) -type f 2>/dev/null | wc -l | tr -d " ") clips, $$(du -sh $(REMOTE_VOICES) 2>/dev/null | cut -f1)"'
 
@@ -194,20 +181,20 @@ voices-status: ## Compare clip count and size on both sides
 # Small next to the store, and like the voice clips the droplet is usually the newer side -
 # so neither target uses --delete.
 
-pull-history: ## Fetch previous takes from the droplet (non-destructive)
+pull-history: require-droplet ## Fetch previous takes from the droplet (non-destructive)
 	$(preflight)
 	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
 		$(DROPLET):$(REMOTE_HISTORY) pipelines/quests/audio-history/
 	@echo "==> pulled into pipelines/quests/audio-history/"
 
-push-history: ## Upload previous takes to the droplet (non-destructive)
+push-history: require-droplet ## Upload previous takes to the droplet (non-destructive)
 	$(preflight)
 	@[ -d pipelines/quests/audio-history ] || { echo "no pipelines/quests/audio-history/ to push"; exit 1; }
 	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
 		pipelines/quests/audio-history/ $(DROPLET):$(REMOTE_HISTORY)
 	@echo "==> pushed"
 
-history-status: ## Compare take count and size on both sides
+history-status: require-droplet ## Compare take count and size on both sides
 	@echo "local:  $$(find pipelines/quests/audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ') takes, $$(du -sh pipelines/quests/audio-history 2>/dev/null | cut -f1 || echo 0)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_HISTORY) -name "*.mp3" 2>/dev/null | wc -l | tr -d " ") takes, $$(du -sh $(REMOTE_HISTORY) 2>/dev/null | cut -f1)"'
 
@@ -282,7 +269,7 @@ package-meta: ## Zip the meta addon that pulls in all four packs
 	@VERSION=$(VERSION) NAME=SpokenQuestsAudio ./scripts/quests/package-meta.sh
 
 # The complete pack's home, since it is too big for CurseForge: nginx serves
-# /srv/voiceover/shared/downloads/ straight off disk (see deploy/quests/nginx-voiceover.conf), and
+# /srv/spoken/shared/downloads/ straight off disk (see deploy/web/nginx-spoken.conf), and
 # this puts a freshly built zip there.
 #
 # The version comes from the built module rather than a variable, so pushing a pack nobody
@@ -298,11 +285,11 @@ package-meta: ## Zip the meta addon that pulls in all four packs
 # so a zip pushed into the old tree would land in a directory nothing answers from.
 REMOTE_DOWNLOADS := $(REMOTE_ROOT)/shared/downloads
 
-push-complete: ## Upload the built complete pack to the site's downloads directory
+push-complete: require-droplet ## Upload the built complete pack to the site's downloads directory
 	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. brew install rsync"; exit 1; }
 	@v=$$(sed -n 's/^## Version:[[:space:]]*//p' dist/SpokenQuestsAudioComplete/SpokenQuestsAudioComplete.toc 2>/dev/null | head -1); 	[ -n "$$v" ] || { echo "No complete module built. Run: make package-audio-complete"; exit 1; }; 	zip=dist/SpokenQuestsAudioComplete-$$v.zip; 	[ -f "$$zip" ] || { echo "$$zip is missing. Run: make package-audio-complete"; exit 1; }; 	echo "==> $$zip -> $(DROPLET):$(REMOTE_DOWNLOADS)/"; 	$(RSYNC) -a --human-readable --info=progress2 -e "$(SSH)" "$$zip" $(DROPLET):$(REMOTE_DOWNLOADS)/; 	$(SSH) $(DROPLET) "ln -sfn SpokenQuestsAudioComplete-$$v.zip $(REMOTE_DOWNLOADS)/SpokenQuestsAudioComplete-latest.zip"; 	echo "==> https://spoken.rusty.one/downloads/SpokenQuestsAudioComplete-latest.zip"
 
-downloads-status: ## List what the site is offering for download
+downloads-status: require-droplet ## List what the site is offering for download
 	@$(SSH) $(DROPLET) 'ls -lh $(REMOTE_DOWNLOADS)/'
 
 # `release` uploads whatever is already in dist/ to CurseForge - it builds nothing, so the
@@ -342,9 +329,9 @@ release-audio: ## Upload the four packs and their meta addon
 # One direction only. Editing the file by hand would put it out of step with the table the
 # app reads, and the app is what everyone looks at.
 
-pull-ignores: ## Export the ignore list from the droplet into pipelines/quests/corpus/ignored.json
+pull-ignores: require-droplet ## Export the ignore list from the droplet into pipelines/quests/corpus/ignored.json
 	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; \
-	  psql "$$DATABASE_URL" -At -f -' < deploy/quests/sql/export_ignores.sql > $(IGNORED_JSON).tmp
+	  psql "$$DATABASE_URL" -At -f -' < deploy/web/sql/export_ignores.sql > $(IGNORED_JSON).tmp
 	@# A truncated or failed export must not replace a good list: an empty file here would
 	@# silently un-ignore every line the next time anyone pushed or built.
 	@$(PYTHON) -c "import json,sys; json.load(open(sys.argv[1]))['ignored']" $(IGNORED_JSON).tmp \
@@ -352,35 +339,6 @@ pull-ignores: ## Export the ignore list from the droplet into pipelines/quests/c
 	@mv $(IGNORED_JSON).tmp $(IGNORED_JSON)
 	@echo "==> wrote $(IGNORED_JSON). Commit it: the CLI and the rsync targets read the file, not the database."
 
-audio-status: ## Compare file count and size on both sides
+audio-status: require-droplet ## Compare file count and size on both sides
 	@echo "local:  $$(find audio -name '*.mp3' | wc -l | tr -d ' ') files, $$(du -sh audio | cut -f1)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_AUDIO) -name "*.mp3" | wc -l | tr -d " ") files, $$(du -sh $(REMOTE_AUDIO) | cut -f1)"'
-
-# --- droplet plumbing -----------------------------------------------------------------
-
-# `-F /dev/null` is the point of this target, and IdentitiesOnly alone is not enough: a
-# `Host *` block in ~/.ssh/config contributes its IdentityFile entries to every host, so
-# a plain `ssh -i deploy_key host` can succeed on a personal key and report a working
-# deploy key that CI - which has only this one, and no ssh config - cannot use.
-ssh-check: ## Test the CI deploy key against the droplet, as CI authenticates
-	@echo "local  $(DEPLOY_KEY): $$(ssh-keygen -lf $(DEPLOY_KEY) 2>/dev/null | awk '{print $$2}' || echo 'MISSING')"
-	@echo "compare against the 'deploy key fingerprint' line in the workflow log"
-	@ssh -F /dev/null -i $(DEPLOY_KEY) -o IdentitiesOnly=yes -o BatchMode=yes $(DROPLET) \
-		'echo "connected as $$(whoami)"; ls -ld /srv/voiceover /srv/voiceover/bin 2>&1' \
-		|| { echo; echo "Rejected. On the droplet, as root:"; \
-		     echo "  install -d -m 700 -o deploy -g deploy /home/deploy/.ssh"; \
-		     echo "  echo '<contents of $(DEPLOY_KEY).pub>' >> /home/deploy/.ssh/authorized_keys"; \
-		     echo "  chown deploy:deploy /home/deploy/.ssh/authorized_keys"; \
-		     echo "  chmod 600 /home/deploy/.ssh/authorized_keys"; exit 1; }
-
-deploy-scripts: ## Install deploy/quests/bin + ecosystem.config.js on the droplet
-	$(RSYNC) -a -e "$(SSH)" deploy/quests/bin/ $(DROPLET):$(REMOTE_ROOT)/bin/
-	$(RSYNC) -a -e "$(SSH)" deploy/quests/ecosystem.config.js $(DROPLET):$(REMOTE_ROOT)/shared/
-	$(SSH) $(DROPLET) 'chmod +x $(REMOTE_ROOT)/bin/*.sh'
-	@echo "==> installed"
-
-releases: ## List releases on the droplet, marking the live one
-	@$(SSH) $(DROPLET) '$(REMOTE_ROOT)/bin/rollback.sh --list'
-
-rollback: ## Roll back to the previous release (or RELEASE=<name>)
-	$(SSH) $(DROPLET) '$(REMOTE_ROOT)/bin/rollback.sh $(RELEASE)'

@@ -9,7 +9,7 @@
  * assert that a query was made, which is not the question.
  *
  * Needs DATABASE_URL and migrations applied:
- *   deploy/quests/bin/migrate.sh "$PWD/apps/web"
+ *   deploy/web/bin/migrate.sh "$PWD/apps/web"
  */
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 

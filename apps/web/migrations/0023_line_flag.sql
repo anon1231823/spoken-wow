@@ -25,7 +25,7 @@
 -- 's:'. A quests flag, if one is ever wanted, would be a different set of verdicts about a
 -- different kind of defect, and giving it a column now would be guessing at both.
 --
--- Additive and forward-only per deploy/quests/bin/migrate.sh: the table is new.
+-- Additive and forward-only per deploy/web/bin/migrate.sh: the table is new.
 
 create table "line_flag" (
   -- Matches the take table's "lineId". No foreign key: a line can be flagged before it has

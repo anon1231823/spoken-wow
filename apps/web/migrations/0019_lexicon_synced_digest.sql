@@ -20,7 +20,7 @@
 -- timestamp because it was being asked the wrong question would lose the answer to the
 -- right one.
 --
--- Additive and forward-only per deploy/quests/bin/migrate.sh: the column is nullable, so
+-- Additive and forward-only per deploy/web/bin/migrate.sh: the column is nullable, so
 -- the previous release runs against this schema untouched.
 
 alter table "pronunciation_lexicon" add column "syncedDigest" text;

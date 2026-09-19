@@ -1,13 +1,12 @@
 # Deploying Spoken
 
-One site, two sections, on the droplet that currently runs the two it replaces. nginx in
-front, pm2 supervising, GitHub Actions deploying on every push to `main` that touches
-`apps/web/`, `pipelines/`, `addons/SpokenZones/Data/` or `deploy/web/`.
+One site, three sections, on one droplet. nginx in front, pm2 supervising, GitHub Actions
+deploying on every push to `main` that touches `apps/web/`, `pipelines/`,
+`addons/SpokenZones/Data/` or `deploy/web/`.
 
-It is deliberately beside the two old trees rather than on top of them: a separate `/srv`
-tree, a separate database, a separate pm2 app. `/srv/voiceover` and `/srv/zonelore` are
-frozen — see the banner in each of their READMEs — and stay whole after the cutover, because
-they are the rollback.
+It replaced two separate deployments, whose names are now redirect vhosts pointing here —
+see `nginx-voiceover-redirect.conf` and `nginx-lore-redirect.conf`, which exist so that
+every address the addons have ever emitted still resolves.
 
 ```
 /srv/spoken/
@@ -35,10 +34,9 @@ deploys later, and every one of those is either irreplaceable or was paid for.
 
 ## The audio volume
 
-The stores total ~10 GB, and the merge **copies** them rather than moving them, because the
-two old trees are the rollback. The droplet's root filesystem is 33 GB with the old sites
-already on it, which leaves no room to do that and no room to grow afterwards. So the bytes
-live on `/mnt/voice`, a block volume that can be resized without touching the droplet.
+The stores total ~10 GB against a 33 GB root filesystem, which leaves no room to grow. So
+the bytes live on `/mnt/voice`, a block volume that can be resized without touching the
+droplet.
 
 `shared/<store>` reaches it through a symlink, so that name still means what it meant:
 `ecosystem.config.js` builds every path variable from it, `make/quests.mk` and
@@ -46,7 +44,7 @@ live on `/mnt/voice`, a block volume that can be resized without touching the dr
 and the disk it sits on is an implementation detail.
 
 ```bash
-ssh root@rusty.one
+ssh "root@$SPOKEN_HOST"
   bash store.sh          # make web-store prints it; idempotent
 ```
 
@@ -89,13 +87,11 @@ pm2 environment. They are secrets, and that file is the only place they exist:
 | `BETTER_AUTH_SECRET` | 32 random bytes | signs session cookies; rotating it signs everyone out |
 | `BETTER_AUTH_URL` | `https://spoken.rusty.one` | **must match the public origin exactly** |
 | `SPOKEN_SECRET_KEY` | 32 bytes, base64 | the master key stored ElevenLabs credentials are sealed under |
-| `ELEVENLABS_DICTIONARY_ID` | `Elx0…` | the pronunciation dictionary `/lexicon` updates in place. **Must not change**: unset, every save creates a new one |
+| `ELEVENLABS_DICTIONARY_ID` | an id from your ElevenLabs account | the pronunciation dictionary `/lexicon` updates in place. **Must not change**: unset, every save creates a new one |
 
-**`SPOKEN_SECRET_KEY` must be the value of `ZONELORE_SECRET_KEY` in
-`/srv/zonelore/shared/app.env`.** The zones site's stored keys are sealed under that one and
-are imported at cutover as ciphertext; AES-GCM offers no way to re-seal a credential nothing
-can open. Get it wrong and every collaborator pastes their key again — recoverable, but they
-have to be told.
+**`SPOKEN_SECRET_KEY` cannot be rotated casually.** Every stored ElevenLabs credential is
+sealed under it, and AES-GCM offers no way to re-seal a credential nothing can open. Change
+it and every collaborator pastes their key again — recoverable, but they have to be told.
 
 **There is no `ELEVENLABS_API_KEY`.** Every request that reaches ElevenLabs is spent from the
 signed-in user's own account, using a key they set on `/profile`, sealed under
@@ -111,150 +107,23 @@ cat > /srv/spoken/shared/app.env <<EOF
 DATABASE_URL=postgres://spoken:$PGPW@127.0.0.1:5432/spoken
 BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 BETTER_AUTH_URL=https://spoken.rusty.one
-SPOKEN_SECRET_KEY=$(grep ZONELORE_SECRET_KEY /srv/zonelore/shared/app.env | cut -d= -f2-)
-ELEVENLABS_DICTIONARY_ID=Elx0hcDze8EXW2rImeLT
+SPOKEN_SECRET_KEY=$(openssl rand -base64 32)   # once, and never again: see above
+ELEVENLABS_DICTIONARY_ID=<the dictionary id from your ElevenLabs account>
 EOF
 chown deploy:deploy /srv/spoken/shared/app.env
 chmod 600 /srv/spoken/shared/app.env
 ```
 
-## Standing it up beside the old sites
+## Standing it up
 
 `deploy/web/bootstrap.sh`, run on the droplet as root, makes the tree and the database and
 prints what is left. Then, from a workstation, `make web-deploy-scripts`.
 
-**Stage on port 3002 until the cutover.** Port 3000 belongs to voiceover until it is stopped.
-
-The port goes in `shared/app.env`, not in `ecosystem.config.js`: that file spreads
-`readSecrets()` last, so `PORT=3002` in app.env overrides the literal above it. A staging
-port is a fact about one box, which is exactly what app.env is for — and it means the
-cutover deletes a line rather than reverting a commit.
-
-Either reach it over an ssh tunnel:
+Reach a staged instance over an ssh tunnel rather than opening a port:
 
 ```bash
-ssh -L 3002:127.0.0.1:3002 deploy@rusty.one     # then http://127.0.0.1:3002
+ssh -L 3002:127.0.0.1:3002 "$SPOKEN_DROPLET"     # then http://127.0.0.1:3002
 ```
-
-…or install the vhost early, pointed at the staging port. `nginx-spoken.conf` names the
-upstream once for exactly this:
-
-```nginx
-upstream spoken_app {
-    server 127.0.0.1:3002;    # 3000 at cutover
-```
-
-The second way gets the real certificate and a real origin, so sign-in works — but it also
-makes a half-migrated site publicly reachable, with every quest line showing as a gap. Whichever you pick, `BETTER_AUTH_URL` must match the origin you actually
-use, or every sign-in returns `403 Invalid origin`: `http://127.0.0.1:3002` for the tunnel,
-`https://spoken.rusty.one` for the vhost.
-
-**The zones line data can be staged early**, and should be. Without the corpus `/zones`
-renders a "not loaded yet" notice and the search API answers `503 corpus_empty`; without
-the takes every line reports missing audio, because presence is read from the `take` table
-while the files themselves are already on disk. Quests does not have that second problem —
-it reads its store from disk — which is why a half-staged site looks lopsided.
-
-```bash
-DATABASE_URL=postgres://spoken:…@127.0.0.1:5432/spoken \
-ZONELORE_URL=postgres://zonelore:…@127.0.0.1:5432/zonelore \
-  make web-migrate-lines      # lore_line, line_flag, take; writes no migration marker
-```
-
-The reports can move early too, for the same reason - a triage page with nothing in it
-cannot be looked at - and need the quests database as well as the zones one:
-
-```bash
-make web-migrate-reports    # line_report and feedback into report; replaces by source
-make web-migrate-verdicts   # the quests triage decisions, onto this database's own scan
-```
-
-`line_issue` is rebuilt wholesale by every scan, so a staged database has its own findings
-with every verdict back at `open`. The scan is a machine's output and costs nothing to
-redo; the verdicts are the part somebody sat down and made, and they are matched across on
-`(category, item)` — which the table declares unique, and which is what a finding is.
-
-None of this reaches what only the restore carries: the line overrides, the voice clones,
-the quests takes and their history, and the lexicon as it actually stands. Those arrive
-with the `pg_dump` at step 3 below, which is the one description of that copy there should
-be.
-
-The split is which rows can be thrown away and written again. Those three are statements
-about a zone line that lore.rusty.one holds the only copy of, so the import deletes and
-re-copies each wholesale and can be run as often as it is useful. Accounts and sealed keys cannot be treated that way — they
-merge into rows this database already has — so they move exactly once, at the cutover, by
-the import below, which refuses to run a second time. Reports are replaceable only because
-the copy deletes this database's reports for that source first: nothing about a report is
-unique, and three people reporting one line is the signal the table exists to carry, so a
-second copy that merged would double every row.
-
-**Do not regenerate anything on the staged site.** It writes into `shared/`, which at that
-point is a copy that the cutover is about to overwrite, and the credits would be spent on a
-take that is then thrown away.
-
-## The cutover
-
-A short freeze. Everything before this point is reversible by doing nothing.
-
-```bash
-# 1. Stop both old apps. This also stops their queues, and frees port 3000.
-ssh deploy@rusty.one 'pm2 stop voiceover zonelore'
-
-# 2. Top up the audio. `cp -an` never overwrites, so if the bulk was copied early (below)
-#    this only carries across what was generated since. Copies, never moves: the old
-#    trees are the rollback. It refuses to run if the volume is not mounted.
-make web-cutover-audio
-
-# 3. The database. The quests half is restored wholesale, because the merged schema was
-#    grown from it and the migrations carry it forward.
-#
-#    DROP IT FIRST. By this point the staged database holds the migrations and whatever
-#    `web-migrate-lines` copied in, and a pg_dump restored over that fails every CREATE
-#    TABLE while its COPYs land on top of rows that are already there. Nothing is lost:
-#    everything the staging held came from one of the two old databases, and steps 3 and
-#    4 bring all of it back.
-ssh root@rusty.one
-  # dropdb refuses while anything holds a connection, and the staged app holds several.
-  sudo -u deploy pm2 stop spoken
-  sudo -u postgres dropdb --if-exists spoken
-  sudo -u postgres createdb -O spoken spoken
-  sudo -u postgres pg_dump voiceover | sudo -u postgres psql --set ON_ERROR_STOP=on spoken
-  /srv/spoken/bin/migrate.sh /srv/spoken/current
-  # Started again by step 5, which is where it picks up port 3000 and the real origin.
-
-#    The accounts arrive here, with the quests database: five of them, one an admin. The
-#    two on the zones side are merged in by step 4, by lower(email) - and today both of
-#    them already exist on the quests side, so nobody new is created and both keep the
-#    password they use on voiceover.rusty.one. Sessions do not move; everyone signs in
-#    again against an origin that has changed anyway.
-
-# 4. The zones half, laid over it. Rehearse first; it writes nothing. This copies the
-#    corpus, flags and takes again, replacing whatever `web-migrate-lines` staged
-#    earlier, so the edits and takes made between staging and the freeze come with them.
-DATABASE_URL=postgres://spoken:…@127.0.0.1:5432/spoken \
-ZONELORE_URL=postgres://zonelore:…@127.0.0.1:5432/zonelore \
-  make web-migrate-legacy-dry
-# then, if the counts look right:
-  make web-migrate-legacy
-
-# 5. Port 3000, and start.
-#    Delete the PORT line from /srv/spoken/shared/app.env, set BETTER_AUTH_URL to
-#    https://spoken.rusty.one there, and point the upstream in nginx-spoken.conf at 3000.
-ssh deploy@rusty.one 'pm2 startOrReload /srv/spoken/shared/ecosystem.config.js --update-env'
-
-# 6. nginx: the new vhost, and the two old ones become redirects.
-ssh root@rusty.one
-  cp deploy/web/nginx-spoken.conf           /etc/nginx/sites-available/spoken
-  cp deploy/web/nginx-voiceover-redirect.conf /etc/nginx/sites-available/voiceover
-  cp deploy/web/nginx-lore-redirect.conf      /etc/nginx/sites-available/lore
-  ln -sf /etc/nginx/sites-available/spoken /etc/nginx/sites-enabled/
-  nginx -t && systemctl reload nginx
-```
-
-Then flip `REMOTE_ROOT` in `make/quests.mk` and `make/zones.mk` to `/srv/spoken`, and the
-zones `REMOTE_SOUNDS_DIR` to `sounds`. **Not before**: those targets rsync with `--delete`,
-and a `pull` against a tree the audio has not been copied into yet would delete the local
-store instead of filling it.
 
 ### Checking it
 
@@ -271,36 +140,213 @@ curl -sI 'https://lore.rusty.one/r/1411/razor-hill'          | grep -i location 
 curl -sI 'https://voiceover.rusty.one/downloads/SpokenQuestsAudioComplete-latest.zip' | grep -i location
 ```
 
-Then sign in with an account that only ever existed on the zones site, and regenerate one
-line in each section with a key set on `/profile`.
+Then sign in and regenerate one line in each section with a key set on `/profile`.
 
 `make quests-audio-status` and `make zones-audio-status` compare file counts and sizes
-between the workstation and the droplet, which is the check that the copy in step 2 was
-complete.
+between the workstation and the droplet.
 
-### Rolling back
+## GitHub credentials, step by step
 
-Nothing about the cutover is one-way until the old trees are deleted.
+Four secrets, and the workflows read nothing else about the droplet. Run all of it locally.
+
+**1 — Generate a deploy-only SSH key.** No passphrase; Actions cannot type one.
 
 ```bash
-ssh root@rusty.one
-  cp deploy/quests/nginx-voiceover.conf /etc/nginx/sites-available/voiceover
-  cp deploy/zones/nginx-lore.conf       /etc/nginx/sites-available/lore
-  rm /etc/nginx/sites-enabled/spoken
-  nginx -t && systemctl reload nginx
-ssh deploy@rusty.one 'pm2 stop spoken && pm2 start voiceover zonelore'
+ssh-keygen -t ed25519 -f ~/.ssh/id_spoken_deploy -C "gha-spoken-deploy" -N ""
 ```
 
-Both old databases are untouched by the cutover — the import reads `zonelore` and writes
-`spoken` — and both old audio stores still hold their own copies. What is lost is whatever
-was done on the merged site in the meantime.
+**2 — Authorize it on the droplet**, for the `deploy` user only:
+
+```bash
+ssh-copy-id -i ~/.ssh/id_spoken_deploy.pub "deploy@$SPOKEN_HOST"
+ssh -i ~/.ssh/id_spoken_deploy "deploy@$SPOKEN_HOST" 'echo ok'    # must print: ok
+```
+
+**3 — Capture the host key**, so CI verifies the server rather than blindly trusting it:
+
+```bash
+ssh-keyscan -H "$SPOKEN_HOST" > /tmp/known_hosts
+```
+
+**4 — Set the secrets** (from the repo root, with `gh` authenticated):
+
+```bash
+gh secret set DO_SSH_KEY     < ~/.ssh/id_spoken_deploy
+gh secret set DO_KNOWN_HOSTS < /tmp/known_hosts
+gh secret set DO_HOST        --body "$SPOKEN_HOST"
+gh secret set DO_USER        --body "deploy"
+```
+
+Through the UI instead: **Settings → Secrets and variables → Actions → New repository
+secret**. For `DO_SSH_KEY` paste the **private** key including the
+`-----BEGIN OPENSSH PRIVATE KEY-----` and `-----END …-----` lines *and the trailing
+newline* — a missing trailing newline is the usual cause of `Load key: error in libcrypto`.
+
+**5 — Verify and clean up:**
+
+```bash
+gh secret list        # DO_HOST, DO_KNOWN_HOSTS, DO_SSH_KEY, DO_USER
+rm /tmp/known_hosts
+```
+
+**6 — Create the `production` environment.** The workflow declares
+`environment: production`, so create it under **Settings → Environments**. This also gives a
+deployment history and the option of a required-reviewer gate later without touching the
+workflow.
+
+The private key never leaves your machine except into GitHub's secret store, and authorizes
+exactly one unprivileged user on one host. Revoking it is one line out of
+`/home/deploy/.ssh/authorized_keys`.
+
+A workstation sets the same facts as shell environment variables — `SPOKEN_DROPLET`,
+`SPOKEN_HOST` and optionally `SPOKEN_DEPLOY_KEY`. See `make/droplet.mk`; nothing in the repo
+names the host.
+
+## What a deploy does
+
+1. Typecheck, unit tests, migrations against a throwaway Postgres, build. A red build never
+   reaches the droplet.
+2. Assemble `standalone` + `.next/static` + `corpus.json.gz` + `migrations/` into a release
+   directory.
+3. **Boot that exact artifact in CI** and hit `/api/search`, the stylesheet, and a real
+   sign-up. This catches a broken bundle before it can replace a working release.
+4. `rsync` it to `releases/<utc-stamp>-<sha>/`.
+5. `activate.sh` — `migrate.sh`, then the atomic symlink swap, then
+   `pm2 startOrReload --update-env`.
+6. Smoke check on the droplet; **on failure it rolls back automatically** and fails the job.
+7. `prune.sh 5`.
+
+### About step 5
+
+Migrations run **before** the swap, so a migration that fails aborts the deploy with the
+previous release still live and serving. Each file in `migrations/` is applied once, inside
+a transaction that also records its name in `schema_migration`; there is no half-applied
+state to clean up.
+
+The asymmetry worth holding in your head: **a rollback moves code, never schema.** Nothing
+un-applies a migration. So migrations have to stay additive — a release must be able to run
+against the schema of the release *after* it, or rolling back one version breaks the site in
+a way `rollback.sh` cannot fix. Adding a nullable column is fine; renaming or dropping one
+needs two deploys.
+
+### Promoting the first admin
+
+There is deliberately no bootstrap path through the UI. Register normally, then, on the
+droplet:
+
+```bash
+ssh "$SPOKEN_DROPLET"
+psql "$(grep ^DATABASE_URL /srv/spoken/shared/app.env | cut -d= -f2-)" \
+  -c "UPDATE \"user\" SET role = 'admin' WHERE email = 'you@example.com'"
+```
+
+`user` is quoted because it is a reserved word — that is Better Auth's default table name.
+Every role after this one is handed out from `/admin`, which will not let an admin demote
+themselves.
+
+## Serving the complete sound pack
+
+The complete quests pack is 1.2 GB, which CurseForge will not take, so the site hosts it at
+`/downloads/SpokenQuestsAudioComplete-latest.zip`. `make quests-push-complete` uploads the
+versioned zip into `shared/downloads/` and repoints the `-latest` symlink; nginx aliases the
+location straight at the directory, so the file never passes through the app.
 
 ## Day to day
 
-The runbook the two old deployments wrote still applies, because this is the same shape:
-`deploy/quests/README.md` has the long version of how a release is assembled, why the queue
-starts lazily, and what to do when pm2 keeps launching a script path that has moved. What is
-new here is that there is one app where there were two, and that both sections are in every
-release — a change to the shared queue, the shared roster or the shared report table is a
-change to both, and shipping them apart would leave a window where one had it and the other
-did not.
+```bash
+make web-releases                  # list, marking the live one
+make web-rollback                  # one release older
+make web-rollback RELEASE=20260727-2143-a1b2c3d
+make quests-audio-status           # store parity between local and droplet
+make zones-audio-status
+make web-logs                      # pm2 logs spoken
+```
+
+Rollback walks strictly backwards in time, so running it repeatedly keeps stepping to older
+releases instead of bouncing between the newest two.
+
+Both sections are in every release — a change to the shared queue, the shared roster or the
+shared report table is a change to both, and shipping them apart would leave a window where
+one had it and the other did not.
+
+## The regeneration queue
+
+Mass regeneration is a queue in Postgres (`regeneration_batch`, `regeneration_job`), drained
+inside the app processes rather than by a separate service. A session-scoped advisory lock
+picks one process to lead, and only that one claims jobs. A process joins leader contention
+the first time one of the `/api/regenerate/queue` routes is called on it — not on boot, but
+lazily.
+
+**Two things worth knowing:**
+
+- **`kill_timeout` is load-bearing.** The leader finishes its in-flight ElevenLabs calls
+  before releasing the lock, so a `pm2 reload` hands the queue over rather than running two
+  drains at once. Lowering it back towards pm2's 1600 ms default reintroduces SIGKILL
+  mid-take, and a killed leader's jobs then wait out a five-minute lease.
+- **Anything with the database URL is a potential contender.** A one-off `next start` pointed
+  at production Postgres becomes one as soon as anything calls a queue route on it — which for
+  a `next start` someone is poking at is likely to be the explorer page's own poll. The
+  advisory lock is what makes this safe — one leader, whichever it is — but nothing confines
+  the queue to the droplet except custody of the database URL.
+
+To see what it is doing without the UI:
+
+```sql
+select "state", count(*) from "regeneration_job" group by "state";
+select * from "regeneration_batch" order by "createdAt" desc limit 5;
+```
+
+To stop it, use `POST /api/regenerate/queue/stop`, which the Stop button calls: it cancels
+pending jobs, leaves in-flight ones to finish and be billed, and stamps the batch so the
+panel can explain why it stopped.
+
+If the app is not answering, break glass with:
+
+```sql
+update "regeneration_job" set "state" = 'cancelled', "finishedAt" = now()
+ where "state" = 'pending';
+```
+
+This cancels pending jobs but does not stamp the batch with a reason, so the UI will show a
+stopped queue with no explanation — and running jobs are unaffected, because their characters
+are already billed at ElevenLabs. The full behaviour of `cancelPending()` in
+`apps/web/src/lib/generation/queue.ts` is the authority; keep it in sync with changes there.
+
+### Why the queue starts lazily
+
+The queue is started by `ensureQueueRunning()` from `apps/web/src/lib/generation/boot.ts`,
+called by the `/api/regenerate/queue` routes, rather than from a Next `instrumentation.ts`
+hook.
+
+`instrumentation.ts` is the natural home and was the original design. It does not work here:
+Next compiles that file for the edge runtime as well as node, whether or not the app has any
+edge code, and the `NEXT_RUNTIME` guard stops the code running there but not being bundled.
+Webpack then has to resolve the whole server graph — `pg`'s optional native binding, `fs`,
+`path`, `stream`, and our own `history.ts` reaching `node:crypto` — for a runtime that never
+executes it, and `next dev` answers 500. No `next.config.ts` setting fixes it; the problem is
+that the compile happens at all. `next build` is unaffected, because it only produces an edge
+compile when the app really contains edge code.
+
+**The cost:** a batch interrupted by a deploy does not resume on boot. It resumes when
+something calls a queue route — in practice when an admin opens the explorer, since the page
+polls the queue every fifteen seconds for anyone who can regenerate. On a quiet evening an
+interrupted batch waits.
+
+## Gotchas worth knowing
+
+- **`make quests-push` refuses to overwrite newer droplet audio.** Regeneration happens on
+  the droplet through the web UI, so it is usually the newer side — and `--delete` would take
+  the difference with it. Two rsync dry runs, one with `-u`, name exactly the files the
+  droplet has changed since you last pulled. `make quests-pull` first, or `FORCE=1` to
+  overwrite anyway.
+- **`audio-history/` is the one directory whose loss is permanent.** Version 0 of each file
+  is audio that predates this project's ability to reproduce it — the same failure that left
+  this project with voices it could not remake. `make quests-pull-history` it somewhere safe.
+- **`cp -a`, never `cp -r`, when assembling a release.** pnpm's `node_modules/next` is a
+  symlink into `.pnpm/`; a dereferencing copy (which is what BSD `cp -r` does) detaches it
+  from its siblings and the bundle dies at boot with
+  `Cannot find module 'styled-jsx/package.json'`.
+- **The droplet is a second copy of the audio, not a backup.** `make quests-push` propagates
+  local deletions within seconds. Keep the real backup wherever it is today.
+- **`pm2 save` runs on every activate**, which is what lets pm2's systemd unit resurrect the
+  app after a reboot. Nothing is saved until the first successful deploy.

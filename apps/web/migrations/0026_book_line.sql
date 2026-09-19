@@ -22,7 +22,7 @@
 -- the other language's live flag. Only enUS exists today; vmangos carries eight more
 -- translations in locales_page_text, on these same ids.
 --
--- Additive and forward-only per deploy/quests/bin/migrate.sh: the table is new.
+-- Additive and forward-only per deploy/web/bin/migrate.sh: the table is new.
 
 create table "book_line" (
   "id"        bigserial   primary key,

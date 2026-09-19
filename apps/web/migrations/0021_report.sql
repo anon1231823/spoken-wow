@@ -36,7 +36,7 @@
 --
 -- "line_report" is left in place as the rollback, and goes in the cleanup after cutover.
 --
--- Additive and forward-only per deploy/quests/bin/migrate.sh: the table is new.
+-- Additive and forward-only per deploy/web/bin/migrate.sh: the table is new.
 
 create table "report" (
   "id"       bigserial   primary key,

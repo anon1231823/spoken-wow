@@ -169,18 +169,10 @@ jobs:
           # release directory, so without this a deploy has nothing to apply.
           cp -a apps/web/migrations "$R"/migrations
 
-          # The legacy import ships too. It runs once, at the cutover, from the droplet --
-          # it resolves `pg` out of the release's own node_modules, and the alternative is
-          # copying a script by hand during a freeze, which is the worst moment to
-          # discover it is not there.
-          mkdir -p "$R"/apps/web/scripts
-          cp apps/web/scripts/migrate-legacy.mjs "$R"/apps/web/scripts/
-
           test -f "$R"/apps/web/server.js
           test -L "$R"/apps/web/node_modules/next   # symlink survived the copy
           test -f "$R"/migrations/0001_auth.sql
           test -f "$R"/migrations/0020_take.sql
-          test -f "$R"/apps/web/scripts/migrate-legacy.mjs
           test -f "$R"/pipelines/quests/voice/generation.json
           test -f "$R"/pipelines/quests/voice/pronunciation.json
           test -f "$R"/pipelines/zones/tools/seed/area-names.json
@@ -298,7 +290,7 @@ jobs:
           chmod 600 ~/.ssh/known_hosts
 
           if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null 2>&1; then
-            echo "::error::DO_SSH_KEY is not a usable private key. Re-set it from the file so the trailing newline survives: gh secret set DO_SSH_KEY < ~/.ssh/id_rusty.one - it must be the private key, not the .pub, including its BEGIN/END lines."
+            echo "::error::DO_SSH_KEY is not a usable private key. Re-set it from the file so the trailing newline survives: gh secret set DO_SSH_KEY < ~/.ssh/id_spoken_deploy - it must be the private key, not the .pub, including its BEGIN/END lines."
             exit 1
           fi
           echo "deploy key fingerprint: $(ssh-keygen -lf ~/.ssh/deploy_key | awk '{print $2}')"
