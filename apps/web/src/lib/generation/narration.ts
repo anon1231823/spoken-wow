@@ -43,8 +43,8 @@ const SOUND = /<([a-z][^<>]*)>/g;
  * The NPC's own sounds, rewritten into ElevenLabs' audio-tag syntax.
  *
  * Blizzard writes them in angle brackets - `<hic>`, `<cough>`, `<sigh>`, `<mutters>` - and
- * ElevenLabs writes them in square ones. eleven_v3, the model the database selects, performs a
- * tag rather than reading it; the angle-bracket form is not syntax to any model and would be
+ * ElevenLabs writes them in square ones. eleven_v3, the default everywhere, performs a tag
+ * rather than reading it; the angle-bracket form is not syntax to any model and would be
  * spoken aloud or refused by the gate.
  *
  * Applied to the whole line before segments(), so it reaches the single-voice path too: a line

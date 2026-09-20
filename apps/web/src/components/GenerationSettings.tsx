@@ -24,8 +24,8 @@ import {
 import type { EffectiveSettings } from "@/lib/generation/settings";
 import type { Model } from "@/lib/voices/elevenlabs";
 
-/** What the pipeline has always used, and still the safe default. See MODEL_NOTES. */
-const PIPELINE_DEFAULT = "eleven_multilingual_v2";
+/** What generation.json ships and the database selects. See MODEL_NOTES. */
+const DEFAULT_MODEL = "eleven_v3";
 
 /**
  * What each model means *for this project*, which is not what it means in general.
@@ -37,9 +37,10 @@ const PIPELINE_DEFAULT = "eleven_multilingual_v2";
  * model tried, so nothing guarantees an NPC's lines will match.
  */
 const MODEL_NOTES: Record<string, string> = {
-  eleven_multilingual_v2: "What the Python pipeline uses. Every existing line was made with it.",
   eleven_v3:
-    "The most expressive model, which cuts against holding one NPC to a single performance. Worth trying on a line before a batch.",
+    "The default everywhere. The most expressive model, and the one that honours the pronunciation dictionary's phoneme rules.",
+  eleven_multilingual_v2:
+    "What the Python pipeline used to ship. Steadier across a batch, but it ignores phoneme rules and bracketed sounds entirely.",
 };
 
 const SLIDERS: { key: keyof VoiceSettings & string; label: string; hint: string }[] = [
@@ -168,7 +169,7 @@ export default function GenerationSettings({
             <p
               className={cn(
                 "text-xs",
-                draft.modelId === PIPELINE_DEFAULT ? "text-muted-foreground" : "text-amber-400",
+                draft.modelId === DEFAULT_MODEL ? "text-muted-foreground" : "text-amber-400",
               )}
             >
               {MODEL_NOTES[draft.modelId]}
