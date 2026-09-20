@@ -88,6 +88,12 @@ const TAKE_COLUMNS = [
   "dictionaryVersionId",
 ];
 
+// Written to the row but NOT to the manifest: the lead-in is how a take was made, not what
+// the addon needs to play it, and adding fields to TAKE_COLUMNS would restate every entry
+// in the committed manifest.json. See apps/web/src/lib/generation/leadin.ts.
+const LEAD_IN_COLUMNS = { leadIn: false, leadInSec: null };
+const INSERT_COLUMNS = [...TAKE_COLUMNS, ...Object.keys(LEAD_IN_COLUMNS)];
+
 // This project's own source in the shared table. Both sites' takes live in one "take"
 // table now, and the two name files by different frozen rules -- quests files carry an
 // extension and are shared by several NPCs, these are extension-less and one per line --
@@ -266,13 +272,13 @@ export async function insertTake(lineId, record, origin, settings = null) {
     const { rows } = await client.query(
       `insert into "take" (
          "source", "lineId", "lang", "version", "isCurrent", "origin", "settings",
-         ${TAKE_COLUMNS.map((c) => `"${columnOf(c)}"`).join(", ")}, "createdAt"
+         ${INSERT_COLUMNS.map((c) => `"${columnOf(c)}"`).join(", ")}, "createdAt"
        )
        select '${SOURCE}', $1, $2,
               coalesce(max("version"), 0) + 1,
               true, $3, $4::jsonb,
-              ${TAKE_COLUMNS.map((_, i) => `$${i + 6}`).join(", ")},
-              $${TAKE_COLUMNS.length + 6}::timestamptz
+              ${INSERT_COLUMNS.map((_, i) => `$${i + 6}`).join(", ")},
+              $${INSERT_COLUMNS.length + 6}::timestamptz
          from "take"
         where "source" = '${SOURCE}' and "file" = $5 and "lang" = $2
        returning "version"`,
@@ -282,7 +288,9 @@ export async function insertTake(lineId, record, origin, settings = null) {
         origin,
         settings === null ? null : JSON.stringify(settings),
         file,
-        ...TAKE_COLUMNS.map((column) => record[column] ?? null),
+        // `?? LEAD_IN_COLUMNS[column]` rather than `?? null` for the last two: "leadIn" is
+        // NOT NULL, and a CLI caller that knows nothing about lead-ins says false by omission.
+        ...INSERT_COLUMNS.map((column) => record[column] ?? LEAD_IN_COLUMNS[column] ?? null),
         record.generatedAt,
       ],
     );

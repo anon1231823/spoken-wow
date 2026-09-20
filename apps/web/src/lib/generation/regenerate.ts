@@ -21,6 +21,7 @@ import { readOverrides } from "@/lib/issues/overrides";
 import { INVALID_CHARS, isVoiceable } from "@/lib/text-gate";
 
 import { currentLocator } from "./dictionary";
+import { performsTags, trimLeadIn, withLeadIn } from "./leadin";
 import { fileDefaults } from "./files";
 import { applyPronunciation } from "./pronunciation";
 import { canonicalNpcId, seedFor } from "./seed";
@@ -179,8 +180,10 @@ export async function regenerateLine(
     const speech = narrated
       ? await textToDialogue(
           {
-            inputs: parts.map((part) => ({
-              text: part.text,
+            // Lead-in on the first turn only: the settling happens once, at the top of the
+            // file, and a throat clear between turns would be heard rather than trimmed.
+            inputs: parts.map((part, index) => ({
+              text: index === 0 ? withLeadIn(part.text, config.modelId) : part.text,
               voiceId: part.speaker === "narrator" ? narratorVoiceId! : voiceId,
             })),
             modelId: config.modelId,
@@ -193,7 +196,10 @@ export async function regenerateLine(
       : await textToSpeech(
           {
             voiceId,
-            text: spokenText,
+            // Prepended at the request and never stored: spokenText is what `characters`
+            // counts and what spokenHash hashes, and a constant prefix inside it would make
+            // every take in the corpus stale at once.
+            text: withLeadIn(spokenText, config.modelId),
             modelId: config.modelId,
             voiceSettings: config.voiceSettings,
             seed,
@@ -203,9 +209,13 @@ export async function regenerateLine(
         );
     if (!speech.ok) return { ok: false, failure: speech.failure };
 
+    // Trimmed before commitVersion, so the store, the archive and `bytes` all describe the
+    // audio the addon will play rather than the one ElevenLabs returned.
+    const { audio, trimmedSec } = await trimLeadIn(speech.audio, config.modelId);
+
     const committed = await commitVersion({
       file,
-      data: speech.audio,
+      data: audio,
       lineId,
       voice: line.voice,
       narratorVoice: narrated ? NARRATOR_VOICE : null,
@@ -221,6 +231,8 @@ export async function regenerateLine(
         : config.voiceSettings,
       spokenText,
       dictionaryVersion: dictionary?.versionId ?? null,
+      leadIn: performsTags(config.modelId),
+      leadInSec: trimmedSec,
       createdBy,
     });
 

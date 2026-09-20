@@ -35,6 +35,7 @@ import {
   restoreTake,
   writeAudio,
 } from "./tools";
+import { performsTags, trimLeadIn, withLeadIn } from "@/lib/generation/leadin";
 import { narratorConfig, NarratorMissing, type VoiceConfig } from "./voice";
 
 /**
@@ -53,6 +54,7 @@ async function takeFor(
   config: VoiceConfig,
   path: string,
   credits: number | null,
+  leadInSec: number | null,
 ) {
   return {
     file: entry.file,
@@ -66,6 +68,8 @@ async function takeFor(
     outputFormat: config.outputFormat,
     dictionaryId: config.dictionaryId ?? null,
     dictionaryVersionId: config.dictionaryVersionId ?? null,
+    leadIn: performsTags(config.modelId),
+    leadInSec,
     generatedAt: new Date().toISOString(),
   };
 }
@@ -128,7 +132,9 @@ export async function regenerateZoneLine(
   const speech = await textToSpeech(
     {
       voiceId: config.voiceId!,
-      text: entry.spoken,
+      // Prepended at the request only. entry.spoken is what the hash and the character
+      // count describe, and a constant prefix inside it would make every line stale.
+      text: withLeadIn(entry.spoken, config.modelId),
       modelId: config.modelId,
       voiceSettings: config.voiceSettings,
       seed: null,
@@ -140,7 +146,9 @@ export async function regenerateZoneLine(
     { apiKey: options.apiKey },
   );
   if (!speech.ok) return { ok: false, failure: speech.failure };
-  const { audio, credits } = speech;
+  const { credits } = speech;
+  // Trimmed before the store sees it: what is written here is what the addon plays.
+  const { audio, trimmedSec } = await trimLeadIn(speech.audio, config.modelId);
 
   try {
     // Archives the take being replaced. This is what makes a bad re-roll reversible, and
@@ -149,7 +157,7 @@ export async function regenerateZoneLine(
 
     const version = await insertTake(
       entry.id,
-      await takeFor(entry, config, path, credits),
+      await takeFor(entry, config, path, credits, trimmedSec),
       "generated",
       // Unlike an imported take, this one knows exactly what it was made with, so a
       // version that sounded right can be reproduced after the settings have moved on.

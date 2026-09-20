@@ -19,6 +19,7 @@ const { closeDb, db } = await import("@/lib/db");
 const { storePath, versionPath, versionsOnDisk, writeStoreFile } = await import("./archive");
 const { regenerateLine } = await import("./regenerate");
 const { listVersions } = await import("./versions");
+const { LEAD_IN } = await import("./leadin");
 const { audioRelPath } = await import("@/lib/audio");
 const { lineIndex } = await import("@/lib/corpus");
 const { clearOverride, writeOverride } = await import("@/lib/issues/overrides");
@@ -189,7 +190,10 @@ describe("a line with no audio yet", () => {
     expect(speech.url).toBe("https://stub.invalid/v1/text-to-speech/voice-human-male-standard");
   });
 
-  it("counts the characters it actually spoke", async () => {
+  // The lead-in is the one thing sent that the take does NOT record: it is a constant, it
+  // says nothing about the line, and counting it would make every take in the corpus stale
+  // the day it was introduced.
+  it("counts the characters it actually spoke, and not the lead-in", async () => {
     const { options, calls } = stub();
     const result = await regenerate(SOLO, options);
 
@@ -198,8 +202,8 @@ describe("a line with no audio yet", () => {
 
     const spoken = (calls.find((c) => c.url.includes("text-to-speech"))!.body as { text: string })
       .text;
-    expect(result.spokenText).toBe(spoken);
-    expect(result.characters).toBe(spoken.length);
+    expect(spoken).toBe(`${LEAD_IN}${result.spokenText}`);
+    expect(result.characters).toBe(result.spokenText.length);
   });
 });
 
@@ -212,7 +216,9 @@ describe("a race with an accent tag", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const speech = calls.find((call) => call.url.includes("text-to-speech"))!;
-    expect((speech.body as { text: string }).text).toBe("[Scottish accent] Hiccup! Ho Ho!");
+    expect((speech.body as { text: string }).text).toBe(
+      `${LEAD_IN}[Scottish accent] Hiccup! Ho Ho!`,
+    );
   });
 
   // The tag is text ElevenLabs bills for and text the staleness check hashes, so a take that
@@ -234,7 +240,9 @@ describe("a race with an accent tag", () => {
     await regenerate(SOLO, options);
 
     const speech = calls.find((call) => call.url.includes("text-to-speech"))!;
-    expect((speech.body as { text: string }).text.startsWith("[")).toBe(false);
+    const sent = (speech.body as { text: string }).text;
+    // Past the lead-in, which every v3 request carries and which is not an accent tag.
+    expect(sent.slice(LEAD_IN.length).startsWith("[")).toBe(false);
   });
 });
 
@@ -381,7 +389,7 @@ describe("a line whose spoken text has been rewritten", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const sent = calls.find((c) => c.url.includes("text-to-speech"))!.body as { text: string };
-    expect(sent.text).toBe("Say this instead.");
+    expect(sent.text).toBe(`${LEAD_IN}Say this instead.`);
     expect(result.spokenText).toBe("Say this instead.");
     // Billed for what was sent, so the version row is not describing a different take.
     expect(result.characters).toBe("Say this instead.".length);
@@ -433,8 +441,12 @@ describe("a line whose spoken text has been rewritten", () => {
     };
     // The whole line is a direction, so there is one turn and the narrator speaks it, with
     // the brackets stripped rather than read aloud.
+    // The lead-in rides on the first turn: the ramp-up happens once, at the top of the file.
     expect(body.inputs).toEqual([
-      { text: "Sirra begins translating the note...", voice_id: "voice-narrator-male" },
+      {
+        text: `${LEAD_IN}Sirra begins translating the note...`,
+        voice_id: "voice-narrator-male",
+      },
     ]);
     // Only stability: the endpoint documents nothing else, so nothing else is claimed.
     expect(body.settings).toEqual({ stability: expect.any(Number) });

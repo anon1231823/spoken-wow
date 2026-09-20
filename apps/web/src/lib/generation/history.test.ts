@@ -42,6 +42,8 @@ function take(overrides: Partial<Parameters<typeof commitVersion>[0]> = {}) {
     voice: "dwarf-male",
     narratorVoice: null,
     voiceId: "voice-abc",
+    leadIn: false,
+    leadInSec: null,
     modelId: "eleven_multilingual_v2",
     seed: 1163733943,
     characters: 42,

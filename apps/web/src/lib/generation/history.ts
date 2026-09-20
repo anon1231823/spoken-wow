@@ -36,6 +36,9 @@ import type { VoicelineVersion } from "./versions";
 export type CommitInput = {
   file: string;
   data: Buffer;
+  /** Whether the request carried a lead-in, and how much was trimmed off the stored audio. */
+  leadIn: boolean;
+  leadInSec: number | null;
   lineId: string;
   voice: string;
   voiceId: string;
@@ -159,6 +162,8 @@ export async function commitVersion(input: CommitInput): Promise<CommitResult> {
     settings: input.settings,
     spokenHash: spokenHash(input.spokenText),
     dictionaryVersion: input.dictionaryVersion,
+    leadIn: input.leadIn,
+    leadInSec: input.leadInSec,
     createdBy: input.createdBy,
   });
   await setCurrentVersion(input.file, version);

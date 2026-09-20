@@ -41,6 +41,10 @@ export type TakeRecord = {
   outputFormat: string | null;
   dictionaryId: string | null;
   dictionaryVersionId: string | null;
+  /** Whether the request carried a lead-in. See lib/generation/leadin.ts. */
+  leadIn: boolean;
+  /** Seconds cut off the front, or null when the lead-in was asked for and not found. */
+  leadInSec: number | null;
   generatedAt: string;
 };
 
@@ -77,10 +81,10 @@ export async function insertTake(
          "source", "lineId", "lang", "version", "isCurrent", "origin", "settings",
          "file", "spokenHash", "characters", "credits", "durationSec", "bytes",
          "voiceId", "modelId", "outputFormat", "dictionaryId", "dictionaryVersion",
-         "createdAt"
+         "leadIn", "leadInSec", "createdAt"
        )
        select $1, $2, $3, coalesce(max("version"), 0) + 1, true, $4, $5::jsonb,
-              $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::timestamptz
+              $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19::timestamptz
          from "take"
         where "source" = $1 and "file" = $6 and "lang" = $3
        returning "version"`,
@@ -101,6 +105,8 @@ export async function insertTake(
         record.outputFormat,
         record.dictionaryId,
         record.dictionaryVersionId,
+        record.leadIn,
+        record.leadInSec,
         record.generatedAt,
       ],
     );
