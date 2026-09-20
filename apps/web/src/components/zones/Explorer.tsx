@@ -622,18 +622,21 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           <col className="w-40" />
           <col className="w-44" />
           <col />
-          {/* Wide enough for what the cell actually holds: icon buttons are 32px, an editor
-              can have four side by side - report, edit, restore, regenerate - and the take
-              version sits in front of them. Anything narrower and the row overflows left
-              over the prose. w-10 for everyone else, who has the report button and nothing
-              more; never w-0, since that button is not gated. */}
-          <col className={canRegenerate ? "w-48" : "w-10"} />
+          {/* Audio: the state word, or the take selector, both of which are short. */}
+          <col className="w-28" />
+          {/* Wide enough for what the cell actually holds: icon buttons are 32px and an
+              editor can have three side by side - report, edit, regenerate - plus the
+              report count. Anything narrower and the row overflows left over the prose.
+              w-16 for everyone else, who has the report button and the count; never w-0,
+              since that button is not gated. */}
+          <col className={canRegenerate ? "w-40" : "w-16"} />
         </colgroup>
         <thead>
           <tr className="text-muted-foreground border-border border-b text-left text-xs">
             <th className="px-2 pb-1 font-medium">Zone</th>
             <th className="px-2 pb-1 font-medium">Subzone</th>
             <th className="px-2 pb-1 font-medium">Lore</th>
+            <th className="px-2 pb-1 font-medium">Audio</th>
             <th className="sr-only">Actions</th>
           </tr>
         </thead>
@@ -649,6 +652,12 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
               onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
               state={rowStates[line.id]}
               onClearDirty={(l) => clearDirty([l.file])}
+              onRestored={(l, version) => {
+                // The player's cache buster: the file name does not move when a take is
+                // put back, so without this the browser replays the clip just replaced.
+                setVersions((current) => ({ ...current, [l.id]: version }));
+                refetch();
+              }}
               onReport={setReportFor}
               onEditText={(l) => setEditFor(withEdits(l))}
               onRegenerate={regenerateOne}

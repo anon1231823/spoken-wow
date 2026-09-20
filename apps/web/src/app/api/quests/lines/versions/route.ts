@@ -1,33 +1,20 @@
 /**
- * Every take of a line, and how many each line has.
+ * What a page of search results needs to know about its files' takes, in one request.
  *
- * Two shapes, because the page needs two different things. Opening one line's history wants
- * the whole record; drawing a search result wants only "does this line have any", for up to
- * a few thousand files at once - and a query string long enough to name them all would be
- * refused by nginx before it arrived. Hence GET for one and POST for many.
+ * POST rather than GET because a search can name a few thousand files, and a query string
+ * long enough to carry them would be refused by nginx before it arrived. Opening ONE line's
+ * history is /api/takes, which every section shares; this stays quests-only because the two
+ * questions it answers beside the counts -- staleness and pronunciation drift -- are
+ * computed here from the corpus on disk, while zones and books answer both from their own
+ * catalogues inside their search.
  */
 import { corpusFiles } from "@/lib/audio";
 import { requireRegenerate } from "@/lib/generation/authz";
-import { historyOf } from "@/lib/generation/history";
 import { dirtyQuestFiles } from "@/lib/quests/dirtiness";
 import { staleFiles } from "@/lib/quests/staleness";
-import { versionCounts } from "@/lib/generation/versions";
+import { liveVersions, versionCounts } from "@/lib/generation/versions";
 
 export const dynamic = "force-dynamic";
-
-export async function GET(request: Request) {
-  const { denied } = await requireRegenerate();
-  if (denied) return denied;
-
-  const file = new URL(request.url).searchParams.get("file");
-  // Membership of the corpus, not a pattern: the same whitelist that makes the history
-  // playback route traversal-proof.
-  if (!file || !corpusFiles().has(file)) {
-    return Response.json({ error: "unknown file" }, { status: 404 });
-  }
-
-  return Response.json({ file, versions: await historyOf(file) });
-}
 
 export async function POST(request: Request) {
   const { denied } = await requireRegenerate();
@@ -43,16 +30,19 @@ export async function POST(request: Request) {
     (file): file is string => typeof file === "string" && known.has(file),
   );
 
-  // All three in one round trip, because the page asks them about the same files: how many
-  // takes are there, is the live one still made of the current text, and was it cut before
-  // a pronunciation it speaks was changed. The third is the one no hash can answer.
-  const [counts, stale, dirty] = await Promise.all([
+  // All four in one round trip, because the page asks them about the same files: how many
+  // takes are there, which one is live, is it still made of the current text, and was it
+  // cut before a pronunciation it speaks was changed. The last is the one no hash can
+  // answer.
+  const [counts, live, stale, dirty] = await Promise.all([
     versionCounts(files),
+    liveVersions(files),
     staleFiles(files),
     dirtyQuestFiles(files),
   ]);
   return Response.json({
     counts: Object.fromEntries(counts),
+    live: Object.fromEntries(live),
     stale: [...stale],
     dirty: [...dirty],
   });

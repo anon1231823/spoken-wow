@@ -308,6 +308,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
     void fetchTakeCounts(files, controller.signal).then((info) => {
       if (!info) return;
       setTakes((current) => ({ ...current, ...info.counts }));
+      // The live version per file, which the Audio column prints. Merged rather than
+      // replaced, because a regeneration in this session has already written its own.
+      setVersions((current) => ({ ...info.live, ...current }));
       // Replaced rather than merged: a file that has just been regenerated must leave the
       // set, and merging could only ever add to it.
       setStale(new Set(info.stale));
@@ -767,14 +770,17 @@ export default function Explorer({ facets }: { facets: Facets }) {
             <col className="w-52" />
             <col className="w-48" />
             <col className="w-32" />
+            {/* The line text takes whatever the named columns leave, which is what anyone
+                here to read came for. */}
             <col />
+            {/* Audio: a state word, or the take selector. Both are short. */}
             <col className="w-28" />
-            {/* Wide enough for what the cell actually holds, which the old w-20 was not: icon
-                buttons are 32px, and a collaborator can have five of them side by side - report,
-                edit, ignore, history, regenerate - so anything narrower pushes them left over
-                the line text. w-10 for everyone else, who has the report button and nothing
-                more; never w-0, since that button is not gated. */}
-            <col className={showRegenerate ? "w-44" : "w-10"} />
+            {/* Wide enough for what the cell actually holds, which the old w-20 was not:
+                icon buttons are 32px, and a collaborator can have four side by side --
+                report, edit, ignore, regenerate -- plus the report count. Anything narrower
+                pushes them left over the line text. w-16 for everyone else, who has the
+                report button and the count; never w-0, since that button is not gated. */}
+            <col className={showRegenerate ? "w-40" : "w-16"} />
           </colgroup>
           <thead>
             <tr className="text-muted-foreground border-border border-b text-left text-xs">
@@ -782,6 +788,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
               <th className="px-2 pb-1 font-medium">Quest</th>
               <th className="px-2 pb-1 font-medium">Race / gender / flavor</th>
               <th className="px-2 pb-1 font-medium">Line</th>
+              <th className="px-2 pb-1 font-medium">Audio</th>
               <th className="sr-only">Actions</th>
             </tr>
           </thead>
@@ -796,6 +803,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 state={lineStates[line.lineId]}
                 blocked={blockedReason(line)}
                 takes={takes[line.audioPath] ?? 0}
+                version={versions[line.audioPath] ?? null}
                 stale={stale.has(line.audioPath)}
                 dirty={dirty.has(line.audioPath) && !cleared.has(line.audioPath)}
                 onClearDirty={(l) => clearDirty([l.audioPath])}

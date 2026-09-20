@@ -7,12 +7,12 @@ import {
   MessageSquare,
   PencilIcon,
   PlayIcon,
-  RotateCw,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import RegenerateButton from "@/components/RegenerateButton";
+import TakeSelector from "@/components/TakeSelector";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ResultLine } from "@/lib/zones/search";
@@ -33,6 +33,8 @@ type Props = {
   onPlay: (line: ResultLine) => void;
   onNarrowToZone: (line: ResultLine) => void;
   onReport: (line: ResultLine) => void;
+  /** An earlier take is live again, so the row and the player can catch up. */
+  onRestored: (line: ResultLine, version: number) => void;
   onEditText: (line: ResultLine) => void;
   onRegenerate: (line: ResultLine) => void;
   /** Say this take is fine as it stands, despite a pronunciation having moved under it. */
@@ -62,6 +64,7 @@ export function LineRow({
   onPlay,
   onNarrowToZone,
   onReport,
+  onRestored,
   onEditText,
   onRegenerate,
   onClearDirty,
@@ -150,35 +153,6 @@ export function LineRow({
             </span>
           )}
 
-          {/* The regeneration outcome replaces the state chips: once a line has just been
-              made, "no audio" is stale and confusing rather than merely redundant. */}
-          {state?.phase === "error" ? (
-            <span className="text-destructive mt-0.5 max-w-[12rem] shrink-0 text-right text-xs">
-              {state.message}
-            </span>
-          ) : state?.phase === "done" ? (
-            <span className="mt-0.5 shrink-0 text-xs text-emerald-400">
-              regenerated · v{state.version}
-            </span>
-          ) : (
-            STATE_LABEL[line.state] && (
-              <span className={cn("mt-0.5 shrink-0 text-xs", STATE_STYLE[line.state])}>
-                {STATE_LABEL[line.state]}
-              </span>
-            )
-          )}
-
-          {/* Beside the state rather than inside it: the text has not moved, so this line is
-              `current` and dirty at once, and one word cannot say both. */}
-          {line.dirty && (
-            <span
-              className="mt-0.5 shrink-0 text-xs text-amber-300"
-              title="Cut before a pronunciation it speaks was changed"
-            >
-              pronunciation
-            </span>
-          )}
-
           {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle needs
               a real control. It doubles as the only thing on screen saying rows expand. */}
           <button
@@ -198,19 +172,41 @@ export function LineRow({
         </div>
       </td>
 
-      <td className="py-1.5 pr-1 pl-2">
-        <span className="flex items-center justify-end gap-1">
-          {/* Which take is live, beside the two controls that change it. A line with one
-              take says nothing: v1 is what every untouched line is. */}
-          {line.take && line.take.takes > 1 && (
-            <span
-              className="text-muted-foreground flex items-center gap-0.5 font-mono text-xs"
-              title={`${line.take.takes} takes; v${line.take.version} is live`}
-            >
-              <RotateCw size={10} /> v{line.take.version}
-            </span>
-          )}
+      {/* Audio, in a column of its own rather than floated into the prose, the way the
+          books table has always had it: the point of a column is that it lines up down the
+          page, and "which of these has no clip yet" is the question this screen is most
+          often asked. It holds what the clip's state is, and which take that clip is. */}
+      <td className="px-2 py-2 text-xs whitespace-nowrap">
+        {/* The regeneration outcome replaces the state: once a line has just been made,
+            "no audio" is stale and confusing rather than merely redundant. */}
+        {state?.phase === "error" ? (
+          <span className="text-destructive">{state.message}</span>
+        ) : state?.phase === "done" ? (
+          <span className="text-emerald-400">v{state.version}</span>
+        ) : STATE_LABEL[line.state] ? (
+          <span className={STATE_STYLE[line.state]}>{STATE_LABEL[line.state]}</span>
+        ) : (
+          // Which take is live, and the way to any other. The label IS the control, so
+          // there is no second icon for a history nobody knew was there.
+          <TakeSelector
+            source="zones"
+            file={line.file}
+            version={line.take?.version ?? null}
+            takes={line.take?.takes ?? 0}
+            onRestored={(version) => onRestored(line, version)}
+          />
+        )}
+        {/* Beneath the state rather than inside it: the text has not moved, so this line is
+            `current` and dirty at once, and one word cannot say both. */}
+        {line.dirty && (
+          <div className="text-amber-300" title="Cut before a pronunciation it speaks was changed">
+            pronunciation
+          </div>
+        )}
+      </td>
 
+      <td className="py-1.5 pr-1 pl-2">
+        <span className="flex items-center justify-end gap-1 whitespace-nowrap">
           {/* The count is public; the bodies are not. So everyone sees how many open
               reports a line carries -- "somebody has already said so" is the answer to the
               question a dissatisfied listener is about to ask -- and a triager gets a link

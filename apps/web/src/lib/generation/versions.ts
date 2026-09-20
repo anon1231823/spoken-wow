@@ -113,6 +113,24 @@ export async function versionCounts(files: string[]): Promise<Map<string, number
 }
 
 /**
+ * Which version is live for each of these files, so a row can say what it is playing.
+ *
+ * The live take rather than the highest, which are not the same thing once a restore has
+ * moved the flag back down -- and saying "v5" over the bytes of v2 is exactly the kind of
+ * quiet wrongness the take layer exists to avoid.
+ */
+export async function liveVersions(files: string[]): Promise<Map<string, number>> {
+  if (files.length === 0) return new Map();
+  const { rows } = await db().query<{ file: string; version: number }>(
+    `select "file", "version"
+       from "take"
+      where "source" = 'quests' and "isCurrent" and "file" = any($1::text[])`,
+    [files],
+  );
+  return new Map(rows.map((row) => [row.file, row.version]));
+}
+
+/**
  * When the live take of each file was generated, as epoch milliseconds.
  *
  * The live take only, not the newest row: what "this line was generated on Tuesday" means is

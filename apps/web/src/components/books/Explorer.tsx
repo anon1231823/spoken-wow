@@ -482,6 +482,12 @@ export function Explorer({ books }: { books: BookFacet[] }) {
             onRegenerate={regenerateOne}
             onSelectBook={(line) => updateFilters({ bookId: line.bookId })}
             onReport={setReportFor}
+            onRestored={(line, version) => {
+              // The player's cache buster, so the clip that was just put back is the one
+              // that plays rather than the take it replaced -- the file name does not move.
+              setVersions((state) => ({ ...state, [line.id]: version }));
+              refetch();
+            }}
           />
         )
       )}

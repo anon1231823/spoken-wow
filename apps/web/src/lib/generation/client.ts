@@ -100,6 +100,8 @@ export async function fetchGenerationStatus(
  */
 export type TakeInfo = {
   counts: Record<string, number>;
+  /** Which version is live for each file -- not the highest, once a restore has moved it. */
+  live: Record<string, number>;
   stale: string[];
   /** Files whose take predates a change to a pronunciation it speaks. See lib/generation/dirty. */
   dirty: string[];

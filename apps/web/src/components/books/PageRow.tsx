@@ -4,6 +4,7 @@ import { ChevronDownIcon, Eraser, FlagIcon, PlayIcon } from "lucide-react";
 import { useState } from "react";
 
 import RegenerateButton from "@/components/RegenerateButton";
+import TakeSelector from "@/components/TakeSelector";
 import { Button } from "@/components/ui/button";
 import { materialName } from "@/lib/books/filters";
 import type { ResultLine } from "@/lib/books/search";
@@ -34,6 +35,8 @@ type Props = {
   onSelectBook: (line: ResultLine) => void;
   /** Open the report dialog. Everyone gets this, signed in or not. */
   onReport: (line: ResultLine) => void;
+  /** An earlier take is live again, so the row and the player can catch up. */
+  onRestored: (line: ResultLine, version: number) => void;
   /** Say this take is fine as it stands, despite a pronunciation having moved under it. */
   onClearDirty: (line: ResultLine) => void;
 };
@@ -63,6 +66,7 @@ export function PageRow({
   onSelectBook,
   onClearDirty,
   onReport,
+  onRestored,
 }: Props) {
   const playable = line.state !== "missing";
   const [expanded, setExpanded] = useState(false);
@@ -187,10 +191,19 @@ export function PageRow({
           // Why this page is silent, rather than leaving it looking merely un-narrated. It
           // is in the corpus because the game has it.
           <span className="text-muted-foreground italic">{line.skipReason}</span>
+        ) : STATE_LABEL[line.state] ? (
+          <span className={STATE_STYLE[line.state]}>{STATE_LABEL[line.state]}</span>
         ) : (
-          <span className={STATE_STYLE[line.state]}>
-            {STATE_LABEL[line.state] || `v${line.take?.version ?? 1}`}
-          </span>
+          // Which take is live, and the way to any other. The label IS the control: the
+          // number is the question, and "which other numbers are there" is what a click
+          // asks. Only where there is audio to have takes of.
+          <TakeSelector
+            source="books"
+            file={line.file}
+            version={line.take?.version ?? null}
+            takes={line.take?.takes ?? 0}
+            onRestored={(version) => onRestored(line, version)}
+          />
         )}
         {/* Beneath the state rather than inside it: the text has not moved, so this page is
             `current` and dirty at once, and one word cannot say both. */}
@@ -205,7 +218,10 @@ export function PageRow({
         {line.chars}
       </td>
 
-      <td className="px-2 py-2">
+      {/* One line, like the other two explorers': the controls read left to right and the
+          column keeps its width whatever a row happens to offer. */}
+      <td className="py-1.5 pr-1 pl-2">
+        <span className="flex items-center justify-end gap-1 whitespace-nowrap">
         {/* Outside the canRegenerate gate, deliberately: reporting is what a reader who
             cannot sign in has, and /api/reports is unauthenticated for the same reason.
             Every page has an address -- it is the page id the addon builds its link from --
@@ -238,6 +254,7 @@ export function PageRow({
             blocked={line.generatable ? null : `this page cannot be voiced: ${line.skipReason}`}
           />
         )}
+        </span>
       </td>
     </tr>
   );
