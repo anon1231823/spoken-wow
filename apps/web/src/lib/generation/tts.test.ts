@@ -7,6 +7,7 @@ import {
   textToDialogue,
   textToSpeech,
 } from "./tts";
+import { LEAD_IN } from "./leadin";
 
 const SETTINGS = {
   stability: 0.5,
@@ -111,7 +112,15 @@ describe("textToSpeech", () => {
     const fetchImpl = stub(audioResponse());
     const result = await textToSpeech(REQUEST, { ...OPTIONS, fetchImpl });
 
-    expect(result).toEqual({ ok: true, audio: Buffer.from("ID3fake-mp3-bytes"), credits: 17 });
+    // Both false/null: REQUEST is eleven_multilingual_v2, which would read the brackets
+    // aloud, so no lead-in is sent and there is nothing to trim back off.
+    expect(result).toEqual({
+      ok: true,
+      audio: Buffer.from("ID3fake-mp3-bytes"),
+      leadIn: false,
+      leadInSec: null,
+      credits: 17,
+    });
 
     const [url, init] = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(url).toBe("https://stub.invalid/v1/text-to-speech/voice-abc");
@@ -259,8 +268,10 @@ const base = {
 
 describe("buildDialoguePayload", () => {
   it("keeps the turns in order, each with its own voice", () => {
+    // The first turn carries the lead-in; the second must not, or a throat clear would land
+    // mid-file where nothing trims it.
     expect(buildDialoguePayload(base).inputs).toEqual([
-      { text: "Excellent.", voice_id: "npc-voice" },
+      { text: `${LEAD_IN}Excellent.`, voice_id: "npc-voice" },
       { text: "He reads.", voice_id: "narrator-voice" },
     ]);
   });
@@ -294,7 +305,10 @@ describe("buildDialoguePayload", () => {
 
 describe("dialogueCharacters", () => {
   it("counts every turn, since the limit is across all of them", () => {
-    expect(dialogueCharacters(base)).toBe("Excellent.".length + "He reads.".length);
+    // Including the lead-in, because the endpoint's limit counts what it is sent.
+    expect(dialogueCharacters(base)).toBe(
+      LEAD_IN.length + "Excellent.".length + "He reads.".length,
+    );
   });
 });
 

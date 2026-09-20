@@ -40,18 +40,20 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
-const run = promisify(execFile);
+import { FFMPEG } from "@/lib/voices/merge";
 
-/** Shared with lib/voices/merge.ts, which is the other caller that needs ffmpeg. */
-export const FFMPEG = process.env.FFMPEG_PATH ?? "ffmpeg";
+const run = promisify(execFile);
 
 export const LEAD_IN = "[clears throat] [long pause] ";
 
 /**
  * Models that perform a bracketed tag rather than reading it.
  *
- * The same distinction narration.ts relies on for `<hic>`. A model that is not on this list
- * would say "clears throat" aloud, so it gets no lead-in at all rather than a broken one.
+ * A model not on this list would say "clears throat" aloud, so it gets no lead-in at all
+ * rather than a broken one. Note this is narrower than the codebase as a whole: audioTags
+ * and accentTagged in narration.ts send their brackets to whatever model is configured,
+ * without asking. So this list means "the lead-in is safe here", not "this codebase only
+ * sends brackets to models that perform them".
  */
 export const TAG_MODELS = ["eleven_v3"] as const;
 
@@ -69,6 +71,17 @@ export const GAP_SECONDS = 1.8;
 
 /** How far into the clip to look. The measured lead-in ends by 3.4s. */
 export const WINDOW_SECONDS = 6;
+
+/**
+ * How much of the clip to decode looking for it.
+ *
+ * Nothing starting after WINDOW_SECONDS can be the lead-in, so decoding a whole book page -
+ * minutes of audio, several jobs at a time - to inspect its first seconds is most of the
+ * cost of the trim. The cap is well clear of the window rather than equal to it: the cut is
+ * the END of a gap, and a qualifying gap that starts just inside the window has to be able
+ * to finish inside the decoded span or it would be truncated into invisibility.
+ */
+const SCAN_SECONDS = 12;
 
 /** Cut this much before speech resumes, so the first phoneme survives the trim. */
 export const MARGIN_SECONDS = 0.05;
@@ -107,15 +120,17 @@ export function cutPoint(output: string): number | null {
 
 export type Trimmed = {
   audio: Buffer;
+  /** Whether a lead-in was sent at all, which is a property of the model. */
+  leadIn: boolean;
   /**
    * Seconds removed, or null when nothing was.
    *
    * Null covers three different cases on purpose - no lead-in was sent, the model ignored
    * it, or ffmpeg failed - because the caller's response to all three is the same: store the
-   * audio it has. Which one happened is in the log, and `leadIn` on the take says whether
-   * one was asked for at all.
+   * audio it has. Which one happened is in the log, and `leadIn` separates the first case
+   * from the two worth chasing.
    */
-  trimmedSec: number | null;
+  leadInSec: number | null;
 };
 
 /**
@@ -127,7 +142,7 @@ export type Trimmed = {
  * The take then carries `leadIn: true` with no `leadInSec`, which is how these are found.
  */
 export async function trimLeadIn(audio: Buffer, modelId: string): Promise<Trimmed> {
-  if (!performsTags(modelId)) return { audio, trimmedSec: null };
+  if (!performsTags(modelId)) return { audio, leadIn: false, leadInSec: null };
 
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "spoken-leadin-"));
   const source = path.join(directory, "in.mp3");
@@ -139,16 +154,23 @@ export async function trimLeadIn(audio: Buffer, modelId: string): Promise<Trimme
     // silencedetect reports on stderr at info level, so -v error would hide exactly what
     // this reads. That mistake costs an hour: every clip looks clean and the conclusion is
     // that the audio has no gaps in it.
-    const { stderr } = await run(FFMPEG, [
-      "-i", source,
-      "-af", `silencedetect=noise=${NOISE_FLOOR_DB}dB:d=${GAP_SECONDS}`,
-      "-f", "null", "-",
-    ]);
+    // maxBuffer raised the way merge.ts raises it: this reads ffmpeg's own chatter, which
+    // is the one thing the default 1MB was never sized for.
+    const { stderr } = await run(
+      FFMPEG,
+      [
+        "-i", source,
+        "-t", String(SCAN_SECONDS),
+        "-af", `silencedetect=noise=${NOISE_FLOOR_DB}dB:d=${GAP_SECONDS}`,
+        "-f", "null", "-",
+      ],
+      { maxBuffer: 8 * 1024 * 1024 },
+    );
 
     const cut = cutPoint(stderr);
     if (cut === null) {
-      console.warn(`lead-in gap not found; storing the take as it arrived`);
-      return { audio, trimmedSec: null };
+      console.warn("lead-in gap not found; storing the take as it arrived");
+      return { audio, leadIn: true, leadInSec: null };
     }
 
     // Stream copy rather than re-encode: the trim must not cost a second lossy generation
@@ -156,11 +178,22 @@ export async function trimLeadIn(audio: Buffer, modelId: string): Promise<Trimme
     // 44.1kHz is within 26ms - far finer than the margin above.
     await run(FFMPEG, ["-v", "error", "-y", "-ss", String(cut), "-i", source, "-c", "copy", trimmed]);
 
-    return { audio: await fs.readFile(trimmed), trimmedSec: cut };
+    return { audio: await fs.readFile(trimmed), leadIn: true, leadInSec: cut };
   } catch (error) {
-    console.error("trimming the lead-in failed; storing the take as it arrived", error);
-    return { audio, trimmedSec: null };
+    // Named rather than lumped in, because it is the likeliest cause of every take on a box
+    // arriving untrimmed, and the generic message sends the reader looking at the audio.
+    const detail = message(error);
+    console.error(
+      detail.includes("ENOENT") && detail.includes(FFMPEG)
+        ? `ffmpeg is not installed or not on PATH (looked for "${FFMPEG}"); storing takes untrimmed`
+        : `trimming the lead-in failed; storing the take as it arrived: ${detail}`,
+    );
+    return { audio, leadIn: true, leadInSec: null };
   } finally {
     await fs.rm(directory, { recursive: true, force: true });
   }
+}
+
+function message(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

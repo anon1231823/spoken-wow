@@ -19,7 +19,6 @@ import type { RegenerateResult } from "@/lib/generation/regenerate";
 import { textToSpeech } from "@/lib/generation/tts";
 import { type VoiceConfig } from "@/lib/zones/voice";
 import { narratorConfig, NarratorMissing } from "@/lib/zones/voice";
-import { performsTags, trimLeadIn, withLeadIn } from "@/lib/generation/leadin";
 
 import { catalogue, BASE_LANG, type BookPage } from "./catalogue";
 export { publish } from "./publish";
@@ -75,14 +74,10 @@ export async function regenerateBookLine(
   }
 
   // No seed: a page is narrated once and re-rolled by hand if it comes out wrong.
-  //
-  // The lead-in goes on HERE and not in page.spoken: the hash, the character count and the
-  // file name all describe the page, and a take is stale when the page's text moves. Folding
-  // a constant prefix into that would restate every page in the library as stale at once.
   const speech = await textToSpeech(
     {
       voiceId: config.voiceId,
-      text: withLeadIn(page.spoken, config.modelId),
+      text: page.spoken,
       modelId: config.modelId,
       voiceSettings: config.voiceSettings,
       seed: null,
@@ -94,10 +89,8 @@ export async function regenerateBookLine(
     { apiKey: options.apiKey },
   );
   if (!speech.ok) return { ok: false, failure: speech.failure };
-  const { credits } = speech;
-  // Before anything is written: the store keeps what the addon plays, and a throat clear
-  // that reached the store would need a second pass over the file to get out again.
-  const { audio, trimmedSec } = await trimLeadIn(speech.audio, config.modelId);
+  // Already trimmed of its lead-in by tts.ts: the store keeps what the addon plays.
+  const { audio, credits } = speech;
 
   try {
     // Archives the take being replaced, which is what makes a bad re-roll reversible.
@@ -118,8 +111,8 @@ export async function regenerateBookLine(
         outputFormat: config.outputFormat,
         dictionaryId: config.dictionaryId ?? null,
         dictionaryVersionId: config.dictionaryVersionId ?? null,
-        leadIn: performsTags(config.modelId),
-        leadInSec: trimmedSec,
+        leadIn: speech.leadIn,
+        leadInSec: speech.leadInSec,
         generatedAt: new Date().toISOString(),
       },
       "generated",

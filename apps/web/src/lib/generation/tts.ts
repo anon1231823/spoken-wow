@@ -23,6 +23,7 @@ import {
 
 import type { VoiceSettings } from "./config";
 import { classifyUpstream, failure, type Failure } from "./errors";
+import { trimLeadIn, withLeadIn } from "./leadin";
 
 /**
  * The corpus is English, so every request says so.
@@ -88,7 +89,11 @@ export type DialogueRequest = {
 export type SpeechResult =
   | {
       ok: true;
+      /** Already trimmed of its lead-in, if the model took one. See ./leadin. */
       audio: Buffer;
+      /** Whether a lead-in was sent, and how many seconds were cut back off. */
+      leadIn: boolean;
+      leadInSec: number | null;
       /**
        * What the request actually cost, from the `character-cost` response header.
        *
@@ -115,7 +120,11 @@ export function creditsFrom(headers: Headers): number | null {
 
 export function buildPayload(request: SpeechRequest): Record<string, unknown> {
   const payload: Record<string, unknown> = {
-    text: request.text,
+    // The lead-in belongs here for the reason language_code does: it is a constant derived
+    // from the model, so every caller should get it and none should have to remember it.
+    // preview.ts is why that matters - it audition a single sentence, which is the request
+    // most damaged by the ramp-up, and it would never have thought to ask.
+    text: withLeadIn(request.text, request.modelId),
     model_id: request.modelId,
     voice_settings: request.voiceSettings,
   };
@@ -150,7 +159,12 @@ export function buildPayload(request: SpeechRequest): Record<string, unknown> {
  */
 export function buildDialoguePayload(request: DialogueRequest): Record<string, unknown> {
   const payload: Record<string, unknown> = {
-    inputs: request.inputs.map((input) => ({ text: input.text, voice_id: input.voiceId })),
+    // Lead-in on the first turn only: the settling happens once, at the top of the file, and
+    // a throat clear between turns would be heard rather than trimmed.
+    inputs: request.inputs.map((input, index) => ({
+      text: index === 0 ? withLeadIn(input.text, request.modelId) : input.text,
+      voice_id: input.voiceId,
+    })),
     model_id: request.modelId,
     settings: { stability: request.stability },
   };
@@ -167,9 +181,16 @@ export function buildDialoguePayload(request: DialogueRequest): Record<string, u
   return payload;
 }
 
-/** Total characters across every turn, which is what the endpoint's limit counts. */
+/**
+ * Total characters across every turn, which is what the endpoint's limit counts.
+ *
+ * Measured off the built payload rather than the request, so the lead-in is counted. The
+ * limit is about what the endpoint receives, and a check that ignored the prefix would be
+ * measuring a payload nobody sends.
+ */
 export function dialogueCharacters(request: DialogueRequest): number {
-  return request.inputs.reduce((sum, input) => sum + input.text.length, 0);
+  const { inputs } = buildDialoguePayload(request) as { inputs: { text: string }[] };
+  return inputs.reduce((sum, input) => sum + input.text.length, 0);
 }
 
 /**
@@ -181,6 +202,7 @@ export function dialogueCharacters(request: DialogueRequest): number {
 async function requestAudio(
   path: string,
   payload: Record<string, unknown>,
+  modelId: string,
   options: ElevenLabsOptions,
 ): Promise<SpeechResult> {
   // The caller's own key, never a server-wide one: see config() in lib/voices/elevenlabs.ts.
@@ -230,19 +252,27 @@ async function requestAudio(
   }
 
   const credits = creditsFrom(response.headers);
-  const audio = Buffer.from(await response.arrayBuffer());
-  if (audio.byteLength === 0) {
+  const received = Buffer.from(await response.arrayBuffer());
+  if (received.byteLength === 0) {
     return { ok: false, failure: failure("upstream", "ElevenLabs returned an empty response") };
   }
 
-  return { ok: true, audio, credits };
+  // Trimmed here rather than by each caller, so what comes out of this module is always the
+  // audio to keep. Never throws: a take that cannot be trimmed is still a take worth storing.
+  const { audio, leadIn, leadInSec } = await trimLeadIn(received, modelId);
+  return { ok: true, audio, leadIn, leadInSec, credits };
 }
 
 export async function textToSpeech(
   request: SpeechRequest,
   options: ElevenLabsOptions = {},
 ): Promise<SpeechResult> {
-  return requestAudio(`/v1/text-to-speech/${request.voiceId}`, buildPayload(request), options);
+  return requestAudio(
+    `/v1/text-to-speech/${request.voiceId}`,
+    buildPayload(request),
+    request.modelId,
+    options,
+  );
 }
 
 /** The documented ceiling across all turns. Worth asserting rather than discovering. */
@@ -264,7 +294,12 @@ export async function textToDialogue(
       ),
     };
   }
-  return requestAudio("/v1/text-to-dialogue", buildDialoguePayload(request), options);
+  return requestAudio(
+    "/v1/text-to-dialogue",
+    buildDialoguePayload(request),
+    request.modelId,
+    options,
+  );
 }
 
 function message(error: unknown): string {
