@@ -26,7 +26,6 @@ import {
   versionsOnDisk,
   writeStoreFile,
 } from "./archive";
-import { noteStored } from "@/lib/audio";
 import type { VoiceSettings } from "./config";
 import type { VoicelineVersion } from "./versions";
 
@@ -139,7 +138,6 @@ export async function commitVersion(input: CommitInput): Promise<CommitResult> {
   const version = Math.max(fromRows, onDisk.length ? Math.max(...onDisk) + 1 : 0);
 
   await writeStoreFile(input.file, input.data);
-  noteStored(input.file);
 
   await archiveStoreFile(input.file, version);
   await recordVersion({
@@ -203,7 +201,6 @@ export async function restoreVersion(file: string, version: number): Promise<Res
   });
 
   const data = await restoreVersionFile(file, version);
-  noteStored(file);
   await setCurrentVersion(file, version);
 
   return { version, bytes: data.byteLength, archivedInherited };

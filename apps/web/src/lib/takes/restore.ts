@@ -22,7 +22,6 @@ import "server-only";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { noteStored } from "@/lib/audio";
 import type { Source } from "@/lib/generation/queue";
 
 import { storePathOf } from "./adapters";
@@ -76,7 +75,6 @@ export async function restoreTake(
   }
 
   await setLiveTake(source, file, version);
-  if (source === "quests") noteStored(file);
 
   // Never fatal: the take IS restored by this point, and a failure here means the addon's
   // table is one rebuild behind, which the next drain fixes.

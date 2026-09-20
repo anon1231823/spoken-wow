@@ -77,7 +77,7 @@ endef
         package-audio-complete package-meta push-complete icon \
         downloads-status \
         factions release release-audio release-wago release-curse \
-        release-dry
+        release-dry backfill-takes
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -133,10 +133,11 @@ push: require-droplet ## Upload pipelines/quests/audio/ to the droplet (refuses 
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	$(RSYNC) $(RSYNC_OPTS) pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO)
-	@# No pm2 reload: storeIndex() re-reads whenever either subfolder's mtime moves, which
-	@# a push always changes. It had to reload while the memo was permanent - see the
-	@# freshness note in apps/web/src/lib/audio.ts.
-	@echo "==> pushed"
+	@# No pm2 reload: nothing in the request path caches the store any more. Whether a line
+	@# has audio is a take row, which this push does not change -- the droplet's own rows
+	@# already describe its store, and `make backfill-takes` is what reconciles them when a
+	@# file arrives or leaves. See apps/web/src/lib/audio.ts.
+	@echo "==> pushed. On the droplet, reconcile the take rows: make quests-backfill-takes"
 
 pull: require-droplet ## Download the droplet's audio store into pipelines/quests/audio/ (DESTRUCTIVE: --delete)
 	$(preflight)
@@ -146,6 +147,9 @@ pull: require-droplet ## Download the droplet's audio store into pipelines/quest
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	$(RSYNC) $(RSYNC_OPTS) $(DROPLET):$(REMOTE_AUDIO) pipelines/quests/audio/
 	@echo "==> pulled"
+	@# --delete means a local file can have gone. A take row that outlives its file claims
+	@# audio that is not there, and the explorer trusts that claim -- so reconcile locally.
+	@$(MAKE) --no-print-directory -f make/quests.mk backfill-takes ARGS=--reconcile
 
 # --- voice clips ----------------------------------------------------------------------
 #
@@ -328,6 +332,21 @@ release-audio: ## Upload the four packs and their meta addon
 #
 # One direction only. Editing the file by hand would put it out of step with the table the
 # app reads, and the app is what everyone looks at.
+
+# The take rows that say which lines have audio, against the clips actually on disk.
+#
+# Two jobs, one script. Without arguments it gives every clip with no take row an
+# `inherited` one -- which is most of this store, narrated by the Python CLI years before
+# the app recorded anything. With --reconcile it does the opposite: a row whose file has
+# gone stops being the live one, because "has audio" is read from these rows now and a row
+# that outlives its file lies in the direction that matters.
+#
+# Runs where the store is. A machine holding half the store would write rows for the half
+# it has and leave the rest reading as missing, so the script refuses an empty store and
+# says what it is about to do first. ARGS=--dry-run to see without writing.
+
+backfill-takes: ## Give every clip a take row (ARGS=--dry-run, ARGS=--reconcile)
+	@cd apps/web && node scripts/backfill-takes.mjs $(ARGS)
 
 pull-ignores: require-droplet ## Export the ignore list from the droplet into pipelines/quests/corpus/ignored.json
 	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; \

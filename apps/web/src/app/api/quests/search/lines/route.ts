@@ -8,7 +8,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 
-import { storeIndex } from "@/lib/audio";
+import { voicedFiles } from "@/lib/generation/versions";
 import { loadCorpus } from "@/lib/corpus";
 import { searchContext } from "@/lib/quests/context";
 import { filtersFromParams, needsDates, needsStale } from "@/lib/search-request";
@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const filters = filtersFromParams(request.nextUrl.searchParams);
   const context = await searchContext(needsDates(filters), needsStale(filters));
-  const lines = matchingLines(loadCorpus(), storeIndex(), filters, context);
+  const lines = matchingLines(loadCorpus(), await voicedFiles(), filters, context);
   // The same overrides the estimate is built from, so the quote prices the text that will
   // actually be sent rather than the text the corpus happens to hold.
   return NextResponse.json({ jobs: batchJobs(lines, context.overrides) });

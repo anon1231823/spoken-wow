@@ -113,6 +113,26 @@ export async function versionCounts(files: string[]): Promise<Map<string, number
 }
 
 /**
+ * Every quests file that has a live take: the set the explorer means by "has audio".
+ *
+ * THE DATABASE ANSWERS THIS NOW, not a readdir of the store. Zones and books have always
+ * answered it from a take row, and one question with two implementations is one that
+ * drifts: a directory listing cannot say which take is live, what it cost, or whether it
+ * is the one somebody restored -- it can only say that a file with that name exists.
+ *
+ * What keeps it true is the other half, scripts/backfill-takes.mjs: an inherited take row
+ * for every clip the CLI narrated before this app recorded anything, and a --reconcile
+ * pass that retires a row whose file an rsync has since deleted. Without that pass a row
+ * outlives its file and the badge lies in the direction that matters.
+ */
+export async function voicedFiles(): Promise<Set<string>> {
+  const { rows } = await db().query<{ file: string }>(
+    `select "file" from "take" where "source" = 'quests' and "isCurrent"`,
+  );
+  return new Set(rows.map((row) => row.file));
+}
+
+/**
  * Which version is live for each of these files, so a row can say what it is playing.
  *
  * The live take rather than the highest, which are not the same thing once a restore has

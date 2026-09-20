@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { storeIndex } from "@/lib/audio";
+import { voicedFiles } from "@/lib/generation/versions";
 import { loadCorpus } from "@/lib/corpus";
 import { searchContext } from "@/lib/quests/context";
 import { filtersFromParams, needsDates, needsDirty, needsStale } from "@/lib/search-request";
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   const filters = filtersFromParams(params);
   const result = search(
     loadCorpus(),
-    storeIndex(),
+    await voicedFiles(),
     { ...filters, offset: (page - 1) * limit, limit },
     await searchContext(
       needsDates(filters),
