@@ -162,6 +162,10 @@ export default function AudioPlayer({
               step={0.05}
               disabled={!src || !total}
               aria-label="Seek"
+              // The bar itself is 4px tall, which is a miserable thing to hit with a mouse.
+              // The padding gives the track a 20px-tall pointer target, and the matching
+              // negative margin keeps the row laid out as if it were still 4px.
+              className="-my-2 cursor-pointer py-2 data-disabled:cursor-default"
               onValueChange={([value]) => setScrubbing(value)}
               // Committed on release, never on every intermediate value: setting currentTime
               // per pointer move restarts the fetch each time.
