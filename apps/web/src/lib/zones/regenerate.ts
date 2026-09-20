@@ -53,6 +53,7 @@ async function takeFor(
   config: VoiceConfig,
   path: string,
   credits: number | null,
+  leadIn: { leadIn: boolean; leadInSec: number | null },
 ) {
   return {
     file: entry.file,
@@ -66,6 +67,7 @@ async function takeFor(
     outputFormat: config.outputFormat,
     dictionaryId: config.dictionaryId ?? null,
     dictionaryVersionId: config.dictionaryVersionId ?? null,
+    ...leadIn,
     generatedAt: new Date().toISOString(),
   };
 }
@@ -140,6 +142,7 @@ export async function regenerateZoneLine(
     { apiKey: options.apiKey },
   );
   if (!speech.ok) return { ok: false, failure: speech.failure };
+  // Already trimmed of its lead-in by tts.ts: what is written here is what the addon plays.
   const { audio, credits } = speech;
 
   try {
@@ -149,7 +152,7 @@ export async function regenerateZoneLine(
 
     const version = await insertTake(
       entry.id,
-      await takeFor(entry, config, path, credits),
+      await takeFor(entry, config, path, credits, speech),
       "generated",
       // Unlike an imported take, this one knows exactly what it was made with, so a
       // version that sounded right can be reproduced after the settings have moved on.
@@ -210,9 +213,12 @@ export async function restoreZoneTake(
     outputFormat: string | null;
     dictionaryId: string | null;
     dictionaryVersionId: string | null;
+    leadIn: boolean;
+    leadInSec: number | null;
   }>(
     `select "spokenHash" as "textHash", "characters" as "chars", "voiceId", "modelId",
-            "outputFormat", "dictionaryId", "dictionaryVersion" as "dictionaryVersionId"
+            "outputFormat", "dictionaryId", "dictionaryVersion" as "dictionaryVersionId",
+            "leadIn", "leadInSec"
        from "take"
       where "source" = 'zones' and "lineId" = $1 and "version" = $2`,
     [lineId, archiveVersion],
@@ -238,6 +244,10 @@ export async function restoreZoneTake(
       outputFormat: original.outputFormat,
       dictionaryId: original.dictionaryId,
       dictionaryVersionId: original.dictionaryVersionId,
+      // The restored take's own values: the file being made live is the one that was cut
+      // then, lead-in and all, and claiming otherwise would misreport what is playing.
+      leadIn: original.leadIn,
+      leadInSec: original.leadInSec,
       generatedAt: new Date().toISOString(),
     },
     "generated",

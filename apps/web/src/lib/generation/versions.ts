@@ -68,6 +68,15 @@ export type NewVersion = {
   settings?: VoiceSettings | Pick<VoiceSettings, "stability"> | null;
   spokenHash?: string | null;
   dictionaryVersion?: string | null;
+  /**
+   * Whether the request carried a lead-in, and how many seconds were cut off the front.
+   *
+   * `leadIn` true with `leadInSec` null is a take that asked for one and did not get it -
+   * the model ignored the tag, or ffmpeg was unavailable - so it still has the ramp-up and
+   * a throat clear in it. See lib/generation/leadin.ts.
+   */
+  leadIn?: boolean;
+  leadInSec?: number | null;
   createdBy?: string | null;
 };
 
@@ -152,8 +161,10 @@ export async function recordVersion(version: NewVersion): Promise<void> {
     `insert into "take"
        ("source", "file", "version", "origin", "lineId", "voice", "bytes",
         "voiceId", "modelId", "seed", "characters", "credits", "settings",
-        "spokenHash", "dictionaryVersion", "createdBy", "narratorVoice")
-     values ('quests', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+        "spokenHash", "dictionaryVersion", "createdBy", "narratorVoice",
+        "leadIn", "leadInSec")
+     values ('quests', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+             $17, $18)`,
     [
       version.file,
       version.version,
@@ -171,6 +182,10 @@ export async function recordVersion(version: NewVersion): Promise<void> {
       version.dictionaryVersion ?? null,
       version.createdBy ?? null,
       version.narratorVoice ?? null,
+      // False rather than null by omission: an inherited or imported take was not made here
+      // and never had a lead-in, which is what the column says about it.
+      version.leadIn ?? false,
+      version.leadInSec ?? null,
     ],
   );
 }

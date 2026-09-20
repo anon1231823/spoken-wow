@@ -57,6 +57,9 @@ export type TakeRecord = {
   outputFormat: string | null;
   dictionaryId: string | null;
   dictionaryVersionId: string | null;
+  /** Whether the request carried a lead-in, and how much was cut. See generation/leadin.ts. */
+  leadIn: boolean;
+  leadInSec: number | null;
   generatedAt: string;
 };
 

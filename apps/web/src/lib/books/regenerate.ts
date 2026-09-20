@@ -89,6 +89,7 @@ export async function regenerateBookLine(
     { apiKey: options.apiKey },
   );
   if (!speech.ok) return { ok: false, failure: speech.failure };
+  // Already trimmed of its lead-in by tts.ts: the store keeps what the addon plays.
   const { audio, credits } = speech;
 
   try {
@@ -110,6 +111,8 @@ export async function regenerateBookLine(
         outputFormat: config.outputFormat,
         dictionaryId: config.dictionaryId ?? null,
         dictionaryVersionId: config.dictionaryVersionId ?? null,
+        leadIn: speech.leadIn,
+        leadInSec: speech.leadInSec,
         generatedAt: new Date().toISOString(),
       },
       "generated",

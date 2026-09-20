@@ -205,6 +205,8 @@ export async function regenerateLine(
 
     const committed = await commitVersion({
       file,
+      // Already trimmed of its lead-in by tts.ts, so the store, the archive and `bytes` all
+      // describe the audio the addon will play.
       data: speech.audio,
       lineId,
       voice: line.voice,
@@ -221,6 +223,8 @@ export async function regenerateLine(
         : config.voiceSettings,
       spokenText,
       dictionaryVersion: dictionary?.versionId ?? null,
+      leadIn: speech.leadIn,
+      leadInSec: speech.leadInSec,
       createdBy,
     });
 
