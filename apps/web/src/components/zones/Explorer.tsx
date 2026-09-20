@@ -466,30 +466,6 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     };
   }, [canRegenerate, refetch]);
 
-  const restore = useCallback(
-    (line: ResultLine) => {
-      fetch(`/api/zones/restore?${new URLSearchParams({ lineId: line.id })}`)
-        .then((response) => response.json())
-        .then((data: { versions: number[] }) => {
-          const newest = data.versions[0];
-          if (newest === undefined) return;
-          return fetch("/api/zones/restore", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lineId: line.id, version: newest }),
-          })
-            .then((response) => response.json())
-            .then((result: { version?: number }) => {
-              if (result.version !== undefined) {
-                setVersions((current) => ({ ...current, [line.id]: result.version! }));
-              }
-              refetch();
-            });
-        })
-        .catch(() => {});
-    },
-    [refetch],
-  );
   //----------------------------------------------------------------------------
   // Playback
   //----------------------------------------------------------------------------
@@ -676,7 +652,6 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
               onReport={setReportFor}
               onEditText={(l) => setEditFor(withEdits(l))}
               onRegenerate={regenerateOne}
-              onRestore={restore}
             />
           ))}
         </tbody>

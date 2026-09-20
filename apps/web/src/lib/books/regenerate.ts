@@ -22,8 +22,11 @@ import { narratorConfig, NarratorMissing } from "@/lib/zones/voice";
 
 import { catalogue, BASE_LANG, type BookPage } from "./catalogue";
 export { publish } from "./publish";
+import { archiveNameFor } from "@/lib/takes/archive";
+import { noteArchiveFile } from "@/lib/takes/store";
+
 import { durationOf } from "./tools";
-import { insertTake, writeAudio } from "./store";
+import { archiveLive, archiveTake, insertTake, writeAudio } from "./store";
 
 /**
  * Resolving the narrator can fail before any request is made.
@@ -93,7 +96,12 @@ export async function regenerateBookLine(
   const { audio, credits } = speech;
 
   try {
-    // Archives the take being replaced, which is what makes a bad re-roll reversible.
+    // The clip about to be replaced, archived under the take it belongs to. Usually a
+    // no-op -- a take cut since takes were archived by version already has its copy -- but
+    // one written before that has a row and no archive entry, and overwriting it would
+    // destroy audio that cost credits.
+    await archiveLive(page.file, lang);
+
     const path = await writeAudio(page.file, audio);
     const bytes = (await stat(path)).size;
 
@@ -121,6 +129,12 @@ export async function regenerateBookLine(
       config.voiceSettings,
       lang,
     );
+
+    // After the row, because only the row knows the version: the archived file is named
+    // after the take it holds, which is what makes a restore a statement about which take
+    // is live rather than a guess about which clip is which.
+    await archiveTake(page.file, version);
+    await noteArchiveFile("books", page.file, version, archiveNameFor(version), lang);
 
     return {
       ok: true,

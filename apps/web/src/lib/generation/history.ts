@@ -10,7 +10,6 @@
  *   1. archive what is in the store, before anything overwrites it
  *   2. write the new bytes
  *   3. record the row and mark it current
- *   4. prune
  *
  * A crash between 2 and 3 leaves a store file with no row, which reads as inherited audio
  * and archives correctly on the next attempt. The reverse order would lose the previous take
@@ -18,15 +17,13 @@
  */
 import { createHash } from "node:crypto";
 
-import { deleteVersions, listVersions, nextVersion, recordVersion, setCurrentVersion } from "./versions";
+import { listVersions, nextVersion, recordVersion, setCurrentVersion } from "./versions";
 import {
   archiveStoreFile,
   INHERITED_VERSION,
-  pruneVersionFiles,
   restoreVersionFile,
   storeFileExists,
   versionsOnDisk,
-  versionsToPrune,
   writeStoreFile,
 } from "./archive";
 import { noteStored } from "@/lib/audio";
@@ -73,7 +70,6 @@ export type CommitResult = {
   bytes: number;
   /** Set when audio that predated this app was archived to make room for this take. */
   archivedInherited: boolean;
-  pruned: number[];
 };
 
 /**
@@ -168,9 +164,7 @@ export async function commitVersion(input: CommitInput): Promise<CommitResult> {
   });
   await setCurrentVersion(input.file, version);
 
-  const pruned = await prune(input.file);
-
-  return { version, bytes: input.data.byteLength, archivedInherited, pruned };
+  return { version, bytes: input.data.byteLength, archivedInherited };
 }
 
 export type RestoreResult = {
@@ -213,24 +207,6 @@ export async function restoreVersion(file: string, version: number): Promise<Res
   await setCurrentVersion(file, version);
 
   return { version, bytes: data.byteLength, archivedInherited };
-}
-
-/**
- * Drop everything but version 0 and the newest four, from both disk and the table.
- *
- * Driven by what is on disk rather than by the rows, so it never tries to delete a file that
- * is not there. A row whose audio has already gone - an rsync from elsewhere, a hand-deleted
- * directory - is left alone rather than tidied away: it is still a true record that the take
- * existed, and historyOf marks it unplayable while restoreVersion refuses it outright.
- */
-export async function prune(file: string): Promise<number[]> {
-  const onDisk = await versionsOnDisk(file);
-  const doomed = versionsToPrune(onDisk);
-  if (doomed.length === 0) return [];
-
-  await pruneVersionFiles(file, doomed);
-  await deleteVersions(file, doomed);
-  return doomed;
 }
 
 /** History for one file, with takes whose audio has gone marked unrestorable. */

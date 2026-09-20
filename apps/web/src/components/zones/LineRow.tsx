@@ -7,7 +7,6 @@ import {
   MessageSquare,
   PencilIcon,
   PlayIcon,
-  RotateCcw,
   RotateCw,
 } from "lucide-react";
 import Link from "next/link";
@@ -26,7 +25,7 @@ export type RowState =
 type Props = {
   line: ResultLine;
   current: boolean;
-  /** Editor and up: the rewrite, restore and regenerate controls. */
+  /** Editor and up: the rewrite and regenerate controls. */
   canRegenerate: boolean;
   /** Editor and up: may read the report bodies, so the count badge links to the queue. */
   canTriage: boolean;
@@ -36,7 +35,6 @@ type Props = {
   onReport: (line: ResultLine) => void;
   onEditText: (line: ResultLine) => void;
   onRegenerate: (line: ResultLine) => void;
-  onRestore: (line: ResultLine) => void;
   /** Say this take is fine as it stands, despite a pronunciation having moved under it. */
   onClearDirty: (line: ResultLine) => void;
 };
@@ -66,13 +64,9 @@ export function LineRow({
   onReport,
   onEditText,
   onRegenerate,
-  onRestore,
   onClearDirty,
 }: Props) {
   const playable = line.state !== "missing";
-  // More than one take means there is something to go back to. Restoring is free, so the
-  // control is only ever hidden when it would do nothing.
-  const restorable = (line.take?.takes ?? 0) > 1;
   const [expanded, setExpanded] = useState(false);
 
   /**
@@ -269,20 +263,6 @@ export function LineRow({
               >
                 <PencilIcon className="size-3.5" />
               </Button>
-
-              {/* Only once there is something to go back to, so an untouched line keeps a
-                  single control rather than two. */}
-              {restorable && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title="Restore an earlier take (free)"
-                  aria-label={`Restore an earlier take of ${line.name}`}
-                  onClick={() => onRestore(line)}
-                >
-                  <RotateCcw className="size-3.5" />
-                </Button>
-              )}
 
               {/* Only on a dirty row. A clean one keeps the control it would do nothing to,
                   and the mark is the whole reason this button exists. */}

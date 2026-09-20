@@ -13,7 +13,7 @@
 import "server-only";
 
 import { existsSync } from "node:fs";
-import { mkdir, readdir, rename, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { db, query } from "@/lib/db";
@@ -122,32 +122,58 @@ export async function insertTake(
 }
 
 /**
- * Moves the live clip to audio-history/{file}/v{n}.mp3.
+ * Copies the live clip into the archive under a take's own version.
  *
- * A rename, not a copy: the bytes are about to be replaced either way. Numbered from what
- * is already archived rather than from take."version", so the archive stays readable
- * without a database -- which is the state a release path is in.
+ * EVERY TAKE IS ARCHIVED UNDER ITS OWN VERSION, and nothing is ever renamed or deleted.
+ * This used to move the clip it was about to overwrite, numbered from what was already in
+ * the directory -- so the number was a position in a sequence of overwrites rather than a
+ * take version, the newest take was the one clip with no archive copy, and working out
+ * which take a file held meant pairing names against rows and hoping the counts matched.
+ * Naming the archive after the take makes a restore a statement about which take is live.
+ *
+ * A copy, because the store file is what the addon plays and it stays where it is. An
+ * existing name is left alone rather than overwritten: an archived take is immutable, and
+ * two takes claiming one number is the ambiguity this is here to remove.
  */
-async function archiveExisting(file: string, path: string): Promise<void> {
-  if (!existsSync(path)) return;
+export async function archiveTake(file: string, version: number): Promise<boolean> {
+  const source = join(soundsDir(), `${file}.mp3`);
+  if (!existsSync(source)) return false;
 
   const dir = join(historyDir(), file);
   await mkdir(dir, { recursive: true });
 
-  const existing = await readdir(dir).catch(() => [] as string[]);
-  const highest = existing.reduce((max, name) => {
-    const match = /^v(\d+)\.mp3$/.exec(name);
-    return match ? Math.max(max, Number(match[1])) : max;
-  }, 0);
+  const target = join(dir, `v${version}.mp3`);
+  if (existsSync(target)) return false;
 
-  await rename(path, join(dir, `v${highest + 1}.mp3`));
+  // Copy beside the target and rename, for the reason writeAudio does it: a half-copied
+  // mp3 that later looks like a finished take is worse than no take at all.
+  const temp = `${target}.part`;
+  await copyFile(source, temp);
+  await rename(temp, target);
+  return true;
 }
 
-/** Writes a clip, archiving whatever it replaces. Returns the absolute path written. */
+/**
+ * Archives the clip that is live NOW, before something replaces it.
+ *
+ * The counterpart of the quests side's archiveInherited, and there for the same reason: a
+ * clip written before takes were archived by version has a row and no archive copy, and
+ * overwriting it would destroy audio that cost money and cannot be reproduced.
+ */
+export async function archiveLive(file: string, lang: string = BASE_LANG): Promise<boolean> {
+  const rows = await query<{ version: number }>(
+    `select "version" from "take"
+      where "source" = $1 and "file" = $2 and "lang" = $3 and "isCurrent"`,
+    [SOURCE, file, lang],
+  );
+  const live = rows[0]?.version;
+  return live === undefined ? false : archiveTake(file, live);
+}
+
+/** Writes a clip. Archiving it is the caller's next step, once the take has a version. */
 export async function writeAudio(file: string, buffer: Buffer): Promise<string> {
   const path = join(soundsDir(), `${file}.mp3`);
 
-  await archiveExisting(file, path);
   await mkdir(dirname(path), { recursive: true });
 
   // Write beside the target and rename, so an interrupted run cannot leave a truncated mp3
@@ -155,20 +181,6 @@ export async function writeAudio(file: string, buffer: Buffer): Promise<string> 
   const temp = `${path}.part`;
   await writeFile(temp, buffer);
   await rename(temp, path);
-
-  return path;
-}
-
-/** Puts an archived take back on disk. No API call and no credits. */
-export async function restoreTakeFile(file: string, archiveVersion: number): Promise<string> {
-  const archived = join(historyDir(), file, `v${archiveVersion}.mp3`);
-  if (!existsSync(archived)) throw new Error(`no archived take at ${archived}`);
-
-  const path = join(soundsDir(), `${file}.mp3`);
-  // Archive the clip being replaced first, so a restore is itself reversible.
-  await archiveExisting(file, path);
-  await mkdir(dirname(path), { recursive: true });
-  await rename(archived, path);
 
   return path;
 }

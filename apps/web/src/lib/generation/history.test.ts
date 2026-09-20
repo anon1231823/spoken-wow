@@ -21,7 +21,7 @@ process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
 const { storePath, versionPath, versionsOnDisk, writeStoreFile } = await import("./archive");
-const { commitVersion, historyOf, prune, restoreVersion } = await import("./history");
+const { commitVersion, historyOf, restoreVersion } = await import("./history");
 const { listVersions } = await import("./versions");
 
 const SETTINGS = {
@@ -167,40 +167,42 @@ describe("commitVersion", () => {
   });
 });
 
-describe("pruning", () => {
-  it("keeps version 0 and the newest four, dropping rows and files together", async () => {
+describe("keeping every take", () => {
+  it("keeps all of them, however many re-rolls there have been", async () => {
+    // This used to keep version 0 and the newest four and delete the rest, which meant the
+    // fifth re-roll of a line destroyed a take somebody might want back -- and a re-roll is
+    // exactly when they want it. Audio files are now kept; reclaiming space is a deliberate
+    // job for a cleanup process, not a side effect of generating.
     await writeStoreFile(file, Buffer.from("inherited"));
     for (let i = 0; i < 6; i++) await take({ data: Buffer.from(`take ${i}`) });
 
-    expect(await versionsOnDisk(file)).toEqual([0, 3, 4, 5, 6]);
-    expect((await listVersions(file)).map((v) => v.version)).toEqual([6, 5, 4, 3, 0]);
+    expect(await versionsOnDisk(file)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect((await listVersions(file)).map((v) => v.version)).toEqual([6, 5, 4, 3, 2, 1, 0]);
 
-    // The original survives six re-rolls. A flat "newest five" would have lost it.
+    // The original is still the one nothing can reproduce.
     expect(fs.readFileSync(versionPath(file, 0), "utf8")).toBe("inherited");
   });
 
-  it("never reissues a pruned version number", async () => {
+  it("numbers past the highest used, so a number is never reissued", async () => {
     await writeStoreFile(file, Buffer.from("inherited"));
     for (let i = 0; i < 6; i++) await take();
 
-    const next = await take();
-    expect(next.version).toBe(7);
-    expect(await versionsOnDisk(file)).toEqual([0, 4, 5, 6, 7]);
+    expect((await take()).version).toBe(7);
   });
 
-  // Driven by what is on disk, so it never tries to delete a file that is not there. A row
-  // whose audio has gone survives as an unplayable record rather than being tidied away:
-  // someone else's rsync should not silently erase the fact that a take existed, and
+  // A row whose audio has gone survives as an unplayable record rather than being tidied
+  // away: someone else's rsync should not silently erase the fact that a take existed, and
   // historyOf and restoreVersion both already refuse to offer it.
   it("leaves a hand-deleted take recorded but unplayable", async () => {
     await take();
     await take();
     fs.rmSync(versionPath(file, 0));
 
-    await prune(file);
-
     expect((await listVersions(file)).map((v) => v.version)).toEqual([1, 0]);
-    expect(await historyOf(file)).toMatchObject([{ version: 1, playable: true }, { version: 0, playable: false }]);
+    expect(await historyOf(file)).toMatchObject([
+      { version: 1, playable: true },
+      { version: 0, playable: false },
+    ]);
   });
 });
 

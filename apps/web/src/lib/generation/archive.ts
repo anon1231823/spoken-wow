@@ -1,14 +1,13 @@
 /**
- * The bytes of every take: reading, writing and pruning audio-history/.
+ * The bytes of every take: reading and writing audio-history/.
  *
  * Layout mirrors the store one level deeper, so a version is addressable by path alone:
  *
  *     audio-history/gossip/31ab172e1a375db1c9157d594eb608d9/0.mp3
  *     audio-history/quests/5-accept/1.mp3
  *
- * Version 0 is always the take that predates this app. It is never pruned, because it is the
- * only copy of audio the project cannot reproduce - the newest four are cheap to remake and
- * the original is not.
+ * Version 0 is always the take that predates this app, and the only copy of audio the
+ * project cannot reproduce: its settings, seed and often its voice are unknown.
  *
  * Nothing here touches the database. versions.ts is the record of what these files are;
  * this is the files.
@@ -20,13 +19,16 @@ import { AUDIO_DIR, AUDIO_HISTORY_DIR } from "@/lib/paths";
 import { isSafeAudioPath } from "@/lib/range";
 
 /**
- * How many takes survive: version 0, plus the newest four.
+ * NOTHING HERE DELETES A TAKE. This used to keep version 0 plus the newest four and discard
+ * the rest, because the store is 1.1 GB on storage backed up by hand. That traded away the
+ * one thing an archive is for: the fifth re-roll of a line silently destroyed the take
+ * somebody might want back, and a re-roll is exactly when they want it. Audio files are now
+ * kept, and reclaiming space is a deliberate job for a cleanup process that does not exist
+ * yet -- when it does, it belongs here, with a rule someone chose and can read.
  *
- * Bounded because the store is already 1.1 GB on storage that is backed up by hand. Pinning
- * 0 rather than keeping a flat "newest five" is the whole point - a flat window loses the
- * original on the fifth re-roll, which is the take most worth having.
+ * Version 0 is still the take that predates this app, and is still the one nothing can
+ * reproduce: the settings, the seed and often the voice are unknown.
  */
-export const KEEP_VERSIONS = 5;
 export const INHERITED_VERSION = 0;
 
 function assertSafe(file: string): void {
@@ -132,25 +134,3 @@ export async function restoreVersionFile(file: string, version: number): Promise
   return data;
 }
 
-/**
- * Which versions a prune would remove: everything but version 0 and the newest four.
- *
- * Separated from the deletion so the rule can be tested without a filesystem, and so a
- * caller can report what it is about to discard.
- */
-export function versionsToPrune(versions: number[], keep: number = KEEP_VERSIONS): number[] {
-  const sorted = [...versions].sort((a, b) => b - a);
-  const survivors = new Set<number>();
-
-  if (versions.includes(INHERITED_VERSION)) survivors.add(INHERITED_VERSION);
-  for (const version of sorted) {
-    if (survivors.size >= keep) break;
-    survivors.add(version);
-  }
-
-  return versions.filter((version) => !survivors.has(version)).sort((a, b) => a - b);
-}
-
-export async function pruneVersionFiles(file: string, versions: number[]): Promise<void> {
-  await Promise.all(versions.map((version) => fs.rm(versionPath(file, version), { force: true })));
-}

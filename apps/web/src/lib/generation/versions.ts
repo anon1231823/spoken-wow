@@ -162,9 +162,9 @@ export async function recordVersion(version: NewVersion): Promise<void> {
        ("source", "file", "version", "origin", "lineId", "voice", "bytes",
         "voiceId", "modelId", "seed", "characters", "credits", "settings",
         "spokenHash", "dictionaryVersion", "createdBy", "narratorVoice",
-        "leadIn", "leadInSec")
+        "leadIn", "leadInSec", "archiveFile")
      values ('quests', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
-             $17, $18)`,
+             $17, $18, $19)`,
     [
       version.file,
       version.version,
@@ -186,6 +186,11 @@ export async function recordVersion(version: NewVersion): Promise<void> {
       // and never had a lead-in, which is what the column says about it.
       version.leadIn ?? false,
       version.leadInSec ?? null,
+      // Where archive.ts put the bytes. Quests names an archived take after its version
+      // and always has, so this is not news here -- it is recorded anyway, because a take
+      // that says where its own audio is needs nothing worked out about it, and that is
+      // what lets one history panel read all three sections.
+      `${version.version}.mp3`,
     ],
   );
 }

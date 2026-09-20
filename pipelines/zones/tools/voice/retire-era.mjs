@@ -21,7 +21,7 @@
 import { loadEraAreas } from "../lib/era.mjs";
 import { loadEnvFile } from "../lib/env.mjs";
 import * as db from "./db.mjs";
-import { LANG, archiveAudio, loadManifest } from "./store.mjs";
+import { LANG, archiveAudio, liveTakeVersion, loadManifest } from "./store.mjs";
 
 // Before anything reads DATABASE_URL.
 await loadEnvFile();
@@ -64,19 +64,23 @@ async function main() {
   // filter this would demote every language's take for these lineIds while
   // archiving only this language's masters -- the other languages' audio would
   // be lost with no audio-history entry to restore it from.
+  for (const t of targets) t.liveVersion = await liveTakeVersion(t.record.file);
+
   await db.query(
     `update "take" set "isCurrent" = false
       where "source" = 'zones' and "isCurrent" and "lang" = $2 and "lineId" = any($1)`,
     [targets.map((t) => t.id), LANG],
   );
 
+  // After the update above, so the take these bytes belong to is looked up before it stops
+  // being current -- archiveAudio names the archived file after that take's own version.
   let archived = 0;
   let missing = 0;
   for (const t of targets) {
-    (await archiveAudio(t.record.file)) ? archived++ : missing++;
+    (await archiveAudio(t.record.file, t.liveVersion)) ? archived++ : missing++;
   }
 
-  console.log(`\nretired ${targets.length} takes: ${archived} masters moved to audio-history/`);
+  console.log(`\nretired ${targets.length} takes: ${archived} masters kept in audio-history/`);
   if (missing) console.log(`${missing} had no file on disk (already moved or never pulled)`);
   console.log("\nnext:  make lookup   (re-exports the manifest, rebuilds Sounds.lua)");
 }

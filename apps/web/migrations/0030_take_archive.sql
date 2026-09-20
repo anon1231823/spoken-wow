@@ -1,0 +1,35 @@
+-- Where a take's bytes live in the history directory.
+--
+-- The three sections archive audio two different ways, and this column is what lets the one
+-- history panel read both without a single file being moved.
+--
+-- Quests archives every take at the moment it is cut: commitVersion writes the store file
+-- and then copies it to audio-history/{file}/{version}.mp3, so the archive is complete and
+-- the name IS the version. Zones and books archive the file they are about to overwrite,
+-- renaming it to audio-history/{file}/v{n}.mp3 where n counts what is already in the
+-- directory -- so the number is a position in a sequence of overwrites, not a take version,
+-- and the newest take is the one clip with no archive copy at all.
+--
+-- Those two disagree about which take a given file holds, and only the quests arrangement
+-- can answer "put v3 back" without guessing. So the quests arrangement wins: every take is
+-- archived under its own version when it is cut, a restore moves the live flag rather than
+-- copying bytes to a new number, and nothing ever deletes or renames an archived file.
+--
+-- This column records the name a take's bytes are under, because the zones and books files
+-- already on disk keep their old numbering forever. Rewriting them would mean renaming
+-- irreplaceable audio to tidy up a naming scheme, which is the one thing the audio rules
+-- here forbid. So:
+--
+--   null   the take predates this column. Its file is found the way its section always
+--          found it -- {version}.mp3 for quests, or by pairing the directory's v{n}.mp3
+--          names in order against that file's takes for zones and books.
+--   set    the exact basename, written when the take was cut.
+--
+-- A backfill fills in what it can pair with certainty and leaves the rest null; a take
+-- whose bytes cannot be named is shown as unplayable rather than pointed at a guess, which
+-- is the failure mode that matters here. Restoring the wrong clip is silent, and the person
+-- who notices is a player hearing the wrong line.
+--
+-- Additive and forward-only per deploy/web/bin/migrate.sh: one nullable column.
+
+alter table "take" add column if not exists "archiveFile" text;

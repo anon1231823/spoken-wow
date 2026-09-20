@@ -17,7 +17,7 @@
 // can still generate audio and ship the addon. tools/voice/export-manifest.mjs is
 // what keeps the file in step once the database is in play.
 
-import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -303,21 +303,28 @@ export async function insertTake(lineId, record, origin, settings = null) {
 // Audio
 //------------------------------------------------------------------------------
 
-// Writes a clip, archiving whatever it replaces.
+// Writes a clip, and archives the take that clip IS.
 //
-// This lives here rather than in generate.mjs because the archive has exactly one
-// correct moment: after the replacement exists in memory, and before it lands on the
-// path the old take occupies. generate.mjs writes the mp3 and *then* records the take,
-// so an archive step driven by the record would always run one instant too late, with
-// the file it wanted to keep already overwritten.
+// EVERY TAKE IS ARCHIVED UNDER ITS OWN VERSION, and nothing is ever renamed or deleted.
+// This used to archive the clip it was about to overwrite, renaming it to v{n} where n
+// counted what was already in the directory -- so the number was a position in a sequence
+// of overwrites rather than a take version, the newest take was the one clip with no
+// archive copy, and working out which take a given file held meant pairing names against
+// rows and hoping the counts lined up. Archiving the take itself makes the name the
+// version, which is what the quests side has always done, and is what lets a restore be a
+// statement about which take is live rather than a copy of bytes to a new number.
 //
-// `file` is store-relative and extension-less, e.g. "1411/razor-hill" -- the same
-// string the manifest, the lookup table and the take table all carry. Returns the
-// absolute path written, which the caller needs for ffprobe and stat.
-export async function writeAudio(file, buffer) {
+// The version is the caller's, because only the caller knows it: insertTake computes it
+// inside its transaction. Order is write-then-archive rather than the reverse, so a crash
+// between the two leaves a store file with no archive copy -- which the next write
+// repairs through archiveLive -- rather than an archive entry for bytes that were never
+// written.
+//
+// `file` is store-relative and extension-less, e.g. "1411/razor-hill" -- the same string
+// the manifest, the lookup table and the take table all carry. Returns the absolute path
+// written, which the caller needs for ffprobe and stat.
+export async function writeAudio(file, buffer, version) {
   const path = join(soundsDir(), `${file}.mp3`);
-
-  await archiveExisting(file, path);
 
   await mkdir(dirname(path), { recursive: true });
   // Write beside the target and rename, so an interrupted run cannot leave a truncated
@@ -326,40 +333,85 @@ export async function writeAudio(file, buffer) {
   await writeFile(temp, buffer);
   await rename(temp, path);
 
+  if (version !== undefined) await archiveTake(file, version);
+
   return path;
 }
 
-// Retires a live clip without writing a replacement: the mp3 moves to
-// audio-history/{file}/v{n}.mp3 and the caller flips the take off in the
-// database. The undo is restoreTake, exactly as for a re-roll. Returns whether
-// there was a file to move.
-export async function archiveAudio(file) {
-  const path = join(soundsDir(), `${file}.mp3`);
-  if (!existsSync(path)) return false;
-  await archiveExisting(file, path);
-  return true;
-}
-
-// Moves the live clip to audio-history/{file}/v{n}.mp3. A rename, not a copy: the bytes
-// are about to be replaced either way, and copying 300MB during a bulk re-cut is pure
-// IO for no additional safety.
-async function archiveExisting(file, path) {
-  if (!existsSync(path)) return;
+// Copies the live clip into the archive under a take's own version.
+//
+// A copy, not a move: the store file is what the addon plays and it stays where it is.
+// Skips a name that already exists rather than overwriting it -- an archived take is
+// immutable, and a second write under one version would mean two different takes claiming
+// the same number.
+export async function archiveTake(file, version) {
+  const source = join(soundsDir(), `${file}.mp3`);
+  if (!existsSync(source)) return false;
 
   const dir = join(historyDir(), file);
   await mkdir(dir, { recursive: true });
 
-  // Numbered from what is already archived rather than from take."version".
-  // The two agree in database mode, but this has to work with DATABASE_URL unset too,
-  // and a filename derived from the database would make the archive unreadable without
-  // it.
-  const existing = await readdir(dir).catch(() => []);
-  const highest = existing.reduce((max, name) => {
-    const match = /^v(\d+)\.mp3$/.exec(name);
-    return match ? Math.max(max, Number(match[1])) : max;
-  }, 0);
+  // With no database there are no take rows and so no version to name a file after: the
+  // manifest is the record, and the archive falls back to counting what is already in the
+  // directory, exactly as it did before. That is the no-Postgres path this module exists
+  // to keep working, and lib/takes/archive.ts reads both namings for this reason.
+  const name = version === null || version === undefined
+    ? `v${(await readdir(dir).catch(() => [])).reduce((max, entry) => {
+        const match = /^v(\d+)\.mp3$/.exec(entry);
+        return match ? Math.max(max, Number(match[1])) : max;
+      }, 0) + 1}.mp3`
+    : `v${version}.mp3`;
 
-  await rename(path, join(dir, `v${highest + 1}.mp3`));
+  const target = join(dir, name);
+  if (existsSync(target)) return false;
+
+  // Copy beside the target and rename, for the reason writeAudio does: a half-copied mp3
+  // that later looks like a finished take is worse than no take at all.
+  const temp = `${target}.part`;
+  await copyFile(source, temp);
+  await rename(temp, target);
+  return true;
+}
+
+// The version of the take that is live for this file, or null with no database.
+//
+// Needed wherever a clip has to be archived under the take it actually is: the caller of
+// writeAudio knows the version it is about to write, but archiving the clip being replaced
+// means asking which take that clip belongs to.
+export async function liveTakeVersion(file) {
+  if (!db.isEnabled()) return null;
+  const { rows } = await db.query(
+    `select "version" from "take"
+      where "source" = '${SOURCE}' and "file" = $1 and "lang" = $2 and "isCurrent"`,
+    [file, LANG],
+  );
+  return rows[0]?.version ?? null;
+}
+
+// Archives the clip that is live NOW, before something replaces it.
+//
+// The counterpart of the quests side's archiveInherited, and needed for the same reason:
+// a clip imported from the old sound pack -- or written before takes were archived by
+// version -- has a row but no archive copy, and overwriting it would destroy audio that
+// cost money and cannot be reproduced. Called with the live take's own version, so the
+// copy lands under the name that take will always be found by.
+export async function archiveLive(file, liveVersion) {
+  return archiveTake(file, liveVersion ?? (await liveTakeVersion(file)));
+}
+
+// Retires a live clip without writing a replacement: the caller flips the take off in
+// the database, and the bytes stay in the archive under their own version. Returns
+// whether there was a file to retire.
+//
+// The clip leaves the store because the store is what ships; it does not leave the
+// archive, because nothing here deletes a take.
+export async function archiveAudio(file, liveVersion = undefined) {
+  const path = join(soundsDir(), `${file}.mp3`);
+  if (!existsSync(path)) return false;
+
+  await archiveLive(file, liveVersion);
+  await rm(path);
+  return true;
 }
 
 // ffprobe rather than parsing frame headers: the duration is what stops the addon's
@@ -380,19 +432,30 @@ export async function durationOf(path) {
   return Math.round(seconds * 1000) / 1000;
 }
 
-// Puts an archived take back. No API call and no credits -- this is the undo for a
-// re-roll that came out worse, which is the whole reason takes are kept.
-export async function restoreTake(file, archiveVersion) {
-  const archived = join(historyDir(), file, `v${archiveVersion}.mp3`);
+// Puts an archived take back into the store. No API call and no credits -- this is the
+// undo for a re-roll that came out worse, which is the whole reason takes are kept.
+//
+// A COPY, NOT A MOVE. This used to rename the archived file into the store, which meant
+// restoring a take destroyed the only archived copy of it: undo once and the take you
+// restored could never be found again. The caller marks the restored take current; no new
+// row is written and no bytes are displaced, because the clip being replaced is itself
+// already archived under its own version.
+//
+// `name` is the archived file's basename, resolved by the caller -- `v3.mp3` for anything
+// cut since takes were archived by version, and whatever the directory holds for the clips
+// that predate it. See lib/takes/archive.ts for how one is paired with the other.
+export async function restoreTake(file, name) {
+  const archived = join(historyDir(), file, name);
   if (!existsSync(archived)) {
     throw new Error(`no archived take at ${archived}`);
   }
 
   const path = join(soundsDir(), `${file}.mp3`);
-  // Archive the clip being replaced first, so a restore is itself reversible.
-  await archiveExisting(file, path);
   await mkdir(dirname(path), { recursive: true });
-  await rename(archived, path);
+
+  const temp = `${path}.part`;
+  await copyFile(archived, temp);
+  await rename(temp, path);
 
   return path;
 }

@@ -26,8 +26,13 @@ import { failure } from "@/lib/generation/errors";
 import type { RegenerateResult } from "@/lib/generation/regenerate";
 import { textToSpeech } from "@/lib/generation/tts";
 
+import { archiveNameFor } from "@/lib/takes/archive";
+import { archiveNameOf, noteArchiveFile, setLiveTake } from "@/lib/takes/store";
+
 import { catalogue, type CatalogueEntry } from "./catalogue";
 import {
+  archiveLive,
+  archiveTake,
   buildLookup,
   durationOf,
   exportManifest,
@@ -146,8 +151,12 @@ export async function regenerateZoneLine(
   const { audio, credits } = speech;
 
   try {
-    // Archives the take being replaced. This is what makes a bad re-roll reversible, and
-    // the reason writeAudio lives in the pipeline's store rather than in this caller.
+    // The clip about to be replaced, archived under the take it belongs to. Usually a
+    // no-op -- every take cut since takes were archived by version already has its copy --
+    // but an imported clip has a row and no archive entry, and overwriting that would
+    // destroy audio nothing can reproduce.
+    await archiveLive(entry.file);
+
     const path = await writeAudio(entry.file, audio);
 
     const version = await insertTake(
@@ -158,6 +167,12 @@ export async function regenerateZoneLine(
       // version that sounded right can be reproduced after the settings have moved on.
       config.voiceSettings,
     );
+
+    // After the row, because only the row knows the version: the archived file is named
+    // after the take it holds, which is what makes a restore a statement about which take
+    // is live rather than a guess about which clip is which.
+    await archiveTake(entry.file, version);
+    await noteArchiveFile("zones", entry.file, version, archiveNameFor(version));
 
     return {
       ok: true,
@@ -190,66 +205,29 @@ export async function regenerateZoneLine(
 }
 
 /**
- * Puts an archived take back, for free.
+ * Puts an archived take back into the store, for free.
  *
- * A new row rather than a flag moved, unlike restoring lore: the bytes on disk are what an
- * addon plays, so putting an older clip back IS generating the current one, and the history
- * should say when that happened. Its credits are null rather than the original's -- this
- * cost nothing, and summing credits over takes should total what was actually spent.
+ * Moving the live flag rather than writing a new row, which is what `restore` means for a
+ * lore version too (lib/zones/lore.ts): the history is the set of takes this line has had,
+ * and restoring is a statement about which of them is right, not a new one. It can be, now
+ * that every take is archived under its own version -- there are no bytes left over with
+ * no row to claim them, which is what a copy-to-a-new-number was for.
+ *
+ * Refuses a take whose bytes cannot be found rather than restoring something else. The
+ * archived name comes from resolveArchive, which pairs the clips of a line against its
+ * takes and answers nothing at all when it cannot be sure.
  */
-export async function restoreZoneTake(
-  lineId: string,
-  archiveVersion: number,
-): Promise<number> {
+export async function restoreZoneTake(lineId: string, version: number): Promise<number> {
   const entry = await entryFor(lineId);
   if (!entry) throw new Error(`unknown lineId ${lineId}`);
 
-  const { query } = await import("@/lib/db");
-  const rows = await query<{
-    textHash: string;
-    chars: number;
-    voiceId: string | null;
-    modelId: string | null;
-    outputFormat: string | null;
-    dictionaryId: string | null;
-    dictionaryVersionId: string | null;
-    leadIn: boolean;
-    leadInSec: number | null;
-  }>(
-    `select "spokenHash" as "textHash", "characters" as "chars", "voiceId", "modelId",
-            "outputFormat", "dictionaryId", "dictionaryVersion" as "dictionaryVersionId",
-            "leadIn", "leadInSec"
-       from "take"
-      where "source" = 'zones' and "lineId" = $1 and "version" = $2`,
-    [lineId, archiveVersion],
-  );
-  const original = rows[0];
-  if (!original) throw new Error(`no take at version ${archiveVersion} for ${lineId}`);
+  const name = await archiveNameOf("zones", entry.file, version);
+  if (!name) {
+    throw new Error(`the audio of version ${version} of ${lineId} cannot be found`);
+  }
 
-  const path = await restoreTake(entry.file, archiveVersion);
+  await restoreTake(entry.file, name);
+  await setLiveTake("zones", entry.file, version);
 
-  return insertTake(
-    lineId,
-    {
-      file: entry.file,
-      // The restored take's own hash, so staleness describes the audio that is now live
-      // rather than the audio it displaced.
-      textHash: original.textHash,
-      chars: original.chars,
-      credits: null,
-      durationSec: await durationOf(path),
-      bytes: (await stat(path)).size,
-      voiceId: original.voiceId,
-      modelId: original.modelId,
-      outputFormat: original.outputFormat,
-      dictionaryId: original.dictionaryId,
-      dictionaryVersionId: original.dictionaryVersionId,
-      // The restored take's own values: the file being made live is the one that was cut
-      // then, lead-in and all, and claiming otherwise would misreport what is playing.
-      leadIn: original.leadIn,
-      leadInSec: original.leadInSec,
-      generatedAt: new Date().toISOString(),
-    },
-    "generated",
-  );
+  return version;
 }

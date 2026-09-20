@@ -2,9 +2,6 @@
 
 import "server-only";
 
-import { readdir } from "node:fs/promises";
-import { join } from "node:path";
-
 import { catalogue } from "./catalogue";
 import { historyDir, soundsDir } from "./tools";
 
@@ -35,12 +32,3 @@ export async function isAddressable(relPath: string, ): Promise<boolean> {
   return (await addressableFiles()).has(relPath);
 }
 
-/** Which archived takes exist for a line, newest first. Empty when none do. */
-export async function archivedVersions(file: string, ): Promise<number[]> {
-  const names = await readdir(join(historyDir(), file)).catch(() => [] as string[]);
-  return names
-    .map((name) => /^v(\d+)\.mp3$/.exec(name))
-    .filter((match): match is RegExpExecArray => match !== null)
-    .map((match) => Number(match[1]))
-    .sort((a, b) => b - a);
-}
