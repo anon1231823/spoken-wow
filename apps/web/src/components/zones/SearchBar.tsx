@@ -138,6 +138,19 @@ export function SearchBar({
           onChange={(generatedBefore) => onChange({ generatedBefore })}
         />
 
+        {/* A checkbox rather than a value of `state`, because a line can be current and
+            carry this at once: as a state it would hide whichever answer came second. */}
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Checkbox
+            id="dirty-only"
+            checked={filters.dirty ?? false}
+            onCheckedChange={(value) => onChange({ dirty: value === true || undefined })}
+          />
+          <Label htmlFor="dirty-only" className="text-muted-foreground text-sm">
+            pronunciation moved
+          </Label>
+        </div>
+
         <div className="flex items-center gap-2 whitespace-nowrap">
           <Checkbox
             id="short-only"

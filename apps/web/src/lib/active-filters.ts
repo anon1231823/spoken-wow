@@ -37,6 +37,7 @@ export function activeFilterCount(filters: LineFilters): number {
     filters.overridden || undefined,
     filters.ignored || undefined,
     filters.outdated || undefined,
+    filters.dirty || undefined,
     filters.generatedBefore,
     filters.generatedAfter,
   ].filter(Boolean).length;

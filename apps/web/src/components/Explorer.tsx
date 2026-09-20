@@ -31,6 +31,7 @@ import {
   type QueueSnapshot,
 } from "@/lib/generation/client";
 import { estimate as estimateBatch, LIST_RATE, type Estimate } from "@/lib/generation/billing";
+import { useClearDirty } from "@/lib/generation/use-clear-dirty";
 import { canConfigureGeneration, canRegenerate } from "@/lib/permissions";
 import { isVoiceable } from "@/lib/text-gate";
 import type { Filter, LineFilters, ResultLine, SearchResult } from "@/lib/search";
@@ -82,6 +83,7 @@ function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.overridden) params.set("overridden", "1");
   if (filters.ignored) params.set("ignored", "1");
   if (filters.outdated) params.set("outdated", "1");
+  if (filters.dirty) params.set("dirty", "1");
   if (filters.generatedBefore) params.set("before", filters.generatedBefore);
   if (filters.generatedAfter) params.set("after", filters.generatedAfter);
   return params;
@@ -127,6 +129,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       overridden: params.get("overridden") === "1",
       ignored: params.get("ignored") === "1",
       outdated: params.get("outdated") === "1",
+      dirty: params.get("dirty") === "1",
       generatedBefore: params.get("before") ?? undefined,
       generatedAfter: params.get("after") ?? undefined,
     }),
@@ -148,6 +151,13 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const [takes, setTakes] = useState<Record<string, number>>({});
   // Files whose live audio was made from text that has since changed.
   const [stale, setStale] = useState<Set<string>>(new Set());
+  // Files whose live audio was cut before a pronunciation it speaks was changed. A separate
+  // set because the two faults are separate: either can be true of a file alone.
+  const [dirty, setDirty] = useState<Set<string>>(new Set());
+  // What has been cleared since this page was fetched, laid over that set rather than
+  // deleted from it: the set is replaced wholesale by every take-count fetch, so a deletion
+  // would be undone by the next page load while the ack it wrote is still in force.
+  const { cleared, clear: clearDirty } = useClearDirty("quests");
   // The line whose spoken text is being rewritten, or null.
   const [editing, setEditing] = useState<ResultLine | null>(null);
   const [ignoring, setIgnoring] = useState<ResultLine | null>(null);
@@ -237,6 +247,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
         ...("line" in next ? { line: next.line } : {}),
         ...("overridden" in next ? { overridden: next.overridden ? "1" : undefined } : {}),
         ...("outdated" in next ? { outdated: next.outdated ? "1" : undefined } : {}),
+        ...("dirty" in next ? { dirty: next.dirty ? "1" : undefined } : {}),
         ...("ignored" in next ? { ignored: next.ignored ? "1" : undefined } : {}),
         ...("generatedBefore" in next ? { before: next.generatedBefore } : {}),
         ...("generatedAfter" in next ? { after: next.generatedAfter } : {}),
@@ -322,6 +333,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       // Replaced rather than merged: a file that has just been regenerated must leave the
       // set, and merging could only ever add to it.
       setStale(new Set(info.stale));
+      setDirty(new Set(info.dirty));
     });
     return () => controller.abort();
   }, [showRegenerate, result]);
@@ -526,6 +538,23 @@ export default function Explorer({ facets }: { facets: Facets }) {
   }, [applySuccess]);
 
   /**
+   * Clear every dirty file the current search matches, not just this page's.
+   *
+   * The match set comes from the batch endpoint, which is what "everything this filter
+   * selects" already means here, and the marks from the same per-file question the page
+   * asks -- so nothing is cleared that the server would not have called dirty. Lines the
+   * batch endpoint omits because nothing would voice them are omitted here too; audio for
+   * them is rare and clearing a mark on it can wait for the row itself.
+   */
+  const clearAllDirty = useCallback(async () => {
+    const jobs = await fetchBatchJobs(new URLSearchParams(filterQuery));
+    if (!jobs || jobs.length === 0) return;
+    const files = [...new Set(jobs.map((job) => job.audioPath))];
+    const info = await fetchTakeCounts(files);
+    if (info) clearDirty(info.dirty);
+  }, [filterQuery, clearDirty]);
+
+  /**
    * Ask to regenerate everything the current search matches.
    *
    * The whole match set, not the page on screen - which is why the jobs are fetched rather
@@ -687,6 +716,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
   }, [current]);
 
   const pageCount = result ? Math.max(1, Math.ceil(result.total / result.limit)) : 1;
+  // This page's marks, minus what has been cleared without a refetch since.
+  const marked = [...dirty].filter((file) => !cleared.has(file)).length;
 
   return (
     <>
@@ -735,6 +766,16 @@ export default function Explorer({ facets }: { facets: Facets }) {
               ? `${plural(result.total, "line")} across ${plural(result.npcCount, "NPC")}`
               : ""}
         </div>
+        {/* This page's marks, which is what the row-level question was asked for. The
+            corpus-wide count is what the "pronunciation moved" filter is for. */}
+        {showRegenerate && marked > 0 && (
+          <span className="flex items-center gap-1 text-sm text-amber-300">
+            {marked} pronunciation on this page
+            <Button size="xs" variant="ghost" onClick={() => void clearAllDirty()}>
+              clear all matching
+            </Button>
+          </span>
+        )}
         {showRegenerate && result && result.total > 0 && (
           <Button
             size="xs"
@@ -792,6 +833,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 blocked={blockedReason(line)}
                 takes={takes[line.audioPath] ?? 0}
                 stale={stale.has(line.audioPath)}
+                dirty={dirty.has(line.audioPath) && !cleared.has(line.audioPath)}
+                onClearDirty={(l) => clearDirty([l.audioPath])}
                 onPlay={play}
                 onEditText={setEditing}
                 onIgnore={canConfigure ? setIgnoring : null}

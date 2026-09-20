@@ -201,6 +201,18 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
             audio outdated
           </Label>
         </div>
+        {/* Its own box beside "audio outdated", not a narrowing of it: a lexicon edit moves
+            no text, so the two select different faults in the same file. */}
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Checkbox
+            id="dirty-only"
+            checked={filters.dirty ?? false}
+            onCheckedChange={(value) => onFilters({ dirty: value === true })}
+          />
+          <Label htmlFor="dirty-only" className="text-muted-foreground text-sm">
+            pronunciation moved
+          </Label>
+        </div>
         <div className="flex items-center gap-2 whitespace-nowrap">
           <Checkbox
             id="narration-only"

@@ -25,6 +25,7 @@ import {
   type GenerationStatusResponse,
   type QueueSnapshot,
 } from "@/lib/generation/client";
+import { useClearDirty } from "@/lib/generation/use-clear-dirty";
 import { noApiKeyMessage } from "@/lib/no-api-key";
 import * as permissions from "@/lib/permissions";
 import * as echo from "@/lib/url-echo";
@@ -161,6 +162,10 @@ export function Explorer({ books }: { books: BookFacet[] }) {
   // Held in refs so refetch() -- called from a poll and from a completed regeneration --
   // reads the current view without being rebuilt on every filter change, which would
   // restart the poll timer each time.
+  // Held so a cleared row stays cleared without a refetch that would rebuild a hundred rows
+  // to unset one boolean.
+  const { cleared, clear: clearDirty } = useClearDirty("books");
+
   const filterQueryRef = useRef(filterQuery);
   filterQueryRef.current = filterQuery;
   const pageRef = useRef(page);
@@ -285,6 +290,14 @@ export function Explorer({ books }: { books: BookFacet[] }) {
    * the route drops -- fetched at click time, and the estimate is computed from them here
    * rather than asked for.
    */
+  /** Every dirty page the current filter matches, not just this screen's. */
+  const clearAllDirty = useCallback(() => {
+    fetch(`/api/books/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
+      .then((response) => response.json())
+      .then(({ dirtyFiles }: { dirtyFiles?: string[] }) => clearDirty(dirtyFiles ?? []))
+      .catch(() => {});
+  }, [clearDirty]);
+
   const askToRegenerateAll = useCallback(() => {
     if (!result || result.total === 0) return;
 
@@ -418,7 +431,14 @@ export function Explorer({ books }: { books: BookFacet[] }) {
           {result ? result.total.toLocaleString() : "…"} pages
           {result && ` · ${result.counts.missing.toLocaleString()} without audio`}
           {result && result.counts.stale > 0 && ` · ${result.counts.stale.toLocaleString()} outdated`}
+          {result && result.dirty > 0 && ` · ${result.dirty.toLocaleString()} pronunciation`}
         </span>
+        {/* Beside the counts, and only for someone who could act on it. */}
+        {canRegenerate && result && result.dirty > 0 && (
+          <Button size="sm" variant="ghost" onClick={clearAllDirty}>
+            Clear {result.dirty.toLocaleString()} marks
+          </Button>
+        )}
         {canRegenerate && result && result.total > 0 && (
           <Button size="sm" variant="secondary" onClick={askToRegenerateAll}>
             Regenerate these
@@ -433,11 +453,16 @@ export function Explorer({ books }: { books: BookFacet[] }) {
       ) : (
         result && (
           <BookList
-            lines={result.lines}
+            // Cleared in this session laid over the fetched rows, the way the zones
+            // explorer lays a flag over its own: the search said what was true when it ran.
+            lines={result.lines.map((line) =>
+              cleared.has(line.file) ? { ...line, dirty: false } : line,
+            )}
             current={current}
             canRegenerate={canRegenerate}
             rowStates={rowStates}
             onPlay={setCurrent}
+            onClearDirty={(line) => clearDirty([line.file])}
             onRegenerate={regenerateOne}
             onSelectBook={(line) => updateFilters({ bookId: line.bookId })}
           />

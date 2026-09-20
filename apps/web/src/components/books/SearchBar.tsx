@@ -115,6 +115,16 @@ export function SearchBar({
         voiceable only
       </Label>
 
+      {/* A checkbox rather than a value of `state`, because a page can be current and carry
+          this at once: as a state it would hide whichever answer came second. */}
+      <Label className="flex items-center gap-1.5 text-xs">
+        <Checkbox
+          checked={filters.dirty ?? false}
+          onCheckedChange={(checked) => onChange({ dirty: checked === true ? true : undefined })}
+        />
+        pronunciation moved
+      </Label>
+
       {active > 0 && (
         <Button variant="ghost" size="sm" onClick={onClearAll}>
           Clear {active} filter{active === 1 ? "" : "s"}

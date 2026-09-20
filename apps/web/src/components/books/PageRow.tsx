@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDownIcon, PlayIcon } from "lucide-react";
+import { ChevronDownIcon, Eraser, PlayIcon } from "lucide-react";
 import { useState } from "react";
 
 import RegenerateButton from "@/components/RegenerateButton";
+import { Button } from "@/components/ui/button";
 import { materialName } from "@/lib/books/filters";
 import type { ResultLine } from "@/lib/books/search";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,8 @@ type Props = {
   onRegenerate: (line: ResultLine) => void;
   /** Narrowing to this book, from its name. */
   onSelectBook: (line: ResultLine) => void;
+  /** Say this take is fine as it stands, despite a pronunciation having moved under it. */
+  onClearDirty: (line: ResultLine) => void;
 };
 
 // The same colour discipline as the other two explorers: red is only ever a real problem,
@@ -56,6 +59,7 @@ export function PageRow({
   onPlay,
   onRegenerate,
   onSelectBook,
+  onClearDirty,
 }: Props) {
   const playable = line.state !== "missing";
   const [expanded, setExpanded] = useState(false);
@@ -185,6 +189,13 @@ export function PageRow({
             {STATE_LABEL[line.state] || `v${line.take?.version ?? 1}`}
           </span>
         )}
+        {/* Beneath the state rather than inside it: the text has not moved, so this page is
+            `current` and dirty at once, and one word cannot say both. */}
+        {line.dirty && (
+          <div className="text-amber-300" title="Cut before a pronunciation it speaks was changed">
+            pronunciation
+          </div>
+        )}
       </td>
 
       <td className="text-muted-foreground px-2 py-2 text-right text-xs whitespace-nowrap">
@@ -192,6 +203,18 @@ export function PageRow({
       </td>
 
       <td className="px-2 py-2">
+        {/* Only on a dirty row: a clean one keeps the single control it already had. */}
+        {canRegenerate && line.dirty && (
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Audio predates a pronunciation change - clear the mark (does not regenerate)"
+            aria-label={`Clear the pronunciation mark on page ${line.pageNumber} of ${line.title}`}
+            onClick={() => onClearDirty(line)}
+          >
+            <Eraser className="size-3.5" />
+          </Button>
+        )}
         {canRegenerate && (
           <RegenerateButton
             onClick={() => onRegenerate(line)}

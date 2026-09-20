@@ -31,6 +31,7 @@ import * as permissions from "@/lib/permissions";
 import type { LineFlag, ZoneFacet } from "@/lib/zones/catalogue";
 import { filterParams, filtersFromParams, PAGE_SIZE, type LineFilters } from "@/lib/zones/filters";
 import type { ResultLine, SearchResult } from "@/lib/zones/search";
+import { useClearDirty } from "@/lib/generation/use-clear-dirty";
 import * as echo from "@/lib/url-echo";
 
 // Long enough to hold a whole typed word: the timer restarts on every keystroke, so this
@@ -237,6 +238,10 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // Flags
   //----------------------------------------------------------------------------
 
+  // Held rather than refetched, for the reason the flag overlay is: a search rebuild to
+  // unset one boolean is wasteful.
+  const { cleared, clear: clearDirty } = useClearDirty("zones");
+
   const setFlag = useCallback(
     (line: ResultLine, status: "bad" | "ok" | null, note?: string) => {
       // Optimistic: a review pass is one judgement per second and waiting for a round
@@ -270,6 +275,14 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // The fetched row, with any judgement or rewrite made since it was fetched laid over
   // the top. A rewritten line is stale by definition -- the text no longer hashes to what
   // was spoken -- so the state moves with the text rather than waiting for a refetch.
+  /** Every dirty line the current filter matches, not just this page's. */
+  const clearAllDirty = useCallback(() => {
+    fetch(`/api/zones/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
+      .then((response) => response.json())
+      .then(({ dirtyFiles }: { dirtyFiles?: string[] }) => clearDirty(dirtyFiles ?? []))
+      .catch(() => {});
+  }, [clearDirty]);
+
   const withFlag = useCallback(
     (line: ResultLine): ResultLine => {
       let out = line;
@@ -285,9 +298,12 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           ...(out.translated === false ? { translated: true } : {}),
         };
       }
+      // Cleared in this session. The row keeps whatever the search said about everything
+      // else: an acknowledgement is about the pronunciation mark and nothing more.
+      if (cleared.has(out.file)) out = { ...out, dirty: false };
       return out;
     },
-    [flagged, rewritten],
+    [flagged, rewritten, cleared],
   );
 
   //----------------------------------------------------------------------------
@@ -655,6 +671,18 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         {result && result.counts.stale > 0 && (
           <span className="text-sm text-amber-300">{result.counts.stale} outdated</span>
         )}
+        {/* Its own count, beside the states rather than among them: a line can be current
+            and carry this at once. The button only for someone who could act on it. */}
+        {result && result.dirty > 0 && (
+          <span className="flex items-center gap-1 text-sm text-amber-300">
+            {result.dirty} pronunciation
+            {canRegenerate && (
+              <Button size="xs" variant="ghost" onClick={clearAllDirty}>
+                clear all
+              </Button>
+            )}
+          </span>
+        )}
 
         {canRegenerate && result && result.total > 0 && (
           <Button size="xs" variant="secondary" className="ml-auto" onClick={askToRegenerateAll}>
@@ -708,6 +736,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
               onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
               state={rowStates[line.id]}
               onFlag={setFlag}
+              onClearDirty={(l) => clearDirty([l.file])}
               onNote={(l) => setNoteFor(withFlag(l))}
               onReport={(l) =>
                 setReportFor({ lineId: l.id, file: l.file, name: l.name })

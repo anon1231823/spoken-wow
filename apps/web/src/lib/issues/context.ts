@@ -12,6 +12,7 @@
  * reads the override itself, and there a failure *should* be fatal.
  */
 import { generatedAt } from "../generation/versions";
+import { dirtyQuestFiles } from "./dirtiness";
 import { staleFiles } from "./staleness";
 import type { SearchContext } from "../search";
 import { NO_CONTEXT } from "../search";
@@ -31,15 +32,17 @@ export async function searchContext(
   finding?: number,
   dated = false,
   outdated = false,
+  dirty = false,
 ): Promise<SearchContext> {
   try {
-    const [issues, overrides, ignores, lines, dates, stale] = await Promise.all([
+    const [issues, overrides, ignores, lines, dates, stale, dirt] = await Promise.all([
       issuesByLine(),
       readOverrides(),
       readIgnores(),
       finding ? findingLines(finding) : null,
       dated ? generatedAt() : null,
       outdated ? staleFiles() : null,
+      dirty ? dirtyQuestFiles() : null,
     ]);
     return {
       issues,
@@ -48,6 +51,7 @@ export async function searchContext(
       findingLines: lines,
       generatedAt: dates ?? undefined,
       stale: stale ?? undefined,
+      dirty: dirt ?? undefined,
     };
   } catch (error) {
     console.warn("[issues] search context unavailable, serving unmarked results:", error);

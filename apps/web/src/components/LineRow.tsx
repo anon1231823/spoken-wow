@@ -2,6 +2,7 @@
 
 import {
   ChevronDownIcon,
+  Eraser,
   EyeOffIcon,
   FlagIcon,
   MessageSquareIcon,
@@ -82,6 +83,11 @@ type Props = {
   takes: number;
   /** The live audio was made from text that has since changed. */
   stale: boolean;
+  /**
+   * The live audio was cut before a pronunciation it speaks was changed, and nobody has
+   * said since that it is fine. Independent of `stale`: a lexicon edit moves no text.
+   */
+  dirty: boolean;
   onPlay: (line: ResultLine) => void;
   onEditText: (line: ResultLine) => void;
   /** Open the ignore dialog, or null for anyone not allowed to make that decision. */
@@ -93,6 +99,8 @@ type Props = {
   /** Narrow the search to this line's NPC, or to its quest. */
   onNarrowToNpc: (line: ResultLine) => void;
   onNarrowToQuest: (line: ResultLine) => void;
+  /** Say this take is fine as it stands, despite a pronunciation having moved under it. */
+  onClearDirty: (line: ResultLine) => void;
 };
 
 /**
@@ -124,6 +132,7 @@ export default function LineRow({
   blocked,
   takes,
   stale,
+  dirty,
   onPlay,
   onEditText,
   onIgnore,
@@ -132,6 +141,7 @@ export default function LineRow({
   onRestored,
   onNarrowToNpc,
   onNarrowToQuest,
+  onClearDirty,
 }: Props) {
   const missing = absence(line);
   const [expanded, setExpanded] = useState(false);
@@ -255,6 +265,16 @@ export default function LineRow({
                   audio outdated
                 </span>
               )}
+              {/* Beside "audio outdated" rather than instead of it: the two are different
+                  complaints about one file and either can be true alone. */}
+              {dirty && (
+                <span
+                  className="text-amber-300"
+                  title="This audio was cut before a pronunciation it speaks was changed"
+                >
+                  pronunciation
+                </span>
+              )}
               {/* First of the chips: it is the reason the row is on screen at all, since a
                   search only shows these when they were asked for. */}
               {line.ignored && (
@@ -345,6 +365,19 @@ export default function LineRow({
                 onClick={() => onIgnore(line)}
               >
                 <EyeOffIcon className={cn("size-3.5", line.ignored && "text-amber-300")} />
+              </Button>
+            )}
+            {/* Only on a dirty row. The mark is the whole reason this control exists, and a
+                clean row would be offering to clear nothing. */}
+            {dirty && (
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Audio predates a pronunciation change - clear the mark (does not regenerate)"
+                aria-label={`Clear the pronunciation mark on ${line.npcName}'s line`}
+                onClick={() => onClearDirty(line)}
+              >
+                <Eraser className="size-3.5 text-amber-300" />
               </Button>
             )}
             {/* Only shown once there is something to go back to, so an untouched line keeps
