@@ -23,7 +23,7 @@ import { Player as BooksPlayer } from "@/components/books/Player";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Player as ZonesPlayer } from "@/components/zones/Player";
-import { explorerHref, reportHref } from "@/lib/links";
+import { explorerHref, reportHref, targetExplorerHref } from "@/lib/links";
 import type { ResultLine as BookLine } from "@/lib/books/search";
 import { searchPath, type SourceLine } from "@/lib/reports/detail";
 import {
@@ -270,10 +270,11 @@ export default function ReportTable({
                       <Badge variant="outline" className="shrink-0 py-0 leading-5">
                         {SOURCE_LABELS[report.source]}
                       </Badge>
-                      {/* The explorer, narrowed to this line: where a triager works. The
-                          `/r/` page the reporter saw is the fallback for a report whose
-                          address resolved to no line, because there is nothing to filter
-                          on and the raw address is still worth opening. */}
+                      {/* The explorer, narrowed to this line: where a triager works. A
+                          report with no line id - a gossip NPC whose reporter never picked
+                          one of the takes - narrows the explorer by its address instead.
+                          The `/r/` page the reporter saw is the last fallback, for an
+                          address no filter addresses. */}
                       {report.lineId ? (
                         <Link
                           href={explorerHref(report.source, report.lineId)}
@@ -284,7 +285,10 @@ export default function ReportTable({
                         </Link>
                       ) : report.target ? (
                         <Link
-                          href={reportHref(report.source, report.target)}
+                          href={
+                            targetExplorerHref(report.source, report.target) ??
+                            reportHref(report.source, report.target)
+                          }
                           title={report.target}
                           className="text-muted-foreground truncate font-mono underline-offset-2 hover:underline"
                         >
