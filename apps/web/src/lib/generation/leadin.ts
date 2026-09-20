@@ -18,6 +18,18 @@
  * `[long pause]` rather than `[pause]` - the short one gave 0.86s, which is separable but
  * without much room.
  *
+ * BOTH TAGS ARE LOAD-BEARING. `[long pause]` on its own was tried, to save 16 of the 29
+ * characters: three draws produced no leading gap at all, and each one began speaking
+ * immediately. With nothing before it there is nothing for the model to pause between, and
+ * the tag is dropped - so the gap this cuts at is not the pause standing alone, it is the
+ * pause AFTER the throat clear. The throat clear is also what the ramp-up happens to, which
+ * is the point of the exercise.
+ *
+ * The 29 characters are billed as ordinary text, which is roughly 11% on top of a full
+ * corpus regeneration and far more on a short line - a 50-character greeting pays 58%. That
+ * was weighed and accepted rather than gated on length: the tag is what makes the opening
+ * usable, and a line too short to warrant it is also a line that is nearly all ramp-up.
+ *
  * The lead-in is NOT part of the spoken text. It is prepended at the request and nowhere
  * else, so `characters`, the staleness hash and the file name all describe what the line
  * actually says. Folding it in would restate every take in the corpus as stale at once.
