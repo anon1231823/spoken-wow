@@ -131,7 +131,11 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
   // that generated nothing at all -- which is every idle tick -- would do it forever.
   // Per drain rather than per line for both: each rewrites its whole lookup table, and
   // doing that per take would be the slowest part of a run otherwise spent waiting on
-  // ElevenLabs. Quests has no entry because its addon reads the corpus it already ships.
+  // ElevenLabs. Quests still has no entry, and the reason has changed: its corpus lives in
+  // Postgres now, but a take is not part of any exported artifact -- a regenerated line
+  // keeps its filename, so the lookup tables the pack ships are unmoved. What quests
+  // exports is the corpus itself, and that is a maintainer step (`make quests-export-corpus`)
+  // because its output is a committed file.
   const afterDrain: Partial<Record<Source, () => Promise<void>>> = options.afterDrain ?? {
     zones: () => publishZones(),
     books: () => publishBooks(),

@@ -19,8 +19,12 @@ function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T
   return value && (allowed as readonly string[]).includes(value) ? (value as T) : undefined;
 }
 
-export function filtersFromParams(params: URLSearchParams): LineFilters {
-  const { races, genders, flavors, voices } = facets();
+/**
+ * Async because the facets are: the corpus is a table now, so which races and voices exist
+ * is a question with a current answer rather than a constant baked into the release.
+ */
+export async function filtersFromParams(params: URLSearchParams): Promise<LineFilters> {
+  const { races, genders, flavors, voices } = await facets();
 
   return {
     q: params.get("q") ?? "",

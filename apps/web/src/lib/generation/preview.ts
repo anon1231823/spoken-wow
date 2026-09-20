@@ -19,7 +19,8 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-import { loadCorpus, type CorpusLine } from "@/lib/corpus";
+import type { CorpusLine } from "@/lib/corpus";
+import { corpus } from "@/lib/quests/catalogue";
 import { PREVIEW_DIR } from "@/lib/paths";
 import type { ElevenLabsOptions } from "@/lib/voices/elevenlabs";
 
@@ -140,7 +141,8 @@ type SampleHolder = { [samplesKey]?: Memo };
  * a pass with 135.
  *
  * Tied to the identity of the lines it was built from, and discarded when they differ. In
- * production that array is loadCorpus()'s own memo and never changes, so the check always
+ * production that array is the catalogue's own memo and changes only when the table does,
+ * so the check
  * passes; in a test it changes every case, and a sample remembered from a different corpus
  * would be a wrong answer rather than a stale one.
  */
@@ -271,7 +273,7 @@ export async function renderPreview(
   const { text: sentence, line }: Sample =
     mode === "word"
       ? { text: entry.grapheme, line: null }
-      : sampleSentence(entry.grapheme, loadCorpus().lines);
+      : sampleSentence(entry.grapheme, (await corpus()).lines);
 
   const spoken = speakable(entry, sentence);
   const source = line ? { npcName: line.npcName, lineId: line.lineId } : null;
@@ -346,15 +348,15 @@ export type CacheState = Record<PreviewMode, boolean>;
  * Silent about entries with no pronunciation yet, and about the model refusing IPA - those
  * are simply not cached, which is true, and the refusal is the preview's own job to report.
  */
-export function previewCache(
+export async function previewCache(
   entries: LexiconEntry[],
   pickVoice: (line: CorpusLine | null) => string | null,
   config: GenerationConfig,
   dir: string = PREVIEW_DIR,
-): Record<string, CacheState> {
+): Promise<Record<string, CacheState>> {
   const samples = sampleSentences(
     entries.map((entry) => entry.grapheme),
-    loadCorpus().lines,
+    (await corpus()).lines,
   );
 
   const cache: Record<string, CacheState> = {};

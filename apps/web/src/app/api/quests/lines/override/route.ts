@@ -29,7 +29,7 @@ export async function PUT(request: Request) {
     return Response.json({ error: message }, { status: 400 });
   }
 
-  if (!corpusFiles().has(draft.file)) {
+  if (!(await corpusFiles()).has(draft.file)) {
     return Response.json({ error: "unknown file" }, { status: 404 });
   }
 
@@ -42,7 +42,7 @@ export async function DELETE(request: Request) {
   if (denied) return denied;
 
   const file = new URL(request.url).searchParams.get("file");
-  if (!file || !corpusFiles().has(file)) {
+  if (!file || !(await corpusFiles()).has(file)) {
     return Response.json({ error: "unknown file" }, { status: 404 });
   }
 

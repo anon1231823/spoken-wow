@@ -1,17 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { buildLineIndex, lineIndex, loadCorpus, npcKey } from "./corpus";
+import { buildLineIndex, npcKey } from "./corpus";
+import { corpus as catalogue, lineIndex } from "./quests/catalogue";
 
-describe("corpus", () => {
-  const corpus = loadCorpus();
+describe("corpus", async () => {
+  const corpus = await catalogue();
 
-  it("loads the committed corpus", () => {
-    expect(corpus.schemaVersion).toBe(2);
-    expect(corpus.lines).toHaveLength(corpus.lineCount);
-    expect(corpus.lineCount).toBeGreaterThan(17000);
+  it("loads the committed corpus", async () => {
+    expect(corpus.lines.length).toBeGreaterThan(17000);
   });
 
-  it("carries the fields the explorer searches on", () => {
+  it("carries the fields the explorer searches on", async () => {
     const line = corpus.lines.find((l) => l.lineId === "q:5:accept");
     expect(line).toBeDefined();
     expect(line!.npcName).toBe("Jitters");
@@ -20,34 +19,34 @@ describe("corpus", () => {
     expect(line!.voice).toBe("human-male-standard");
   });
 
-  it("namespaces npc keys by type", () => {
+  it("namespaces npc keys by type", async () => {
     // creature 68 is a Stormwind City Guard, gameobject 68 is a Wanted Poster
     expect(npcKey({ npcType: "creature", npcId: 68 })).not.toBe(
       npcKey({ npcType: "gameobject", npcId: 68 }),
     );
   });
 
-  it("memoises, so repeated loads do not re-parse", () => {
-    expect(loadCorpus()).toBe(corpus);
+  it("memoises, so repeated loads do not re-parse", async () => {
+    expect((await catalogue()).lines).toBe(corpus.lines);
   });
 });
 
 // One lineId can belong to many lines. A gossip lineId is g:{md5(text + race + gender)}, so
 // every dwarf man with the same greeting shares one id and one mp3 - which is what makes
 // regeneration an operation on a file rather than on an NPC's line.
-describe("lineIndex", () => {
-  const index = lineIndex();
+describe("lineIndex", async () => {
+  const index = await lineIndex();
 
-  it("indexes every line in the corpus", () => {
+  it("indexes every line in the corpus", async () => {
     const total = [...index.values()].reduce((sum, group) => sum + group.length, 0);
-    expect(total).toBe(loadCorpus().lineCount);
+    expect(total).toBe((await catalogue()).lines.length);
   });
 
-  it("finds a quest line under its id", () => {
+  it("finds a quest line under its id", async () => {
     expect(index.get("q:5:accept")!.map((l) => l.npcName)).toContain("Jitters");
   });
 
-  it("groups the NPCs that share a gossip line", () => {
+  it("groups the NPCs that share a gossip line", async () => {
     const shared = [...index.values()].filter(
       (group) => group.length > 1 && group[0].source === "gossip",
     );
@@ -61,8 +60,8 @@ describe("lineIndex", () => {
     }
   });
 
-  it("memoises", () => {
-    expect(lineIndex()).toBe(index);
-    expect(buildLineIndex(loadCorpus())).not.toBe(index);
+  it("memoises", async () => {
+    expect(await lineIndex()).toBe(index);
+    expect(buildLineIndex(await catalogue())).not.toBe(index);
   });
 });

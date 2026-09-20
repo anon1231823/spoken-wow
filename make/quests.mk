@@ -21,7 +21,8 @@ REMOTE_PM2   := pm2
 
 # The ignore list and the rsync exclusion file derived from it.
 #
-# pipelines/quests/corpus/ignored.json is committed and exported from the database by `make pull-ignores`;
+# pipelines/quests/corpus/ignored.json is committed and written from the database by
+# `make quests-export-ignores`;
 # .rsync-ignored is regenerated before every transfer and gitignored. Deriving it each time
 # rather than committing it means a stale exclusion cannot survive a decision being undone.
 # Passed straight through to scripts/package-audio.sh, which documents each one. Empty
@@ -73,11 +74,12 @@ endef
 
 .DEFAULT_GOAL := help
 .PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
-        pull-history push-history history-status pull-ignores package package-audio \
+        pull-history push-history history-status package package-audio \
         package-audio-complete package-meta push-complete icon \
         downloads-status \
         factions release release-audio release-wago release-curse \
-        release-dry backfill-takes
+        release-dry backfill-takes import-corpus export-corpus export-ignores \
+        fold-overrides sync check-synced
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -326,12 +328,111 @@ release-audio: ## Upload the four packs and their meta addon
 #
 # Lines this project has decided never to voice: the war-effort tallies, whose $$2113w is a
 # counter the game expands against a live server, and Blizzard's own debris. The decision is
-# made in the web app and lives in Postgres, where it carries a reason and an author. This
-# brings it back as a committed file, which is the only form the Python CLI and rsync can
-# read - neither has a database.
+# made in the web app and lives in Postgres, where it carries a reason and an author. The
+# committed file is the only form the Python CLI and rsync can read - neither has a
+# database - so `make quests-export-ignores` writes it from the table.
 #
-# One direction only. Editing the file by hand would put it out of step with the table the
-# app reads, and the app is what everyone looks at.
+# It used to be pulled from the droplet over ssh, because the droplet's database was the
+# only one that had the rows. `make quests-sync` brings them home now, so the export is a
+# local read like every other one here, and deploy/web/sql/export_ignores.sql is gone with
+# the target that fed it.
+#
+# One direction only, either way. Editing the file by hand would put it out of step with
+# the table the app reads, and the app is what everyone looks at.
+
+# The corpus, which lives in Postgres now.
+#
+# corpus/corpus.json.gz is still what the Python CLI and the addon build read, and still
+# committed -- producing audio and shipping a pack need no database, which is the promise
+# requirements.txt makes. What changed is that the file is an EXPORT of quest_line rather
+# than something maintained by hand, exactly as zones' manifest.json is an export of the
+# take table. The check that proves the table carries everything is that an import followed
+# by an export leaves the file byte-identical.
+
+# Run from the pipeline's directory, because the CLI's default paths are relative to it.
+QUESTS_CLI = cd $(QUESTS_DIR) && $(abspath $(PYTHON)) cli-main.py
+
+import-corpus: ## corpus/corpus.json.gz -> quest_line (needs DATABASE_URL and psycopg2)
+	@$(QUESTS_CLI) import-corpus
+
+export-corpus: ## quest_line -> corpus/corpus.json.gz (ARGS=--check to compare instead)
+	$(freshness-check)
+	@$(QUESTS_CLI) export-corpus $(ARGS)
+
+export-ignores: ## line_ignore -> corpus/ignored.json, replacing the old ssh export
+	@$(QUESTS_CLI) export-ignores $(ARGS)
+
+fold-overrides: ## line_override rows -> edited versions. Once, after import-corpus.
+	@$(QUESTS_CLI) fold-overrides
+
+# THE DROPLET IS UPSTREAM FOR EVERYTHING THE APP WRITES.
+#
+# Corpus edits and takes are made on the site, so the droplet's database is the newer side
+# of both. A laptop is upstream for exactly one thing: a fresh vmangos extract, which is
+# imported locally and pushed before a build. At build time, then, data only ever flows one
+# way -- which is what makes it safe to package from a laptop at all.
+#
+# Before this, a pack built here could ship words production had already corrected, and
+# nothing would have said so. The corpus was a committed file, so "is it current?" meant
+# "did you pull recently?", and the answer was somebody's memory.
+
+LOCAL_DB ?= postgres://localhost/spoken_quests_dev
+CORPUS_TABLES := --table=quest_line --table=quest_line_speaker --table=quest_spawn \
+                 --table=quest_corpus_meta --table=line_ignore
+# pg_dump 16.10 and later wrap output in \restrict / \unrestrict, psql meta-commands an
+# older psql fails on. Both clusters are ours, so strip them. Same as make/books.mk.
+UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
+
+sync: require-droplet ## Replace the local corpus tables with the droplet's (DESTRUCTIVE)
+	@echo "local:"
+	@psql "$(LOCAL_DB)" -tAc 'select count(*) || \' lines, \' || count(*) filter (where "isCurrent") || \' live\' from "quest_line"'
+	@echo "droplet:"
+	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" -tAc \
+	  '"'"'select count(*) || '"'"'"'"'"'"'"'"' lines, '"'"'"'"'"'"'"'"' || count(*) filter (where "isCurrent") || '"'"'"'"'"'"'"'"' live'"'"'"'"'"'"'"'"' from "quest_line"'"'"''
+	@printf 'Replace the LOCAL corpus tables with the droplet ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
+	@( echo 'begin;'; \
+	   echo 'truncate "quest_line", "quest_line_speaker", "quest_spawn", "quest_corpus_meta", "line_ignore";'; \
+	   $(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; pg_dump "$$DATABASE_URL" --data-only $(CORPUS_TABLES)' \
+	     | $(UNRESTRICT); \
+	   echo 'commit;' ) \
+	  | psql "$(LOCAL_DB)" -v ON_ERROR_STOP=1 -q
+	@# --data-only carries no sequences, so the next insert would collide with an id the
+	@# dump already used. The same trap `make web-migrate-books` documents.
+	@psql "$(LOCAL_DB)" -q -c 'select setval(pg_get_serial_sequence(\'public.quest_line\', \'id\'), (select coalesce(max("id"), 1) from "quest_line"))' \
+	                    -c 'select setval(pg_get_serial_sequence(\'public.quest_line_speaker\', \'id\'), (select coalesce(max("id"), 1) from "quest_line_speaker"))' \
+	                    -c 'select setval(pg_get_serial_sequence(\'public.quest_spawn\', \'id\'), (select coalesce(max("id"), 1) from "quest_spawn"))'
+	@echo "==> synced. Rebuild the committed corpus with:  make quests-export-corpus"
+
+# The stamp both sides compute the same way, kept in a file because the quoting for a query
+# sent over ssh is unreadable -- the same reason export_ignores.sql was a file.
+CORPUS_STAMP_SQL := deploy/web/sql/corpus_stamp.sql
+
+# Refuses to let a stale laptop ship a pack -- but asks rather than deciding, because the
+# droplet being unreachable is not the same thing as the data being wrong, and an offline
+# rebuild from the committed corpus is a legitimate thing to want.
+#
+# With no droplet configured it says so and continues: a clone with no access still has to
+# be able to build. With no TTY -- CI -- the prompt fails closed, which is what CI should do.
+define freshness-check
+@if [ -z "$(DROPLET)" ]; then \
+  echo "no droplet configured; skipping the corpus freshness check"; \
+else \
+  here=$$(psql "$(LOCAL_DB)" -tA -f $(CORPUS_STAMP_SQL) 2>/dev/null); \
+  there=$$($(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" -tA -f -' < $(CORPUS_STAMP_SQL) 2>/dev/null); \
+  if [ -z "$$there" ]; then \
+    echo "could not read the droplet's corpus stamp; continuing without the check"; \
+  elif [ "$$here" != "$$there" ]; then \
+    echo "the local corpus and the droplet's disagree:"; \
+    echo "  local:   $$here"; \
+    echo "  droplet: $$there"; \
+    echo "Run 'make quests-sync' first, or continue and ship what is here."; \
+    printf 'Continue anyway? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }; \
+  fi; \
+fi
+endef
+
+check-synced: ## Compare the local corpus with the droplet's, and prompt if they differ
+	$(freshness-check)
 
 # The take rows that say which lines have audio, against the clips actually on disk.
 #
@@ -347,16 +448,6 @@ release-audio: ## Upload the four packs and their meta addon
 
 backfill-takes: ## Give every clip a take row (ARGS=--dry-run, ARGS=--reconcile)
 	@cd apps/web && node scripts/backfill-takes.mjs $(ARGS)
-
-pull-ignores: require-droplet ## Export the ignore list from the droplet into pipelines/quests/corpus/ignored.json
-	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; \
-	  psql "$$DATABASE_URL" -At -f -' < deploy/web/sql/export_ignores.sql > $(IGNORED_JSON).tmp
-	@# A truncated or failed export must not replace a good list: an empty file here would
-	@# silently un-ignore every line the next time anyone pushed or built.
-	@$(PYTHON) -c "import json,sys; json.load(open(sys.argv[1]))['ignored']" $(IGNORED_JSON).tmp \
-	  || { rm -f $(IGNORED_JSON).tmp; echo "export was not a list; kept $(IGNORED_JSON)"; exit 1; }
-	@mv $(IGNORED_JSON).tmp $(IGNORED_JSON)
-	@echo "==> wrote $(IGNORED_JSON). Commit it: the CLI and the rsync targets read the file, not the database."
 
 audio-status: require-droplet ## Compare file count and size on both sides
 	@echo "local:  $$(find audio -name '*.mp3' | wc -l | tr -d ' ') files, $$(du -sh audio | cut -f1)"

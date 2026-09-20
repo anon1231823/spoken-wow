@@ -63,7 +63,7 @@ export async function listVoices(options: ElevenLabsOptions = {}): Promise<Map<s
     // Stock voices are skipped rather than reported: their names ("Roger - Laid-Back,
     // Casual, Resonant") cannot express a race-gender mapping, so they are not candidates.
     if (!voice.name || !voice.voice_id) continue;
-    if (isVoiceSlot(voice.name)) found.set(voice.name, voice.voice_id);
+    if (await isVoiceSlot(voice.name)) found.set(voice.name, voice.voice_id);
   }
   return found;
 }

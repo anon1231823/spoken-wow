@@ -11,7 +11,8 @@
  * `source` and `npcType` are absent on purpose: they are closed unions on CorpusLine, so
  * their lists live next to the type in lib/search.ts.
  */
-import { loadCorpus } from "./corpus";
+import type { CorpusLine } from "./corpus";
+import { corpus } from "./quests/catalogue";
 
 export type Facets = {
   races: string[];
@@ -29,14 +30,14 @@ export type Facets = {
   flavorScopes: { race: string; gender: string; flavor: string }[];
 };
 
-export function buildFacets(): Facets {
+export function buildFacets(lines: CorpusLine[]): Facets {
   const races = new Set<string>();
   const genders = new Set<string>();
   const flavors = new Set<string>();
   const voices = new Set<string>();
   const scopes = new Map<string, { race: string; gender: string; flavor: string }>();
 
-  for (const line of loadCorpus().lines) {
+  for (const line of lines) {
     races.add(line.race);
     genders.add(line.gender);
     voices.add(line.voice);
@@ -63,10 +64,19 @@ export function buildFacets(): Facets {
 }
 
 const cacheKey = Symbol.for("wow-voiceover.facets");
-type CacheHolder = { [cacheKey]?: Facets };
+type CacheHolder = { [cacheKey]?: { lines: CorpusLine[]; facets: Facets } };
 
-export function facets(): Facets {
+/**
+ * Tied to the identity of the lines it was built from, which is how every memo over the
+ * catalogue works now: the corpus is a table, so the facets move when somebody edits a
+ * line's voice, and a permanent memo would keep offering a race nothing is spoken in.
+ */
+export async function facets(): Promise<Facets> {
+  const lines = (await corpus()).lines;
   const holder = globalThis as CacheHolder;
-  if (!holder[cacheKey]) holder[cacheKey] = buildFacets();
-  return holder[cacheKey]!;
+
+  if (!holder[cacheKey] || holder[cacheKey].lines !== lines) {
+    holder[cacheKey] = { lines, facets: buildFacets(lines) };
+  }
+  return holder[cacheKey].facets;
 }

@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "files must be an array" }, { status: 400 });
   }
 
-  const known = corpusFiles();
+  const known = await corpusFiles();
   const files = body.files.filter(
     (file): file is string => typeof file === "string" && known.has(file),
   );

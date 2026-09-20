@@ -6,7 +6,7 @@ import { facets } from "@/lib/facets";
 
 export const metadata: Metadata = { title: "Quests · Spoken" };
 
-export default function Page() {
+export default async function Page() {
   // Read here rather than fetched: the filter options are derived from a corpus that is
   // committed and does not change while the server runs, so a round trip for them would buy
   // nothing but an empty dropdown on first paint.
@@ -19,7 +19,7 @@ export default function Page() {
         game install.
       </p>
       <Suspense>
-        <Explorer facets={facets()} />
+        <Explorer facets={await facets()} />
       </Suspense>
     </main>
   );

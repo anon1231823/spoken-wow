@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { loadCorpus } from "./corpus";
+import { corpus as catalogue } from "./quests/catalogue";
 import { buildFacets } from "./facets";
 
-const corpus = loadCorpus();
-const facets = buildFacets();
+const corpus = await catalogue();
+const facets = buildFacets(corpus.lines);
 
 describe("facets", () => {
   it("offers every value the corpus actually uses", () => {

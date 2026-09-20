@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { loadCorpus, npcKey } from "./corpus";
+import { npcKey } from "./corpus";
+import { corpus as catalogue } from "./quests/catalogue";
 import { readStoreIndex } from "./audio";
 import { batchJobs, isGap, matchingLines, search } from "./search";
 
-const corpus = loadCorpus();
+const corpus = await catalogue();
 /**
  * What the explorer means by "has audio" is a take row now (voicedFiles), read per request
  * and passed in. These tests are about the pure search, so they hand it a set built from
@@ -208,10 +209,10 @@ describe("annotation", () => {
 
 describe("paging", () => {
   it("reports the whole match set, not the page", () => {
-    // Against the whole corpus, so includeProgress: corpus.lineCount counts every line.
+    // Against the whole corpus, so includeProgress: every line counts.
     const page = find({ includeProgress: true });
     expect(page.lines).toHaveLength(50);
-    expect(page.total).toBe(corpus.lineCount);
+    expect(page.total).toBe(corpus.lines.length);
     expect(page.npcCount).toBeGreaterThan(2_000);
   });
 
@@ -228,7 +229,7 @@ describe("paging", () => {
   });
 
   it("ends with a short page rather than an empty one", () => {
-    const last = Math.floor((corpus.lineCount - 1) / 50) * 50;
+    const last = Math.floor((corpus.lines.length - 1) / 50) * 50;
     const page = find({ includeProgress: true, offset: last });
     expect(page.lines.length).toBeGreaterThan(0);
     expect(page.lines.length).toBeLessThanOrEqual(50);
@@ -253,7 +254,7 @@ describe("paging", () => {
 describe("row keys", () => {
   it("are unique across the entire corpus", () => {
     const keys = all();
-    expect(keys).toHaveLength(corpus.lineCount);
+    expect(keys).toHaveLength(corpus.lines.length);
     expect(new Set(keys.map((l) => l.key)).size).toBe(keys.length);
   });
 

@@ -9,7 +9,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 const { closeDb, db } = await import("@/lib/db");
 const { audioRelPath, fileIndex } = await import("@/lib/audio");
-const { lineIndex } = await import("@/lib/corpus");
+const { lineIndex } = await import("@/lib/quests/catalogue");
 const { fileDefaults } = await import("@/lib/generation/files");
 const { spokenHash } = await import("@/lib/generation/history");
 const { applyPronunciation } = await import("@/lib/generation/pronunciation");
@@ -24,11 +24,11 @@ const { staleFiles } = await import("./staleness");
  * flake that only shows up under load.
  */
 const LINE = "q:33:accept";
-const file = audioRelPath(lineIndex().get(LINE)![0]);
+const file = audioRelPath((await lineIndex()).get(LINE)![0]);
 
 /** What generation would send for this line right now. */
-function currentHash(): string {
-  const line = fileIndex().get(file)!;
+async function currentHash(): Promise<string> {
+  const line = (await fileIndex()).get(file)!;
   return spokenHash(applyPronunciation(line.text, fileDefaults().rules));
 }
 
@@ -90,12 +90,12 @@ afterAll(async () => {
 
 describe("staleFiles", () => {
   it("says nothing is stale when the live take matches the current text", async () => {
-    await liveTake(currentHash());
+    await liveTake(await currentHash());
     expect(await staleFiles([file])).toEqual(new Set());
   });
 
   it("catches a take made before the text was rewritten", async () => {
-    await liveTake(currentHash());
+    await liveTake(await currentHash());
     await writeOverride(file, LINE, "Something else entirely.", null);
 
     expect(await staleFiles([file])).toEqual(new Set([file]));
@@ -128,7 +128,7 @@ describe("staleFiles", () => {
  * mp3's version rows flake under parallel test files.
  */
 const DWARF_LINE = "q:48:complete";
-const dwarfFile = audioRelPath(lineIndex().get(DWARF_LINE)![0]);
+const dwarfFile = audioRelPath((await lineIndex()).get(DWARF_LINE)![0]);
 
 describe("a race with an accent tag", () => {
   let deposedDwarf: number[] = [];
@@ -172,7 +172,7 @@ describe("a race with an accent tag", () => {
   // The tag is part of the string that was sent, so a take made with it must compare equal to
   // what would be sent now - otherwise every dwarf line is stale forever rather than once.
   it("leaves a take made with the tag alone", async () => {
-    const line = fileIndex().get(dwarfFile)!;
+    const line = (await fileIndex()).get(dwarfFile)!;
     await dwarfTake(spokenHash(tagged(applyPronunciation(line.text, fileDefaults().rules))));
 
     expect((await currentConfig()).raceTags.dwarf).toBe("[Scottish accent]");
@@ -180,7 +180,7 @@ describe("a race with an accent tag", () => {
   });
 
   it("catches a take made before the race had a tag", async () => {
-    const line = fileIndex().get(dwarfFile)!;
+    const line = (await fileIndex()).get(dwarfFile)!;
     await dwarfTake(spokenHash(applyPronunciation(line.text, fileDefaults().rules)));
 
     expect(await staleFiles([dwarfFile])).toEqual(new Set([dwarfFile]));

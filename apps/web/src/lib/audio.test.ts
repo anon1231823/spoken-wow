@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { loadCorpus } from "./corpus";
+import { corpus as catalogue } from "./quests/catalogue";
 import { audioRelPath, corpusFiles, readStoreIndex, subfolder } from "./audio";
 
 describe("audio paths", () => {
@@ -32,9 +32,9 @@ describe("audio paths", () => {
   });
 });
 
-describe("store reconciliation", () => {
+describe("store reconciliation", async () => {
   const store = readStoreIndex();
-  const addressed = new Set(loadCorpus().lines.map(audioRelPath));
+  const addressed = new Set((await catalogue()).lines.map(audioRelPath));
 
   it("has an audio store to check", () => {
     // A fresh clone has no audio until `python cli-main.py import-audio` has run.
@@ -54,19 +54,19 @@ describe("store reconciliation", () => {
 });
 
 
-describe("corpusFiles", () => {
-  const files = corpusFiles();
+describe("corpusFiles", async () => {
+  const files = await corpusFiles();
 
-  it("contains every path the explorer would link to", () => {
-    for (const line of loadCorpus().lines.slice(0, 500)) {
+  it("contains every path the explorer would link to", async () => {
+    for (const line of (await catalogue()).lines.slice(0, 500)) {
       expect(files.has(audioRelPath(line))).toBe(true);
     }
   });
 
-  it("holds one entry per distinct file, not per line", () => {
+  it("holds one entry per distinct file, not per line", async () => {
     // 14,315 generatable lines collapse to 11,081 files: a gossip file is named
     // md5(text + race + gender), so NPCs sharing a line share an mp3.
-    expect(files.size).toBeLessThan(loadCorpus().lineCount);
+    expect(files.size).toBeLessThan((await catalogue()).lines.length);
     expect(files.size).toBeGreaterThan(10000);
   });
 
@@ -84,7 +84,7 @@ describe("corpusFiles", () => {
     }
   });
 
-  it("memoises", () => {
-    expect(corpusFiles()).toBe(files);
+  it("memoises", async () => {
+    expect(await corpusFiles()).toBe(files);
   });
 });

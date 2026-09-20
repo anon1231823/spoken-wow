@@ -33,7 +33,7 @@ export async function GET(request: Request, context: Context) {
   if (denied) return denied;
   if (!isStoredSampleName(file)) return new Response("bad clip name", { status: 400 });
 
-  const target = samplePath(voice, file);
+  const target = await samplePath(voice, file);
   let size: number;
   let etag: string;
   try {

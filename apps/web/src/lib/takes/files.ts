@@ -16,7 +16,7 @@ import { addressableFiles as zonesFiles } from "@/lib/zones/audio";
 
 /** Zones and books name a file without its extension; their addressable sets carry one. */
 export async function isAddressableFile(source: Source, file: string): Promise<boolean> {
-  if (source === "quests") return corpusFiles().has(file);
+  if (source === "quests") return (await corpusFiles()).has(file);
   const files = source === "zones" ? await zonesFiles() : await booksFiles();
   return files.has(`${file}.mp3`);
 }

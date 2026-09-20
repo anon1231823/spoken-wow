@@ -15,7 +15,8 @@
  * having been computed in Python from text that nobody could edit yet.
  */
 import { audioRelPath } from "@/lib/audio";
-import { lineIndex, type CorpusLine } from "@/lib/corpus";
+import type { CorpusLine } from "@/lib/corpus";
+import { lineIndex } from "@/lib/quests/catalogue";
 import { readIgnores } from "@/lib/quests/ignores";
 import { readOverrides } from "@/lib/quests/overrides";
 import { INVALID_CHARS, isVoiceable } from "@/lib/text-gate";
@@ -62,8 +63,8 @@ export type RegenerateResult = RegenerateSuccess | { ok: false; failure: Failure
  * A gossip lineId is g:{md5(text + race + gender)}, so it can name many NPCs at once - they
  * share the text, the voice and the mp3, and differ only in who says it.
  */
-function resolve(lineId: string): CorpusLine[] | null {
-  const group = lineIndex().get(lineId);
+async function resolve(lineId: string): Promise<CorpusLine[] | null> {
+  const group = (await lineIndex()).get(lineId);
   return group && group.length > 0 ? group : null;
 }
 
@@ -72,7 +73,7 @@ export async function regenerateLine(
   createdBy: string,
   options: ElevenLabsOptions = {},
 ): Promise<RegenerateResult> {
-  const group = resolve(lineId);
+  const group = await resolve(lineId);
   if (!group) {
     return { ok: false, failure: { ...failure("bad-request", `no line ${lineId}`), status: 404 } };
   }

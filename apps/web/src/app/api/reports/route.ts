@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       ? await zonesTarget(raw)
       : source === "books"
         ? await booksTarget(raw)
-        : questsTarget(raw, body.lineId);
+        : await questsTarget(raw, body.lineId);
 
   if (!addressed) {
     return Response.json({ error: "unknown target" }, { status: 400 });
@@ -103,15 +103,16 @@ export async function POST(request: Request) {
  * Only a lineId the address actually resolves to is stored, so the browser cannot attach a
  * report to a line the reporter never saw.
  */
-function questsTarget(
+async function questsTarget(
   raw: string | null,
   claimed: unknown,
-): { lineId: string | null; target: string } | null {
+): Promise<{ lineId: string | null; target: string } | null> {
   const target = raw ? parseTarget(raw.split("/")) : null;
   if (!target) return null;
 
   const wanted = typeof claimed === "string" ? claimed : null;
-  const lineId = resolveTarget(target).find((line) => line.lineId === wanted)?.lineId ?? null;
+  const lines = await resolveTarget(target);
+  const lineId = lines.find((line) => line.lineId === wanted)?.lineId ?? null;
   return { lineId, target: formatTarget(target) };
 }
 

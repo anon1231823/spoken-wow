@@ -39,6 +39,27 @@ subparsers.add_parser(
     "extract",
     help="Query the world DB and write the committed corpus. The only stage needing MySQL.") \
     .add_argument("--out", default=DEFAULT_CORPUS_PATH)
+subparsers.add_parser(
+    "import-corpus",
+    help="corpus.json.gz -> Postgres. Needed by a maintainer, not to produce audio.") \
+    .add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
+ign = subparsers.add_parser(
+    "export-ignores",
+    help="line_ignore -> corpus/ignored.json, which the CLI and rsync read.")
+ign.add_argument("--ignored", default=DEFAULT_IGNORED_PATH)
+ign.add_argument("--check", action="store_true",
+                 help="Compare instead of writing; exits 1 if they differ.")
+
+subparsers.add_parser(
+    "fold-overrides",
+    help="line_override rows -> edited versions of their lines. Run once after import-corpus.")
+exp = subparsers.add_parser(
+    "export-corpus",
+    help="Postgres -> corpus.json.gz. The committed file is an export of the table.")
+exp.add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
+exp.add_argument("--check", action="store_true",
+                 help="Compare instead of writing; exits 1 if they differ.")
+
 imp = subparsers.add_parser(
     "import-audio",
     help="Copy existing mp3s into the project's audio store.")
@@ -115,6 +136,30 @@ elif args.mode == "extract":
     corpus = extract(args.out)
     print(f"Wrote {corpus['lineCount']} lines "
           f"and spawns for {len(corpus['spawns'])} NPCs to {args.out}")
+
+elif args.mode == "import-corpus":
+    # Imported here rather than at the top, the way extract is: psycopg2 is in
+    # requirements-extract.txt, and the everyday path deliberately installs no database
+    # client at all.
+    from tts_cli.corpus_db import import_corpus
+    import_corpus(args.corpus)
+
+elif args.mode == "export-ignores":
+    from tts_cli.corpus_db import export_ignores
+    if not export_ignores(args.ignored, check=args.check) and args.check:
+        raise SystemExit(1)
+
+elif args.mode == "fold-overrides":
+    from tts_cli.corpus_db import fold_overrides
+    fold_overrides()
+
+elif args.mode == "export-corpus":
+    from tts_cli.corpus_db import export_corpus
+    same = export_corpus(args.corpus, check=args.check)
+    if args.check and not same:
+        # Worth failing a build over: the file the addon build reads no longer matches what
+        # the table would produce, so the table is not carrying everything it needs to.
+        raise SystemExit(1)
 
 elif args.mode == "import-audio":
     report = import_audio(args.source, args.store, load_corpus(args.corpus), progress=True,

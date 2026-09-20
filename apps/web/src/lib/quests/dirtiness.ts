@@ -48,7 +48,7 @@ export async function dirtyQuestFiles(files?: string[]): Promise<Set<string>> {
 
   if (!context.changes.length) return new Set();
 
-  const lines = fileIndex();
+  const lines = await fileIndex();
   const rules = fileDefaults().rules;
 
   const takes = [];

@@ -6,7 +6,8 @@
  * load is the failure most worth reporting. So resolution happens here, against the corpus,
  * and is allowed to fail: an address that matches nothing still deserves a form.
  */
-import { loadCorpus, type Corpus, type CorpusLine } from "@/lib/corpus";
+import type { Corpus, CorpusLine } from "@/lib/corpus";
+import { corpus as questCorpus } from "@/lib/quests/catalogue";
 
 /**
  * The three of lib/line-fields.ts's SOURCES that a quest address can name. The fourth,
@@ -56,11 +57,12 @@ export function formatTarget(target: Target): string {
  * An array rather than a line because an NPC address means all of that creature's lines and
  * the reporter picks one, and because a quest can hold separate male and female variants.
  */
-export function resolveTarget(target: Target, corpus: Corpus = loadCorpus()): CorpusLine[] {
+export async function resolveTarget(target: Target, corpus?: Corpus): Promise<CorpusLine[]> {
+  const lines = corpus ?? (await questCorpus());
   if (target.kind === "quest") {
-    return corpus.lines.filter(
+    return lines.lines.filter(
       (line) => line.questId === target.questId && line.source === target.event,
     );
   }
-  return corpus.lines.filter((line) => line.npcId === target.npcId);
+  return lines.lines.filter((line) => line.npcId === target.npcId);
 }

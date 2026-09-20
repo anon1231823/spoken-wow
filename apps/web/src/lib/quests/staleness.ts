@@ -46,7 +46,7 @@ export async function staleFiles(files?: string[]): Promise<Set<string>> {
       );
 
   const overrides = await readOverrides();
-  const lines = fileIndex();
+  const lines = await fileIndex();
   const rules = fileDefaults().rules;
   // Once for the whole sweep, unlike regenerate.ts which reads it per line: this answers a
   // question about the takes as they stand, and a settings change landing mid-sweep would

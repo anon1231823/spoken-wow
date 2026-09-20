@@ -269,7 +269,7 @@ export async function sync(
   // case-insensitive - see toRules.
   const rules = toRules(
     entries,
-    graphemeCasings(entries.filter((e) => !e.alias).map((e) => e.grapheme)),
+    await graphemeCasings(entries.filter((e) => !e.alias).map((e) => e.grapheme)),
   );
 
   const pinned = process.env.ELEVENLABS_DICTIONARY_ID?.trim();

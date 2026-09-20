@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loadCorpus } from "@/lib/corpus";
+import { corpus } from "@/lib/quests/catalogue";
 import { canonicalNpcId, ELEVENLABS_SEED_MAX, seedFor } from "./seed";
 
 /**
@@ -61,9 +61,9 @@ describe("canonicalNpcId", () => {
 // gender, so it says nothing about who speaks it. If this ever stops finding a shared line,
 // the corpus has changed shape and the seeding rule should be revisited.
 describe("the corpus this is written against", () => {
-  it("still has lineIds spoken by more than one NPC", () => {
+  it("still has lineIds spoken by more than one NPC", async () => {
     const byLine = new Map<string, Set<number>>();
-    for (const line of loadCorpus().lines) {
+    for (const line of (await corpus()).lines) {
       if (!line.generatable) continue;
       if (!byLine.has(line.lineId)) byLine.set(line.lineId, new Set());
       byLine.get(line.lineId)!.add(line.npcId);

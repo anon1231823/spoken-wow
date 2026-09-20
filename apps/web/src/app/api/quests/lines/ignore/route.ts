@@ -10,7 +10,7 @@
  * lines the corpus has or it does not exist. Nothing here touches a path, so there is no
  * traversal to defend against - only a table that should not fill with ids nobody can resolve.
  */
-import { lineIndex } from "@/lib/corpus";
+import { lineIndex } from "@/lib/quests/catalogue";
 import { requireConfigure } from "@/lib/generation/authz";
 import { clearIgnore, writeIgnore } from "@/lib/quests/ignores";
 
@@ -31,7 +31,7 @@ export async function PUT(request: Request) {
   }
 
   const { lineId, reason } = (body ?? {}) as { lineId?: unknown; reason?: unknown };
-  if (typeof lineId !== "string" || !lineIndex().has(lineId)) {
+  if (typeof lineId !== "string" || !(await lineIndex()).has(lineId)) {
     return Response.json({ error: "unknown line" }, { status: 404 });
   }
   if (typeof reason !== "string" || !reason.trim()) {
@@ -52,7 +52,7 @@ export async function DELETE(request: Request) {
   if (denied) return denied;
 
   const lineId = new URL(request.url).searchParams.get("lineId");
-  if (!lineId || !lineIndex().has(lineId)) {
+  if (!lineId || !(await lineIndex()).has(lineId)) {
     return Response.json({ error: "unknown line" }, { status: 404 });
   }
 

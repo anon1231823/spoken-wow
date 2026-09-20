@@ -9,7 +9,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { loadCorpus, type CorpusLine } from "./corpus";
+import type { CorpusLine } from "./corpus";
+import { corpus } from "./quests/catalogue";
 import { AUDIO_DIR } from "./paths";
 
 export const SUBFOLDERS = ["quests", "gossip"] as const;
@@ -34,14 +35,19 @@ export function audioRelPath(line: Pick<CorpusLine, "source" | "fileName">): str
  * line whose current audio is missing, so membership here cannot depend on the store.
  */
 const corpusFilesKey = Symbol.for("wow-voiceover.corpus-files");
-type FilesHolder = { [corpusFilesKey]?: Set<string> };
+type FilesHolder = { [corpusFilesKey]?: { lines: CorpusLine[]; files: Set<string> } };
 
-export function corpusFiles(): Set<string> {
+export async function corpusFiles(): Promise<Set<string>> {
+  const lines = (await corpus()).lines;
   const holder = globalThis as FilesHolder;
-  if (!holder[corpusFilesKey]) {
-    holder[corpusFilesKey] = new Set(loadCorpus().lines.map(audioRelPath));
+
+  // Tied to the identity of the array rather than memoised outright: the catalogue rebuilds
+  // when the table moves, and a set built from the lines before an edit would keep claiming
+  // a file for a line that no longer writes one.
+  if (!holder[corpusFilesKey] || holder[corpusFilesKey].lines !== lines) {
+    holder[corpusFilesKey] = { lines, files: new Set(lines.map(audioRelPath)) };
   }
-  return holder[corpusFilesKey]!;
+  return holder[corpusFilesKey].files;
 }
 
 /**
@@ -55,19 +61,21 @@ export function corpusFiles(): Set<string> {
  * same reason: 17,507 entries built once rather than per request.
  */
 const fileIndexKey = Symbol.for("wow-voiceover.file-index");
-type FileIndexHolder = { [fileIndexKey]?: Map<string, CorpusLine> };
+type FileIndexHolder = { [fileIndexKey]?: { lines: CorpusLine[]; index: Map<string, CorpusLine> } };
 
-export function fileIndex(): Map<string, CorpusLine> {
+export async function fileIndex(): Promise<Map<string, CorpusLine>> {
+  const lines = (await corpus()).lines;
   const holder = globalThis as FileIndexHolder;
-  if (!holder[fileIndexKey]) {
+
+  if (!holder[fileIndexKey] || holder[fileIndexKey].lines !== lines) {
     const index = new Map<string, CorpusLine>();
-    for (const line of loadCorpus().lines) {
+    for (const line of lines) {
       const file = audioRelPath(line);
       if (!index.has(file)) index.set(file, line);
     }
-    holder[fileIndexKey] = index;
+    holder[fileIndexKey] = { lines, index };
   }
-  return holder[fileIndexKey]!;
+  return holder[fileIndexKey].index;
 }
 
 export function readStoreIndex(audioDir: string = AUDIO_DIR): Set<string> {

@@ -1,16 +1,17 @@
 /**
- * Reading the corpus: every voiceline the project knows how to produce.
+ * What a voiceline is: the shape every reader of the quest corpus agrees on.
  *
- * The corpus is written by Python (tts_cli/corpus.py) and committed. Everything here is
- * read-only - in particular `fileName` is computed by tts_cli/naming.py and never derived
- * on this side, because a filename that differs by one character addresses a file the
- * addon can never find, and it fails silently.
+ * TYPES AND PURE HELPERS ONLY. The rows themselves come from lib/quests/catalogue.ts now,
+ * which reads quest_line the way the zones and books catalogues read theirs. This module
+ * used to read and memoise corpus/corpus.json.gz; that file is an export of the table
+ * these days, and the only things that still read it are the Python CLI and the addon
+ * build, neither of which runs here.
+ *
+ * `fileName` is computed by tts_cli/naming.py and never derived on this side, because a
+ * filename differing by one character addresses a file the addon can never find, and it
+ * fails silently.
  */
-import fs from "node:fs";
-import zlib from "node:zlib";
-
 import type { NpcType, Source } from "./line-fields";
-import { CORPUS_PATH } from "./paths";
 
 /** Mirrors the line schema built in tts_cli/corpus.py:build_corpus. */
 export type CorpusLine = {
@@ -34,15 +35,15 @@ export type CorpusLine = {
   skipReason: string | null;
 };
 
-export type Spawn = { map: number; x: number; y: number };
-
-export type Corpus = {
-  schemaVersion: number;
-  generatedAt: string;
-  lineCount: number;
-  lines: CorpusLine[];
-  spawns: Record<string, Spawn[]>;
-};
+/**
+ * The lines, and nothing else.
+ *
+ * The file this used to be read from also carries a schema version, an extraction
+ * timestamp and a spawn table. None of them were ever read here -- they exist so the
+ * addon build can be reproduced, and they live in quest_corpus_meta and quest_spawn now,
+ * where the exporter reads them.
+ */
+export type Corpus = { lines: CorpusLine[] };
 
 /**
  * Namespaced NPC key.
@@ -53,24 +54,6 @@ export type Corpus = {
  */
 export function npcKey(line: Pick<CorpusLine, "npcType" | "npcId">): string {
   return `${line.npcType}:${line.npcId}`;
-}
-
-export function readCorpus(corpusPath: string = CORPUS_PATH): Corpus {
-  const gz = fs.readFileSync(corpusPath);
-  return JSON.parse(zlib.gunzipSync(gz).toString("utf8")) as Corpus;
-}
-
-// Memoised on globalThis rather than in a module variable: the dev server re-evaluates
-// modules on hot reload, and re-reading and re-parsing 2 MB on every request is felt.
-const cacheKey = Symbol.for("wow-voiceover.corpus");
-type CacheHolder = { [cacheKey]?: Corpus };
-
-export function loadCorpus(): Corpus {
-  const holder = globalThis as CacheHolder;
-  if (!holder[cacheKey]) {
-    holder[cacheKey] = readCorpus();
-  }
-  return holder[cacheKey]!;
 }
 
 /**
@@ -89,13 +72,4 @@ export function buildLineIndex(corpus: Corpus): Map<string, CorpusLine[]> {
     else index.set(line.lineId, [line]);
   }
   return index;
-}
-
-const indexKey = Symbol.for("wow-voiceover.line-index");
-type IndexHolder = { [indexKey]?: Map<string, CorpusLine[]> };
-
-export function lineIndex(): Map<string, CorpusLine[]> {
-  const holder = globalThis as IndexHolder;
-  if (!holder[indexKey]) holder[indexKey] = buildLineIndex(loadCorpus());
-  return holder[indexKey]!;
 }

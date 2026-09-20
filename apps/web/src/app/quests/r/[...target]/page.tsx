@@ -46,7 +46,7 @@ export default async function ReportPage({
     );
   }
 
-  const lines = resolveTarget(target);
+  const lines = await resolveTarget(target);
   // One candidate needs no choosing; several mean the reporter picked one from the list below.
   const line =
     lines.find((candidate) => candidate.lineId === chosen) ?? (lines.length === 1 ? lines[0] : null);
