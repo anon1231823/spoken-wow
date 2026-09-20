@@ -792,6 +792,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 line={line}
                 current={line.key === current?.key}
                 canRegenerate={showRegenerate}
+                canTriage={showRegenerate}
                 state={lineStates[line.lineId]}
                 blocked={blockedReason(line)}
                 takes={takes[line.audioPath] ?? 0}
@@ -839,7 +840,10 @@ export default function Explorer({ facets }: { facets: Facets }) {
         onCancel={() => setIgnoring(null)}
       />
 
-      <ReportDialog line={reporting} onClose={() => setReporting(null)} />
+      <ReportDialog
+        subject={reporting && { source: "quests", line: reporting }}
+        onClose={() => setReporting(null)}
+      />
 
       <RegenerateDialog
         pending={pendingBatch}

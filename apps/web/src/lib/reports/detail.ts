@@ -14,6 +14,7 @@ import type { ResultLine as BookLine } from "@/lib/books/search";
 import type { ResultLine as QuestLine } from "@/lib/search";
 import type { ResultLine as ZoneLine } from "@/lib/zones/search";
 
+import { targetForLine } from "./line-target";
 import type { Source } from "./reports";
 
 /** Whichever shape the section's search endpoint answered with. */
@@ -30,6 +31,24 @@ export type LineDetail = {
   /** The id this section's regenerate endpoint takes. */
   lineId: string;
 };
+
+/**
+ * The address a report about this line travels on, or null where the line has none.
+ *
+ * One per section, because the three address lines by different frozen rules and each one
+ * is what its /r/ landing page already resolves: a quests address is the one the addon
+ * builds out of a quest id or a unit GUID, a zones address is the line's own audio path --
+ * which is what /zones/r/{mapID}/{slug} is -- and a books address is the page id and
+ * nothing else, because that is all the addon has to build a link from.
+ *
+ * Only quests can answer null. Its addresses are built from what a client can see, and a
+ * line neither a quest nor a gossip address can name would arrive in triage unresolvable.
+ */
+export function reportTargetOf(source: Source, line: SourceLine): string | null {
+  if (source === "quests") return targetForLine(line as QuestLine);
+  if (source === "zones") return (line as ZoneLine).file;
+  return String((line as BookLine).pageId);
+}
 
 /** The section's search, narrowed to the one line a report is about. */
 export function searchPath(source: Source, lineId: string): string {

@@ -23,8 +23,27 @@ import { dirtyQuestFiles } from "./dirtiness";
 import { staleFiles } from "./staleness";
 import type { SearchContext } from "../search";
 import { NO_CONTEXT } from "../search";
+import { query } from "../db";
 import { readIgnores } from "./ignores";
 import { readOverrides } from "./overrides";
+
+/**
+ * lineId -> how many reports about it are still open.
+ *
+ * Grouped in the database rather than counted here, and `lineId is not null` excludes a
+ * report about the project, which belongs to no line. The same query the zones and books
+ * catalogues run; the count is public while the bodies are not, so a row can say "somebody
+ * has already reported this one" without showing what they said.
+ */
+async function openReports(): Promise<Map<string, number>> {
+  const rows = await query<{ lineId: string; open: number }>(
+    `select "lineId", count(*)::int as "open"
+       from "report"
+      where "source" = 'quests' and "status" = 'open' and "lineId" is not null
+      group by "lineId"`,
+  );
+  return new Map(rows.map((row) => [row.lineId, row.open]));
+}
 
 /**
  * @param dated whether a generation-date bound is in force. The dates are one query over the
@@ -38,9 +57,10 @@ export async function searchContext(
   dirty = false,
 ): Promise<SearchContext> {
   try {
-    const [overrides, ignores, dates, stale, dirt] = await Promise.all([
+    const [overrides, ignores, reports, dates, stale, dirt] = await Promise.all([
       readOverrides(),
       readIgnores(),
+      openReports(),
       dated ? generatedAt() : null,
       outdated ? staleFiles() : null,
       dirty ? dirtyQuestFiles() : null,
@@ -48,6 +68,7 @@ export async function searchContext(
     return {
       overrides,
       ignores,
+      reports,
       generatedAt: dates ?? undefined,
       stale: stale ?? undefined,
       dirty: dirt ?? undefined,

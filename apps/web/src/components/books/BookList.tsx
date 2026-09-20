@@ -22,6 +22,8 @@ type Props = {
   onRegenerate: (line: ResultLine) => void;
   /** Narrowing to one book, from its name. */
   onSelectBook: (line: ResultLine) => void;
+  /** Open the report dialog. Everyone gets this, signed in or not. */
+  onReport: (line: ResultLine) => void;
   /** Say a take is fine as it stands, despite a pronunciation having moved under it. */
   onClearDirty: (line: ResultLine) => void;
 };
@@ -59,6 +61,7 @@ export function BookList({
   onRegenerate,
   onSelectBook,
   onClearDirty,
+  onReport,
 }: Props) {
   const groupRows = useMemo(() => bookRuns(lines), [lines]);
 
@@ -104,6 +107,7 @@ export function BookList({
             onRegenerate={onRegenerate}
             onSelectBook={onSelectBook}
             onClearDirty={onClearDirty}
+            onReport={onReport}
           />
         ))}
       </tbody>

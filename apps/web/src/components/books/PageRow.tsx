@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDownIcon, Eraser, PlayIcon } from "lucide-react";
+import { ChevronDownIcon, Eraser, FlagIcon, PlayIcon } from "lucide-react";
 import { useState } from "react";
 
 import RegenerateButton from "@/components/RegenerateButton";
@@ -32,6 +32,8 @@ type Props = {
   onRegenerate: (line: ResultLine) => void;
   /** Narrowing to this book, from its name. */
   onSelectBook: (line: ResultLine) => void;
+  /** Open the report dialog. Everyone gets this, signed in or not. */
+  onReport: (line: ResultLine) => void;
   /** Say this take is fine as it stands, despite a pronunciation having moved under it. */
   onClearDirty: (line: ResultLine) => void;
 };
@@ -60,6 +62,7 @@ export function PageRow({
   onRegenerate,
   onSelectBook,
   onClearDirty,
+  onReport,
 }: Props) {
   const playable = line.state !== "missing";
   const [expanded, setExpanded] = useState(false);
@@ -203,6 +206,19 @@ export function PageRow({
       </td>
 
       <td className="px-2 py-2">
+        {/* Outside the canRegenerate gate, deliberately: reporting is what a reader who
+            cannot sign in has, and /api/reports is unauthenticated for the same reason.
+            Every page has an address -- it is the page id the addon builds its link from --
+            so unlike a quests row there is no case where this is hidden. */}
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Report a problem with this page"
+          aria-label={`Report page ${line.pageNumber} of ${line.title}`}
+          onClick={() => onReport(line)}
+        >
+          <FlagIcon className="size-3.5" />
+        </Button>
         {/* Only on a dirty row: a clean one keeps the single control it already had. */}
         {canRegenerate && line.dirty && (
           <Button

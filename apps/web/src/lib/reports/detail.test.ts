@@ -8,13 +8,16 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { detailOf, regeneratePath, searchPath } from "./detail";
+import { detailOf, regeneratePath, reportTargetOf, searchPath } from "./detail";
 import type { ResultLine as BookLine } from "@/lib/books/search";
 import type { ResultLine as QuestLine } from "@/lib/search";
 import type { ResultLine as ZoneLine } from "@/lib/zones/search";
 
 const questLine = {
   lineId: "q:374:accept",
+  source: "accept",
+  questId: 374,
+  npcId: 233,
   npcName: "Marshal Dughan",
   questTitle: "Kobold Camp Cleanup",
   race: "human",
@@ -37,6 +40,7 @@ const zoneLine = {
 
 const bookLine = {
   id: "b:261",
+  pageId: 261,
   title: "The Dusty Tome",
   pageNumber: 2,
   pageCount: 4,
@@ -103,5 +107,38 @@ describe("searchPath and regeneratePath", () => {
   it("posts a regeneration to the section that owns the line", () => {
     expect(regeneratePath("books")).toBe("/api/books/regenerate");
     expect(regeneratePath("quests")).toBe("/api/quests/regenerate");
+  });
+});
+
+/**
+ * The address a report travels on, which every row now asks for the same way.
+ *
+ * Worth pinning per section rather than trusting: each of the three is frozen by
+ * AGENTS.md, each /r/ landing page resolves exactly this string, and a report whose
+ * address resolves to nothing arrives in triage as a row nobody can act on.
+ */
+describe("reportTargetOf", () => {
+  it("builds a quests address the way the addon does, out of the quest and the event", () => {
+    expect(reportTargetOf("quests", questLine)).toBe("quest/374/accept");
+  });
+
+  it("addresses a gossip line by its speaker, because gossip has no quest to name", () => {
+    const gossip = { ...questLine, source: "gossip", npcId: 233 } as unknown as QuestLine;
+    expect(reportTargetOf("quests", gossip)).toBe("npc/233");
+  });
+
+  it("refuses a quests line no address can name, rather than inventing one", () => {
+    // The row hides its report button in the same case. A "quest/null/accept" would look
+    // like a real report and resolve to nothing.
+    const orphan = { ...questLine, questId: null } as unknown as QuestLine;
+    expect(reportTargetOf("quests", orphan)).toBe(null);
+  });
+
+  it("addresses a zone line by its audio path, which is what its report link is", () => {
+    expect(reportTargetOf("zones", zoneLine)).toBe("1411/razor-hill");
+  });
+
+  it("addresses a book page by the page id, which is all the addon has to build a link from", () => {
+    expect(reportTargetOf("books", bookLine)).toBe("261");
   });
 });

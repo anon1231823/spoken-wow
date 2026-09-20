@@ -8,6 +8,7 @@ import Pagination from "@/components/Pagination";
 import RegenerateDialog from "@/components/RegenerateDialog";
 import RegenerationPanel from "@/components/RegenerationPanel";
 import { BookList } from "@/components/books/BookList";
+import ReportDialog from "@/components/ReportDialog";
 import type { RowState } from "@/components/books/PageRow";
 import { Player } from "@/components/books/Player";
 import { SearchBar } from "@/components/books/SearchBar";
@@ -58,6 +59,8 @@ export function Explorer({ books }: { books: BookFacet[] }) {
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState<ResultLine | null>(null);
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
+  // Anyone can open this one, signed in or not -- see ReportDialog.
+  const [reportFor, setReportFor] = useState<ResultLine | null>(null);
   // Bumped per page after a regeneration, to bust the browser's audio cache: the filename
   // does not change, so without this the take that was replaced keeps playing.
   const [versions, setVersions] = useState<Record<string, number>>({});
@@ -466,7 +469,8 @@ export function Explorer({ books }: { books: BookFacet[] }) {
         result && (
           <BookList
             // Cleared in this session laid over the fetched rows, the way the zones
-            // explorer lays a flag over its own: the search said what was true when it ran.
+            // explorer lays a rewrite over its own: the search said what was true when it
+            // ran.
             lines={result.lines.map((line) =>
               cleared.has(line.file) ? { ...line, dirty: false } : line,
             )}
@@ -477,6 +481,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
             onClearDirty={(line) => clearDirty([line.file])}
             onRegenerate={regenerateOne}
             onSelectBook={(line) => updateFilters({ bookId: line.bookId })}
+            onReport={setReportFor}
           />
         )
       )}
@@ -496,6 +501,11 @@ export function Explorer({ books }: { books: BookFacet[] }) {
           audioRef={audio}
         />
       </div>
+
+      <ReportDialog
+        subject={reportFor && { source: "books", line: reportFor }}
+        onClose={() => setReportFor(null)}
+      />
 
       <RegenerateDialog
         pending={pendingBatch}

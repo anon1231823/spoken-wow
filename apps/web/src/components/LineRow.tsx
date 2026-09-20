@@ -9,6 +9,7 @@ import {
   PencilIcon,
   PlayIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import LineHistory from "./LineHistory";
@@ -76,6 +77,8 @@ type Props = {
   line: ResultLine;
   current: boolean;
   canRegenerate: boolean;
+  /** Editor and up: may read the report bodies, so the count links to the queue. */
+  canTriage: boolean;
   state?: LineState;
   blocked: string | null;
   /** How many takes this line's file has. Zero means there is nothing to go back to. */
@@ -127,6 +130,7 @@ export default function LineRow({
   line,
   current,
   canRegenerate,
+  canTriage,
   state,
   blocked,
   takes,
@@ -326,6 +330,30 @@ export default function LineRow({
 
       <td className="py-1.5 pr-1 pl-0">
         <span className="flex items-center justify-end">
+          {/* The count is public; the bodies are not. So everyone sees how many open
+              reports a line carries -- "somebody has already said so" is the answer to the
+              question a dissatisfied listener is about to ask -- and a triager gets a link
+              to where they can be read. The same chip the zones and books rows carry. */}
+          {line.reportsOpen > 0 &&
+            (canTriage ? (
+              <Link
+                href="/reports?source=quests"
+                title={`${line.reportsOpen} open report${line.reportsOpen === 1 ? "" : "s"}`}
+                className="flex items-center gap-0.5 rounded bg-amber-500/15 px-1 text-xs text-amber-400"
+              >
+                <MessageSquareIcon className="size-3" />
+                {line.reportsOpen}
+              </Link>
+            ) : (
+              <span
+                className="flex items-center gap-0.5 rounded bg-amber-500/15 px-1 text-xs text-amber-400"
+                title={`${line.reportsOpen} open report${line.reportsOpen === 1 ? "" : "s"}`}
+              >
+                <MessageSquareIcon className="size-3" />
+                {line.reportsOpen}
+              </span>
+            ))}
+
           {/* Outside the canRegenerate gate, deliberately: reporting is what a player who
               cannot sign in has, and /api/reports is unauthenticated for the same reason.
               Hidden only when the line has no address the report page could resolve. */}

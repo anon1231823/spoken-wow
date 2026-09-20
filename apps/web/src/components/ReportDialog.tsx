@@ -8,34 +8,40 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import ReportForm from "./ReportForm";
-import { targetForLine } from "@/lib/reports/line-target";
-import type { ResultLine } from "@/lib/search";
+import { detailOf, reportTargetOf, type SourceLine } from "@/lib/reports/detail";
+import type { Source } from "@/lib/reports/reports";
+
+/** The line being reported and which corpus it belongs to, or null when the dialog is shut. */
+export type ReportSubject = { source: Source; line: SourceLine } | null;
 
 type Props = {
-  /** The line being reported, or null when the dialog is closed. */
-  line: ResultLine | null;
+  subject: ReportSubject;
   onClose: () => void;
 };
 
 /**
  * Reporting a line from the table, without leaving it.
  *
- * The same ReportForm the /r/ landing page shows a player who copied an address out of the
- * game, against the same address format and the same public endpoint - so a report filed here
- * is indistinguishable from one filed from the game, which is what keeps triage one list
- * rather than two.
+ * One dialog for all three sections, against the same ReportForm the /r/ landing pages show
+ * a player who copied an address out of the game, and the same public endpoint - so a report
+ * filed here is indistinguishable from one filed from the game, which is what keeps triage
+ * one list rather than three.
  *
- * It carries the lineId as well as the address, which the game cannot always do: an NPC
- * address names every line that speaker has, and a reporter coming from the game picks one by
- * hand. Here the row already knows which line it is.
+ * It was three dialogs and two of them existed: quests carried the lineId as well as the
+ * address, because an NPC address names every line that speaker has and a reporter coming
+ * from the game picks one by hand, while the zones one passed a file path and had a
+ * never-used "general" mode. Both of those are the same shape once the address is asked for
+ * per source, which is what reportTargetOf does.
  */
-export default function ReportDialog({ line, onClose }: Props) {
-  const target = line ? targetForLine(line) : null;
+export default function ReportDialog({ subject, onClose }: Props) {
+  const target = subject ? reportTargetOf(subject.source, subject.line) : null;
 
   // No address means no report: a line the addressing scheme cannot name would arrive in
-  // triage as a row nobody can resolve. LineRow hides the button in the same case, so this is
-  // the second half of one decision rather than a case anyone should reach.
-  if (!line || !target) return null;
+  // triage as a row nobody can resolve. The rows hide the button in the same case, so this
+  // is the second half of one decision rather than a case anyone should reach.
+  if (!subject || !target) return null;
+
+  const detail = detailOf(subject.source, subject.line);
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -43,12 +49,12 @@ export default function ReportDialog({ line, onClose }: Props) {
         <DialogHeader>
           <DialogTitle>Report this line</DialogTitle>
           <DialogDescription>
-            {line.npcName}
-            {line.questTitle ? ` — ${line.questTitle}` : ""} ({target})
+            {detail.heading}
+            {detail.context ? ` — ${detail.context}` : ""} ({target})
           </DialogDescription>
         </DialogHeader>
 
-        <ReportForm source="quests" target={target} lineId={line.lineId} />
+        <ReportForm source={subject.source} target={target} lineId={detail.lineId} />
       </DialogContent>
     </Dialog>
   );

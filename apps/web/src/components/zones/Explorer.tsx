@@ -12,7 +12,7 @@ import RegenerationPanel from "@/components/RegenerationPanel";
 import { LineRow, type RowState } from "@/components/zones/LineRow";
 import { LoreDialog } from "@/components/zones/LoreDialog";
 import { Player } from "@/components/zones/Player";
-import ZoneReportDialog, { type ReportTarget } from "@/components/zones/ReportDialog";
+import ReportDialog from "@/components/ReportDialog";
 import { SearchBar } from "@/components/zones/SearchBar";
 import { useSession } from "@/lib/auth-client";
 import { totals as estimateTotals, LIST_RATE, type Estimate } from "@/lib/generation/billing";
@@ -80,7 +80,8 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // the search would reorder the table under the cursor, and with ?state=stale the line
   // just edited would vanish as it was saved.
   const [rewritten, setRewritten] = useState<Record<string, string>>({});
-  const [reportFor, setReportFor] = useState<ReportTarget | null>(null);
+  // Anyone can open this one, signed in or not -- see ReportDialog.
+  const [reportFor, setReportFor] = useState<ResultLine | null>(null);
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
   // Bumped per line after a regeneration, to bust the browser's audio cache: the
   // filename does not change, so without this the old take keeps playing.
@@ -672,9 +673,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
               onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
               state={rowStates[line.id]}
               onClearDirty={(l) => clearDirty([l.file])}
-              onReport={(l) =>
-                setReportFor({ lineId: l.id, file: l.file, name: l.name })
-              }
+              onReport={setReportFor}
               onEditText={(l) => setEditFor(withEdits(l))}
               onRegenerate={regenerateOne}
               onRestore={restore}
@@ -700,7 +699,10 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         onSaved={(line, full) => setRewritten((current) => ({ ...current, [line.id]: full }))}
       />
 
-      <ZoneReportDialog target={reportFor} onClose={() => setReportFor(null)} />
+      <ReportDialog
+        subject={reportFor && { source: "zones", line: reportFor }}
+        onClose={() => setReportFor(null)}
+      />
 
       <ApiKeyRequiredDialog message={keyRequired} onClose={() => setKeyRequired(null)} />
 

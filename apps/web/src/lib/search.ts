@@ -129,6 +129,11 @@ export type SearchContext = {
    * the corpus, and a visible extra row is the safer way to be wrong.
    */
   ignores?: Map<string, LineIgnore>;
+  /**
+   * lineId -> how many reports about it are still open. The count only; the bodies are
+   * behind the triage role on /reports, as they are for the other two sections.
+   */
+  reports?: Map<string, number>;
 };
 
 export const NO_CONTEXT: SearchContext = { overrides: new Map() };
@@ -143,6 +148,8 @@ export type ResultLine = CorpusLine & {
   key: string;
   hasAudio: boolean;
   audioPath: string;
+  /** How many reports about this line are still open. Zero when nobody has said anything. */
+  reportsOpen: number;
   /** The rewritten spoken text, or null. `text` stays what the corpus says. */
   override: string | null;
   /**
@@ -434,6 +441,7 @@ export function search(
       key: keys.get(line)!,
       hasAudio: store.has(audioPath),
       audioPath,
+      reportsOpen: context.reports?.get(line.lineId) ?? 0,
       override,
       voiceable: isVoiceable(line, override ?? line.text),
       narration: hasNarration(override ?? line.text),
