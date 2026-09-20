@@ -18,7 +18,6 @@ import { filterParams, filtersFromParams, PAGE_SIZE, type PageFilters } from "@/
 import type { ResultLine, SearchResult } from "@/lib/books/search";
 import { totals as estimateTotals, LIST_RATE, type Estimate } from "@/lib/generation/billing";
 import {
-  clearDirty,
   fetchGenerationStatus,
   fetchQueue,
   queueBatch,
@@ -26,6 +25,7 @@ import {
   type GenerationStatusResponse,
   type QueueSnapshot,
 } from "@/lib/generation/client";
+import { useClearDirty } from "@/lib/generation/use-clear-dirty";
 import { noApiKeyMessage } from "@/lib/no-api-key";
 import * as permissions from "@/lib/permissions";
 import * as echo from "@/lib/url-echo";
@@ -162,9 +162,9 @@ export function Explorer({ books }: { books: BookFacet[] }) {
   // Held in refs so refetch() -- called from a poll and from a completed regeneration --
   // reads the current view without being rebuilt on every filter change, which would
   // restart the poll timer each time.
-  // Files acknowledged since this screen was fetched, so a cleared row stays cleared
-  // without a refetch that would rebuild a hundred rows to unset one boolean.
-  const [cleared, setCleared] = useState<Set<string>>(new Set());
+  // Held so a cleared row stays cleared without a refetch that would rebuild a hundred rows
+  // to unset one boolean.
+  const { cleared, clear: clearDirty } = useClearDirty("books");
 
   const filterQueryRef = useRef(filterQuery);
   filterQueryRef.current = filterQuery;
@@ -290,33 +290,13 @@ export function Explorer({ books }: { books: BookFacet[] }) {
    * the route drops -- fetched at click time, and the estimate is computed from them here
    * rather than asked for.
    */
-  /**
-   * Say these takes are fine as they stand.
-   *
-   * Optimistic: the mark goes as the button is pressed and comes back if the write is
-   * refused, because a control that does nothing visible for a round trip reads as broken.
-   * Keyed on the file, which is what the acknowledgement is keyed on.
-   */
-  const clearDirtyFiles = useCallback((files: string[]) => {
-    if (!files.length) return;
-    setCleared((current) => new Set([...current, ...files]));
-    void clearDirty("books", files).then((ok) => {
-      if (ok) return;
-      setCleared((current) => {
-        const next = new Set(current);
-        for (const file of files) next.delete(file);
-        return next;
-      });
-    });
-  }, []);
-
   /** Every dirty page the current filter matches, not just this screen's. */
   const clearAllDirty = useCallback(() => {
     fetch(`/api/books/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
       .then((response) => response.json())
-      .then(({ dirtyFiles }: { dirtyFiles?: string[] }) => clearDirtyFiles(dirtyFiles ?? []))
+      .then(({ dirtyFiles }: { dirtyFiles?: string[] }) => clearDirty(dirtyFiles ?? []))
       .catch(() => {});
-  }, [clearDirtyFiles]);
+  }, [clearDirty]);
 
   const askToRegenerateAll = useCallback(() => {
     if (!result || result.total === 0) return;
@@ -482,7 +462,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
             canRegenerate={canRegenerate}
             rowStates={rowStates}
             onPlay={setCurrent}
-            onClearDirty={(line) => clearDirtyFiles([line.file])}
+            onClearDirty={(line) => clearDirty([line.file])}
             onRegenerate={regenerateOne}
             onSelectBook={(line) => updateFilters({ bookId: line.bookId })}
           />

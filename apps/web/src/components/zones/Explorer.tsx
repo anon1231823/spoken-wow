@@ -18,7 +18,6 @@ import { SearchBar } from "@/components/zones/SearchBar";
 import { useSession } from "@/lib/auth-client";
 import { totals as estimateTotals, LIST_RATE, type Estimate } from "@/lib/generation/billing";
 import {
-  clearDirty,
   dismissQueue,
   fetchGenerationStatus,
   fetchQueue,
@@ -32,6 +31,7 @@ import * as permissions from "@/lib/permissions";
 import type { LineFlag, ZoneFacet } from "@/lib/zones/catalogue";
 import { filterParams, filtersFromParams, PAGE_SIZE, type LineFilters } from "@/lib/zones/filters";
 import type { ResultLine, SearchResult } from "@/lib/zones/search";
+import { useClearDirty } from "@/lib/generation/use-clear-dirty";
 import * as echo from "@/lib/url-echo";
 
 // Long enough to hold a whole typed word: the timer restarts on every keystroke, so this
@@ -238,9 +238,9 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // Flags
   //----------------------------------------------------------------------------
 
-  // Files acknowledged since this page was fetched. Held here rather than refetched, for
-  // the reason the flag overlay is: a search rebuild to unset one boolean is wasteful.
-  const [cleared, setCleared] = useState<Set<string>>(new Set());
+  // Held rather than refetched, for the reason the flag overlay is: a search rebuild to
+  // unset one boolean is wasteful.
+  const { cleared, clear: clearDirty } = useClearDirty("zones");
 
   const setFlag = useCallback(
     (line: ResultLine, status: "bad" | "ok" | null, note?: string) => {
@@ -275,33 +275,13 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // The fetched row, with any judgement or rewrite made since it was fetched laid over
   // the top. A rewritten line is stale by definition -- the text no longer hashes to what
   // was spoken -- so the state moves with the text rather than waiting for a refetch.
-  /**
-   * Say these takes are fine as they stand.
-   *
-   * Optimistic, like a flag: the mark disappears when the button is pressed and comes back
-   * if the write is refused, because the alternative is a control that does nothing visible
-   * for a round trip. Keyed on the file, which is what the acknowledgement is keyed on.
-   */
-  const clearDirtyFiles = useCallback((files: string[]) => {
-    if (!files.length) return;
-    setCleared((current) => new Set([...current, ...files]));
-    void clearDirty("zones", files).then((ok) => {
-      if (ok) return;
-      setCleared((current) => {
-        const next = new Set(current);
-        for (const file of files) next.delete(file);
-        return next;
-      });
-    });
-  }, []);
-
   /** Every dirty line the current filter matches, not just this page's. */
   const clearAllDirty = useCallback(() => {
     fetch(`/api/zones/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
       .then((response) => response.json())
-      .then(({ dirtyFiles }: { dirtyFiles?: string[] }) => clearDirtyFiles(dirtyFiles ?? []))
+      .then(({ dirtyFiles }: { dirtyFiles?: string[] }) => clearDirty(dirtyFiles ?? []))
       .catch(() => {});
-  }, [clearDirtyFiles]);
+  }, [clearDirty]);
 
   const withFlag = useCallback(
     (line: ResultLine): ResultLine => {
@@ -756,7 +736,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
               onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
               state={rowStates[line.id]}
               onFlag={setFlag}
-              onClearDirty={(l) => clearDirtyFiles([l.file])}
+              onClearDirty={(l) => clearDirty([l.file])}
               onNote={(l) => setNoteFor(withFlag(l))}
               onReport={(l) =>
                 setReportFor({ lineId: l.id, file: l.file, name: l.name })

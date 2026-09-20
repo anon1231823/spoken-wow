@@ -18,7 +18,6 @@ import { useSession } from "@/lib/auth-client";
 import type { Facets } from "@/lib/facets";
 import { NARRATOR_VOICE } from "@/lib/generation/narration";
 import {
-  clearDirty,
   dismissQueue,
   fetchBatchJobs,
   fetchGenerationStatus,
@@ -32,6 +31,7 @@ import {
   type QueueSnapshot,
 } from "@/lib/generation/client";
 import { estimate as estimateBatch, LIST_RATE, type Estimate } from "@/lib/generation/billing";
+import { useClearDirty } from "@/lib/generation/use-clear-dirty";
 import { canConfigureGeneration, canRegenerate } from "@/lib/permissions";
 import { isVoiceable } from "@/lib/text-gate";
 import type { Filter, LineFilters, ResultLine, SearchResult } from "@/lib/search";
@@ -154,6 +154,10 @@ export default function Explorer({ facets }: { facets: Facets }) {
   // Files whose live audio was cut before a pronunciation it speaks was changed. A separate
   // set because the two faults are separate: either can be true of a file alone.
   const [dirty, setDirty] = useState<Set<string>>(new Set());
+  // What has been cleared since this page was fetched, laid over that set rather than
+  // deleted from it: the set is replaced wholesale by every take-count fetch, so a deletion
+  // would be undone by the next page load while the ack it wrote is still in force.
+  const { cleared, clear: clearDirty } = useClearDirty("quests");
   // The line whose spoken text is being rewritten, or null.
   const [editing, setEditing] = useState<ResultLine | null>(null);
   const [ignoring, setIgnoring] = useState<ResultLine | null>(null);
@@ -534,26 +538,6 @@ export default function Explorer({ facets }: { facets: Facets }) {
   }, [applySuccess]);
 
   /**
-   * Say these takes are fine as they stand, despite a pronunciation having moved under them.
-   *
-   * Optimistic, and the mark comes back if the write is refused: the alternative is a button
-   * that does nothing visible for a round trip. Keyed on the file, which is what the
-   * acknowledgement is keyed on -- 1,076 of these files are spoken by several NPCs, and all
-   * of those rows are cleared together because it is one recording.
-   */
-  const clearDirtyFiles = useCallback((files: string[]) => {
-    if (!files.length) return;
-    setDirty((current) => {
-      const next = new Set(current);
-      for (const file of files) next.delete(file);
-      return next;
-    });
-    void clearDirty("quests", files).then((ok) => {
-      if (!ok) setDirty((current) => new Set([...current, ...files]));
-    });
-  }, []);
-
-  /**
    * Clear every dirty file the current search matches, not just this page's.
    *
    * The match set comes from the batch endpoint, which is what "everything this filter
@@ -567,8 +551,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
     if (!jobs || jobs.length === 0) return;
     const files = [...new Set(jobs.map((job) => job.audioPath))];
     const info = await fetchTakeCounts(files);
-    if (info) clearDirtyFiles(info.dirty);
-  }, [filterQuery, clearDirtyFiles]);
+    if (info) clearDirty(info.dirty);
+  }, [filterQuery, clearDirty]);
 
   /**
    * Ask to regenerate everything the current search matches.
@@ -732,6 +716,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
   }, [current]);
 
   const pageCount = result ? Math.max(1, Math.ceil(result.total / result.limit)) : 1;
+  // This page's marks, minus what has been cleared without a refetch since.
+  const marked = [...dirty].filter((file) => !cleared.has(file)).length;
 
   return (
     <>
@@ -782,9 +768,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
         </div>
         {/* This page's marks, which is what the row-level question was asked for. The
             corpus-wide count is what the "pronunciation moved" filter is for. */}
-        {showRegenerate && dirty.size > 0 && (
+        {showRegenerate && marked > 0 && (
           <span className="flex items-center gap-1 text-sm text-amber-300">
-            {dirty.size} pronunciation on this page
+            {marked} pronunciation on this page
             <Button size="xs" variant="ghost" onClick={() => void clearAllDirty()}>
               clear all matching
             </Button>
@@ -847,8 +833,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 blocked={blockedReason(line)}
                 takes={takes[line.audioPath] ?? 0}
                 stale={stale.has(line.audioPath)}
-                dirty={dirty.has(line.audioPath)}
-                onClearDirty={(l) => clearDirtyFiles([l.audioPath])}
+                dirty={dirty.has(line.audioPath) && !cleared.has(line.audioPath)}
+                onClearDirty={(l) => clearDirty([l.audioPath])}
                 onPlay={play}
                 onEditText={setEditing}
                 onIgnore={canConfigure ? setIgnoring : null}

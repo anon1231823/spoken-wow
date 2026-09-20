@@ -24,8 +24,15 @@ import type { Source } from "@/lib/reports/reports";
 
 import { kindOf, type LexiconEntry } from "./lexicon";
 
-/** One save's worth of movement for one word. `changedAt` is epoch ms. */
-export type LexiconChange = { grapheme: string; changedAt: number };
+/**
+ * One save's worth of movement for one word. `changedAt` is epoch ms.
+ *
+ * `matcher` is the compiled pattern, filled in on first use and kept for the life of the
+ * context - which is one request. A cache keyed by grapheme at module scope would be the
+ * obvious alternative and is the wrong shape: it would outlive every request and grow with
+ * every word ever edited, to save compiling a handful of patterns per sweep.
+ */
+export type LexiconChange = { grapheme: string; changedAt: number; matcher?: RegExp };
 
 export type DirtyContext = {
   /** Newest first, which is the order the sweep below wants and the index serves. */
@@ -109,22 +116,10 @@ export function isDirty(take: SpokenTake, context: DirtyContext): boolean {
   for (const change of context.changes) {
     if (change.changedAt <= since) continue;
     text ??= normalise(take.text);
-    if (patternFor(change.grapheme).test(text)) return true;
+    change.matcher ??= pattern(change.grapheme);
+    if (change.matcher.test(text)) return true;
   }
   return false;
-}
-
-// Compiled once per word rather than once per take: a sweep is 17,000 takes and a handful
-// of changed names.
-const patterns = new Map<string, RegExp>();
-
-function patternFor(grapheme: string): RegExp {
-  let compiled = patterns.get(grapheme);
-  if (!compiled) {
-    compiled = pattern(grapheme);
-    patterns.set(grapheme, compiled);
-  }
-  return compiled;
 }
 
 /** The changes and the acknowledgements, for one section. Two selects, both small. */

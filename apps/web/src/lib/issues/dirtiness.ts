@@ -29,7 +29,7 @@ import { readOverrides } from "./overrides";
 export async function dirtyQuestFiles(files?: string[]): Promise<Set<string>> {
   if (files?.length === 0) return new Set();
 
-  const [{ rows }, context] = await Promise.all([
+  const [{ rows }, context, overrides] = await Promise.all([
     files
       ? db().query<{ file: string; generatedAt: Date | null }>(
           `select "file", "createdAt" as "generatedAt" from "take"
@@ -41,11 +41,13 @@ export async function dirtyQuestFiles(files?: string[]): Promise<Set<string>> {
             where "source" = 'quests' and "isCurrent"`,
         ),
     loadDirtyContext("quests"),
+    // In the same round as the rest: memoised behind a stamp, so this is a timestamp check
+    // rather than a table read, but it is still a round trip to sit behind the others.
+    readOverrides(),
   ]);
 
   if (!context.changes.length) return new Set();
 
-  const overrides = await readOverrides();
   const lines = fileIndex();
   const rules = fileDefaults().rules;
 
