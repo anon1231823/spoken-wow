@@ -26,6 +26,8 @@ type Props = {
   onReport: (line: ResultLine) => void;
   /** An earlier take is live again. */
   onRestored: (line: ResultLine, version: number) => void;
+  /** Rewrite what a page says. Editor and up. */
+  onEditText: (line: ResultLine) => void;
   /** Say a take is fine as it stands, despite a pronunciation having moved under it. */
   onClearDirty: (line: ResultLine) => void;
 };
@@ -65,6 +67,7 @@ export function BookList({
   onClearDirty,
   onReport,
   onRestored,
+  onEditText,
 }: Props) {
   const groupRows = useMemo(() => bookRuns(lines), [lines]);
 
@@ -87,7 +90,7 @@ export function BookList({
             left across the character count. w-10 for everyone else, who has the report
             button alone; never w-0, because the column still has to exist for the rowspans
             above it to count against. */}
-        <col className={canRegenerate ? "w-28" : "w-10"} />
+        <col className={canRegenerate ? "w-36" : "w-10"} />
       </colgroup>
       <thead>
         <tr className="text-muted-foreground border-border border-b text-left text-xs">
@@ -115,6 +118,7 @@ export function BookList({
             onClearDirty={onClearDirty}
             onReport={onReport}
             onRestored={onRestored}
+            onEditText={onEditText}
           />
         ))}
       </tbody>

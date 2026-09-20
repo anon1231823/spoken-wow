@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDownIcon, Eraser, FlagIcon, PlayIcon } from "lucide-react";
+import { ChevronDownIcon, Eraser, FlagIcon, PencilIcon, PlayIcon } from "lucide-react";
 import { useState } from "react";
 
 import RegenerateButton from "@/components/RegenerateButton";
@@ -37,6 +37,8 @@ type Props = {
   onReport: (line: ResultLine) => void;
   /** An earlier take is live again, so the row and the player can catch up. */
   onRestored: (line: ResultLine, version: number) => void;
+  /** Rewrite what this page says. Editor and up. */
+  onEditText: (line: ResultLine) => void;
   /** Say this take is fine as it stands, despite a pronunciation having moved under it. */
   onClearDirty: (line: ResultLine) => void;
 };
@@ -67,6 +69,7 @@ export function PageRow({
   onClearDirty,
   onReport,
   onRestored,
+  onEditText,
 }: Props) {
   const playable = line.state !== "missing";
   const [expanded, setExpanded] = useState(false);
@@ -235,6 +238,20 @@ export function PageRow({
         >
           <FlagIcon className="size-3.5" />
         </Button>
+        {/* Rewriting the text is not an audio action and it is free, but it is gated the
+            same way the other two sections gate theirs: the edit is what a later
+            regeneration would speak. */}
+        {canRegenerate && (
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Rewrite what this page says"
+            aria-label={`Edit the text of page ${line.pageNumber} of ${line.title}`}
+            onClick={() => onEditText(line)}
+          >
+            <PencilIcon className="size-3.5" />
+          </Button>
+        )}
         {/* Only on a dirty row: a clean one keeps the single control it already had. */}
         {canRegenerate && line.dirty && (
           <Button
