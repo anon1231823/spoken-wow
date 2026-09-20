@@ -60,17 +60,36 @@ export const TAG_MODELS = ["eleven_v3"] as const;
 /**
  * A gap at least this long is the lead-in; anything shorter is punctuation.
  *
- * Set between two measurements rather than at a round number. The lead-in gap ran 1.98s at
- * its shortest over three draws. eleven_v3 also inserts pauses nobody asked for - a separate
- * defect, seen mid-phrase and at the top of a clip - and the longest of those measured 1.47s.
- * 1.8 sits between the two, which is the whole margin there is: a spurious pause longer than
- * this, early in a clip, would be cut as though it were the lead-in, taking the opening words
- * with it.
+ * Set between two measured populations, and the space between them is 0.044 seconds. Every
+ * clip we have, by the duration of its first gap:
+ *
+ *   lead-in performed    2.529  2.276  1.980  1.516
+ *   no lead-in in it     1.472  1.404  1.266  1.218  1.153
+ *
+ * The second row is eleven_v3 inserting pauses nobody asked for - a separate defect, seen
+ * mid-phrase and at the top of a clip. 1.5 is the only value that separates the two rows,
+ * and it was 1.8 until a draw came back with a 1.516s gap and kept its throat clear.
+ *
+ * Both failure modes are re-rollable, so the choice is which way to be wrong. A missed trim
+ * announces itself in the first second and gets re-rolled. A cut that fires on a spurious
+ * pause silently deletes the opening words, and on a page that starts mid-sentence it reads
+ * as nothing worse than an abrupt open. Erring towards missing is erring towards the error
+ * somebody notices.
+ *
+ * The margin is thin enough that this deserves a proper measurement - eight or ten draws of
+ * one text - rather than the handful of clips above.
  */
-export const GAP_SECONDS = 1.8;
+export const GAP_SECONDS = 1.5;
 
-/** How far into the clip to look. The measured lead-in ends by 3.4s. */
-export const WINDOW_SECONDS = 6;
+/**
+ * How far into the clip the gap may start.
+ *
+ * Every lead-in gap measured starts between 0.79s and 1.14s, so 3s is generous. It cannot
+ * separate a lead-in from a spurious pause - those start at 0.67s to 1.04s, right on top of
+ * the same range - so this is a guard against cutting at a mid-clip sentence pause, not a
+ * discriminator.
+ */
+export const WINDOW_SECONDS = 3;
 
 /**
  * How much of the clip to decode looking for it.
@@ -81,7 +100,7 @@ export const WINDOW_SECONDS = 6;
  * the END of a gap, and a qualifying gap that starts just inside the window has to be able
  * to finish inside the decoded span or it would be truncated into invisibility.
  */
-const SCAN_SECONDS = 12;
+const SCAN_SECONDS = 10;
 
 /** Cut this much before speech resumes, so the first phoneme survives the trim. */
 export const MARGIN_SECONDS = 0.05;
