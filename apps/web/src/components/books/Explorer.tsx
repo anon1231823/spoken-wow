@@ -387,6 +387,18 @@ export function Explorer({ books }: { books: BookFacet[] }) {
   }, [canRegenerate, refetch]);
 
   //----------------------------------------------------------------------------
+  // Playback
+  //----------------------------------------------------------------------------
+
+  const play = useCallback((line: ResultLine) => {
+    setCurrent(line);
+    // The <audio> src follows `current`, so play only once React has committed it. React
+    // queues its own flush as a microtask when setCurrent is called, which is before this
+    // one, so by the time this runs the element is pointing at the new clip.
+    queueMicrotask(() => void audio.current?.play().catch(() => {}));
+  }, []);
+
+  //----------------------------------------------------------------------------
   // Render
   //----------------------------------------------------------------------------
 
@@ -461,7 +473,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
             current={current}
             canRegenerate={canRegenerate}
             rowStates={rowStates}
-            onPlay={setCurrent}
+            onPlay={play}
             onClearDirty={(line) => clearDirty([line.file])}
             onRegenerate={regenerateOne}
             onSelectBook={(line) => updateFilters({ bookId: line.bookId })}
