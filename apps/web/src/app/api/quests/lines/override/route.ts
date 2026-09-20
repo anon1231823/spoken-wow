@@ -10,8 +10,8 @@
  */
 import { corpusFiles } from "@/lib/audio";
 import { requireRegenerate } from "@/lib/generation/authz";
-import { OverrideError, validateOverride } from "@/lib/issues/override";
-import { clearOverride, writeOverride } from "@/lib/issues/overrides";
+import { OverrideError, validateOverride } from "@/lib/quests/override";
+import { clearOverride, writeOverride } from "@/lib/quests/overrides";
 
 export const dynamic = "force-dynamic";
 

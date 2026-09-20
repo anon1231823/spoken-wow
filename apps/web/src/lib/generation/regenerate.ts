@@ -16,8 +16,8 @@
  */
 import { audioRelPath } from "@/lib/audio";
 import { lineIndex, type CorpusLine } from "@/lib/corpus";
-import { readIgnores } from "@/lib/issues/ignores";
-import { readOverrides } from "@/lib/issues/overrides";
+import { readIgnores } from "@/lib/quests/ignores";
+import { readOverrides } from "@/lib/quests/overrides";
 import { INVALID_CHARS, isVoiceable } from "@/lib/text-gate";
 
 import { currentLocator } from "./dictionary";

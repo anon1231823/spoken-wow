@@ -122,25 +122,10 @@ describe("matching", () => {
   });
 });
 
-describe("flags and reports", () => {
+describe("reports", () => {
   const entries = [entry({ id: "z:1" }), entry({ id: "z:2" }), entry({ id: "z:3" })];
 
-  it("treats unreviewed as the absence of a flag, which is what finishes a listening pass", () => {
-    const lines = search(
-      entries,
-      context({
-        flags: new Map([
-          ["z:1", { status: "bad", note: null, updatedAt: "2026-08-09T00:00:00.000Z" }],
-          ["z:2", { status: "ok", note: null, updatedAt: "2026-08-09T00:00:00.000Z" }],
-        ]),
-      }),
-    ).lines;
-
-    expect(matching(lines, { flag: "unreviewed" }).map((l) => l.id)).toEqual(["z:3"]);
-    expect(matching(lines, { flag: "bad" }).map((l) => l.id)).toEqual(["z:1"]);
-  });
-
-  /** What a stranger complained about, as opposed to what an editor has already judged. */
+  /** The one worklist now: what a listener complained about and nobody has answered. */
   it("selects lines carrying an unresolved report", () => {
     const lines = search(entries, context({ reports: new Map([["z:2", 3]]) })).lines;
 

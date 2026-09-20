@@ -72,12 +72,6 @@ export type Take = {
   takes: number;
 };
 
-export type LineFlag = {
-  status: "bad" | "ok";
-  note: string | null;
-  updatedAt: string;
-};
-
 /**
  * Everything database-backed, passed into the pure search rather than fetched by it.
  * This is the split ../wow-voiceover/web/src/lib/search.ts:82 makes, and the reason
@@ -93,7 +87,6 @@ export type SearchContext = {
    * See lib/generation/dirty.ts.
    */
   dirt: DirtyContext;
-  flags: Map<string, LineFlag>;
   /**
    * lineId -> how many reports are still open. The COUNT only; the bodies are behind the
    * triage role on /reports. A visitor already sees the `bad` badge on a line -- "someone
@@ -106,7 +99,6 @@ export type SearchContext = {
 export const EMPTY_CONTEXT: SearchContext = {
   takes: new Map(),
   dirt: NO_DIRT,
-  flags: new Map(),
   reports: new Map(),
 };
 
@@ -282,7 +274,7 @@ export async function lineByPath(
 }
 
 export async function loadContext(): Promise<SearchContext> {
-  const [takeRows, flagRows, reportRows, dirt] = await Promise.all([
+  const [takeRows, reportRows, dirt] = await Promise.all([
     query<{
       lineId: string;
       version: number;
@@ -311,11 +303,6 @@ export async function loadContext(): Promise<SearchContext> {
                 ) as "takes"
          from "take" t
         where t."source" = 'zones' and t."isCurrent"`,
-    ),
-    // No source column: line_flag is a zones table, and a lineId in it is always 'z:'
-    // or 's:'. See migration 0023.
-    query<{ lineId: string; status: "bad" | "ok"; note: string | null; updatedAt: Date }>(
-      `select "lineId", "status", "note", "updatedAt" from "line_flag"`,
     ),
     // Grouped in the database rather than counted here: the resolved rows are the ones
     // that accumulate, and there is no reason to carry them across the wire to drop them.
@@ -350,12 +337,6 @@ export async function loadContext(): Promise<SearchContext> {
         },
       ]),
     ),
-    flags: new Map(
-      flagRows.map((row) => [
-        row.lineId,
-        { status: row.status, note: row.note, updatedAt: row.updatedAt.toISOString() },
-      ]),
-    ),
     reports: new Map(reportRows.map((row) => [row.lineId, row.open])),
     dirt,
   };
@@ -364,9 +345,9 @@ export async function loadContext(): Promise<SearchContext> {
 /**
  * Whether a lineId names something that exists.
  *
- * Neither `line_flag` nor `feedback` has a foreign key onto `lore_line`, so this is the
- * only thing standing between a typo and a row nothing will ever show or clean up. Every
- * route that accepts a lineId from outside calls it.
+ * `report` has no foreign key onto `lore_line`, so this is the only thing standing between
+ * a typo and a row nothing will ever show or clean up. Every route that accepts a lineId
+ * from outside calls it.
  */
 export async function isKnownLine(lineId: string): Promise<boolean> {
   const entries = await catalogue();

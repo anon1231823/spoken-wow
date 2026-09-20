@@ -12,7 +12,7 @@
  */
 import { lineIndex } from "@/lib/corpus";
 import { requireConfigure } from "@/lib/generation/authz";
-import { clearIgnore, writeIgnore } from "@/lib/issues/ignores";
+import { clearIgnore, writeIgnore } from "@/lib/quests/ignores";
 
 export const dynamic = "force-dynamic";
 

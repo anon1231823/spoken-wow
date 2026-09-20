@@ -49,19 +49,6 @@ function plural(count: number, noun: string): string {
   return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
 }
 
-/**
- * The `issues` param, which is "any" or a severity.
- *
- * The client twin of issueLevel in lib/search-request.ts. Two of them for the reason
- * filterParams and filtersFromParams are two: the browser writes this string and the server
- * reads it, and neither can import the other.
- */
-function issueLevelFromParam(value: string | null): LineFilters["issues"] {
-  if (value === "any") return "any";
-  const level = Number(value);
-  return level === 1 || level === 2 || level === 3 ? (level as 1 | 2 | 3) : undefined;
-}
-
 /** Everything that narrows the corpus, as the query string the two search endpoints read. */
 function filterParams(filters: LineFilters): URLSearchParams {
   const params = new URLSearchParams();
@@ -76,9 +63,6 @@ function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.npcType) params.set("type", filters.npcType);
   if (filters.includeProgress) params.set("progress", "1");
   if (filters.narration) params.set("narration", "1");
-  if (filters.issues) params.set("issues", String(filters.issues));
-  if (filters.issueCategory) params.set("issue", filters.issueCategory);
-  if (filters.finding) params.set("finding", String(filters.finding));
   if (filters.line) params.set("line", filters.line);
   if (filters.overridden) params.set("overridden", "1");
   if (filters.ignored) params.set("ignored", "1");
@@ -122,9 +106,6 @@ export default function Explorer({ facets }: { facets: Facets }) {
       npcType: (params.get("type") as LineFilters["npcType"]) ?? undefined,
       includeProgress: params.get("progress") === "1",
       narration: params.get("narration") === "1",
-      issues: issueLevelFromParam(params.get("issues")),
-      issueCategory: params.get("issue") ?? undefined,
-      finding: Number(params.get("finding")) || undefined,
       line: params.get("line") ?? undefined,
       overridden: params.get("overridden") === "1",
       ignored: params.get("ignored") === "1",
@@ -241,9 +222,6 @@ export default function Explorer({ facets }: { facets: Facets }) {
         ...("includeProgress" in next
           ? { progress: next.includeProgress ? "1" : undefined }
           : {}),
-        ...("issues" in next ? { issues: next.issues } : {}),
-        ...("issueCategory" in next ? { issue: next.issueCategory } : {}),
-        ...("finding" in next ? { finding: next.finding } : {}),
         ...("line" in next ? { line: next.line } : {}),
         ...("overridden" in next ? { overridden: next.overridden ? "1" : undefined } : {}),
         ...("outdated" in next ? { outdated: next.outdated ? "1" : undefined } : {}),
@@ -731,28 +709,14 @@ export default function Explorer({ facets }: { facets: Facets }) {
         onClearAll={clearAll}
       />
 
-      {/* Neither of these has a dropdown to sit in: a finding arrives by link from /issues
-          and a line id from /reports, so without them the list would be narrowed with
-          nothing on the page saying so. */}
+      {/* No dropdown to sit in: a line id arrives by link from /reports, so without this
+          the list would be narrowed with nothing on the page saying so. */}
       {filters.line && (
         <div className="text-muted-foreground mt-3 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs">
           <span>
             Showing one line: <span className="font-mono">{filters.line}</span>
           </span>
           <Button size="xs" variant="ghost" onClick={() => updateFilters({ line: undefined })}>
-            Show everything
-          </Button>
-        </div>
-      )}
-
-      {filters.finding && (
-        <div className="text-muted-foreground mt-3 flex items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs">
-          <span>Showing the lines of one finding.</span>
-          <Button
-            size="xs"
-            variant="ghost"
-            onClick={() => updateFilters({ finding: undefined })}
-          >
             Show everything
           </Button>
         </div>
@@ -818,7 +782,6 @@ export default function Explorer({ facets }: { facets: Facets }) {
               <th className="px-2 pb-1 font-medium">Quest</th>
               <th className="px-2 pb-1 font-medium">Race / gender / flavor</th>
               <th className="px-2 pb-1 font-medium">Line</th>
-              <th className="px-2 pb-1 font-medium">Issue</th>
               <th className="sr-only">Actions</th>
             </tr>
           </thead>

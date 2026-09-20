@@ -9,8 +9,8 @@
 import { corpusFiles } from "@/lib/audio";
 import { requireRegenerate } from "@/lib/generation/authz";
 import { historyOf } from "@/lib/generation/history";
-import { dirtyQuestFiles } from "@/lib/issues/dirtiness";
-import { staleFiles } from "@/lib/issues/staleness";
+import { dirtyQuestFiles } from "@/lib/quests/dirtiness";
+import { staleFiles } from "@/lib/quests/staleness";
 import { versionCounts } from "@/lib/generation/versions";
 
 export const dynamic = "force-dynamic";

@@ -9,7 +9,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Facets } from "@/lib/facets";
-import { ISSUE_GROUPS, ISSUE_GROUP_LABELS } from "@/lib/issues/issues";
 import { NPC_TYPES, SOURCES } from "@/lib/line-fields";
 import { activeFilterCount } from "@/lib/active-filters";
 import type { Filter, LineFilters } from "@/lib/search";
@@ -33,12 +32,6 @@ const SCOPE_OPTIONS: ChipOption[] = [
   { value: "npc", label: "NPC only" },
   { value: "quest", label: "Quest only" },
   { value: "text", label: "Line text only" },
-];
-
-const ISSUE_OPTIONS: ChipOption[] = [
-  { value: "1", label: "will break" },
-  { value: "2", label: "likely wrong or worse" },
-  { value: "3", label: "has any issue" },
 ];
 
 const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
@@ -135,27 +128,6 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
           value={filters.npcType}
           options={plainOptions(NPC_TYPES)}
           onChange={(npcType) => onFilters({ npcType: npcType as LineFilters["npcType"] })}
-        />
-
-        {/* Severity as one dropdown rather than a checkbox plus a level, because "has an
-            issue" and "has a bad one" are the same question asked at different strengths. */}
-        <FilterChip
-          label="issues"
-          value={filters.issues === undefined ? undefined : String(filters.issues)}
-          options={ISSUE_OPTIONS}
-          onChange={(value) =>
-            onFilters({ issues: value === undefined ? undefined : (Number(value) as 1 | 2 | 3) })
-          }
-        />
-
-        <FilterChip
-          label="kind"
-          value={filters.issueCategory}
-          options={ISSUE_GROUPS.map((group) => ({
-            value: group,
-            label: ISSUE_GROUP_LABELS[group],
-          }))}
-          onChange={(issueCategory) => onFilters({ issueCategory })}
         />
         {/* Read as one range: "generated after X" and "generated before Y". A file the app
             has never written has no date, and counts as generated long ago - so it sits in

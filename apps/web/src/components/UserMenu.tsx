@@ -71,11 +71,6 @@ export default function UserMenu() {
           <Link href="/lexicon">Pronunciation</Link>
         </Button>
       )}
-      {canConfigureGeneration(role) && (
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/issues">Issues</Link>
-        </Button>
-      )}
       {canRegenerate(role) && (
         <Button asChild variant="ghost" size="sm">
           <Link href="/reports">Reports</Link>

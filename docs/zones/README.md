@@ -1235,7 +1235,7 @@ that is why it is hosted at all. Everything else needs an account *and* a role:
 |---|---|
 | *(nobody)* | browse, filter, search, play, download a clip, **file feedback** |
 | `member` | exactly the same. Registering grants nothing |
-| `editor` | flag lines and write notes; Regenerate, which spends credits; Restore; read and resolve feedback |
+| `editor` | Regenerate, which spends credits; Restore; rewrite a line's text; read and resolve feedback |
 | `admin` | also edit the pronunciation rules, and grant these roles at `/admin` |
 
 `member` doing nothing is the point: the site is reachable from the internet, so anything
@@ -1293,12 +1293,17 @@ claim, not a verdict, so "not an issue" is a normal outcome. Reopening is always
 The same reports also expand inline in the explorer, and `?fb=open` narrows the table to
 lines carrying an unresolved one.
 
-**`feedback` is a separate table from `line_flag`, not a status on it.** They look alike
-and are not the same thing: a flag is one editor's verdict and is the regeneration
-worklist, whereas a report is one visitor's claim and there can be several per line.
-Folding them together would mean either letting a passer-by write the worklist or
-throwing away what the passer-by had to say, and it could not hold "three people
-independently reported this line", which is the most useful signal here.
+**The editor's review flags are gone; feedback is the one worklist.** `line_flag` held
+one editor's verdict per line -- `bad`, `ok`, or a note -- beside the reports a visitor
+files, and the explorer carried a Review column for it. Two worklists over the same lines
+meant two places to look and two things to keep clear, and only one of them was fed by the
+people actually listening. So the verdicts, the note dialog and the column were removed,
+and a problem with a line is now said in exactly one way: a report.
+
+The `line_flag` table is left in place, unread. It is forward-only like every other table
+here, and it still holds the era attributions the full-corpus review wrote --
+`tools/fix-flagged.mjs` was built to spend model credits on those notes and is retired
+with them. Reviving that pass means pointing it at `report` first.
 
 **Open counts are public; report bodies are not.** The badge on a row and the `?fb=open`
 filter travel with the search results, because "someone has already reported this one" is

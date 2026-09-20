@@ -21,7 +21,7 @@ import { storeIndex } from "@/lib/audio";
 import { loadCorpus } from "@/lib/corpus";
 import { requireApiKey, requireRegenerate } from "@/lib/generation/authz";
 import { createBatch, enqueue, snapshot } from "@/lib/generation/queue";
-import { searchContext } from "@/lib/issues/context";
+import { searchContext } from "@/lib/quests/context";
 import { batchJobs, matchingLines } from "@/lib/search";
 import { filtersFromParams, needsDates, needsStale } from "@/lib/search-request";
 import { ensureQueueRunning, queueWorker } from "@/lib/generation/boot";
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
   }
 
   const filters = filtersFromParams(new URLSearchParams(body.filters));
-  const context = await searchContext(filters.finding, needsDates(filters), needsStale(filters));
+  const context = await searchContext(needsDates(filters), needsStale(filters));
   const lines = matchingLines(loadCorpus(), storeIndex(), filters, context);
   // The same overrides the estimate was built from, so what is queued is what was quoted.
   const jobs = batchJobs(lines, context.overrides);

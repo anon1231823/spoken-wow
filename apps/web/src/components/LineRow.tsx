@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-import IssueChip from "./IssueChip";
 import LineHistory from "./LineHistory";
 import RegenerateButton from "./RegenerateButton";
 import { Button } from "./ui/button";
@@ -323,10 +322,6 @@ export default function LineRow({
             />
           </button>
         </div>
-      </td>
-
-      <td className="px-2 py-2">
-        {line.issue ? <IssueChip issue={line.issue} /> : <span className="text-muted-foreground">—</span>}
       </td>
 
       <td className="py-1.5 pr-1 pl-0">

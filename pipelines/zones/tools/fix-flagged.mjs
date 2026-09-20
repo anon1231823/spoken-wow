@@ -1,4 +1,15 @@
 #!/usr/bin/env node
+// RETIRED. Kept for the method, not to be run as it stands.
+//
+// This reads `line_flag`, which the site no longer writes: the editor's review verdicts
+// and their notes were removed in favour of feedback, which is now the only way a problem
+// with a line is recorded. The table and its existing notes are still there -- migrations
+// here are forward-only and drop nothing -- so the rows this was written for have not gone
+// anywhere, and reviving the pass means reading `report` instead: `source = 'zones'`,
+// `status = 'open'`, `lineId is not null`, with the body where the note used to be. The
+// staleness check below is the part worth keeping whatever the input becomes; it exists
+// because a double-run re-billed ~345 model calls.
+//
 // Repairs the corpus lines the review flagged, guided by the reviewer's notes.
 //
 //   node tools/fix-flagged.mjs --dry-run     # model runs, nothing recorded

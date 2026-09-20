@@ -22,7 +22,7 @@ const { listVersions } = await import("./versions");
 const { LEAD_IN } = await import("./leadin");
 const { audioRelPath } = await import("@/lib/audio");
 const { lineIndex } = await import("@/lib/corpus");
-const { clearOverride, writeOverride } = await import("@/lib/issues/overrides");
+const { clearOverride, writeOverride } = await import("@/lib/quests/overrides");
 
 /** A quest line one NPC speaks. Jitters, human-male, in Deadwind Pass. */
 const SOLO = "q:5:accept";

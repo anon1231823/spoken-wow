@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { storeIndex } from "@/lib/audio";
 import { loadCorpus } from "@/lib/corpus";
-import { searchContext } from "@/lib/issues/context";
+import { searchContext } from "@/lib/quests/context";
 import { filtersFromParams, needsDates, needsDirty, needsStale } from "@/lib/search-request";
 import { PAGE_SIZE, search } from "@/lib/search";
 
@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
     storeIndex(),
     { ...filters, offset: (page - 1) * limit, limit },
     await searchContext(
-      filters.finding,
       needsDates(filters),
       needsStale(filters),
       needsDirty(filters),

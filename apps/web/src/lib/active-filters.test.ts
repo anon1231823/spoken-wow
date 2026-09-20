@@ -51,15 +51,8 @@ describe("counting what is in force", () => {
     expect(activeFilterCount({ includeProgress: false })).toBe(0);
   });
 
-  it("counts a deep-linked finding, which narrows harder than anything else", () => {
-    expect(activeFilterCount({ finding: 42 })).toBe(1);
-  });
-
-  it("counts an issue severity of zero-like shape", () => {
-    // "any" and the severities are all truthy, but severity is a number and 0 is not a
-    // severity - this pins that the filter is not tested for truthiness alone.
-    expect(activeFilterCount({ issues: "any" })).toBe(1);
-    expect(activeFilterCount({ issues: 1 })).toBe(1);
+  it("counts a line deep-link, which narrows harder than anything else", () => {
+    expect(activeFilterCount({ line: "q:33:accept" })).toBe(1);
   });
 });
 

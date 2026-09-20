@@ -286,55 +286,12 @@ describe("batch jobs", () => {
 });
 
 /**
- * Findings and overrides come from Postgres, so search takes them as a context rather than
- * reading them - which is what lets these run against the real corpus and no database.
+ * Overrides come from Postgres, so search takes them as a context rather than reading them
+ * - which is what lets these run against the real corpus and no database.
  */
-describe("issues", () => {
-  const marked = (lineId: string, severity: 1 | 2 | 3, categories: string[]) =>
-    ({ issues: new Map([[lineId, { severity, categories }]]), overrides: new Map() }) as const;
-
-  it("annotates a line with what is wrong with it, and leaves the rest null", () => {
-    const context = marked("q:123:complete", 1, ["name-apostrophe"]);
-    const lines = search(corpus, store, { q: "dughan", filter: "npc", limit: 20_000 }, context).lines;
-
-    expect(lines.find((l) => l.lineId === "q:123:complete")!.issue).toEqual({
-      severity: 1,
-      categories: ["name-apostrophe"],
-    });
-    expect(lines.find((l) => l.lineId !== "q:123:complete")!.issue).toBe(null);
-  });
-
-  it("filters to lines carrying any finding", () => {
-    const context = marked("q:123:complete", 3, ["name-compound"]);
-    expect(matchingLines(corpus, store, { issues: "any" }, context).map((l) => l.lineId)).toEqual([
-      "q:123:complete",
-    ]);
-  });
-
-  it("reads a severity as 'this bad or worse', because a line carries its worst", () => {
-    const context = marked("q:123:complete", 2, ["punct-double-hyphen"]);
-    expect(matchingLines(corpus, store, { issues: 1 }, context)).toHaveLength(0);
-    expect(matchingLines(corpus, store, { issues: 2 }, context)).toHaveLength(1);
-    expect(matchingLines(corpus, store, { issues: 3 }, context)).toHaveLength(1);
-  });
-
-  it("filters by a category or by the group it belongs to", () => {
-    const context = marked("q:123:complete", 1, ["name-apostrophe"]);
-    expect(matchingLines(corpus, store, { issueCategory: "name-apostrophe" }, context)).toHaveLength(1);
-    expect(matchingLines(corpus, store, { issueCategory: "name" }, context)).toHaveLength(1);
-    expect(matchingLines(corpus, store, { issueCategory: "punct" }, context)).toHaveLength(0);
-  });
-
-  it("matches nothing for a category the scan has never emitted", () => {
-    const context = marked("q:123:complete", 1, ["name-apostrophe"]);
-    expect(matchingLines(corpus, store, { issueCategory: "invented-by-a-url" }, context)).toHaveLength(0);
-  });
-});
-
 describe("overrides", () => {
   /** An override is keyed on the audio file, because one mp3 is spoken by many NPCs. */
   const rewrite = (file: string, text: string) => ({
-    issues: new Map(),
     overrides: new Map([[file, { file, lineId: "", text, updatedAt: "", updatedBy: null }]]),
   });
 
@@ -418,45 +375,6 @@ describe("overrides", () => {
   });
 });
 
-describe("one finding's lines", () => {
-  /** What /issues links with: the finding's own line set, resolved server-side. */
-  const from = (lineIds: string[]) => ({
-    issues: new Map(),
-    overrides: new Map(),
-    findingLines: new Set(lineIds),
-  });
-
-  it("shows exactly the lines the finding names", () => {
-    const context = from(["q:123:complete", "q:123:accept"]);
-    const lines = matchingLines(corpus, store, { finding: 42 }, context);
-    expect(lines.map((l) => l.lineId).sort()).toEqual(["q:123:accept", "q:123:complete"]);
-  });
-
-  it("keeps every row of a line several NPCs share", () => {
-    // A gossip lineId is a hash of the text, so one id can name a dozen speakers. The
-    // finding counts the line once; the explorer has to list all of them.
-    const shared = corpus.lines.find(
-      (l) => l.source === "gossip" && corpus.lines.filter((o) => o.lineId === l.lineId).length > 1,
-    )!;
-    const rows = matchingLines(corpus, store, { finding: 42 }, from([shared.lineId]));
-    expect(rows.length).toBeGreaterThan(1);
-    expect(new Set(rows.map((l) => l.lineId))).toEqual(new Set([shared.lineId]));
-  });
-
-  it("matches nothing for a finding that is not there, rather than everything", () => {
-    // The failure that would matter: a dropped filter reads as "the whole corpus is this
-    // finding", and someone presses Regenerate all.
-    expect(matchingLines(corpus, store, { finding: 99_999 }, from([]))).toHaveLength(0);
-    expect(matchingLines(corpus, store, { finding: 99_999 })).toHaveLength(0);
-  });
-
-  it("still narrows further when combined with another filter", () => {
-    const context = from(["q:123:complete", "q:123:accept"]);
-    const lines = matchingLines(corpus, store, { finding: 42, source: "accept" }, context);
-    expect(lines.map((l) => l.lineId)).toEqual(["q:123:accept"]);
-  });
-});
-
 describe("filtering by when the live take was generated", () => {
   const fileOf = (line: { source: string; fileName: string }) =>
     `${line.source === "gossip" ? "gossip" : "quests"}/${line.fileName}.mp3`;
@@ -465,7 +383,6 @@ describe("filtering by when the live take was generated", () => {
   const dated = corpus.lines.slice(0, 3);
   const at = (day: string) => new Date(`${day}T12:00:00`).getTime();
   const context = {
-    issues: new Map(),
     overrides: new Map(),
     generatedAt: new Map([
       [fileOf(dated[0]), at("2026-07-10")],
@@ -526,12 +443,11 @@ describe("filtering by when the live take was generated", () => {
 });
 
 /**
- * Ignored lines: the war-effort tallies and Blizzard's test quest. Passed in as context for
- * the reason findings are - the decision lives in Postgres, and these run without one.
+ * Ignored lines: the war-effort tallies and Blizzard's test quest. Passed in as context
+ * because the decision lives in Postgres, and these run without one.
  */
 describe("ignored lines", () => {
   const ignoring = (lineId: string, reason = "war-effort tally") => ({
-    issues: new Map(),
     overrides: new Map(),
     ignores: new Map([
       [lineId, { lineId, reason, createdAt: "2026-08-16T00:00:00.000Z", createdBy: null }],
@@ -590,6 +506,17 @@ describe("search by line id", () => {
     const found = all({ line: sample });
     expect(found.length).toBeGreaterThan(0);
     expect(found.every((l) => l.lineId === sample)).toBe(true);
+  });
+
+  it("keeps every row of a line several NPCs share", () => {
+    // A gossip lineId is a hash of the text, so one id can name a dozen speakers, and the
+    // explorer has to list all of them rather than the line once.
+    const shared = corpus.lines.find(
+      (l) => l.source === "gossip" && corpus.lines.filter((o) => o.lineId === l.lineId).length > 1,
+    )!;
+    const rows = all({ line: shared.lineId });
+    expect(rows.length).toBeGreaterThan(1);
+    expect(new Set(rows.map((l) => l.lineId))).toEqual(new Set([shared.lineId]));
   });
 
   it("matches nothing when no line carries the id", () => {
