@@ -12,7 +12,7 @@ def test_generation_defaults_favour_consistency():
     """The shipped settings were stability 0.28 / similarity 0.992, which maximised
     per-call variance and made one NPC drift between performers."""
     cfg = voice_config.load_generation()
-    assert cfg["model_id"] == "eleven_multilingual_v2"
+    assert cfg["model_id"] == "eleven_v3"
     assert cfg["voice_settings"]["stability"] == 0.5
     assert cfg["voice_settings"]["similarity_boost"] == 0.75
     assert cfg["seed_strategy"] == "npc"

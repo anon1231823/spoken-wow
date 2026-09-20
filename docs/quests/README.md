@@ -669,7 +669,7 @@ The same brackets also hold sounds the NPC makes: `<hic>`, `<cough>`, `<sigh>`, 
 corpus with no exceptions — a direction names someone, a sound is a bare lowercase word. Do not
 also require a closing full stop; that misclassifies `Motega shrugs his shoulder`. A sound is
 not narrated: `audioTags` rewrites it into ElevenLabs' own syntax — `<hic>` becomes `[hic]` —
-and the NPC performs it in their own voice, which `eleven_v3` (the model the database selects)
+and the NPC performs it in their own voice, which `eleven_v3` (the default everywhere)
 understands and `eleven_multilingual_v2` does not. The rewrite runs on the whole line before it
 is split, so a line whose only bracket is a sound never touches the dialogue endpoint.
 

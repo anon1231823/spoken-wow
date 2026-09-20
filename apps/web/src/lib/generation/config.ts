@@ -52,7 +52,7 @@ export const UNIT_INTERVAL = ["stability", "similarity_boost", "style"] as const
  * asserts this matches the file exactly, so the copy cannot quietly drift.
  */
 export const FALLBACK: GenerationConfig = {
-  modelId: "eleven_multilingual_v2",
+  modelId: "eleven_v3",
   voiceSettings: {
     stability: 0.5,
     similarity_boost: 0.75,

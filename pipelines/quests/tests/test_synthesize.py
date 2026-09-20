@@ -13,7 +13,7 @@ LINE = {
     "generatable": True,
 }
 CFG = {
-    "model_id": "eleven_multilingual_v2",
+    "model_id": "eleven_v3",
     "voice_settings": {"stability": 0.5, "similarity_boost": 0.75,
                        "style": 0, "use_speaker_boost": True},
     "seed_strategy": "npc",
@@ -39,7 +39,7 @@ def test_speaks_the_normalized_text():
 
 def test_carries_model_and_settings():
     payload = build_payload(LINE, CFG, RULES)
-    assert payload["model_id"] == "eleven_multilingual_v2"
+    assert payload["model_id"] == "eleven_v3"
     assert payload["voice_settings"]["stability"] == 0.5
 
 
