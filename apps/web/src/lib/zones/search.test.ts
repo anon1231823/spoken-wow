@@ -212,3 +212,46 @@ describe("search", () => {
     expect(result.lines.map((l) => l.id)).toEqual(["z:1411", "s:1411:razor hill"]);
   });
 });
+
+describe("dirty", () => {
+  const spoken = "The tauren of Durotar greet you.";
+  const changed = { grapheme: "Tauren", changedAt: Date.parse("2026-08-10T00:00:00.000Z") };
+
+  function dirtyContext() {
+    return context({
+      takes: new Map([["z:1411", take()]]),
+      dirt: { changes: [changed], acks: new Map() },
+    });
+  }
+
+  it("marks a current take whose pronunciation has moved under it", () => {
+    // The text has not changed, so the take is `current` - which is exactly why this needed
+    // a mark of its own rather than a fourth state.
+    const [line] = search([entry({ spoken })], dirtyContext()).lines;
+    expect(line.state).toBe("current");
+    expect(line.dirty).toBe(true);
+  });
+
+  it("selects and counts them", () => {
+    const entries = [
+      entry({ spoken }),
+      entry({ id: "s:1411:razor hill", kind: "subzone", file: "1411/razor-hill", spoken: "Quiet." }),
+    ];
+    const result = search(entries, dirtyContext(), { dirty: true });
+    expect(result.lines.map((l) => l.id)).toEqual(["z:1411"]);
+    expect(result.dirty).toBe(1);
+  });
+
+  it("is clean once somebody has said so", () => {
+    const acked = context({
+      takes: new Map([["z:1411", take()]]),
+      dirt: { changes: [changed], acks: new Map([["1411/zone", Date.now()]]) },
+    });
+    expect(search([entry({ spoken })], acked).lines[0].dirty).toBe(false);
+  });
+
+  it("says nothing about a line with no audio", () => {
+    const noTake = context({ dirt: { changes: [changed], acks: new Map() } });
+    expect(search([entry({ spoken })], noTake).lines[0].dirty).toBe(false);
+  });
+});

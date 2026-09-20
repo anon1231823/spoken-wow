@@ -98,7 +98,12 @@ export async function fetchGenerationStatus(
  * long enough to carry them would be refused before it arrived. Both answers in one trip
  * because it is the same page asking about the same files.
  */
-export type TakeInfo = { counts: Record<string, number>; stale: string[] };
+export type TakeInfo = {
+  counts: Record<string, number>;
+  stale: string[];
+  /** Files whose take predates a change to a pronunciation it speaks. See lib/generation/dirty. */
+  dirty: string[];
+};
 
 export async function fetchTakeCounts(
   files: string[],
@@ -289,4 +294,25 @@ export async function stopQueue(): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: "{}",
   }).catch(() => {});
+}
+
+/**
+ * Say that these takes are fine as they stand, despite a pronunciation having moved under
+ * them.
+ *
+ * One endpoint for all three sections, because the tables it writes are shared. Returns
+ * whether it worked rather than throwing: the caller has already cleared the marks on
+ * screen, and the worst case is a row that comes back marked on the next search.
+ */
+export async function clearDirty(source: string, files: string[]): Promise<boolean> {
+  try {
+    const response = await fetch("/api/dirty", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source, files }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }

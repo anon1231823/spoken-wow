@@ -11,6 +11,8 @@
 // sha1 of the SPOKEN text. If these two ever disagree, the explorer is lying about what
 // needs regenerating.
 
+import { isDirty } from "@/lib/generation/dirty";
+
 import type { CatalogueEntry, LineFlag, SearchContext, Take } from "./catalogue";
 import { PAGE_SIZE, SHORT_LINE, type LineFilters, type State } from "./filters";
 
@@ -34,6 +36,12 @@ export type ResultLine = {
   /** How many reports on this line are still open. The count is public; the bodies are
    *  not -- see SearchContext.reports. */
   reportsOpen: number;
+  /**
+   * This take was cut before a pronunciation it speaks was changed, and nobody has said it
+   * is fine since. Orthogonal to `state`: a take can be current and dirty at once, because
+   * a lexicon edit moves no text. Cleared by hand only -- see lib/generation/dirty.ts.
+   */
+  dirty: boolean;
   /** The English prose this line would be translated from. Absent when reading English. */
   english?: string;
   /** False when this language has no row for the line yet, so `text` is the English
@@ -48,6 +56,8 @@ export type SearchResult = {
   /** What the current filter selects, for the header and the regenerate quote. */
   totalChars: number;
   counts: Record<State, number>;
+  /** How many of the matched lines are dirty. Not a fourth state; see ResultLine.dirty. */
+  dirty: number;
   offset: number;
   limit: number;
 };
@@ -74,6 +84,13 @@ export function decorate(entry: CatalogueEntry, context: SearchContext): ResultL
     take: take ?? null,
     flag: context.flags.get(entry.id) ?? null,
     reportsOpen: context.reports.get(entry.id) ?? 0,
+    // The spoken text, not the full one: the lexicon is applied to what is sent.
+    dirty: take
+      ? isDirty(
+          { file: entry.file, text: entry.spoken, generatedAt: Date.parse(take.generatedAt) },
+          context.dirt,
+        )
+      : false,
   };
 }
 
@@ -110,6 +127,8 @@ export function matching(lines: ResultLine[], filters: LineFilters = {}): Result
   if (filters.kind) out = out.filter((l) => l.kind === filters.kind);
   if (filters.mapID !== undefined) out = out.filter((l) => l.mapID === filters.mapID);
   if (filters.state) out = out.filter((l) => l.state === filters.state);
+  // Its own filter rather than a fourth state, because a current take can be dirty.
+  if (filters.dirty) out = out.filter((l) => l.dirty);
   if (filters.short) out = out.filter((l) => l.short);
 
   if (filters.flag) {
@@ -169,8 +188,10 @@ export function search(
 
   const counts: Record<State, number> = { missing: 0, stale: 0, current: 0 };
   let totalChars = 0;
+  let dirty = 0;
   for (const line of matched) {
     counts[line.state]++;
+    if (line.dirty) dirty++;
     totalChars += line.chars;
   }
 
@@ -179,6 +200,7 @@ export function search(
     total: matched.length,
     totalChars,
     counts,
+    dirty,
     offset,
     limit,
   };

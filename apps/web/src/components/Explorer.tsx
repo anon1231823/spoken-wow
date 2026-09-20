@@ -18,6 +18,7 @@ import { useSession } from "@/lib/auth-client";
 import type { Facets } from "@/lib/facets";
 import { NARRATOR_VOICE } from "@/lib/generation/narration";
 import {
+  clearDirty,
   dismissQueue,
   fetchBatchJobs,
   fetchGenerationStatus,
@@ -82,6 +83,7 @@ function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.overridden) params.set("overridden", "1");
   if (filters.ignored) params.set("ignored", "1");
   if (filters.outdated) params.set("outdated", "1");
+  if (filters.dirty) params.set("dirty", "1");
   if (filters.generatedBefore) params.set("before", filters.generatedBefore);
   if (filters.generatedAfter) params.set("after", filters.generatedAfter);
   return params;
@@ -127,6 +129,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       overridden: params.get("overridden") === "1",
       ignored: params.get("ignored") === "1",
       outdated: params.get("outdated") === "1",
+      dirty: params.get("dirty") === "1",
       generatedBefore: params.get("before") ?? undefined,
       generatedAfter: params.get("after") ?? undefined,
     }),
@@ -148,6 +151,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const [takes, setTakes] = useState<Record<string, number>>({});
   // Files whose live audio was made from text that has since changed.
   const [stale, setStale] = useState<Set<string>>(new Set());
+  // Files whose live audio was cut before a pronunciation it speaks was changed. A separate
+  // set because the two faults are separate: either can be true of a file alone.
+  const [dirty, setDirty] = useState<Set<string>>(new Set());
   // The line whose spoken text is being rewritten, or null.
   const [editing, setEditing] = useState<ResultLine | null>(null);
   const [ignoring, setIgnoring] = useState<ResultLine | null>(null);
@@ -237,6 +243,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
         ...("line" in next ? { line: next.line } : {}),
         ...("overridden" in next ? { overridden: next.overridden ? "1" : undefined } : {}),
         ...("outdated" in next ? { outdated: next.outdated ? "1" : undefined } : {}),
+        ...("dirty" in next ? { dirty: next.dirty ? "1" : undefined } : {}),
         ...("ignored" in next ? { ignored: next.ignored ? "1" : undefined } : {}),
         ...("generatedBefore" in next ? { before: next.generatedBefore } : {}),
         ...("generatedAfter" in next ? { after: next.generatedAfter } : {}),
@@ -322,6 +329,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       // Replaced rather than merged: a file that has just been regenerated must leave the
       // set, and merging could only ever add to it.
       setStale(new Set(info.stale));
+      setDirty(new Set(info.dirty));
     });
     return () => controller.abort();
   }, [showRegenerate, result]);
@@ -524,6 +532,43 @@ export default function Explorer({ facets }: { facets: Facets }) {
 
     applySuccess(response.file, response.version, line.lineId);
   }, [applySuccess]);
+
+  /**
+   * Say these takes are fine as they stand, despite a pronunciation having moved under them.
+   *
+   * Optimistic, and the mark comes back if the write is refused: the alternative is a button
+   * that does nothing visible for a round trip. Keyed on the file, which is what the
+   * acknowledgement is keyed on -- 1,076 of these files are spoken by several NPCs, and all
+   * of those rows are cleared together because it is one recording.
+   */
+  const clearDirtyFiles = useCallback((files: string[]) => {
+    if (!files.length) return;
+    setDirty((current) => {
+      const next = new Set(current);
+      for (const file of files) next.delete(file);
+      return next;
+    });
+    void clearDirty("quests", files).then((ok) => {
+      if (!ok) setDirty((current) => new Set([...current, ...files]));
+    });
+  }, []);
+
+  /**
+   * Clear every dirty file the current search matches, not just this page's.
+   *
+   * The match set comes from the batch endpoint, which is what "everything this filter
+   * selects" already means here, and the marks from the same per-file question the page
+   * asks -- so nothing is cleared that the server would not have called dirty. Lines the
+   * batch endpoint omits because nothing would voice them are omitted here too; audio for
+   * them is rare and clearing a mark on it can wait for the row itself.
+   */
+  const clearAllDirty = useCallback(async () => {
+    const jobs = await fetchBatchJobs(new URLSearchParams(filterQuery));
+    if (!jobs || jobs.length === 0) return;
+    const files = [...new Set(jobs.map((job) => job.audioPath))];
+    const info = await fetchTakeCounts(files);
+    if (info) clearDirtyFiles(info.dirty);
+  }, [filterQuery, clearDirtyFiles]);
 
   /**
    * Ask to regenerate everything the current search matches.
@@ -735,6 +780,16 @@ export default function Explorer({ facets }: { facets: Facets }) {
               ? `${plural(result.total, "line")} across ${plural(result.npcCount, "NPC")}`
               : ""}
         </div>
+        {/* This page's marks, which is what the row-level question was asked for. The
+            corpus-wide count is what the "pronunciation moved" filter is for. */}
+        {showRegenerate && dirty.size > 0 && (
+          <span className="flex items-center gap-1 text-sm text-amber-300">
+            {dirty.size} pronunciation on this page
+            <Button size="xs" variant="ghost" onClick={() => void clearAllDirty()}>
+              clear all matching
+            </Button>
+          </span>
+        )}
         {showRegenerate && result && result.total > 0 && (
           <Button
             size="xs"
@@ -792,6 +847,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 blocked={blockedReason(line)}
                 takes={takes[line.audioPath] ?? 0}
                 stale={stale.has(line.audioPath)}
+                dirty={dirty.has(line.audioPath)}
+                onClearDirty={(l) => clearDirtyFiles([l.audioPath])}
                 onPlay={play}
                 onEditText={setEditing}
                 onIgnore={canConfigure ? setIgnoring : null}

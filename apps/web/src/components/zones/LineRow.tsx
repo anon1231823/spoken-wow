@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   Check,
   ChevronDownIcon,
+  Eraser,
   FlagIcon,
   MessageSquare,
   PencilIcon,
@@ -42,6 +43,8 @@ type Props = {
   onEditText: (line: ResultLine) => void;
   onRegenerate: (line: ResultLine) => void;
   onRestore: (line: ResultLine) => void;
+  /** Say this take is fine as it stands, despite a pronunciation having moved under it. */
+  onClearDirty: (line: ResultLine) => void;
 };
 
 // The same colour discipline as the quests explorer: red is only ever a real problem, amber
@@ -73,6 +76,7 @@ export function LineRow({
   onEditText,
   onRegenerate,
   onRestore,
+  onClearDirty,
 }: Props) {
   const playable = line.state !== "missing";
   const status = line.flag?.status ?? null;
@@ -178,6 +182,17 @@ export function LineRow({
                 {STATE_LABEL[line.state]}
               </span>
             )
+          )}
+
+          {/* Beside the state rather than inside it: the text has not moved, so this line is
+              `current` and dirty at once, and one word cannot say both. */}
+          {line.dirty && (
+            <span
+              className="mt-0.5 shrink-0 text-xs text-amber-300"
+              title="Cut before a pronunciation it speaks was changed"
+            >
+              pronunciation
+            </span>
           )}
 
           {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle needs
@@ -347,6 +362,20 @@ export function LineRow({
                   onClick={() => onRestore(line)}
                 >
                   <RotateCcw className="size-3.5" />
+                </Button>
+              )}
+
+              {/* Only on a dirty row. A clean one keeps the control it would do nothing to,
+                  and the mark is the whole reason this button exists. */}
+              {line.dirty && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  title="Audio predates a pronunciation change - clear the mark (does not regenerate)"
+                  aria-label={`Clear the pronunciation mark on ${line.name}`}
+                  onClick={() => onClearDirty(line)}
+                >
+                  <Eraser className="size-3.5" />
                 </Button>
               )}
 

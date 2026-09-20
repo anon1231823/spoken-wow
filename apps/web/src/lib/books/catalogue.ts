@@ -11,6 +11,7 @@
 import "server-only";
 
 import { query } from "@/lib/db";
+import { loadDirtyContext, NO_DIRT, type DirtyContext } from "@/lib/generation/dirty";
 
 import type { OwnerKind } from "./filters";
 import { spokenText, textHash, fileFor } from "./tools";
@@ -69,11 +70,21 @@ export type Take = {
  */
 export type SearchContext = {
   takes: Map<string, Take>;
+  /**
+   * What the lexicon has changed lately, and what somebody has already judged fine. Carried
+   * rather than resolved into a set, because the rule needs the page's text as well as its
+   * take. See lib/generation/dirty.ts.
+   */
+  dirt: DirtyContext;
   /** lineId -> how many reports are still open. The count only; the bodies are on /reports. */
   reports: Map<string, number>;
 };
 
-export const EMPTY_CONTEXT: SearchContext = { takes: new Map(), reports: new Map() };
+export const EMPTY_CONTEXT: SearchContext = {
+  takes: new Map(),
+  dirt: NO_DIRT,
+  reports: new Map(),
+};
 
 /**
  * The corpus is empty, so there is nothing to show.
@@ -183,7 +194,7 @@ export async function catalogue(lang: string = BASE_LANG): Promise<BookPage[]> {
 }
 
 export async function loadContext(lang: string = BASE_LANG): Promise<SearchContext> {
-  const [takeRows, reportRows] = await Promise.all([
+  const [takeRows, reportRows, dirt] = await Promise.all([
     query<{
       lineId: string;
       version: number;
@@ -223,6 +234,7 @@ export async function loadContext(lang: string = BASE_LANG): Promise<SearchConte
         group by "lineId"`,
       [lang],
     ),
+    loadDirtyContext("books"),
   ]);
 
   return {
@@ -245,6 +257,7 @@ export async function loadContext(lang: string = BASE_LANG): Promise<SearchConte
       ]),
     ),
     reports: new Map(reportRows.map((row) => [row.lineId, row.open])),
+    dirt,
   };
 }
 

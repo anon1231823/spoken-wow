@@ -48,6 +48,9 @@ export async function GET(request: Request) {
     const all = search(entries, context, filters, 0, Number.MAX_SAFE_INTEGER);
     return Response.json({
       ids: all.lines.map((line) => line.id),
+      // The files of the matching lines that are dirty, for "clear all": the mark is keyed
+      // on the recording, and a page of rows cannot name what the rest of the filter holds.
+      dirtyFiles: all.lines.filter((line) => line.dirty).map((line) => line.file),
       total: all.total,
       // Summed here rather than in the browser: the confirmation dialog needs the character
       // total to quote a cost, and this query has already counted it.

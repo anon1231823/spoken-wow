@@ -27,6 +27,14 @@ export type PageFilters = {
   bookId?: number;
   state?: State;
   /**
+   * Audio cut before a pronunciation it speaks was changed, and not since judged.
+   *
+   * Not a value of `state`, which is about text: a page whose text has not moved is
+   * `current` and can be dirty at the same time, and folding the two would make each
+   * answer hide the other.
+   */
+  dirty?: boolean;
+  /**
    * Only pages that can be voiced at all.
    *
    * 88 of the 1191 cannot: 36 hold substitution tokens the game fills in at runtime, 26
@@ -69,6 +77,7 @@ export function filterParams(filters: PageFilters): URLSearchParams {
   if (filters.ownerKind) params.set("kind", filters.ownerKind);
   if (filters.bookId !== undefined) params.set("book", String(filters.bookId));
   if (filters.state) params.set("state", filters.state);
+  if (filters.dirty) params.set("dirty", "1");
   if (filters.voiceable) params.set("voiceable", "1");
   if (filters.reports) params.set("fb", filters.reports);
   if (filters.line) params.set("line", filters.line);
@@ -91,6 +100,7 @@ export function filtersFromParams(params: URLSearchParams): PageFilters {
     ownerKind: oneOf(params.get("kind"), OWNER_KINDS),
     bookId: Number.isFinite(bookId) && bookId > 0 ? bookId : undefined,
     state: oneOf(params.get("state"), STATES),
+    dirty: params.get("dirty") === "1" || undefined,
     voiceable: params.get("voiceable") === "1" || undefined,
     reports: oneOf(params.get("fb"), REPORTS),
     line: params.get("line") || undefined,
@@ -105,6 +115,7 @@ export function activeFilterCount(filters: PageFilters): number {
     filters.ownerKind,
     filters.bookId,
     filters.state,
+    filters.dirty,
     filters.voiceable,
     filters.reports,
     filters.line,

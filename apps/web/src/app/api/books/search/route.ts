@@ -44,6 +44,11 @@ export async function GET(request: Request) {
       // Only voiceable pages: the other 88 are in the corpus because the game has them,
       // and quoting a cost for text nothing can speak would be a bill for silence.
       ids: all.lines.filter((line) => line.generatable).map((line) => line.id),
+      // The files of the matching pages that are dirty, for "clear all": the mark is keyed
+      // on the recording, and a page of rows cannot name what the rest of the filter holds.
+      // Unfiltered by `generatable`, unlike the ids: a page nothing will voice can still
+      // carry audio made before the lexicon moved.
+      dirtyFiles: all.lines.filter((line) => line.dirty).map((line) => line.file),
       total: all.total,
       totalChars: all.lines
         .filter((line) => line.generatable)

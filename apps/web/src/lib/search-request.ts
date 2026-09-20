@@ -57,6 +57,7 @@ export function filtersFromParams(params: URLSearchParams): LineFilters {
     // the lines nobody will ever voice.
     ignored: params.get("ignored") === "1",
     outdated: params.get("outdated") === "1",
+    dirty: params.get("dirty") === "1",
     // Kept as the raw day. dayStart is what decides whether it is a date, so there is one
     // definition of that rather than one here and another in the filter.
     generatedBefore: params.get("before") || undefined,
@@ -72,4 +73,9 @@ export function needsDates(filters: LineFilters): boolean {
 /** Whether staleness has to be answered for the whole corpus, which is a query and a hash per take. */
 export function needsStale(filters: LineFilters): boolean {
   return Boolean(filters.outdated);
+}
+
+/** The same question for pronunciation: one query plus a substring pass per changed word. */
+export function needsDirty(filters: LineFilters): boolean {
+  return Boolean(filters.dirty);
 }

@@ -91,6 +91,13 @@ export type LineFilters = {
   /** Lines whose audio was made from text that has since changed. */
   outdated?: boolean;
   /**
+   * Lines whose audio was made before a pronunciation it speaks was changed.
+   *
+   * Not a narrower `outdated`, and not implied by it: a lexicon edit moves no text, so the
+   * two select disjoint problems with the same audio and either can be true alone.
+   */
+  dirty?: boolean;
+  /**
    * Bounds on when the live take was generated, as "YYYY-MM-DD". Both include the whole of
    * the day they name, which is what picking a day off a calendar means.
    *
@@ -133,6 +140,11 @@ export type SearchContext = {
    * means nobody asked, not that every take is current.
    */
   stale?: Set<string>;
+  /**
+   * Files whose live take predates a change to a pronunciation it speaks, with nobody having
+   * said since that it is fine. Absent means nobody asked, as with `stale`.
+   */
+  dirty?: Set<string>;
   /**
    * Lines nobody will voice, with the reason. Absent means the database could not be
    * reached, which shows them rather than hiding them: an outage should not silently narrow
@@ -357,6 +369,7 @@ export function matchingLines(
     line: lineId,
     overridden,
     outdated = false,
+    dirty = false,
     ignored = false,
     generatedBefore,
     generatedAfter,
@@ -367,6 +380,7 @@ export function matchingLines(
     findingLines,
     generatedAt,
     stale,
+    dirty: dirtyOf,
     ignores,
   }: SearchContext = NO_CONTEXT,
 ): CorpusLine[] {
@@ -415,6 +429,9 @@ export function matchingLines(
   // Absent `stale` means nobody asked for it, so nothing matches rather than everything: the
   // honest answer to "which audio is out of date?" without the data is none, not all.
   if (outdated) lines = lines.filter((line) => stale?.has(audioRelPath(line)) ?? false);
+  // Absent `dirty` means nobody asked, so nothing matches rather than everything - the
+  // argument the line above makes, for the same reason.
+  if (dirty) lines = lines.filter((line) => dirtyOf?.has(audioRelPath(line)) ?? false);
   // A restoration is not a rewrite: it puts a stripped stage direction back and changes no
   // words, so it does not belong in a list of lines someone rewrote by hand.
   if (overridden) {

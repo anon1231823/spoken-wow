@@ -132,3 +132,40 @@ describe("search", () => {
     expect(result.total).toBe(3);
   });
 });
+
+describe("dirty", () => {
+  const spoken = "Of the tauren and their herds.";
+  const changed = { grapheme: "Tauren", changedAt: Date.parse("2026-09-19T00:00:00.000Z") };
+
+  const dirt = (acks: Map<string, number> = new Map()) => ({ changes: [changed], acks });
+
+  it("marks a current page whose pronunciation has moved under it", () => {
+    const line = decorate(
+      page({ spoken }),
+      context({ takes: new Map([["b:10", take()]]), dirt: dirt() }),
+    );
+    expect(line.state).toBe("current");
+    expect(line.dirty).toBe(true);
+  });
+
+  it("selects and counts them", () => {
+    const pages = [page({ spoken }), page({ id: "b:11", pageId: 11, file: "11", spoken: "Quiet." })];
+    const result = search(pages, context({ takes: new Map([["b:10", take()]]), dirt: dirt() }), {
+      dirty: true,
+    });
+    expect(result.lines.map((l) => l.id)).toEqual(["b:10"]);
+    expect(result.dirty).toBe(1);
+  });
+
+  it("is clean once somebody has said so", () => {
+    const acked = context({
+      takes: new Map([["b:10", take()]]),
+      dirt: dirt(new Map([["10", Date.now()]])),
+    });
+    expect(decorate(page({ spoken }), acked).dirty).toBe(false);
+  });
+
+  it("says nothing about a page with no audio", () => {
+    expect(decorate(page({ spoken }), context({ dirt: dirt() })).dirty).toBe(false);
+  });
+});

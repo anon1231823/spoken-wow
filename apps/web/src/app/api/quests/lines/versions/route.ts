@@ -9,6 +9,7 @@
 import { corpusFiles } from "@/lib/audio";
 import { requireRegenerate } from "@/lib/generation/authz";
 import { historyOf } from "@/lib/generation/history";
+import { dirtyQuestFiles } from "@/lib/issues/dirtiness";
 import { staleFiles } from "@/lib/issues/staleness";
 import { versionCounts } from "@/lib/generation/versions";
 
@@ -42,8 +43,17 @@ export async function POST(request: Request) {
     (file): file is string => typeof file === "string" && known.has(file),
   );
 
-  // Both in one round trip, because the page asks the same question about the same files:
-  // how many takes are there, and is the live one still made of the current text.
-  const [counts, stale] = await Promise.all([versionCounts(files), staleFiles(files)]);
-  return Response.json({ counts: Object.fromEntries(counts), stale: [...stale] });
+  // All three in one round trip, because the page asks them about the same files: how many
+  // takes are there, is the live one still made of the current text, and was it cut before
+  // a pronunciation it speaks was changed. The third is the one no hash can answer.
+  const [counts, stale, dirty] = await Promise.all([
+    versionCounts(files),
+    staleFiles(files),
+    dirtyQuestFiles(files),
+  ]);
+  return Response.json({
+    counts: Object.fromEntries(counts),
+    stale: [...stale],
+    dirty: [...dirty],
+  });
 }

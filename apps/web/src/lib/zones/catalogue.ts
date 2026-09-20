@@ -13,6 +13,7 @@
 import "server-only";
 
 import { query } from "@/lib/db";
+import { loadDirtyContext, NO_DIRT, type DirtyContext } from "@/lib/generation/dirty";
 
 import { corpusRows, currentLore } from "./lore";
 import {
@@ -84,6 +85,14 @@ export type LineFlag = {
  */
 export type SearchContext = {
   takes: Map<string, Take>;
+  /**
+   * What the lexicon has changed lately, and what somebody has already judged fine.
+   *
+   * Carried rather than resolved into a set of ids, because the rule needs the line's text
+   * as well as its take - and the text is the catalogue's, which this map is built beside.
+   * See lib/generation/dirty.ts.
+   */
+  dirt: DirtyContext;
   flags: Map<string, LineFlag>;
   /**
    * lineId -> how many reports are still open. The COUNT only; the bodies are behind the
@@ -96,6 +105,7 @@ export type SearchContext = {
 
 export const EMPTY_CONTEXT: SearchContext = {
   takes: new Map(),
+  dirt: NO_DIRT,
   flags: new Map(),
   reports: new Map(),
 };
@@ -272,7 +282,7 @@ export async function lineByPath(
 }
 
 export async function loadContext(): Promise<SearchContext> {
-  const [takeRows, flagRows, reportRows] = await Promise.all([
+  const [takeRows, flagRows, reportRows, dirt] = await Promise.all([
     query<{
       lineId: string;
       version: number;
@@ -316,6 +326,7 @@ export async function loadContext(): Promise<SearchContext> {
         where "source" = 'zones' and "status" = 'open' and "lineId" is not null
         group by "lineId"`,
     ),
+    loadDirtyContext("zones"),
   ]);
 
   return {
@@ -346,6 +357,7 @@ export async function loadContext(): Promise<SearchContext> {
       ]),
     ),
     reports: new Map(reportRows.map((row) => [row.lineId, row.open])),
+    dirt,
   };
 }
 
