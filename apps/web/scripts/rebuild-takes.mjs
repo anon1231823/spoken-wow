@@ -190,12 +190,16 @@ if (!url) throw new Error("DATABASE_URL is not set -- the takes live in Postgres
 const pool = new pg.Pool({ connectionString: url });
 
 async function rebuildQuests(listing) {
+  // Rebuilt before if any take points at a bare `{n}.mp3`. Only this script writes those:
+  // everything commitTake archives is `v{n}-{hash}.mp3`. Asking whether ANY take has an
+  // archiveFile would be wrong -- the first quests line regenerated after deploy has one,
+  // and would make this skip every other line in the corpus.
   const { rows: done } = await pool.query(
     `select count(*)::int as "n" from "take"
-      where "source" = 'quests' and "archiveFile" is not null`,
+      where "source" = 'quests' and "archiveFile" ~ '^[0-9]+\\.mp3$'`,
   );
   if (done[0].n > 0) {
-    console.log(`quests: ${done[0].n} takes already carry archiveFile -- rebuilt before, skipped`);
+    console.log(`quests: ${done[0].n} takes already point at the old archive -- rebuilt before, skipped`);
     return;
   }
 
@@ -250,7 +254,10 @@ async function rebuildQuests(listing) {
       version: i + 1,
       old,
       row: rowByOld.get(old) ?? null,
-      archiveFile: archiveByOld.get(old)?.name ?? null,
+      // The listing's name when it has one; otherwise whatever the row already records, which
+      // is how a take cut after deploy -- archived as v{n}-{hash}.mp3, a name the old-style
+      // listing parser does not read -- keeps its own.
+      archiveFile: archiveByOld.get(old)?.name ?? rowByOld.get(old)?.archiveFile ?? null,
       bytes: archiveByOld.get(old)?.bytes ?? rowByOld.get(old)?.bytes ?? store.get(file) ?? 0,
       isCurrent: old === liveOld,
     }));
