@@ -544,14 +544,15 @@ Like the lexicon, overrides live only in the database, and the Python CLI does n
 
 #### Managing voices
 
-`/voices` is admin-only. It lists the 54 `race-gender-flavor` voices the corpus needs —
-alphabetically, so a race-gender's flavors sit together — with the lines and NPCs each one
-carries, and marks which exist in the ElevenLabs account. The flavored voices are derived from
-the corpus, so a race added upstream cannot leave the page quietly missing a voice. The
-race-genders themselves are listed by hand in `apps/web/src/lib/voices/voices.ts`, which the
-triage selects and the explorer filters read too: a race-gender listed there that no line
-speaks yet gets a bare `race-gender` slot, so its voice can be cloned before the first line
-for it is accepted.
+`/voices` is admin-only. It lists every voice on the roster — alphabetically, so a
+race-gender's flavors sit together — with the lines and NPCs each one carries, and marks which
+exist in the ElevenLabs account. The roster is `apps/web/src/lib/voices/voices.ts`: every
+race-gender and its flavors, written down by hand, and read by the triage selects and the
+explorer filters too. A voice listed there has a slot before any line uses it, so it can be
+cloned before its first line is accepted. The corpus only supplies the counts; a test fails on
+a corpus line whose voice is not on the roster, and accepting a contribution refuses one. The
+Skybourne elves have the game's two voice sets per gender, named by their NPCSounds id
+(`skybourneelf-male-3776`) until they have better names.
 
 Expanding one shows the clips it would be cloned from: upload, play back, delete, and
 **merge** a selection into one take with an adjustable pause. A slot finds its own source
@@ -861,10 +862,9 @@ has no model at all, submitting for an NPC somebody else already resolved.
 
 `/contributions` shows the result with its provenance and says plainly which rows are guesses;
 the override there writes `moderator` and is collaborator-only, like everything else that
-changes a row. A race the corpus has no line for yet is added to `apps/web/src/lib/voices/voices.ts`:
-that puts it in the triage race select and gives it a bare `race-gender` slot on `/voices`,
-marked as not existing in the account until it is cloned. A test fails if a corpus line
-speaks a race-gender the list does not have.
+changes a row. A new race or voice set is added to the roster in
+`apps/web/src/lib/voices/voices.ts`: that puts it in the triage selects and gives it a slot on
+`/voices`, marked as not existing in the account until it is cloned.
 
 ## Addon Install
 

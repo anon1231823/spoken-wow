@@ -106,6 +106,10 @@ describe("defaultFlavorFor", () => {
   it("is null for a race-gender the corpus has never carried a flavored line for at all", async () => {
     expect(await defaultFlavorFor("murloc", "male")).toBe(null);
   });
+
+  it("falls back to the busiest set voices.ts declares for a race-gender with no lines", async () => {
+    expect(await defaultFlavorFor("skybourneelf", "female")).toBe("3773");
+  });
 });
 
 describe("flavorsFor", async () => {
@@ -122,6 +126,10 @@ describe("flavorsFor", async () => {
 
   it("is empty for a race-gender the corpus has never carried a flavored line for at all", async () => {
     expect(await flavorsFor("murloc", "male")).toEqual([]);
+  });
+
+  it("offers the declared voice sets of a race-gender with no lines yet", async () => {
+    expect(await flavorsFor("skybourneelf", "male")).toEqual(["3775", "3776"]);
   });
 
   it("agrees with defaultFlavorFor: the default is always one of the offered options", async () => {
