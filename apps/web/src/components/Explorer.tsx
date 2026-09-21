@@ -22,7 +22,6 @@ import {
   fetchBatchJobs,
   fetchGenerationStatus,
   fetchQueue,
-  fetchTakeCounts,
   queueBatch,
   regenerate,
   stopQueue,
@@ -128,16 +127,14 @@ export default function Explorer({ facets }: { facets: Facets }) {
   // Per-line regeneration state, and per-file version numbers used to bust the audio cache.
   const [lineStates, setLineStates] = useState<Record<string, LineState>>({});
   const [versions, setVersions] = useState<Record<string, number>>({});
-  // How many takes each file has, so a line only offers history when there is history.
-  const [takes, setTakes] = useState<Record<string, number>>({});
-  // Files whose live audio was made from text that has since changed.
-  const [stale, setStale] = useState<Set<string>>(new Set());
-  // Files whose live audio was cut before a pronunciation it speaks was changed. A separate
-  // set because the two faults are separate: either can be true of a file alone.
-  const [dirty, setDirty] = useState<Set<string>>(new Set());
-  // What has been cleared since this page was fetched, laid over that set rather than
-  // deleted from it: the set is replaced wholesale by every take-count fetch, so a deletion
-  // would be undone by the next page load while the ack it wrote is still in force.
+  // Bumped to fetch the page again after something changed what it shows -- a new take, a
+  // restore -- the way the zones and books explorers do. Take counts, staleness and the
+  // pronunciation mark all arrive on the rows themselves now; there is no second copy of
+  // them held here to keep in step.
+  const [refreshKey, setRefreshKey] = useState(0);
+  const refetch = useCallback(() => setRefreshKey((key) => key + 1), []);
+  // What has been cleared since this page was fetched, laid over the rows' own marks until
+  // the next fetch brings the acknowledgement back from the server.
   const { cleared, clear: clearDirty } = useClearDirty("quests");
   // The line whose spoken text is being rewritten, or null.
   const [editing, setEditing] = useState<ResultLine | null>(null);
@@ -289,7 +286,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       });
 
     return () => controller.abort();
-  }, [filterQuery, page]);
+  }, [filterQuery, page, refreshKey]);
 
   useEffect(() => {
     if (!showRegenerate) return;
@@ -298,30 +295,6 @@ export default function Explorer({ facets }: { facets: Facets }) {
     return () => controller.abort();
   }, [showRegenerate]);
 
-  // One request per page rather than one per row, and only for someone who can act on it.
-  useEffect(() => {
-    if (!showRegenerate || !result) return;
-    const files = [...new Set(result.lines.map((line) => line.audioPath))];
-    if (files.length === 0) return;
-
-    const controller = new AbortController();
-    void fetchTakeCounts(files, controller.signal).then((info) => {
-      if (!info) return;
-      // The row already carries both numbers from the search -- that is what a signed-out
-      // visitor sees, and what these overlay. The fetched values win over this session's
-      // own: a regeneration writes its version here for the moment before the refetch
-      // lands, and once the refetch has landed the server is the newer answer, including
-      // when somebody else regenerated the same file.
-      setTakes((current) => ({ ...current, ...info.counts }));
-      setVersions((current) => ({ ...current, ...info.live }));
-      // Replaced rather than merged: a file that has just been regenerated must leave the
-      // set, and merging could only ever add to it.
-      setStale(new Set(info.stale));
-      setDirty(new Set(info.dirty));
-    });
-    return () => controller.abort();
-  }, [showRegenerate, result]);
-
   /**
    * Adopt a rewritten line.
    *
@@ -329,8 +302,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
    * is unchanged, and a refetch would rebuild fifty rows to move one string. Every row sharing
    * the file is patched, because an override is keyed on the file and they all now say it.
    *
-   * The file becomes stale here rather than waiting for the next take-count fetch, because the
-   * claim is already true: whatever audio exists was made from the old text.
+   * The file becomes stale here rather than waiting for the next fetch, because the claim is
+   * already true: whatever audio exists was made from the old text.
    */
   const handleOverrideSaved = useCallback((file: string, text: string | null) => {
     setEditing(null);
@@ -340,17 +313,17 @@ export default function Explorer({ facets }: { facets: Facets }) {
             ...current,
             lines: current.lines.map((line) =>
               line.audioPath === file
-                ? { ...line, override: text, voiceable: isVoiceable(line, text ?? line.text) }
+                ? {
+                    ...line,
+                    override: text,
+                    voiceable: isVoiceable(line, text ?? line.text),
+                    stale: line.hasAudio,
+                  }
                 : line,
             ),
           }
         : current,
     );
-    setStale((current) => {
-      const next = new Set(current);
-      next.add(file);
-      return next;
-    });
   }, []);
 
   /**
@@ -381,9 +354,13 @@ export default function Explorer({ facets }: { facets: Facets }) {
    * browser stops replaying what was there a moment ago - except the line is not marked
    * "regenerated", because it was not.
    */
-  const handleRestored = useCallback((file: string, version: number) => {
-    setVersions((current) => ({ ...current, [file]: version }));
-  }, []);
+  const handleRestored = useCallback(
+    (file: string, version: number) => {
+      setVersions((current) => ({ ...current, [file]: version }));
+      refetch();
+    },
+    [refetch],
+  );
 
   /**
    * Why this line's Regenerate control is unavailable, or null.
@@ -430,23 +407,16 @@ export default function Explorer({ facets }: { facets: Facets }) {
    * Every line resolving to this file now has audio, not just the one clicked: a gossip
    * file is shared by every NPC of that race and gender who says the same thing.
    */
-  const applySuccess = useCallback((file: string, version: number, lineId: string) => {
-    setVersions((current) => ({ ...current, [file]: version }));
-    // A file with a take has history, so the control appears without waiting for a reload.
-    setTakes((current) => ({ ...current, [file]: Math.max(current[file] ?? 0, version + 1) }));
-    setLineStates((current) => ({ ...current, [lineId]: { phase: "done", version } }));
-
-    setResult((current) =>
-      current
-        ? {
-            ...current,
-            lines: current.lines.map((line) =>
-              line.audioPath === file ? { ...line, hasAudio: true } : line,
-            ),
-          }
-        : current,
-    );
-  }, []);
+  const applySuccess = useCallback(
+    (file: string, version: number, lineId: string) => {
+      // The version busts the audio cache at once; everything else the row shows -- that it
+      // has audio, how many takes, whether it is stale -- comes back with the refetch.
+      setVersions((current) => ({ ...current, [file]: version }));
+      setLineStates((current) => ({ ...current, [lineId]: { phase: "done", version } }));
+      refetch();
+    },
+    [refetch],
+  );
 
   /**
    * Watch the queue.
@@ -524,18 +494,17 @@ export default function Explorer({ facets }: { facets: Facets }) {
   /**
    * Clear every dirty file the current search matches, not just this page's.
    *
-   * The match set comes from the batch endpoint, which is what "everything this filter
-   * selects" already means here, and the marks from the same per-file question the page
-   * asks -- so nothing is cleared that the server would not have called dirty. Lines the
-   * batch endpoint omits because nothing would voice them are omitted here too; audio for
-   * them is rare and clearing a mark on it can wait for the row itself.
+   * The search route answers `ids=1` with the dirty files of the whole match set, the same
+   * question the zones explorer asks its own route -- so nothing is cleared that the server
+   * would not have called dirty.
    */
   const clearAllDirty = useCallback(async () => {
-    const jobs = await fetchBatchJobs(new URLSearchParams(filterQuery));
-    if (!jobs || jobs.length === 0) return;
-    const files = [...new Set(jobs.map((job) => job.audioPath))];
-    const info = await fetchTakeCounts(files);
-    if (info) clearDirty(info.dirty);
+    const params = new URLSearchParams(filterQuery);
+    params.set("ids", "1");
+    const response = await fetch(`/api/quests/search?${params}`).catch(() => null);
+    if (!response?.ok) return;
+    const { dirtyFiles } = (await response.json()) as { dirtyFiles?: string[] };
+    clearDirty(dirtyFiles ?? []);
   }, [filterQuery, clearDirty]);
 
   /**
@@ -701,7 +670,11 @@ export default function Explorer({ facets }: { facets: Facets }) {
 
   const pageCount = result ? Math.max(1, Math.ceil(result.total / result.limit)) : 1;
   // This page's marks, minus what has been cleared without a refetch since.
-  const marked = [...dirty].filter((file) => !cleared.has(file)).length;
+  const marked = new Set(
+    (result?.lines ?? [])
+      .filter((line) => line.dirty && !cleared.has(line.audioPath))
+      .map((line) => line.audioPath),
+  ).size;
 
   return (
     <>
@@ -805,10 +778,10 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 canTriage={showRegenerate}
                 state={lineStates[line.lineId]}
                 blocked={blockedReason(line)}
-                takes={takes[line.audioPath] ?? line.take?.takes ?? 0}
+                takes={line.take?.takes ?? 0}
                 version={versions[line.audioPath] ?? line.take?.version ?? null}
-                stale={stale.has(line.audioPath)}
-                dirty={dirty.has(line.audioPath) && !cleared.has(line.audioPath)}
+                stale={line.stale}
+                dirty={line.dirty && !cleared.has(line.audioPath)}
                 onClearDirty={(l) => clearDirty([l.audioPath])}
                 onPlay={play}
                 onEditText={setEditing}

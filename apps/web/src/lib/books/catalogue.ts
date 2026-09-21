@@ -15,6 +15,7 @@ import { loadDirtyContext, NO_DIRT, type DirtyContext } from "@/lib/generation/d
 
 import type { OwnerKind } from "./filters";
 import { spokenText, textHash, fileFor } from "./tools";
+import { liveTakes } from "@/lib/takes/store";
 
 /** The language the corpus is read in. One for now; the table carries the column at full
  *  strength because vmangos has eight more translations on these same ids. */
@@ -195,34 +196,7 @@ export async function catalogue(lang: string = BASE_LANG): Promise<BookPage[]> {
 
 export async function loadContext(lang: string = BASE_LANG): Promise<SearchContext> {
   const [takeRows, reportRows, dirt] = await Promise.all([
-    query<{
-      lineId: string;
-      version: number;
-      file: string;
-      textHash: string;
-      chars: number;
-      credits: number | null;
-      durationSec: number | null;
-      bytes: number;
-      modelId: string | null;
-      voiceId: string | null;
-      generatedAt: Date;
-      takes: string;
-    }>(
-      // Scoped by source as well as language, for the reason migration 0020 gives at
-      // length: the three sides name files by their own frozen rules and nothing
-      // guarantees the namespaces stay disjoint. Unscoped, a zones take could become the
-      // current version of a books file.
-      `select t."lineId", t."version", t."file", t."spokenHash" as "textHash",
-              t."characters" as "chars", t."credits", t."durationSec", t."bytes",
-              t."modelId", t."voiceId", t."createdAt" as "generatedAt",
-              (select count(*) from "take" a
-                where a."source" = 'books' and a."lineId" = t."lineId"
-                  and a."lang" = t."lang") as "takes"
-         from "take" t
-        where t."source" = 'books' and t."isCurrent" and t."lang" = $1`,
-      [lang],
-    ),
+    liveTakes("books", lang),
     // Grouped in the database rather than counted here: resolved rows are the ones that
     // accumulate, and there is no reason to carry them across to drop them. `lineId is not
     // null` excludes a report about the project, which belongs to no line.
@@ -244,15 +218,15 @@ export async function loadContext(lang: string = BASE_LANG): Promise<SearchConte
         {
           version: row.version,
           file: row.file,
-          textHash: row.textHash,
-          chars: row.chars,
+          textHash: row.spokenHash ?? "",
+          chars: row.characters ?? 0,
           credits: row.credits,
           durationSec: row.durationSec,
           bytes: row.bytes,
           modelId: row.modelId,
           voiceId: row.voiceId,
-          generatedAt: row.generatedAt.toISOString(),
-          takes: Number(row.takes),
+          generatedAt: row.createdAt.toISOString(),
+          takes: row.takes,
         },
       ]),
     ),

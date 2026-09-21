@@ -16,6 +16,7 @@ import { query } from "@/lib/db";
 import { loadDirtyContext, NO_DIRT, type DirtyContext } from "@/lib/generation/dirty";
 
 import { corpusRows, currentLore } from "./lore";
+import { liveTakes } from "@/lib/takes/store";
 import {
   assignFiles,
   loadPronunciation,
@@ -275,35 +276,7 @@ export async function lineByPath(
 
 export async function loadContext(): Promise<SearchContext> {
   const [takeRows, reportRows, dirt] = await Promise.all([
-    query<{
-      lineId: string;
-      version: number;
-      file: string;
-      textHash: string;
-      chars: number;
-      credits: number | null;
-      durationSec: number | null;
-      bytes: number;
-      modelId: string | null;
-      voiceId: string | null;
-      generatedAt: Date;
-      takes: string;
-    }>(
-      // Scoped by source, because the take table holds all three sections and each
-      // names files by its own frozen rules. The "lang" column stays on that shared
-      // table and every zones row carries 'enUS'; nothing here selects on it.
-      //
-      // The column names are the merged table's; the manifest's spelling of them lives in
-      // store.mjs, which is the seam the CLI shares. See migration 0020.
-      `select t."lineId", t."version", t."file", t."spokenHash" as "textHash",
-              t."characters" as "chars", t."credits", t."durationSec", t."bytes",
-              t."modelId", t."voiceId", t."createdAt" as "generatedAt",
-              (select count(*) from "take" a
-                where a."source" = 'zones' and a."lineId" = t."lineId"
-                ) as "takes"
-         from "take" t
-        where t."source" = 'zones' and t."isCurrent"`,
-    ),
+    liveTakes("zones"),
     // Grouped in the database rather than counted here: the resolved rows are the ones
     // that accumulate, and there is no reason to carry them across the wire to drop them.
     // `lineId is not null` excludes a report about the project, which belongs to no line.
@@ -323,17 +296,15 @@ export async function loadContext(): Promise<SearchContext> {
         {
           version: row.version,
           file: row.file,
-          textHash: row.textHash,
-          chars: row.chars,
+          textHash: row.spokenHash ?? "",
+          chars: row.characters ?? 0,
           credits: row.credits,
           durationSec: row.durationSec,
           bytes: row.bytes,
           modelId: row.modelId,
           voiceId: row.voiceId,
-          generatedAt: row.generatedAt.toISOString(),
-          // count(*) is bigint; the int8 parser in db.ts turns it into a number, but
-          // Number() here keeps this honest if that parser is ever removed.
-          takes: Number(row.takes),
+          generatedAt: row.createdAt.toISOString(),
+          takes: row.takes,
         },
       ]),
     ),

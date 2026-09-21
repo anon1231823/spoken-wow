@@ -154,10 +154,17 @@ export type ResultLine = CorpusLine & {
   reportsOpen: number;
   /**
    * The live take of this line's file, and how many takes it has. Null when none is
-   * recorded, which means the line has never been generated. Shaped like the zones and books rows' `take` for the same reason
-   * the Audio column is shaped like theirs.
+   * recorded, which means the line has never been generated. Shaped like the zones and
+   * books rows' `take` for the same reason the Audio column is shaped like theirs.
    */
   take: { version: number; takes: number } | null;
+  /** The live take was cut from text that has since changed. */
+  stale: boolean;
+  /**
+   * The live take was cut before a pronunciation it speaks was changed, and nobody has
+   * said since that it is fine. Orthogonal to `stale`: a lexicon edit moves no text.
+   */
+  dirty: boolean;
   /** The rewritten spoken text, or null. `text` stays what the corpus says. */
   override: string | null;
   /**
@@ -451,6 +458,10 @@ export function search(
       audioPath,
       reportsOpen: context.reports?.get(line.lineId) ?? 0,
       take: context.takes?.get(audioPath) ?? null,
+      // From the context when it was asked for -- a filter on either needs the whole set.
+      // The search route fills in the page otherwise; see there.
+      stale: context.stale?.has(audioPath) ?? false,
+      dirty: context.dirty?.has(audioPath) ?? false,
       override,
       voiceable: isVoiceable(line, override ?? line.text),
       narration: hasNarration(override ?? line.text),

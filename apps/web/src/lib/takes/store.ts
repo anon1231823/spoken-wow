@@ -78,6 +78,48 @@ export function archiveNameOf(source: Source, take: Pick<Take, "version" | "arch
   return take.archiveFile ?? archiveNameFor(source, take.version);
 }
 
+/** One section's live take of one file, with how many takes that file has. */
+export type LiveTake = {
+  lineId: string;
+  file: string;
+  version: number;
+  /** Every take of this file, the live one included. */
+  takes: number;
+  spokenHash: string | null;
+  characters: number | null;
+  credits: number | null;
+  durationSec: number | null;
+  bytes: number;
+  modelId: string | null;
+  voiceId: string | null;
+  createdAt: Date;
+};
+
+/**
+ * The live take of every file in a section, and how many takes each has.
+ *
+ * One query for all three sections, which each used to write for themselves -- quests in
+ * generation/versions.ts, zones and books in their catalogues -- and all three as a count
+ * subquery per live row. Postgres does not flatten a scalar subquery in the select list,
+ * so at eleven thousand quests files that was eleven thousand index scans on every
+ * search. A grouped count joined once does the same in one pass.
+ *
+ * Counted by file, which is what take_current_idx is on. For zones and books a file and a
+ * line are the same thing; a quests file is shared by every NPC who speaks it.
+ */
+export async function liveTakes(source: Source, lang = "enUS"): Promise<LiveTake[]> {
+  return query<LiveTake>(
+    `select t."lineId", t."file", t."version", c."takes", t."spokenHash", t."characters",
+            t."credits", t."durationSec"::float8 as "durationSec", t."bytes"::float8 as "bytes",
+            t."modelId", t."voiceId", t."createdAt"
+       from "take" t
+       join (select "file", count(*)::int as "takes" from "take"
+              where "source" = $1 and "lang" = $2 group by "file") c using ("file")
+      where t."source" = $1 and t."lang" = $2 and t."isCurrent"`,
+    [source, lang],
+  );
+}
+
 /** The version of the live take of one file, or null when it has never been generated. */
 export async function liveVersion(
   source: Source,

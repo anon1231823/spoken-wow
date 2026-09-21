@@ -89,42 +89,6 @@ export async function fetchGenerationStatus(
   }
 }
 
-/**
- * How many takes each of these files has, and which of them are of text that has since moved.
- *
- * POST rather than GET because a search can name a few thousand files, and a query string
- * long enough to carry them would be refused before it arrived. Both answers in one trip
- * because it is the same page asking about the same files.
- */
-export type TakeInfo = {
-  counts: Record<string, number>;
-  /** Which version is live for each file -- not the highest, once a restore has moved it. */
-  live: Record<string, number>;
-  stale: string[];
-  /** Files whose take predates a change to a pronunciation it speaks. See lib/generation/dirty. */
-  dirty: string[];
-};
-
-export async function fetchTakeCounts(
-  files: string[],
-  signal?: AbortSignal,
-): Promise<TakeInfo | null> {
-  try {
-    const response = await fetch("/api/quests/lines/versions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ files }),
-      signal,
-    });
-    if (!response.ok) return null;
-    return (await response.json()) as TakeInfo;
-  } catch {
-    // The page works without it: no line offers history, nothing is marked stale, and
-    // nothing else changes.
-    return null;
-  }
-}
-
 /** One unit of work in a batch. Mirrors BatchLine in lib/search.ts; see the note above. */
 export type BatchJob = {
   lineId: string;
