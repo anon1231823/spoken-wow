@@ -7,6 +7,7 @@
 #   ./scripts/books/release.sh audio       # just the sound pack
 #   ./scripts/books/release.sh --store=wago        # Wago only
 #   ./scripts/books/release.sh --store=curseforge  # CurseForge only
+#   NO_DEPENDENCIES=1 ./scripts/books/release.sh audio   # upload without declaring the addon
 #
 # TWO STORES, ONE RELEASE. The same zip goes to both by default, because a file that exists
 # on one store and not the other is how the two drift into being different addons. --store
@@ -243,7 +244,11 @@ for target in "${targets[@]}"; do
     # Built with node rather than a heredoc: the changelog is markdown containing quotes,
     # backticks and newlines, and hand-escaping it into JSON is how a release ends up with a
     # mangled changelog nobody notices for a month.
+    # NO_DEPENDENCIES is the way past errorCode 1018 below: CurseForge refuses a relation to a
+    # project it will not resolve yet, and a file uploaded without one can have it added in the
+    # web UI once it will.
     dependencies="$(target_dependencies "$target")"
+    [[ -n "${NO_DEPENDENCIES:-}" ]] && dependencies=""
     metadata="$(node -e '
       const [changelog, releaseType, gameVersionIds, displayName, dependencies] = process.argv.slice(1);
       const slugs = dependencies.trim().split(/\s+/).filter(Boolean);
@@ -259,6 +264,7 @@ for target in "${targets[@]}"; do
 
     echo "  curse:    project $project, game versions $game_version_names"
     [[ -n "$dependencies" ]] && echo "  requires: $(echo $dependencies)"
+    [[ -n "${NO_DEPENDENCIES:-}" ]] && echo "  requires: nothing (NO_DEPENDENCIES) -- add $(target_dependencies "$target") in the web UI afterwards"
 
     if [[ -n "$dry_run" ]]; then
       echo "  dry run -- not uploading to CurseForge"
@@ -294,7 +300,7 @@ for target in "${targets[@]}"; do
       # dependency must name an *approved* project, and a project sits at status "New" until
       # moderation clears it.
       case "$response" in
-        *1018*) echo "hint: errorCode 1018 means a slug in relations names a project CurseForge will not resolve -- if spoken-books is still awaiting moderation, upload the pack once it is approved." >&2;;
+        *1018*) echo "hint: errorCode 1018 means a slug in relations names a project CurseForge will not resolve -- if spoken-books is still awaiting moderation, upload the pack once it is approved, or now with NO_DEPENDENCIES=1." >&2;;
       esac
       exit 1
     fi
