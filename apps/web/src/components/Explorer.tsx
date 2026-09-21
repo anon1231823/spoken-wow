@@ -13,6 +13,7 @@ import OverrideDialog from "./OverrideDialog";
 import RegenerateDialog from "./RegenerateDialog";
 import RegenerationPanel from "./RegenerationPanel";
 import SearchBar from "./SearchBar";
+import { Loading, Refreshing } from "@/components/Loading";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
 import type { Facets } from "@/lib/facets";
@@ -118,7 +119,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
 
   const [query, setQuery] = useState(urlQuery);
   const [result, setResult] = useState<SearchResult | null>(null);
-  const [loading, setLoading] = useState(false);
+  // True from the start: the first search runs in an effect, after the first paint, and
+  // until it answers the table has nothing to show but this.
+  const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState<ResultLine | null>(null);
 
   // Which voices exist and what is left of the character budget. Read once, and only for
@@ -702,12 +705,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
       )}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 pb-1">
-        <div className="text-muted-foreground text-sm">
-          {loading && !result
-            ? "Searching…"
-            : result
-              ? `${plural(result.total, "line")} across ${plural(result.npcCount, "NPC")}`
-              : ""}
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
+          {result && `${plural(result.total, "line")} across ${plural(result.npcCount, "NPC")}`}
+          {loading && result && <Refreshing />}
         </div>
         {/* This page's marks, which is what the row-level question was asked for. The
             corpus-wide count is what the "pronunciation moved" filter is for. */}
@@ -740,8 +740,13 @@ export default function Explorer({ facets }: { facets: Facets }) {
       {/* Fixed layout, because the point of the columns is that they line up down the page:
           left to auto sizing, one long quest title would widen its column for every row. The
           text column takes whatever the named columns leave. */}
+      {loading && !result && <Loading />}
+
       {result && result.lines.length > 0 && (
-        <table className="w-full table-fixed border-collapse text-sm">
+        <table
+          aria-busy={loading}
+          className={`w-full table-fixed border-collapse text-sm transition-opacity ${loading ? "opacity-60" : ""}`}
+        >
           <colgroup>
             <col className="w-52" />
             <col className="w-48" />

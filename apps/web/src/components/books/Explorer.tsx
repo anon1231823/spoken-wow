@@ -13,6 +13,7 @@ import { PageTextDialog } from "@/components/books/PageTextDialog";
 import type { RowState } from "@/components/books/PageRow";
 import { Player } from "@/components/books/Player";
 import { SearchBar } from "@/components/books/SearchBar";
+import { Loading, Refreshing } from "@/components/Loading";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
 import type { BookFacet } from "@/lib/books/catalogue";
@@ -448,6 +449,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
       )}
 
       <div className="text-muted-foreground mb-2 flex items-center gap-3 text-xs">
+        {loading && result && <Refreshing />}
         <span>
           {result ? result.total.toLocaleString() : "…"} pages
           {result && ` · ${result.counts.missing.toLocaleString()} without audio`}
@@ -468,47 +470,49 @@ export function Explorer({ books }: { books: BookFacet[] }) {
       </div>
 
       {loading && !result ? (
-        <p className="text-muted-foreground text-sm">Loading…</p>
+        <Loading label="Loading pages…" />
       ) : result && result.lines.length === 0 ? (
         <p className="text-muted-foreground text-sm">Nothing matches these filters.</p>
       ) : (
         result && (
-          <BookList
-            // Cleared in this session laid over the fetched rows, the way the zones
-            // explorer lays a rewrite over its own: the search said what was true when it
-            // ran.
-            lines={result.lines.map((line) => {
-              let row = cleared.has(line.file) ? { ...line, dirty: false } : line;
-              // A rewritten page is stale by definition -- its text no longer hashes to
-              // what was spoken -- so the state moves with the text rather than waiting
-              // for a refetch.
-              if (line.id in rewritten) {
-                const text = rewritten[line.id];
-                row = {
-                  ...row,
-                  text,
-                  chars: text.length,
-                  state: row.state === "missing" ? "missing" : "stale",
-                };
-              }
-              return row;
-            })}
-            current={current}
-            canRegenerate={canRegenerate}
-            rowStates={rowStates}
-            onPlay={play}
-            onClearDirty={(line) => clearDirty([line.file])}
-            onRegenerate={regenerateOne}
-            onSelectBook={(line) => updateFilters({ bookId: line.bookId })}
-            onReport={setReportFor}
-            onEditText={setEditFor}
-            onRestored={(line, version) => {
-              // The player's cache buster, so the clip that was just put back is the one
-              // that plays rather than the take it replaced -- the file name does not move.
-              setVersions((state) => ({ ...state, [line.id]: version }));
-              refetch();
-            }}
-          />
+          <div aria-busy={loading} className={`transition-opacity ${loading ? "opacity-60" : ""}`}>
+            <BookList
+              // Cleared in this session laid over the fetched rows, the way the zones
+              // explorer lays a rewrite over its own: the search said what was true when it
+              // ran.
+              lines={result.lines.map((line) => {
+                let row = cleared.has(line.file) ? { ...line, dirty: false } : line;
+                // A rewritten page is stale by definition -- its text no longer hashes to
+                // what was spoken -- so the state moves with the text rather than waiting
+                // for a refetch.
+                if (line.id in rewritten) {
+                  const text = rewritten[line.id];
+                  row = {
+                    ...row,
+                    text,
+                    chars: text.length,
+                    state: row.state === "missing" ? "missing" : "stale",
+                  };
+                }
+                return row;
+              })}
+              current={current}
+              canRegenerate={canRegenerate}
+              rowStates={rowStates}
+              onPlay={play}
+              onClearDirty={(line) => clearDirty([line.file])}
+              onRegenerate={regenerateOne}
+              onSelectBook={(line) => updateFilters({ bookId: line.bookId })}
+              onReport={setReportFor}
+              onEditText={setEditFor}
+              onRestored={(line, version) => {
+                // The player's cache buster, so the clip that was just put back is the one
+                // that plays rather than the take it replaced -- the file name does not move.
+                setVersions((state) => ({ ...state, [line.id]: version }));
+                refetch();
+              }}
+            />
+          </div>
         )
       )}
 

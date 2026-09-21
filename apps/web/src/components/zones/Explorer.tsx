@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ApiKeyRequiredDialog from "@/components/ApiKeyRequiredDialog";
 import Key from "@/components/Key";
 import Pagination from "@/components/Pagination";
+import { Loading, Refreshing } from "@/components/Loading";
 import { Button } from "@/components/ui/button";
 import RegenerateDialog from "@/components/RegenerateDialog";
 import RegenerationPanel from "@/components/RegenerationPanel";
@@ -577,12 +578,9 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       )}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 pb-1">
-        <div className="text-muted-foreground text-sm">
-          {loading && !result
-            ? "Searching…"
-            : result
-              ? `${result.total.toLocaleString()} ${result.total === 1 ? "line" : "lines"}`
-              : ""}
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
+          {result && `${result.total.toLocaleString()} ${result.total === 1 ? "line" : "lines"}`}
+          {loading && result && <Refreshing />}
         </div>
         {result && result.counts.missing > 0 && (
           <span className="text-destructive text-sm">{result.counts.missing} missing</span>
@@ -617,7 +615,13 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       {/* Fixed layout, because the point of the columns is that they line up down the
           page: left to auto sizing, one long subzone name would widen its column for
           every row. The lore column takes whatever the named ones leave. */}
-      <table className="w-full table-fixed border-collapse text-sm">
+      {loading && !result && <Loading />}
+
+      <table
+        aria-busy={loading}
+        hidden={!result}
+        className={`w-full table-fixed border-collapse text-sm transition-opacity ${loading ? "opacity-60" : ""}`}
+      >
         <colgroup>
           <col className="w-40" />
           <col className="w-44" />
