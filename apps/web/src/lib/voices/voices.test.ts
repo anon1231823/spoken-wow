@@ -26,7 +26,7 @@ describe("VOICES", () => {
   it("derives the races and genders from the list", () => {
     expect(RACES).toContain("skybourneelf");
     expect(GENDERS).toEqual(["female", "male"]);
-    expect(gendersOf("bloodelf")).toEqual(["female"]);
+    expect(gendersOf("narrator")).toEqual(["male"]);
   });
 });
 

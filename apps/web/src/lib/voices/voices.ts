@@ -23,6 +23,7 @@ export type RaceGender = { race: string; gender: Gender };
 
 export const VOICES: readonly RaceGender[] = [
   { race: "bloodelf", gender: "female" },
+  { race: "bloodelf", gender: "male" },
   { race: "dwarf", gender: "female" },
   { race: "dwarf", gender: "male" },
   { race: "gnome", gender: "female" },
