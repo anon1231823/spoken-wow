@@ -199,6 +199,12 @@ function ContributeButton:Setup()
     end
     watcher:SetScript("OnEvent", function()
         ContributeButton:Refresh()
+        -- The same events are exactly the moments a line appears, so gathering rides on them
+        -- rather than registering a third frame for the seven. After Refresh, whose HasGap has
+        -- by then started the model load a gathered line wants.
+        if Contribute.Gather then
+            Contribute:Gather()
+        end
     end)
     self.watcher = watcher
 

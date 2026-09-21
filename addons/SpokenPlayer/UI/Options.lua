@@ -110,6 +110,19 @@ local function Build()
             function() return Addon.db.profile.Contribute.HideButtons end,
             function(v) Addon.db.profile.Contribute.HideButtons = v end,
             function() Callbacks:Fire("CONTRIBUTE_SETTINGS_CHANGED") end)
+        -- The opt-out the first Contribute click promises. Independent of hiding the buttons:
+        -- a player who gathers has no use for them, and hiding them must not stop it.
+        if Gather then
+            layout:Checkbox(L.OPT_GATHER, L.OPT_GATHER_TIP,
+                function() return Gather:IsEnabled() end,
+                function(v)
+                    -- Choosing here is an answer to the first-click question too.
+                    Gather:SetIntroduced()
+                    Gather:SetEnabled(v)
+                end)
+            layout:Button(L.OPT_GATHER_SHARE, 200, function() Spoken:ShowGatherInstructions() end)
+            layout:Button(L.OPT_GATHER_CLEAR, 200, function() Gather:Clear() end, L.OPT_GATHER_CLEAR_TIP)
+        end
     end
 
     layout:Section(L.OPT_MINIMAP_TITLE)

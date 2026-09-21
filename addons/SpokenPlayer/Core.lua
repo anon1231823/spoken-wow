@@ -65,6 +65,16 @@ Defaults = {
     char = {
         IsPaused = false,
     },
+    -- Account-wide, not per profile: gathering fills one file the player uploads, and a
+    -- switch that differed between characters would leave them unsure what is in it.
+    global = {
+        Gather = {
+            Enabled = false,
+            -- Whether the first Contribute click has offered the choice yet. Asked once, not
+            -- on every click: after that the settings panel is where it changes.
+            Introduced = false,
+        },
+    },
 }
 
 --- Idempotent, so the test harness and ADDON_LOADED can both call it.
@@ -193,6 +203,8 @@ function Addon:Enable()
             SoundQueue:Skip()
         elseif command == "options" or command == "settings" then
             Options:Open()
+        elseif command == "share" and Spoken.ShowGatherInstructions and Gather then
+            Spoken:ShowGatherInstructions()
         elseif command == "reset" then
             PlayerFrame:Reset()
         elseif command == "diagnostics" then

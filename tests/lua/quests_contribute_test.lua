@@ -150,6 +150,9 @@ Expect("...and sends nothing, since the server keys gossip on the creature id", 
 world.npcName, world.npcGUID = savedName, savedGUID
 
 ------------------------------------------------------------------------------- Show()
+-- The first-click choice between one line and gathering is gather_test.lua's; here the
+-- player has already answered it, so Show() goes straight to the payload.
+SpokenEnv.Spoken.Gather:SetIntroduced()
 -- Compression must run on the click alone -- HasGap fires on every quest and gossip event --
 -- and this spies on Encode rather than trusting the comment, so a future edit that moved the
 -- call into Capture/HasGap would fail here rather than merely cost more.

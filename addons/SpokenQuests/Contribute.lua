@@ -328,7 +328,10 @@ function Contribute:Capture()
         fields[#fields + 1] = { "npc", NPCField() }
         Observations(fields)
         fields[#fields + 1] = { "title", GetTitleText and GetTitleText() or "" }
-        return Spoken.Contribute:Envelope("quests", fields, text)
+        -- The second value is what Gather keys the line on: the quest, the moment and who said
+        -- it. The text is left out on purpose -- the same panel read twice is one line.
+        return Spoken.Contribute:Envelope("quests", fields, text),
+            format("q:%s:%s:%s", tostring(questID or 0), EVENT_PATHS[event], tostring(NPCID() or ""))
     end
 
     -- Gossip: no quest and no event, but an NPC saying something this corpus has never heard.
@@ -343,7 +346,9 @@ function Contribute:Capture()
     if gossip and gossip ~= "" and NPCID() then
         fields[#fields + 1] = { "npc", NPCField() }
         Observations(fields)
-        return Spoken.Contribute:Envelope("quests", fields, gossip)
+        -- An NPC can say several different things, so gossip is keyed on the words as well.
+        return Spoken.Contribute:Envelope("quests", fields, gossip),
+            format("g:%d:%d", NPCID(), Spoken.Contribute:Checksum(gossip))
     end
 
     return nil
@@ -416,8 +421,12 @@ function Contribute:HasGap()
     -- Hidden in the Spoken Player settings: no gap to show, and so no model to prime. The
     -- method is guarded because an older bundled player does not have it.
     local hidden = Spoken.AreContributeButtonsHidden and Spoken:AreContributeButtonsHidden()
-    local gap = not hidden and HasSomethingToSend() and not HasSoundForCurrent()
-    if gap then
+    -- Gathering needs the model primed as much as a click does, and runs with the buttons
+    -- hidden as readily as with them shown.
+    local gathering = Spoken.Gather and Spoken.Gather:IsEnabled()
+    local missing = (not hidden or gathering) and HasSomethingToSend() and not HasSoundForCurrent()
+    local gap = not hidden and missing
+    if missing then
         PrimeModelCache(Utils:GetNPCGUID())
     elseif loadingGUID then
         -- No gap, but a load is still in flight for whatever NPC started it: the player closed
@@ -429,6 +438,36 @@ function Contribute:HasGap()
         AbandonModelLoad(loadingGUID)
     end
     return gap
+end
+
+-- How long after a panel opens to take the line a second time. The first capture has the
+-- words; the NPC's model arrives from PrimeModelCache's load a moment later, and the second
+-- capture replaces the first under the same key with it filled in.
+local RECAPTURE_DELAY = 1
+
+local function GatherNow()
+    if not (Spoken.Gather and Spoken.Gather:IsEnabled()) then
+        return false
+    end
+    if not HasSomethingToSend() or HasSoundForCurrent() then
+        return false
+    end
+    local envelope, key = Contribute:Capture()
+    return envelope and Spoken.Gather:Add(key, envelope) or false
+end
+
+--- Keep the line on screen for later, if the player opted into gathering and it is one this
+--- client has no voice for. Called on every quest and gossip panel event; the hide-buttons
+--- setting does not apply, since gathering is how a player without buttons still contributes.
+function Contribute:Gather()
+    if not (_G.Spoken and Spoken.Contribute and Spoken.Gather) then
+        return false
+    end
+    local stored = GatherNow()
+    if stored and C_Timer and C_Timer.After then
+        C_Timer.After(RECAPTURE_DELAY, GatherNow)
+    end
+    return stored
 end
 
 --- A quest's own text, as its quest log entry shows it: the description, which is what the
@@ -510,16 +549,19 @@ end
 
 --- Hand the player an envelope: as one link where the bundled player can build one, and as the
 --- raw text and the address otherwise.
-local function Offer(envelope)
+local function Offer(envelope, key)
     local address = format("%s/contribute", SITE_URL)
+    -- What the first-click choice gathers if the player takes it. Only for a line with a key:
+    -- a quest log entry has no NPC in front of it, so it is sent but never kept.
+    local gather = key and { key = key, envelope = envelope } or nil
     -- Encode is absent on an older SpokenPlayer a legacy-client zip can still bundle; Link
     -- returns nil for that or for an oversized result. Either way, the two-copy fallback still
     -- works, which is the whole point of shipping it alongside the link instead of replacing it.
     local link = Spoken.Contribute.Encode and Spoken.Contribute:Link(address, envelope)
     if link then
-        Spoken:ShowContribution(link, address, true)
+        Spoken:ShowContribution(link, address, true, gather)
     else
-        Spoken:ShowContribution(envelope, address)
+        Spoken:ShowContribution(envelope, address, nil, gather)
     end
 end
 
@@ -537,8 +579,8 @@ end
 -- result almost always thrown away unhandled. Show() runs once, when they have already decided
 -- to send it.
 function Contribute:Show()
-    local envelope = self:Capture()
+    local envelope, key = self:Capture()
     if envelope then
-        Offer(envelope)
+        Offer(envelope, key)
     end
 end
