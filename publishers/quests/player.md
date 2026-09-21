@@ -47,3 +47,9 @@ The packs are hundreds of megabytes each, which is more than Wago's uploader tak
 An Alliance player wants Alliance + Shared, a Horde player Horde + Shared, and Gossip on top if they want NPC chatter.<!-- only:curseforge --> Anyone who would rather not choose can take All, which holds no audio itself and simply pulls the four packs in as dependencies.<!-- /only -->
 
 The player finds whatever packs are installed and plays from all of them, so adding Gossip later needs nothing but the install.
+
+## When there is no voice
+
+The corpus is built from a 1.12 world database, so it has nothing for a quest written after vanilla, for languages that database does not carry, or for a line an NPC says that nobody has recorded. There the quest window and the gossip window show a **Contribute** button in their top right, under the close button, and the quest log offers the same where a quest's Play would be. Press it and it hands you a link carrying the text your client is showing, along with what it can see of who is speaking -- the model, the sex, the creature type -- which is how a new NPC gets the right voice. Copy it, open it in your browser, and press Send. Your character's name, class and race are swapped back to placeholders before anything leaves the game, so a line can be voiced for everyone. Rather not see the button? **Hide the Contribute buttons** in the Spoken Player settings turns it off.
+
+The first time you press Contribute, you can also choose to **gather as you play**: every quest and NPC line Spoken has no voice for is kept quietly, and you send them all at once by uploading `SavedVariables/SpokenContributions.lua` at spoken.rusty.one/contribute. `/spoken share` shows the steps again, and **Gather missing lines in the background** in the Spoken Player settings turns it off.

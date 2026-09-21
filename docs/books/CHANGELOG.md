@@ -10,8 +10,11 @@ only combination that is tested.
   not know, the Play button reads **Contribute**: pressing it hands you a link carrying the
   page's own text, copied off your screen. Mail is never sent this way. Hide it with **Hide
   the Contribute buttons** in the Spoken Player settings.
-
-The sound pack is unchanged at 2.0.0; nothing it carries moved.
+- **Or gather as you play**: with gathering on (see Spoken Player 2.1.0), every page Spoken has
+  no voice for is kept for you to send in one go. Mail is never kept either.
+- **The sound pack moves to 2.1.0 with it.** Two pages are narrated again: page 3 of *Old
+  Hatreds - The Colonization of Kalimdor* and page 4 of *The Feast of Winter Veil*. Their
+  words are unchanged, and every other page is the same recording as in 2.0.0.
 
 ## 2.0.0 — 2026-09-18
 

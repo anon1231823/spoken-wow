@@ -2615,7 +2615,7 @@ local subzones = {
 		["jaguero isle"] = {
 			name = "Jaguero Isle",
 			short = "Off the coast of the Wild Shore lies Jaguero Isle, jungle held by panthers and gorillas that answer to no one.",
-			full = "Off the coast of the Wild Shore lies Jaguero Isle, jungle held by panthers and gorillas that answer to no one. Chief among them is King Mukla, an enormous ape, who rules the isle and keeps a captive: Princess Poobah, a tauren held against her will.\n\nHalf-buried along the shore are bottles washed up from the sea, one holding a folded note.",
+			full = "Off the coast of the Wild Shore lies Jaguero Isle, jungle held by panthers and gorillas that answer to no one. Chief among them is King Mukla, an enormous ape, who rules the isle and keeps a captive Princess Poobah, a tauren held against her will.\n\nHalf-buried along the shore are bottles washed up from the sea, one holding a folded note.",
 			source = "https://warcraft.wiki.gg/wiki/Jaguero_Isle",
 		},
 		["janeiros point"] = {
