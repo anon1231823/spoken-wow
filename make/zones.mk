@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy \
         status remove clean voice voice-zones lookup export \
-        pull-history history-status sounds ssh-check sync check-synced \
+        pull-history pull-live history-status sounds ssh-check sync check-synced full-release \
         icon lore-import lore-export lore-check lore-rewrite aliases languages locale-check \
         release release-dry release-wago release-curse
 
@@ -217,6 +217,12 @@ pull-history: require-droplet ## Fetch the droplet's archived takes (non-destruc
 	$(RSYNC) $(HISTORY_RSYNC_OPTS) $(REMOTE_HISTORY) pipelines/zones/audio-history/
 	@echo "==> pulled. Build the pack's Sounds/ with:  make zones-sounds"
 
+# Only the takes the pack is built from: the live ones, as the local database has them, so run
+# `make zones-sync` first. pull-history is the whole archive, for listening to old takes.
+pull-live: require-droplet ## Fetch only the live takes the local database names (after sync)
+	$(preflight)
+	@$(DB_ENV) RSYNC="$(RSYNC)" scripts/audio/pull-live.sh zones
+
 history-status: require-droplet ## Compare archived take count and size on both sides
 	@echo "local:   $$(find pipelines/zones/audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ') takes, $$(du -sh pipelines/zones/audio-history 2>/dev/null | cut -f1 || echo 0)"
 	@$(SSH) $(DROPLET) 'echo "droplet: $$(find $(REMOTE_ROOT)/shared/audio-history/zones -name "*.mp3" 2>/dev/null | wc -l | tr -d " ") takes, $$(du -sh $(REMOTE_ROOT)/shared/audio-history/zones 2>/dev/null | cut -f1)"' \
@@ -265,3 +271,21 @@ release-wago: ## Upload the built zips to Wago only (needs WAGO_TOKEN)
 
 release-curse: ## Upload the built zips to CurseForge only (needs CURSEFORGE_TOKEN)
 	@./scripts/zones/release.sh --store=curseforge
+
+# The whole pack release, from production's data to the stores, with one question before
+# anything is uploaded. Each step is its own target and still runs alone; this is their order.
+#
+# The version is SpokenZonesAudio.toc's, so bump it and add its `## <version> — audio` section
+# to docs/zones/CHANGELOG.md first; both uploads quote that section. The pack goes to
+# CurseForge only -- Wago answers 413 to a file this size (scripts/lib/wago.sh) -- and to
+# GitHub, which is where a Wago player gets it.
+full-release: require-droplet ## Sync, pull live takes, build and upload the sound pack
+	@$(MAKE) --no-print-directory -f make/zones.mk sync
+	@$(MAKE) --no-print-directory -f make/zones.mk pull-live
+	@$(MAKE) --no-print-directory -f make/zones.mk package-audio
+	@./scripts/zones/release.sh --dry-run --store=curseforge audio
+	@./scripts/audio-github-release.sh --dry-run zones-audio
+	@printf 'Upload the zones pack to CurseForge and GitHub? [y/N] '; \
+	  read -r answer; [ "$$answer" = y ] || { echo aborted; exit 1; }
+	@./scripts/zones/release.sh --store=curseforge audio
+	@./scripts/audio-github-release.sh zones-audio

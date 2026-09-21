@@ -16,8 +16,10 @@ Scope expansion is expensive here specifically:
   cannot cut one; keep it that way, and do not reintroduce a generation flag as a
   convenience.
 - `make zones-sync` is destructive (table replacement). Confirm before running it. Data
-  only ever comes home from production: audio through `make zones-pull-history`, which
-  never deletes, and there is no push for either.
+  only ever comes home from production: audio through `make zones-pull-live` (the live
+  takes, after a sync) or `make zones-pull-history` (every take), neither of which ever
+  deletes, and there is no push for either. `make zones-full-release` chains sync,
+  pull-live, package-audio and the uploads, asking before it uploads.
 - The take archive is the only audio. `addons/SpokenZonesAudio/Sounds/` is assembled from
   the live takes by `make zones-sounds` before a build and is not a store; never treat a
   file there as the record.
