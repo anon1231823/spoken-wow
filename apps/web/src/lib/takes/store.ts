@@ -20,7 +20,7 @@ import path from "node:path";
 
 import { db, query } from "@/lib/db";
 
-import { historyDirOf, storePathOf } from "./adapters";
+import { historyDirOf } from "./adapters";
 import type { Source } from "@/lib/sections";
 
 export type Take = {
@@ -156,9 +156,7 @@ export async function setLiveTake(
 
 /** Where one take's bytes are, or why there are none to read. */
 export type TakeBytes =
-  /** The live take: its bytes are the store file, which is what the addon ships. */
-  | { kind: "live"; path: string }
-  /** An earlier take, archived. */
+  /** The take's clip, in its line's history directory. */
   | { kind: "file"; path: string }
   /** The take exists, and nothing kept its clip. */
   | { kind: "gone" }
@@ -166,21 +164,12 @@ export type TakeBytes =
   | { kind: "none" };
 
 /**
- * Where one take's bytes are, from its row alone.
+ * Where one take's bytes are, from its row alone -- the live take exactly like any other.
  *
- * Three answers, and none of them reads the disk:
- *
- *   - live: the store, which holds exactly the clip the addon ships
  *   - archiveFile set: that file in the line's history directory
- *   - neither: the take happened and its clip was not kept -- pruned by the code before
+ *   - not set: the take happened and its clip was not kept -- pruned by the code before
  *     this branch, consumed by its rename-to-restore, or retired somewhere this archive
  *     never saw. Known to be gone, so nothing is looked for.
- *
- * There used to be a fourth: a row with no archiveFile was given the name its section's
- * rule would have written, and the file was looked for under it. For zones and books that
- * rule named clips by their position in a sequence of overwrites, not by version, so the
- * guess could find a real file holding a different take. Every row that has a clip now
- * records it, so nothing is guessed.
  *
  * Whether a named file is really there is answered by whoever reads it.
  */
@@ -190,16 +179,30 @@ export async function takePath(
   version: number,
   lang = "enUS",
 ): Promise<TakeBytes> {
-  const rows = await query<Pick<Take, "archiveFile" | "isCurrent">>(
-    `select "archiveFile", "isCurrent" from "take"
+  const rows = await query<Pick<Take, "archiveFile">>(
+    `select "archiveFile" from "take"
       where "source" = $1 and "file" = $2 and "lang" = $3 and "version" = $4`,
     [source, file, lang, version],
   );
-  const take = rows[0];
+  return located(source, file, rows[0]);
+}
+
+/** The live take's bytes, the way takePath finds any take's. What the live audio routes play. */
+export async function livePath(source: Source, file: string, lang = "enUS"): Promise<TakeBytes> {
+  const rows = await query<Pick<Take, "archiveFile">>(
+    `select "archiveFile" from "take"
+      where "source" = $1 and "file" = $2 and "lang" = $3 and "isCurrent"`,
+    [source, file, lang],
+  );
+  return located(source, file, rows[0]);
+}
+
+function located(
+  source: Source,
+  file: string,
+  take: Pick<Take, "archiveFile"> | undefined,
+): TakeBytes {
   if (!take) return { kind: "none" };
-  if (take.isCurrent) return { kind: "live", path: storePathOf(source, file) };
-  if (take.archiveFile) {
-    return { kind: "file", path: path.join(historyDirOf(source, file), take.archiveFile) };
-  }
-  return { kind: "gone" };
+  if (!take.archiveFile) return { kind: "gone" };
+  return { kind: "file", path: path.join(historyDirOf(source, file), take.archiveFile) };
 }

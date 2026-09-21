@@ -16,19 +16,15 @@
  * Deliberately simpler than the live audio routes. A take never changes once written -- a
  * new take gets a new number, and nothing renames or deletes one -- so it is cached
  * immutably with no ETag dance. That holds for the live take too: restoring an earlier one
- * moves the flag to a different version, which is a different URL. Range support is kept because Safari opens audio
- * with `bytes=0-1` and refuses a 200.
+ * moves the flag to a different version, which is a different URL.
  *
  * Collaborator-only, unlike the live audio: a signed-out visitor has no business
  * enumerating takes that were rejected.
  */
-import fs from "node:fs";
 import { NextRequest } from "next/server";
 
 import { requireRegenerate } from "@/lib/generation/authz";
-import { parseRange } from "@/lib/range";
-
-import { streamOf } from "@/lib/stream";
+import { serveTake } from "@/lib/takes/serve";
 import { isAddressableFile } from "@/lib/takes/files";
 import { takePath } from "@/lib/takes/store";
 import { isSource } from "@/lib/sections";
@@ -51,43 +47,5 @@ export async function GET(request: NextRequest) {
     return new Response("unknown file", { status: 404 });
   }
 
-  // Three different 404s, because the panel predicts none of them and this is where a
-  // listener finds out: a take nobody recorded, a take whose clip was not kept, and a take
-  // whose named file is missing from this machine.
-  const bytes = await takePath(source, file, version);
-  if (bytes.kind === "none") return new Response("no such take", { status: 404 });
-  if (bytes.kind === "gone") return new Response("this take's audio was not kept", { status: 404 });
-  // Live or archived, the answer is a file to stream.
-  const target = bytes.path;
-
-  let size: number;
-  try {
-    size = fs.statSync(target).size;
-  } catch {
-    return new Response("no such take", { status: 404 });
-  }
-
-  const headers: Record<string, string> = {
-    "Content-Type": "audio/mpeg",
-    "Accept-Ranges": "bytes",
-    // Immutable is honest here: one version of a file is written once and never rewritten.
-    "Cache-Control": "public, max-age=31536000, immutable",
-  };
-
-  const range = parseRange(request.headers.get("range"), size);
-  if (range === "unsatisfiable") {
-    return new Response(null, {
-      status: 416,
-      headers: { "Content-Range": `bytes */${size}`, "Accept-Ranges": "bytes" },
-    });
-  }
-
-  if (!range) {
-    headers["Content-Length"] = String(size);
-    return new Response(streamOf(target), { status: 200, headers });
-  }
-
-  headers["Content-Length"] = String(range.end - range.start + 1);
-  headers["Content-Range"] = `bytes ${range.start}-${range.end}/${size}`;
-  return new Response(streamOf(target, range.start, range.end), { status: 206, headers });
+  return serveTake(request, await takePath(source, file, version), { immutable: true });
 }

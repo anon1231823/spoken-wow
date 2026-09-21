@@ -1,7 +1,7 @@
 /**
  * Streaming a file off disk as a web ReadableStream.
  *
- * Shared by the audio store and the voice clips: both serve whole files and byte ranges,
+ * Shared by the audio archive and the voice clips: both serve whole files and byte ranges,
  * and both are read by an <audio> element, so both need the same cancel handling — a
  * seek abandons the previous response, and without destroying the node stream the read
  * would run to completion against a client that stopped listening.

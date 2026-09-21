@@ -5,14 +5,14 @@
  * re-roll is not always an improvement, and without this the only way back would be a file
  * copy on the droplet.
  *
- * RESTORING MOVES THE LIVE FLAG. It writes no new take and copies no bytes to a new number,
- * because every take is archived under its own version as it is cut: the history is the set
- * of takes this line has had, and restoring says which of them is right rather than making
- * another one. It is the same thing `restore` means for a lore version (lib/zones/lore.ts).
+ * RESTORING MOVES THE LIVE FLAG, and does nothing else: no new take, no file read or
+ * written. Every take is its own archived file, so the history is the set of takes this
+ * line has had, and restoring says which of them is right. It is the same thing `restore`
+ * means for a lore version (lib/zones/lore.ts).
  *
- * Holds the same lock a regeneration does. Restoring while a regeneration of the same file
- * is in flight would have the two racing to decide what is current, and the loser's audio
- * would sit in the store under the winner's version number.
+ * Holds the same lock a regeneration does. A restore landing while a regeneration of the
+ * same file is in flight would race it to decide which take is live, and whichever wrote
+ * last would win without the other's author ever seeing why.
  */
 import { requireRegenerate } from "@/lib/generation/authz";
 import { BUSY, withTakeLock } from "@/lib/generation/lock";
@@ -53,9 +53,9 @@ export async function POST(request: Request) {
       await restoreTake(source, file, version);
       return { ok: true as const };
     } catch (error) {
-      // restoreTake refuses a version that was never recorded, and one whose bytes cannot
-      // be found for certain. Both are the caller asking for something that does not
-      // exist, and both leave the store untouched.
+      // restoreTake refuses a version that was never recorded, and one whose clip was not
+      // kept. Both are the caller asking for something that does not exist, and both leave
+      // the live take where it was.
       return { ok: false as const, error: error instanceof Error ? error.message : String(error) };
     }
   });

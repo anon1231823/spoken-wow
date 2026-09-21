@@ -1,7 +1,7 @@
 import path from "node:path";
 
 /**
- * Where the quests data lives in a checkout: the corpus, the audio store, the voice
+ * Where the quests data lives in a checkout: the corpus, the audio archive, the voice
  * config and the three sibling caches. Two levels up from apps/web/, then into
  * pipelines/quests/ -- the monorepo move put the app one directory deeper and the data
  * under the pipeline that produces it.
@@ -26,13 +26,10 @@ const DATA_ROOT = path.resolve(process.cwd(), "..", "..", PIPELINE_DIR);
 export const CORPUS_PATH =
   process.env.SPOKEN_QUESTS_CORPUS ?? path.join(DATA_ROOT, "corpus", "corpus.json.gz");
 
-export const AUDIO_DIR =
-  process.env.SPOKEN_QUESTS_AUDIO ?? path.join(DATA_ROOT, "audio");
-
 /**
  * Clips uploaded to build a voice clone, one directory per race-gender.
  *
- * In production this points at shared/ alongside the audio store, for the same reason: a
+ * In production this points at shared/ alongside the audio archive, for the same reason: a
  * voice cannot be remade without the clips it was made from, so they must survive a deploy
  * and a rollback. Gitignored locally.
  */
@@ -51,12 +48,9 @@ export const NPC_LINES_DIR =
   process.env.SPOKEN_QUESTS_NPC_LINES ?? path.join(DATA_ROOT, "voice", "npc-lines");
 
 /**
- * Previous takes of a regenerated line, one directory per file: <sub>/<fileName>/, holding
- * whatever name each take's row records in archiveFile.
- *
- * A sibling of the store rather than a directory inside it, and deliberately so:
- * readStoreIndex walks audio/{quests,gossip} and `make push` rsyncs audio/, so anything
- * living under there would be mistaken for the store's own contents by both.
+ * Every take of every quests line, the live one included, one directory per file:
+ * <sub>/<fileName>/, holding whatever name each take's row records in archiveFile. The
+ * only place quests audio lives; which take is live is the row's `isCurrent`.
  */
 export const AUDIO_HISTORY_DIR =
   process.env.SPOKEN_QUESTS_AUDIO_HISTORY ?? path.join(DATA_ROOT, "audio-history");
@@ -65,9 +59,8 @@ export const AUDIO_HISTORY_DIR =
  * Rendered pronunciation previews, as `<hash>.mp3`.
  *
  * A cache, not a store: every file here can be rebuilt by spending credits again, and
- * nothing in the addon or the corpus refers to one. It is separate from the audio store for
- * the reason audio-history is - readStoreIndex walks audio/ and would otherwise count a
- * preview as a voiceline - and it outlives a deploy because the whole point is not paying
+ * nothing in the addon or the corpus refers to one. It is separate from the archive, which
+ * only takes belong in, and it outlives a deploy because the whole point is not paying
  * twice to hear the same entry.
  */
 export const PREVIEW_DIR =

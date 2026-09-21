@@ -12,13 +12,11 @@ import path from "node:path";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "voice-regen-"));
-process.env.SPOKEN_QUESTS_AUDIO = path.join(root, "audio");
 process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
-const { historyDirOf, storePathOf } = await import("@/lib/takes/adapters");
+const { historyDirOf } = await import("@/lib/takes/adapters");
 const historyDir = (file: string) => historyDirOf("quests", file);
-const storePath = (file: string) => storePathOf("quests", file);
 const { archiveName } = await import("@/lib/takes/bytes");
 const { listTakes } = await import("@/lib/takes/store");
 const { regenerateLine } = await import("./regenerate");
@@ -175,7 +173,7 @@ async function regenerate(lineId: string, options: ReturnType<typeof stub>["opti
 }
 
 describe("a line with no audio yet", () => {
-  it("generates it and writes it into the store", async () => {
+  it("generates it and archives it as version 1", async () => {
     const { options, calls } = stub();
 
     const result = await regenerate(SOLO, options);
@@ -186,7 +184,7 @@ describe("a line with no audio yet", () => {
     expect(result.version).toBe(1);
     expect(result.voice).toBe("human-male-standard");
     expect(result.voiceId).toBe("voice-human-male-standard");
-    expect(fs.readFileSync(storePath(result.file))).toEqual(MP3);
+    expect(fs.readFileSync(path.join(historyDir(result.file), archiveName(1, MP3)))).toEqual(MP3);
 
     const speech = calls.find((call) => call.url.includes("text-to-speech"))!;
     expect(speech.url).toBe("https://stub.invalid/v1/text-to-speech/voice-human-male-standard");
@@ -249,7 +247,7 @@ describe("a race with an accent tag", () => {
 });
 
 describe("a line whose audio already exists", () => {
-  it("archives the take being replaced under its own version", async () => {
+  it("adds a take beside the one it replaces, and changes neither file", async () => {
     const file = await fileFor(SOLO);
 
     const { options } = stub();
@@ -261,24 +259,13 @@ describe("a line whose audio already exists", () => {
     expect(second.ok).toBe(true);
     if (!second.ok) return;
     expect(second.version).toBe(2);
-    expect(fs.readFileSync(path.join(historyDir(file), archiveName(1, MP3)))).toEqual(MP3);
-    expect(fs.readFileSync(storePath(file))).toEqual(MP3);
-  });
-
-  it("keeps audio no take row describes, as a take of its own", async () => {
-    // Before, this refused. The clip is now archived under its own hash and recorded, so
-    // the re-roll goes ahead and the old audio can still be restored.
-    const file = await fileFor(SOLO);
-    fs.mkdirSync(path.dirname(storePath(file)), { recursive: true });
-    fs.writeFileSync(storePath(file), "audio nothing recorded");
-
-    const result = await regenerate(SOLO, stub().options);
-
-    expect(result.ok).toBe(true);
+    expect(fs.readdirSync(historyDir(file)).sort()).toEqual(
+      [archiveName(1, MP3), archiveName(2, MP3)].sort(),
+    );
     const takes = await listTakes("quests", file);
-    expect(takes.map((t) => [t.version, t.origin])).toEqual([
-      [2, "generated"],
-      [1, "imported"],
+    expect(takes.map((t) => [t.version, t.isCurrent])).toEqual([
+      [2, true],
+      [1, false],
     ]);
   });
 });
@@ -372,16 +359,13 @@ describe("when ElevenLabs refuses", () => {
 
   // The property that makes a failed regeneration safe: the line still plays what it played
   // before, and nothing has been recorded that suggests otherwise.
-  it("leaves the store and the history untouched", async () => {
+  it("writes no file and no row", async () => {
     const file = await fileFor(SOLO);
-    fs.mkdirSync(path.dirname(storePath(file)), { recursive: true });
-    fs.writeFileSync(storePath(file), "the take that was already there");
 
     const { options } = stub({ speech: () => new Response("nope", { status: 500 }) });
     const result = await regenerateLine(SOLO, "user", options);
 
     expect(result.ok).toBe(false);
-    expect(fs.readFileSync(storePath(file), "utf8")).toBe("the take that was already there");
     expect(fs.existsSync(historyDir(file))).toBe(false);
     expect(await listTakes("quests", file)).toEqual([]);
   });

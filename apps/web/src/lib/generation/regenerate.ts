@@ -204,7 +204,7 @@ export async function regenerateLine(
         );
     if (!speech.ok) return { ok: false, failure: speech.failure };
 
-    // Already trimmed of its lead-in by tts.ts, so the store, the archive and `bytes` all
+    // Already trimmed of its lead-in by tts.ts, so the archived file and `bytes` both
     // describe the audio the addon will play.
     const committed = await commitTake("quests", file, speech.audio, {
       lineId,

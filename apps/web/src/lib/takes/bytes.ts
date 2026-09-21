@@ -37,40 +37,15 @@ export function archiveName(version: number, data: Buffer): string {
   return `v${version}-${contentId(data)}.mp3`;
 }
 
-/** The content id embedded in an archive name, or null for a name from before they had one. */
-export function contentIdIn(name: string): string | null {
-  return /^v\d+-([0-9a-f]{8})\.mp3$/.exec(name)?.[1] ?? null;
-}
-
-/** Run `fill` against a dotted `.part` beside `target`, then rename it into place. */
-async function atomically(target: string, fill: (partial: string) => Promise<void>) {
+/** Write `data` to `target` through a dotted `.part` beside it, renamed into place. */
+export async function writeAtomic(target: string, data: Buffer): Promise<void> {
   await fs.mkdir(path.dirname(target), { recursive: true });
   const partial = path.join(path.dirname(target), `.${path.basename(target)}.part`);
   try {
-    await fill(partial);
+    await fs.writeFile(partial, data);
     await fs.rename(partial, target);
   } catch (error) {
     await fs.rm(partial, { force: true });
-    throw error;
-  }
-}
-
-/** Write `data` to `target`, atomically. */
-export function writeAtomic(target: string, data: Buffer): Promise<void> {
-  return atomically(target, (partial) => fs.writeFile(partial, data));
-}
-
-/** Copy `source` to `target`, atomically. A copy, never a move: archived audio stays put. */
-export function copyAtomic(source: string, target: string): Promise<void> {
-  return atomically(target, (partial) => fs.copyFile(source, partial));
-}
-
-/** The file's bytes, or null when there is no such file. */
-export async function readIfPresent(file: string): Promise<Buffer | null> {
-  try {
-    return await fs.readFile(file);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException)?.code === "ENOENT") return null;
     throw error;
   }
 }

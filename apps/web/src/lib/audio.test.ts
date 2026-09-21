@@ -1,11 +1,7 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { corpus as catalogue } from "./quests/catalogue";
-import { audioRelPath, readStoreIndex, subfolder, fileIndex } from "./audio";
+import { audioRelPath, subfolder, fileIndex } from "./audio";
 
 describe("audio paths", () => {
   it("puts quest lines under quests/", () => {
@@ -31,28 +27,6 @@ describe("audio paths", () => {
     );
   });
 });
-
-describe("store reconciliation", async () => {
-  const store = readStoreIndex();
-  const addressed = new Set((await catalogue()).lines.map(audioRelPath));
-
-  it("has an audio store to check", () => {
-    // A fresh clone has no audio until `python cli-main.py import-audio` has run.
-    if (store.size === 0) {
-      console.warn("audio store is empty; run import-audio to exercise reconciliation");
-    }
-    expect(store.size).toBeGreaterThanOrEqual(0);
-  });
-
-  it("addresses every file in the store", () => {
-    // The real assertion of this file: if the subfolder rule here ever diverged from
-    // subfolder_from_line_id in tts_cli/naming.py, files would go unaddressed and the
-    // explorer would report audio as missing while it sits on disk.
-    const orphans = [...store].filter((rel) => !addressed.has(rel));
-    expect(orphans).toEqual([]);
-  });
-});
-
 
 describe("fileIndex as the whitelist of addressable paths", async () => {
   const files = await fileIndex();

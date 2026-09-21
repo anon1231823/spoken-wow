@@ -2,16 +2,15 @@ import { describe, expect, it } from "vitest";
 
 import { npcKey } from "./corpus";
 import { corpus as catalogue } from "./quests/catalogue";
-import { readStoreIndex } from "./audio";
 import { batchJobs, isGap, matchingLines, search } from "./search";
 
 const corpus = await catalogue();
 /**
- * What the explorer means by "has audio" is a take row now (voicedFiles), read per request
- * and passed in. These tests are about the pure search, so they hand it a set built from
- * the store on disk -- the same shape, and the one that needs no database.
+ * What the explorer means by "has audio" is a live take row, read per request and passed
+ * in. These tests are about the pure search, so they hand it an empty set -- the same
+ * shape, and the one that needs no database.
  */
-const store = readStoreIndex();
+const store = new Set<string>();
 const find = (options: Parameters<typeof search>[2]) => search(corpus, store, options);
 /**
  * The whole result rather than a page, for assertions about the match set itself.

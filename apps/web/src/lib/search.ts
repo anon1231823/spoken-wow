@@ -294,7 +294,7 @@ function matches(line: CorpusLine, q: string, filter: Filter): boolean {
 }
 
 /**
- * A gap: a line the generator would voice, with nothing in the store.
+ * A gap: a line the generator would voice, with no live take.
  *
  * Same definition as missing_lines (tts_cli/store.py) - lines the generator never voices
  * (progress text, unresolved template tokens) are expected absences, not gaps.

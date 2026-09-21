@@ -1,5 +1,5 @@
 /**
- * Where each section keeps its audio: the one thing the take layer cannot write once.
+ * Where each section archives its takes: the one thing the take layer cannot write once.
  *
  * Everything else about a take is the same in all three -- one table, one commit, one
  * history panel -- but the paths are frozen by AGENTS.md and differ on purpose. A quests
@@ -7,10 +7,11 @@
  * books file is extension-less and belongs to one line ('1411/razor-hill'). Renaming either
  * means re-shipping a sound pack every user has already downloaded.
  *
- * Each section's archive mirrors its store one level deeper, so a take is addressable by
- * path alone: audio-history/gossip/31ab…/v3-1a2b3c4d.mp3 beside audio/gossip/31ab….mp3.
+ * Every take of a file lives in one directory named after the file, one level deeper than
+ * the addon's own path: gossip/31ab….mp3 is archived under audio-history/gossip/31ab…/.
  * What a take's archived file is called is its row's business (`archiveFile`); this only
- * says which directory it is in.
+ * says which directory it is in. There is no live copy anywhere else: the live take is a
+ * flag on its row, and a pack build copies it to the addon's path (pipelines/lib/sounds.mjs).
  *
  * A total Record rather than a switch, for the reason lib/generation/worker.ts gives:
  * adding a section and forgetting one of these is then a type error rather than a route
@@ -20,17 +21,15 @@ import "server-only";
 
 import path from "node:path";
 
-import { historyDir as booksHistory, soundsDir as booksSounds } from "@/lib/books/audio";
-import { AUDIO_DIR, AUDIO_HISTORY_DIR } from "@/lib/paths";
+import { historyDir as booksHistory } from "@/lib/books/audio";
+import { AUDIO_HISTORY_DIR } from "@/lib/paths";
 import { isSafeAudioPath } from "@/lib/range";
 import type { Source } from "@/lib/sections";
-import { historyDir as zonesHistory, soundsDir as zonesSounds } from "@/lib/zones/tools";
+import { historyDir as zonesHistory } from "@/lib/zones/tools";
 
 type StoreAdapter = {
   /** Where one line's archived takes live. */
   historyDir: (file: string) => string;
-  /** Where the live clip lives. */
-  storePath: (file: string) => string;
 };
 
 /**
@@ -46,24 +45,15 @@ const ADAPTERS: Record<Source, StoreAdapter> = {
   quests: {
     historyDir: (file) =>
       path.join(AUDIO_HISTORY_DIR, path.dirname(questsFile(file)), path.basename(file, ".mp3")),
-    storePath: (file) => path.join(AUDIO_DIR, questsFile(file)),
   },
-  // A sibling of Sounds/ rather than a child, because validate-audio.mjs walks Sounds/ and
-  // would otherwise flag every archived take as a clip the lookup table does not know.
   zones: {
     historyDir: (file) => path.join(zonesHistory(), file),
-    storePath: (file) => path.join(zonesSounds(), `${file}.mp3`),
   },
   books: {
     historyDir: (file) => path.join(booksHistory(), file),
-    storePath: (file) => path.join(booksSounds(), `${file}.mp3`),
   },
 };
 
 export function historyDirOf(source: Source, file: string): string {
   return ADAPTERS[source].historyDir(file);
-}
-
-export function storePathOf(source: Source, file: string): string {
-  return ADAPTERS[source].storePath(file);
 }

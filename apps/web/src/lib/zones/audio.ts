@@ -1,11 +1,8 @@
-// Which zones audio paths exist, and which are allowed to be asked for.
+// Which zones audio paths, and which are allowed to be asked for.
 
 import "server-only";
 
 import { catalogue } from "./catalogue";
-import { soundsDir } from "./tools";
-
-export { soundsDir };
 
 /** Store-relative, e.g. '1411/razor-hill.mp3'. Also the /api/zones/audio/ route path. */
 export function audioRelPath(file: string): string {

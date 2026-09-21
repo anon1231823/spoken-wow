@@ -7,7 +7,7 @@ import path from "node:path";
 import { catalogue, BASE_LANG } from "./catalogue";
 
 /**
- * The books audio store.
+ * The books audio archive: every take of every page, one directory per file.
  *
  * Env-overridden in production the way lib/paths.ts's exports are, and assembled from a
  * joined array for the reason stated there at length: Next's file tracer statically
@@ -17,16 +17,11 @@ import { catalogue, BASE_LANG } from "./catalogue";
  */
 const PIPELINE_DIR = ["pipelines", "books"].join(path.sep);
 
-export function soundsDir(): string {
-  return (
-    process.env.SPOKEN_BOOKS_AUDIO ??
-    path.join(path.resolve(process.cwd(), "..", "..", PIPELINE_DIR), "audio")
-  );
-}
-
-/** Previous takes, one directory per file, beside the live store. */
 export function historyDir(): string {
-  return process.env.SPOKEN_BOOKS_AUDIO_HISTORY ?? `${soundsDir()}-history`;
+  return (
+    process.env.SPOKEN_BOOKS_AUDIO_HISTORY ??
+    path.join(path.resolve(process.cwd(), "..", "..", PIPELINE_DIR), "audio-history")
+  );
 }
 
 /** Store-relative, e.g. '1381.mp3'. Also the /api/books/audio/ route path. */

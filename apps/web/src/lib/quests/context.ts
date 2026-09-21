@@ -1,7 +1,7 @@
 /**
  * The Postgres-backed maps a quests search needs, fetched together and never fatally.
  *
- * The explorer reads the corpus and the audio store off disk on purpose: a database outage
+ * The explorer used to read the corpus and the audio store off disk on purpose: a database outage
  * takes accounts and regeneration with it, but browsing and playback keep working
  * (deploy/README.md). Overrides arrived after that promise was made and must not quietly
  * withdraw it - so a failure here degrades to an un-overridden search rather than a 500 on

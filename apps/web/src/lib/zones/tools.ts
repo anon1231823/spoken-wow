@@ -55,7 +55,6 @@ export const textHash = namingModule.textHash as (spoken: string) => string;
 
 // Functions rather than constants: each reads an environment override the droplet sets,
 // and a path resolved at import would be fixed before the process had one.
-export const soundsDir = storeModule.soundsDir as () => string;
 export const historyDir = storeModule.historyDir as () => string;
 
 export const toSpokenText = normaliseModule.toSpokenText as (

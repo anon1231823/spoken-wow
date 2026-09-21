@@ -4,7 +4,7 @@
  * Range support is not optional even for clips a few megabytes long: Safari opens audio
  * with `Range: bytes=0-1` and refuses a resource that answers 200, so a naive whole-file
  * response works in Chrome and silently fails in Safari. Same reasoning, and the same
- * parseRange, as the audio store.
+ * parseRange, as the take audio.
  */
 import fs from "node:fs";
 

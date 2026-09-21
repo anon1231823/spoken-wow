@@ -16,13 +16,10 @@ import path from "node:path";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "takes-store-int-"));
-process.env.SPOKEN_QUESTS_AUDIO = path.join(root, "audio");
 process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
-const { listTakes, setLiveTake, takePath } = await import(
-  "./store"
-);
+const { listTakes, livePath, setLiveTake, takePath } = await import("./store");
 
 /** A file no other run will collide with, so this can share a database with anything else. */
 let file: string;
@@ -90,16 +87,22 @@ describe("finding a take's bytes", () => {
     });
   });
 
-  it("puts the live take in the store, which is where its bytes actually are", async () => {
-    // A take can be live without ever having been archived: audio narrated before this app
-    // kept records has one row and one file, in the store. commitTake makes the archived
-    // copy at the moment a re-roll is about to overwrite it, and not before.
-    await record(1, true);
+  it("finds the live take in the archive like any other, which is the only place it is", async () => {
+    await record(1);
+    await record(2, true, "v2-00ff00ff.mp3");
 
-    expect(await takePath("quests", file, 1)).toEqual({
-      kind: "live",
-      path: path.join(root, "audio", file),
-    });
+    const archived = {
+      kind: "file",
+      path: path.join(root, "audio-history", "gossip", stem(), "v2-00ff00ff.mp3"),
+    };
+    expect(await takePath("quests", file, 2)).toEqual(archived);
+    expect(await livePath("quests", file)).toEqual(archived);
+  });
+
+  it("says a line has no live take, rather than pointing anywhere", async () => {
+    await record(1);
+
+    expect(await livePath("quests", file)).toEqual({ kind: "none" });
   });
 
   it("says a clip was not kept, rather than guessing a name for it", async () => {
