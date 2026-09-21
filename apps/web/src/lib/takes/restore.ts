@@ -1,11 +1,13 @@
 /**
  * Putting an earlier take back, in one place for all three sections.
  *
- * Two steps and a third that only two sections need:
+ * Two steps:
  *
  *   1. copy the archived clip into the store, because the store is what the addon plays
  *   2. move the live flag onto that take
- *   3. rebuild the section's lookup table, where it has one
+ *
+ * No addon artifact is rebuilt. A pack's lookup table is built from the take table when
+ * the pack is packaged, so the site has nothing to publish.
  *
  * A COPY, NOT A MOVE. The zones and books stores used to rename the archived file back
  * into place, which meant restoring a take destroyed the only archived copy of it: undo
@@ -19,28 +21,11 @@
  */
 import "server-only";
 
+import type { Source } from "@/lib/sections";
+
 import { storePathOf } from "./adapters";
 import { copyAtomic } from "./bytes";
 import { setLiveTake, takePath } from "./store";
-import type { Source } from "@/lib/sections";
-
-/**
- * Rebuild what the addon reads, for the sections that keep a lookup table.
- *
- * Imported lazily and per source, so a restore in one section never drags the other two's
- * pipeline modules into the bundle. Quests has no entry: its addon reads the corpus it
- * ships, and a take is found by filename.
- */
-const PUBLISH: Partial<Record<Source, () => Promise<void>>> = {
-  zones: async () => {
-    const { publish } = await import("@/lib/zones/regenerate");
-    await publish();
-  },
-  books: async () => {
-    const { publish } = await import("@/lib/books/publish");
-    await publish();
-  },
-};
 
 export async function restoreTake(
   source: Source,
@@ -70,10 +55,4 @@ export async function restoreTake(
   }
 
   await setLiveTake(source, file, version);
-
-  // Never fatal: the take IS restored by this point, and a failure here means the addon's
-  // table is one rebuild behind, which the next drain fixes.
-  await PUBLISH[source]?.().catch((error: unknown) => {
-    console.error(`${source}: could not rebuild the lookup after a restore`, error);
-  });
 }

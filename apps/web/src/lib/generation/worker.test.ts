@@ -240,9 +240,6 @@ describe("startWorker", () => {
           return OK;
         },
       },
-      // The real one rewrites the addon's whole lookup table; this test is about which
-      // generator ran, and publishing is the queue's business either way.
-      afterDrain: {},
     });
 
     await until(async () => (await statesOf(batch)).done === 2);
@@ -250,51 +247,6 @@ describe("startWorker", () => {
 
     expect(seen).toHaveLength(2);
     expect(seen.every((entry) => entry.startsWith("zones:"))).toBe(true);
-  });
-
-  /**
-   * The zones side rebuilds the addon's lookup table after a take changes, and that
-   * rewrites all 1,353 rows -- so it runs when the queue empties rather than per line.
-   */
-  it("publishes once after the queue drains, not once per line", async () => {
-    const batch = await seed(3, "zones");
-    let published = 0;
-
-    const worker = startWorker(() => true, {
-      apiKeyFor: KEYED,
-      budget: async () => 1,
-      regenerate: { zones: async () => OK },
-      afterDrain: {
-        zones: async () => {
-          published += 1;
-        },
-      },
-    });
-
-    await until(async () => (await statesOf(batch)).done === 3);
-    await until(async () => published > 0);
-    await worker.stop();
-
-    expect(published).toBe(1);
-  });
-
-  /** An idle queue publishes nothing: every tick would otherwise rewrite that table. */
-  it("does not publish when it generated nothing", async () => {
-    let published = 0;
-    const worker = startWorker(() => true, {
-      apiKeyFor: KEYED,
-      afterDrain: {
-        zones: async () => {
-          published += 1;
-        },
-      },
-      idleMs: 10,
-    });
-
-    await new Promise((resolve) => setTimeout(resolve, 120));
-    await worker.stop();
-
-    expect(published).toBe(0);
   });
 
   it("keeps going after a failure that is not fatal", async () => {

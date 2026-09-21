@@ -17,7 +17,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help db extract import export lookup deploy deploy-copy status remove \
-        pull pull-dry sounds db-pull package package-audio release-dry release release-wago release-curse icon test
+        pull pull-dry sounds sync check-synced package package-audio release-dry release release-wago release-curse icon test
 
 PIPELINE := pipelines/books
 QUESTS   := pipelines/quests
@@ -65,32 +65,15 @@ RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(comman
 # into. Stale files cost disk; deleted ones cost credits.
 RSYNC_OPTS := -az --info=stats1,progress2 --human-readable
 
-LOCAL_DB ?= postgres://localhost/spoken_quests_dev
-
-# pg_dump 16.10 and later wrap their output in \restrict / \unrestrict, psql meta-commands
-# an older psql fails on. Both clusters are ours, so strip them. Same as make/zones.mk.
-UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
-
-db-pull: require-droplet ## Copy the droplet's books takes into the local database (REPLACES them)
-	@printf 'Replace the LOCAL books takes with the droplet ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	@( echo 'begin;'; \
-	   echo 'delete from "take" where "source" = '"'"'books'"'"';'; \
-	   $(SSH) $(DROPLET) 'set -a; . /srv/spoken/shared/app.env; set +a; pg_dump "$$DATABASE_URL" --data-only --table=take --inserts' \
-	     | grep -E "VALUES \([0-9]+, .books.," | $(UNRESTRICT); \
-	   echo 'commit;' ) \
-	  | psql "$(LOCAL_DB)" -v ON_ERROR_STOP=1 -q
-	@psql "$(LOCAL_DB)" -tAc "select count(*) || ' books takes locally' from take where source = 'books'"
+# One direction only: production is upstream for every edit and every take. The recipe is
+# shared with quests and zones -- see scripts/db/sync-section.sh. This used to fetch the
+# takes but not book_line, so a page fixed on the site shipped with its old words.
+sync: require-droplet ## Replace the local book text and takes with the droplet's (DESTRUCTIVE)
+	@$(DB_ENV) scripts/db/sync-section.sh books book_line
 	@echo "==> rebuild the pack's table with:  make books-lookup"
 
-# Filtered with grep rather than a WHERE clause because pg_dump has no such option. --inserts
-# puts each row on a line of its own, so the section's rows can be selected out of the dump
-# without parsing SQL; --rows-per-insert would batch them across lines and cut statements in
-# half, and a COPY-format dump could not be filtered at all.
-#
-# The pattern matches the source column by position -- id, then source -- rather than the
-# word appearing anywhere in a row, and spells the quotes as `.` so that no single quote has
-# to survive make's expansion and two levels of shell. Written with real quotes it silently
-# matched nothing, which looks exactly like a droplet with no takes on it.
+check-synced: ## Compare the local books data with the droplet's, and prompt if they differ
+	@$(DB_ENV) scripts/db/check-synced.sh books
 
 pull-dry: require-droplet ## Preview what `make books-pull` would fetch
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run -e "$(SSH)" $(DROPLET):$(REMOTE_BOOKS) $(LOCAL_BOOKS)
@@ -122,7 +105,9 @@ package: ## Zip the addon into dist/ (for a release)
 # unpacks straight into a client's AddOns directory. Zipped from the repo root instead it
 # carries an addons/ prefix, and unzipping lands it at AddOns/addons/SpokenBooksAudio,
 # where the client will never look.
-package-audio: ## Zip the sound pack into dist/ (for another machine, or a release)
+# From the database, against production's data: the lookup table is rebuilt here rather than
+# on the droplet after every generation, which is what the site used to do.
+package-audio: check-synced lookup ## Zip the sound pack into dist/ (for another machine, or a release)
 	@test -d addons/SpokenBooksAudio/Sounds || { echo "no Sounds/ -- run: make books-pull && make books-sounds"; exit 1; }
 	@mkdir -p dist
 	@version=$$(sed -n 's/^## Version: //p' addons/SpokenBooksAudio/SpokenBooksAudio.toc); \

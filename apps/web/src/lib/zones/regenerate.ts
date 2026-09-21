@@ -27,7 +27,7 @@ import { textToSpeech } from "@/lib/generation/tts";
 import { commitTake } from "@/lib/takes/commit";
 
 import { catalogue, type CatalogueEntry } from "./catalogue";
-import { buildLookup, durationOf, exportManifest } from "./tools";
+import { durationOf } from "./tools";
 import { narratorConfig, NarratorMissing, type VoiceConfig } from "./voice";
 
 /**
@@ -39,19 +39,6 @@ import { narratorConfig, NarratorMissing, type VoiceConfig } from "./voice";
 function asFailure(error: unknown) {
   if (error instanceof NarratorMissing) return failure("voice-missing", error.message);
   return failure("upstream", error instanceof Error ? error.message : String(error));
-}
-
-/**
- * The addon resolves every clip through Sounds.lua, so a take that is not in it is
- * unreachable and a stale duration resets the Play button at the wrong moment.
- *
- * Exported rather than called per line: buildLookup rewrites the whole 1353-row table, and
- * doing that once per line would be the slowest part of a run that is otherwise waiting on
- * ElevenLabs. The queue calls it once when it drains.
- */
-export async function publish(): Promise<void> {
-  await exportManifest();
-  await buildLookup();
 }
 
 async function entryFor(lineId: string): Promise<CatalogueEntry | undefined> {

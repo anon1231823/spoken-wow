@@ -21,7 +21,6 @@ import { type VoiceConfig } from "@/lib/zones/voice";
 import { narratorConfig, NarratorMissing } from "@/lib/zones/voice";
 
 import { catalogue, BASE_LANG, type BookPage } from "./catalogue";
-export { publish } from "./publish";
 import { durationOf } from "./tools";
 
 /**

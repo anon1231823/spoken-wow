@@ -99,8 +99,8 @@ UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
 
 # The whole production database, copied into a local one of its own.
 #
-# For rehearsing a migration against the data it will actually meet. The per-section pulls
-# (make books-db-pull, make zones-db-pull) copy one table's worth of rows for everyday work;
+# For rehearsing a migration against the data it will actually meet. The per-section syncs
+# (make quests-sync, zones-sync, books-sync) copy one section's rows for everyday work;
 # this copies everything, because what a migration can break is the joins between tables --
 # a take whose lineId no longer resolves, an override naming a file the corpus dropped.
 #

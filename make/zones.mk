@@ -4,8 +4,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy \
         status remove clean voice voice-zones lookup export \
-        push push-dry pull pull-dry audio-status ssh-check pull-manifest \
-        db-push db-pull \
+        push push-dry pull pull-dry audio-status ssh-check sync check-synced \
         icon lore-import lore-export lore-check lore-rewrite aliases languages locale-check \
         release release-dry release-wago release-curse
 
@@ -163,7 +162,7 @@ locale-check: ## Report per-language string coverage, and check Languages.lua is
 # half CI does not do: the audio store and the database contents. See deploy/web/README.md.
 #
 #   make push              ~700MB of mp3s, the first time and after a local bulk run
-#   make db-push           seed the droplet's database from the local one
+#   make sync              bring production's lore and takes home
 #
 # Droplet setup, releases and rollback are make/web.mk's: one /srv/spoken tree, one
 # deploy, one place holding the guards.
@@ -193,7 +192,6 @@ LOCAL_SOUNDS  := addons/SpokenZonesAudio/Sounds/
 # Lowercase on the new store, where it was shared/Sounds on /srv/zonelore. The volume is
 # case-sensitive, so the old spelling is a new empty directory rather than an error.
 REMOTE_SOUNDS_DIR := sounds
-MANIFEST_FILE := manifest.json
 REMOTE_SOUNDS  := $(DROPLET):$(REMOTE_ROOT)/shared/$(REMOTE_SOUNDS_DIR)/
 REMOTE_HISTORY := $(DROPLET):$(REMOTE_ROOT)/shared/audio-history/
 
@@ -243,15 +241,8 @@ pull: require-droplet ## Fetch the audio store from the droplet (DESTRUCTIVE: --
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@$(RSYNC) $(RSYNC_OPTS) $(REMOTE_SOUNDS) $(LOCAL_SOUNDS)
 	@[ -d pipelines/zones/audio-history ] && $(RSYNC) $(RSYNC_OPTS) $(REMOTE_HISTORY) pipelines/zones/audio-history/ || true
-	@echo "==> pulled. Rebuild the lookup table with:  make db-pull && make lookup"
+	@echo "==> pulled. Rebuild the lookup table with:  make sync && make lookup"
 	@echo "    then package it with:  make package-audio"
-
-# The one file the droplet writes that git wants back. The manifest is an export of the
-# droplet's database, so `make db-pull` is the better route for it; this is the one that
-# works when you only want the file.
-pull-manifest: require-droplet ## Fetch the droplet's exported manifest.json
-	@$(RSYNC) -a -e "$(SSH)" $(DROPLET):$(REMOTE_ROOT)/shared/$(MANIFEST_FILE) pipelines/zones/tools/voice/$(MANIFEST_FILE)
-	@echo "==> fetched. Review with: git diff pipelines/zones/tools/voice/$(MANIFEST_FILE)"
 
 audio-status: require-droplet ## What is on disk locally and on the droplet
 	@printf 'local     live      %5s mp3  %s\n' \
@@ -271,55 +262,25 @@ audio-status: require-droplet ## What is on disk locally and on the droplet
 #-------------------------------------------------------------------------------
 # Moving the database between machines
 #
-# Data only, never schema: migrations own the schema on both sides, and a dump that
-# carried DDL would fight them. pg_dump runs inside the local container so its version
-# always matches the local server; psql on the droplet reads plain SQL, so a version
-# difference between the two clusters does not matter.
-#
-# This is how the droplet gets seeded after its first deploy, and how the takes and
-# flags it accumulates come home.
+# One direction only: production is upstream for every edit and every take, so data comes
+# home and never goes back. The recipe is shared with quests and books -- see
+# scripts/db/sync-section.sh.
 #-------------------------------------------------------------------------------
 
-# Unquoted because both names are already all-lowercase; quoting them here would have to
-# survive two levels of shell inside the ssh command below, and does not.
-DUMP_TABLES := --table=voiceline_take --table=line_flag --table=lore_line
-PGDUMP      := docker compose exec -T postgres pg_dump -U zonelore -d zonelore --data-only $(DUMP_TABLES)
+sync: require-droplet ## Replace the local zones lore and takes with the droplet's (DESTRUCTIVE)
+	@$(DB_ENV) scripts/db/sync-section.sh zones lore_line
+	@echo "==> bring the addon into step with:  make zones-lore-export && make zones-lookup"
 
-# pg_dump 16.10 and later wrap their output in \restrict / \unrestrict, psql meta-commands
-# that guard against a dump file from an untrusted source. A psql older than that fails on
-# them, and the two clusters here are both ours, so strip them rather than requiring the
-# droplet's psql to match the container's.
-UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
-
-db-push: require-droplet ## Copy the local takes, flags and lore into the droplet's database (REPLACES them)
-	@echo "local:"
-	@docker compose exec -T postgres psql -U zonelore -d zonelore \
-		-c 'select l."lang", (select count(*) from "voiceline_take" t where t."lang" = l."lang") as takes, (select count(*) from "line_flag" f where f."lang" = l."lang") as flags from (select "lang" from "voiceline_take" union select "lang" from "line_flag") l order by 1'
-	@echo "droplet:"
-	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" \
-		-c "select l.\"lang\", (select count(*) from \"voiceline_take\" t where t.\"lang\" = l.\"lang\") as takes, (select count(*) from \"line_flag\" f where f.\"lang\" = l.\"lang\") as flags from (select \"lang\" from \"voiceline_take\" union select \"lang\" from \"line_flag\") l order by 1"'
-	@printf 'Replace the droplet contents with the local ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	@( echo 'begin;'; \
-	   echo 'truncate "voiceline_take", "line_flag", "lore_line";'; \
-	   $(PGDUMP) | $(UNRESTRICT); \
-	   echo 'commit;' ) \
-	  | $(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 -q'
-	@echo "==> pushed"
-
-db-pull: require-droplet ## Copy the droplet's takes, flags and lore into the local database (REPLACES them)
-	@printf 'Replace the LOCAL database contents with the droplet ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	@( echo 'begin;'; \
-	   echo 'truncate "voiceline_take", "line_flag", "lore_line";'; \
-	   $(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; pg_dump "$$DATABASE_URL" --data-only $(DUMP_TABLES)' | $(UNRESTRICT); \
-	   echo 'commit;' ) \
-	  | docker compose exec -T postgres psql -U zonelore -d zonelore -v ON_ERROR_STOP=1 -q
-	@echo "==> pulled. Bring the addon into step with:  make lore-export && make lookup"
+check-synced: ## Compare the local zones data with the droplet's, and prompt if they differ
+	@$(DB_ENV) scripts/db/check-synced.sh zones
 
 #-------------------------------------------------------------------------------
 # Deploying
 #-------------------------------------------------------------------------------
 
-package-audio: validate-audio ## Build the sound-pack zip
+# From the database, against production's data: the lookup table is rebuilt here rather than
+# on the droplet after every generation, which is what the site used to do.
+package-audio: check-synced lookup validate-audio ## Build the sound-pack zip
 	@./scripts/zones/package-audio.sh
 
 release-dry: ## Show what `make release` would upload to CurseForge and Wago

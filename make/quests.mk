@@ -355,8 +355,7 @@ QUESTS_CLI = cd $(QUESTS_DIR) && $(abspath $(PYTHON)) cli-main.py
 import-corpus: ## corpus/corpus.json.gz -> quest_line (needs DATABASE_URL and psycopg2)
 	@$(QUESTS_CLI) import-corpus
 
-export-corpus: ## quest_line -> corpus/corpus.json.gz (ARGS=--check to compare instead)
-	$(freshness-check)
+export-corpus: check-synced ## quest_line -> corpus/corpus.json.gz (ARGS=--check to compare instead)
 	@$(QUESTS_CLI) export-corpus $(ARGS)
 
 export-ignores: ## line_ignore -> corpus/ignored.json, replacing the old ssh export
@@ -376,63 +375,15 @@ fold-overrides: ## line_override rows -> edited versions. Once, after import-cor
 # nothing would have said so. The corpus was a committed file, so "is it current?" meant
 # "did you pull recently?", and the answer was somebody's memory.
 
-LOCAL_DB ?= postgres://localhost/spoken_quests_dev
-CORPUS_TABLES := --table=quest_line --table=quest_line_speaker --table=quest_spawn \
-                 --table=quest_corpus_meta --table=line_ignore
-# pg_dump 16.10 and later wrap output in \restrict / \unrestrict, psql meta-commands an
-# older psql fails on. Both clusters are ours, so strip them. Same as make/books.mk.
-UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
+sync: require-droplet ## Replace the local quests corpus and takes with the droplet's (DESTRUCTIVE)
+	@$(DB_ENV) scripts/db/sync-section.sh quests \
+	  quest_line quest_line_speaker quest_spawn quest_corpus_meta line_ignore
+	@echo "==> rebuild the committed corpus with:  make quests-export-corpus"
 
-sync: require-droplet ## Replace the local corpus tables with the droplet's (DESTRUCTIVE)
-	@echo "local:"
-	@psql "$(LOCAL_DB)" -tAc 'select count(*) || \' lines, \' || count(*) filter (where "isCurrent") || \' live\' from "quest_line"'
-	@echo "droplet:"
-	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" -tAc \
-	  '"'"'select count(*) || '"'"'"'"'"'"'"'"' lines, '"'"'"'"'"'"'"'"' || count(*) filter (where "isCurrent") || '"'"'"'"'"'"'"'"' live'"'"'"'"'"'"'"'"' from "quest_line"'"'"''
-	@printf 'Replace the LOCAL corpus tables with the droplet ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	@( echo 'begin;'; \
-	   echo 'truncate "quest_line", "quest_line_speaker", "quest_spawn", "quest_corpus_meta", "line_ignore";'; \
-	   $(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; pg_dump "$$DATABASE_URL" --data-only $(CORPUS_TABLES)' \
-	     | $(UNRESTRICT); \
-	   echo 'commit;' ) \
-	  | psql "$(LOCAL_DB)" -v ON_ERROR_STOP=1 -q
-	@# --data-only carries no sequences, so the next insert would collide with an id the
-	@# dump already used. The same trap `make web-migrate-books` documents.
-	@psql "$(LOCAL_DB)" -q -c 'select setval(pg_get_serial_sequence(\'public.quest_line\', \'id\'), (select coalesce(max("id"), 1) from "quest_line"))' \
-	                    -c 'select setval(pg_get_serial_sequence(\'public.quest_line_speaker\', \'id\'), (select coalesce(max("id"), 1) from "quest_line_speaker"))' \
-	                    -c 'select setval(pg_get_serial_sequence(\'public.quest_spawn\', \'id\'), (select coalesce(max("id"), 1) from "quest_spawn"))'
-	@echo "==> synced. Rebuild the committed corpus with:  make quests-export-corpus"
-
-# The stamp both sides compute the same way, kept in a file because the quoting for a query
-# sent over ssh is unreadable -- the same reason export_ignores.sql was a file.
-CORPUS_STAMP_SQL := deploy/web/sql/corpus_stamp.sql
-
-# Refuses to let a stale laptop ship a pack -- but asks rather than deciding, because the
-# droplet being unreachable is not the same thing as the data being wrong, and an offline
-# rebuild from the committed corpus is a legitimate thing to want.
-#
-# With no droplet configured it says so and continues: a clone with no access still has to
-# be able to build. With no TTY -- CI -- the prompt fails closed, which is what CI should do.
-define freshness-check
-@if [ -z "$(DROPLET)" ]; then \
-  echo "no droplet configured; skipping the corpus freshness check"; \
-else \
-  here=$$(psql "$(LOCAL_DB)" -tA -f $(CORPUS_STAMP_SQL) 2>/dev/null); \
-  there=$$($(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; psql "$$DATABASE_URL" -tA -f -' < $(CORPUS_STAMP_SQL) 2>/dev/null); \
-  if [ -z "$$there" ]; then \
-    echo "could not read the droplet's corpus stamp; continuing without the check"; \
-  elif [ "$$here" != "$$there" ]; then \
-    echo "the local corpus and the droplet's disagree:"; \
-    echo "  local:   $$here"; \
-    echo "  droplet: $$there"; \
-    echo "Run 'make quests-sync' first, or continue and ship what is here."; \
-    printf 'Continue anyway? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }; \
-  fi; \
-fi
-endef
-
-check-synced: ## Compare the local corpus with the droplet's, and prompt if they differ
-	$(freshness-check)
+# Refuses to let a stale laptop ship a pack, or asks first. scripts/db/check-synced.sh has
+# the reasoning; every section's packaging runs the same one.
+check-synced: ## Compare the local quests data with the droplet's, and prompt if they differ
+	@$(DB_ENV) scripts/db/check-synced.sh quests
 
 # ONE-OFF. Rebuilds the take table from the rows already in Postgres and the clips in
 # audio-history, so the database records every take that happened -- including the ones the

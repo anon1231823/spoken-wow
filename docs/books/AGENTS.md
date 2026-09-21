@@ -59,7 +59,7 @@ What ships is the committed one. Before cutting a sound pack, bring the takes an
 narration home and regenerate it here:
 
 ```bash
-make books-db-pull     # the droplet's takes -> local database
+make books-sync        # the droplet's page text and takes -> local database
 make books-lookup      # -> addons/SpokenBooksAudio/Data/Sounds.lua (committed)
 make books-pull        # the mp3s -> pipelines/books/audio
 make books-sounds      # -> addons/SpokenBooksAudio/Sounds (not committed)

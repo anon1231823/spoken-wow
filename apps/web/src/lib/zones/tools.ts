@@ -40,8 +40,6 @@ import "server-only";
 import * as storeModule from "@tools/voice/store.mjs";
 import * as normaliseModule from "@tools/voice/normalise.mjs";
 import * as namingModule from "@tools/voice/naming.mjs";
-import * as exportModule from "@tools/voice/export-manifest.mjs";
-import * as lookupModule from "@tools/voice/build-lookup.mjs";
 import * as wikiModule from "@tools/lib/wiki.mjs";
 
 // buildCatalogue() is deliberately NOT re-exported. It reads the committed Lua, which is an
@@ -75,15 +73,3 @@ export const makeShort = wikiModule.makeShort as (full: string, limit?: number) 
 
 export const durationOf = storeModule.durationOf as (path: string) => Promise<number>;
 
-// What the addon actually ships, rebuilt after a batch drains rather than after every line:
-// buildLookup rewrites the whole table, and doing that 1,353 times would be the slowest part
-// of a run that is otherwise waiting on ElevenLabs.
-export const exportManifest = exportModule.exportManifest as (options?: {
-  check?: boolean;
-}) => Promise<{ skipped: boolean; changed: boolean; count: number }>;
-export const buildLookup = lookupModule.buildLookup as () => Promise<{
-  zones: number;
-  subzones: number;
-  missingFiles: number;
-  path: string;
-}>;

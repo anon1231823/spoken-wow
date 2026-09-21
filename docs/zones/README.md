@@ -1325,8 +1325,8 @@ and not by the repo — `export SPOKEN_DROPLET=deploy@<host>`, or pass
 make zones-audio-status     # local and droplet, side by side
 make zones-pull-dry         # what `make zones-pull` would change
 make zones-pull             # the audio the droplet regenerated
-make zones-db-pull          # the takes and flags behind it
-make zones-lookup           # rebuild Sounds.lua from the manifest
+make zones-sync             # the lore and takes behind it
+make zones-lookup           # rebuild Sounds.lua from the database
 ```
 
 One language per transfer: every target above takes `LOCALE=deDE` and defaults to

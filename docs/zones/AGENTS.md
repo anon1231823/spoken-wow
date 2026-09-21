@@ -15,8 +15,9 @@ Scope expansion is expensive here specifically:
   happens on the droplet, through the site. `generate.mjs` reports on lines and
   cannot cut one; keep it that way, and do not reintroduce a generation flag as a
   convenience.
-- `make zones-push`, `make zones-pull`, `make zones-db-push`, `make zones-db-pull` are destructive
-  (`rsync --delete`, table replacement). Confirm before running one.
+- `make zones-push`, `make zones-pull` and `make zones-sync` are destructive
+  (`rsync --delete`, table replacement). Confirm before running one. Data only ever comes
+  home from production; there is no push for the database.
 - `addons/SpokenZones/Data/*.lua` and `addons/SpokenZonesAudio/Data/Sounds.lua` are
   generated. Fix the source, not the output. For lore text that source is the
   `lore_line` table -- edit it through the explorer, or re-scrape, then
