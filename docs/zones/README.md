@@ -1320,7 +1320,8 @@ breaks.
 Every zone and subzone the client can name is already in the corpus; what is missing for some
 of them is the lore itself. So a gap is not reported, it is written. Where the map panel says a
 place "is on the map, but nobody has written its lore yet" (or that there is no lore for it at
-all), a **Contribute** button sits right under that sentence, in the panel's body. It sends the
+all), a **Contribute** button sits right under that sentence, in the panel's body -- and the
+same in the lore window, for whichever zone or subzone is selected in its list. It sends the
 place the panel is showing -- the map, the zone's name, the subzone -- not where the player
 stands, since a place can be described from anywhere. The client has no text to hand over, so
 the envelope carries none.
