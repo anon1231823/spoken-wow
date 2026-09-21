@@ -28,6 +28,9 @@ local UNKNOWN = "A page no corpus has ever held.\n\nWritten for this test alone.
 stub.ShowPage({ title = "Ledger of Nothing", number = 2, text = UNKNOWN })
 
 Expect("an unknown page is a gap", B:HasContributionGap(), true)
+env.Addon.db.profile.Contribute.HideButtons = true
+Expect("...but not when Contribute buttons are hidden in the player settings", B:HasContributionGap(), false)
+env.Addon.db.profile.Contribute.HideButtons = false
 local envelope = B:CaptureContribution()
 Expect("the source is books", envelope:match("^!SPOKEN1 books\n") ~= nil, true)
 Expect("the key is the client-side checksum",

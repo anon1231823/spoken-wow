@@ -26,6 +26,9 @@ local Z = H.LoadZones(ZONES)   -- the loader that loads Core.lua for real, unlik
 stub.SetZone({ map = 1537, zone = "Ironforge", subzone = "A Nook With No Lore", x = 0.55, y = 0.47 })
 
 Expect("a place with no lore is a gap", Z:HasContributionGap(), true)
+env.Addon.db.profile.Contribute.HideButtons = true
+Expect("...but not when Contribute buttons are hidden in the player settings", Z:HasContributionGap(), false)
+env.Addon.db.profile.Contribute.HideButtons = false
 local envelope = Z:CaptureContribution()
 Expect("the source is zones", envelope:match("^!SPOKEN1 zones\n") ~= nil, true)
 Expect("the map is carried", envelope:match("\nmap=1537\n") ~= nil, true)

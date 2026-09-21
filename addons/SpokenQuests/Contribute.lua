@@ -408,7 +408,10 @@ function Contribute:HasGap()
     if not (_G.Spoken and Spoken.Contribute and Spoken.ShowContribution) then
         return false
     end
-    local gap = HasSomethingToSend() and not HasSoundForCurrent()
+    -- Hidden in the Spoken Player settings: no gap to show, and so no model to prime. The
+    -- method is guarded because an older bundled player does not have it.
+    local hidden = Spoken.AreContributeButtonsHidden and Spoken:AreContributeButtonsHidden()
+    local gap = not hidden and HasSomethingToSend() and not HasSoundForCurrent()
     if gap then
         PrimeModelCache(Utils:GetNPCGUID())
     elseif loadingGUID then

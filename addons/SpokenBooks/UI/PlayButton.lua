@@ -161,5 +161,13 @@ function SpokenBooks:SetupPlayButton()
 	end)
 
 	self.playButton = button
+
+	-- Toggling the hide setting in the Spoken Player settings fires no game event.
+	if _G.Spoken and Spoken.RegisterCallback then
+		Spoken:RegisterCallback("CONTRIBUTE_SETTINGS_CHANGED", function()
+			SpokenBooks:RefreshPlayButton()
+		end)
+	end
+
 	return button
 end

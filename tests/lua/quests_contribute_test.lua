@@ -73,6 +73,18 @@ stub.FireEvent("QUEST_DETAIL")
 Expect("the button appears on the quest detail panel when there is a gap",
     VoiceOver.ContributeButton.button:IsShown(), true)
 
+-- The Spoken Player setting that hides every Contribute button. Toggling it fires no game
+-- event, so the button must hear about it through the player's own callback.
+SpokenEnv.Addon.db.profile.Contribute.HideButtons = true
+SpokenEnv.Callbacks:Fire("CONTRIBUTE_SETTINGS_CHANGED")
+Expect("hiding Contribute buttons in the player settings hides it at once",
+    VoiceOver.ContributeButton.button:IsShown(), false)
+stub.FireEvent("QUEST_DETAIL")
+Expect("...and it stays hidden through the next quest event", VoiceOver.ContributeButton.button:IsShown(), false)
+SpokenEnv.Addon.db.profile.Contribute.HideButtons = false
+SpokenEnv.Callbacks:Fire("CONTRIBUTE_SETTINGS_CHANGED")
+Expect("...and comes back when the setting is turned off", VoiceOver.ContributeButton.button:IsShown(), true)
+
 -- A pack picks up the line: the gap closes, and the button goes with it on the next event.
 VoiceOver.DataModules:Register("TestPack", {
     SoundLengthLookupByFileName = { ["9123-accept"] = 1 },

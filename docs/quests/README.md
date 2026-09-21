@@ -752,7 +752,10 @@ of the text, and `Contribute:HasGap()` puts a button reading **"Contribute"** â€
 the books addon's button carries â€” on the Blizzard quest frame itself, anchored into whichever
 of the accept, progress or reward panel's own button row is on screen, and beside the gossip
 frame's Goodbye button for an NPC line, exactly when there is text on screen and nothing queued
-to play.
+to play. A player who does not want it turns it off with **Hide the Contribute buttons** in the
+Spoken Player settings, one switch for the quests, books and zones buttons alike; each addon
+asks `Spoken:AreContributeButtonsHidden()` in its gap check and refreshes on the player's
+`CONTRIBUTE_SETTINGS_CHANGED` callback, since toggling it fires no game event.
 
 Clicking it opens the same copy box `ReportButton.lua` uses, holding a plain-text envelope
 instead of an address: the addon, the build, the locale, the quest or NPC, and the text
