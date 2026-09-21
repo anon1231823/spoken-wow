@@ -20,7 +20,7 @@ process.env.SPOKEN_QUESTS_AUDIO = path.join(root, "audio");
 process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
-const { listTakes, noteArchiveFile, setLiveTake, takePath } = await import(
+const { listTakes, setLiveTake, takePath } = await import(
   "./store"
 );
 
@@ -145,15 +145,5 @@ describe("moving the live flag", () => {
 
     const live = (await listTakes("quests", file)).filter((take) => take.isCurrent);
     expect(live.map((take) => take.version)).toEqual([1]);
-  });
-});
-
-describe("recording where a take's bytes went", () => {
-  it("saves the name, so nothing has to be worked out for that take again", async () => {
-    await record(5, true);
-
-    await noteArchiveFile("quests", file, 5, "v5.mp3");
-
-    expect((await listTakes("quests", file))[0].archiveFile).toBe("v5.mp3");
   });
 });

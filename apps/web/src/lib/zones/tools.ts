@@ -44,25 +44,6 @@ import * as exportModule from "@tools/voice/export-manifest.mjs";
 import * as lookupModule from "@tools/voice/build-lookup.mjs";
 import * as wikiModule from "@tools/lib/wiki.mjs";
 
-/** What generation recorded for a line. Mirrors a manifest record, and so a current take. */
-export type TakeRecord = {
-  file: string;
-  textHash: string;
-  chars: number;
-  credits: number | null;
-  durationSec: number | null;
-  bytes: number;
-  voiceId: string | null;
-  modelId: string | null;
-  outputFormat: string | null;
-  dictionaryId: string | null;
-  dictionaryVersionId: string | null;
-  /** Whether the request carried a lead-in, and how much was cut. See generation/leadin.ts. */
-  leadIn: boolean;
-  leadInSec: number | null;
-  generatedAt: string;
-};
-
 // buildCatalogue() is deliberately NOT re-exported. It reads the committed Lua, which is an
 // export of lore_line and therefore at best as fresh as the table; the app builds its
 // catalogue from the table itself. The CLI keeps it: tools/ must run without a database.
@@ -92,35 +73,7 @@ export const loadPronunciation = normaliseModule.loadPronunciation as () => Prom
 // the wiki get the same summary from the same prose.
 export const makeShort = wikiModule.makeShort as (full: string, limit?: number) => string;
 
-/** Writes a clip and archives it under its own version. Returns the absolute path. */
-export const writeAudio = storeModule.writeAudio as (
-  file: string,
-  buffer: Buffer,
-  version?: number,
-) => Promise<string>;
-/** Copies the live clip into the archive under a take's version. Nothing is moved. */
-export const archiveTake = storeModule.archiveTake as (
-  file: string,
-  version: number | null,
-) => Promise<boolean>;
-/**
- * Archives whatever is live before it is replaced, under the take it belongs to.
- *
- * The counterpart of the quests side's archiveInherited: a clip imported from the old sound
- * pack has a row but no archive copy, and overwriting it would destroy audio that cannot be
- * reproduced.
- */
-export const archiveLive = storeModule.archiveLive as (
-  file: string,
-  liveVersion?: number | null,
-) => Promise<boolean>;
 export const durationOf = storeModule.durationOf as (path: string) => Promise<number>;
-export const insertTake = storeModule.insertTake as (
-  lineId: string,
-  record: TakeRecord,
-  origin: "imported" | "generated",
-  settings?: Record<string, unknown> | null,
-) => Promise<number>;
 
 // What the addon actually ships, rebuilt after a batch drains rather than after every line:
 // buildLookup rewrites the whole table, and doing that 1,353 times would be the slowest part

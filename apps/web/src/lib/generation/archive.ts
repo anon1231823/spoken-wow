@@ -14,7 +14,6 @@
  * Nothing here touches the database. versions.ts is the record of what these files are;
  * this is the files, and nothing here is ever consulted to decide what exists.
  */
-import fs from "node:fs/promises";
 import path from "node:path";
 
 import { AUDIO_DIR, AUDIO_HISTORY_DIR } from "@/lib/paths";
@@ -46,69 +45,6 @@ export function historyDir(file: string): string {
   const sub = path.dirname(file);
   const name = path.basename(file, ".mp3");
   return path.join(AUDIO_HISTORY_DIR, sub, name);
-}
-
-export function versionPath(file: string, version: number): string {
-  // Versions are 1-based, so 0 is as wrong as -1 here rather than a special case.
-  if (!Number.isInteger(version) || version < 1) {
-    throw new Error(`bad version ${version}`);
-  }
-  return path.join(historyDir(file), `${version}.mp3`);
-}
-
-export async function storeFileExists(file: string): Promise<boolean> {
-  try {
-    await fs.access(storePath(file));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export async function storeFileBytes(file: string): Promise<number | null> {
-  try {
-    return (await fs.stat(storePath(file))).size;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Write bytes into the store.
- *
- * `.part`-then-rename, the same atomic write storeSample uses: rename is atomic within a
- * filesystem, so a reader - or the addon build - can never see a half-written mp3. The
- * leading dot keeps an interrupted write out of readStoreIndex, which matches only *.mp3.
- */
-export async function writeStoreFile(file: string, data: Buffer): Promise<void> {
-  const target = storePath(file);
-  await fs.mkdir(path.dirname(target), { recursive: true });
-
-  const partial = path.join(path.dirname(target), `.${path.basename(target)}.part`);
-  try {
-    await fs.writeFile(partial, data);
-    await fs.rename(partial, target);
-  } catch (error) {
-    await fs.rm(partial, { force: true });
-    throw error;
-  }
-}
-
-/** Copy what is in the store now into history at `version`. Returns its size. */
-export async function archiveStoreFile(file: string, version: number): Promise<number> {
-  const source = storePath(file);
-  const target = versionPath(file, version);
-  await fs.mkdir(path.dirname(target), { recursive: true });
-
-  const partial = `${target}.part`;
-  try {
-    await fs.copyFile(source, partial);
-    await fs.rename(partial, target);
-  } catch (error) {
-    await fs.rm(partial, { force: true });
-    throw error;
-  }
-  return (await fs.stat(target)).size;
 }
 
 

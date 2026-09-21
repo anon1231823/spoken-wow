@@ -1162,7 +1162,7 @@ which in practice means it never gets started.
 ```sh
 cp ../../.env.example ../../.env   # DATABASE_URL is already filled in; add your API key
 make zones-db-up                # Postgres on 5433, then migrations
-make zones-import               # seed from tools/voice/manifest.json (idempotent)
+make web-db-pull                # production's rows, since the database is the record
 make zones-web                  # http://localhost:3000
 ```
 
@@ -1189,19 +1189,16 @@ that comes out worse can be undone — the superseded mp3s go to `audio-history/
 `pipelines/zones/tools/voice/manifest.json` is still committed and is still what `build-lookup.mjs`
 turns into the addon's lookup table. It stopped being hand-maintained and became an
 export: `make zones-lookup` runs `export-manifest.mjs` before `build-lookup.mjs`. **The
-addon build never learns the database exists** — with `DATABASE_URL` unset every tool
-falls back to the file and a clone with no Postgres can still generate audio and ship
-the addon.
+addon build never learns the database exists** — with `DATABASE_URL` unset the build
+tools read the committed file, so a clone with no Postgres can still build the addon.
+It cannot generate audio: takes are cut only by the site.
 
-The seam is `pipelines/zones/tools/voice/store.mjs`, which already owned `loadManifest`/`saveManifest`
-and is the only way the other tools reach that state. Putting Postgres behind those
-two functions is what keeps the CLI and the web app writing the same rows.
-`../wow-voiceover/web/migrations/0012` records the alternative: *"the Python CLI reads
-the corpus and will not see these rows… The web app is the generation path. This is
-recorded rather than solved."*
+`pipelines/zones/tools/voice/store.mjs` is read-only. Takes are written by
+`apps/web/src/lib/takes/commit.ts`, which all three sections share; this module used to
+hold the zones copy of that, and the web app borrowed it.
 
-The check that proves it: `make import && make export` must leave `manifest.json`
-byte-identical, and `validate-audio.mjs` must still pass.
+The check that proves the committed file is current: `export-manifest.mjs --check` must
+report no change, and `validate-audio.mjs` must still pass.
 
 ### Regenerating costs money, so it says so first
 

@@ -16,9 +16,10 @@ process.env.SPOKEN_QUESTS_AUDIO = path.join(root, "audio");
 process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
-const { historyDir, storePath, versionPath, writeStoreFile } = await import("./archive");
+const { historyDir, storePath } = await import("./archive");
+const { archiveName } = await import("@/lib/takes/bytes");
+const { listTakes } = await import("@/lib/takes/store");
 const { regenerateLine } = await import("./regenerate");
-const { listVersions } = await import("./versions");
 const { LEAD_IN } = await import("./leadin");
 const { audioRelPath } = await import("@/lib/audio");
 const { lineIndex } = await import("@/lib/quests/catalogue");
@@ -258,20 +259,25 @@ describe("a line whose audio already exists", () => {
     expect(second.ok).toBe(true);
     if (!second.ok) return;
     expect(second.version).toBe(2);
-    expect(fs.readFileSync(versionPath(file, 1))).toEqual(MP3);
+    expect(fs.readFileSync(path.join(historyDir(file), archiveName(1, MP3)))).toEqual(MP3);
     expect(fs.readFileSync(storePath(file))).toEqual(MP3);
   });
 
-  it("refuses when the store has audio no take row describes", async () => {
-    // A clip the table cannot name has no version to be archived under, and writing over
-    // it would destroy it. Every clip in the store is meant to have a row.
+  it("keeps audio no take row describes, as a take of its own", async () => {
+    // Before, this refused. The clip is now archived under its own hash and recorded, so
+    // the re-roll goes ahead and the old audio can still be restored.
     const file = await fileFor(SOLO);
-    await writeStoreFile(file, Buffer.from("audio nothing recorded"));
+    fs.mkdirSync(path.dirname(storePath(file)), { recursive: true });
+    fs.writeFileSync(storePath(file), "audio nothing recorded");
 
-    const { options } = stub();
-    await expect(regenerate(SOLO, options)).rejects.toThrow(/no take row/);
+    const result = await regenerate(SOLO, stub().options);
 
-    expect(fs.readFileSync(storePath(file), "utf8")).toBe("audio nothing recorded");
+    expect(result.ok).toBe(true);
+    const takes = await listTakes("quests", file);
+    expect(takes.map((t) => [t.version, t.origin])).toEqual([
+      [2, "generated"],
+      [1, "imported"],
+    ]);
   });
 });
 
@@ -366,7 +372,8 @@ describe("when ElevenLabs refuses", () => {
   // before, and nothing has been recorded that suggests otherwise.
   it("leaves the store and the history untouched", async () => {
     const file = await fileFor(SOLO);
-    await writeStoreFile(file, Buffer.from("the take that was already there"));
+    fs.mkdirSync(path.dirname(storePath(file)), { recursive: true });
+    fs.writeFileSync(storePath(file), "the take that was already there");
 
     const { options } = stub({ speech: () => new Response("nope", { status: 500 }) });
     const result = await regenerateLine(SOLO, "user", options);
@@ -374,7 +381,7 @@ describe("when ElevenLabs refuses", () => {
     expect(result.ok).toBe(false);
     expect(fs.readFileSync(storePath(file), "utf8")).toBe("the take that was already there");
     expect(fs.existsSync(historyDir(file))).toBe(false);
-    expect(await listVersions(file)).toEqual([]);
+    expect(await listTakes("quests", file)).toEqual([]);
   });
 });
 

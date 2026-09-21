@@ -20,25 +20,14 @@
  */
 import "server-only";
 
-import { stat } from "node:fs/promises";
-
 import { failure } from "@/lib/generation/errors";
+import { BUSY, withFileLock } from "@/lib/generation/lock";
 import type { RegenerateResult } from "@/lib/generation/regenerate";
 import { textToSpeech } from "@/lib/generation/tts";
-
-import { archiveNameFor } from "@/lib/takes/archive";
-import { noteArchiveFile } from "@/lib/takes/store";
+import { commitTake } from "@/lib/takes/commit";
 
 import { catalogue, type CatalogueEntry } from "./catalogue";
-import {
-  archiveLive,
-  archiveTake,
-  buildLookup,
-  durationOf,
-  exportManifest,
-  insertTake,
-  writeAudio,
-} from "./tools";
+import { buildLookup, durationOf, exportManifest } from "./tools";
 import { narratorConfig, NarratorMissing, type VoiceConfig } from "./voice";
 
 /**
@@ -50,30 +39,6 @@ import { narratorConfig, NarratorMissing, type VoiceConfig } from "./voice";
 function asFailure(error: unknown) {
   if (error instanceof NarratorMissing) return failure("voice-missing", error.message);
   return failure("upstream", error instanceof Error ? error.message : String(error));
-}
-
-async function takeFor(
-  entry: CatalogueEntry,
-  config: VoiceConfig,
-  path: string,
-  credits: number | null,
-  leadIn: { leadIn: boolean; leadInSec: number | null },
-) {
-  return {
-    file: entry.file,
-    textHash: entry.hash,
-    chars: entry.spoken.length,
-    credits,
-    durationSec: await durationOf(path),
-    bytes: (await stat(path)).size,
-    voiceId: config.voiceId ?? null,
-    modelId: config.modelId,
-    outputFormat: config.outputFormat,
-    dictionaryId: config.dictionaryId ?? null,
-    dictionaryVersionId: config.dictionaryVersionId ?? null,
-    ...leadIn,
-    generatedAt: new Date().toISOString(),
-  };
 }
 
 /**
@@ -129,73 +94,91 @@ export async function regenerateZoneLine(
     return { ok: false, failure: asFailure(error) };
   }
 
-  // No seed: a zone line is narrated once and re-rolled by hand if it comes out wrong,
-  // so there is nothing to reproduce bit for bit.
-  const speech = await textToSpeech(
-    {
-      voiceId: config.voiceId!,
-      text: entry.spoken,
-      modelId: config.modelId,
-      voiceSettings: config.voiceSettings,
-      seed: null,
-      dictionary:
-        config.dictionaryId && config.dictionaryVersionId
-          ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
-          : null,
-    },
-    { apiKey: options.apiKey },
-  );
-  if (!speech.ok) return { ok: false, failure: speech.failure };
-  // Already trimmed of its lead-in by tts.ts: what is written here is what the addon plays.
-  const { audio, credits } = speech;
-
-  try {
-    // The clip about to be replaced, archived under the take it belongs to. Usually a
-    // no-op -- every take cut since takes were archived by version already has its copy --
-    // but an imported clip has a row and no archive entry, and overwriting that would
-    // destroy audio nothing can reproduce.
-    await archiveLive(entry.file);
-
-    const path = await writeAudio(entry.file, audio);
-
-    const version = await insertTake(
-      entry.id,
-      await takeFor(entry, config, path, credits, speech),
-      "generated",
-      // Unlike an imported take, this one knows exactly what it was made with, so a
-      // version that sounded right can be reproduced after the settings have moved on.
-      config.voiceSettings,
+  // Held across the ElevenLabs call, not just the write, for the reason quests holds it:
+  // two requests for one line must not both spend credits. The key is the one the restore
+  // route and every other section use, so a restore cannot interleave with a generation.
+  const outcome = await withFileLock(`zones:${entry.file}`, async (): Promise<RegenerateResult> => {
+    // No seed: a zone line is narrated once and re-rolled by hand if it comes out wrong,
+    // so there is nothing to reproduce bit for bit.
+    const speech = await textToSpeech(
+      {
+        voiceId: config.voiceId!,
+        text: entry.spoken,
+        modelId: config.modelId,
+        voiceSettings: config.voiceSettings,
+        seed: null,
+        dictionary:
+          config.dictionaryId && config.dictionaryVersionId
+            ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
+            : null,
+      },
+      { apiKey: options.apiKey },
     );
+    if (!speech.ok) return { ok: false, failure: speech.failure };
+    // Already trimmed of its lead-in by tts.ts: what is written here is what the addon plays.
+    const { audio, credits } = speech;
 
-    // After the row, because only the row knows the version: the archived file is named
-    // after the take it holds, which is what makes a restore a statement about which take
-    // is live rather than a guess about which clip is which.
-    await archiveTake(entry.file, version);
-    await noteArchiveFile("zones", entry.file, version, archiveNameFor("zones", version));
+    try {
+      const committed = await commitTake(
+        "zones",
+        entry.file,
+        audio,
+        {
+          lineId: entry.id,
+          voiceId: config.voiceId ?? null,
+          modelId: config.modelId,
+          outputFormat: config.outputFormat,
+          // Unlike an imported take, this one knows exactly what it was made with, so a
+          // version that sounded right can be reproduced after the settings have moved on.
+          settings: config.voiceSettings,
+          characters: entry.spoken.length,
+          credits,
+          spokenHash: entry.hash,
+          dictionaryId: config.dictionaryId ?? null,
+          dictionaryVersion: config.dictionaryVersionId ?? null,
+          leadIn: speech.leadIn,
+          leadInSec: speech.leadInSec,
+          createdBy,
+        },
+        { measure: durationOf },
+      );
 
+      return {
+        ok: true,
+        lineId,
+        file: entry.file,
+        version: committed.version,
+        bytes: committed.bytes,
+        characters: entry.spoken.length,
+        credits,
+        // No seed. The quests side derives one per NPC so a file shared by several of them
+        // regenerates the same way whichever row the button was pressed on; here every line
+        // has a file of its own and one narrator, so there is nothing to hold steady.
+        seed: null,
+        voice: config.voiceName,
+        // narratorConfig resolves this or throws, so it is set by the time we are here.
+        voiceId: config.voiceId!,
+        dictionaryVersion: config.dictionaryVersionId ?? null,
+        spokenText: entry.spoken,
+        // Nothing else plays this file: naming.mjs gives every line its own, which is the
+        // whole difference from a gossip file named after its text.
+        sharedWith: 0,
+      };
+    } catch (error) {
+      return { ok: false, failure: asFailure(error) };
+    }
+  });
+
+  if (outcome === BUSY) {
     return {
-      ok: true,
-      lineId,
-      file: entry.file,
-      version,
-      bytes: (await stat(path)).size,
-      characters: entry.spoken.length,
-      credits,
-      // No seed. The quests side derives one per NPC so a file shared by several of them
-      // regenerates the same way whichever row the button was pressed on; here every line
-      // has a file of its own and one narrator, so there is nothing to hold steady.
-      seed: null,
-      voice: config.voiceName,
-      // narratorConfig resolves this or throws, so it is set by the time we are here.
-      voiceId: config.voiceId!,
-      dictionaryVersion: config.dictionaryVersionId ?? null,
-      spokenText: entry.spoken,
-      // Nothing else plays this file: naming.mjs gives every line its own, which is the
-      // whole difference from a gossip file named after its text.
-      sharedWith: 0,
+      ok: false,
+      failure: {
+        ...failure("upstream", `${entry.file} is already being regenerated; try again in a moment`),
+        status: 409,
+        fatal: false,
+      },
     };
-  } catch (error) {
-    return { ok: false, failure: asFailure(error) };
   }
+  return outcome;
 }
 

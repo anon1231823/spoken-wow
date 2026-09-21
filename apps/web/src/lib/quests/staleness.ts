@@ -16,7 +16,7 @@
 import { fileIndex } from "../audio";
 import { db } from "../db";
 import { fileDefaults } from "../generation/files";
-import { spokenHash } from "../generation/history";
+import { spokenHash } from "../generation/spoken-hash";
 import { accentTagged, audioTags } from "../generation/narration";
 import { applyPronunciation } from "../generation/pronunciation";
 import { currentConfig } from "../generation/settings";

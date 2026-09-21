@@ -19,10 +19,8 @@
  */
 import "server-only";
 
-import fs from "node:fs/promises";
-import path from "node:path";
-
 import { storePathOf } from "./adapters";
+import { copyAtomic } from "./bytes";
 import { setLiveTake, takePath } from "./store";
 import type { Source } from "@/lib/sections";
 
@@ -60,23 +58,13 @@ export async function restoreTake(
   // it. Nothing to move, and the flag is where it belongs.
   if (source_path === target) return;
 
-  await fs.mkdir(path.dirname(target), { recursive: true });
-
-  // Copy beside the target and rename, the same atomic write every store here uses: rename
-  // is atomic within a filesystem, so a reader - or the addon build - never sees half a
-  // clip. The leading dot keeps an interrupted copy out of the quests store index, which
-  // matches only *.mp3.
-  //
   // THIS is where missing bytes are discovered, and the only place that should discover
   // them: nothing about drawing a list of takes depends on the archive being reachable, so
   // a restore that cannot find its clip fails here, with the path it looked for, and the
   // live flag is not moved.
-  const partial = path.join(path.dirname(target), `.${path.basename(target)}.part`);
   try {
-    await fs.copyFile(source_path, partial);
-    await fs.rename(partial, target);
+    await copyAtomic(source_path, target);
   } catch (error) {
-    await fs.rm(partial, { force: true });
     const reason = (error as NodeJS.ErrnoException)?.code === "ENOENT" ? "is not on disk" : "could not be read";
     throw new Error(`the audio of version ${version} of ${file} ${reason} (${source_path})`);
   }

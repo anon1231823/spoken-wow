@@ -3,7 +3,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy \
-        status remove clean voice voice-zones lookup import export \
+        status remove clean voice voice-zones lookup export \
         push push-dry pull pull-dry audio-status ssh-check pull-manifest \
         db-push db-pull \
         icon lore-import lore-export lore-check lore-rewrite aliases languages locale-check \
@@ -101,9 +101,6 @@ validate-audio: ## Check manifest, files on disk and lookup table agree (DATABAS
 # works against pipelines/zones/tools/voice/manifest.json. The schema and its migrations
 # belong to apps/web now; see make/web.mk and deploy/web/README.md.
 #-------------------------------------------------------------------------------
-
-import: ## Seed the database from pipelines/zones/tools/voice/manifest.json (idempotent)
-	@$(VOICE_LANG) node pipelines/zones/tools/voice/import-manifest.mjs
 
 export: ## Write pipelines/zones/tools/voice/manifest.json from the database
 	@$(VOICE_LANG) node pipelines/zones/tools/voice/export-manifest.mjs

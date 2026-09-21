@@ -12,10 +12,9 @@
 //
 // Run after any generation, before build-lookup.mjs. `make lookup` does both.
 //
-// THE ROUND TRIP IS THE PROOF. import-manifest.mjs followed by this script must leave
-// tools/voice/manifest.json byte-identical. If it does not, the database is not
-// carrying everything the addon needs and nothing built on top of it can be trusted.
-// That is what --check is for, and what the M8 verification step runs.
+// --check re-exports and compares against the committed file without writing it, so CI
+// can prove the committed manifest is what the database says. The database is the record;
+// this file is only ever written from it.
 
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -73,8 +72,8 @@ export async function exportManifest({ check = false } = {}) {
   // manifest straight over the committed one. Nothing complained, because writing what
   // the database says is exactly what this function is for.
   //
-  // Deliberately not "refuses to shrink it". Retiring takes is a real operation
-  // (retire-era.mjs) and a language legitimately loses entries. Zero is the one count
+  // Deliberately not "refuses to shrink it". Retiring takes is a real operation and a
+  // language legitimately loses entries. Zero is the one count
   // that cannot be arrived at by any sequence of real edits, because a take is never
   // deleted -- it is superseded.
   if (count === 0 && before > 0) {

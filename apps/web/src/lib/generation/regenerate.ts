@@ -19,13 +19,14 @@ import type { CorpusLine } from "@/lib/corpus";
 import { lineIndex } from "@/lib/quests/catalogue";
 import { readIgnores } from "@/lib/quests/ignores";
 import { readOverrides } from "@/lib/quests/overrides";
+import { commitTake } from "@/lib/takes/commit";
 import { INVALID_CHARS, isVoiceable } from "@/lib/text-gate";
 
 import { currentLocator } from "./dictionary";
 import { fileDefaults } from "./files";
 import { applyPronunciation } from "./pronunciation";
 import { canonicalNpcId, seedFor } from "./seed";
-import { commitVersion } from "./history";
+import { spokenHash } from "./spoken-hash";
 import { currentConfig } from "./settings";
 import { generationStatus } from "./status";
 import { accentTagged, audioTags, NARRATOR_VOICE, segments } from "./narration";
@@ -139,7 +140,7 @@ export async function regenerateLine(
     };
   }
 
-  const outcome = await withFileLock(file, async (): Promise<RegenerateResult> => {
+  const outcome = await withFileLock(`quests:${file}`, async (): Promise<RegenerateResult> => {
     const config = await currentConfig();
     // The accent direction goes on last, so it sits in front of the words rather than in
     // front of a `<hic>` audioTags has yet to rewrite. Inside spokenText and not bolted on at
@@ -203,11 +204,9 @@ export async function regenerateLine(
         );
     if (!speech.ok) return { ok: false, failure: speech.failure };
 
-    const committed = await commitVersion({
-      file,
-      // Already trimmed of its lead-in by tts.ts, so the store, the archive and `bytes` all
-      // describe the audio the addon will play.
-      data: speech.audio,
+    // Already trimmed of its lead-in by tts.ts, so the store, the archive and `bytes` all
+    // describe the audio the addon will play.
+    const committed = await commitTake("quests", file, speech.audio, {
       lineId,
       voice: line.voice,
       narratorVoice: narrated ? NARRATOR_VOICE : null,
@@ -221,7 +220,7 @@ export async function regenerateLine(
       settings: narrated
         ? { stability: config.voiceSettings.stability }
         : config.voiceSettings,
-      spokenText,
+      spokenHash: spokenHash(spokenText),
       dictionaryVersion: dictionary?.versionId ?? null,
       leadIn: speech.leadIn,
       leadInSec: speech.leadInSec,

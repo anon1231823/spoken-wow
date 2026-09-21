@@ -132,21 +132,6 @@ export async function setLiveTake(
   }
 }
 
-/** Record where a take's bytes were archived, so nothing has to work it out again. */
-export async function noteArchiveFile(
-  source: Source,
-  file: string,
-  version: number,
-  name: string,
-  lang = "enUS",
-): Promise<void> {
-  await query(
-    `update "take" set "archiveFile" = $5
-      where "source" = $1 and "file" = $2 and "lang" = $3 and "version" = $4`,
-    [source, file, lang, version, name],
-  );
-}
-
 /**
  * Absolute path of one archived take, for streaming or copying it back.
  *

@@ -12,21 +12,17 @@
  */
 import "server-only";
 
-import { stat } from "node:fs/promises";
-
 import { failure } from "@/lib/generation/errors";
+import { BUSY, withFileLock } from "@/lib/generation/lock";
 import type { RegenerateResult } from "@/lib/generation/regenerate";
 import { textToSpeech } from "@/lib/generation/tts";
+import { commitTake } from "@/lib/takes/commit";
 import { type VoiceConfig } from "@/lib/zones/voice";
 import { narratorConfig, NarratorMissing } from "@/lib/zones/voice";
 
 import { catalogue, BASE_LANG, type BookPage } from "./catalogue";
 export { publish } from "./publish";
-import { archiveNameFor } from "@/lib/takes/archive";
-import { noteArchiveFile } from "@/lib/takes/store";
-
 import { durationOf } from "./tools";
-import { archiveLive, archiveTake, insertTake, writeAudio } from "./store";
 
 /**
  * Resolving the narrator can fail before any request is made.
@@ -76,85 +72,85 @@ export async function regenerateBookLine(
     return { ok: false, failure: asFailure(error) };
   }
 
-  // No seed: a page is narrated once and re-rolled by hand if it comes out wrong.
-  const speech = await textToSpeech(
-    {
-      voiceId: config.voiceId,
-      text: page.spoken,
-      modelId: config.modelId,
-      voiceSettings: config.voiceSettings,
-      seed: null,
-      dictionary:
-        config.dictionaryId && config.dictionaryVersionId
-          ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
-          : null,
-    },
-    { apiKey: options.apiKey },
-  );
-  if (!speech.ok) return { ok: false, failure: speech.failure };
-  // Already trimmed of its lead-in by tts.ts: the store keeps what the addon plays.
-  const { audio, credits } = speech;
-
-  try {
-    // The clip about to be replaced, archived under the take it belongs to. Usually a
-    // no-op -- a take cut since takes were archived by version already has its copy -- but
-    // one written before that has a row and no archive entry, and overwriting it would
-    // destroy audio that cost credits.
-    await archiveLive(page.file, lang);
-
-    const path = await writeAudio(page.file, audio);
-    const bytes = (await stat(path)).size;
-
-    const version = await insertTake(
-      page.id,
+  // Held across the ElevenLabs call, for the reason every section holds it: two requests
+  // for one page must not both spend credits, and a restore must not interleave.
+  const outcome = await withFileLock(`books:${page.file}`, async (): Promise<RegenerateResult> => {
+    // No seed: a page is narrated once and re-rolled by hand if it comes out wrong.
+    const speech = await textToSpeech(
       {
-        file: page.file,
-        textHash: page.hash,
-        chars: page.spoken.length,
-        credits,
-        durationSec: await durationOf(path),
-        bytes,
         voiceId: config.voiceId,
+        text: page.spoken,
         modelId: config.modelId,
-        outputFormat: config.outputFormat,
-        dictionaryId: config.dictionaryId ?? null,
-        dictionaryVersionId: config.dictionaryVersionId ?? null,
-        leadIn: speech.leadIn,
-        leadInSec: speech.leadInSec,
-        generatedAt: new Date().toISOString(),
+        voiceSettings: config.voiceSettings,
+        seed: null,
+        dictionary:
+          config.dictionaryId && config.dictionaryVersionId
+            ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
+            : null,
       },
-      "generated",
-      // Unlike an imported take this one knows what it was made with, so a version that
-      // sounded right can be reproduced after the settings have moved on.
-      config.voiceSettings,
-      lang,
+      { apiKey: options.apiKey },
     );
+    if (!speech.ok) return { ok: false, failure: speech.failure };
+    // Already trimmed of its lead-in by tts.ts: what is written here is what the addon plays.
+    const { audio, credits } = speech;
 
-    // After the row, because only the row knows the version: the archived file is named
-    // after the take it holds, which is what makes a restore a statement about which take
-    // is live rather than a guess about which clip is which.
-    await archiveTake(page.file, version);
-    await noteArchiveFile("books", page.file, version, archiveNameFor("books", version), lang);
+    try {
+      const committed = await commitTake(
+        "books",
+        page.file,
+        audio,
+        {
+          lineId: page.id,
+          voiceId: config.voiceId,
+          modelId: config.modelId,
+          outputFormat: config.outputFormat,
+          // Unlike an imported take this one knows what it was made with, so a version that
+          // sounded right can be reproduced after the settings have moved on.
+          settings: config.voiceSettings,
+          characters: page.spoken.length,
+          credits,
+          spokenHash: page.hash,
+          dictionaryId: config.dictionaryId ?? null,
+          dictionaryVersion: config.dictionaryVersionId ?? null,
+          leadIn: speech.leadIn,
+          leadInSec: speech.leadInSec,
+          createdBy,
+        },
+        { lang, measure: durationOf },
+      );
 
+      return {
+        ok: true,
+        lineId,
+        file: page.file,
+        version: committed.version,
+        bytes: committed.bytes,
+        characters: page.spoken.length,
+        credits,
+        // No seed: one page is one file and one narrator, so there is nothing to hold steady
+        // across the several NPCs a quests file can be shared by.
+        seed: null,
+        voice: config.voiceName,
+        // narratorConfig resolves this or throws, so it is set by the time we are here.
+        voiceId: config.voiceId!,
+        dictionaryVersion: config.dictionaryVersionId ?? null,
+        spokenText: page.spoken,
+        sharedWith: 0,
+      };
+    } catch (error) {
+      return { ok: false, failure: asFailure(error) };
+    }
+  });
+
+  if (outcome === BUSY) {
     return {
-      ok: true,
-      lineId,
-      file: page.file,
-      version,
-      bytes,
-      characters: page.spoken.length,
-      credits,
-      // No seed: one page is one file and one narrator, so there is nothing to hold steady
-      // across the several NPCs a quests file can be shared by.
-      seed: null,
-      voice: config.voiceName,
-      // narratorConfig resolves this or throws, so it is set by the time we are here.
-      voiceId: config.voiceId!,
-      dictionaryVersion: config.dictionaryVersionId ?? null,
-      spokenText: page.spoken,
-      sharedWith: 0,
+      ok: false,
+      failure: {
+        ...failure("upstream", `${page.file} is already being regenerated; try again in a moment`),
+        status: 409,
+        fatal: false,
+      },
     };
-  } catch (error) {
-    return { ok: false, failure: asFailure(error) };
   }
+  return outcome;
 }
