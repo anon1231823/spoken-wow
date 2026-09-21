@@ -1,0 +1,337 @@
+#!/usr/bin/env node
+// Rebuilds the quests take table from the two things that actually record what happened:
+// the rows already in Postgres, and the files in audio-history/.
+//
+//   node scripts/rebuild-quests-takes.mjs --archive /tmp/prod-archive.txt --dry-run
+//   node scripts/rebuild-quests-takes.mjs --archive /tmp/prod-archive.txt
+//
+// Supersedes the store-only seed that came before it, which could only ever say "one take"
+// per line. RUN ONCE, THEN DELETE IT.
+//
+// WHY THE TABLE IS NOT ALREADY THE ANSWER. The app used to prune: keep the newest few
+// takes, delete the rest, rows and files together (KEEP_VERSIONS, deleteVersions,
+// pruneVersionFiles). It deleted oldest-first, so what is missing from any file is a
+// prefix -- 1,390 production files have no version 0 or 1, 63 have no 0, 1 or 2. The rows
+// are gone. Where pruning did not reach the file, the clip is still in audio-history and is
+// the only surviving record that the take happened.
+//
+// WHAT THE ARCHIVE IS, EXACTLY. Every clip under audio-history was written by this app's
+// archiveStoreFile, named `{version}.mp3` after the take it holds. tts_cli never wrote
+// there -- it overwrites the store in place -- so the CLI's own re-rolls left no trace
+// anywhere and are not recoverable by this or anything else. A line the CLI narrated and
+// never re-rolled through the app has exactly one take, and that is the honest answer.
+//
+// THE NUMBERING. A file's takes are the union of the numbers the archive carries and the
+// numbers its rows carry, sorted ascending, renumbered 1..n. The old numbering started at
+// 0 for audio that predated the app; there is no version 0 now, and a line is either
+// generated or it is not, so the pre-app take becomes version 1 like any other first take.
+// Every row gets its `archiveFile` pinned to the real filename, so renumbering moves no
+// bytes and nothing has to infer a name afterwards.
+//
+//     disk:     0.mp3  1.mp3  2.mp3  3.mp3  4.mp3  5.mp3
+//     version:    1      2      3      4      5      6
+//
+// A row whose number the archive does not carry is kept and left with a null archiveFile:
+// pruning deleted its clip, the take still happened, and the player says so when somebody
+// asks to hear it. A file with neither rows nor archive gets one take at version 1, which
+// is what the store file is.
+//
+// The live take is whichever number was live before, carried across to its new number. If
+// nothing was live -- a file the app never touched -- it is the newest take.
+
+import { readdir, readFile, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { gunzipSync } from "node:zlib";
+
+import pg from "pg";
+
+import { loadEnv } from "../../../pipelines/lib/env.mjs";
+
+await loadEnv("quests");
+
+const ROOT = new URL("../../../pipelines/quests/", import.meta.url).pathname;
+const SUBFOLDERS = ["quests", "gossip"];
+const LANG = "enUS";
+
+const argv = process.argv.slice(2);
+const args = new Set(argv);
+const dryRun = args.has("--dry-run");
+const archiveArg = argv.includes("--archive") ? argv[argv.indexOf("--archive") + 1] : null;
+
+function storeDir() {
+  return process.env.SPOKEN_QUESTS_AUDIO ?? join(ROOT, "audio");
+}
+
+function archiveDir() {
+  return process.env.SPOKEN_QUESTS_AUDIO_HISTORY ?? join(ROOT, "audio-history");
+}
+
+function corpusPath() {
+  return process.env.SPOKEN_QUESTS_CORPUS ?? join(ROOT, "corpus", "corpus.json.gz");
+}
+
+/** Store-relative paths of every clip on disk, the way lib/audio.ts reads them. */
+async function filesOnDisk() {
+  const found = new Map();
+  for (const sub of SUBFOLDERS) {
+    const dir = join(storeDir(), sub);
+    if (!existsSync(dir)) continue;
+    for (const name of await readdir(dir)) {
+      if (!name.endsWith(".mp3")) continue;
+      const file = `${sub}/${name}`;
+      found.set(file, (await stat(join(dir, name))).size);
+    }
+  }
+  return found;
+}
+
+/**
+ * The history directory's path for a store file, and back again.
+ *
+ * audio-history mirrors the store one level deeper: audio/gossip/31ab….mp3 is archived
+ * under audio-history/gossip/31ab…/. Mirrors lib/takes/adapters.ts, which owns the rule.
+ */
+function fileForHistoryPath(relative) {
+  // 'quests/4298-accept/0.mp3' -> ['quests/4298-accept', '0.mp3']
+  const cut = relative.lastIndexOf("/");
+  if (cut === -1) return null;
+  const dir = relative.slice(0, cut);
+  const name = relative.slice(cut + 1);
+  const match = /^(\d+)\.mp3$/.exec(name);
+  if (!match) return null;
+  return { file: `${dir}.mp3`, version: Number(match[1]), name };
+}
+
+/**
+ * file -> [{ version, name, bytes }], from a listing rather than a walk.
+ *
+ * The listing is `find -L . -name '*.mp3' -printf '%s %P\n'` run inside audio-history, so
+ * this can be built on a machine that does not hold the archive -- which is the whole point:
+ * the archive is on the droplet and the reconstruction is not.
+ */
+function parseArchive(text) {
+  const byFile = new Map();
+  let skipped = 0;
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    const space = line.indexOf(" ");
+    if (space === -1) continue;
+    const bytes = Number(line.slice(0, space));
+    const relative = line.slice(space + 1).replace(/^\.\//, "");
+    const parsed = fileForHistoryPath(relative);
+    if (!parsed) {
+      skipped++;
+      continue;
+    }
+    if (!byFile.has(parsed.file)) byFile.set(parsed.file, []);
+    byFile.get(parsed.file).push({ version: parsed.version, name: parsed.name, bytes });
+  }
+  for (const takes of byFile.values()) takes.sort((a, b) => a.version - b.version);
+  return { byFile, skipped };
+}
+
+/** The same shape, walked from a local audio-history. For testing without a droplet. */
+async function walkArchive(root) {
+  const lines = [];
+  async function walk(dir, prefix) {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) await walk(join(dir, entry.name), relative);
+      else if (entry.name.endsWith(".mp3")) {
+        lines.push(`${(await stat(join(dir, entry.name))).size} ${relative}`);
+      }
+    }
+  }
+  await walk(root, "");
+  return parseArchive(lines.join("\n"));
+}
+
+function fileIndex(corpus) {
+  const index = new Map();
+  for (const line of corpus.lines) {
+    const sub = line.source === "gossip" ? "gossip" : "quests";
+    const file = `${sub}/${line.fileName}.mp3`;
+    if (!index.has(file)) index.set(file, line);
+  }
+  return index;
+}
+
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error("DATABASE_URL is not set -- the takes live in Postgres");
+
+const pool = new pg.Pool({ connectionString: url });
+
+try {
+  const store = await filesOnDisk();
+  if (store.size === 0) {
+    throw new Error(
+      `no clips under ${storeDir()} -- run this where the store is, or set SPOKEN_QUESTS_AUDIO`,
+    );
+  }
+
+  const archive = archiveArg
+    ? parseArchive(await readFile(archiveArg, "utf8"))
+    : await walkArchive(archiveDir());
+
+  const corpus = JSON.parse(gunzipSync(await readFile(corpusPath())).toString("utf8"));
+  const index = fileIndex(corpus);
+
+  const { rows } = await pool.query(
+    `select * from "take" where "source" = 'quests' and "lang" = $1 order by "file", "version"`,
+    [LANG],
+  );
+  const byFile = new Map();
+  for (const row of rows) {
+    if (!byFile.has(row.file)) byFile.set(row.file, []);
+    byFile.get(row.file).push(row);
+  }
+
+  // Every file worth having a take: what is in the store, plus anything the archive knows
+  // about that the store has lost, plus anything the table already claims.
+  const files = new Set([...store.keys(), ...archive.byFile.keys(), ...byFile.keys()]);
+
+  const plan = [];
+  const unknown = [];
+  for (const file of [...files].sort()) {
+    const existing = byFile.get(file) ?? [];
+    const archived = archive.byFile.get(file) ?? [];
+    const line = index.get(file);
+    if (!line && existing.length === 0) {
+      unknown.push(file);
+      continue;
+    }
+
+    // The union, which is what "every take that happened" means here: a number the archive
+    // carries is a take whose clip survived, a number only the table carries is a take
+    // whose clip pruning deleted. Both happened.
+    const olds = [...new Set([...archived.map((a) => a.version), ...existing.map((r) => r.version)])];
+    olds.sort((a, b) => a - b);
+
+    const liveOld = existing.find((row) => row.isCurrent)?.version ?? olds[olds.length - 1];
+    const archiveByOld = new Map(archived.map((a) => [a.version, a]));
+    const rowByOld = new Map(existing.map((r) => [r.version, r]));
+
+    const takes = olds.map((old, i) => ({
+      version: i + 1,
+      old,
+      row: rowByOld.get(old) ?? null,
+      archiveFile: archiveByOld.get(old)?.name ?? null,
+      bytes: archiveByOld.get(old)?.bytes ?? rowByOld.get(old)?.bytes ?? store.get(file) ?? 0,
+      isCurrent: old === liveOld,
+    }));
+
+    // Neither rows nor archive: the store file is the one take anybody knows about.
+    if (takes.length === 0) {
+      takes.push({
+        version: 1,
+        old: null,
+        row: null,
+        archiveFile: null,
+        bytes: store.get(file) ?? 0,
+        isCurrent: true,
+      });
+    }
+
+    const unchanged =
+      existing.length === takes.length &&
+      takes.every((t) => t.row && t.row.version === t.version && t.row.archiveFile === t.archiveFile);
+    if (!unchanged) plan.push({ file, line, takes, existing });
+  }
+
+  const newRows = plan.reduce((sum, p) => sum + p.takes.filter((t) => !t.row).length, 0);
+  const renumbered = plan.reduce(
+    (sum, p) => sum + p.takes.filter((t) => t.row && t.row.version !== t.version).length,
+    0,
+  );
+
+  console.log(`${store.size} clips in ${storeDir()}`);
+  console.log(`${archive.byFile.size} files have archived takes (${archive.skipped} names skipped)`);
+  console.log(`${rows.length} take rows now`);
+  console.log(`${plan.length} files change: ${newRows} takes recovered, ${renumbered} renumbered`);
+  if (unknown.length > 0) {
+    console.log(`${unknown.length} clips are not in the corpus and are skipped, e.g.:`);
+    for (const file of unknown.slice(0, 5)) console.log(`  ${file}`);
+  }
+
+  if (dryRun) {
+    console.log("\n--dry-run: nothing written. A sample of what would change:\n");
+    for (const entry of plan.filter((p) => p.takes.length > 1).slice(0, 5)) {
+      const before = entry.existing.map((r) => r.version).join(",") || "none";
+      const after = entry.takes
+        .map((t) => `${t.version}${t.archiveFile ? `=${t.archiveFile}` : "*"}`)
+        .join(" ");
+      console.log(`  ${entry.file}\n    rows now: ${before}\n    becomes:  ${after}`);
+    }
+    console.log("\n  (* = no archived clip; the take happened, its bytes were pruned away)");
+  } else {
+    let done = 0;
+    for (const entry of plan) {
+      const client = await pool.connect();
+      try {
+        await client.query("begin");
+        // Replaced rather than updated in place: renumbering upward collides with
+        // take_source_lang_file_version_key row by row, and nothing references a take by
+        // id -- migration 0020 says so where it declines to preserve them.
+        await client.query(
+          `delete from "take" where "source" = 'quests' and "lang" = $1 and "file" = $2`,
+          [LANG, entry.file],
+        );
+        for (const take of entry.takes) {
+          const row = take.row;
+          await client.query(
+            `insert into "take"
+               ("source", "lang", "file", "lineId", "version", "isCurrent", "origin",
+                "voice", "narratorVoice", "voiceId", "modelId", "seed", "settings",
+                "characters", "credits", "bytes", "spokenHash", "dictionaryVersion",
+                "createdAt", "createdBy", "archiveFile")
+             values ('quests', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+                     $15, $16, $17, $18, $19, $20)`,
+            [
+              LANG,
+              entry.file,
+              row?.lineId ?? entry.line.lineId,
+              take.version,
+              take.isCurrent,
+              // A row this app wrote stays 'generated'; a take only the archive remembers,
+              // or a store file with no history, is 'imported' -- this app did not cut it,
+              // or cut it under a record that pruning destroyed.
+              row?.origin === "generated" ? "generated" : "imported",
+              row?.voice ?? entry.line.voice,
+              row?.narratorVoice ?? null,
+              row?.voiceId ?? null,
+              row?.modelId ?? null,
+              row?.seed ?? null,
+              row?.settings ?? null,
+              row?.characters ?? null,
+              row?.credits ?? null,
+              take.bytes,
+              row?.spokenHash ?? null,
+              row?.dictionaryVersion ?? null,
+              row?.createdAt ?? new Date(),
+              row?.createdBy ?? null,
+              take.archiveFile,
+            ],
+          );
+        }
+        await client.query("commit");
+      } catch (error) {
+        await client.query("rollback").catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
+      done++;
+      if (done % 500 === 0) console.log(`  ${done}/${plan.length}`);
+    }
+    console.log(`\nrebuilt ${done} files`);
+  }
+} finally {
+  await pool.end();
+}

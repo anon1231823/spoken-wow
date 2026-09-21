@@ -78,7 +78,7 @@ endef
         package-audio-complete package-meta push-complete icon \
         downloads-status \
         factions release release-audio release-wago release-curse \
-        release-dry seed-takes import-corpus export-corpus export-ignores \
+        release-dry rebuild-takes import-corpus export-corpus export-ignores \
         fold-overrides sync check-synced
 
 help: ## Show this help
@@ -434,17 +434,17 @@ endef
 check-synced: ## Compare the local corpus with the droplet's, and prompt if they differ
 	$(freshness-check)
 
-# ONE-OFF. Gives every clip the Python CLI narrated its take row, at version 1, so the
-# database is true about a corpus generated before the database existed. Run it once on the
-# droplet, where the store is, and then delete both this target and the script: from there
-# on a take exists because the app wrote it.
+# ONE-OFF. Rebuilds the take table from the rows already in Postgres and the clips in
+# audio-history, so the database records every take that happened -- including the ones the
+# old pruning deleted the rows for and left the files behind. Run it once on the droplet,
+# where both live, and then delete this target and the script.
 #
 # A machine holding half the store would write rows for the half it has and leave the rest
 # reading as ungenerated, so the script refuses an empty store and says what it is about to
 # do first. ARGS=--dry-run to see without writing.
 
-seed-takes: ## ONE-OFF: give every already-narrated clip its version 1 (ARGS=--dry-run)
-	@cd apps/web && node scripts/seed-quests-takes.mjs $(ARGS)
+rebuild-takes: ## ONE-OFF: rebuild the take table from the rows and the archive (ARGS=--dry-run)
+	@cd apps/web && node scripts/rebuild-quests-takes.mjs $(ARGS)
 
 audio-status: require-droplet ## Compare file count and size on both sides
 	@echo "local:  $$(find audio -name '*.mp3' | wc -l | tr -d ' ') files, $$(du -sh audio | cut -f1)"

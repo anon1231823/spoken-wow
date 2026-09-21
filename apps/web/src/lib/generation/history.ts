@@ -96,7 +96,7 @@ async function archiveLive(file: string): Promise<boolean> {
   // A clip with no take row is audio the database does not know exists, and there is no
   // version number to archive it under. Writing over it would destroy a take nothing could
   // name afterwards, so this refuses instead. It is not a disagreement to paper over: every
-  // clip in the store is meant to have a row, and scripts/seed-quests-takes.mjs is what
+  // clip in the store is meant to have a row, and scripts/rebuild-quests-takes.mjs is what
   // gave the ones narrated before this app kept records theirs.
   if (live === null && inStore) {
     throw new Error(
