@@ -25,7 +25,7 @@
 import "server-only";
 
 import { query } from "@/lib/db";
-import type { Corpus, CorpusLine } from "@/lib/corpus";
+import { npcKey, type Corpus, type CorpusLine } from "@/lib/corpus";
 
 export const BASE_LANG = "enUS";
 
@@ -89,6 +89,7 @@ type Row = {
   fileName: string;
   generatable: boolean;
   skipReason: string | null;
+  contributionId: number | null;
 };
 
 /**
@@ -103,7 +104,7 @@ async function build(lang: string): Promise<CorpusLine[]> {
     `select l."lineId", l."source", l."questId", l."questTitle",
             s."npcId", s."npcName", s."npcType", s."race", s."gender", s."flavor", s."voice",
             l."playerGender", l."text", l."originalText", l."fileName",
-            l."generatable", l."skipReason"
+            l."generatable", l."skipReason", s."contributionId"
        from "quest_line_speaker" s
        join "quest_line" l
          on l."lineId" = s."lineId" and l."variant" = s."variant"
@@ -165,4 +166,109 @@ export async function lineIndex(lang: string = BASE_LANG): Promise<Map<string, C
     holder[indexKey] = { lines, index };
   }
   return holder[indexKey].index;
+}
+
+/**
+ * What the corpus already knows about an NPC, or null for one it has never carried.
+ *
+ * The corpus is the exact answer where it has one: it was built from the same display data the
+ * game uses, including the flavor that no client API exposes.
+ *
+ * A linear scan, not a new memoised index: lineIndex groups by lineId, and one lineId is shared
+ * by every NPC with the same gossip line, so it cannot answer "what does this one NPC carry"
+ * without a second index carrying its own cache-invalidation story alongside it. This runs once
+ * per contribution resolved, not per request, so the scan is the honest cost here.
+ */
+export async function npcVoiceFromCorpus(
+  npcType: string,
+  npcId: number,
+): Promise<{ race: string; gender: string; flavor: string | null; npcName: string } | null> {
+  const wanted = `${npcType}:${npcId}`;
+  for (const line of (await corpus()).lines) {
+    if (npcKey(line) === wanted) {
+      return { race: line.race, gender: line.gender, flavor: line.flavor, npcName: line.npcName };
+    }
+  }
+  return null;
+}
+
+/**
+ * The flavor to give a race-gender the game data does not answer for -- an NPC resolved only
+ * from the model file id the addon reported, which names a race and a gender but never a
+ * flavor.
+ *
+ * Mirrors pipelines/quests/tts_cli/flavors.py's fallback_flavors exactly: "standard" where
+ * that race-gender has any corpus lines carrying it, otherwise its busiest flavor. Never a
+ * constant -- four race-genders (dwarf-female, goblin-female, goblin-male, tauren-male) have
+ * no standard voice in the game at all, so a constant would point at nothing for them.
+ *
+ * A race-gender the corpus carries no flavored line for at all (not merely no "standard" one)
+ * answers null, not a guess: there is nothing in the data to derive a busiest flavor from, and
+ * the row this feeds is unconfirmed regardless.
+ */
+export async function defaultFlavorFor(race: string, gender: string): Promise<string | null> {
+  return (await flavorDefaults()).get(`${race}-${gender}`) ?? null;
+}
+
+/**
+ * Every flavor a race-gender's voice actually has, for the triage table's flavor picker.
+ *
+ * A moderator confirming a client-provenance row (race and gender known, flavor only guessed)
+ * must be offered exactly the voice sets tts_cli can generate for that race-gender -- goblin
+ * female has only "zany"; tauren male has no "standard" at all (defaultFlavorFor's own flagship
+ * case) but does have elder/shaman/warrior. Anything wider would let a moderator pick a voice
+ * name that produces no file.
+ */
+export async function flavorsFor(race: string, gender: string): Promise<string[]> {
+  const tally = (await flavorTallies()).get(`${race}-${gender}`);
+  return tally ? [...tally.keys()].sort((a, b) => a.localeCompare(b)) : [];
+}
+
+const flavorTalliesKey = Symbol.for("spoken.quests-flavor-tallies");
+type FlavorTalliesHolder = { [flavorTalliesKey]?: { lines: CorpusLine[]; tallies: Map<string, Map<string, number>> } };
+
+// race-gender -> flavor -> how many corpus lines carry it. Shared by flavorDefaults and
+// flavorsFor, which ask the identical question of the identical data, and tied to the
+// catalogue's own array so it re-tallies exactly when the tables move.
+async function flavorTallies(): Promise<Map<string, Map<string, number>>> {
+  const lines = (await corpus()).lines;
+  const holder = globalThis as FlavorTalliesHolder;
+  if (!holder[flavorTalliesKey] || holder[flavorTalliesKey].lines !== lines) {
+    const counts = new Map<string, Map<string, number>>();
+    for (const line of lines) {
+      if (!line.flavor) continue;
+      const raceGender = `${line.race}-${line.gender}`;
+      const tally = counts.get(raceGender) ?? new Map<string, number>();
+      tally.set(line.flavor, (tally.get(line.flavor) ?? 0) + 1);
+      counts.set(raceGender, tally);
+    }
+    holder[flavorTalliesKey] = { lines, tallies: counts };
+  }
+  return holder[flavorTalliesKey].tallies;
+}
+
+const flavorDefaultsKey = Symbol.for("spoken.quests-default-flavors");
+type FlavorDefaultsHolder = { [flavorDefaultsKey]?: { lines: CorpusLine[]; defaults: Map<string, string> } };
+
+// Tied to the catalogue's own array, as lineIndex is, so it re-tallies exactly when the tables
+// move and never otherwise.
+async function flavorDefaults(): Promise<Map<string, string>> {
+  const lines = (await corpus()).lines;
+  const holder = globalThis as FlavorDefaultsHolder;
+  if (!holder[flavorDefaultsKey] || holder[flavorDefaultsKey].lines !== lines) {
+    const counts = await flavorTallies();
+    const defaults = new Map<string, string>();
+    for (const [raceGender, tally] of counts) {
+      if (tally.has("standard")) {
+        defaults.set(raceGender, "standard");
+        continue;
+      }
+      // Busiest first, then name, so a tie does not depend on Map iteration order --
+      // fallback_flavors' own tie-break, kept identical so the two sides never disagree.
+      const [flavor] = [...tally.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+      defaults.set(raceGender, flavor);
+    }
+    holder[flavorDefaultsKey] = { lines, defaults };
+  }
+  return holder[flavorDefaultsKey].defaults;
 }

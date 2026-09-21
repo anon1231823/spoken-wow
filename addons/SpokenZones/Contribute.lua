@@ -1,9 +1,9 @@
--- A place this addon has no lore for, as something that can be reported with coordinates.
+-- A place this addon has no lore for, as something a player can describe.
 --
 -- No text, unlike the quests and books envelopes: zone lore is wiki-sourced rather than
--- client-sourced, so the client has nothing to hand over. What this sends is enough to find
--- the place again -- the map, the zone, the subzone and where the player was standing -- and
--- the count on the far side is what makes it a priority rather than a note.
+-- client-sourced, so the client has nothing to hand over. What this sends names the place --
+-- the map, the zone, the subzone -- and the contribute page asks the player for the part that
+-- is actually missing: a description of it.
 --
 -- It travels the same format for one reason: one triage queue for three addons.
 
@@ -16,101 +16,57 @@ local ADDON_NAME, SpokenZones = ...
 -- everyone still running the shipped addon.
 local SITE_URL = "https://spoken.rusty.one"
 
--- The player's normalised position on their own current map, or nil, nil off it. Nothing in
--- this addon already asks this -- Audio.lua and Autoplay.lua only ever need which map the
--- player is on, never where on it -- so this is the one genuinely new lookup here, not a
--- second copy of an existing one.
-local function PlayerPosition(mapID)
-    if not (mapID and C_Map and C_Map.GetPlayerMapPosition) then
-        return nil, nil
+--- Whether this client can offer Contribute at all: a player that carries contributing (an
+--- older bundled one does not), and the buttons not hidden in its settings.
+function SpokenZones:CanContribute()
+    if not (_G.Spoken and Spoken.Contribute and Spoken.ShowContribution) then
+        return false
     end
-    local pos = C_Map.GetPlayerMapPosition(mapID, "player")
-    if not pos then
-        return nil, nil
+    if Spoken.AreContributeButtonsHidden and Spoken:AreContributeButtonsHidden() then
+        return false
     end
-    return pos:GetXY()
+    return true
 end
 
---- The envelope for the place the player is standing in, or nil off any map.
-function SpokenZones:CaptureContribution()
-    local map = self:GetPlayerMapID()
-    if not map then
+--- The envelope for a place the panel is showing with no lore, or nil with no map to name.
+---
+--- The place the player is looking at, not where they stand: every zone and subzone is already
+--- known, what is missing is what to say about it, and a player reading the map of a zone they
+--- have been to can describe it from anywhere. The description itself is written on the
+--- contribute page, which asks for it -- the client has nothing to hand over.
+function SpokenZones:CaptureContribution(mapID, subzone)
+    if not mapID then
         return nil
     end
 
-    local x, y = PlayerPosition(map)
     local fields =
     {
         -- SpokenZones.VERSION does not exist -- Core.lua computes the real .toc version into
-        -- the lowercase SpokenZones.version, the same GetAddOnMetadata read DataModules-style
-        -- lookups elsewhere in this project use; "dev" is what a source checkout with no .toc
+        -- the lowercase SpokenZones.version; "dev" is what a source checkout with no .toc
         -- metadata at all reads back as.
         { "addon", format("SpokenZones/%s", self.version or "dev") },
         { "build", format("%s/%s", (GetBuildInfo and select(1, GetBuildInfo())) or "?",
                                    (GetBuildInfo and select(2, GetBuildInfo())) or "?") },
         { "locale", (GetLocale and GetLocale()) or "enUS" },
-        { "map", map },
-        { "zone", (GetRealZoneText and GetRealZoneText()) or "" },
-        { "subzone", (GetSubZoneText and GetSubZoneText()) or "" },
+        { "map", mapID },
     }
-
-    -- Omitted, not sent empty, when GetPlayerMapPosition has nothing -- an indoor map, an
-    -- instance, a map this client generation cannot place the player on. `x=` is a field the
-    -- site's reader would have to have an opinion about (empty string? zero? malformed?); a
-    -- key that is simply not there is a question it never has to ask. Matches how the quests
-    -- envelope already drops its own optional "quest" field rather than sending it blank --
-    -- see SpokenQuests/Contribute.lua's Capture.
-    if x and y then
-        fields[#fields + 1] = { "x", format("%.2f", x) }
-        fields[#fields + 1] = { "y", format("%.2f", y) }
+    local zone = self:GetMapName(mapID)
+    if zone and zone ~= "" then
+        fields[#fields + 1] = { "zone", zone }
+    end
+    -- Omitted rather than sent empty for the zone itself: the site keys a contribution on the
+    -- map, or the map and the subzone, and an empty subzone is a key it would have to decide
+    -- about.
+    if subzone and subzone ~= "" then
+        fields[#fields + 1] = { "subzone", subzone }
     end
 
     return Spoken.Contribute:Envelope("zones", fields, nil)
 end
 
---- The lore entry for where the player is standing, or nil for a genuine gap. Resolves the
---- same way UI/LoreWindow.lua's CurrentZoneID and Autoplay.lua's NarrateUnheard already do --
---- GetPlayerMapID walked up through GetLoreWithFallback to a mapID this corpus actually keys
---- entries by, subzone lore preferred over the zone's when the player is standing in one --
---- rather than a second lookup path of its own.
-function SpokenZones:LoreForCurrentPlace()
-    local _, mapID = self:GetLoreWithFallback(self:GetPlayerMapID())
-    if not mapID then
-        return nil
-    end
-
-    local subZone = GetSubZoneText and GetSubZoneText() or ""
-    if subZone ~= "" then
-        local entry = self:GetSubzoneLore(mapID, subZone)
-        if entry and not self:IsPending(entry) then
-            return entry
-        end
-    end
-
-    local entry = self:GetLore(mapID)
-    if entry and not self:IsPending(entry) then
-        return entry
-    end
-    return nil
-end
-
---- Whether the contribute button belongs on screen: nowhere with lore, and somewhere to send.
-function SpokenZones:HasContributionGap()
-    if not (_G.Spoken and Spoken.Contribute and Spoken.ShowContribution) then
-        return false
-    end
-    if self:LoreForCurrentPlace() then
-        return false
-    end
-    return self:CaptureContribution() ~= nil
-end
-
--- Compression belongs here, not in CaptureContribution or HasContributionGap: Autoplay and the
--- lore window ask the gap question far more often than a player ever presses the button, and
--- paying deflate's cost there would be work spent on every place walked through, not just the
--- ones actually reported. This runs once, on the click.
-function SpokenZones:ShowContribution()
-    local envelope = self:CaptureContribution()
+-- Compression belongs here, not in CaptureContribution: this runs once, on the click.
+function SpokenZones:ShowContribution(mapID, subzone)
+    local envelope = self:CaptureContribution(mapID, subzone)
     if not envelope then
         return
     end

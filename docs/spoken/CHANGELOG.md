@@ -1,5 +1,16 @@
 # Changelog — Spoken Player
 
+## 2.1.0 — 2026-09-21
+
+- **Sending the game's text where Spoken has no voice.** When Spoken Quests, Spoken Zones or
+  Spoken Books has nothing for what is on screen, its Contribute button opens a small box
+  holding a link. Copy it, open it in a browser and press Send: the link already carries the
+  text straight from your client, so there is nothing to paste. It is compressed, so a long
+  book page still fits in one link.
+- **Hide the Contribute buttons**, a new Contributions section in the settings, turns every
+  one of those buttons off in one place.
+- Not on the 1.12, 2.4.3 and 3.3.5 clients, where contributing is off for now.
+
 ## 2.0.4 — 2026-09-18
 
 - **The portrait is a portrait again on the Forever client.** Selecting camera 0 of the

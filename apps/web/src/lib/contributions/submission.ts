@@ -16,7 +16,7 @@ import { normaliseText } from "@books-tools/lib/text.mjs";
 import { checkEnvelope, type Submission } from "./contributions";
 import type { Envelope } from "./envelope";
 
-export function submissionFrom(envelope: Envelope, raw: string): Submission | null {
+export function submissionFrom(envelope: Envelope, raw: string, description?: string | null): Submission | null {
   // The key/text rules live in contributions.ts's checkEnvelope, not here, so the paste-box
   // preview can run the same check and refuse before Send rather than after a 400 -- see
   // ContributeForm.tsx's previewOf.
@@ -24,7 +24,10 @@ export function submissionFrom(envelope: Envelope, raw: string): Submission | nu
   if (!check.ok) return null;
 
   const { locale = "enUS", build = "", ...meta } = envelope.fields;
-  const text = envelope.text ? normaliseText(envelope.text) : null;
+  // A zones envelope carries no text -- the client has none to give -- so its contribution is
+  // the description the player wrote on the page, kept where every other source keeps its text.
+  const written = envelope.source === "zones" ? description : envelope.text;
+  const text = written ? normaliseText(written) : null;
 
   const dedup = createHash("sha256")
     .update([envelope.source, check.key, locale, text ?? ""].join("\u0000"))

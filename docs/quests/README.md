@@ -749,10 +749,17 @@ the corpus is built from a 1.12 world database, so it has nothing for content th
 vanilla, for a locale that database does not carry, or for whatever a private server invented
 on top of it. In those three cases the client in front of the player is holding the only copy
 of the text, and `Contribute:HasGap()` puts a button reading **"Contribute"** — the same word
-the books addon's button carries — on the Blizzard quest frame itself, anchored into whichever
-of the accept, progress or reward panel's own button row is on screen, and beside the gossip
-frame's Goodbye button for an NPC line, exactly when there is text on screen and nothing queued
-to play.
+the books addon's button carries — in the top right corner of the Blizzard quest or gossip
+frame, just left of its close button, exactly when there is text on screen and nothing queued
+to play. The quest log offers the same thing where a quest's Play would be: a small plus icon
+in the list, and the details view's Play reading **Contribute**. A contribution from the log
+carries the quest's own description as its accept text and `from=log`, but no NPC — the log
+does not say who gave the quest. It exists on the Blizzard clients only: the 1.12, 2.4.3 and 3.3.5 clients are private
+servers, where contributing is off for now, and their `.toc` files leave out the `Contribute.xml`
+that loads it (the 1.12 client's Lua 5.0 could not parse it anyway). A player who does not want it turns it off with **Hide the Contribute buttons** in the
+Spoken Player settings, one switch for the quests, books and zones buttons alike; each addon
+asks `Spoken:AreContributeButtonsHidden()` in its gap check and refreshes on the player's
+`CONTRIBUTE_SETTINGS_CHANGED` callback, since toggling it fires no game event.
 
 Clicking it opens the same copy box `ReportButton.lua` uses, holding a plain-text envelope
 instead of an address: the addon, the build, the locale, the quest or NPC, and the text
@@ -766,6 +773,94 @@ row. That count is the triage priority at `/contributions`, the contribution que
 `/reports`: a collaborator accepts or rejects, and **accepting never starts generation** — a
 contribution becomes corpus text and a regeneration job the same deliberate way a report
 becomes a fix, by a person reading it first.
+
+Accepting a quest row writes it into the quest tables, the same ones the extract fills
+(`lib/contributions/accept.ts`): a `quest_line` with origin `contributed`, named by the same
+rules `tts_cli/naming.py` uses, and a `quest_line_speaker` row carrying the contribution's id.
+From there it is an ordinary line — the explorer lists it under missing audio with a
+*contributed* badge linking back, an editor fixes the words the player's client substituted
+through the usual text override, generates a take, and the next export carries it into the
+pack. The speaker row is the mark, not the line's origin, because an edit puts an `edited`
+version on top; it is also what `corpus_db.py`'s import leaves alone when it replaces every
+extracted speaker, and it numbers from 1,000,000 so a re-import never meets it. The corpus
+wins where it already has the line: a quest moment is matched by quest id and moment alone
+(the tables carry some only as `:m`/`:f` variants), and a gossip line it already has gains the
+contributing NPC as one more speaker instead of a copy. Progress lines are kept, marked
+`progress` and never voiced, as the extract marks its own. Once written, a contribution cannot
+be moved back to new or rejected; ignoring the line in the explorer is how to back out.
+
+#### Who is speaking
+
+A line still needs a voice, and a voice name is `race-gender-flavor`. The corpus answers that
+for every NPC it carries. For one it has never seen, the answer has to come from somewhere, and
+the client can supply two thirds of it.
+
+The addon reports what it can see and nothing more: `kind` (creature or gameobject), `model` —
+the model file id a `PlayerModel` frame answers for the unit — `sex` from `UnitSex`, and
+`creature` from `UnitCreatureType`. It carries no race table. `apps/web/src/lib/npc/models.ts`
+holds that instead, 81 character models across 32 races, and maps `122055` to
+`{race: "tauren", gender: "male"}`. The path a race and gender resolve to on disk —
+`character/tauren/male/taurenmale.m2` — lives in the community listfile, not in this repo; the
+model table only ever needs the race and the gender an id names, never the path itself. The
+table lives on the site deliberately: a race added upstream, or an id that turns out to mean
+something else, is corrected in one deploy, while a table shipped inside the addon waits for
+every player to take an update, and the legacy-client players install their zips by hand.
+
+`resolveNpc` then answers in order, stopping at the first that knows:
+
+1. **A moderator's answer.** Somebody looked, and they may know something no data source does.
+2. **The corpus**, for an NPC it already carries. Exact, and the only one of the three that
+   supplies a real flavor.
+3. **The client's model id**, mapped to a race and a gender, with the flavor defaulted and the
+   row left **unconfirmed**. The default is not a constant: `lib/corpus.ts:defaultFlavorFor`
+   mirrors `tts_cli/flavors.py`'s own `fallback_flavors` — "standard" where that race-gender has
+   it, otherwise its busiest flavor, from the corpus rather than a hardcoded name. Four
+   race-genders (dwarf-female, goblin-female, goblin-male, tauren-male) have no standard voice
+   in the game at all, so a constant would leave them pointing at nothing; tauren-male defaults
+   to `warrior`, its busiest, not `standard`. A race-gender the corpus has never carried a
+   flavored line for at all defaults to no flavor rather than a guess.
+4. **Nothing.** A murloc, a dragon or an elemental is drawn with a creature model rather than a
+   character one, and resolves to no race at all. That is a normal outcome, not a failure:
+   `narrator-male` has always been the pseudo-race for things that do not have one.
+
+**The flavor cannot be detected in game, and it is worth knowing why before going looking.**
+`tts_cli/flavors.py` recovers it by reading SoundEntries names like
+`DwarfFemaleMaternalNPCGreetings`. No client API exposes a creature's `NPCSoundID`, nor the
+sound the game chose to play when the gossip frame opened, and the modern client's data has no
+`SoundKitName` table at all. So for a new NPC the flavor is defaulted and flagged, and a
+moderator is the only thing that can improve it.
+
+An envelope carrying no `kind` resolves to nothing rather than being assumed a creature.
+`ReportButton:TargetForGUID` accepts any GUID `Enums.GUID:CanHaveID` allows, which includes
+`GameObject` — the sound packs ship `object_name_lookups.lua` for exactly those quest givers —
+and such an envelope carries no `model` either, so the best row it could produce is a name we
+already have. Filing a gameobject under a creature id would merge two id spaces that overlap:
+creature 68 is a Stormwind City Guard, gameobject 68 is a Wanted Poster.
+
+Reading such a contribution is different from writing it. The triage page, accept and the
+export all look its id up under both kinds (`triage.ts:idOnlyResolution`): when the answers on
+file agree, that answer is used, a moderator's first. When a creature and a gameobject sharing
+the id disagree, nothing is used and the row shows the conflict; the moderator picks which one
+the contribution meant, and that pick is stored on the contribution (`contribution.npcKind`,
+migration 0033), never in `meta`, which stays what the client sent. From then on every reader
+treats the row as if its envelope had carried the kind.
+
+The answer is stored once per NPC, keyed on the kind *and* the id for that same reason, so one
+correction fixes every line that NPC speaks. `npc_resolution` also keeps what the client
+reported even when a moderator overrules it — evidence about the NPC is worth more than the
+guess it produced — along with the client build, since model ids are per-build data.
+
+Precedence is enforced in the SQL rather than by whoever calls it: `moderator` outranks
+`corpus`, which outranks `client`, which outranks `none`, and a write only lands when it ranks
+at least as high as what is already there. A submission carrying less information can never
+erase one carrying more — the case that matters is a player on an older addon, whose envelope
+has no model at all, submitting for an NPC somebody else already resolved.
+
+`/contributions` shows the result with its provenance and says plainly which rows are guesses;
+the override there writes `moderator` and is collaborator-only, like everything else that
+changes a row. A race with no voice yet needs nothing special: `/voices` derives its roster
+from the corpus, so an accepted contribution makes the slot appear by itself, marked as not
+existing in the account until it is cloned.
 
 ## Addon Install
 

@@ -19,6 +19,21 @@ export function isStatus(value: unknown): value is ContributionStatus {
 /** The same cap the reports body carries, for the same reason. */
 export const COMPLAINT_MAX = 4000;
 
+/**
+ * A zones contribution's description of the place: required, since the addon can name a place
+ * but has nothing to say about it, and the description is the whole contribution. The floor is
+ * what separates a sentence from "idk"; the ceiling is COMPLAINT_MAX's, for the same reason.
+ */
+export const DESCRIPTION_MIN = 20;
+export const DESCRIPTION_MAX = COMPLAINT_MAX;
+
+/** The description a zones contribution needs, trimmed, or null when it is too short to keep. */
+export function descriptionFrom(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().slice(0, DESCRIPTION_MAX);
+  return trimmed.length >= DESCRIPTION_MIN ? trimmed : null;
+}
+
 /** A bare digit string: the id fields below, never validated by the writer, must be this. */
 const DIGITS = /^\d+$/;
 

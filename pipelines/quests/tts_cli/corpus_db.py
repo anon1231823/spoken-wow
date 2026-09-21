@@ -219,7 +219,16 @@ def import_corpus(path, verbose=True):
 
             # Speakers, wholesale. `ord` is the row's place in the corpus's own list, which
             # is what lets the export reproduce the file rather than a reordering of it.
-            cur.execute("""delete from "quest_line_speaker" where "lang" = %s""", (LANG,))
+            #
+            # Except a player's: a speaker row with a contributionId was written when a
+            # moderator accepted a contribution (apps/web migration 0034), is not the
+            # extract's, and would otherwise vanish -- line and all -- on the next import.
+            # Those rows take an `ord` from 1,000,000 up, so the extract's 0..n never meets them.
+            cur.execute(
+                """delete from "quest_line_speaker"
+                    where "lang" = %s and "contributionId" is null""",
+                (LANG,),
+            )
             speaker_rows = []
             for ord_, row in enumerate(lines):
                 variant = variants[row["lineId"]].index(_line_key(row))

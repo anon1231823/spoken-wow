@@ -3,11 +3,10 @@
 -- Shows lore for the zone the map is displaying, or for a subzone the player
 -- clicked (see UI/SubzoneClick.lua), with a link back to the zone.
 --
--- Also the home for the contribute button (UI/ReportButton.lua's CreateContributeButton):
--- this panel is up, next to the map, for as long as a player might be standing somewhere with
--- no lore, which the lore window is not -- that one only opens on request. The button's own
--- visibility answers a different question than everything else on this panel (the player's
--- location, not what is displayed here), so it is not part of Refresh below.
+-- Also the home for the contribute button (UI/ReportButton.lua's CreateContributeButton), in the
+-- body under the sentence that says a place has no lore yet, pointed at the place this panel is
+-- showing -- not where the player stands, since every place is known and what is missing is a
+-- description someone can write from anywhere.
 
 local ADDON_NAME, SpokenZones = ...
 local L = SpokenZones.L
@@ -23,9 +22,6 @@ local AUDIO_RESERVE = 66
 -- and the button is a rare click, so they share a row rather than costing the body
 -- another one.
 local REPORT_RESERVE = 64
-
--- Room for the contribute button beside the report button, on the same footer row.
-local CONTRIBUTE_RESERVE = 138
 
 local panel, header, infoLine, body, footer, audioButton, reportButton, contributeButton
 
@@ -85,14 +81,9 @@ local function BuildPanel()
 	reportButton = SpokenZones:CreateReportButton(panel)
 	reportButton:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -PADDING, PADDING - 6)
 
-	-- Left of Report rather than under it: unlike Report it does not depend on a selection,
-	-- so it never competes for the same anchor and can sit on the footer row permanently.
-	contributeButton = SpokenZones:CreateContributeButton(panel)
-	contributeButton:SetPoint("BOTTOMRIGHT", reportButton, "BOTTOMLEFT", -6, 0)
-
 	footer = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
 	footer:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", PADDING, PADDING - 4)
-	footer:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -(PADDING + REPORT_RESERVE + CONTRIBUTE_RESERVE), PADDING - 4)
+	footer:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -(PADDING + REPORT_RESERVE), PADDING - 4)
 	footer:SetJustifyH("LEFT")
 	footer:SetText("Lore: warcraft.wiki.gg (CC BY-SA 4.0)")
 
@@ -101,6 +92,12 @@ local function BuildPanel()
 	-- Cleared against the button rather than the credit line: the button is the
 	-- taller of the two, so it is the one that decides where the text has to stop.
 	body.frame:SetPoint("BOTTOMRIGHT", reportButton, "TOPRIGHT", 0, 6)
+
+	-- Under the text that says the lore is missing, inside the body, so it reads as the answer
+	-- to that sentence and follows it as it wraps. Only ever shown with that sentence, which is
+	-- short enough never to scroll.
+	contributeButton = SpokenZones:CreateContributeButton(body.child)
+	contributeButton:SetPoint("TOPLEFT", body.text, "BOTTOMLEFT", 0, -10)
 
 	SpokenZones.panel = panel
 end
@@ -169,6 +166,7 @@ local function Refresh(mapID)
 	end
 
 	panel:Show()
+	contributeButton:SetTarget(nil, nil)
 
 	local zoneName = SpokenZones:GetMapName(mapID) or ("uiMapID " .. tostring(mapID))
 
@@ -193,6 +191,7 @@ local function Refresh(mapID)
 				selected.areaName or selected.entry.name or "") .. "|r")
 			audioButton:SetTarget(nil, nil)
 			reportButton:SetTarget(nil, nil)
+			contributeButton:SetTarget(mapID, selected.areaName or selected.entry.name)
 			return
 		end
 		SetBody(selected.entry.full or selected.entry.short or "")
@@ -228,6 +227,7 @@ local function Refresh(mapID)
 				SpokenZones:GetMapName(foundOn) or zoneName) .. "|r")
 			audioButton:SetTarget(nil, nil)
 			reportButton:SetTarget(nil, nil)
+			contributeButton:SetTarget(foundOn, nil)
 			return
 		end
 		SetBody(entry.full or entry.short or "")
@@ -241,6 +241,7 @@ local function Refresh(mapID)
 		SetBody("|cff888888" .. L.NO_LORE_FOR:format(zoneName) .. "|r")
 		audioButton:SetTarget(nil, nil)
 		reportButton:SetTarget(nil, nil)
+		contributeButton:SetTarget(mapID, nil)
 	end
 end
 
@@ -291,6 +292,13 @@ function SpokenZones:SetupMapPanel()
 	SpokenZones:OnMapChanged(function(mapID)
 		Refresh(mapID)
 	end)
+
+	-- Toggling "Hide the Contribute buttons" in the Spoken Player settings fires no game event.
+	if _G.Spoken and Spoken.RegisterCallback then
+		Spoken:RegisterCallback("CONTRIBUTE_SETTINGS_CHANGED", function()
+			Refresh(SpokenZones:GetDisplayedMapID())
+		end)
+	end
 
 	Refresh(SpokenZones:GetDisplayedMapID())
 end

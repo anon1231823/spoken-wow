@@ -25,7 +25,7 @@ local SCROLL_STEP = ROW_HEIGHT * 3
 -- button is a rare click, so they share the footer row.
 local REPORT_RESERVE = 64
 
-local window, listScroll, listChild, header, subheader, body, footer, audioButton, reportButton
+local window, listScroll, listChild, header, subheader, body, footer, audioButton, reportButton, contributeButton
 local rows = {}
 local expandedZone = nil
 local selection = nil -- { mapID = , key = nil|string }
@@ -100,6 +100,9 @@ end
 --------------------------------------------------------------------------------
 
 local function ShowEntry()
+	-- Only the "no lore yet" states below point it anywhere.
+	contributeButton:SetTarget(nil, nil)
+
 	if not selection then
 		header:SetText("Spoken Zones")
 		subheader:SetText("")
@@ -120,6 +123,7 @@ local function ShowEntry()
 				body:SetText("|cff888888" .. L.LORE_NOT_WRITTEN:format(entry.name or key) .. "|r")
 				audioButton:SetTarget(nil, nil)
 				reportButton:SetTarget(nil, nil)
+				contributeButton:SetTarget(mapID, entry.name or key)
 				return
 			end
 			body:SetText(entry.full or entry.short or "")
@@ -144,6 +148,9 @@ local function ShowEntry()
 	end
 	audioButton:SetTarget(entry and not pending and mapID or nil, nil)
 	reportButton:SetTarget(entry and not pending and mapID or nil, nil)
+	if pending or not entry then
+		contributeButton:SetTarget(mapID, nil)
+	end
 end
 
 --------------------------------------------------------------------------------
@@ -381,6 +388,17 @@ local function BuildWindow()
 	-- Cleared against the button rather than the credit line: the button is the
 	-- taller of the two, so it is the one that decides where the text has to stop.
 	body.frame:SetPoint("BOTTOMRIGHT", reportButton, "TOPRIGHT", 0, 6)
+
+	-- Under the sentence that says a place has no lore yet, as on the map panel.
+	contributeButton = SpokenZones:CreateContributeButton(body.child)
+	contributeButton:SetPoint("TOPLEFT", body.text, "BOTTOMLEFT", 0, -10)
+
+	-- Toggling "Hide the Contribute buttons" in the Spoken Player settings fires no game event.
+	if _G.Spoken and Spoken.RegisterCallback then
+		Spoken:RegisterCallback("CONTRIBUTE_SETTINGS_CHANGED", function()
+			SpokenZones:RefreshLoreWindow()
+		end)
+	end
 
 	SpokenZones.window = window
 end

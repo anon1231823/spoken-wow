@@ -33,6 +33,12 @@ export type CorpusLine = {
   fileName: string;
   generatable: boolean;
   skipReason: string | null;
+  /**
+   * The contribution this speaker row came from, when a player sent the line and a moderator
+   * accepted it (migration 0034). Absent or null for everything the extract carries. Optional
+   * because many tests build a CorpusLine by hand for questions this has no bearing on.
+   */
+  contributionId?: number | null;
 };
 
 /**

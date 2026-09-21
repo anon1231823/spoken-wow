@@ -45,6 +45,14 @@ describe("submissionFrom", () => {
     expect(made?.text).toBe(null);
   });
 
+  it("keeps a place's description as its text, and dedups on it", () => {
+    const zones: Envelope = { source: "zones", fields: { map: "1537", subzone: "Nook" }, text: null };
+    const a = submissionFrom(zones, "raw", "A drafty nook behind the forge.  ");
+    const b = submissionFrom(zones, "raw", "Somewhere else entirely, by the lake.");
+    expect(a?.text).toBe("A drafty nook behind the forge.");
+    expect(a?.dedup).not.toBe(b?.dedup);
+  });
+
   it("keys the open part of a zone on the bare map, not nothing", () => {
     // The addon writes subzone="" here (GetSubZoneText() off any subzone), which used to
     // require f.subzone truthy and made this envelope unsubmittable -- the main zones gap,

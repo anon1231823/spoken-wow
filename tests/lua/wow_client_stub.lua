@@ -14,6 +14,14 @@ local world = {
     rewardText = "",
     npcName = "Innkeeper Test",
     npcGUID = "Creature-0-0-0-0-1234-0",
+    modelFileID = nil,    -- what a loaded PlayerModel answers for the unit on screen
+    -- True between SetUnit and the model actually finishing loading: makes GetModelFileID
+    -- answer nil even though the probe is shown, the way a real model does for however long
+    -- the load takes. Without this the stub always answers immediately once shown, which is
+    -- why an early-click read racing the load was never once exercised before this existed.
+    modelStillLoading = false,
+    unitSex = 2,          -- UnitSex: 1 unknown, 2 male, 3 female
+    creatureType = "Humanoid",
     panels = {},
     played = {},
     -- Sound state the player addon is tested against. `played` keeps the path only, so
@@ -332,7 +340,8 @@ function _G.GetRealmName() return "Realm" end
 function _G.UnitGUID() return world.npcGUID end
 function _G.UnitExists() return true end
 function _G.UnitIsPlayer() return false end
-function _G.UnitSex() return 2 end
+function _G.UnitSex() return world.unitSex end
+function _G.UnitCreatureType() return world.creatureType end
 function _G.GetCVar(key) return world.cvars[key] or "1" end
 function _G.SetCVar(key, value)
     world.cvars[key] = tostring(value)
@@ -347,7 +356,17 @@ end
 function _G.StopSound(handle) table.insert(world.stopped, handle) end
 function _G.PlayMusic(path) table.insert(world.music, path) end
 function _G.StopMusic() table.insert(world.music, false) end
+-- How many frames CreateFrame has built, across every name and kind: a model probe built
+-- once and reused shows up here as one, however many times the code that reuses it runs.
+local frameCount = 0
+function M.FrameCount() return frameCount end
+-- How many times a PlayerModel's SetUnit has been called: the frame count alone cannot see a
+-- probe that is built once but re-primed on every refresh, which is the cost that actually
+-- matters (SetUnit is what starts a model loading).
+local setUnitCount = 0
+function M.SetUnitCount() return setUnitCount end
 function _G.CreateFrame(kind, name, parent)
+    frameCount = frameCount + 1
     local f = name and Frame(name) or MakeFrame(nil)
     f.frameType = kind
     f.parent = parent
@@ -366,7 +385,51 @@ function _G.CreateFrame(kind, name, parent)
         function f:SetAutoFocus() end
         function f:SetScript(event, fn) self.handlers = self.handlers or {}; self.handlers[event] = fn end
     end
+    -- A PlayerModel only loads while it is shown, and answers nothing until it has -- so the
+    -- stub refuses to answer a frame that is not currently shown, the same way a real one
+    -- answers nothing to a probe that never called Show. SetUnit is counted separately from
+    -- CreateFrame: a probe built once and reused would still call SetUnit on every read, and
+    -- that is the cost HasGap must never pay merely to answer a yes/no question. Tracked as
+    -- M.playerModel (this addon only ever keeps one) so a test can fire OnModelLoaded itself,
+    -- the way a live client's asynchronous model load would -- see M.FinishModelLoad.
+    if kind == "PlayerModel" then
+        M.playerModel = f
+        function f:SetUnit(unit) self.unit = unit; setUnitCount = setUnitCount + 1 end
+        function f:GetModelFileID()
+            if not self.shown or world.modelStillLoading then return nil end
+            return world.modelFileID
+        end
+        -- Set at call time, not frame-creation time, so a test can flip M.modelCallbackDisabled
+        -- after the probe already exists (it is built once and kept for the addon's whole
+        -- lifetime) and still simulate a client that has never once called the handler it was
+        -- asked to install -- SetScript on an unrecognised script type is a real Lua error, not
+        -- a silent no-op, which is what the addon's own pcall around SetScript is guarding.
+        function f:SetScript(script, fn)
+            if script == "OnModelLoaded" and M.modelCallbackDisabled then
+                self.scripts.OnModelLoaded = nil
+                error("OnModelLoaded is not a recognised script type on this client")
+            end
+            self.scripts[script] = fn
+        end
+    end
     return f
+end
+
+-- Whether this client ever calls a PlayerModel's OnModelLoaded handler at all -- unknown for
+-- real, since it has not been confirmed against a live client; a test sets this true to
+-- exercise the addon's fallback for that possibility instead of the fast path.
+M.modelCallbackDisabled = false
+
+--- Fire the model probe's OnModelLoaded script, the way a live client would once the file has
+--- actually finished loading. Probed against a live client: SetUnit followed immediately by
+--- GetModelFileID answers nothing, and the same read a moment later answers the real id -- so
+--- a test drives that moment explicitly rather than the addon polling for it.
+function M.FinishModelLoad()
+    local probe = M.playerModel
+    local handler = probe and probe.scripts and probe.scripts.OnModelLoaded
+    if handler then
+        handler(probe)
+    end
 end
 
 --- Every label under this frame, however deep: a control's own text, and the font string
@@ -840,14 +903,14 @@ libs["AceDB-3.0"] = {
 }
 
 --- Load the Spoken player addon against this stub and return its private environment.
---- Loads exactly what its addon.xml lists, in order, then initialises the saved
---- variables the way ADDON_LOADED would.
+--- Loads exactly what its addon.xml and then Contribute.xml list, in order (a Blizzard-client
+--- .toc's order), then initialises the saved variables the way ADDON_LOADED would.
 function M.LoadSpoken(addonDirectory)
     for _, file in ipairs({ "Environment", "Version", "Core", "SoundUtils", "Callbacks", "SoundQueue", "Sources",
-        "Strings", "UI/Layout", "UI/Portrait", "UI/Actions", "UI/ContributeBox", "UI/PlayerFrame", "UI/MinimapButton",
+        "Strings", "UI/Layout", "UI/Portrait", "UI/Actions", "UI/PlayerFrame", "UI/MinimapButton",
         -- Real LibDeflate, not a hand-faked stub library: Contribute:Encode's round trip through
         -- actual compression is the point of testing it at all.
-        "UI/Options", "API", "Libs/LibDeflate/LibDeflate", "Contribute", "Compat" }) do
+        "UI/Options", "API", "Libs/LibDeflate/LibDeflate", "Compat", "UI/ContributeBox", "Contribute" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     local env = _G.SpokenEnv
@@ -899,6 +962,7 @@ function M.SetModernQuestLog(quests)
     }
 
     local titles = {}
+    local descriptions = {}
     for _, quest in ipairs(quests) do
         local row = _G.CreateFrame("Button", nil, scroll.Contents)
         row.questID = quest.questID
@@ -908,6 +972,7 @@ function M.SetModernQuestLog(quests)
         row.Checkbox = _G.CreateFrame("Frame", nil, row)
         table.insert(active, row)
         titles[quest.questID] = quest.title
+        descriptions[getn(active)] = quest.description
     end
 
     -- The details view the list opens a quest into, and the one function that opens it.
@@ -925,7 +990,16 @@ function M.SetModernQuestLog(quests)
     _G.C_QuestLog = {
         GetTitleForQuestID = function(questID) return titles[questID] end,
         GetNumQuestLogEntries = function() return getn(active) end,
+        GetLogIndexForQuestID = function(questID)
+            for index, row in ipairs(active) do
+                if row.questID == questID then return index end
+            end
+        end,
     }
+    -- The modern log's text is asked for by entry index; it has no selection to read it from.
+    _G.GetQuestLogQuestText = function(index)
+        return descriptions[index], ""
+    end
     -- What the client redraws the list through, and what the overlay hooks.
     _G.QuestLogQuests_Update = function() end
 
@@ -966,7 +1040,7 @@ function M.LoadQuests(addonDirectory, spokenDirectory)
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
     for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "EasterEggs",
-        "DataModules", "ReportButton", "Player", "Contribute", "VoiceOver" }) do
+        "DataModules", "ReportButton", "Player", "VoiceOver", "Contribute" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     return VO, env
@@ -991,7 +1065,7 @@ function M.LoadQuestsAlone(addonDirectory)
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
     for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "EasterEggs",
-        "DataModules", "ReportButton", "Player", "Contribute", "VoiceOver" }) do
+        "DataModules", "ReportButton", "Player", "VoiceOver", "Contribute" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     return VO

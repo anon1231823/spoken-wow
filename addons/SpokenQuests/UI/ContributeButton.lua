@@ -21,8 +21,12 @@ setfenv(1, VoiceOver)
 -- unchanged: a greyed-out button on every quest and every NPC this client has no line for is
 -- a permanent invitation to wonder what's broken; an absent one says there is nothing to do.
 
-local BUTTON_HEIGHT = 22
-local GAP = 8
+local BUTTON_HEIGHT = 20
+local BUTTON_WIDTH = 90
+local GAP = 2
+-- From the close button's bottom edge down into the middle of the strip under the title bar.
+local STRIP_OFFSET = 12
+local CORNER_INSET = 32
 
 -- The events that flip a quest or gossip panel on or off, on every client generation this
 -- addon targets -- not a timer. VoiceOver.lua's own OnInitialize already pays for
@@ -50,25 +54,6 @@ local function IsFrameVisible(frame)
     return frame:IsShown()
 end
 
--- The two buttons flanking the row this button shares, per quest panel. Read out of
--- Vanilla/QuestFrame.xml, TBC/QuestFrame.xml and Mainline/QuestFrame.xml
--- (github.com/Gethe/wow-ui-source): all three declare these six as true globals, one
--- BOTTOMLEFT and one BOTTOMRIGHT of QuestFrame, on every one of the three panels. Everything
--- else about the row -- QuestFrame's own width, each button's exact padding, and whether a
--- right-hand button exists at all (the modern Mainline Reward panel ships no Cancel button)
--- -- differs by client generation, which is why this button is never anchored to a raw pixel
--- offset: it is anchored to whichever of these the running client actually drew, so a padding
--- change or a missing button on one generation cannot misplace it on another.
-local function RowButtonsFor(panel)
-    if panel == QuestFrameDetailPanel then
-        return QuestFrameAcceptButton, QuestFrameDeclineButton
-    elseif panel == QuestFrameProgressPanel then
-        return QuestFrameCompleteButton, QuestFrameGoodbyeButton
-    elseif panel == QuestFrameRewardPanel then
-        return QuestFrameCompleteQuestButton, QuestFrameCancelButton
-    end
-end
-
 --- Which of the three NPC quest panels is on screen, the same priority Contribute:Capture
 --- and ReportButton:CurrentTarget both use.
 local function QuestPanelOnScreen()
@@ -81,69 +66,54 @@ local function QuestPanelOnScreen()
     end
 end
 
--- The gossip frame's Goodbye button, under whichever of the two names it is reachable by.
---
--- github.com/Gethe/wow-ui-source's "Classic" module (what Classic Era, Anniversary and every
--- client sharing that Gossip frame build load) and its "Mainline" module (Forever, and
--- current retail) both place a lone GoodbyeButton at GossipFrame's bottom-right with nothing
--- else on that row -- reached as GossipFrame.GreetingPanel.GoodbyeButton, a parentKey rather
--- than a separate global. The three original 1.12/2.4.3/3.3.5 clients predate that source
--- tree, and this change could not check what their own gossip frame actually exposes;
--- GossipGreetingGoodbyeButton below is an unverified guess at the older, pre-parentKey naming
--- Blizzard used elsewhere, not a confirmed one. Both are tried, and if neither resolves, the
--- button simply does not appear on gossip there -- Capture() still works from `/spq` or
--- whatever else reaches it; nothing forces the guess to be right.
---
--- `type(greeting) == "table"` rather than a plain truthiness check: on a real client an
--- absent parentKey just reads as nil, but the test stub's generic frame object answers any
--- unset, capitalised field with a callable stand-in rather than nil (it exists to make
--- ordinary method calls on parts of the UI a test never built into no-ops), and indexing
--- .GoodbyeButton off THAT would error instead of falling through to the legacy global.
-local function GossipGoodbyeButton()
-    local frame = _G.GossipFrame
-    local greeting = frame and frame.GreetingPanel
-    if type(greeting) == "table" and greeting.GoodbyeButton then
-        return greeting.GoodbyeButton
+-- A frame's close button, under whichever of its two names this client uses: a parentKey on
+-- the modern frames (ButtonFrameTemplate's CloseButton) and a global on the older ones.
+-- `type(...) == "table"` rather than truthiness for the reason the test stub gives: its generic
+-- frame answers any unset capitalised field with a callable stand-in rather than nil.
+local function CloseButtonOf(frame, global)
+    if frame and type(frame.CloseButton) == "table" then
+        return frame.CloseButton
     end
-    return _G.GossipGreetingGoodbyeButton
+    return _G[global]
 end
 
---- Anchor the button into the free gap on `panel`'s own button row. False when this panel
---- carries no left-hand button to anchor from at all, which no client this file was checked
---- against actually does, but a client that surprises us here should get no button rather
---- than one anchored to nothing.
-function ContributeButton:PositionOnQuestPanel(panel)
-    local left, right = RowButtonsFor(panel)
-    if not left then
+-- How far the quest log's details Play sits from its panel's right edge: it mirrors the Back
+-- button's left inset (Compatibility.lua's UpdateDetailsPlayButton), so read it off the same
+-- button, and fall back to the number that anchor falls back to.
+local function PlayButtonInset()
+    local details = _G.QuestMapFrame and QuestMapFrame.DetailsFrame
+    local header = details and (details.BackFrame or details)
+    local back = header and header.BackButton
+    if type(back) == "table" and back.GetPoint then
+        local _, _, _, x = back:GetPoint(1)
+        if type(x) == "number" and x > 0 then
+            return x
+        end
+    end
+    return 11
+end
+
+--- Place the button in `frame`'s top right corner, in the empty strip under the title bar: just
+--- below the close button, and as far in from the frame's right edge as the quest log's details
+--- Play is from its own, so the two read as the same control. On the title bar itself, beside
+--- the close button, it ran into the NPC's name. Inset from the corner when the client draws no
+--- close button this file can find. False only when there is no frame to place it on.
+function ContributeButton:PositionAtCorner(frame, close)
+    if not frame then
         return false
     end
-
     local button = self.button
     button:ClearAllPoints()
-    -- LEFT alone would need a guessed width; LEFT and RIGHT together make the button exactly
-    -- as wide as the gap actually is on this client, so a snug fit narrows the label rather
-    -- than spilling over the button beside it.
-    button:SetPoint("LEFT", left, "RIGHT", GAP, 0)
-    if right then
-        button:SetPoint("RIGHT", right, "LEFT", -GAP, 0)
+    button:SetWidth(BUTTON_WIDTH)
+    local frameTop, closeBottom = frame.GetTop and frame:GetTop(), close and close.GetBottom and close:GetBottom()
+    if type(frameTop) == "number" and type(closeBottom) == "number" then
+        button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PlayButtonInset(), -(frameTop - closeBottom + STRIP_OFFSET))
+    elseif close then
+        -- Not laid out yet, so no edges to measure: under the close button, right-aligned with it.
+        button:SetPoint("TOPRIGHT", close, "BOTTOMRIGHT", -GAP, -STRIP_OFFSET)
     else
-        button:SetWidth(110)
+        button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -CORNER_INSET, -CORNER_INSET)
     end
-    return true
-end
-
---- Anchor the button to the left of the gossip frame's Goodbye button. False when this
---- client's gossip frame does not resolve one -- see GossipGoodbyeButton's comment.
-function ContributeButton:PositionOnGossip()
-    local goodbye = GossipGoodbyeButton()
-    if not goodbye then
-        return false
-    end
-
-    local button = self.button
-    button:ClearAllPoints()
-    button:SetPoint("RIGHT", goodbye, "LEFT", -GAP, 0)
-    button:SetWidth(110)
     return true
 end
 
@@ -163,12 +133,13 @@ function ContributeButton:Refresh()
         return
     end
 
-    local panel = QuestPanelOnScreen()
     local placed
-    if panel then
-        placed = self:PositionOnQuestPanel(panel)
+    if QuestPanelOnScreen() then
+        self.gossip = false
+        placed = self:PositionAtCorner(_G.QuestFrame, CloseButtonOf(_G.QuestFrame, "QuestFrameCloseButton"))
     else
-        placed = self:PositionOnGossip()
+        self.gossip = true
+        placed = self:PositionAtCorner(_G.GossipFrame, CloseButtonOf(_G.GossipFrame, "GossipFrameCloseButton"))
     end
     if placed then
         button:Show()
@@ -208,13 +179,7 @@ function ContributeButton:Setup()
         Contribute:Show()
     end)
     button:SetScript("OnEnter", function(self)
-        if not GameTooltip then
-            return
-        end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("No line for this")
-        GameTooltip:AddLine("Send your own client's text so it can be added.", 1, 0.8, 0.2, true)
-        GameTooltip:Show()
+        Contribute:ShowTooltip(self, ContributeButton.gossip)
     end)
     button:SetScript("OnLeave", function()
         if GameTooltip then
@@ -236,6 +201,14 @@ function ContributeButton:Setup()
         ContributeButton:Refresh()
     end)
     self.watcher = watcher
+
+    -- The hide setting lives in the Spoken Player settings, and toggling it fires no game
+    -- event, so the button hears about it from the player instead.
+    if _G.Spoken and Spoken.RegisterCallback then
+        Spoken:RegisterCallback("CONTRIBUTE_SETTINGS_CHANGED", function()
+            ContributeButton:Refresh()
+        end)
+    end
 
     return button
 end

@@ -32,7 +32,7 @@ Install one of those and your addon manager brings Spoken Player with it. Instal
 
 ## Settings
 
-Game Menu → Options → AddOns → **Spoken**, or `/spoken options`. Each Spoken addon keeps its own settings beside it. On first login the window position, scale and lock, the minimap button and the sound channel are carried over from VoiceOver Redux or ZoneLore.
+Game Menu → Options → AddOns → **Spoken**, or `/spoken options`. Each Spoken addon keeps its own settings beside it. **Hide the Contribute buttons** turns off, in one place, the button every Spoken addon shows when it has no voice for something. On first login the window position, scale and lock, the minimap button and the sound channel are carried over from VoiceOver Redux or ZoneLore.
 
 ```
 /spoken, /sp         play/pause

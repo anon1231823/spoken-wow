@@ -1,7 +1,7 @@
 -- What the zones addon sends for a place it has no lore for. Run with `make test-player`.
 --
--- No text: zone lore is wiki-sourced, so the client has nothing to give and this envelope is a
--- vote that the gap exists, carrying enough to find the place again.
+-- No text: zone lore is wiki-sourced, so the client has nothing to give. The envelope names the
+-- place the panel shows, and the contribute page asks the player to describe it.
 local here = arg[0]:match("^(.*)/[^/]*$") or "."
 package.path = here .. "/?.lua;" .. package.path
 local stub = require("wow_client_stub")
@@ -23,53 +23,43 @@ stub.SetAddOns({ { folder = "SpokenZones", meta = { Version = "9.9.9" } } })
 
 local Z = H.LoadZones(ZONES)   -- the loader that loads Core.lua for real, unlike stub.LoadZones
 
-stub.SetZone({ map = 1537, zone = "Ironforge", subzone = "A Nook With No Lore", x = 0.55, y = 0.47 })
+-- The player stands somewhere else entirely: what is sent is the place the panel shows.
+stub.SetZone({ map = 1453, zone = "Stormwind City", x = 0.5, y = 0.5 })
 
-Expect("a place with no lore is a gap", Z:HasContributionGap(), true)
-local envelope = Z:CaptureContribution()
+Expect("contributing is offered with a current player", Z:CanContribute(), true)
+env.Addon.db.profile.Contribute.HideButtons = true
+Expect("...but not when Contribute buttons are hidden in the player settings", Z:CanContribute(), false)
+env.Addon.db.profile.Contribute.HideButtons = false
+
+Z.Zones[1537] = { name = "Ironforge", pending = true }
+local envelope = Z:CaptureContribution(1537, "A Nook With No Lore")
 Expect("the source is zones", envelope:match("^!SPOKEN1 zones\n") ~= nil, true)
-Expect("the map is carried", envelope:match("\nmap=1537\n") ~= nil, true)
-Expect("the zone is carried", envelope:match("\nzone=Ironforge\n") ~= nil, true)
+Expect("the map is the one shown, not the player's", envelope:match("\nmap=1537\n") ~= nil, true)
+Expect("the zone is named from the map", envelope:match("\nzone=Ironforge\n") ~= nil, true)
 Expect("the subzone is carried", envelope:match("\nsubzone=A Nook With No Lore\n") ~= nil, true)
-Expect("the position is carried", envelope:match("\nx=0%.55\n") ~= nil, true)
-Expect("there is no text block", envelope:match("text<<") == nil, true)
+Expect("no position: every place is already known", envelope:match("\nx=") == nil and envelope:match("\ny=") == nil, true)
+Expect("there is no text block -- the description is written on the page", envelope:match("text<<") == nil, true)
 Expect("the addon field carries the real .toc version, not the \"dev\" fallback",
     envelope:match("\naddon=SpokenZones/9%.9%.9\n") ~= nil, true)
 
--- Off any map C_Map.GetPlayerMapPosition can place the player on -- an indoor area, an
--- instance, or just a client generation that cannot answer -- PlayerPosition returns nil, nil,
--- and the field is left out of the envelope entirely rather than sent as x=. An empty value is
--- a field the site's reader has to have an opinion about; an absent key is not.
-stub.SetZone({ map = 1539, zone = "Somewhere Unplaceable" })
-local noPosition = Z:CaptureContribution()
-Expect("no position is carried as an omitted field, not an empty one",
-    noPosition:match("\nx=\n") == nil, true)
-Expect("...neither key is sent", noPosition:match("\nx=") == nil and noPosition:match("\ny=") == nil, true)
-Expect("...the rest of the envelope is still sent", noPosition:match("\nmap=1539\n") ~= nil, true)
-
--- A place that does have lore is not a gap. A fresh map with no subzone, so this does not
--- also exercise ResolveAreaKey's alias table -- Language.lua populates that, and this loader
--- deliberately does not load it (Contribute.lua never reads an alias, only a plain zone key).
-stub.SetZone({ map = 1538, zone = "Somewhere Else" })
-Z.Zones[1538] = { full = "There is lore here." }
-Expect("a place with lore is not a gap", Z:HasContributionGap(), false)
+local zoneOnly = Z:CaptureContribution(1537, nil)
+Expect("a zone with no subzone leaves the key out rather than sending it empty", zoneOnly:match("\nsubzone=") == nil, true)
+Expect("nothing is captured without a map", Z:CaptureContribution(nil, nil), nil)
 
 ------------------------------------------------------------------------------- Show()
--- Compression must run on the click alone -- Autoplay and the lore window ask the gap question
--- on nearly every zone change, and this spies on Encode rather than trusting the comment, so a
--- future edit that moved the call earlier would fail here rather than merely cost more.
-stub.SetZone({ map = 1537, zone = "Ironforge", subzone = "A Nook With No Lore", x = 0.55, y = 0.47 })
+-- Compression must run on the click alone; this spies on Encode rather than trusting the
+-- comment, so a future edit that moved the call earlier would fail here.
 local encodeCalls = 0
 local realEncode = env.Spoken.Contribute.Encode
 env.Spoken.Contribute.Encode = function(...)
     encodeCalls = encodeCalls + 1
     return realEncode(...)
 end
-Z:HasContributionGap()
-Z:CaptureContribution()
-Expect("HasContributionGap/CaptureContribution never encode", encodeCalls, 0)
+Z:CanContribute()
+Z:CaptureContribution(1537, "A Nook With No Lore")
+Expect("CanContribute/CaptureContribution never encode", encodeCalls, 0)
 
-Z:ShowContribution()
+Z:ShowContribution(1537, "A Nook With No Lore")
 Expect("...only Show() does", encodeCalls, 1)
 local box = env.Spoken.ContributeBox
 Expect("Show() puts a link in the box, not the raw envelope",
@@ -79,7 +69,7 @@ env.Spoken.Contribute.Encode = realEncode
 
 -- The fallback an older bundled SpokenPlayer still gets: no Encode at all.
 env.Spoken.Contribute.Encode = nil
-Z:ShowContribution()
+Z:ShowContribution(1537, "A Nook With No Lore")
 Expect("...falls back to the raw envelope when Encode is absent",
     box.editBox:GetText():match("^!SPOKEN1 zones\n") ~= nil, true)
 Expect("...with the old two-copy hint", box.hint:GetText(), "Press Ctrl+C, then paste it at:")

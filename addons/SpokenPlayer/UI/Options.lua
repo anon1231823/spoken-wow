@@ -101,6 +101,17 @@ local function Build()
             function(v) audio().LegacyHDModels = v end)
     end
 
+    -- The buttons live on Blizzard's quest, book and map frames, not on the player, but
+    -- they all open the player's box, so the one switch for them is here. Absent where
+    -- Contribute.xml is not loaded (the private-server clients): nothing there to hide.
+    if Spoken.Contribute then
+        layout:Section(L.OPT_CONTRIBUTE_TITLE)
+        layout:Checkbox(L.OPT_HIDE_CONTRIBUTE, L.OPT_HIDE_CONTRIBUTE_TIP,
+            function() return Addon.db.profile.Contribute.HideButtons end,
+            function(v) Addon.db.profile.Contribute.HideButtons = v end,
+            function() Callbacks:Fire("CONTRIBUTE_SETTINGS_CHANGED") end)
+    end
+
     layout:Section(L.OPT_MINIMAP_TITLE)
     layout:Checkbox(L.OPT_MINIMAP_SHOW, nil,
         function() return not mm().hide end,
@@ -120,6 +131,16 @@ local function Build()
     return panel
 end
 
+-- The legacy window's height: never shorter than it always was, and tall enough for every
+-- row, including a link a feature addon added after the window was built.
+local function FitWindow()
+    if not (panel and panel.isWindow) then return end
+    local needed = 52 + panel.layout:Height() + 16
+    if needed > (panel:GetHeight() or 0) then
+        panel:SetHeight(needed)
+    end
+end
+
 function Options:Setup()
     if panel then return end
     Build()
@@ -127,8 +148,11 @@ function Options:Setup()
         self.category = Settings.RegisterCanvasLayoutCategory(panel, "Spoken Player")
         Settings.RegisterAddOnCategory(self.category)
     else
-        -- No Settings API: a window of our own, opened by /spoken options.
+        -- No Settings API: a window of our own, opened by /spoken options. Sized to its
+        -- rows, which vary by client, rather than a fixed height the rows can outgrow.
+        panel.isWindow = true
         panel:SetSize(420, 360)
+        FitWindow()
         panel:SetPoint("CENTER")
         panel:SetMovable(true)
         panel:EnableMouse(true)
@@ -154,6 +178,7 @@ function Options:AddLink(text, onClick)
         panel.layout:Section(L.OPT_ADDONS_TITLE)
     end
     table.insert(panel.links, panel.layout:Button(text, 200, onClick))
+    FitWindow()
 end
 
 function Options:Open()

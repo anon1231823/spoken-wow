@@ -252,6 +252,21 @@ export default function LineRow({
           {/* What is true of the TEXT stays beside the text; what is true of the audio
               moved to the Audio column, where it lines up down the page. */}
           <span className="mt-0.5 flex shrink-0 gap-2 text-xs">
+            {/* Nothing else about a contributed row differs from a native one -- this is the
+                whole marker, plus a way back to where it came from. */}
+            {line.contributionId ? (
+              <a
+                // ?status=accepted -- page.tsx defaults to status=new, and a contributed
+                // line's own contribution is by definition accepted, so a bare /contributions
+                // link would land on a queue that never shows the row it points at.
+                href={`/contributions?status=accepted#contribution-${line.contributionId}`}
+                onClick={(event) => event.stopPropagation()}
+                title="Accepted from a player's contribution"
+                className="text-muted-foreground hover:text-foreground underline underline-offset-2"
+              >
+                contributed
+              </a>
+            ) : null}
             {/* First of these: it is the reason the row is on screen at all, since a
                 search only shows an ignored line when it was asked for. */}
             {line.ignored && (
