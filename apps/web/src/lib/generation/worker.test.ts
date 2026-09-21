@@ -43,7 +43,7 @@ const OK: RegenerateResult = {
   spokenText: "x",
   dictionaryVersion: null,
   sharedWith: 0,
-  archivedInherited: false,
+  archivedLive: false,
 };
 
 async function seed(count: number, source: Source = "quests"): Promise<string> {

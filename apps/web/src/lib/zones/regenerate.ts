@@ -196,7 +196,7 @@ export async function regenerateZoneLine(
       // Version 0 inherited audio is a quests idea -- there, the app took over a store the
       // Python CLI had already filled. Here the first take this app writes is a new row
       // beside the imported one, so there is never anything to archive on the way in.
-      archivedInherited: false,
+      archivedLive: false,
     };
   } catch (error) {
     return { ok: false, failure: asFailure(error) };

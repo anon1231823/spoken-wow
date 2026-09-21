@@ -155,7 +155,7 @@ export async function regenerateBookLine(
       sharedWith: 0,
       // A quests idea: there the app took over a store the Python CLI had filled. The
       // books store starts empty, so there is never inherited audio to archive on the way in.
-      archivedInherited: false,
+      archivedLive: false,
     };
   } catch (error) {
     return { ok: false, failure: asFailure(error) };

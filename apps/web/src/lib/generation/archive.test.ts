@@ -17,13 +17,10 @@ process.env.SPOKEN_QUESTS_AUDIO_HISTORY = HISTORY;
 const {
   archiveStoreFile,
   historyDir,
-  INHERITED_VERSION,
-  restoreVersionFile,
   storeFileBytes,
   storeFileExists,
   storePath,
   versionPath,
-  versionsOnDisk,
   writeStoreFile,
 } = await import("./archive");
 
@@ -110,61 +107,29 @@ describe("writeStoreFile", () => {
 
 describe("archiveStoreFile", () => {
   it("copies the store file into history and reports its size", async () => {
-    await writeStoreFile(FILE, Buffer.from("inherited take"));
-    const bytes = await archiveStoreFile(FILE, INHERITED_VERSION);
+    await writeStoreFile(FILE, Buffer.from("the first take"));
+    const bytes = await archiveStoreFile(FILE, 1);
 
     expect(bytes).toBe(14);
-    expect(fs.readFileSync(versionPath(FILE, 0), "utf8")).toBe("inherited take");
+    expect(fs.readFileSync(versionPath(FILE, 1), "utf8")).toBe("the first take");
     // Archiving copies; it must not move, or the line would go silent.
-    expect(fs.readFileSync(storePath(FILE), "utf8")).toBe("inherited take");
+    expect(fs.readFileSync(storePath(FILE), "utf8")).toBe("the first take");
   });
 
   it("fails rather than recording an empty take when the store file is absent", async () => {
-    await expect(archiveStoreFile(FILE, 0)).rejects.toThrow();
-    expect(await versionsOnDisk(FILE)).toEqual([]);
+    await expect(archiveStoreFile(FILE, 1)).rejects.toThrow();
+    expect(fs.existsSync(historyDir(FILE))).toBe(true);
+    expect(fs.readdirSync(historyDir(FILE))).toEqual([]);
+  });
+
+  it("refuses version 0, which no longer means anything", async () => {
+    // It used to mean "the take that predates the app". A line is either generated or it
+    // is not, and its first generation is version 1.
+    await writeStoreFile(FILE, Buffer.from("x"));
+    await expect(archiveStoreFile(FILE, 0)).rejects.toThrow("bad version 0");
   });
 });
 
-describe("restoreVersionFile", () => {
-  it("puts an archived take back into the store", async () => {
-    await writeStoreFile(FILE, Buffer.from("original"));
-    await archiveStoreFile(FILE, 0);
-    await writeStoreFile(FILE, Buffer.from("re-rolled"));
-
-    const data = await restoreVersionFile(FILE, 0);
-
-    expect(data.toString()).toBe("original");
-    expect(fs.readFileSync(storePath(FILE), "utf8")).toBe("original");
-    // The take restored from is still in history: restoring is not consuming.
-    expect(fs.readFileSync(versionPath(FILE, 0), "utf8")).toBe("original");
-  });
-});
-
-describe("versionsOnDisk", () => {
-  it("is empty for a file nothing has touched", async () => {
-    expect(await versionsOnDisk(FILE)).toEqual([]);
-  });
-
-  it("lists numerically, not lexically", async () => {
-    fs.mkdirSync(historyDir(FILE), { recursive: true });
-    for (const version of [0, 2, 10, 9]) {
-      fs.writeFileSync(versionPath(FILE, version), "x");
-    }
-    expect(await versionsOnDisk(FILE)).toEqual([0, 2, 9, 10]);
-  });
-
-  it("ignores anything that is not a numbered take", async () => {
-    fs.mkdirSync(historyDir(FILE), { recursive: true });
-    fs.writeFileSync(versionPath(FILE, 1), "x");
-    fs.writeFileSync(path.join(historyDir(FILE), "1.mp3.part"), "x");
-    fs.writeFileSync(path.join(historyDir(FILE), "notes.txt"), "x");
-    expect(await versionsOnDisk(FILE)).toEqual([1]);
-  });
-});
-
-// The rule the user chose: version 0 pinned, plus the newest four. A flat "newest five"
-// would lose the original on the fifth re-roll, and the original is the only take that
-// cannot be remade.
 describe("storeFileExists and storeFileBytes", () => {
   it("report a gap rather than throwing", async () => {
     expect(await storeFileExists(FILE)).toBe(false);

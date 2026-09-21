@@ -25,7 +25,7 @@ import path from "node:path";
 import type { Source } from "@/lib/generation/queue";
 
 import { storePathOf } from "./adapters";
-import { archiveFileOf, archivePath, setLiveTake } from "./store";
+import { setLiveTake, takePath } from "./store";
 
 /**
  * Rebuild what the addon reads, for the sections that keep a lookup table.
@@ -50,13 +50,17 @@ export async function restoreTake(
   file: string,
   version: number,
 ): Promise<void> {
-  const name = await archiveFileOf(source, file, version);
   // The row is what says the take exists. A version nobody recorded is a caller asking for
   // something that never happened; a version whose BYTES are missing is a different failure
   // and belongs below, where the copy is attempted and says so.
-  if (!name) throw new Error(`no version ${version} of ${file} in ${source}`);
+  const source_path = await takePath(source, file, version);
+  if (!source_path) throw new Error(`no version ${version} of ${file} in ${source}`);
 
   const target = storePathOf(source, file);
+  // Already live: its bytes are the store file, and copying a file over itself truncates
+  // it. Nothing to move, and the flag is where it belongs.
+  if (source_path === target) return;
+
   await fs.mkdir(path.dirname(target), { recursive: true });
 
   // Copy beside the target and rename, the same atomic write every store here uses: rename
@@ -68,7 +72,6 @@ export async function restoreTake(
   // them: nothing about drawing a list of takes depends on the archive being reachable, so
   // a restore that cannot find its clip fails here, with the path it looked for, and the
   // live flag is not moved.
-  const source_path = archivePath(source, file, name);
   const partial = path.join(path.dirname(target), `.${path.basename(target)}.part`);
   try {
     await fs.copyFile(source_path, partial);

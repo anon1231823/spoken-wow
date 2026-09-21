@@ -20,7 +20,7 @@ process.env.SPOKEN_QUESTS_AUDIO = path.join(root, "audio");
 process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
-const { storePath, versionPath, versionsOnDisk, writeStoreFile } = await import("./archive");
+const { historyDir, storePath, versionPath, writeStoreFile } = await import("./archive");
 const { commitVersion } = await import("./history");
 const { listVersions } = await import("./versions");
 
@@ -82,54 +82,56 @@ afterAll(async () => {
   await closeDb();
 });
 
-describe("the first regeneration of inherited audio", () => {
-  it("archives what was there as version 0 before overwriting it", async () => {
-    await writeStoreFile(file, Buffer.from("the audio this project inherited"));
+/** The take numbers in a file's history directory, ascending. Test-only. */
+function archived(name: string): number[] {
+  if (!fs.existsSync(historyDir(name))) return [];
+  return fs
+    .readdirSync(historyDir(name))
+    .filter((entry) => /^\d+\.mp3$/.test(entry))
+    .map((entry) => Number(entry.slice(0, -4)))
+    .sort((a, b) => a - b);
+}
 
+describe("audio in the store that no take row describes", () => {
+  it("refuses to generate over it rather than destroying a take nothing can name", async () => {
+    // This is the whole of what version 0 used to be for: the app found a clip it had no
+    // record of and invented a number to archive it under. A version number is the table's
+    // to issue, so the honest answer is to stop. Seeding the rows is a one-off that has
+    // already happened for every clip in the store.
+    await writeStoreFile(file, Buffer.from("audio nothing recorded"));
+
+    await expect(take()).rejects.toThrow(/no take row/);
+
+    // Untouched: the clip is still there and still the only copy of itself.
+    expect(fs.readFileSync(storePath(file), "utf8")).toBe("audio nothing recorded");
+    expect(archived(file)).toEqual([]);
+  });
+});
+
+describe("the first take of a line", () => {
+  it("is version 1, because there is no take before the first one", async () => {
     const result = await take();
 
-    expect(result.archivedInherited).toBe(true);
+    expect(result.archivedLive).toBe(false);
     expect(result.version).toBe(1);
-
-    // The original is recoverable, which is the entire point of the exercise.
-    expect(fs.readFileSync(versionPath(file, 0), "utf8")).toBe(
-      "the audio this project inherited",
-    );
-    expect(fs.readFileSync(storePath(file), "utf8")).toBe("generated take");
-  });
-
-  it("records the inherited take as unreproducible rather than guessing", async () => {
-    await writeStoreFile(file, Buffer.from("inherited"));
-    await take();
-
-    const [, inherited] = await listVersions(file);
-    expect(inherited.version).toBe(0);
-    expect(inherited.origin).toBe("inherited");
-    // Nothing recorded how it was made; claiming a model or a seed would suggest it could
-    // be reproduced.
-    expect(inherited.modelId).toBeNull();
-    expect(inherited.seed).toBeNull();
-    expect(inherited.settings).toBeNull();
-    expect(inherited.bytes).toBe(9);
-  });
-
-  it("archives nothing when the line had no audio to begin with", async () => {
-    const result = await take();
-
-    expect(result.archivedInherited).toBe(false);
-    expect(result.version).toBe(0);
-    expect(await versionsOnDisk(file)).toEqual([0]);
+    expect(archived(file)).toEqual([1]);
     expect((await listVersions(file))[0].origin).toBe("generated");
   });
+});
 
-  it("archives only once, however many times the line is regenerated", async () => {
-    await writeStoreFile(file, Buffer.from("inherited"));
+describe("re-rolling a line", () => {
+  it("archives the take being replaced under its own version, every time", async () => {
+    // Not "once, the first time". Every take is copied out before the next lands on it,
+    // and a take that was already archived when it was cut is simply copied over itself.
+    await take({ data: Buffer.from("first") });
 
-    expect((await take()).archivedInherited).toBe(true);
-    expect((await take()).archivedInherited).toBe(false);
-    expect((await take()).archivedInherited).toBe(false);
+    expect((await take({ data: Buffer.from("second") })).archivedLive).toBe(true);
+    expect((await take({ data: Buffer.from("third") })).archivedLive).toBe(true);
 
-    expect(await versionsOnDisk(file)).toEqual([0, 1, 2, 3]);
+    expect(archived(file)).toEqual([1, 2, 3]);
+    expect(fs.readFileSync(versionPath(file, 1), "utf8")).toBe("first");
+    expect(fs.readFileSync(versionPath(file, 2), "utf8")).toBe("second");
+    expect(fs.readFileSync(storePath(file), "utf8")).toBe("third");
   });
 });
 
@@ -153,7 +155,7 @@ describe("commitVersion", () => {
     await take({ data: Buffer.from("third") });
 
     const versions = await listVersions(file);
-    expect(versions.filter((v) => v.isCurrent).map((v) => v.version)).toEqual([2]);
+    expect(versions.filter((v) => v.isCurrent).map((v) => v.version)).toEqual([3]);
     expect(fs.readFileSync(storePath(file), "utf8")).toBe("third");
   });
 
@@ -169,22 +171,19 @@ describe("commitVersion", () => {
 
 describe("keeping every take", () => {
   it("keeps all of them, however many re-rolls there have been", async () => {
-    // This used to keep version 0 and the newest four and delete the rest, which meant the
-    // fifth re-roll of a line destroyed a take somebody might want back -- and a re-roll is
-    // exactly when they want it. Audio files are now kept; reclaiming space is a deliberate
-    // job for a cleanup process, not a side effect of generating.
-    await writeStoreFile(file, Buffer.from("inherited"));
+    // This used to keep the newest five and delete the rest, which meant the fifth re-roll
+    // of a line destroyed a take somebody might want back -- and a re-roll is exactly when
+    // they want it. Audio files are now kept; reclaiming space is a deliberate job for a
+    // cleanup process, not a side effect of generating.
     for (let i = 0; i < 6; i++) await take({ data: Buffer.from(`take ${i}`) });
 
-    expect(await versionsOnDisk(file)).toEqual([0, 1, 2, 3, 4, 5, 6]);
-    expect((await listVersions(file)).map((v) => v.version)).toEqual([6, 5, 4, 3, 2, 1, 0]);
+    expect(archived(file)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect((await listVersions(file)).map((v) => v.version)).toEqual([6, 5, 4, 3, 2, 1]);
 
-    // The original is still the one nothing can reproduce.
-    expect(fs.readFileSync(versionPath(file, 0), "utf8")).toBe("inherited");
+    expect(fs.readFileSync(versionPath(file, 1), "utf8")).toBe("take 0");
   });
 
   it("numbers past the highest used, so a number is never reissued", async () => {
-    await writeStoreFile(file, Buffer.from("inherited"));
     for (let i = 0; i < 6; i++) await take();
 
     expect((await take()).version).toBe(7);
@@ -197,39 +196,28 @@ describe("keeping every take", () => {
   it("leaves a hand-deleted take recorded", async () => {
     await take();
     await take();
-    fs.rmSync(versionPath(file, 0));
+    fs.rmSync(versionPath(file, 1));
 
-    expect((await listVersions(file)).map((v) => v.version)).toEqual([1, 0]);
+    expect((await listVersions(file)).map((v) => v.version)).toEqual([2, 1]);
   });
 });
 
 describe("when the rows are gone but the takes are not", () => {
-  it("does not overwrite version 0 with whatever is current", async () => {
-    await writeStoreFile(file, Buffer.from("the irreplaceable original"));
-    await take({ data: Buffer.from("a re-roll") });
-
-    // The rows vanish; the audio does not.
-    await db().query(`delete from "take" where "file" = $1`, [file]);
-
-    const result = await take({ data: Buffer.from("another re-roll") });
-
-    expect(result.archivedInherited).toBe(false);
-    expect(fs.readFileSync(versionPath(file, 0), "utf8")).toBe("the irreplaceable original");
-  });
-
-  it("does not reissue a version number that already names a take", async () => {
-    await writeStoreFile(file, Buffer.from("original"));
+  it("stops, rather than reading the archive to work out what it lost", async () => {
+    // This used to survive a wiped table by taking the highest number in the history
+    // directory and carrying on -- which made the filesystem a second register of what
+    // exists, and on a machine whose archive is mounted elsewhere it read as "no history"
+    // and handed out a number already in use. The table is the record. A store file it
+    // cannot account for stops the write instead, and nothing is overwritten or renumbered.
     await take({ data: Buffer.from("first") });
     await take({ data: Buffer.from("second") });
-    expect(await versionsOnDisk(file)).toEqual([0, 1, 2]);
 
     await db().query(`delete from "take" where "file" = $1`, [file]);
 
-    const result = await take({ data: Buffer.from("third") });
+    await expect(take({ data: Buffer.from("third") })).rejects.toThrow(/no take row/);
 
-    expect(result.version).toBe(3);
     expect(fs.readFileSync(versionPath(file, 1), "utf8")).toBe("first");
     expect(fs.readFileSync(versionPath(file, 2), "utf8")).toBe("second");
-    expect(fs.readFileSync(versionPath(file, 3), "utf8")).toBe("third");
+    expect(fs.readFileSync(storePath(file), "utf8")).toBe("second");
   });
 });

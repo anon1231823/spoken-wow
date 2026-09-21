@@ -1,10 +1,10 @@
 /**
  * The record of every take: what it was made with, by whom, and which one is live.
  *
- * The disk holds the bytes (archive.ts); this holds what they mean. The two can disagree
- * only by someone deleting files by hand, and listVersions reconciles them on read rather
- * than trusting either alone - offering a restore of a take that is not on disk would fail
- * at the worst moment, after the current file had already been archived.
+ * The disk holds the bytes (archive.ts); this holds what they mean, and this is the only
+ * one of the two that is ever asked what exists. A take is a row. Whether its bytes are
+ * reachable from the machine serving the page is a different question, asked at the moment
+ * somebody plays or restores it and answered there.
  *
  * Every statement here names `"source" = 'quests'`. The `take` table holds both sides of the
  * site (see migration 0020), the two name files by different frozen rules, and a query that
@@ -17,7 +17,13 @@ import { db } from "@/lib/db";
 
 import type { VoiceSettings } from "./config";
 
-export type Origin = "inherited" | "generated";
+/**
+ * `imported` is for takes this app did not cut: the corpus the CLI narrated before any of
+ * this recorded anything, and the zones audio that came in from the old droplet. It means
+ * the settings, the seed and often the voice are unknown -- null, which is unknown rather
+ * than unchanged -- not that the take is older than version 1. There is no version 0.
+ */
+export type Origin = "imported" | "generated";
 
 export type VoicelineVersion = {
   file: string;
@@ -40,7 +46,7 @@ export type VoicelineVersion = {
    * Together these are what makes staleness answerable: the hash moves when the regex rules
    * or the corpus text change, the version moves when the lexicon does, and a phoneme rule
    * changes only the second. null on every row written before the two columns existed, and
-   * on every inherited take - which means unknown, not unchanged.
+   * on every imported take - which means unknown, not unchanged.
    */
   spokenHash: string | null;
   dictionaryVersion: string | null;
@@ -120,10 +126,10 @@ export async function versionCounts(files: string[]): Promise<Map<string, number
  * drifts: a directory listing cannot say which take is live, what it cost, or whether it
  * is the one somebody restored -- it can only say that a file with that name exists.
  *
- * What keeps it true is the other half, scripts/backfill-takes.mjs: an inherited take row
- * for every clip the CLI narrated before this app recorded anything, and a --reconcile
- * pass that retires a row whose file an rsync has since deleted. Without that pass a row
- * outlives its file and the badge lies in the direction that matters.
+ * A row outliving its file is not a reason to go back to the disk. The archive is
+ * append-only and the store is whatever the last rsync left; the table is what the site and
+ * the addon build are built from, so a file the local machine happens not to have is a
+ * missing file, not a missing take. The player says so when it cannot fetch one.
  */
 export async function voicedFiles(): Promise<Set<string>> {
   const { rows } = await db().query<{ file: string }>(
@@ -199,25 +205,36 @@ export async function generatedAt(): Promise<Map<string, number>> {
 /**
  * The version number a new take should get: one past the highest ever used.
  *
- * Past the highest *used*, not the highest surviving, so a pruned number is never reissued.
+ * Past the highest *used*, not the highest surviving, so a number is never reissued.
  * Reusing one would make two different takes share a filename in history and an id in the
  * table, and the older row would win the unique constraint.
+ *
+ * The first take of a line is version 1. A file with no rows has never been generated, and
+ * there is no number standing for the take before that one.
  */
 export async function nextVersion(file: string): Promise<number> {
   const { rows } = await db().query<{ next: number }>(
-    `select coalesce(max("version"), -1) + 1 as next
+    `select coalesce(max("version"), 0) + 1 as next
        from "take" where "source" = 'quests' and "file" = $1`,
     [file],
   );
-  return rows[0]?.next ?? 0;
+  return rows[0]?.next ?? 1;
 }
 
-export async function hasVersions(file: string): Promise<boolean> {
-  const { rows } = await db().query(
-    `select 1 from "take" where "source" = 'quests' and "file" = $1 limit 1`,
+/**
+ * The version of the take that is live for this file, or null when it has never been
+ * generated.
+ *
+ * What the bytes in the store are, which is what commitVersion needs to know before it
+ * writes over them.
+ */
+export async function liveVersionOf(file: string): Promise<number | null> {
+  const { rows } = await db().query<{ version: number }>(
+    `select "version" from "take"
+      where "source" = 'quests' and "file" = $1 and "isCurrent"`,
     [file],
   );
-  return rows.length > 0;
+  return rows[0]?.version ?? null;
 }
 
 export async function recordVersion(version: NewVersion): Promise<void> {
@@ -289,11 +306,3 @@ export async function setCurrentVersion(file: string, version: number): Promise<
   }
 }
 
-export async function deleteVersions(file: string, versions: number[]): Promise<void> {
-  if (versions.length === 0) return;
-  await db().query(
-    `delete from "take"
-      where "source" = 'quests' and "file" = $1 and "version" = any($2::int[])`,
-    [file, versions],
-  );
-}

@@ -1,46 +1,43 @@
 #!/usr/bin/env node
-// Gives every clip in the quests store a take row, so the database can answer which lines
-// have audio.
+// Gives every clip the CLI narrated before this app kept records its take row: version 1,
+// origin 'imported'.
 //
-//   cd apps/web && node scripts/backfill-takes.mjs --dry-run     # report, write nothing
-//   cd apps/web && node scripts/backfill-takes.mjs               # insert the missing rows
-//   cd apps/web && node scripts/backfill-takes.mjs --reconcile   # retire rows gone stale
+//   cd apps/web && node scripts/seed-quests-takes.mjs --dry-run   # report, write nothing
+//   cd apps/web && node scripts/seed-quests-takes.mjs             # insert the rows
+//
+// RUN ONCE, WHERE THE STORE IS, AND THEN DELETE THIS FILE. It is the one-off that makes the
+// database true about a corpus generated before the database existed. Nothing in the app
+// calls it, nothing re-runs it, and there is no second store to seed: from here on a take
+// exists because commitVersion wrote it.
 //
 // It lives here rather than under pipelines/quests/tools because `pg` is a web dependency
 // and this is the app's database; from there the import does not resolve. The same reason
 // scripts/apply-overrides.mjs is here.
 //
-// WHY THIS EXISTS. The site used to answer "does this line have audio?" with a readdir of
-// the store, because that is where the answer was: most of this corpus was narrated by the
-// Python CLI years before the app recorded takes at all. Zones and books have always
-// answered it from a take row instead, and one question with two implementations is one
-// that drifts -- the disk scan cannot say which take is live, what it cost, or whether it
-// is the one somebody restored. This inserts the rows that make the database's answer true.
+// WHY THE ROWS ARE VERSION 1. These clips were generated. The generator was tts_cli rather
+// than the web app, so what it used -- the settings, the seed, the model -- was never
+// written down, but that is a gap in the record and not a different kind of take. The app
+// used to call them version 0, "the take that predates the app", and that number leaked
+// into the schema, the archive naming and the UI, where it read as a line having audio from
+// before it had a first take. A line has either been generated or it has not. This is its
+// first generation.
 //
-// `origin = 'inherited'`, which migration 0020 reserves for exactly this: audio that
-// predates the app that would have recorded how it was made. Nothing else is claimed --
+// `origin = 'imported'`, which is what the zones takes that came in from the old droplet
+// already use and means the same thing: this app did not cut it. Nothing else is claimed --
 // settings, characters, credits and the spoken hash are all null, which means UNKNOWN and
-// not "unchanged". A hash invented here would make every inherited line look current, which
-// is the opposite of true: nobody knows what text these were cut from.
+// not "unchanged". A hash invented here would make every seeded line look current, which is
+// the opposite of true: nobody knows what text these were cut from.
 //
-// Version 0 where it is free, which is the number the archive already reserves for the
-// inherited take (lib/generation/archive.ts) -- so a later re-roll archives this clip as
-// v0 and the numbering stays what it always was.
+// THE BYTES STAY WHERE THEY ARE. A seeded take is the live one, so its clip is the store
+// file, which is exactly where it already is. Nothing is copied into audio-history; the
+// copy is made by commitVersion, the moment a re-roll is about to overwrite it.
 //
-// RUNS WHERE THE STORE IS. A machine with a partial copy of the store would insert rows for
-// the clips it happens to have; the rest would read as missing until somebody noticed. It
-// refuses to run against a store that is empty, and prints what it is about to do first.
-//
-// --reconcile is the other half, and the reason this is a tool rather than a migration:
-// `make quests-push` and `make quests-pull` rsync with --delete, so a file can leave the
-// store after its row exists. The row would then claim audio that is not there -- a badge
-// lying in the direction that matters, since "has audio" is what the explorer trusts.
-// Reconciling clears the live flag for those, leaving the row as the record that the take
-// existed. Run it after every push or pull.
+// It refuses to run against an empty store: a machine with a partial copy would insert rows
+// for the clips it happens to have and leave the rest looking ungenerated.
 
-import { createHash } from "node:crypto";
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { gunzipSync } from "node:zlib";
 
@@ -57,7 +54,6 @@ const LANG = "enUS";
 
 const args = new Set(process.argv.slice(2));
 const dryRun = args.has("--dry-run");
-const reconcile = args.has("--reconcile");
 
 function storeDir() {
   return process.env.SPOKEN_QUESTS_AUDIO ?? join(ROOT, "audio");
@@ -128,29 +124,13 @@ try {
   }
 
   const { rows: existing } = await pool.query(
-    `select "file", max("version")::int as "highest",
-            bool_or("isCurrent") as "live"
-       from "take" where "source" = 'quests' and "lang" = $1 group by "file"`,
+    `select distinct "file" from "take" where "source" = 'quests' and "lang" = $1`,
     [LANG],
   );
-  const known = new Map(existing.map((row) => [row.file, row]));
+  const known = new Set(existing.map((row) => row.file));
 
-  if (reconcile) {
-    // Rows claiming a file that is no longer there. The row stays -- it is still a true
-    // record that the take existed -- but it stops being the live one, which is what the
-    // explorer reads.
-    const orphaned = existing.filter((row) => row.live && !disk.has(row.file));
-    console.log(`${orphaned.length} live takes have no file in the store`);
-    if (!dryRun && orphaned.length > 0) {
-      await pool.query(
-        `update "take" set "isCurrent" = false
-          where "source" = 'quests' and "lang" = $1 and "isCurrent" and "file" = any($2::text[])`,
-        [LANG, orphaned.map((row) => row.file)],
-      );
-      console.log(`retired ${orphaned.length}`);
-    }
-  }
-
+  // Files the app has already written a take for are left entirely alone. Their history is
+  // real and this has nothing to add to it.
   const missing = [...disk].filter((file) => !known.has(file));
   // Clips the corpus cannot name: transcode leftovers, or files for lines a later extract
   // dropped. Reported and skipped rather than given a row with an empty lineId, which would
@@ -160,7 +140,7 @@ try {
 
   console.log(`${disk.size} clips in ${storeDir()}`);
   console.log(`${known.size} already have a take row`);
-  console.log(`${insertable.length} need an inherited take`);
+  console.log(`${insertable.length} need a version 1`);
   if (unknown.length > 0) {
     console.log(`${unknown.length} are not in the corpus and are skipped, e.g.:`);
     for (const file of unknown.slice(0, 5)) console.log(`  ${file}`);
@@ -179,22 +159,19 @@ try {
     for (const file of insertable) {
       const line = index.get(file);
       const bytes = (await stat(join(storeDir(), file))).size;
-      // Version 0 when this file has no rows at all, which is what the archive reserves for
-      // the inherited take; past the highest otherwise, so a number is never reissued.
-      const version = known.has(file) ? known.get(file).highest + 1 : 0;
 
       await pool.query(
         `insert into "take"
            ("source", "lang", "file", "lineId", "version", "isCurrent", "origin", "voice",
             "bytes")
-         values ('quests', $1, $2, $3, $4, true, 'inherited', $5, $6)
+         values ('quests', $1, $2, $3, 1, true, 'imported', $4, $5)
          on conflict ("source", "lang", "file", "version") do nothing`,
-        [LANG, file, line.lineId, version, line.voice, bytes],
+        [LANG, file, line.lineId, line.voice, bytes],
       );
       written++;
       if (written % 500 === 0) console.log(`  ${written}/${insertable.length}`);
     }
-    console.log(`\ninserted ${written} inherited takes`);
+    console.log(`\ninserted ${written} takes at version 1`);
   }
 } finally {
   await pool.end();

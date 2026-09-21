@@ -16,7 +16,7 @@ process.env.SPOKEN_QUESTS_AUDIO = path.join(root, "audio");
 process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
-const { storePath, versionPath, versionsOnDisk, writeStoreFile } = await import("./archive");
+const { historyDir, storePath, versionPath, writeStoreFile } = await import("./archive");
 const { regenerateLine } = await import("./regenerate");
 const { listVersions } = await import("./versions");
 const { LEAD_IN } = await import("./leadin");
@@ -180,8 +180,8 @@ describe("a line with no audio yet", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.file).toBe("quests/5-accept.mp3");
-    expect(result.version).toBe(0);
-    expect(result.archivedInherited).toBe(false);
+    expect(result.version).toBe(1);
+    expect(result.archivedLive).toBe(false);
     expect(result.voice).toBe("human-male-standard");
     expect(result.voiceId).toBe("voice-human-male-standard");
     expect(fs.readFileSync(storePath(result.file))).toEqual(MP3);
@@ -247,21 +247,33 @@ describe("a race with an accent tag", () => {
 });
 
 describe("a line whose audio already exists", () => {
-  it("archives the inherited take before overwriting it", async () => {
+  it("archives the take being replaced under its own version", async () => {
     const file = await fileFor(SOLO);
-    await writeStoreFile(file, Buffer.from("the audio this project inherited"));
 
     const { options } = stub();
-    const result = await regenerate(SOLO, options);
+    const first = await regenerate(SOLO, options);
+    expect(first.ok).toBe(true);
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.archivedInherited).toBe(true);
-    expect(result.version).toBe(1);
-    expect(fs.readFileSync(versionPath(file, 0), "utf8")).toBe(
-      "the audio this project inherited",
-    );
+    const second = await regenerate(SOLO, stub().options);
+
+    expect(second.ok).toBe(true);
+    if (!second.ok) return;
+    expect(second.archivedLive).toBe(true);
+    expect(second.version).toBe(2);
+    expect(fs.readFileSync(versionPath(file, 1))).toEqual(MP3);
     expect(fs.readFileSync(storePath(file))).toEqual(MP3);
+  });
+
+  it("refuses when the store has audio no take row describes", async () => {
+    // A clip the table cannot name has no version to be archived under, and writing over
+    // it would destroy it. Every clip in the store is meant to have a row.
+    const file = await fileFor(SOLO);
+    await writeStoreFile(file, Buffer.from("audio nothing recorded"));
+
+    const { options } = stub();
+    await expect(regenerate(SOLO, options)).rejects.toThrow(/no take row/);
+
+    expect(fs.readFileSync(storePath(file), "utf8")).toBe("audio nothing recorded");
   });
 });
 
@@ -363,7 +375,7 @@ describe("when ElevenLabs refuses", () => {
 
     expect(result.ok).toBe(false);
     expect(fs.readFileSync(storePath(file), "utf8")).toBe("the take that was already there");
-    expect(await versionsOnDisk(file)).toEqual([]);
+    expect(fs.existsSync(historyDir(file))).toBe(false);
     expect(await listVersions(file)).toEqual([]);
   });
 });

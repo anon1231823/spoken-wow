@@ -33,7 +33,7 @@ export type RegenerateOk = {
   voice: string;
   spokenText: string;
   sharedWith: number;
-  archivedInherited: boolean;
+  archivedLive: boolean;
 };
 
 export type RegenerateFailed = {

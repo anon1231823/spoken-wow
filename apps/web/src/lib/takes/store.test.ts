@@ -20,7 +20,7 @@ process.env.SPOKEN_QUESTS_AUDIO = path.join(root, "audio");
 process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
-const { archiveFileOf, listTakes, noteArchiveFile, setLiveTake, takeHistory } = await import(
+const { listTakes, noteArchiveFile, setLiveTake, takeHistory, takePath } = await import(
   "./store"
 );
 
@@ -98,11 +98,15 @@ describe("what the history panel is told", () => {
 });
 
 describe("finding a take's bytes", () => {
+  const stem = () => path.basename(file, ".mp3");
+
   it("believes the name a take recorded for itself", async () => {
     await record(3, false, "v3.mp3");
     await record(4, true);
 
-    expect(await archiveFileOf("quests", file, 3)).toBe("v3.mp3");
+    expect(await takePath("quests", file, 3)).toBe(
+      path.join(root, "audio-history", "gossip", stem(), "v3.mp3"),
+    );
   });
 
   it("falls back to the section's naming rule for a take that predates the column", async () => {
@@ -111,7 +115,18 @@ describe("finding a take's bytes", () => {
     await record(3);
     await record(4, true);
 
-    expect(await archiveFileOf("quests", file, 3)).toBe("3.mp3");
+    expect(await takePath("quests", file, 3)).toBe(
+      path.join(root, "audio-history", "gossip", stem(), "3.mp3"),
+    );
+  });
+
+  it("puts the live take in the store, which is where its bytes actually are", async () => {
+    // A take can be live without ever having been archived: audio narrated before this app
+    // kept records has one row and one file, in the store. commitVersion makes the archived
+    // copy at the moment a re-roll is about to overwrite it, and not before.
+    await record(1, true);
+
+    expect(await takePath("quests", file, 1)).toBe(path.join(root, "audio", file));
   });
 
   it("answers null for a version nobody recorded", async () => {
@@ -119,7 +134,7 @@ describe("finding a take's bytes", () => {
     // belongs to whoever tries to play or restore it.
     await record(1, true);
 
-    expect(await archiveFileOf("quests", file, 9)).toBe(null);
+    expect(await takePath("quests", file, 9)).toBe(null);
   });
 });
 

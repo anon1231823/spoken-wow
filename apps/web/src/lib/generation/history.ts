@@ -21,14 +21,8 @@
  */
 import { createHash } from "node:crypto";
 
-import { listVersions, nextVersion, recordVersion, setCurrentVersion } from "./versions";
-import {
-  archiveStoreFile,
-  INHERITED_VERSION,
-  storeFileExists,
-  versionsOnDisk,
-  writeStoreFile,
-} from "./archive";
+import { liveVersionOf, nextVersion, recordVersion, setCurrentVersion } from "./versions";
+import { archiveStoreFile, storeFileExists, writeStoreFile } from "./archive";
 import type { VoiceSettings } from "./config";
 import type { VoicelineVersion } from "./versions";
 
@@ -70,48 +64,49 @@ export type CommitInput = {
 export type CommitResult = {
   version: number;
   bytes: number;
-  /** Set when audio that predated this app was archived to make room for this take. */
-  archivedInherited: boolean;
+  /** Set when the take being replaced had to be archived before this one overwrote it. */
+  archivedLive: boolean;
 };
 
 /**
- * Archive whatever is in the store as version 0, if this file has no history yet.
+ * Copy the take that is live now into the archive, before new bytes land on top of it.
  *
- * The single most important step in this module. Audio produced before this app existed
- * cannot be reproduced - the settings, the seed and often the voice are all unknown - so the
- * first regeneration is the only chance to keep it. Doing it here rather than at the call
+ * The single most important step in this module, and the one thing here that may not be
+ * skipped: the store holds exactly one clip per line, so writing a new take destroys the
+ * old one unless it has already been copied out. Doing it here rather than at the call
  * site means neither generation nor restore can forget.
+ *
+ * WHICH VERSION IT IS COMES FROM THE DATABASE. The live row says what the bytes in the
+ * store are; the archive is where they go. This used to invent a version 0 for a file with
+ * no rows -- audio "predating the app" -- and read the history directory to decide whether
+ * to. Both are gone: a version number is a thing the table issues, and there is no number
+ * meaning "the take before the first take".
+ *
+ * A store file with no row at all is the one case left, and it refuses rather than guessing
+ * a number for it. See below.
+ *
+ * Re-copying a take that was already archived at the moment it was cut is deliberate and
+ * cheap: the bytes are the same, so the write is idempotent, and the alternative is a stat
+ * that makes the archive authoritative again for a question the table can answer.
  */
-async function archiveInherited(input: {
-  file: string;
-  lineId: string;
-  voice: string;
-}): Promise<boolean> {
-  const [existing, onDisk] = await Promise.all([
-    listVersions(input.file),
-    versionsOnDisk(input.file),
-  ]);
+async function archiveLive(file: string): Promise<boolean> {
+  const live = await liveVersionOf(file);
+  const inStore = await storeFileExists(file);
 
-  // The disk is consulted as well as the table, and this is not belt and braces. If the rows
-  // are gone but the takes are not - a restored backup, a hand-run delete, a fresh database
-  // pointed at an existing audio-history - then trusting the table alone would archive the
-  // *current* take as version 0 and overwrite the real original with it. That is the one
-  // outcome this whole module exists to prevent, and it is unrecoverable.
-  if (existing.length > 0 || onDisk.length > 0) return false;
-  if (!(await storeFileExists(input.file))) return false;
+  // A clip with no take row is audio the database does not know exists, and there is no
+  // version number to archive it under. Writing over it would destroy a take nothing could
+  // name afterwards, so this refuses instead. It is not a disagreement to paper over: every
+  // clip in the store is meant to have a row, and scripts/seed-quests-takes.mjs is what
+  // gave the ones narrated before this app kept records theirs.
+  if (live === null && inStore) {
+    throw new Error(
+      `${file} has audio in the store but no take row, so a re-roll would destroy a take ` +
+        "nothing recorded. Give it a row before generating over it.",
+    );
+  }
+  if (live === null || !inStore) return false;
 
-  const bytes = await archiveStoreFile(input.file, INHERITED_VERSION);
-  await recordVersion({
-    file: input.file,
-    version: INHERITED_VERSION,
-    origin: "inherited",
-    lineId: input.lineId,
-    voice: input.voice,
-    bytes,
-    // No settings, model or seed: nothing recorded how this was made, and guessing would be
-    // worse than the honest gap - it would suggest the take could be reproduced.
-    createdBy: null,
-  });
+  await archiveStoreFile(file, live);
   return true;
 }
 
@@ -129,16 +124,14 @@ export function spokenHash(spokenText: string): string {
 
 /** Write a new take into the store and record it. Caller must hold the file's lock. */
 export async function commitVersion(input: CommitInput): Promise<CommitResult> {
-  const archivedInherited = await archiveInherited(input);
+  const archivedLive = await archiveLive(input.file);
 
-  // Past the highest number either side has seen. Taking it from the table alone would let a
-  // lost row hand out a number that already names a file, and archiveStoreFile would write
-  // straight over that take.
-  const [fromRows, onDisk] = await Promise.all([
-    nextVersion(input.file),
-    versionsOnDisk(input.file),
-  ]);
-  const version = Math.max(fromRows, onDisk.length ? Math.max(...onDisk) + 1 : 0);
+  // From the rows, and only the rows. This used to take the larger of the table's next
+  // number and one past the highest file in the history directory, to survive a row going
+  // missing. That made the filesystem a second register of what exists, which is the thing
+  // the take table is for -- and on a machine whose archive is mounted elsewhere it read as
+  // "no history" and handed out a number already in use.
+  const version = await nextVersion(input.file);
 
   await writeStoreFile(input.file, input.data);
 
@@ -165,5 +158,5 @@ export async function commitVersion(input: CommitInput): Promise<CommitResult> {
   });
   await setCurrentVersion(input.file, version);
 
-  return { version, bytes: input.data.byteLength, archivedInherited };
+  return { version, bytes: input.data.byteLength, archivedLive };
 }

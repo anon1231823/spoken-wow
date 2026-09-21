@@ -45,25 +45,36 @@ function take(text: string) {
 }
 
 it("puts a take back without losing a file or inventing a take", async () => {
-  await writeStoreFile(file, Buffer.from("inherited"));
   await take("take one");
   await take("take two");
+  await take("take three");
 
   const dir = path.join(root, "audio-history", "gossip", path.basename(file, ".mp3"));
   const before = fs.readdirSync(dir).sort();
   const rowsBefore = await listTakes("quests", file);
 
-  await restoreTake("quests", file, 0);
+  await restoreTake("quests", file, 1);
 
   expect(fs.readdirSync(dir).sort()).toEqual(before);
-  expect(fs.readFileSync(storePath(file), "utf8")).toBe("inherited");
+  expect(fs.readFileSync(storePath(file), "utf8")).toBe("take one");
   const rowsAfter = await listTakes("quests", file);
   expect(rowsAfter).toHaveLength(rowsBefore.length);
-  expect(rowsAfter.filter((r) => r.isCurrent).map((r) => r.version)).toEqual([0]);
+  expect(rowsAfter.filter((r) => r.isCurrent).map((r) => r.version)).toEqual([1]);
 
   // Twice over, which is the case that used to eat the archive entry: the second restore
   // has to find the take the first one moved away from.
-  await restoreTake("quests", file, 2);
+  await restoreTake("quests", file, 3);
   expect(fs.readdirSync(dir).sort()).toEqual(before);
-  expect(fs.readFileSync(storePath(file), "utf8")).toBe("take two");
+  expect(fs.readFileSync(storePath(file), "utf8")).toBe("take three");
+});
+
+it("restoring the take that is already live changes nothing", async () => {
+  // Its bytes ARE the store file. Copying a file over itself truncates it, so this is the
+  // difference between a no-op and a silent loss of the live clip.
+  await take("only take");
+
+  await restoreTake("quests", file, 1);
+
+  expect(fs.readFileSync(storePath(file), "utf8")).toBe("only take");
+  expect((await listTakes("quests", file)).map((r) => r.version)).toEqual([1]);
 });

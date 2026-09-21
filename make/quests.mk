@@ -78,7 +78,7 @@ endef
         package-audio-complete package-meta push-complete icon \
         downloads-status \
         factions release release-audio release-wago release-curse \
-        release-dry backfill-takes import-corpus export-corpus export-ignores \
+        release-dry seed-takes import-corpus export-corpus export-ignores \
         fold-overrides sync check-synced
 
 help: ## Show this help
@@ -136,10 +136,9 @@ push: require-droplet ## Upload pipelines/quests/audio/ to the droplet (refuses 
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	$(RSYNC) $(RSYNC_OPTS) pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO)
 	@# No pm2 reload: nothing in the request path caches the store any more. Whether a line
-	@# has audio is a take row, which this push does not change -- the droplet's own rows
-	@# already describe its store, and `make backfill-takes` is what reconciles them when a
-	@# file arrives or leaves. See apps/web/src/lib/audio.ts.
-	@echo "==> pushed. On the droplet, reconcile the take rows: make quests-backfill-takes"
+	@# has audio is a take row, and this push does not change one. The rows are the record
+	@# of what was generated; the store is a cache of the bytes, which this keeps in step.
+	@echo "==> pushed"
 
 pull: require-droplet ## Download the droplet's audio store into pipelines/quests/audio/ (DESTRUCTIVE: --delete)
 	$(preflight)
@@ -149,9 +148,10 @@ pull: require-droplet ## Download the droplet's audio store into pipelines/quest
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	$(RSYNC) $(RSYNC_OPTS) $(DROPLET):$(REMOTE_AUDIO) pipelines/quests/audio/
 	@echo "==> pulled"
-	@# --delete means a local file can have gone. A take row that outlives its file claims
-	@# audio that is not there, and the explorer trusts that claim -- so reconcile locally.
-	@$(MAKE) --no-print-directory -f make/quests.mk backfill-takes ARGS=--reconcile
+	@# --delete means a local file can have gone, and no take row is touched for it. A take
+	@# is a row; a clip this machine does not happen to hold is a missing file, which the
+	@# player reports when somebody asks for it. Retiring rows to match a local rsync would
+	@# make the laptop's disk an authority on what production has generated.
 
 # --- voice clips ----------------------------------------------------------------------
 #
@@ -434,20 +434,17 @@ endef
 check-synced: ## Compare the local corpus with the droplet's, and prompt if they differ
 	$(freshness-check)
 
-# The take rows that say which lines have audio, against the clips actually on disk.
+# ONE-OFF. Gives every clip the Python CLI narrated its take row, at version 1, so the
+# database is true about a corpus generated before the database existed. Run it once on the
+# droplet, where the store is, and then delete both this target and the script: from there
+# on a take exists because the app wrote it.
 #
-# Two jobs, one script. Without arguments it gives every clip with no take row an
-# `inherited` one -- which is most of this store, narrated by the Python CLI years before
-# the app recorded anything. With --reconcile it does the opposite: a row whose file has
-# gone stops being the live one, because "has audio" is read from these rows now and a row
-# that outlives its file lies in the direction that matters.
-#
-# Runs where the store is. A machine holding half the store would write rows for the half
-# it has and leave the rest reading as missing, so the script refuses an empty store and
-# says what it is about to do first. ARGS=--dry-run to see without writing.
+# A machine holding half the store would write rows for the half it has and leave the rest
+# reading as ungenerated, so the script refuses an empty store and says what it is about to
+# do first. ARGS=--dry-run to see without writing.
 
-backfill-takes: ## Give every clip a take row (ARGS=--dry-run, ARGS=--reconcile)
-	@cd apps/web && node scripts/backfill-takes.mjs $(ARGS)
+seed-takes: ## ONE-OFF: give every already-narrated clip its version 1 (ARGS=--dry-run)
+	@cd apps/web && node scripts/seed-quests-takes.mjs $(ARGS)
 
 audio-status: require-droplet ## Compare file count and size on both sides
 	@echo "local:  $$(find audio -name '*.mp3' | wc -l | tr -d ' ') files, $$(du -sh audio | cut -f1)"

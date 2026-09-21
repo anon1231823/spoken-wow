@@ -22,12 +22,12 @@ import { db, query } from "@/lib/db";
 import type { Source } from "@/lib/generation/queue";
 
 import { archiveNameFor } from "./archive";
-import { historyDirOf } from "./adapters";
+import { historyDirOf, storePathOf } from "./adapters";
 
 export type Take = {
   version: number;
   isCurrent: boolean;
-  origin: "inherited" | "imported" | "generated";
+  origin: "imported" | "generated";
   /** Where the bytes are, relative to the line's history directory, or null when unknown. */
   archiveFile: string | null;
   characters: number | null;
@@ -157,17 +157,36 @@ export function archivePath(source: Source, file: string, name: string): string 
   return path.join(historyDirOf(source, file), name);
 }
 
-/** The archived file of one take, or null when the take was never recorded. */
-export async function archiveFileOf(
+/**
+ * Where one take's bytes are, absolute, or null when no such take was ever recorded.
+ *
+ * The live take is in the store; every other take is in the archive. That is not a
+ * fallback, it is the layout: the store holds exactly one clip per line, the one the addon
+ * ships, and the archive holds the rest.
+ *
+ * It matters because a take can be live without ever having been archived. Audio the CLI
+ * narrated before any of this kept records has one row and one file, in the store, and
+ * looking for it under audio-history/ would be looking for a copy nothing had reason to
+ * make. commitVersion archives the live take before it overwrites it, so the copy appears
+ * exactly when it is needed.
+ *
+ * One query. Whether the take is live is a column, not something to infer from a second
+ * lookup that could disagree with the first.
+ */
+export async function takePath(
   source: Source,
   file: string,
   version: number,
   lang = "enUS",
 ): Promise<string | null> {
-  const rows = await query<{ version: number; archiveFile: string | null }>(
-    `select "version", "archiveFile" from "take"
+  const rows = await query<Pick<Take, "version" | "archiveFile" | "isCurrent">>(
+    `select "version", "archiveFile", "isCurrent" from "take"
       where "source" = $1 and "file" = $2 and "lang" = $3 and "version" = $4`,
     [source, file, lang, version],
   );
-  return rows[0] ? archiveNameOf(source, rows[0]) : null;
+  const take = rows[0];
+  if (!take) return null;
+  return take.isCurrent
+    ? storePathOf(source, file)
+    : archivePath(source, file, archiveNameOf(source, take));
 }

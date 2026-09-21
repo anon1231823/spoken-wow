@@ -13,9 +13,10 @@
  * taken from the caller -- there is no string here that a request can steer at another
  * directory.
  *
- * Deliberately simpler than the live audio routes. An archived take never changes once
- * written -- a new take gets a new number, and nothing renames or deletes one -- so it is
- * cached immutably with no ETag dance. Range support is kept because Safari opens audio
+ * Deliberately simpler than the live audio routes. A take never changes once written -- a
+ * new take gets a new number, and nothing renames or deletes one -- so it is cached
+ * immutably with no ETag dance. That holds for the live take too: restoring an earlier one
+ * moves the flag to a different version, which is a different URL. Range support is kept because Safari opens audio
  * with `bytes=0-1` and refuses a 200.
  *
  * Collaborator-only, unlike the live audio: a signed-out visitor has no business
@@ -29,7 +30,7 @@ import { parseRange } from "@/lib/range";
 import { isSource } from "@/lib/reports/reports";
 import { streamOf } from "@/lib/stream";
 import { isAddressableFile } from "@/lib/takes/files";
-import { archiveFileOf, archivePath } from "@/lib/takes/store";
+import { takePath } from "@/lib/takes/store";
 
 export const dynamic = "force-dynamic";
 
@@ -49,13 +50,12 @@ export async function GET(request: NextRequest) {
     return new Response("unknown file", { status: 404 });
   }
 
-  const name = await archiveFileOf(source, file, version);
   // The take was never recorded. Distinct from the 404 below, which is a take that exists
   // and whose bytes do not -- the panel no longer predicts either, so this is where a
   // listener finds out.
-  if (!name) return new Response("no such take", { status: 404 });
+  const target = await takePath(source, file, version);
+  if (!target) return new Response("no such take", { status: 404 });
 
-  const target = archivePath(source, file, name);
   let size: number;
   try {
     size = fs.statSync(target).size;

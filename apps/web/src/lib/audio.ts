@@ -96,10 +96,11 @@ export function readStoreIndex(audioDir: string = AUDIO_DIR): Set<string> {
  * answered it -- a directory listing can say a file exists, but not which take is live,
  * what it cost, or whether it is the one somebody restored.
  *
- * readStoreIndex survives because two jobs still genuinely ask the disk: the backfill that
- * gives every inherited clip a take row, and its --reconcile pass that retires a row whose
- * file an rsync deleted. Those are the seam where the store and the table are compared, and
- * comparing them needs both sides.
+ * readStoreIndex survives for the tests, which need to know which of this store's clips a
+ * machine actually holds before asserting anything about it, and for the one-off that seeds
+ * the take rows for audio narrated before the app recorded any. Nothing the site serves
+ * calls it. A clip this machine does not hold is a missing file, reported by the player
+ * when somebody asks to hear it -- never a line that reads as ungenerated.
  *
  * The memoised storeIndex(), its directory-mtime stamp and noteStored() are gone with the
  * search path that used them. They existed because a search read this per request and two

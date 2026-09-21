@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 export type Take = {
   version: number;
   isCurrent: boolean;
-  origin: "inherited" | "imported" | "generated";
+  origin: "imported" | "generated";
   characters: number | null;
   credits: number | null;
   modelId: string | null;
@@ -275,7 +275,7 @@ export default function TakeSelector({
                   <div className="text-muted-foreground truncate">
                     {when(take.createdAt)}
                     {take.createdByName && ` · ${take.createdByName}`}
-                    {/* Nothing recorded how an inherited take was made, so nothing is
+                    {/* Nothing recorded how an imported take was made, so nothing is
                         claimed about it. */}
                     {take.credits !== null && ` · ${take.credits} credits`}
                   </div>

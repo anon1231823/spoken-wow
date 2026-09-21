@@ -10,12 +10,18 @@
  * renamed or deleted:
  *
  *   quests        `{version}.mp3` -- the number IS the take version, since commitVersion
- *                 archives each take as it is cut. `0.mp3` is the take that predates the
- *                 app (INHERITED_VERSION).
- *   zones, books  `v{version}.mp3` for everything cut since takes were archived by version.
- *                 Older clips there were numbered by position in a sequence of overwrites,
- *                 which is not a version -- those rows are matched to their files once, by
- *                 scripts/backfill-archive-names.mjs, and carry `archiveFile` afterwards.
+ *                 archives each take as it is cut.
+ *   zones, books  `v{version}.mp3`.
+ *
+ * Versions are 1-based. A `0.mp3` left on disk by the version-0 convention this app used to
+ * have is not renamed and not deleted -- archived audio never is -- but no row points at
+ * one, and nothing here will produce that name again.
+ *
+ * There used to be more in this file: a parser for history filenames and a sort over them,
+ * both written so that a one-time script could pair a directory listing against a file's
+ * take rows by position. Nothing pairs anything any more. The row says where its bytes are,
+ * or its section's rule does, and a listing of the archive is not consulted by anything the
+ * site serves.
  */
 import type { Source } from "@/lib/generation/queue";
 
@@ -25,25 +31,3 @@ export function archiveNameFor(source: Source, version: number): string {
   // match the other two would be renaming irreplaceable audio to tidy a spelling.
   return source === "quests" ? `${version}.mp3` : `v${version}.mp3`;
 }
-
-/** The version a history filename names, or null when the name is not one of ours. */
-export function versionInName(name: string): number | null {
-  const match = /^v?(\d+)\.mp3$/.exec(name);
-  if (!match) return null;
-  const version = Number(match[1]);
-  return Number.isSafeInteger(version) && version >= 0 ? version : null;
-}
-
-/** History filenames, ascending by the number in them. Anything else is dropped. */
-export function sortedArchiveNames(names: readonly string[]): string[] {
-  return names
-    .filter((name) => versionInName(name) !== null)
-    .sort((a, b) => versionInName(a)! - versionInName(b)!);
-}
-
-export type TakeRef = {
-  version: number;
-  /** What the row already claims, when it was cut under the current naming. */
-  archiveFile?: string | null;
-  isCurrent?: boolean;
-};
