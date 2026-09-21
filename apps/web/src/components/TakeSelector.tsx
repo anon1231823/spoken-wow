@@ -42,9 +42,13 @@ function when(iso: string): string {
  * what was cut; whether the bytes are still there is answered by playing or restoring, and
  * both say so when they fail.
  *
- * Version 0 is the take that predates this app, labelled `original`: nothing recorded how
- * it was made, so no model or cost is shown and inventing one would suggest it could be
- * reproduced. The zones and books equivalent is an imported take.
+ * A take this app did not cut is labelled `no record`, and shows no model and no cost:
+ * nothing wrote down how it was made, and inventing a value would suggest it could be
+ * reproduced. Most quests takes are in that state -- the corpus was narrated by tts_cli,
+ * and the pruning this branch removed destroyed the rows of thousands of re-rolls whose
+ * clips survived in the archive. It used to say `original`, from when the only such take
+ * was the single one that predated the app; it is now the common case, and calling a third
+ * re-roll "original" said the opposite of what is true.
  */
 export default function TakeSelector({
   source,
@@ -268,7 +272,12 @@ export default function TakeSelector({
                   <div className="flex items-baseline gap-1.5">
                     <span className="font-mono">v{take.version}</span>
                     {take.origin !== "generated" && (
-                      <span className="text-amber-400">original</span>
+                      <span
+                        className="text-muted-foreground"
+                        title="Nothing recorded how this take was made"
+                      >
+                        no record
+                      </span>
                     )}
                     {take.isCurrent && <span className="text-emerald-400">live</span>}
                   </div>

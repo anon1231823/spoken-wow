@@ -93,6 +93,13 @@ async function filesOnDisk() {
  * under audio-history/gossip/31ab…/. Mirrors lib/takes/adapters.ts, which owns the rule.
  */
 function fileForHistoryPath(relative) {
+  // The droplet keeps one audio-history for the whole site, a directory per section:
+  // audio-history/quests/gossip/31ab…/0.mp3. A listing taken at that root therefore carries
+  // a leading 'quests/' that a listing taken at the quests history root does not. Strip it
+  // when it is there, so either listing reads the same, and drop the other two sections.
+  if (/^(zones|books)\//.test(relative)) return null;
+  relative = relative.replace(/^quests\//, "");
+
   // 'quests/4298-accept/0.mp3' -> ['quests/4298-accept', '0.mp3']
   const cut = relative.lastIndexOf("/");
   if (cut === -1) return null;

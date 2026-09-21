@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { timecode } from "@/lib/utils";
+import { cn, timecode } from "@/lib/utils";
 
 /**
  * The transport bar both sections play through.
@@ -18,6 +18,13 @@ import { timecode } from "@/lib/utils";
  * The element stays a plain <audio> handed back through `audioRef`, because both explorers
  * drive playback imperatively from the keyboard (space toggles, j/k step). The chrome here is
  * presentation over that element, never a replacement for it.
+ *
+ * WHERE A MISSING FILE IS REPORTED. A take is a row in the database, and nothing asks the
+ * filesystem whether its bytes are reachable while a page renders -- so the first thing that
+ * knows a clip is not there is this element, when somebody presses play. It says so here
+ * rather than failing silently, which is what it used to do: `play()` was called with its
+ * rejection swallowed and no `error` listener at all, so a 404 left the button showing play
+ * and the bar at 0:00 with no explanation.
  *
  * WHAT IT DOES NOT KNOW. Not what a line is, not how its URL is built, not which section it
  * belongs to. Quests names files by NPC and event, zones by map id and slug, and zones adds a
@@ -68,6 +75,10 @@ export default function AudioPlayer({
   // While dragging, the slider follows the pointer rather than timeupdate events. Without
   // this the thumb fights the playhead and snaps back every 250ms.
   const [scrubbing, setScrubbing] = useState<number | null>(null);
+  // Set when the element could not fetch or decode what it was pointed at. Almost always a
+  // clip whose row exists and whose file does not -- the archive is not on every machine
+  // that serves this page.
+  const [failed, setFailed] = useState(false);
 
   // Both refs point at the same element: this component reads it for its own chrome, the
   // explorer drives playback through it.
@@ -86,6 +97,12 @@ export default function AudioPlayer({
     const onPause = () => setPlaying(false);
     const onRate = () => setRate(el.playbackRate);
     const onVolume = () => setMuted(el.muted);
+    // Not declared as onError on the element: a media element's error event does not
+    // bubble, so React's delegation never sees it.
+    const onError = () => {
+      setFailed(true);
+      setPlaying(false);
+    };
 
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("loadedmetadata", onMeta);
@@ -95,6 +112,7 @@ export default function AudioPlayer({
     el.addEventListener("ended", onPause);
     el.addEventListener("ratechange", onRate);
     el.addEventListener("volumechange", onVolume);
+    el.addEventListener("error", onError);
     return () => {
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("loadedmetadata", onMeta);
@@ -104,6 +122,7 @@ export default function AudioPlayer({
       el.removeEventListener("ended", onPause);
       el.removeEventListener("ratechange", onRate);
       el.removeEventListener("volumechange", onVolume);
+      el.removeEventListener("error", onError);
     };
   }, []);
 
@@ -112,12 +131,21 @@ export default function AudioPlayer({
   useEffect(() => {
     setTime(0);
     setDuration(0);
+    setFailed(false);
   }, [src]);
 
   const toggle = () => {
     const el = local.current;
     if (!el?.src) return;
-    void (el.paused ? el.play().catch(() => {}) : el.pause());
+    // Both paths, because a 404 reaches an <audio> either way: play() rejects in some
+    // browsers, and in others it resolves and the element fires `error` instead. Handling
+    // only one leaves the button stuck, which is how this was found in the take popover.
+    void (el.paused
+      ? el.play().catch(() => {
+          setFailed(true);
+          setPlaying(false);
+        })
+      : el.pause());
   };
 
   const cycleRate = () => {
@@ -148,8 +176,14 @@ export default function AudioPlayer({
             {title ?? "Nothing playing"}
             {meta && <span className="text-muted-foreground ml-2 font-mono text-xs">{meta}</span>}
           </div>
-          <div className="text-muted-foreground truncate text-xs">
-            {subtitle ?? "Pick a line to hear it."}
+          <div
+            className={cn(
+              "truncate text-xs",
+              failed ? "text-destructive" : "text-muted-foreground",
+            )}
+            role={failed ? "alert" : undefined}
+          >
+            {failed ? "Its audio is not on the server." : (subtitle ?? "Pick a line to hear it.")}
           </div>
 
           <div className="mt-1.5 flex items-center gap-3">
