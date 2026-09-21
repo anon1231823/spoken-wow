@@ -90,6 +90,22 @@ def _variants(lines):
     return order
 
 
+def _progress(message):
+    """One line per step, as it happens: the import is a single transaction, so nothing it
+    writes is visible from outside until the end, and this is the only way to see it move."""
+    print(f"  {datetime.now().strftime('%H:%M:%S')} {message}", flush=True)
+
+
+def _bulk(cur, what, rows, sql, template=None, page=1000):
+    """execute_values in pages of `page` rows, saying how far it has got after each."""
+    for start in range(0, len(rows), page):
+        psycopg2.extras.execute_values(cur, sql, rows[start:start + page], template=template,
+                                       page_size=page)
+        _progress(f"{what}: {min(start + page, len(rows))}/{len(rows)}")
+    if not rows:
+        _progress(f"{what}: none")
+
+
 def import_corpus(path, verbose=True):
     """corpus.json.gz -> quest_line, quest_line_speaker, quest_spawn.
 
@@ -122,76 +138,84 @@ def import_corpus(path, verbose=True):
                 (corpus["schemaVersion"], corpus["generatedAt"]),
             )
 
+            # Everything the decisions need, in two reads. The import used to ask per line --
+            # its live version, then its highest number -- which is three round trips for each
+            # of fourteen thousand lines: seconds against a local database, and over an ssh
+            # tunnel to production, most of an hour. Now it reads once, decides in memory and
+            # writes in bulk, so its time no longer depends on the distance to the database.
+            _progress("reading what quest_line holds")
+            cur.execute(
+                """select "lineId", "variant", "origin", "text", "originalText"
+                     from "quest_line" where "lang" = %s and "isCurrent" """,
+                (LANG,),
+            )
+            live = {(r[0], r[1]): r[2:] for r in cur.fetchall()}
+            cur.execute(
+                """select "lineId", "variant", max("version") from "quest_line"
+                    where "lang" = %s group by 1, 2""",
+                (LANG,),
+            )
+            highest = {(r[0], r[1]): r[2] for r in cur.fetchall()}
+
+            unchanged, retire, inserts = [], [], []
             for line_id, payloads in variants.items():
                 for variant, payload in enumerate(payloads):
                     row = dict(zip(LINE_FIELDS, payload))
-                    cur.execute(
-                        """select "version", "origin", "text", "originalText", "source",
-                                  "questId", "questTitle", "playerGender", "fileName",
-                                  "generatable", "skipReason"
-                             from "quest_line"
-                            where "lineId" = %s and "variant" = %s and "lang" = %s
-                              and "isCurrent" """,
-                        (line_id, variant, LANG),
-                    )
-                    current = cur.fetchone()
+                    current = live.get((line_id, variant))
 
                     if current is None:
                         action = "promote"
-                    elif current[2] == row["text"] and current[3] == row["originalText"]:
+                    elif current[1] == row["text"] and current[2] == row["originalText"]:
                         action = "skip"
                     else:
-                        action = "record" if current[1] == "edited" else "promote"
-
+                        action = "record" if current[0] == "edited" else "promote"
                     counts[action] += 1
 
+                    structure = (
+                        row["source"], row["questId"], row["questTitle"],
+                        row["playerGender"], row["fileName"], row["generatable"],
+                        row["skipReason"],
+                    )
                     if action == "skip":
                         # The structural fields still move: an edit changes what is said,
                         # never which quest it belongs to or what file it is written to.
-                        cur.execute(
-                            """update "quest_line"
-                                  set "source" = %s, "questId" = %s, "questTitle" = %s,
-                                      "playerGender" = %s, "fileName" = %s,
-                                      "generatable" = %s, "skipReason" = %s
-                                where "lineId" = %s and "variant" = %s and "lang" = %s
-                                  and "isCurrent" """,
-                            (
-                                row["source"], row["questId"], row["questTitle"],
-                                row["playerGender"], row["fileName"], row["generatable"],
-                                row["skipReason"], line_id, variant, LANG,
-                            ),
-                        )
+                        unchanged.append((line_id, variant) + structure)
                         continue
-
-                    cur.execute(
-                        """select coalesce(max("version"), 0) + 1 from "quest_line"
-                            where "lineId" = %s and "variant" = %s and "lang" = %s""",
-                        (line_id, variant, LANG),
+                    if action == "promote" and current is not None:
+                        retire.append((line_id, variant))
+                    inserts.append(
+                        (line_id, variant, LANG, highest.get((line_id, variant), 0) + 1,
+                         action == "promote", row["source"], row["questId"],
+                         row["questTitle"], row["playerGender"], row["fileName"],
+                         row["text"], row["originalText"], row["generatable"],
+                         row["skipReason"])
                     )
-                    version = cur.fetchone()[0]
 
-                    if action == "promote":
-                        cur.execute(
-                            """update "quest_line" set "isCurrent" = false
-                                where "lineId" = %s and "variant" = %s and "lang" = %s
-                                  and "isCurrent" """,
-                            (line_id, variant, LANG),
-                        )
-
-                    cur.execute(
-                        """insert into "quest_line"
-                             ("lineId", "variant", "lang", "version", "isCurrent", "origin",
-                              "source", "questId", "questTitle", "playerGender", "fileName",
-                              "text", "originalText", "generatable", "skipReason")
-                           values (%s, %s, %s, %s, %s, 'extracted', %s, %s, %s, %s, %s, %s,
-                                   %s, %s, %s)""",
-                        (
-                            line_id, variant, LANG, version, action == "promote",
-                            row["source"], row["questId"], row["questTitle"],
-                            row["playerGender"], row["fileName"], row["text"],
-                            row["originalText"], row["generatable"], row["skipReason"],
-                        ),
-                    )
+            _bulk(cur, "quest_line: structure of unchanged lines", unchanged,
+                  """update "quest_line" q
+                        set "source" = v.source, "questId" = v.qid, "questTitle" = v.title,
+                            "playerGender" = v.gender, "fileName" = v.file,
+                            "generatable" = v.gen, "skipReason" = v.skip
+                       from (values %s)
+                         as v(lid, var, source, qid, title, gender, file, gen, skip)
+                      where q."lineId" = v.lid and q."variant" = v.var
+                        and q."lang" = '""" + LANG + """' and q."isCurrent" """,
+                  "(%s, %s::smallint, %s, %s::integer, %s, %s, %s, %s::boolean, %s)")
+            # Before the inserts: the new live version would otherwise collide with the old
+            # one on quest_line_current_idx.
+            _bulk(cur, "quest_line: retired versions", retire,
+                  """update "quest_line" q set "isCurrent" = false
+                       from (values %s) as v(lid, var)
+                      where q."lineId" = v.lid and q."variant" = v.var
+                        and q."lang" = '""" + LANG + """' and q."isCurrent" """,
+                  "(%s, %s::smallint)")
+            _bulk(cur, "quest_line: new versions", inserts,
+                  """insert into "quest_line"
+                       ("lineId", "variant", "lang", "version", "isCurrent", "origin",
+                        "source", "questId", "questTitle", "playerGender", "fileName",
+                        "text", "originalText", "generatable", "skipReason")
+                     values %s""",
+                  "(%s, %s, %s, %s, %s, 'extracted', %s, %s, %s, %s, %s, %s, %s, %s, %s)")
 
             # Speakers, wholesale. `ord` is the row's place in the corpus's own list, which
             # is what lets the export reproduce the file rather than a reordering of it.
@@ -203,14 +227,11 @@ def import_corpus(path, verbose=True):
                     (row["lineId"], variant, LANG, ord_)
                     + tuple(row[field] for field in SPEAKER_FIELDS)
                 )
-            psycopg2.extras.execute_values(
-                cur,
-                """insert into "quest_line_speaker"
-                     ("lineId", "variant", "lang", "ord", "npcType", "npcId", "npcName",
-                      "race", "gender", "flavor", "voice")
-                   values %s""",
-                speaker_rows,
-            )
+            _bulk(cur, "quest_line_speaker", speaker_rows,
+                  """insert into "quest_line_speaker"
+                       ("lineId", "variant", "lang", "ord", "npcType", "npcId", "npcName",
+                        "race", "gender", "flavor", "voice")
+                     values %s""")
 
             cur.execute("""delete from "quest_spawn" """)
             spawn_rows = []
@@ -223,12 +244,10 @@ def import_corpus(path, verbose=True):
             if spawn_rows:
                 # No on-conflict clause: nine of these points are listed twice in the dump
                 # and both copies are kept, for the reason the duplicate speakers are.
-                psycopg2.extras.execute_values(
-                    cur,
-                    """insert into "quest_spawn" ("npcType", "npcId", "map", "x", "y")
-                       values %s""",
-                    spawn_rows,
-                )
+                _bulk(cur, "quest_spawn", spawn_rows,
+                      """insert into "quest_spawn" ("npcType", "npcId", "map", "x", "y")
+                         values %s""")
+            _progress("committing")
     finally:
         conn.close()
 
