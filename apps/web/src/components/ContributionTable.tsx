@@ -545,19 +545,58 @@ function SpeakerCell({
   // or "gameobject", picked by the moderator rather than guessed -- see NpcSummary's own
   // docstring for why resolveNpc refuses to make this guess itself.
   const [kind, setKind] = useState<NpcKind | "">("");
+  // Only ever reachable for a `moderator` row (see below) -- a moderator's own settled answer
+  // stays plain until they ask to change it, so an always-present form isn't one stray click
+  // away from silently overwriting a considered "no race" with an empty save.
+  const [editing, setEditing] = useState(false);
 
-  if (npc.confirmed) {
+  if (npc.provenance === "corpus") {
+    // The corpus is the exact answer, taken from the same display data the game itself uses --
+    // there is nothing for a moderator to decide, and unlike a `moderator` row (below) there is
+    // no "edit" affordance either: overriding the corpus's own answer would need to be a
+    // deliberate act (e.g. direct SQL), not an accident of a form this table always shows.
     return (
       <>
         <span>{speaker(npc)}</span>
         <Badge variant="outline" className="ml-1 py-0 leading-5">
-          {npc.provenance}
+          corpus
         </Badge>
         {speakerNote(npc) ? <p className="text-muted-foreground mt-0.5">{speakerNote(npc)}</p> : null}
       </>
     );
   }
 
+  if (npc.confirmed && !editing) {
+    // A moderator's own settled answer (the only other `confirmed` provenance -- migration
+    // 0031). Shown plainly like the corpus, but with a small edit control that reopens the form
+    // below, preselected with the current values via the same useState initialisers above. The
+    // store already lets a moderator write over a moderator row -- upsertResolution's `where`
+    // compares ranks with `<=`, so an equal rank still updates (store.test.ts's "lets a
+    // moderator write over a moderator row update") -- so nothing there needs to change for
+    // this to work.
+    return (
+      <>
+        <span>{speaker(npc)}</span>
+        <Badge variant="outline" className="ml-1 py-0 leading-5">
+          {npc.provenance}
+        </Badge>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="ml-1 h-5 px-1.5 py-0 text-xs"
+          onClick={() => setEditing(true)}
+        >
+          Edit
+        </Button>
+        {speakerNote(npc) ? <p className="text-muted-foreground mt-0.5">{speakerNote(npc)}</p> : null}
+      </>
+    );
+  }
+
+  // `known` (race and gender already right, only the flavor is a guess) is specifically the
+  // `client` provenance's own shape -- a moderator reopening their own row via Edit gets the
+  // full race/gender/flavor selects below instead, since a moderator revising their own answer
+  // may want to correct any of the three, not just the flavor.
   const known = npc.provenance === "client";
   // The "nothing known" state's own flavor options: flavorScopes is the whole corpus, so this
   // narrows to whatever race and gender were just picked, the same shape flavorOptions already
@@ -658,7 +697,7 @@ function SpeakerCell({
           // A kind-less row with no kind picked yet has nothing valid to POST -- the route
           // requires npcKind and would 400 -- so the button waits rather than silently failing.
           disabled={busy || (npc.npcKind === null && !kind)}
-          onClick={() =>
+          onClick={() => {
             // The "client" state never sends race/gender at all: leaving those keys off is what
             // tells the route to keep what the client already reported, rather than resending
             // (and risking retyping wrong) values this form doesn't even offer as inputs there.
@@ -666,8 +705,14 @@ function SpeakerCell({
               known
                 ? { flavor, note }
                 : { npcKind: kind || undefined, race, gender, flavor, note },
-            )
-          }
+            );
+            // Collapses back to the plain, settled view either way -- overrideNpc's own request
+            // is fire-and-forget from here (see its "if (!response?.ok) return" silent no-op,
+            // the same failure handling every other action in this table already has), so a
+            // failed save leaves `npc` exactly as it was and this simply re-shows that answer
+            // rather than a form now out of sync with it.
+            setEditing(false);
+          }}
         >
           Save
         </Button>

@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { npcSummaryFrom, questFor } from "./triage";
+import { npcSummaryFrom, questFor, resolveMissing } from "./triage";
 
 describe("questFor", () => {
   it("reads the title and quest id off a quest-moment envelope", async () => {
@@ -104,5 +104,39 @@ describe("npcSummaryFrom", () => {
       resolution({ race: null, gender: null, flavor: null, provenance: "none", confirmed: false }),
     );
     expect(summary.flavorOptions).toEqual([]);
+  });
+});
+
+describe("resolveMissing", () => {
+  // The failure this exists to survive: a DB blip or pool exhaustion on one write must not take
+  // the whole queue down with it. Same principle the intake route already follows for the same
+  // call (api/contributions/route.ts: "A failure here must not fail the contribution").
+  it("keeps every other key's answer when one resolver call throws", async () => {
+    const toResolve = new Map([
+      ["creature:1", "a"],
+      ["creature:2", "b"],
+      ["creature:3", "c"],
+    ]);
+    const resolveOne = vi.fn(async (value: string) => {
+      if (value === "b") throw new Error("pool exhausted");
+      return resolution({ npcName: value });
+    });
+
+    const resolved = await resolveMissing(toResolve, resolveOne);
+
+    expect(resolved.get("creature:1")).toMatchObject({ npcName: "a" });
+    expect(resolved.has("creature:2")).toBe(false);
+    expect(resolved.get("creature:3")).toMatchObject({ npcName: "c" });
+  });
+
+  it("leaves a key out entirely when its resolver answers null", async () => {
+    const toResolve = new Map([["creature:1", "a"]]);
+    const resolved = await resolveMissing(toResolve, async () => null);
+    expect(resolved.size).toBe(0);
+  });
+
+  it("is empty for nothing to resolve", async () => {
+    const resolved = await resolveMissing(new Map(), async () => resolution());
+    expect(resolved.size).toBe(0);
   });
 });

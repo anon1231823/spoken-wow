@@ -85,3 +85,36 @@ export async function npcSummaryFrom(
       resolution?.race && resolution?.gender ? await flavorsFor(resolution.race, resolution.gender) : [],
   };
 }
+
+/**
+ * Resolves every key in `toResolve`, tolerating a failure on any single one of them.
+ *
+ * page.tsx's own call (`resolveOne` is resolveNpc) is a render, not a write path with its own
+ * error boundary -- a write that throws (a DB blip, pool exhaustion) inside an unguarded
+ * `Promise.all` would reject the whole thing and 500 the entire moderator queue over one row,
+ * for every collaborator, not just fail to resolve that row. The intake route already treats a
+ * resolveNpc failure as non-fatal to the contribution it's resolving for
+ * (api/contributions/route.ts: "A failure here must not fail the contribution"); this is the
+ * same principle applied to a page read of many rows instead of a write of one.
+ *
+ * A key resolveOne answers null for (no npcKind, or an id past the integer ceiling -- see
+ * resolve.ts's own docstring) is left out of the result exactly like one that threw: either way
+ * there is nothing to add to `resolutions`.
+ */
+export async function resolveMissing<T>(
+  toResolve: Map<string, T>,
+  resolveOne: (value: T) => Promise<NpcResolution | null>,
+): Promise<Map<string, NpcResolution>> {
+  const resolved = new Map<string, NpcResolution>();
+  await Promise.all(
+    [...toResolve.entries()].map(async ([key, value]) => {
+      try {
+        const row = await resolveOne(value);
+        if (row) resolved.set(key, row);
+      } catch (error) {
+        console.error(`resolveMissing: resolveNpc failed for ${key}`, error);
+      }
+    }),
+  );
+  return resolved;
+}

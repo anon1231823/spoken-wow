@@ -8,7 +8,7 @@ import { pageById } from "@/lib/books/catalogue";
 import { corpusLookup } from "@/lib/contributions/existing";
 import { isStatus, type ContributionStatus } from "@/lib/contributions/contributions";
 import { listContributions, type Contribution } from "@/lib/contributions/store";
-import { npcSummaryFrom, questFor, type NpcSummary } from "@/lib/contributions/triage";
+import { npcSummaryFrom, questFor, resolveMissing, type NpcSummary } from "@/lib/contributions/triage";
 import { facets } from "@/lib/facets";
 import { observedFrom, resolveNpc } from "@/lib/npc/resolve";
 import { isProvenance, getResolutions, resolutionKey, type NpcKind, type Provenance } from "@/lib/npc/store";
@@ -97,11 +97,13 @@ async function npcFor(contributions: Contribution[]): Promise<Record<number, Npc
     const key = resolutionKey(o.npcKind, o.npcId);
     if (!resolutions.has(key) && !toResolve.has(key)) toResolve.set(key, o);
   }
-  const newlyResolved = await Promise.all(
-    [...toResolve.entries()].map(async ([key, o]) => [key, await resolveNpc(o)] as const),
-  );
+  // resolveMissing tolerates a single resolveNpc call throwing (a DB blip, pool exhaustion)
+  // rather than letting it reject this whole render -- one unresolved row must never 500 the
+  // entire queue for every collaborator, the same principle the intake route already follows
+  // for the same call.
+  const newlyResolved = await resolveMissing(toResolve, resolveNpc);
   for (const [key, resolution] of newlyResolved) {
-    if (resolution) resolutions.set(key, resolution);
+    resolutions.set(key, resolution);
   }
 
   for (const { row, observed: o } of observed) {
