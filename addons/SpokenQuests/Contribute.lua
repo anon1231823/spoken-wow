@@ -318,6 +318,103 @@ local function GossipOnScreen()
     return GetGossipText and GetGossipText()
 end
 
+-- A letter, a digit, or any byte of a multi-byte UTF-8 character. Byte-wise rather than %w,
+-- which knows nothing past ASCII: a Cyrillic or accented name is all high bytes, and the word
+-- next to it must still count as a word.
+local function IsWordByte(b)
+    return b ~= nil and (b >= 128 or (b >= 48 and b <= 57) or (b >= 65 and b <= 90) or (b >= 97 and b <= 122))
+end
+
+--- Every whole-word occurrence of `word` in `text` replaced by `token`.
+---
+--- A plain find and a hand-made boundary check rather than a pattern: a name is the player's
+--- own input, so it would have to be escaped first, and %f -- the one pattern item that would
+--- make the boundary easy -- is not something every client's Lua is safe to lean on. Whole
+--- words only, so a player called Mist does not turn "Mistwood" into "$Nwood"; "Mist's" still
+--- matches, the apostrophe not being a word byte.
+local function ReplaceWord(text, word, token)
+    local out, pos = {}, 1
+    while true do
+        local first, last = string.find(text, word, pos, true)
+        if not first then
+            break
+        end
+        if IsWordByte(string.byte(text, first - 1)) or IsWordByte(string.byte(text, last + 1)) then
+            out[#out + 1] = string.sub(text, pos, last)
+        else
+            out[#out + 1] = string.sub(text, pos, first - 1)
+            out[#out + 1] = token
+        end
+        pos = last + 1
+    end
+    out[#out + 1] = string.sub(text, pos)
+    return table.concat(out)
+end
+
+--- The text with this character's name, class and race put back as the game's own tokens.
+---
+--- The client hands us quest text with $N, $C and $R already expanded to whoever is reading
+--- it, and a line voiced from that would greet every other player by this one's name. The
+--- extract never has the problem -- it reads the templates -- so the fix is to send what the
+--- extract would have seen: the site substitutes a token the same way the extract does, and a
+--- gossip line hashes to the same id the world database's copy of it would.
+---
+--- Only this client knows which words were substituted. Once the text leaves, "Thrall" in a
+--- line is as likely an NPC as the player, which is why this is done here and not on arrival.
+---
+--- Class and race are replaced wherever they occur as words, so a warrior reading "a warrior's
+--- discipline" sends "a $c's discipline" -- a known cost, taken over voicing someone's class
+--- at every other player. $G cannot be undone at all: the client picked one side of the
+--- branch, and the words of the other side are not on screen.
+function Contribute:Detemplate(text)
+    local swaps = {}
+    local function add(word, token)
+        if type(word) == "string" and word ~= "" then
+            swaps[#swaps + 1] = { word, token }
+        end
+    end
+    local function addCased(word, upper, lower)
+        add(word, upper)
+        if type(word) == "string" and string.lower(word) ~= word then
+            add(string.lower(word), lower)
+        end
+    end
+
+    local name = UnitName and UnitName("player")
+    add(name, "$N")
+    -- A character with a surname (the Classic beta gives Skybourne elves one) is named whole by
+    -- UnitName -- "Valaas Dawnsight" -- while a line greets them by one part: "Greetings, young
+    -- Valaas". Each part is the player too.
+    if type(name) == "string" then
+        for part in string.gmatch(name, "%S+") do
+            if part ~= name then
+                add(part, "$N")
+            end
+        end
+    end
+    if UnitClass then
+        local localized, classFile = UnitClass("player")
+        addCased(localized, "$C", "$c")
+        -- The locales that inflect a class by gender (deDE "Kriegerin") render the form for
+        -- this character, which is the one UnitClass already answered; both are asked for in
+        -- case a line names the other.
+        for _, names in ipairs({ _G.LOCALIZED_CLASS_NAMES_MALE or {}, _G.LOCALIZED_CLASS_NAMES_FEMALE or {} }) do
+            addCased(classFile and names[classFile], "$C", "$c")
+        end
+    end
+    if UnitRace then
+        addCased((UnitRace("player")), "$R", "$r")
+    end
+
+    -- Longest first, so "Night Elf" goes as one race before a shorter word inside it can be
+    -- taken for something else.
+    table.sort(swaps, function(a, b) return string.len(a[1]) > string.len(b[1]) end)
+    for _, pair in ipairs(swaps) do
+        text = ReplaceWord(text, pair[1], pair[2])
+    end
+    return text
+end
+
 --- The fields every quests envelope starts with: which addon, which client, which language.
 local function BaseFields()
     return
@@ -351,7 +448,7 @@ function Contribute:Capture()
         fields[#fields + 1] = { "title", GetTitleText and GetTitleText() or "" }
         -- The second value is what Gather keys the line on: the quest, the moment and who said
         -- it. The text is left out on purpose -- the same panel read twice is one line.
-        return Spoken.Contribute:Envelope("quests", fields, text),
+        return Spoken.Contribute:Envelope("quests", fields, Contribute:Detemplate(text)),
             format("q:%s:%s:%s", tostring(questID or 0), EVENT_PATHS[event], tostring(NPCID() or ""))
     end
 
@@ -365,6 +462,9 @@ function Contribute:Capture()
     -- no UnitGUID and so can never name the creature.
     local gossip = GossipOnScreen()
     if gossip and gossip ~= "" and NPCID() then
+        -- Detemplated before the key is taken too, so the same line gathered on two
+        -- characters is one line rather than one per name.
+        gossip = Contribute:Detemplate(gossip)
         fields[#fields + 1] = { "npc", NPCField() }
         Observations(fields)
         -- An NPC can say several different things, so gossip is keyed on the words as well.
@@ -529,7 +629,7 @@ function Contribute:CaptureFromLog(questID, title)
     fields[#fields + 1] = { "event", "accept" }
     fields[#fields + 1] = { "title", title or "" }
     fields[#fields + 1] = { "from", "log" }
-    return Spoken.Contribute:Envelope("quests", fields, text)
+    return Spoken.Contribute:Envelope("quests", fields, Contribute:Detemplate(text))
 end
 
 --- Whether the quest log should offer Contribute in place of a Play it cannot give.

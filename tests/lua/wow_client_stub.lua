@@ -335,7 +335,11 @@ function _G.GetTitleText() return world.title end
 function _G.GetQuestText() return world.questText end
 function _G.GetProgressText() return world.progressText end
 function _G.GetRewardText() return world.rewardText end
-function _G.UnitName(unit) return unit == "player" and "Tester" or world.npcName end
+function _G.UnitName(unit) return unit == "player" and (world.playerName or "Tester") or world.npcName end
+-- Nil unless a test sets them: a class or race the stub made up would be swapped out of every
+-- text a test captures, and only the tests about that swap should see it happen.
+function _G.UnitClass() return world.playerClass, world.playerClassFile end
+function _G.UnitRace() return world.playerRace, world.playerRaceFile end
 function _G.GetRealmName() return "Realm" end
 function _G.UnitGUID() return world.npcGUID end
 function _G.UnitExists() return true end
@@ -383,6 +387,17 @@ function _G.CreateFrame(kind, name, parent)
         function f:GetMaxBytes() return self.maxBytes or 0 end
         function f:HighlightText() self.highlighted = true end
         function f:SetAutoFocus() end
+        -- A real client ignores SetFocus on an edit box that is not on screen, which is how a
+        -- copy box can open with its text selected and the keyboard still on the game.
+        function f:SetFocus()
+            local frame = self
+            while frame do
+                if frame.shown == false then return end
+                frame = frame.parent
+            end
+            self.focused = true
+        end
+        function f:HasFocus() return self.focused == true end
         function f:SetScript(event, fn) self.handlers = self.handlers or {}; self.handlers[event] = fn end
     end
     -- A PlayerModel only loads while it is shown, and answers nothing until it has -- so the

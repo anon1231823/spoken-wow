@@ -314,6 +314,22 @@ describe("resolveContribution: quests accept", () => {
     expect(group![0]).toMatchObject({ source: "gossip", fileName: gossipFileName(hash), questId: null, contributionId: id });
   });
 
+  it("a line sent with the reader's tokens keeps them as its template and speaks them as the extract does", async () => {
+    await speaker(npcId, "tauren", "male", "warrior");
+    const template = "Well met, $N. The $R $c walks with the Earth Mother.";
+    const id = await gossipContribution(template, npcId);
+    expect((await resolveContribution(id, "accepted", RESOLVER)).ok).toBe(true);
+
+    // Hashed on the template, as the extract hashes the world database's own.
+    const lineId = gossipLineId(gossipHash(template, "tauren", "male"));
+    const group = (await lineIndex()).get(lineId);
+    expect(group).toHaveLength(1);
+    expect(group![0]).toMatchObject({
+      text: "Well met, Adventurer. The Traveler adventurer walks with the Earth Mother.",
+      originalText: template,
+    });
+  });
+
   it("a gossip line the corpus already has gains this NPC as one more speaker, not a copy", async () => {
     // A verbatim duplicate of GUARD_LINE up to the trailing space the corpus carries, spoken by
     // an NPC the corpus does not have saying it.

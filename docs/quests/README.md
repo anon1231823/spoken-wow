@@ -782,9 +782,15 @@ Accepting a quest row writes it into the quest tables, the same ones the extract
 (`lib/contributions/accept.ts`): a `quest_line` with origin `contributed`, named by the same
 rules `tts_cli/naming.py` uses, and a `quest_line_speaker` row carrying the contribution's id.
 From there it is an ordinary line — the explorer lists it under missing audio with a
-*contributed* badge linking back, an editor fixes the words the player's client substituted
-through the usual text override, generates a take, and the next export carries it into the
-pack. The speaker row is the mark, not the line's origin, because an edit puts an `edited`
+*contributed* badge linking back, an editor fixes anything the player's client substituted
+that the addon could not put back (the branch of a `$G` it picked) through the usual text
+override, generates a take, and the next export carries it into the pack. The addon does put
+back the reader's own name, class and race as `$N`, `$C` and `$R` before sending — only the
+client knows which words those were — so a contributed line is a template like an extracted
+one: stored as `originalText`, spoken as `Adventurer`/`Traveler` by the extract's own table,
+and hashed on the template when it is gossip. Class and race are swapped wherever they occur as
+whole words, so a warrior's "a warrior's discipline" arrives as "a `$c`'s discipline"; that
+false positive is accepted over voicing one player's class at everyone. The speaker row is the mark, not the line's origin, because an edit puts an `edited`
 version on top; it is also what `corpus_db.py`'s import leaves alone when it replaces every
 extracted speaker, and it numbers from 1,000,000 so a re-import never meets it. The corpus
 wins where it already has the line: a quest moment is matched by quest id and moment alone

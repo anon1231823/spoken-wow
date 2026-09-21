@@ -23,6 +23,7 @@ local box = Spoken.ContributeBox
 Expect("the box holds the whole envelope", box.editBox:GetText(), envelope)
 Expect("...with no byte limit", box.editBox:GetMaxBytes(), 0)
 Expect("...selected, so Ctrl+C is the only keystroke", box.editBox.highlighted, true)
+Expect("...and focused the first time it opens, or Ctrl+C goes to the game", box.editBox:HasFocus(), true)
 Expect("...and is multi-line", box.editBox.multiLine, true)
 Expect("the address is shown beside it", box.address:GetText(), "https://x")
 Expect("the hint describes pasting, in the fallback case", box.hint:GetText(), "Press Ctrl+C, then paste it at:")

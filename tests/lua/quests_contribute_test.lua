@@ -55,6 +55,39 @@ Expect("...and the gossip text", gossip:match("\nWe stand ready%.\n") ~= nil, tr
 stub.HidePanels()
 Expect("nothing on screen contributes nothing", VoiceOver.Contribute:Capture(), nil)
 
+---------------------------------------------------------------- the reader put back as tokens
+-- The client expands $N, $C and $R to whoever is reading, so the text is sent with the
+-- tokens back in place of this character's name, class and race.
+world.playerClass, world.playerClassFile = "Warrior", "WARRIOR"
+world.playerRace, world.playerRaceFile = "Night Elf", "NightElf"
+world.questText = "Tester! A Night Elf warrior, Tester's kind. Testers and Tester2 stay."
+stub.ShowPanel("QuestFrameDetailPanel")
+local swapped = VoiceOver.Contribute:Capture()
+Expect("the name, class and race go back to tokens, whole words only",
+    swapped:match("\n([^\n]*stay%.)\n"), "$N! A $R $c, $N's kind. Testers and Tester2 stay.")
+
+_G.LOCALIZED_CLASS_NAMES_FEMALE = { WARRIOR = "Kriegerin" }
+world.questText = "Eine Kriegerin, Tester."
+local inflected = VoiceOver.Contribute:Capture()
+Expect("...and the class in either gender's form", inflected:match("\nEine %$C, %$N%.\n") ~= nil, true)
+_G.LOCALIZED_CLASS_NAMES_FEMALE = nil
+
+world.playerName = "Valaas Dawnsight"
+world.questText = "Greetings, young Valaas. The Dawnsight name is known, Valaas Dawnsight."
+local surnamed = VoiceOver.Contribute:Capture()
+Expect("a surnamed character is swapped whole and by either part",
+    surnamed:match("\nGreetings, young %$N%. The %$N name is known, %$N%.\n") ~= nil, true)
+world.playerName = nil
+
+stub.HidePanels()
+stub.ShowGossip("Well met, Tester.")
+local _, key = VoiceOver.Contribute:Capture()
+Expect("gossip is keyed on the tokens, so every character gathers the same line",
+    key, format("g:12345:%d", SpokenEnv.Spoken.Contribute:Checksum("Well met, $N.")))
+stub.HidePanels()
+world.playerClass, world.playerClassFile, world.playerRace, world.playerRaceFile = nil, nil, nil, nil
+world.questText = "Kill six of them.\nThen come back."
+
 -- The button: on the Blizzard quest frame, not stubbed out of LoadQuests the way
 -- QuestOverlayUI and Options are, since this test is specifically about it. Built by
 -- Addon:OnInitialize the same way ReportButton's popup is, and kept in sync by its own event
