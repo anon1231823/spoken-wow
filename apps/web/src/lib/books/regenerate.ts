@@ -134,7 +134,7 @@ export async function regenerateBookLine(
     // after the take it holds, which is what makes a restore a statement about which take
     // is live rather than a guess about which clip is which.
     await archiveTake(page.file, version);
-    await noteArchiveFile("books", page.file, version, archiveNameFor(version), lang);
+    await noteArchiveFile("books", page.file, version, archiveNameFor("books", version), lang);
 
     return {
       ok: true,

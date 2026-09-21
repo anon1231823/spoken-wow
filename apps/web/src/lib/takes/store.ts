@@ -16,13 +16,12 @@
  */
 import "server-only";
 
-import fs from "node:fs/promises";
 import path from "node:path";
 
 import { db, query } from "@/lib/db";
 import type { Source } from "@/lib/generation/queue";
 
-import { resolveArchive, type TakeRef } from "./archive";
+import { archiveNameFor } from "./archive";
 import { historyDirOf } from "./adapters";
 
 export type Take = {
@@ -37,9 +36,6 @@ export type Take = {
   createdAt: string;
   createdByName: string | null;
 };
-
-/** A take as the history panel shows it: with whether its audio is actually there. */
-export type PlayableTake = Take & { playable: boolean };
 
 type Row = Omit<Take, "createdAt"> & { createdAt: Date };
 
@@ -63,50 +59,37 @@ export async function listTakes(
   return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));
 }
 
-/** The history directory's contents, or nothing when the line has never been re-cut. */
-async function archivedNames(source: Source, file: string): Promise<string[]> {
-  return fs.readdir(historyDirOf(source, file)).catch(() => [] as string[]);
+/**
+ * Where a take's bytes are, as a name inside its line's history directory.
+ *
+ * NOTHING HERE LOOKS AT THE DISK. The database is what says a take exists, and a row that
+ * records its own `archiveFile` needs nothing worked out about it. Rows written before that
+ * column fall back to the naming rule their section has always used, which is a fact about
+ * how the file was written rather than a guess about what is there.
+ *
+ * This used to read the directory and mark a take unplayable when its bytes were missing,
+ * so that a history panel could grey it out. That made rendering a list of takes depend on
+ * a filesystem -- and on the droplet, where the archive is not where the app is, it made
+ * every past take look like it had been lost. Whether the bytes are really there is a
+ * question for the moment somebody plays or restores them, and both of those say so when
+ * they fail.
+ */
+export function archiveNameOf(source: Source, take: Pick<Take, "version" | "archiveFile">): string {
+  return take.archiveFile ?? archiveNameFor(source, take.version);
 }
 
 /**
- * Every take of one file, each marked with whether its bytes can actually be found.
+ * Every take of one file, newest first.
  *
- * A take whose audio is gone stays in the list rather than being hidden: it is still a true
- * record that the take existed, and saying so is more useful than a history with holes in
- * it. The panel draws it greyed out and refuses to restore it.
+ * The same shape the panel draws, and it is one query: what a take is, who made it and what
+ * it cost are all columns.
  */
 export async function takeHistory(
   source: Source,
   file: string,
   lang = "enUS",
-): Promise<PlayableTake[]> {
-  const [takes, names] = await Promise.all([
-    listTakes(source, file, lang),
-    archivedNames(source, file),
-  ]);
-  const found = resolveArchive(takes as TakeRef[], names);
-
-  return takes.map((take) => ({
-    ...take,
-    // The live take's bytes are in the store whether or not they are also archived, so it
-    // is playable on its own terms; everything else has to be findable in the archive.
-    archiveFile: found.get(take.version) ?? null,
-    playable: take.isCurrent || found.has(take.version),
-  }));
-}
-
-/** The archived file holding one take's bytes, or null when it cannot be found for sure. */
-export async function archiveNameOf(
-  source: Source,
-  file: string,
-  version: number,
-  lang = "enUS",
-): Promise<string | null> {
-  const [takes, names] = await Promise.all([
-    listTakes(source, file, lang),
-    archivedNames(source, file),
-  ]);
-  return resolveArchive(takes as TakeRef[], names).get(version) ?? null;
+): Promise<Take[]> {
+  return listTakes(source, file, lang);
 }
 
 /**
@@ -164,7 +147,27 @@ export async function noteArchiveFile(
   );
 }
 
-/** Absolute path of one archived take, for streaming it back. */
+/**
+ * Absolute path of one archived take, for streaming or copying it back.
+ *
+ * The one place a take's bytes are located, and it is called only by the two things that
+ * actually touch them: the audio route and the restore. Neither exists to render anything.
+ */
 export function archivePath(source: Source, file: string, name: string): string {
   return path.join(historyDirOf(source, file), name);
+}
+
+/** The archived file of one take, or null when the take was never recorded. */
+export async function archiveFileOf(
+  source: Source,
+  file: string,
+  version: number,
+  lang = "enUS",
+): Promise<string | null> {
+  const rows = await query<{ version: number; archiveFile: string | null }>(
+    `select "version", "archiveFile" from "take"
+      where "source" = $1 and "file" = $2 and "lang" = $3 and "version" = $4`,
+    [source, file, lang, version],
+  );
+  return rows[0] ? archiveNameOf(source, rows[0]) : null;
 }

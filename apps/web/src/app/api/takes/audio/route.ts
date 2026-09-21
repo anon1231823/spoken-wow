@@ -29,7 +29,7 @@ import { parseRange } from "@/lib/range";
 import { isSource } from "@/lib/reports/reports";
 import { streamOf } from "@/lib/stream";
 import { isAddressableFile } from "@/lib/takes/files";
-import { archiveNameOf, archivePath } from "@/lib/takes/store";
+import { archiveFileOf, archivePath } from "@/lib/takes/store";
 
 export const dynamic = "force-dynamic";
 
@@ -49,9 +49,10 @@ export async function GET(request: NextRequest) {
     return new Response("unknown file", { status: 404 });
   }
 
-  const name = await archiveNameOf(source, file, version);
-  // Either the take was never recorded, or its bytes cannot be identified with certainty.
-  // The history panel already marks both unplayable.
+  const name = await archiveFileOf(source, file, version);
+  // The take was never recorded. Distinct from the 404 below, which is a take that exists
+  // and whose bytes do not -- the panel no longer predicts either, so this is where a
+  // listener finds out.
   if (!name) return new Response("no such take", { status: 404 });
 
   const target = archivePath(source, file, name);

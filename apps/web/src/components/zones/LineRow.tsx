@@ -192,6 +192,7 @@ export function LineRow({
             source="zones"
             file={line.file}
             version={line.take?.version ?? null}
+            canRestore={canRegenerate}
             takes={line.take?.takes ?? 0}
             onRestored={(version) => onRestored(line, version)}
           />

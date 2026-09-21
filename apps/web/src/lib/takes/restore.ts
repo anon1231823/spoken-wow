@@ -25,7 +25,7 @@ import path from "node:path";
 import type { Source } from "@/lib/generation/queue";
 
 import { storePathOf } from "./adapters";
-import { archiveNameOf, archivePath, setLiveTake } from "./store";
+import { archiveFileOf, archivePath, setLiveTake } from "./store";
 
 /**
  * Rebuild what the addon reads, for the sections that keep a lookup table.
@@ -50,13 +50,11 @@ export async function restoreTake(
   file: string,
   version: number,
 ): Promise<void> {
-  const name = await archiveNameOf(source, file, version);
-  if (!name) {
-    // Refused rather than guessed. A take whose bytes cannot be identified with certainty
-    // is one where restoring something else would be silent: the store would hold another
-    // line's audio under this file's name, and the first person to notice is a player.
-    throw new Error(`the audio of version ${version} of ${file} cannot be found`);
-  }
+  const name = await archiveFileOf(source, file, version);
+  // The row is what says the take exists. A version nobody recorded is a caller asking for
+  // something that never happened; a version whose BYTES are missing is a different failure
+  // and belongs below, where the copy is attempted and says so.
+  if (!name) throw new Error(`no version ${version} of ${file} in ${source}`);
 
   const target = storePathOf(source, file);
   await fs.mkdir(path.dirname(target), { recursive: true });
@@ -65,13 +63,20 @@ export async function restoreTake(
   // is atomic within a filesystem, so a reader - or the addon build - never sees half a
   // clip. The leading dot keeps an interrupted copy out of the quests store index, which
   // matches only *.mp3.
+  //
+  // THIS is where missing bytes are discovered, and the only place that should discover
+  // them: nothing about drawing a list of takes depends on the archive being reachable, so
+  // a restore that cannot find its clip fails here, with the path it looked for, and the
+  // live flag is not moved.
+  const source_path = archivePath(source, file, name);
   const partial = path.join(path.dirname(target), `.${path.basename(target)}.part`);
   try {
-    await fs.copyFile(archivePath(source, file, name), partial);
+    await fs.copyFile(source_path, partial);
     await fs.rename(partial, target);
   } catch (error) {
     await fs.rm(partial, { force: true });
-    throw error;
+    const reason = (error as NodeJS.ErrnoException)?.code === "ENOENT" ? "is not on disk" : "could not be read";
+    throw new Error(`the audio of version ${version} of ${file} ${reason} (${source_path})`);
   }
 
   await setLiveTake(source, file, version);

@@ -21,7 +21,7 @@ process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
 const { storePath, versionPath, versionsOnDisk, writeStoreFile } = await import("./archive");
-const { commitVersion, historyOf, restoreVersion } = await import("./history");
+const { commitVersion } = await import("./history");
 const { listVersions } = await import("./versions");
 
 const SETTINGS = {
@@ -190,104 +190,19 @@ describe("keeping every take", () => {
     expect((await take()).version).toBe(7);
   });
 
-  // A row whose audio has gone survives as an unplayable record rather than being tidied
-  // away: someone else's rsync should not silently erase the fact that a take existed, and
-  // historyOf and restoreVersion both already refuse to offer it.
-  it("leaves a hand-deleted take recorded but unplayable", async () => {
+  // A row whose audio has gone survives as a record rather than being tidied away:
+  // someone else's rsync should not silently erase the fact that a take existed. The row
+  // is what the panel lists; that the bytes are missing is discovered by whoever plays or
+  // restores it, not predicted by a directory listing while the page renders.
+  it("leaves a hand-deleted take recorded", async () => {
     await take();
     await take();
     fs.rmSync(versionPath(file, 0));
 
     expect((await listVersions(file)).map((v) => v.version)).toEqual([1, 0]);
-    expect(await historyOf(file)).toMatchObject([
-      { version: 1, playable: true },
-      { version: 0, playable: false },
-    ]);
   });
 });
 
-describe("restoreVersion", () => {
-  it("puts the original back and makes it current", async () => {
-    await writeStoreFile(file, Buffer.from("inherited"));
-    await take({ data: Buffer.from("re-rolled") });
-
-    const result = await restoreVersion(file, 0);
-
-    expect(result.version).toBe(0);
-    expect(fs.readFileSync(storePath(file), "utf8")).toBe("inherited");
-
-    const versions = await listVersions(file);
-    expect(versions.filter((v) => v.isCurrent).map((v) => v.version)).toEqual([0]);
-  });
-
-  // History is what happened, not a log of what was looked at. A restore that invented a
-  // version would make "restore v0" produce a v3 that is not the original either.
-  it("does not invent a new version", async () => {
-    await take();
-    await take();
-    await restoreVersion(file, 0);
-
-    expect((await listVersions(file)).map((v) => v.version)).toEqual([1, 0]);
-  });
-
-  it("archives inherited audio first, even when restoring", async () => {
-    // The store holds audio this app never recorded - a file pushed by rsync after the
-    // history was made. Restoring over it without archiving would destroy it.
-    await take();
-    await writeStoreFile(file, Buffer.from("pushed by hand, never recorded"));
-    await db().query(`delete from "take" where "file" = $1`, [file]);
-
-    fs.rmSync(versionPath(file, 0));
-    await writeStoreFile(file, Buffer.from("current"));
-    await take({ data: Buffer.from("newest") });
-
-    expect((await listVersions(file)).some((v) => v.origin === "inherited")).toBe(true);
-    expect(fs.readFileSync(versionPath(file, 0), "utf8")).toBe("current");
-  });
-
-  it("refuses a version that was never recorded", async () => {
-    await take();
-    await expect(restoreVersion(file, 9)).rejects.toThrow(/no version 9/);
-  });
-
-  it("refuses a version whose audio has gone, rather than half-restoring", async () => {
-    await take();
-    await take();
-    fs.rmSync(versionPath(file, 0));
-
-    await expect(restoreVersion(file, 0)).rejects.toThrow(/audio is missing/);
-    // The live take is untouched: nothing was archived and nothing was overwritten.
-    expect(fs.readFileSync(storePath(file), "utf8")).toBe("generated take");
-  });
-});
-
-describe("historyOf", () => {
-  it("marks a take whose audio has gone as unplayable rather than hiding it", async () => {
-    await take();
-    await take();
-    fs.rmSync(versionPath(file, 0));
-
-    const history = await historyOf(file);
-    expect(history.map((v) => [v.version, v.playable])).toEqual([
-      [1, true],
-      [0, false],
-    ]);
-  });
-
-  it("is empty for a line this app has never written", async () => {
-    expect(await historyOf(file)).toEqual([]);
-  });
-});
-
-/**
- * The database is not the only record of what exists.
- *
- * A restored backup, a hand-run delete, or a fresh database pointed at an existing
- * audio-history all leave takes on disk with no rows describing them. Trusting the table
- * alone would archive the *current* take as version 0 - overwriting the real original with
- * a re-roll, permanently. This is how that was actually discovered: a test cleared the rows,
- * a later regeneration ran, and version 0 stopped being the original.
- */
 describe("when the rows are gone but the takes are not", () => {
   it("does not overwrite version 0 with whatever is current", async () => {
     await writeStoreFile(file, Buffer.from("the irreplaceable original"));

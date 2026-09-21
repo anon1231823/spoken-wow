@@ -27,7 +27,7 @@ import type { RegenerateResult } from "@/lib/generation/regenerate";
 import { textToSpeech } from "@/lib/generation/tts";
 
 import { archiveNameFor } from "@/lib/takes/archive";
-import { archiveNameOf, noteArchiveFile, setLiveTake } from "@/lib/takes/store";
+import { noteArchiveFile } from "@/lib/takes/store";
 
 import { catalogue, type CatalogueEntry } from "./catalogue";
 import {
@@ -37,7 +37,6 @@ import {
   durationOf,
   exportManifest,
   insertTake,
-  restoreTake,
   writeAudio,
 } from "./tools";
 import { narratorConfig, NarratorMissing, type VoiceConfig } from "./voice";
@@ -172,7 +171,7 @@ export async function regenerateZoneLine(
     // after the take it holds, which is what makes a restore a statement about which take
     // is live rather than a guess about which clip is which.
     await archiveTake(entry.file, version);
-    await noteArchiveFile("zones", entry.file, version, archiveNameFor(version));
+    await noteArchiveFile("zones", entry.file, version, archiveNameFor("zones", version));
 
     return {
       ok: true,
@@ -204,30 +203,3 @@ export async function regenerateZoneLine(
   }
 }
 
-/**
- * Puts an archived take back into the store, for free.
- *
- * Moving the live flag rather than writing a new row, which is what `restore` means for a
- * lore version too (lib/zones/lore.ts): the history is the set of takes this line has had,
- * and restoring is a statement about which of them is right, not a new one. It can be, now
- * that every take is archived under its own version -- there are no bytes left over with
- * no row to claim them, which is what a copy-to-a-new-number was for.
- *
- * Refuses a take whose bytes cannot be found rather than restoring something else. The
- * archived name comes from resolveArchive, which pairs the clips of a line against its
- * takes and answers nothing at all when it cannot be sure.
- */
-export async function restoreZoneTake(lineId: string, version: number): Promise<number> {
-  const entry = await entryFor(lineId);
-  if (!entry) throw new Error(`unknown lineId ${lineId}`);
-
-  const name = await archiveNameOf("zones", entry.file, version);
-  if (!name) {
-    throw new Error(`the audio of version ${version} of ${lineId} cannot be found`);
-  }
-
-  await restoreTake(entry.file, name);
-  await setLiveTake("zones", entry.file, version);
-
-  return version;
-}

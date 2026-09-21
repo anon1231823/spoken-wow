@@ -1,5 +1,9 @@
 /**
- * Committing a take, and going back to an earlier one.
+ * Committing a take.
+ *
+ * Going back to one lives in lib/takes/restore.ts now, with the other two sections': what
+ * a restore is -- copy the archived clip into the store, move the live flag -- is the same
+ * in all three, and only the paths differed.
  *
  * The two operations that must keep the store, the history directory and the version table
  * agreeing. Everything here assumes the caller already holds the file's lock (lock.ts) - the
@@ -21,7 +25,6 @@ import { listVersions, nextVersion, recordVersion, setCurrentVersion } from "./v
 import {
   archiveStoreFile,
   INHERITED_VERSION,
-  restoreVersionFile,
   storeFileExists,
   versionsOnDisk,
   writeStoreFile,
@@ -163,54 +166,4 @@ export async function commitVersion(input: CommitInput): Promise<CommitResult> {
   await setCurrentVersion(input.file, version);
 
   return { version, bytes: input.data.byteLength, archivedInherited };
-}
-
-export type RestoreResult = {
-  /** The version now live - the one asked for. */
-  version: number;
-  bytes: number;
-  archivedInherited: boolean;
-};
-
-/**
- * Put an earlier take back into the store.
- *
- * The current file is archived first even though it is already in history, because it might
- * not be: a store file with no row is inherited audio, and restoring over it without
- * archiving would destroy the very thing history exists to protect. When it is already
- * recorded, archiveInherited sees the rows and does nothing.
- *
- * The restored take keeps its own version number rather than being copied to a new one.
- * History is what happened, not a log of what was looked at, and a restore that invented a
- * version would make "restore v0" produce a v6 that is not the original either.
- */
-export async function restoreVersion(file: string, version: number): Promise<RestoreResult> {
-  const versions = await listVersions(file);
-  const target = versions.find((candidate) => candidate.version === version);
-  if (!target) throw new Error(`no version ${version} of ${file}`);
-
-  const onDisk = await versionsOnDisk(file);
-  if (!onDisk.includes(version)) {
-    throw new Error(`version ${version} of ${file} is recorded but its audio is missing`);
-  }
-
-  const archivedInherited = await archiveInherited({
-    file,
-    lineId: target.lineId,
-    voice: target.voice,
-  });
-
-  const data = await restoreVersionFile(file, version);
-  await setCurrentVersion(file, version);
-
-  return { version, bytes: data.byteLength, archivedInherited };
-}
-
-/** History for one file, with takes whose audio has gone marked unrestorable. */
-export async function historyOf(
-  file: string,
-): Promise<(VoicelineVersion & { playable: boolean })[]> {
-  const [versions, onDisk] = await Promise.all([listVersions(file), versionsOnDisk(file)]);
-  const present = new Set(onDisk);
-  return versions.map((version) => ({ ...version, playable: present.has(version.version) }));
 }

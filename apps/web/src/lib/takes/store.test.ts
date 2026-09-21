@@ -20,7 +20,7 @@ process.env.SPOKEN_QUESTS_AUDIO = path.join(root, "audio");
 process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
-const { archiveNameOf, listTakes, noteArchiveFile, setLiveTake, takeHistory } = await import(
+const { archiveFileOf, listTakes, noteArchiveFile, setLiveTake, takeHistory } = await import(
   "./store"
 );
 
@@ -84,52 +84,42 @@ describe("listing takes", () => {
 });
 
 describe("what the history panel is told", () => {
-  it("marks a take playable only when its bytes can be found", async () => {
+  it("lists every take, without asking the filesystem anything", async () => {
+    // It used to list the archive directory and grey out the takes it could not find,
+    // which made drawing a list depend on where the bytes happen to live -- and where they
+    // are not on the machine serving the page, every past take looked lost. Nothing here
+    // touches disk; whether a clip is really there is answered by playing or restoring it.
     await record(0, false, "0.mp3");
-    await record(1, true, "1.mp3");
-    archive("0.mp3");
+    await record(1, true);
 
     const history = await takeHistory("quests", file);
-    expect(history.find((take) => take.version === 0)).toMatchObject({
-      playable: true,
-      archiveFile: "0.mp3",
-    });
-    // The live take's bytes are in the store whether or not they are also archived, so it
-    // is playable on its own terms.
-    expect(history.find((take) => take.version === 1)).toMatchObject({ playable: true });
-  });
-
-  it("keeps a take whose audio is gone, and says it cannot be played", async () => {
-    // Someone's rsync, or a hand-deleted directory. The row is still a true record that
-    // the take existed, and hiding it would make the history quietly wrong instead of
-    // visibly incomplete.
-    await record(0, false, "0.mp3");
-    await record(1, true, "1.mp3");
-
-    const history = await takeHistory("quests", file);
-    expect(history.find((take) => take.version === 0)).toMatchObject({ playable: false });
+    expect(history.map((take) => take.version)).toEqual([1, 0]);
   });
 });
 
 describe("finding a take's bytes", () => {
-  it("resolves a quests take by its version, which is what its archive is named", async () => {
-    await record(3);
+  it("believes the name a take recorded for itself", async () => {
+    await record(3, false, "v3.mp3");
     await record(4, true);
-    archive("3.mp3");
 
-    expect(await archiveNameOf("quests", file, 3)).toBe("3.mp3");
+    expect(await archiveFileOf("quests", file, 3)).toBe("v3.mp3");
   });
 
-  it("answers null rather than guessing when the archive cannot be paired", async () => {
-    // Two superseded takes, one clip, and the name says nothing about which: restoring
-    // either would be a coin toss whose wrong outcome is a player hearing another line.
-    await record(1);
-    await record(2);
-    await record(3, true);
-    archive("v7.mp3");
+  it("falls back to the section's naming rule for a take that predates the column", async () => {
+    // Quests named an archived take after its version from the start, so the rule is a
+    // fact about how the file was written rather than a guess about what is there.
+    await record(3);
+    await record(4, true);
 
-    expect(await archiveNameOf("quests", file, 1)).toBe(null);
-    expect(await archiveNameOf("quests", file, 2)).toBe(null);
+    expect(await archiveFileOf("quests", file, 3)).toBe("3.mp3");
+  });
+
+  it("answers null for a version nobody recorded", async () => {
+    // Distinct from a take whose bytes are missing: that one exists, and the failure
+    // belongs to whoever tries to play or restore it.
+    await record(1, true);
+
+    expect(await archiveFileOf("quests", file, 9)).toBe(null);
   });
 });
 

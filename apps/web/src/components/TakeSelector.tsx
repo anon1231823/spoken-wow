@@ -12,7 +12,6 @@ export type Take = {
   version: number;
   isCurrent: boolean;
   origin: "inherited" | "imported" | "generated";
-  playable: boolean;
   characters: number | null;
   credits: number | null;
   modelId: string | null;
@@ -35,9 +34,13 @@ function when(iso: string): string {
  * the number is the question, and "which other numbers are there" is what a click asks.
  *
  * Restoring moves the live flag rather than writing a new take, so this list is the set of
- * takes the line has had and not a log of who looked at it. A take whose bytes cannot be
- * found is shown greyed out rather than hidden: the row is still a true record that the
- * take existed, and offering a restore that would fail is worse than saying so.
+ * takes the line has had and not a log of who looked at it.
+ *
+ * EVERY TAKE IS OFFERED. This used to grey out the ones whose bytes it could not find,
+ * which meant drawing a list of takes required listing a directory -- and where the archive
+ * is not on the machine serving the page, every past take looked lost. The database says
+ * what was cut; whether the bytes are still there is answered by playing or restoring, and
+ * both say so when they fail.
  *
  * Version 0 is the take that predates this app, labelled `original`: nothing recorded how
  * it was made, so no model or cost is shown and inventing one would suggest it could be
@@ -48,6 +51,7 @@ export default function TakeSelector({
   file,
   version,
   takes,
+  canRestore,
   onRestored,
 }: {
   source: Source;
@@ -57,6 +61,15 @@ export default function TakeSelector({
   version: number | null;
   /** How many takes exist, so a line with one says so without being opened. */
   takes: number;
+  /**
+   * Whether this viewer may read the take list and restore from it.
+   *
+   * The NUMBER is public -- which take is playing and how many there are say nothing a
+   * listener should not see, and the row prints them for everyone. The list behind it is
+   * not: /api/takes is collaborator-only, so offering a visitor a dropdown that answers 403
+   * is worse than offering none.
+   */
+  canRestore: boolean;
   /** Called with the version now live, so the row and the player can catch up. */
   onRestored: (version: number) => void;
 }) {
@@ -69,6 +82,9 @@ export default function TakeSelector({
   // One element for the popover rather than one per row: opening a second take should stop
   // the first, and the page's main player is deliberately left alone.
   const preview = useRef<HTMLAudioElement | null>(null);
+  // Which take the element is currently pointed at, for the error handler: a failure
+  // arrives as an event on the element, which knows a src and not a version.
+  const playingRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -97,12 +113,37 @@ export default function TakeSelector({
   // Stop the preview when the popover unmounts, or it keeps playing invisibly.
   useEffect(() => () => preview.current?.pause(), []);
 
+  /**
+   * A take whose bytes are gone, reported when somebody asks to hear it.
+   *
+   * Attached to the element rather than declared as onError, because a media element's
+   * error event does not bubble and reaching it through React's delegation proved
+   * unreliable here -- the button sat showing pause and said nothing. This is the whole
+   * point of not greying takes out in advance, so it has to actually fire.
+   */
+  useEffect(() => {
+    const element = preview.current;
+    if (!element || !open) return;
+
+    function onError() {
+      const take = playingRef.current;
+      if (take === null) return;
+      playingRef.current = null;
+      setPlaying(null);
+      setError(`v${take} could not be played — its audio is not on the server`);
+    }
+
+    element.addEventListener("error", onError);
+    return () => element.removeEventListener("error", onError);
+  }, [open]);
+
   function togglePlay(take: number) {
     const element = preview.current;
     if (!element) return;
 
     if (playing === take) {
       element.pause();
+      playingRef.current = null;
       setPlaying(null);
       return;
     }
@@ -111,8 +152,25 @@ export default function TakeSelector({
       file,
       version: String(take),
     })}`;
-    void element.play().catch(() => setPlaying(null));
+    // Where a missing clip is found out about, rather than predicted: the route answers
+    // 404 and the panel says which take could not be heard, instead of greying every old
+    // take out in advance by listing a directory while the page renders.
+    //
+    // Both paths, because a 404 reaches an <audio> either way: play() rejects in some
+    // browsers, and in others it resolves and the element fires `error` instead. Handling
+    // only the promise leaves the button stuck showing pause, which is how this was found.
+    setError(null);
+    playingRef.current = take;
+    void element.play().catch(() => failed(take));
     setPlaying(take);
+  }
+
+  /** Say which take could not be heard, and let the button go back to play. */
+  function failed(take: number) {
+    if (playingRef.current !== take) return;
+    playingRef.current = null;
+    setPlaying(null);
+    setError(`v${take} could not be played — its audio is not on the server`);
   }
 
   async function restore(take: number) {
@@ -138,11 +196,14 @@ export default function TakeSelector({
     }
   }
 
-  // Nothing to choose between, so the number is printed rather than offered. A line with
-  // one take says `v1`, which is what every untouched line is.
-  if (takes <= 1) {
+  // Nothing to choose between, or nobody to choose: the number is printed rather than
+  // offered. A line with one take says `v1`, which is what every untouched line is.
+  if (takes <= 1 || !canRestore) {
     return version === null ? null : (
-      <span className="text-muted-foreground font-mono text-xs" title="The only take">
+      <span
+        className="text-muted-foreground font-mono text-xs"
+        title={takes <= 1 ? "The only take" : `${takes} takes; v${version} is live`}
+      >
         v{version}
       </span>
     );
@@ -197,8 +258,7 @@ export default function TakeSelector({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  disabled={!take.playable}
-                  title={take.playable ? "Play this take" : "This take's audio cannot be found"}
+                  title="Play this take"
                   onClick={() => togglePlay(take.version)}
                 >
                   {playing === take.version ? <Pause /> : <Play />}
@@ -211,7 +271,6 @@ export default function TakeSelector({
                       <span className="text-amber-400">original</span>
                     )}
                     {take.isCurrent && <span className="text-emerald-400">live</span>}
-                    {!take.playable && <span className="text-destructive">audio gone</span>}
                   </div>
                   <div className="text-muted-foreground truncate">
                     {when(take.createdAt)}
@@ -226,13 +285,9 @@ export default function TakeSelector({
                   <Button
                     variant="ghost"
                     size="xs"
-                    disabled={!take.playable || busy !== null}
+                    disabled={busy !== null}
                     onClick={() => void restore(take.version)}
-                    title={
-                      take.playable
-                        ? "Make this the take the addon plays"
-                        : "This take's audio cannot be found, so it cannot be restored"
-                    }
+                    title="Make this the take the addon plays"
                   >
                     {busy === take.version ? <Loader2 className="animate-spin" /> : <RotateCcw />}
                     Restore
@@ -243,7 +298,14 @@ export default function TakeSelector({
           </ul>
         )}
 
-        <audio ref={preview} onEnded={() => setPlaying(null)} className="hidden" />
+        <audio
+          ref={preview}
+          onEnded={() => {
+            playingRef.current = null;
+            setPlaying(null);
+          }}
+          className="hidden"
+        />
       </PopoverContent>
     </Popover>
   );

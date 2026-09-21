@@ -204,6 +204,7 @@ export function PageRow({
             source="books"
             file={line.file}
             version={line.take?.version ?? null}
+            canRestore={canRegenerate}
             takes={line.take?.takes ?? 0}
             onRestored={(version) => onRestored(line, version)}
           />

@@ -322,6 +322,7 @@ export default function LineRow({
             source="quests"
             file={line.audioPath}
             version={version}
+            canRestore={canRegenerate}
             takes={takes}
             onRestored={(restored) => onRestored(line.audioPath, restored)}
           />
