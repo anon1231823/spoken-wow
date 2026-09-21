@@ -1,18 +1,20 @@
 /**
  * The values the filter dropdowns can offer.
  *
- * Derived from the corpus rather than listed here, for the same reason voiceSlots is
- * (lib/voices/slots.ts): races and voices are decided upstream in tts_cli/consts.py, and a
- * hardcoded list would quietly stop offering one the day it is added.
+ * Races and genders are the voiced list in lib/voices/voices.ts, so a race-gender added there
+ * is filterable before any line uses it. Flavors and voices are derived from the corpus, as
+ * voiceSlots is (lib/voices/slots.ts), plus the bare voice of a voiced race-gender the corpus
+ * does not speak yet.
  *
- * Being a closed set derived from data also makes it a whitelist, which is what lets
- * /api/search take these straight from a query string.
+ * Being closed sets also makes them a whitelist, which is what lets /api/search take these
+ * straight from a query string.
  *
  * `source` and `npcType` are absent on purpose: they are closed unions on CorpusLine, so
  * their lists live next to the type in lib/search.ts.
  */
 import type { CorpusLine } from "./corpus";
 import { corpus } from "./quests/catalogue";
+import { GENDERS, RACES, unspokenVoices } from "./voices/voices";
 
 export type Facets = {
   races: string[];
@@ -31,15 +33,13 @@ export type Facets = {
 };
 
 export function buildFacets(lines: CorpusLine[]): Facets {
-  const races = new Set<string>();
-  const genders = new Set<string>();
+  const spoken = new Set<string>();
   const flavors = new Set<string>();
   const voices = new Set<string>();
   const scopes = new Map<string, { race: string; gender: string; flavor: string }>();
 
   for (const line of lines) {
-    races.add(line.race);
-    genders.add(line.gender);
+    spoken.add(`${line.race}-${line.gender}`);
     voices.add(line.voice);
     // Null for narrator-male and the odd model from a later expansion, which have no NPC
     // voice sets to choose between. Nothing to offer, so nothing is added.
@@ -50,10 +50,10 @@ export function buildFacets(lines: CorpusLine[]): Facets {
 
   const sorted = (values: Set<string>) => [...values].sort((a, b) => a.localeCompare(b));
   return {
-    races: sorted(races),
-    genders: sorted(genders),
+    races: [...RACES],
+    genders: [...GENDERS],
     flavors: sorted(flavors),
-    voices: sorted(voices),
+    voices: sorted(new Set([...voices, ...unspokenVoices(spoken)])),
     flavorScopes: [...scopes.values()].sort(
       (a, b) =>
         a.race.localeCompare(b.race) ||

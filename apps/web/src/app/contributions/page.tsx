@@ -242,8 +242,6 @@ export default async function Page({
         provenance={provenance}
         client={client}
         existing={existing}
-        raceOptions={facetValues.races}
-        genderOptions={facetValues.genders}
         flavorScopes={facetValues.flavorScopes}
       />
     </main>
