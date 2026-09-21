@@ -30,6 +30,10 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 - **Works on non-English clients** — subzone lore is found by the name your client reports, so a German, French, Spanish, Portuguese, Russian, Korean or Chinese client reaches it too. The lore text itself is English for now.
 - **Report a problem** — a Report button on every entry and on the playback controls. The game can't open a browser, so it hands you a short link to that exact line; the page at the other end has the text, the audio and a form.
 
+## When there is no lore at all
+
+Zone lore is written from the wiki, not from anything the client carries, so there is no text in your client for the addon to hand over the way Spoken Quests and Spoken Books can. What it hands over instead is the place itself: stand somewhere the panel has nothing for — Outland, a corner the lore hasn't reached yet — and a button reading **"No lore -- tell us"** appears beside Report. Press it and it gives you a link carrying the map, the zone, the subzone and your coordinates, no text attached. Copy it, open it in your browser, and press Send. The same place sent in by several players is what moves it up the queue.
+
 ## Narration needs a sound pack
 
 The voice audio is a large download, so it ships separately. **Spoken Zones works fine without one** — you read rather than listen. Without a pack the Play button simply doesn't appear, and nothing is narrated.

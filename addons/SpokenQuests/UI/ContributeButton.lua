@@ -1,0 +1,241 @@
+setfenv(1, VoiceOver)
+
+-- The Contribute button, on the Blizzard quest frame itself.
+--
+-- Modeled on SpokenBooks/UI/PlayButton.lua, the closest precedent in this repo for a button
+-- the game's own frame has to host because ours cannot. There the reason is that the book
+-- addon has no player frame of its own at all; here the reason is narrower but just as final:
+-- this button's whole precondition, Contribute:HasGap(), is true exactly when nothing was
+-- ever queued (see Contribute.lua's HasSoundForCurrent), so the Spoken player frame -- whose
+-- action row is where ReportButton's own button lives, registered by Player.lua -- is hidden
+-- the entire time this button needs to be shown (UI/PlayerFrame.lua in the player addon:
+-- `if not clip then self:Hide(); return end`). There is no clip to decorate, so there is no
+-- player-frame action row to add a second action to. What is left, and what already carries
+-- ReportButton's own copy-link popup for exactly this reason, is the game's own frame.
+--
+-- A TEXT button, not an icon, for PlayButton.lua's reason, unchanged: an icon path cannot be
+-- verified without launching the client, and a texture missing on a private-server client
+-- draws nothing at all -- an invisible button is a worse failure than a plain one.
+--
+-- Hidden rather than disabled when there is nothing to send, for PlayButton.lua's reason,
+-- unchanged: a greyed-out button on every quest and every NPC this client has no line for is
+-- a permanent invitation to wonder what's broken; an absent one says there is nothing to do.
+
+local BUTTON_HEIGHT = 22
+local GAP = 8
+
+-- The events that flip a quest or gossip panel on or off, on every client generation this
+-- addon targets -- not a timer. VoiceOver.lua's own OnInitialize already pays for
+-- registering exactly these seven, unconditionally: QUEST_DETAIL/PROGRESS/COMPLETE/FINISHED
+-- on its dedicated recorder frame, and QUEST_GREETING/GOSSIP_SHOW/GOSSIP_CLOSED on its
+-- direct-event frame. Listening for the same seven here, on a second frame of our own, costs
+-- nothing that isn't already being paid, mirrors how PlayButton.lua refreshes off
+-- ITEM_TEXT_READY/ITEM_TEXT_CLOSED rather than a poll, and needs no timer of its own.
+local REFRESH_EVENTS = {
+    "QUEST_DETAIL", "QUEST_PROGRESS", "QUEST_COMPLETE", "QUEST_GREETING",
+    "GOSSIP_SHOW", "GOSSIP_CLOSED", "QUEST_FINISHED",
+}
+
+ContributeButton = {}
+
+-- A copy of VoiceOver.lua's helper of the same name, which is a local there and so not
+-- reachable from this file -- the same reason ReportButton.lua and Player.lua each carry
+-- their own copy rather than sharing one.
+local function IsFrameVisible(frame)
+    if not frame then
+        return false
+    elseif frame.IsVisible then
+        return frame:IsVisible()
+    end
+    return frame:IsShown()
+end
+
+-- The two buttons flanking the row this button shares, per quest panel. Read out of
+-- Vanilla/QuestFrame.xml, TBC/QuestFrame.xml and Mainline/QuestFrame.xml
+-- (github.com/Gethe/wow-ui-source): all three declare these six as true globals, one
+-- BOTTOMLEFT and one BOTTOMRIGHT of QuestFrame, on every one of the three panels. Everything
+-- else about the row -- QuestFrame's own width, each button's exact padding, and whether a
+-- right-hand button exists at all (the modern Mainline Reward panel ships no Cancel button)
+-- -- differs by client generation, which is why this button is never anchored to a raw pixel
+-- offset: it is anchored to whichever of these the running client actually drew, so a padding
+-- change or a missing button on one generation cannot misplace it on another.
+local function RowButtonsFor(panel)
+    if panel == QuestFrameDetailPanel then
+        return QuestFrameAcceptButton, QuestFrameDeclineButton
+    elseif panel == QuestFrameProgressPanel then
+        return QuestFrameCompleteButton, QuestFrameGoodbyeButton
+    elseif panel == QuestFrameRewardPanel then
+        return QuestFrameCompleteQuestButton, QuestFrameCancelButton
+    end
+end
+
+--- Which of the three NPC quest panels is on screen, the same priority Contribute:Capture
+--- and ReportButton:CurrentTarget both use.
+local function QuestPanelOnScreen()
+    if IsFrameVisible(QuestFrameRewardPanel) then
+        return QuestFrameRewardPanel
+    elseif IsFrameVisible(QuestFrameProgressPanel) then
+        return QuestFrameProgressPanel
+    elseif IsFrameVisible(QuestFrameDetailPanel) then
+        return QuestFrameDetailPanel
+    end
+end
+
+-- The gossip frame's Goodbye button, under whichever of the two names it is reachable by.
+--
+-- github.com/Gethe/wow-ui-source's "Classic" module (what Classic Era, Anniversary and every
+-- client sharing that Gossip frame build load) and its "Mainline" module (Forever, and
+-- current retail) both place a lone GoodbyeButton at GossipFrame's bottom-right with nothing
+-- else on that row -- reached as GossipFrame.GreetingPanel.GoodbyeButton, a parentKey rather
+-- than a separate global. The three original 1.12/2.4.3/3.3.5 clients predate that source
+-- tree, and this change could not check what their own gossip frame actually exposes;
+-- GossipGreetingGoodbyeButton below is an unverified guess at the older, pre-parentKey naming
+-- Blizzard used elsewhere, not a confirmed one. Both are tried, and if neither resolves, the
+-- button simply does not appear on gossip there -- Capture() still works from `/spq` or
+-- whatever else reaches it; nothing forces the guess to be right.
+--
+-- `type(greeting) == "table"` rather than a plain truthiness check: on a real client an
+-- absent parentKey just reads as nil, but the test stub's generic frame object answers any
+-- unset, capitalised field with a callable stand-in rather than nil (it exists to make
+-- ordinary method calls on parts of the UI a test never built into no-ops), and indexing
+-- .GoodbyeButton off THAT would error instead of falling through to the legacy global.
+local function GossipGoodbyeButton()
+    local frame = _G.GossipFrame
+    local greeting = frame and frame.GreetingPanel
+    if type(greeting) == "table" and greeting.GoodbyeButton then
+        return greeting.GoodbyeButton
+    end
+    return _G.GossipGreetingGoodbyeButton
+end
+
+--- Anchor the button into the free gap on `panel`'s own button row. False when this panel
+--- carries no left-hand button to anchor from at all, which no client this file was checked
+--- against actually does, but a client that surprises us here should get no button rather
+--- than one anchored to nothing.
+function ContributeButton:PositionOnQuestPanel(panel)
+    local left, right = RowButtonsFor(panel)
+    if not left then
+        return false
+    end
+
+    local button = self.button
+    button:ClearAllPoints()
+    -- LEFT alone would need a guessed width; LEFT and RIGHT together make the button exactly
+    -- as wide as the gap actually is on this client, so a snug fit narrows the label rather
+    -- than spilling over the button beside it.
+    button:SetPoint("LEFT", left, "RIGHT", GAP, 0)
+    if right then
+        button:SetPoint("RIGHT", right, "LEFT", -GAP, 0)
+    else
+        button:SetWidth(110)
+    end
+    return true
+end
+
+--- Anchor the button to the left of the gossip frame's Goodbye button. False when this
+--- client's gossip frame does not resolve one -- see GossipGoodbyeButton's comment.
+function ContributeButton:PositionOnGossip()
+    local goodbye = GossipGoodbyeButton()
+    if not goodbye then
+        return false
+    end
+
+    local button = self.button
+    button:ClearAllPoints()
+    button:SetPoint("RIGHT", goodbye, "LEFT", -GAP, 0)
+    button:SetWidth(110)
+    return true
+end
+
+--- Show, hide and place the button for whatever is on screen now. Parented to UIParent, not
+--- to QuestFrame or GossipFrame: whichever of those two is relevant is the one hidden while
+--- the other is up, and a child cannot be visible while its ancestor is not. Positioning
+--- still tracks the right one, through SetPoint's relativeTo, which does not require a shared
+--- parent.
+function ContributeButton:Refresh()
+    local button = self.button
+    if not button then
+        return
+    end
+
+    if not Contribute:HasGap() then
+        button:Hide()
+        return
+    end
+
+    local panel = QuestPanelOnScreen()
+    local placed
+    if panel then
+        placed = self:PositionOnQuestPanel(panel)
+    else
+        placed = self:PositionOnGossip()
+    end
+    if placed then
+        button:Show()
+    else
+        button:Hide()
+    end
+end
+
+--- Build the button and its event frame, once, parented to UIParent so its own visibility
+--- never depends on QuestFrame's or GossipFrame's.
+function ContributeButton:Setup()
+    if self.button then
+        return self.button
+    end
+    if not CreateFrame then
+        return nil
+    end
+
+    local button = CreateFrame("Button", nil, UIParent, "UIPanelButtonTemplate")
+    button:SetHeight(BUTTON_HEIGHT)
+    -- "Contribute", not "No voice -- contribute": the long form was the first thing a player
+    -- said was wrong about this button, and it has to share a row with Blizzard's own controls.
+    -- The books addon's button already says exactly this word, so the two now match.
+    button:SetText("Contribute")
+    if button.SetFrameStrata then
+        -- DIALOG rather than a verified match for QuestFrame's or GossipFrame's own strata --
+        -- this file did not check what either actually is (neither Vanilla/QuestFrame.xml,
+        -- TBC/QuestFrame.xml nor the two GossipFrame.xml files declare frameStrata inline, so
+        -- it comes from a template or from Lua this change did not chase down). DIALOG is
+        -- above every ordinary game panel, which is what "reads as part of whichever frame is
+        -- open" actually needs.
+        button:SetFrameStrata("DIALOG")
+    end
+    button:Hide()
+
+    button:SetScript("OnClick", function()
+        Contribute:Show()
+    end)
+    button:SetScript("OnEnter", function(self)
+        if not GameTooltip then
+            return
+        end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("No line for this")
+        GameTooltip:AddLine("Send your own client's text so it can be added.", 1, 0.8, 0.2, true)
+        GameTooltip:Show()
+    end)
+    button:SetScript("OnLeave", function()
+        if GameTooltip then
+            GameTooltip:Hide()
+        end
+    end)
+
+    self.button = button
+
+    -- The refresh frame. Ignores its own event argument entirely -- every one of
+    -- REFRESH_EVENTS means only "something may have changed," so there is nothing to read out
+    -- of it, which sidesteps 1.12's OnEvent calling convention (no arguments; the event name
+    -- arrives in the global `event` instead) rather than having to account for it.
+    local watcher = CreateFrame("Frame")
+    for _, event in ipairs(REFRESH_EVENTS) do
+        pcall(watcher.RegisterEvent, watcher, event)
+    end
+    watcher:SetScript("OnEvent", function()
+        ContributeButton:Refresh()
+    end)
+    self.watcher = watcher
+
+    return button
+end

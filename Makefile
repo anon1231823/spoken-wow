@@ -19,7 +19,7 @@
 
 LUA ?= $(shell command -v luajit || command -v lua5.1)
 
-.PHONY: help test test-player lint package-all \
+.PHONY: help test test-player contribute-fixtures lint package-all \
         descriptions descriptions-check descriptions-published \
         audio-release audio-release-dry
 
@@ -54,6 +54,9 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@$(LUA) tests/lua/queue_test.lua
 	@$(LUA) tests/lua/sources_test.lua
 	@$(LUA) tests/lua/api_contract_test.lua
+	@$(LUA) tests/lua/contribute_envelope_test.lua
+	@$(LUA) tests/lua/contribute_box_test.lua
+	@$(LUA) tests/lua/quests_contribute_test.lua
 	@$(LUA) tests/lua/player_frame_test.lua
 	@$(LUA) tests/lua/zones_source_test.lua
 	@$(LUA) tests/lua/zones_pending_test.lua
@@ -68,7 +71,14 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@$(LUA) tests/lua/books_reader_test.lua
 	@$(LUA) tests/lua/books_playlist_test.lua
 	@$(LUA) tests/lua/books_events_test.lua
+	@$(LUA) tests/lua/books_contribute_test.lua
+	@$(LUA) tests/lua/zones_contribute_test.lua
 	@$(LUA) tests/lua/migration_test.lua
+
+# Rewrite the envelope fixtures the TypeScript reader is tested against. A diff here is the
+# wire format changing, and that is a change the reader's tests must be part of.
+contribute-fixtures:
+	SPOKEN_WRITE_FIXTURES=1 $(LUA) tests/lua/contribute_envelope_test.lua
 
 # The Python half needs its own venv:
 #
@@ -87,6 +97,7 @@ test: test-player ## Everything: both webs, the Python pipeline, the addons
 
 lint: ## The checks CI gates on
 	@pnpm -r typecheck
+	@node scripts/check-addon-xml.mjs
 	@node pipelines/zones/tools/validate.mjs
 	@node scripts/descriptions.mjs --check
 	@node pipelines/zones/tools/locale/check-strings.mjs

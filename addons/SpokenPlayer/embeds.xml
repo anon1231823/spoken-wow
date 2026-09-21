@@ -5,4 +5,15 @@
     <Include file="Libs\AceTimer-3.0\AceTimer-3.0.xml"/>
     <Script file="Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua"/>
     <Script file="Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua"/>
+    <!-- Last, and deliberately so. Everything above is a dependency Core.lua asks LibStub for
+         by name the moment it runs; LibDeflate is optional, and Contribute.lua already treats a
+         missing one as "show the player the envelope instead of a link", so the worst case
+         here is the feature degrading rather than the addon failing to start.
+
+         NOTE FOR WHOEVER EDITS THIS FILE NEXT: an XML comment may not contain a double hyphen.
+         Lua's comment marker written inside one of these makes the whole document invalid, and
+         the client then loads none of the libraries below, whichever line they sit on. That
+         failure arrives as "Cannot find a library instance of AceTimer-3.0" at Core.lua:8,
+         naming a library nobody touched, which is a long way from the comment that caused it. -->
+    <Script file="Libs\LibDeflate\LibDeflate.lua"/>
 </Ui>

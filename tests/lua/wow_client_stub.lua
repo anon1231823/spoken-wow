@@ -68,6 +68,14 @@ function M.ShowPanel(name)
     end
 end
 
+--- Hide every Blizzard quest panel and clear gossip text: the client is showing no dialog at
+--- all. Gossip has no panel of its own in this stub, so closing "nothing on screen" means
+--- forgetting it too, the way GOSSIP_CLOSED leaves the client.
+function M.HidePanels()
+    M.ShowPanel(nil)
+    world.gossipText = nil
+end
+
 --- Deliver a client event to every frame registered for it.
 function M.FireEvent(event, ...)
     for _, frame in ipairs(allFrames) do
@@ -347,6 +355,17 @@ function _G.CreateFrame(kind, name, parent)
     -- Recorded so a test can ask what a panel built, the way a player reads it: a row is
     -- a control with a label, and a panel that lost one is a setting nobody can reach.
     if parent and parent.children then table.insert(parent.children, f) end
+    -- The edit box a contribution is copied out of is multi-line and unbounded, neither of
+    -- which the report popup's box is. `highlighted` and `multiLine` are recorded because the
+    -- point of the frame is that the player presses Ctrl+C and nothing else.
+    if kind == "EditBox" then
+        function f:SetMultiLine(on) self.multiLine = on and true or false end
+        function f:SetMaxBytes(n) self.maxBytes = n end
+        function f:GetMaxBytes() return self.maxBytes or 0 end
+        function f:HighlightText() self.highlighted = true end
+        function f:SetAutoFocus() end
+        function f:SetScript(event, fn) self.handlers = self.handlers or {}; self.handlers[event] = fn end
+    end
     return f
 end
 
@@ -388,18 +407,43 @@ _G.DEFAULT_CHAT_FRAME = { AddMessage = function() end }
 world.inCombat = false
 function _G.UnitAffectingCombat() return world.inCombat end
 function _G.GetSubZoneText() return world.subZone or "" end
+function _G.GetRealZoneText() return world.zone or "" end
 -- Defaults to 1: the login greeting's one exception is a brand-new character, so a test
 -- that says nothing about the level is testing that case.
 function _G.UnitLevel() return world.playerLevel or 1 end
 _G.C_Map = {
     GetMapInfo = function(id) return { mapType = 3 } end,
     GetBestMapForUnit = function() return world.playerMapID or 1411 end,
+    -- A Vector2D stand-in: real C_Map.GetPlayerMapPosition returns one with :GetXY(), or nil
+    -- off the map it was asked about. world.posX unset means "not on any map", not "at 0,0" --
+    -- 0,0 is a real corner, so nil has to stay reachable rather than defaulting to it.
+    GetPlayerMapPosition = function(mapID, unit)
+        if world.posX == nil then
+            return nil
+        end
+        return { GetXY = function() return world.posX, world.posY end }
+    end,
 }
 _G.C_Timer = {
     After = function(delay, fn) table.insert(timers, { at = world.time + delay, fn = fn }) end,
 }
+--- Where the player is standing, for the zones addon's map/position reads: GetPlayerMapID,
+--- GetRealZoneText, GetSubZoneText and C_Map.GetPlayerMapPosition. `x`/`y` are optional --
+--- omitting them leaves world.posX nil, which GetPlayerMapPosition reads as off any map.
+function M.SetZone(t)
+    world.playerMapID = t.map
+    world.zone = t.zone
+    world.subZone = t.subzone
+    world.posX = t.x
+    world.posY = t.y
+end
 _G.ERR_ZONE_EXPLORED = "Discovered %s."
 function _G.GetGossipText() return world.gossipText or "" end
+--- Put words on screen from an NPC with nothing to offer but talk: gossip text with no quest
+--- panel behind it.
+function M.ShowGossip(text)
+    world.gossipText = text
+end
 --- The namespaced gossip API. SetClient hands it to the clients that have one.
 M.gossipAPI = {
     GetText = function() return world.gossipText or "" end,
@@ -609,6 +653,20 @@ for _, name in ipairs({ "QuestFrameRewardPanel", "QuestFrameProgressPanel", "Que
     _G[name] = Frame(name)
 end
 
+-- The bottom-row buttons UI/ContributeButton.lua anchors beside, one pair per quest panel, as
+-- Blizzard's own QuestFrame.xml names them on every client generation this addon targets.
+for _, name in ipairs({ "QuestFrameAcceptButton", "QuestFrameDeclineButton", "QuestFrameCompleteButton",
+    "QuestFrameGoodbyeButton", "QuestFrameCompleteQuestButton", "QuestFrameCancelButton" }) do
+    _G[name] = Frame(name)
+end
+
+-- The gossip frame's Goodbye button, reachable the way current Blizzard clients (Classic Era,
+-- Anniversary, and Mainline) expose it: nested under a parentKey rather than a separate
+-- global. See UI/ContributeButton.lua's GossipGoodbyeButton for why a plain global is also
+-- tried and why neither is assumed to exist on the three original legacy clients.
+_G.GossipFrame.GreetingPanel = Frame("GossipFrameGreetingPanel")
+_G.GossipFrame.GreetingPanel.GoodbyeButton = Frame("GossipFrameGreetingPanelGoodbyeButton")
+
 -- The installed addons, as the client's addon-management API sees them. One sound pack
 -- carrying the key it has always carried, until a test says otherwise.
 local PACK = "TestPack"
@@ -681,7 +739,11 @@ libs["LibDBIcon-1.0"] = {
     Show = function() end, Hide = function() end, Lock = function() end, Unlock = function() end, Refresh = function() end,
 }
 _G.LibStub = setmetatable({
-    NewLibrary = function() end,
+    -- Real enough to let a genuinely-vendored LibStub library (LibDeflate, so far) register
+    -- itself when its own source is dofile'd in a test, unlike the no-op this used to be: that
+    -- no-op only ever went unnoticed because every other library here is hand-faked above
+    -- rather than loaded for real, so nothing had called NewLibrary and expected a table back.
+    NewLibrary = function(_, major) libs[major] = libs[major] or {}; return libs[major] end,
     GetLibrary = function(_, name) return libs[name] end,
 }, { __call = function(_, name) return libs[name] end })
 
@@ -782,8 +844,10 @@ libs["AceDB-3.0"] = {
 --- variables the way ADDON_LOADED would.
 function M.LoadSpoken(addonDirectory)
     for _, file in ipairs({ "Environment", "Version", "Core", "SoundUtils", "Callbacks", "SoundQueue", "Sources",
-        "Strings", "UI/Layout", "UI/Portrait", "UI/Actions", "UI/PlayerFrame", "UI/MinimapButton", "UI/Options",
-        "API", "Compat" }) do
+        "Strings", "UI/Layout", "UI/Portrait", "UI/Actions", "UI/ContributeBox", "UI/PlayerFrame", "UI/MinimapButton",
+        -- Real LibDeflate, not a hand-faked stub library: Contribute:Encode's round trip through
+        -- actual compression is the point of testing it at all.
+        "UI/Options", "API", "Libs/LibDeflate/LibDeflate", "Contribute", "Compat" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     local env = _G.SpokenEnv
@@ -902,7 +966,7 @@ function M.LoadQuests(addonDirectory, spokenDirectory)
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
     for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "EasterEggs",
-        "DataModules", "ReportButton", "Player", "VoiceOver" }) do
+        "DataModules", "ReportButton", "Player", "Contribute", "VoiceOver" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     return VO, env
@@ -927,7 +991,7 @@ function M.LoadQuestsAlone(addonDirectory)
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
     for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "EasterEggs",
-        "DataModules", "ReportButton", "Player", "VoiceOver" }) do
+        "DataModules", "ReportButton", "Player", "Contribute", "VoiceOver" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     return VO
