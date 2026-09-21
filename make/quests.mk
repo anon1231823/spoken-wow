@@ -173,7 +173,7 @@ icon: ## Rebuild the addons' icon.tga and the minimap BLP from pipelines/quests/
 package: ## Zip the player addon into dist/: one Blizzard zip, one per legacy client
 	@./scripts/quests/package.sh
 
-package-audio: check-synced sounds ## Transcode, build and zip the five sound packs into dist/ (VERSION=1.4.0)
+package-audio: check-synced export-corpus export-ignores sounds ## Transcode, build and zip the five sound packs into dist/ (VERSION=1.4.0)
 	@VERSION=$(VERSION) ENCODE=$(if $(ENCODE),$(ENCODE),ogg-q0-44k) MODULE=SpokenQuestsAudio \
 	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
@@ -183,7 +183,7 @@ package-audio: check-synced sounds ## Transcode, build and zip the five sound pa
 # so installing it beside them is possible but pointless. The site hosts it: `push-complete`
 # below, under the one current name -- see the note there.
 
-package-audio-complete: check-synced sounds ## Build the whole corpus as one folder for the site (~1.3 GB)
+package-audio-complete: check-synced export-corpus export-ignores sounds ## Build the whole corpus as one folder for the site (~1.3 GB)
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
 	  MODULE_NAME=SpokenQuestsAudioComplete TITLE="Spoken Quests Audio: Complete" \
 	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
@@ -302,7 +302,13 @@ full-release: require-droplet ## Sync, pull live takes, build and upload the pac
 # by an export leaves the file byte-identical.
 
 # Run from the pipeline's directory, because the CLI's default paths are relative to it.
-QUESTS_CLI = cd $(QUESTS_DIR) && $(abspath $(PYTHON)) cli-main.py
+#
+# The database is the one a pack is built from, LOCAL_DB, unless DATABASE_URL names another.
+# The pack build reads corpus.json.gz and ignored.json, never Postgres, so package-audio
+# exports both first: a pack built after a sync without them had the new takes' mp3s in
+# audio/ and no lookup entry pointing at them -- a contributed quest, voiced on the site,
+# silent in game.
+QUESTS_CLI = cd $(QUESTS_DIR) && DATABASE_URL="$(or $(DATABASE_URL),$(LOCAL_DB))" $(abspath $(PYTHON)) cli-main.py
 
 import-corpus: ## corpus/corpus.json.gz -> quest_line (needs DATABASE_URL and psycopg2)
 	@$(QUESTS_CLI) import-corpus
