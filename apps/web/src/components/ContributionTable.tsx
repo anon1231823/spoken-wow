@@ -866,11 +866,10 @@ function SpeakerCell({
         {npc.provenance !== "none" ? (
           <ProvenanceBadge provenance={npc.provenance} />
         ) : null}
-      </div>
-      <div className="flex items-center gap-1">
         <Button
           size="sm"
           variant="outline"
+          className="h-7 px-2 text-xs"
           // A kind-less row with no kind picked yet has nothing valid to POST -- the route
           // requires npcKind and would 400 -- so the button waits rather than silently failing.
           disabled={busy || (npc.npcKind === null && !kind)}
