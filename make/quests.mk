@@ -60,7 +60,7 @@ endef
         downloads-status \
         factions release release-audio release-wago release-curse \
         release-dry import-corpus export-corpus export-ignores \
-        fold-overrides sync check-synced
+        sync check-synced
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -278,9 +278,6 @@ export-corpus: check-synced ## quest_line -> corpus/corpus.json.gz (ARGS=--check
 
 export-ignores: ## line_ignore -> corpus/ignored.json, replacing the old ssh export
 	@$(QUESTS_CLI) export-ignores $(ARGS)
-
-fold-overrides: ## line_override rows -> edited versions. Once, after import-corpus.
-	@$(QUESTS_CLI) fold-overrides
 
 # THE DROPLET IS UPSTREAM FOR EVERYTHING THE APP WRITES.
 #

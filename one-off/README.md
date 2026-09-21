@@ -1,8 +1,8 @@
 # One-off scripts
 
-Each folder here is a change to production's data that ran **once**, kept so that anyone
+Each folder here is a change to production's data that runs **once**, kept so that anyone
 reading the history can see exactly what was done and why. A folder is named for the month it
-ran and what it did.
+was written and what it does, and its README says whether it has run yet, and when it should.
 
 These are records, not tools:
 

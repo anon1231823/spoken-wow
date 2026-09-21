@@ -44,9 +44,6 @@ ign.add_argument("--ignored", default=DEFAULT_IGNORED_PATH)
 ign.add_argument("--check", action="store_true",
                  help="Compare instead of writing; exits 1 if they differ.")
 
-subparsers.add_parser(
-    "fold-overrides",
-    help="line_override rows -> edited versions of their lines. Run once after import-corpus.")
 exp = subparsers.add_parser(
     "export-corpus",
     help="Postgres -> corpus.json.gz. The committed file is an export of the table.")
@@ -103,10 +100,6 @@ elif args.mode == "export-ignores":
     from tts_cli.corpus_db import export_ignores
     if not export_ignores(args.ignored, check=args.check) and args.check:
         raise SystemExit(1)
-
-elif args.mode == "fold-overrides":
-    from tts_cli.corpus_db import fold_overrides
-    fold_overrides()
 
 elif args.mode == "export-corpus":
     from tts_cli.corpus_db import export_corpus
