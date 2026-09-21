@@ -122,17 +122,10 @@ async function npcFor(contributions: Contribution[]): Promise<Record<number, Npc
   return found;
 }
 
-/** /contributions's second filter dimension: whether the row's NPC is a settled answer. */
-export type ConfirmedFilter = "confirmed" | "unconfirmed" | "all";
-
-function isConfirmedFilter(value: unknown): value is "confirmed" | "unconfirmed" {
-  return value === "confirmed" || value === "unconfirmed";
-}
-
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; provenance?: string; confirmed?: string }>;
+  searchParams: Promise<{ status?: string; provenance?: string }>;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
 
@@ -140,17 +133,24 @@ export default async function Page({
   // rows hold text and identifying details a stranger pasted in.
   if (!session || !canRegenerate(session.user.role)) notFound();
 
-  const { status: rawStatus, provenance: rawProvenance, confirmed: rawConfirmed } = await searchParams;
+  const { status: rawStatus, provenance: rawProvenance } = await searchParams;
   const status: ContributionStatus | "all" = isStatus(rawStatus)
     ? rawStatus
     : rawStatus === "all"
       ? "all"
       : "new";
-  // Both default to "all": these are what makes an unconfirmed NPC revisitable later (the
-  // feature the spec asked for and this branch had left unbuilt -- see finding 5), not a
-  // narrowing anyone needs applied before they ask for it.
+  // Defaults to "all", not a narrowing anyone needs applied before they ask for it. There used
+  // to be a second dimension here (a "confirmed" param) alongside this one: dropped, not just
+  // hidden, because it was the same filter under a different name. resolveNpc and the override
+  // route (api/contributions/npc/route.ts) are the only two places that ever write `confirmed`,
+  // and both only ever pair confirmed:true with provenance "corpus" or "moderator" and
+  // confirmed:false with "client" or "none" -- migration 0031's
+  // npc_resolution_confirmed_provenance_check constraint enforces the corpus/moderator half of
+  // that pairing at the schema level, and no code path in this app has ever written the other
+  // way round. So "confirmed" always meant exactly `provenance in ('corpus', 'moderator')`, and
+  // "unconfirmed" always meant `provenance in ('client', 'none')` -- a coarser way to ask a
+  // question `provenance` already answers, not a second question.
   const provenance: Provenance | "all" = isProvenance(rawProvenance) ? rawProvenance : "all";
-  const confirmed: ConfirmedFilter = isConfirmedFilter(rawConfirmed) ? rawConfirmed : "all";
 
   const contributions = await listContributions(status);
   const existing = await existingTextFor(contributions);
@@ -175,16 +175,12 @@ export default async function Page({
       npc: npcs[row.id] ?? null,
       quest: questFor(row),
     }))
-    // A row with no npc at all has nothing for either filter to match -- neither filter is
-    // "which rows never named an NPC", so it drops out the moment either one narrows anything,
-    // rather than showing up under an "unconfirmed" or a specific-provenance view it was never
-    // part of.
+    // A row with no npc at all has nothing for the filter to match -- "which rows never named
+    // an NPC" is not one of its values -- so it drops out the moment provenance narrows
+    // anything, rather than showing up under a specific-provenance view it was never part of.
     .filter((row) => {
-      if (provenance === "all" && confirmed === "all") return true;
-      if (!row.npc) return false;
-      if (provenance !== "all" && row.npc.provenance !== provenance) return false;
-      if (confirmed !== "all" && row.npc.confirmed !== (confirmed === "confirmed")) return false;
-      return true;
+      if (provenance === "all") return true;
+      return row.npc?.provenance === provenance;
     });
 
   const facetValues = await facets();
@@ -202,7 +198,6 @@ export default async function Page({
         initial={rows}
         status={status}
         provenance={provenance}
-        confirmed={confirmed}
         existing={existing}
         raceOptions={facetValues.races}
         genderOptions={facetValues.genders}

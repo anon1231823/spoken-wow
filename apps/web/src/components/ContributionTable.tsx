@@ -21,12 +21,14 @@
  * reason to make that crossing at all.
  */
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 
+import FilterChip, { type ChipOption } from "@/components/FilterChip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { ConfirmedFilter } from "@/app/contributions/page";
 import type { ContributionStatus } from "@/lib/contributions/contributions";
+import { contributionsHref } from "@/lib/contributions/query";
 import type { Contribution } from "@/lib/contributions/store";
 // Both are computed server-side (npcSummaryFrom pulls in corpus.ts's flavorsFor) -- `import
 // type` erases the whole thing at compile time, so none of that follows the type in here. The
@@ -36,7 +38,6 @@ import type { NpcSummary, QuestSummary } from "@/lib/contributions/triage";
 // (values, not just types) out of it would drag Postgres's own node built-ins into this bundle.
 import { NPC_KINDS, PROVENANCES, type NpcKind, type Provenance } from "@/lib/npc/npc";
 import type { NpcResolution } from "@/lib/npc/store";
-import { cn } from "@/lib/utils";
 import { wowheadEntityUrl, wowheadForeverUrl, wowheadQuestUrl } from "@/lib/wowhead";
 
 export type { NpcSummary };
@@ -68,6 +69,10 @@ const STATUS_LABELS: Record<ContributionStatus, string> = {
 };
 
 const STATUS_OPTIONS: readonly ContributionStatus[] = ["new", "accepted", "rejected"];
+const STATUS_CHIP_OPTIONS: ChipOption[] = STATUS_OPTIONS.map((option) => ({
+  value: option,
+  label: STATUS_LABELS[option],
+}));
 
 const PROVENANCE_LABELS: Record<Provenance, string> = {
   corpus: "Corpus",
@@ -76,11 +81,14 @@ const PROVENANCE_LABELS: Record<Provenance, string> = {
   none: "No race",
 };
 
-const CONFIRMED_LABELS: Record<Exclude<ConfirmedFilter, "all">, string> = {
-  confirmed: "Confirmed",
-  unconfirmed: "Unconfirmed",
-};
-const CONFIRMED_OPTIONS: readonly Exclude<ConfirmedFilter, "all">[] = ["unconfirmed", "confirmed"];
+// The Speaker dropdown's options: PROVENANCES's own four, unchanged. A "Confirmed"/"Unconfirmed"
+// pair used to sit alongside these as a second dropdown -- dropped, not merely hidden, because
+// it was the same filter under a different name (see page.tsx's own comment on `provenance` for
+// why: confirmed is a strict function of provenance in every write path this codebase has).
+const SPEAKER_CHIP_OPTIONS: ChipOption[] = PROVENANCES.map((option) => ({
+  value: option,
+  label: PROVENANCE_LABELS[option],
+}));
 
 /** The day and the clock time, short enough to sit in a column, matching ReportTable's `when`. */
 function when(at: string): string {
@@ -107,20 +115,24 @@ function speaker(npc: NpcSummary): string {
  * unlabelled, "?-?-?" next to a "moderator" badge would be one small badge away from looking
  * identical to a genuinely unresolved "?-?-?"/"none" row, which defeats the point of this column
  * being a skimmable "still needs a human" signal.
+ *
+ * Null (no note at all) for an unconfirmed row with no provenance opinion: the nothing-known
+ * form rendered right below already says "nobody has answered this" as plainly as a caption
+ * could -- a redundant "not identified" used to sit here saying the same thing a third time,
+ * after the missing provenance badge (see the `none` branch below) already dropped it once.
  */
 function speakerNote(npc: NpcSummary): string | null {
   if (npc.confirmed) {
     return npc.race || npc.gender || npc.flavor ? null : "confirmed: no race";
   }
   if (npc.provenance === "client") return "guessed from the model the client reported";
-  return "not identified";
+  return null;
 }
 
 export default function ContributionTable({
   initial,
   status,
   provenance,
-  confirmed,
   existing,
   raceOptions,
   genderOptions,
@@ -129,7 +141,6 @@ export default function ContributionTable({
   initial: ContributionRow[];
   status: ContributionStatus | "all";
   provenance: Provenance | "all";
-  confirmed: ConfirmedFilter;
   /** id -> corpus text, present only where the row's key resolves to something on file. */
   existing: Record<number, string>;
   /** facets().races/genders -- every race and gender the corpus has, for the "nothing known" state's selects. */
@@ -138,9 +149,11 @@ export default function ContributionTable({
   /** facets().flavorScopes -- what lets that state's flavor select narrow to whatever race-gender was just chosen, without a round trip. */
   flavorScopes: FlavorScope[];
 }) {
+  const router = useRouter();
+
   /**
    * What this session resolved, overlaid on the server's rows -- the same shape ReportTable
-   * uses and for the same reason: the status links below are navigations, so seeding state
+   * uses and for the same reason: the status dropdown below is a navigation, so seeding state
    * from `initial` once would leave a resolved row sitting in a queue it no longer belongs to
    * until the next reload.
    */
@@ -224,82 +237,34 @@ export default function ContributionTable({
     return status === "all" || current === status;
   });
 
-  // Combines whichever one of the three dimensions is changing with the other two as they
-  // stand -- otherwise a click on a provenance link would reset status and confirmed back to
-  // their defaults, undoing whatever else the moderator had already narrowed to.
-  function href(next: { status?: ContributionStatus | "all"; provenance?: Provenance | "all"; confirmed?: ConfirmedFilter }) {
-    const params = new URLSearchParams({
-      status: next.status ?? status,
-      provenance: next.provenance ?? provenance,
-      confirmed: next.confirmed ?? confirmed,
-    });
-    return `/contributions?${params}`;
+  /**
+   * Move one dropdown and keep the other, then push it -- a soft navigation, not a state
+   * change, so the filter still lives in the URL and survives a refresh. Follows
+   * ReportTable.tsx's own `go`; the mapping itself is contributionsHref, pulled out to
+   * lib/contributions/query.ts so it can be tested without rendering FilterChip or this table.
+   */
+  function go(next: { status?: ContributionStatus | "all"; provenance?: Provenance | "all" }) {
+    router.push(contributionsHref({ status, provenance }, next));
   }
 
   return (
     <>
-      {/* Links rather than FilterChip's dropdown, matching /reports's own status filter: a
-          queue is the thing collaborators want to jump between, not narrow through a dropdown.
-          Three groups now, not one -- provenance and confirmed are what finding 5 asked for,
-          the thing that makes an unconfirmed NPC guess revisitable later. */}
-      <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-        {STATUS_OPTIONS.map((option) => (
-          <a
-            key={option}
-            href={href({ status: option })}
-            className={cn(
-              "rounded-full border px-3 py-1",
-              status === option
-                ? "border-primary bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted",
-            )}
-          >
-            {STATUS_LABELS[option]}
-          </a>
-        ))}
-        <a
-          href={href({ status: "all" })}
-          className={cn(
-            "rounded-full border px-3 py-1",
-            status === "all"
-              ? "border-primary bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted",
-          )}
-        >
-          All
-        </a>
-      </nav>
-
-      <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-muted-foreground text-xs">Speaker:</span>
-        {CONFIRMED_OPTIONS.map((option) => (
-          <a
-            key={option}
-            href={href({ confirmed: confirmed === option ? "all" : option })}
-            className={cn(
-              "rounded-full border px-3 py-1",
-              confirmed === option
-                ? "border-primary bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted",
-            )}
-          >
-            {CONFIRMED_LABELS[option]}
-          </a>
-        ))}
-        {PROVENANCES.map((option) => (
-          <a
-            key={option}
-            href={href({ provenance: provenance === option ? "all" : option })}
-            className={cn(
-              "rounded-full border px-3 py-1",
-              provenance === option
-                ? "border-primary bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted",
-            )}
-          >
-            {PROVENANCE_LABELS[option]}
-          </a>
-        ))}
+      {/* Two dropdowns, the same control the explorers filter with -- matching ReportTable.
+          Status/Speaker being one dropdown each, rather than a row of link pills, is what makes
+          "New / Accepted / Rejected / All" and the six speaker pills fit without crowding. */}
+      <nav className="mb-4 flex flex-wrap items-center gap-2">
+        <FilterChip
+          label="status"
+          value={status === "all" ? undefined : status}
+          options={STATUS_CHIP_OPTIONS}
+          onChange={(next) => go({ status: next as ContributionStatus | undefined })}
+        />
+        <FilterChip
+          label="speaker"
+          value={provenance === "all" ? undefined : provenance}
+          options={SPEAKER_CHIP_OPTIONS}
+          onChange={(next) => go({ provenance: next as Provenance | undefined })}
+        />
       </nav>
 
       {rows.length === 0 ? (
@@ -315,7 +280,6 @@ export default function ContributionTable({
               <th className="border-b py-2 pr-3 font-normal">Locale</th>
               <th className="border-b py-2 pr-3 font-normal">Count</th>
               <th className="border-b py-2 pr-3 font-normal">What they sent</th>
-              <th className="border-b py-2 pr-3 font-normal">Speaker</th>
               <th className="border-b py-2 pr-3 font-normal">Status</th>
               <th className="border-b py-2 font-normal" />
             </tr>
@@ -328,7 +292,11 @@ export default function ContributionTable({
               const npc = npcOverrides[row.id] ?? row.npc;
 
               return (
-                <tr key={row.id} className="align-middle [&>td]:border-b [&>td]:py-2 [&>td]:leading-5">
+                // Top-aligned, not middle: the NPC/Speaker cell below can grow to a whole form's
+                // height (race/gender/flavor selects, a note input), and centring every other
+                // cell against that made the short ones float to mid-row instead of sitting on
+                // a scannable line.
+                <tr key={row.id} className="align-top [&>td]:border-b [&>td]:py-2 [&>td]:leading-5">
                   <td className="text-muted-foreground pr-3 text-xs whitespace-nowrap">
                     {when(row.createdAt)}
                   </td>
@@ -342,38 +310,53 @@ export default function ContributionTable({
                     </Badge>
                   </td>
 
-                  <td className="max-w-[14rem] pr-3 text-xs">
+                  {/* NPC and Speaker, merged: who the NPC is and who voices their lines are the
+                      same question, and showing them as two columns meant scanning across the
+                      row to connect an id in one cell with a form three cells later. Name/id/
+                      links stay on their own line; the voice -- settled text for a corpus NPC,
+                      the override form for one that isn't -- sits right beneath it. */}
+                  <td className="max-w-[20rem] pr-3 text-xs">
                     {npc ? (
-                      <div className="flex items-center gap-1 whitespace-nowrap">
-                        <a
-                          href={`/quests?q=${npc.npcId}&filter=npc`}
-                          className="truncate hover:underline"
-                          title={npc.npcName ?? undefined}
-                        >
-                          {npc.npcName ?? "unnamed"}{" "}
-                          <span className="text-muted-foreground">#{npc.npcId}</span>
-                        </a>
-                        <a
-                          href={
-                            // The corpus's own exact answer means it has this NPC on the branch
-                            // the corpus is built from; anything else -- including a post-vanilla
-                            // NPC like 205729 -- is only ever on the client's own branch. See
-                            // wowhead.ts for why two branches exist rather than one.
-                            //
-                            // A kind-less row (npc.npcKind === null) has no real kind to link
-                            // with yet -- "creature" is a convenience guess for this link only,
-                            // never stored, and every quest/gossip npc field this table has ever
-                            // seen has in fact named one.
-                            npc.provenance === "corpus"
-                              ? wowheadEntityUrl(npc.npcKind ?? "creature", npc.npcId)
-                              : wowheadForeverUrl(npc.npcKind ?? "creature", npc.npcId)
-                          }
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-muted-foreground shrink-0 hover:underline"
-                        >
-                          wh↗
-                        </a>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1 whitespace-nowrap">
+                          <a
+                            href={`/quests?q=${npc.npcId}&filter=npc`}
+                            className="truncate hover:underline"
+                            title={npc.npcName ?? undefined}
+                          >
+                            {npc.npcName ?? "unnamed"}{" "}
+                            <span className="text-muted-foreground">#{npc.npcId}</span>
+                          </a>
+                          <a
+                            href={
+                              // The corpus's own exact answer means it has this NPC on the branch
+                              // the corpus is built from; anything else -- including a post-vanilla
+                              // NPC like 205729 -- is only ever on the client's own branch. See
+                              // wowhead.ts for why two branches exist rather than one.
+                              //
+                              // A kind-less row (npc.npcKind === null) has no real kind to link
+                              // with yet -- "creature" is a convenience guess for this link only,
+                              // never stored, and every quest/gossip npc field this table has ever
+                              // seen has in fact named one.
+                              npc.provenance === "corpus"
+                                ? wowheadEntityUrl(npc.npcKind ?? "creature", npc.npcId)
+                                : wowheadForeverUrl(npc.npcKind ?? "creature", npc.npcId)
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-muted-foreground shrink-0 hover:underline"
+                          >
+                            Wowhead ↗
+                          </a>
+                        </div>
+                        <SpeakerCell
+                          npc={npc}
+                          raceOptions={raceOptions}
+                          genderOptions={genderOptions}
+                          flavorScopes={flavorScopes}
+                          busy={npcBusy === row.id}
+                          onSave={(answer) => void overrideNpc(row.id, npc, answer)}
+                        />
                       </div>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -441,21 +424,6 @@ export default function ContributionTable({
                     </details>
                   </td>
 
-                  <td className="pr-3 text-xs whitespace-nowrap">
-                    {npc ? (
-                      <SpeakerCell
-                        npc={npc}
-                        raceOptions={raceOptions}
-                        genderOptions={genderOptions}
-                        flavorScopes={flavorScopes}
-                        busy={npcBusy === row.id}
-                        onSave={(answer) => void overrideNpc(row.id, npc, answer)}
-                      />
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-
                   <td className="pr-3 text-xs whitespace-nowrap">{STATUS_LABELS[current]}</td>
 
                   <td>
@@ -503,7 +471,8 @@ export default function ContributionTable({
 }
 
 /**
- * The Speaker column, in the three states finding 2 asks for -- keyed on `confirmed`, not
+ * The voice line of the merged NPC/Speaker column (finding 4), in the three states finding 2
+ * asks for -- keyed on `confirmed`, not
  * `provenance` alone, for the reason speakerNote already draws that distinction: `confirmed` is
  * the column resolveNpc and the override route agree means "trust this" (migration 0031 only
  * ever sets it for "corpus" or "moderator"), so a moderator's own settled answer gets the same
@@ -616,22 +585,23 @@ function SpeakerCell({
         ) : (
           <>
             {npc.npcKind === null ? (
-              <>
-                <select
-                  value={kind}
-                  onChange={(event) => setKind(event.target.value as NpcKind | "")}
-                  className="h-7 rounded border bg-transparent text-xs"
-                >
-                  <option value="">kind?</option>
-                  {NPC_KINDS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-                <span>·</span>
-              </>
+              <select
+                value={kind}
+                onChange={(event) => setKind(event.target.value as NpcKind | "")}
+                className="h-7 rounded border bg-transparent text-xs"
+              >
+                <option value="">kind?</option>
+                {NPC_KINDS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             ) : null}
+            {/* No separator spans between these -- each select already reads as its own field
+                (a border, a "race?"/"gender?" placeholder), and a bare `·`/`-` between them was
+                clutter, not information, once the gap the flex row already gives them separates
+                them just as clearly. */}
             <select
               value={race}
               onChange={(event) => {
@@ -647,7 +617,6 @@ function SpeakerCell({
                 </option>
               ))}
             </select>
-            <span>-</span>
             <select
               value={gender}
               onChange={(event) => {
@@ -663,7 +632,6 @@ function SpeakerCell({
                 </option>
               ))}
             </select>
-            <span>-</span>
           </>
         )}
         {known || (race && gender) ? (
@@ -680,16 +648,27 @@ function SpeakerCell({
             ))}
           </select>
         ) : null}
-        <Badge variant="outline" className="py-0 leading-5">
-          {npc.provenance}
-        </Badge>
+        {/* `none` gets no badge: it is the provenance's own way of saying "we tried and learned
+            nothing", which the form sitting right here already says -- see finding 5. `client`
+            still earns one, since "a guess came from somewhere" is real information the form
+            alone doesn't carry. */}
+        {npc.provenance !== "none" ? (
+          <Badge variant="outline" className="py-0 leading-5">
+            {npc.provenance}
+          </Badge>
+        ) : null}
       </div>
       <div className="flex items-center gap-1">
+        {/* min-w-0 keeps a flex item's default content-sized min-width from forcing this input
+            wider than the cell -- without it the placeholder ("why (e.g. a Wowhead link)") was
+            what pushed the row past the column's old 14rem cap and got clipped at the edge. The
+            merged NPC/Speaker column is also wider now (20rem, up from 14rem), giving the text
+            itself room to read rather than just fit. */}
         <Input
           value={note}
           onChange={(event) => setNote(event.target.value)}
           placeholder="why (e.g. a Wowhead link)"
-          className="h-7 flex-1 text-xs"
+          className="h-7 min-w-0 flex-1 text-xs"
         />
         <Button
           size="sm"
