@@ -49,7 +49,7 @@ beforeAll(async () => {
     await db().query(`select "archiveFile" from take limit 1`);
   } catch (error) {
     throw new Error(
-      "store.test.ts needs a migrated database (migration 0030). Run:\n" +
+      "store.test.ts needs a migrated database (migration 0031). Run:\n" +
         '  deploy/web/bin/migrate.sh "$PWD/apps/web"\n' +
         String(error),
     );

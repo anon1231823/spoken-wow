@@ -11,7 +11,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help dev build typecheck test bootstrap deploy-scripts releases rollback logs \
-        ssh-check store migrate-books
+        ssh-check store migrate-books db-pull
 
 APP := @spoken/web
 
@@ -96,6 +96,36 @@ LOCAL_DB ?= postgres://localhost/spoken_quests_dev
 # an older psql fails on. Both clusters are ours, so strip them rather than requiring the
 # droplet's psql to match this one. Same reasoning as make/zones.mk's UNRESTRICT.
 UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
+
+# The whole production database, copied into a local one of its own.
+#
+# For rehearsing a migration against the data it will actually meet. The per-section pulls
+# (make books-db-pull, make zones-db-pull) copy one table's worth of rows for everyday work;
+# this copies everything, because what a migration can break is the joins between tables --
+# a take whose lineId no longer resolves, an override naming a file the corpus dropped.
+#
+# INTO A DATABASE OF ITS OWN, not over $(LOCAL_DB). A rehearsal you cannot repeat is not a
+# rehearsal, and losing the local state to find that out is a bad trade. Override the name
+# with TARGET_DB=... if you want a second one to compare against.
+#
+# IT BRINGS PEOPLE'S DATA WITH IT: accounts, email addresses, sessions, and the prose
+# strangers wrote in reports. The ElevenLabs keys are encrypted at rest and the key that
+# opens them is an environment variable that does not travel in a dump -- but the rows do.
+# Drop the copy when the rehearsal is over.
+TARGET_DB ?= spoken_prod_rehearsal
+
+db-pull: require-droplet ## Copy the whole droplet database into a local one (TARGET_DB=...)
+	@echo "==> this copies production data, including accounts and report prose, onto this machine"
+	@printf 'Copy the droplet database into "$(TARGET_DB)" (dropping any existing copy)? [y/N] ' \
+	  && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
+	@dropdb --if-exists $(TARGET_DB)
+	@createdb $(TARGET_DB)
+	@$(SSH) $(DROPLET) 'set -a; . $(REMOTE_ROOT)/shared/app.env; set +a; pg_dump --no-owner --no-acl "$$DATABASE_URL"' \
+	  | $(UNRESTRICT) \
+	  | psql "postgres:///$(TARGET_DB)" -v ON_ERROR_STOP=1 -q
+	@echo "==> copied. Tables:"
+	@psql "postgres:///$(TARGET_DB)" -tAc "select count(*) || ' tables' from information_schema.tables where table_schema = 'public'"
+	@echo "==> rehearse the migration with:  DATABASE_URL=postgres:///$(TARGET_DB) deploy/web/bin/migrate.sh \"$$PWD/apps/web\""
 
 migrate-books: require-droplet ## Copy the local books corpus onto the droplet (REPLACES book_line)
 	@echo "local:"
