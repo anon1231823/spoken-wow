@@ -8,7 +8,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { closeDb, db } from "@/lib/db";
 
-import { getResolution, PROVENANCES, upsertResolution } from "./store";
+import { getResolution, getResolutionsById, PROVENANCES, upsertResolution } from "./store";
 
 // A bucket no other run shares: these ids are the primary key, so a fixed one would collide
 // between concurrent runs against the shared dev database.
@@ -177,6 +177,29 @@ describe("upsertResolution ranks every real provenance above 'none'", () => {
     expect(result.provenance).toBe(provenance);
     expect(result.race).toBe("tauren");
     expect((await getResolution("creature", npcId))?.provenance).toBe(provenance);
+  });
+});
+
+describe("getResolutionsById", () => {
+  it("returns the one row an id resolves to", async () => {
+    await upsertResolution(resolution());
+    const grouped = await getResolutionsById([npcId]);
+    expect(grouped.get(npcId)?.length).toBe(1);
+    expect(grouped.get(npcId)?.[0].race).toBe("tauren");
+  });
+
+  it("returns both rows when the id is ambiguous between kinds", async () => {
+    await upsertResolution(resolution());
+    await upsertResolution(resolution({ npcKind: "gameobject", race: null, npcName: "A Sign" }));
+    const grouped = await getResolutionsById([npcId]);
+    expect(grouped.get(npcId)?.length).toBe(2);
+    expect(grouped.get(npcId)?.map((r) => r.npcKind).sort()).toEqual(["creature", "gameobject"]);
+    await db().query(`delete from "npc_resolution" where "npcId" = $1`, [npcId]);
+  });
+
+  it("answers nothing for an id nobody has resolved", async () => {
+    const grouped = await getResolutionsById([npcId]);
+    expect(grouped.get(npcId)).toBeUndefined();
   });
 });
 

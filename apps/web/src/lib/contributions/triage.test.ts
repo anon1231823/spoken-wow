@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { npcSummaryFrom, questFor, resolveMissing } from "./triage";
+import { npcSummaryFrom, questFor, resolveMissing, unambiguousResolution } from "./triage";
 
 describe("questFor", () => {
   it("reads the title and quest id off a quest-moment envelope", async () => {
@@ -104,6 +104,23 @@ describe("npcSummaryFrom", () => {
       resolution({ race: null, gender: null, flavor: null, provenance: "none", confirmed: false }),
     );
     expect(summary.flavorOptions).toEqual([]);
+  });
+});
+
+describe("unambiguousResolution", () => {
+  it("gets a kind-less contribution's one matching row", () => {
+    expect(unambiguousResolution([resolution()])).toEqual(resolution());
+  });
+
+  it("gets nothing when the id is ambiguous between two kinds", () => {
+    expect(
+      unambiguousResolution([resolution(), resolution({ npcKind: "gameobject", race: null })]),
+    ).toBeUndefined();
+  });
+
+  it("gets nothing for an id nobody has resolved", () => {
+    expect(unambiguousResolution(undefined)).toBeUndefined();
+    expect(unambiguousResolution([])).toBeUndefined();
   });
 });
 

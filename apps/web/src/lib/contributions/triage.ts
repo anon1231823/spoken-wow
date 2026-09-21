@@ -61,6 +61,22 @@ export type NpcSummary = {
 };
 
 /**
+ * The one row an id-only lookup may stand in for, or undefined when the id doesn't resolve that
+ * cleanly.
+ *
+ * Exactly one row for the id means the number only exists in one of the two kind spaces for
+ * this NPC, so there is nothing to guess between -- using it for display is as safe as a keyed
+ * lookup would have been, had the envelope carried a kind. Two rows (a creature and a
+ * gameobject sharing a number) is the real ambiguity a kind-less envelope can't rule out, and
+ * guessing between them is exactly what resolveNpc's own docstring refuses to do at write time;
+ * reading it here would just move the same guess into the queue instead. Zero rows means the id
+ * hasn't been resolved under either kind, same as any other unresolved NPC.
+ */
+export function unambiguousResolution(rows: NpcResolution[] | undefined): NpcResolution | undefined {
+  return rows?.length === 1 ? rows[0] : undefined;
+}
+
+/**
  * One row's NPC/Speaker column content, from what the envelope itself observed and whatever
  * npc_resolution row (if any) already answers for that (kind, id).
  *

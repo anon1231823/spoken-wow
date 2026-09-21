@@ -123,6 +123,33 @@ export async function upsertResolution(
   return existing;
 }
 
+/**
+ * Every resolution row for any of the given ids, in either kind, grouped by id.
+ *
+ * An id-only lookup is safe to *read*: it does not guess anything, it just hands back whatever
+ * rows already exist so a caller can see whether the id is ambiguous (a creature and a
+ * gameobject sharing a number) before deciding what, if anything, to show. It is not safe to
+ * *write* through -- picking one of two rows to update, or inserting a fresh one, would be
+ * exactly the guess resolveNpc's own docstring refuses to make, silently filing one entity's
+ * data under the other's number. So this stays read-only sugar for display; every write in
+ * this module keeps requiring a kind, and this function must never be used to choose one.
+ */
+export async function getResolutionsById(npcIds: number[]): Promise<Map<number, NpcResolution[]>> {
+  if (npcIds.length === 0) return new Map();
+
+  const { rows } = await db().query<NpcResolution>(
+    `select ${COLUMNS} from "npc_resolution" where "npcId" = any($1::int[])`,
+    [npcIds],
+  );
+  const grouped = new Map<number, NpcResolution[]>();
+  for (const row of rows) {
+    const list = grouped.get(row.npcId) ?? [];
+    list.push(row);
+    grouped.set(row.npcId, list);
+  }
+  return grouped;
+}
+
 /** The map key getResolutions returns rows under -- the same pair getResolution takes, joined. */
 export function resolutionKey(npcKind: NpcKind, npcId: number): string {
   return `${npcKind}:${npcId}`;

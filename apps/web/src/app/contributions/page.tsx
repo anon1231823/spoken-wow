@@ -9,10 +9,16 @@ import { corpusLookup } from "@/lib/contributions/existing";
 import { isStatus, type ContributionStatus } from "@/lib/contributions/contributions";
 import { matchesSpeaker, NEEDS_DECISION, type SpeakerFilter } from "@/lib/contributions/query";
 import { listContributions, type Contribution } from "@/lib/contributions/store";
-import { npcSummaryFrom, questFor, resolveMissing, type NpcSummary } from "@/lib/contributions/triage";
+import {
+  npcSummaryFrom,
+  questFor,
+  resolveMissing,
+  unambiguousResolution,
+  type NpcSummary,
+} from "@/lib/contributions/triage";
 import { facets } from "@/lib/facets";
 import { observedFrom, resolveNpc } from "@/lib/npc/resolve";
-import { isProvenance, getResolutions, resolutionKey, type NpcKind } from "@/lib/npc/store";
+import { isProvenance, getResolutions, getResolutionsById, resolutionKey, type NpcKind } from "@/lib/npc/store";
 import { canRegenerate } from "@/lib/permissions";
 import { lineByPath } from "@/lib/zones/catalogue";
 
@@ -83,6 +89,17 @@ async function npcFor(contributions: Contribution[]): Promise<Record<number, Npc
   }
   const resolutions = await getResolutions(keys);
 
+  // A kind-less envelope (no `kind`, only ever true of the addon's oldest submissions -- see
+  // observedFrom) still names an id, and that id may resolve unambiguously even without a kind:
+  // getResolutionsById below is one query for every such id, not one per row, matching the
+  // discipline getResolutions already keeps for keyed rows.
+  const idOnlyIds = [...new Set(
+    observed
+      .filter(({ observed: o }) => o.npcKind === null && o.npcId !== null)
+      .map(({ observed: o }) => o.npcId as number),
+  )];
+  const idOnly = await getResolutionsById(idOnlyIds);
+
   // An NPC the batch read found nothing for is still resolvable, not merely displayable: an
   // envelope this old predates resolveNpc being called at intake at all (the three real rows
   // this table was designed against are exactly this -- filed before the addon reported `kind`
@@ -113,10 +130,14 @@ async function npcFor(contributions: Contribution[]): Promise<Record<number, Npc
     // name and gets a summary too, npcSummaryFrom's own reason for allowing a null npcKind.
     if (o.npcId === null) continue;
 
-    // A kind-less observation can never itself be a key into `resolutions` (getResolutions and
-    // the resolve loop above both require a kind), so there is nothing to look up for it here --
-    // only a resolution recorded under this envelope's own kind counts.
-    const resolution = o.npcKind !== null ? resolutions.get(resolutionKey(o.npcKind, o.npcId)) : undefined;
+    // A kind-less observation can never be a key into `resolutions` (getResolutions and the
+    // resolve loop above both require a kind), but it may still land on exactly one row of
+    // `idOnly` -- unambiguousResolution is what decides "exactly one", so a number that exists
+    // in both kind spaces falls through to undefined here rather than guessing.
+    const resolution =
+      o.npcKind !== null
+        ? resolutions.get(resolutionKey(o.npcKind, o.npcId))
+        : unambiguousResolution(idOnly.get(o.npcId));
     found[row.id] = await npcSummaryFrom({ npcKind: o.npcKind, npcId: o.npcId, npcName: o.npcName }, resolution);
   }
 
