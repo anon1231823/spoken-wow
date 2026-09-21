@@ -9,12 +9,14 @@ import { describe, expect, it } from "vitest";
 import { filtersFromParams } from "./search-request";
 
 describe("filtersFromParams", () => {
-  it("reads the line id a report links with", () => {
-    expect(filtersFromParams(new URLSearchParams("line=q:374:accept")).line).toBe("q:374:accept");
+  it("reads the line id a report links with", async () => {
+    expect((await filtersFromParams(new URLSearchParams("line=q:374:accept"))).line).toBe(
+      "q:374:accept",
+    );
   });
 
-  it("leaves the line filter out when the param is absent or empty", () => {
-    expect(filtersFromParams(new URLSearchParams("")).line).toBeUndefined();
-    expect(filtersFromParams(new URLSearchParams("line=")).line).toBeUndefined();
+  it("leaves the line filter out when the param is absent or empty", async () => {
+    expect((await filtersFromParams(new URLSearchParams(""))).line).toBeUndefined();
+    expect((await filtersFromParams(new URLSearchParams("line="))).line).toBeUndefined();
   });
 });

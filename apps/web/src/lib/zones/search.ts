@@ -13,7 +13,7 @@
 
 import { isDirty } from "@/lib/generation/dirty";
 
-import type { CatalogueEntry, LineFlag, SearchContext, Take } from "./catalogue";
+import type { CatalogueEntry, SearchContext, Take } from "./catalogue";
 import { PAGE_SIZE, SHORT_LINE, type LineFilters, type State } from "./filters";
 
 export type ResultLine = {
@@ -32,7 +32,6 @@ export type ResultLine = {
   file: string;
   state: State;
   take: Take | null;
-  flag: LineFlag | null;
   /** How many reports on this line are still open. The count is public; the bodies are
    *  not -- see SearchContext.reports. */
   reportsOpen: number;
@@ -82,7 +81,6 @@ export function decorate(entry: CatalogueEntry, context: SearchContext): ResultL
     file: entry.file,
     state: stateOf(entry, take),
     take: take ?? null,
-    flag: context.flags.get(entry.id) ?? null,
     reportsOpen: context.reports.get(entry.id) ?? 0,
     // The spoken text, not the full one: the lexicon is applied to what is sent.
     dirty: take
@@ -131,17 +129,7 @@ export function matching(lines: ResultLine[], filters: LineFilters = {}): Result
   if (filters.dirty) out = out.filter((l) => l.dirty);
   if (filters.short) out = out.filter((l) => l.short);
 
-  if (filters.flag) {
-    // 'unreviewed' is the absence of a row, not a status -- it is what makes a
-    // listening pass finishable, so it has to be expressible as a filter.
-    out =
-      filters.flag === "unreviewed"
-        ? out.filter((l) => l.flag === null)
-        : out.filter((l) => l.flag?.status === filters.flag);
-  }
-
-  // The triage worklist, and the counterpart of `flag: 'bad'`: what somebody else has
-  // complained about, as opposed to what an editor has already judged.
+  // The triage worklist: what somebody has complained about and nobody has answered.
   if (filters.reports === "open") out = out.filter((l) => l.reportsOpen > 0);
 
   // An id the catalogue no longer carries matches nothing rather than everything: a report

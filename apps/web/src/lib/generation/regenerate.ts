@@ -15,22 +15,24 @@
  * having been computed in Python from text that nobody could edit yet.
  */
 import { audioRelPath } from "@/lib/audio";
-import { lineIndex, type CorpusLine } from "@/lib/corpus";
-import { readIgnores } from "@/lib/issues/ignores";
-import { readOverrides } from "@/lib/issues/overrides";
+import type { CorpusLine } from "@/lib/corpus";
+import { lineIndex } from "@/lib/quests/catalogue";
+import { readIgnores } from "@/lib/quests/ignores";
+import { readOverrides } from "@/lib/quests/overrides";
+import { commitTake } from "@/lib/takes/commit";
 import { INVALID_CHARS, isVoiceable } from "@/lib/text-gate";
 
 import { currentLocator } from "./dictionary";
 import { fileDefaults } from "./files";
 import { applyPronunciation } from "./pronunciation";
 import { canonicalNpcId, seedFor } from "./seed";
-import { commitVersion } from "./history";
+import { spokenHash } from "./spoken-hash";
 import { currentConfig } from "./settings";
 import { generationStatus } from "./status";
 import { accentTagged, audioTags, NARRATOR_VOICE, segments } from "./narration";
 import { textToDialogue, textToSpeech } from "./tts";
-import { BUSY, withFileLock } from "./lock";
-import { failure, type Failure } from "./errors";
+import { BUSY, withTakeLock } from "./lock";
+import { busy, failure, type Failure } from "./errors";
 import type { ElevenLabsOptions } from "@/lib/voices/elevenlabs";
 
 export type RegenerateSuccess = {
@@ -51,7 +53,6 @@ export type RegenerateSuccess = {
   dictionaryVersion: string | null;
   /** Other NPCs whose lines resolve to this same file, and who therefore also changed. */
   sharedWith: number;
-  archivedInherited: boolean;
 };
 
 export type RegenerateResult = RegenerateSuccess | { ok: false; failure: Failure };
@@ -62,8 +63,8 @@ export type RegenerateResult = RegenerateSuccess | { ok: false; failure: Failure
  * A gossip lineId is g:{md5(text + race + gender)}, so it can name many NPCs at once - they
  * share the text, the voice and the mp3, and differ only in who says it.
  */
-function resolve(lineId: string): CorpusLine[] | null {
-  const group = lineIndex().get(lineId);
+async function resolve(lineId: string): Promise<CorpusLine[] | null> {
+  const group = (await lineIndex()).get(lineId);
   return group && group.length > 0 ? group : null;
 }
 
@@ -72,7 +73,7 @@ export async function regenerateLine(
   createdBy: string,
   options: ElevenLabsOptions = {},
 ): Promise<RegenerateResult> {
-  const group = resolve(lineId);
+  const group = await resolve(lineId);
   if (!group) {
     return { ok: false, failure: { ...failure("bad-request", `no line ${lineId}`), status: 404 } };
   }
@@ -139,7 +140,7 @@ export async function regenerateLine(
     };
   }
 
-  const outcome = await withFileLock(file, async (): Promise<RegenerateResult> => {
+  const outcome = await withTakeLock("quests", file, async (): Promise<RegenerateResult> => {
     const config = await currentConfig();
     // The accent direction goes on last, so it sits in front of the words rather than in
     // front of a `<hic>` audioTags has yet to rewrite. Inside spokenText and not bolted on at
@@ -203,11 +204,9 @@ export async function regenerateLine(
         );
     if (!speech.ok) return { ok: false, failure: speech.failure };
 
-    const committed = await commitVersion({
-      file,
-      // Already trimmed of its lead-in by tts.ts, so the store, the archive and `bytes` all
-      // describe the audio the addon will play.
-      data: speech.audio,
+    // Already trimmed of its lead-in by tts.ts, so the archived file and `bytes` both
+    // describe the audio the addon will play.
+    const committed = await commitTake("quests", file, speech.audio, {
       lineId,
       voice: line.voice,
       narratorVoice: narrated ? NARRATOR_VOICE : null,
@@ -221,7 +220,7 @@ export async function regenerateLine(
       settings: narrated
         ? { stability: config.voiceSettings.stability }
         : config.voiceSettings,
-      spokenText,
+      spokenHash: spokenHash(spokenText),
       dictionaryVersion: dictionary?.versionId ?? null,
       leadIn: speech.leadIn,
       leadInSec: speech.leadInSec,
@@ -242,19 +241,9 @@ export async function regenerateLine(
       spokenText,
       dictionaryVersion: dictionary?.versionId ?? null,
       sharedWith: new Set(group.map((l) => `${l.npcType}:${l.npcId}`)).size - 1,
-      archivedInherited: committed.archivedInherited,
     };
   });
 
-  if (outcome === BUSY) {
-    return {
-      ok: false,
-      failure: {
-        ...failure("upstream", `${file} is already being regenerated; try again in a moment`),
-        status: 409,
-        fatal: false,
-      },
-    };
-  }
+  if (outcome === BUSY) return { ok: false, failure: busy(file) };
   return outcome;
 }

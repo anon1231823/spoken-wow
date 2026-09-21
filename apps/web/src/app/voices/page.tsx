@@ -25,7 +25,7 @@ export default async function Page() {
   // this page exists.
   if (!session || !canManageVoices(session.user.role)) notFound();
 
-  const all = slots();
+  const all = await slots();
 
   // One memoised read of the account: which voices exist, which models the plan allows, and
   // what is left of the character budget. The page has to be useful before the ElevenLabs key

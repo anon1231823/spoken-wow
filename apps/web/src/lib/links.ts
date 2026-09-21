@@ -1,3 +1,4 @@
+import type { Source } from "@/lib/sections";
 /**
  * Where one page sends you to another.
  *
@@ -7,8 +8,6 @@
  * links and no results, and reports no error at all. A dead deep link that still returns
  * 200 is the kind a build cannot catch, so the addresses live in one tested module.
  */
-
-import type { Source } from "@/lib/reports/reports";
 
 /** Which field a free-text query is matched against. Mirrors LineFilters["filter"]. */
 type Scope = "any" | "npc" | "quest" | "text";

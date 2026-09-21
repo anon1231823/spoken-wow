@@ -16,6 +16,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { VOICE_SAMPLES_DIR } from "@/lib/paths";
+import { writeAtomic } from "@/lib/takes/bytes";
 import { isStoredSampleName } from "./names";
 import { isVoiceSlot } from "./slots";
 
@@ -30,14 +31,14 @@ export const MAX_TOTAL_BYTES = 50 * 1024 * 1024;
 
 export type Sample = { file: string; bytes: number; uploadedAt: string };
 
-export function voiceDir(voice: string): string {
-  if (!isVoiceSlot(voice)) throw new Error(`unknown voice slot ${voice}`);
+export async function voiceDir(voice: string): Promise<string> {
+  if (!(await isVoiceSlot(voice))) throw new Error(`unknown voice slot ${voice}`);
   return path.join(VOICE_SAMPLES_DIR, voice);
 }
 
-export function samplePath(voice: string, file: string): string {
+export async function samplePath(voice: string, file: string): Promise<string> {
   if (!isStoredSampleName(file)) throw new Error(`unsafe sample name ${file}`);
-  return path.join(voiceDir(voice), file);
+  return path.join(await voiceDir(voice), file);
 }
 
 export function extensionOf(filename: string): string {
@@ -99,7 +100,7 @@ export function storedNameFor(originalName: string): string {
 }
 
 export async function listSamples(voice: string): Promise<Sample[]> {
-  const dir = voiceDir(voice);
+  const dir = await voiceDir(voice);
   let names: string[];
   try {
     names = await fs.readdir(dir);
@@ -117,39 +118,21 @@ export async function listSamples(voice: string): Promise<Sample[]> {
   return samples.sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
 }
 
-/**
- * Write one clip.
- *
- * Written to a dotted `.part` name and renamed into place: rename is atomic within a
- * filesystem, so a listing can never see a half-written upload, and the leading dot keeps
- * the partial out of the way even if a write is interrupted.
- */
+/** Write one clip, atomically, so a listing can never see a half-written upload. */
 export async function storeSample(
   voice: string,
   originalName: string,
   data: Buffer,
 ): Promise<Sample> {
-  const dir = voiceDir(voice);
-  await fs.mkdir(dir, { recursive: true });
-
   const file = storedNameFor(originalName);
-  const partial = path.join(dir, `.${file}.part`);
-  const target = path.join(dir, file);
-
-  try {
-    await fs.writeFile(partial, data);
-    await fs.rename(partial, target);
-  } catch (error) {
-    await fs.rm(partial, { force: true });
-    throw error;
-  }
+  await writeAtomic(path.join(await voiceDir(voice), file), data);
 
   return { file, bytes: data.byteLength, uploadedAt: new Date().toISOString() };
 }
 
 export async function deleteSample(voice: string, file: string): Promise<boolean> {
   try {
-    await fs.unlink(samplePath(voice, file));
+    await fs.unlink(await samplePath(voice, file));
     return true;
   } catch {
     return false;

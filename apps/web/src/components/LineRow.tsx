@@ -9,10 +9,10 @@ import {
   PencilIcon,
   PlayIcon,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
-import IssueChip from "./IssueChip";
-import LineHistory from "./LineHistory";
+import TakeSelector from "./TakeSelector";
 import RegenerateButton from "./RegenerateButton";
 import { Button } from "./ui/button";
 import { targetForLine } from "@/lib/reports/line-target";
@@ -77,10 +77,14 @@ type Props = {
   line: ResultLine;
   current: boolean;
   canRegenerate: boolean;
+  /** Editor and up: may read the report bodies, so the count links to the queue. */
+  canTriage: boolean;
   state?: LineState;
   blocked: string | null;
-  /** How many takes this line's file has. Zero means there is nothing to go back to. */
+  /** How many takes this line's file has. Zero means nothing has been cut yet. */
   takes: number;
+  /** Which take is live, for the Audio column. Null where nothing has been cut. */
+  version: number | null;
   /** The live audio was made from text that has since changed. */
   stale: boolean;
   /**
@@ -128,9 +132,11 @@ export default function LineRow({
   line,
   current,
   canRegenerate,
+  canTriage,
   state,
   blocked,
   takes,
+  version,
   stale,
   dirty,
   onPlay,
@@ -243,69 +249,27 @@ export default function LineRow({
           <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "line-clamp-2")}>
             {line.override ?? line.text}
           </span>
-          {/* The regeneration outcome replaces the absence marker: once a line has just been
-              made, "no audio" is stale and confusing rather than merely redundant. */}
-          {state?.phase === "error" ? (
-            <span className="text-destructive mt-0.5 max-w-[12rem] shrink-0 text-right text-xs">
-              {state.message}
-            </span>
-          ) : state?.phase === "done" ? (
-            <span className="mt-0.5 shrink-0 text-xs text-emerald-400">
-              regenerated{state.version > 0 && ` · v${state.version}`}
-            </span>
-          ) : (
-            <span className="mt-0.5 flex shrink-0 gap-2 text-xs">
-              {/* Stale before missing: "no audio" and "the audio is old" cannot both be
-                  true, and a rewrite is the more actionable of the two. */}
-              {stale && (
-                <span
-                  className="text-amber-300"
-                  title="This audio was made from text that has since changed"
-                >
-                  audio outdated
-                </span>
-              )}
-              {/* Beside "audio outdated" rather than instead of it: the two are different
-                  complaints about one file and either can be true alone. */}
-              {dirty && (
-                <span
-                  className="text-amber-300"
-                  title="This audio was cut before a pronunciation it speaks was changed"
-                >
-                  pronunciation
-                </span>
-              )}
-              {/* First of the chips: it is the reason the row is on screen at all, since a
-                  search only shows these when they were asked for. */}
-              {line.ignored && (
-                <span className="text-muted-foreground" title={line.ignored}>
-                  ignored
-                </span>
-              )}
-              {line.narration && (
-                <span
-                  className="text-sky-300"
-                  title="A narrator reads this line's stage directions"
-                >
-                  narration
-                </span>
-              )}
-              {line.override && !line.narrationRestored && !stale && (
-                <span className="text-muted-foreground" title="This line's spoken text was rewritten">
-                  rewritten
-                </span>
-              )}
-              {missing && (
-                <span
-                  className={cn(
-                    missing.kind === "gap" ? "text-destructive" : "text-muted-foreground",
-                  )}
-                >
-                  {missing.label}
-                </span>
-              )}
-            </span>
-          )}
+          {/* What is true of the TEXT stays beside the text; what is true of the audio
+              moved to the Audio column, where it lines up down the page. */}
+          <span className="mt-0.5 flex shrink-0 gap-2 text-xs">
+            {/* First of these: it is the reason the row is on screen at all, since a
+                search only shows an ignored line when it was asked for. */}
+            {line.ignored && (
+              <span className="text-muted-foreground" title={line.ignored}>
+                ignored
+              </span>
+            )}
+            {line.narration && (
+              <span className="text-sky-300" title="A narrator reads this line's stage directions">
+                narration
+              </span>
+            )}
+            {line.override && !line.narrationRestored && !stale && (
+              <span className="text-muted-foreground" title="This line's spoken text was rewritten">
+                rewritten
+              </span>
+            )}
+          </span>
           {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle needs
               a real control. It doubles as the only thing on screen saying rows expand. */}
           <button
@@ -325,12 +289,82 @@ export default function LineRow({
         </div>
       </td>
 
-      <td className="px-2 py-2">
-        {line.issue ? <IssueChip issue={line.issue} /> : <span className="text-muted-foreground">—</span>}
+      {/* Audio, in a column of its own rather than floated into the prose, the way the
+          books table has always had it: the point of a column is that it lines up down the
+          page, and "which of these has no clip yet" is the question this screen is most
+          often asked. It holds what the clip's state is, and which take that clip is. */}
+      <td className="px-2 py-2 text-xs whitespace-nowrap">
+        {/* The regeneration outcome replaces the state: once a line has just been made,
+            "no audio" is stale and confusing rather than merely redundant. */}
+        {state?.phase === "error" ? (
+          <span className="text-destructive">{state.message}</span>
+        ) : state?.phase === "done" ? (
+          <span className="text-emerald-400">
+            v{state.version}
+          </span>
+        ) : missing ? (
+          <span
+            className={missing.kind === "gap" ? "text-destructive" : "text-muted-foreground"}
+            title={missing.kind === "skip" ? "This line is never voiced" : undefined}
+          >
+            {missing.label}
+          </span>
+        ) : stale ? (
+          // Stale before the take number: "the audio is old" is the more actionable of the
+          // two things this cell could say, and a rewrite is why somebody is here.
+          <span className="text-amber-300" title="Made from text that has since changed">
+            audio outdated
+          </span>
+        ) : (
+          // Which take is live, and the way to any other. The label IS the control, so the
+          // history is no longer hidden behind a second icon.
+          <TakeSelector
+            source="quests"
+            file={line.audioPath}
+            version={version}
+            canRestore={canRegenerate}
+            takes={takes}
+            onRestored={(restored) => onRestored(line.audioPath, restored)}
+          />
+        )}
+        {/* Beneath the state rather than inside it: the text has not moved, so a line can
+            be current and dirty at once, and one word cannot say both. */}
+        {dirty && (
+          <div
+            className="text-amber-300"
+            title="Cut before a pronunciation it speaks was changed"
+          >
+            pronunciation
+          </div>
+        )}
       </td>
 
       <td className="py-1.5 pr-1 pl-0">
-        <span className="flex items-center justify-end">
+        <span className="flex items-center justify-end whitespace-nowrap">
+          {/* The count is public; the bodies are not. So everyone sees how many open
+              reports a line carries -- "somebody has already said so" is the answer to the
+              question a dissatisfied listener is about to ask -- and a triager gets a link
+              to where they can be read. The same chip the zones and books rows carry. */}
+          {line.reportsOpen > 0 &&
+            (canTriage ? (
+              <Link
+                href="/reports?source=quests"
+                title={`${line.reportsOpen} open report${line.reportsOpen === 1 ? "" : "s"}`}
+                className="flex items-center gap-0.5 rounded bg-amber-500/15 px-1 text-xs text-amber-400"
+              >
+                <MessageSquareIcon className="size-3" />
+                {line.reportsOpen}
+              </Link>
+            ) : (
+              <span
+                className="flex items-center gap-0.5 rounded bg-amber-500/15 px-1 text-xs text-amber-400"
+                title={`${line.reportsOpen} open report${line.reportsOpen === 1 ? "" : "s"}`}
+              >
+                <MessageSquareIcon className="size-3" />
+                {line.reportsOpen}
+              </span>
+            ))}
+
           {/* Outside the canRegenerate gate, deliberately: reporting is what a player who
               cannot sign in has, and /api/reports is unauthenticated for the same reason.
               Hidden only when the line has no address the report page could resolve. */}
@@ -379,14 +413,6 @@ export default function LineRow({
               >
                 <Eraser className="size-3.5 text-amber-300" />
               </Button>
-            )}
-            {/* Only shown once there is something to go back to, so an untouched line keeps
-                a single control rather than two. */}
-            {takes > 0 && (
-              <LineHistory
-                file={line.audioPath}
-                onRestored={(version) => onRestored(line.audioPath, version)}
-              />
             )}
             <RegenerateButton
               busy={state?.phase === "busy"}

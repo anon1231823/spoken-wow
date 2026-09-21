@@ -9,7 +9,7 @@
  * Being a closed set derived from data also makes it a whitelist, which is what keeps a
  * slot name safe to use as a path segment. Same reasoning as isSafeAudioPath in range.ts.
  */
-import { loadCorpus } from "@/lib/corpus";
+import { corpus } from "@/lib/quests/catalogue";
 import { hasNarration, NARRATOR_VOICE } from "@/lib/generation/narration";
 
 export type VoiceSlot = {
@@ -30,11 +30,11 @@ export type VoiceSlot = {
  * Only generatable lines count: progress text and lines with unresolved template tokens are
  * never voiced, so a voice needed by nothing else is not needed at all.
  */
-export function voiceSlots(): VoiceSlot[] {
+export async function voiceSlots(): Promise<VoiceSlot[]> {
   const lines = new Map<string, number>();
   const npcs = new Map<string, Set<number>>();
 
-  for (const line of loadCorpus().lines) {
+  for (const line of (await corpus()).lines) {
     if (!line.generatable) continue;
     lines.set(line.voice, (lines.get(line.voice) ?? 0) + 1);
     if (!npcs.has(line.voice)) npcs.set(line.voice, new Set());
@@ -47,7 +47,7 @@ export function voiceSlots(): VoiceSlot[] {
     npcCount: npcs.get(name)!.size,
   }));
 
-  return [...derived, narratorSlot()].sort((a, b) => a.name.localeCompare(b.name));
+  return [...derived, await narratorSlot()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
@@ -61,8 +61,8 @@ export function voiceSlots(): VoiceSlot[] {
  *
  * Being a constant rather than user input, it does not weaken isVoiceSlot as a whitelist.
  */
-function narratorSlot(): VoiceSlot {
-  const narrated = loadCorpus().lines.filter((line) => hasNarration(line.text));
+async function narratorSlot(): Promise<VoiceSlot> {
+  const narrated = (await corpus()).lines.filter((line) => hasNarration(line.text));
   return {
     name: NARRATOR_VOICE,
     lineCount: narrated.length,
@@ -71,12 +71,21 @@ function narratorSlot(): VoiceSlot {
 }
 
 const cacheKey = Symbol.for("wow-voiceover.slots");
-type CacheHolder = { [cacheKey]?: VoiceSlot[] };
+type CacheHolder = { [cacheKey]?: { lines: unknown; slots: VoiceSlot[] } };
 
-export function slots(): VoiceSlot[] {
+/**
+ * Tied to the catalogue's own array rather than memoised forever: which voices the corpus
+ * needs is derived from the lines, and the lines are a table now -- an edit that moves a
+ * line to another voice moves this list with it.
+ */
+export async function slots(): Promise<VoiceSlot[]> {
+  const lines = (await corpus()).lines;
   const holder = globalThis as CacheHolder;
-  if (!holder[cacheKey]) holder[cacheKey] = voiceSlots();
-  return holder[cacheKey]!;
+
+  if (!holder[cacheKey] || holder[cacheKey].lines !== lines) {
+    holder[cacheKey] = { lines, slots: await voiceSlots() };
+  }
+  return holder[cacheKey].slots;
 }
 
 /**
@@ -86,6 +95,6 @@ export function slots(): VoiceSlot[] {
  * filesystem or ElevenLabs. Membership of a fixed set, not pattern matching: `../` and an
  * absolute path fail for the same reason `orc-mail` does.
  */
-export function isVoiceSlot(name: string): boolean {
-  return slots().some((slot) => slot.name === name);
+export async function isVoiceSlot(name: string): Promise<boolean> {
+  return (await slots()).some((slot) => slot.name === name);
 }

@@ -8,6 +8,8 @@ import Pagination from "@/components/Pagination";
 import RegenerateDialog from "@/components/RegenerateDialog";
 import RegenerationPanel from "@/components/RegenerationPanel";
 import { BookList } from "@/components/books/BookList";
+import ReportDialog from "@/components/ReportDialog";
+import { PageTextDialog } from "@/components/books/PageTextDialog";
 import type { RowState } from "@/components/books/PageRow";
 import { Player } from "@/components/books/Player";
 import { SearchBar } from "@/components/books/SearchBar";
@@ -58,6 +60,13 @@ export function Explorer({ books }: { books: BookFacet[] }) {
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState<ResultLine | null>(null);
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
+  // Anyone can open this one, signed in or not -- see ReportDialog.
+  const [reportFor, setReportFor] = useState<ResultLine | null>(null);
+  // The page whose text is being rewritten, and the rewrites made since the last search:
+  // re-running it would reorder the table under the cursor, and with ?state=stale the page
+  // just edited would vanish as it was saved.
+  const [editFor, setEditFor] = useState<ResultLine | null>(null);
+  const [rewritten, setRewritten] = useState<Record<string, string>>({});
   // Bumped per page after a regeneration, to bust the browser's audio cache: the filename
   // does not change, so without this the take that was replaced keeps playing.
   const [versions, setVersions] = useState<Record<string, number>>({});
@@ -466,10 +475,24 @@ export function Explorer({ books }: { books: BookFacet[] }) {
         result && (
           <BookList
             // Cleared in this session laid over the fetched rows, the way the zones
-            // explorer lays a flag over its own: the search said what was true when it ran.
-            lines={result.lines.map((line) =>
-              cleared.has(line.file) ? { ...line, dirty: false } : line,
-            )}
+            // explorer lays a rewrite over its own: the search said what was true when it
+            // ran.
+            lines={result.lines.map((line) => {
+              let row = cleared.has(line.file) ? { ...line, dirty: false } : line;
+              // A rewritten page is stale by definition -- its text no longer hashes to
+              // what was spoken -- so the state moves with the text rather than waiting
+              // for a refetch.
+              if (line.id in rewritten) {
+                const text = rewritten[line.id];
+                row = {
+                  ...row,
+                  text,
+                  chars: text.length,
+                  state: row.state === "missing" ? "missing" : "stale",
+                };
+              }
+              return row;
+            })}
             current={current}
             canRegenerate={canRegenerate}
             rowStates={rowStates}
@@ -477,6 +500,14 @@ export function Explorer({ books }: { books: BookFacet[] }) {
             onClearDirty={(line) => clearDirty([line.file])}
             onRegenerate={regenerateOne}
             onSelectBook={(line) => updateFilters({ bookId: line.bookId })}
+            onReport={setReportFor}
+            onEditText={setEditFor}
+            onRestored={(line, version) => {
+              // The player's cache buster, so the clip that was just put back is the one
+              // that plays rather than the take it replaced -- the file name does not move.
+              setVersions((state) => ({ ...state, [line.id]: version }));
+              refetch();
+            }}
           />
         )
       )}
@@ -496,6 +527,17 @@ export function Explorer({ books }: { books: BookFacet[] }) {
           audioRef={audio}
         />
       </div>
+
+      <PageTextDialog
+        line={editFor}
+        onClose={() => setEditFor(null)}
+        onSaved={(line, text) => setRewritten((current) => ({ ...current, [line.id]: text }))}
+      />
+
+      <ReportDialog
+        subject={reportFor && { source: "books", line: reportFor }}
+        onClose={() => setReportFor(null)}
+      />
 
       <RegenerateDialog
         pending={pendingBatch}

@@ -11,7 +11,7 @@
  * segment is encoding risk for no benefit.
  */
 import { requireApiKey, requireRegenerate } from "@/lib/generation/authz";
-import { publish, regenerateZoneLine } from "@/lib/zones/regenerate";
+import { regenerateZoneLine } from "@/lib/zones/regenerate";
 
 export const dynamic = "force-dynamic";
 
@@ -36,14 +36,6 @@ export async function POST(request: Request) {
       { status: result.failure.status },
     );
   }
-
-  // The addon resolves every clip through Sounds.lua, so a take that is not in it is
-  // unreachable. A batch publishes once when the queue drains; a single line has no drain
-  // to wait for, and leaving it unpublished until the next batch would make one-off
-  // regeneration the one path whose result the addon cannot play.
-  await publish().catch((error: unknown) => {
-    console.error("zones: could not rebuild the lookup after a single regeneration", error);
-  });
 
   return Response.json(result);
 }

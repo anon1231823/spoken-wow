@@ -13,7 +13,7 @@
  */
 import { acknowledge } from "@/lib/generation/dirty";
 import { requireRegenerate } from "@/lib/generation/authz";
-import { isSource } from "@/lib/reports/reports";
+import { isSource } from "@/lib/sections";
 
 export const dynamic = "force-dynamic";
 

@@ -26,22 +26,12 @@ import { Player as ZonesPlayer } from "@/components/zones/Player";
 import { explorerHref, reportHref, targetExplorerHref } from "@/lib/links";
 import type { ResultLine as BookLine } from "@/lib/books/search";
 import { searchPath, type SourceLine } from "@/lib/reports/detail";
-import {
-  CATEGORIES,
-  SOURCES,
-  STATUSES,
-  CATEGORY_COLUMN,
-  SOURCE_LABELS,
-  STATUS_LABELS,
-  type Category,
-  type Report,
-  type Source,
-  type Status,
-} from "@/lib/reports/reports";
+import { CATEGORIES, STATUSES, CATEGORY_COLUMN, SOURCE_LABELS, STATUS_LABELS, type Category, type Report, type Status } from "@/lib/reports/reports";
 import { applyResolutions } from "@/lib/reports/rows";
 import type { ResultLine as QuestLine } from "@/lib/search";
 import { cn } from "@/lib/utils";
 import type { ResultLine as ZoneLine } from "@/lib/zones/search";
+import { SOURCES, type Source } from "@/lib/sections";
 
 const STATUS_OPTIONS = STATUSES.map((status) => ({
   value: status,

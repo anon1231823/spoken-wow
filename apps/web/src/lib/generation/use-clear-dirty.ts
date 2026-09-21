@@ -15,6 +15,8 @@
  */
 import { useCallback, useState } from "react";
 
+import type { Source } from "@/lib/sections";
+
 import { clearDirty } from "./client";
 
 export type DirtyClearing = {
@@ -23,7 +25,7 @@ export type DirtyClearing = {
   clear: (files: string[]) => void;
 };
 
-export function useClearDirty(source: "quests" | "zones" | "books"): DirtyClearing {
+export function useClearDirty(source: Source): DirtyClearing {
   const [cleared, setCleared] = useState<Set<string>>(new Set());
 
   const clear = useCallback(

@@ -1,21 +1,18 @@
 "use client";
 
 import {
-  AlertTriangle,
-  Check,
   ChevronDownIcon,
   Eraser,
   FlagIcon,
   MessageSquare,
   PencilIcon,
   PlayIcon,
-  RotateCcw,
-  RotateCw,
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import RegenerateButton from "@/components/RegenerateButton";
+import TakeSelector from "@/components/TakeSelector";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ResultLine } from "@/lib/zones/search";
@@ -28,21 +25,18 @@ export type RowState =
 type Props = {
   line: ResultLine;
   current: boolean;
-  /** Editor and up: the flag controls are drawn as buttons rather than as read-only marks. */
-  canReview: boolean;
-  /** Editor and up: the rewrite, restore and regenerate controls. */
+  /** Editor and up: the rewrite and regenerate controls. */
   canRegenerate: boolean;
   /** Editor and up: may read the report bodies, so the count badge links to the queue. */
   canTriage: boolean;
   state?: RowState;
   onPlay: (line: ResultLine) => void;
   onNarrowToZone: (line: ResultLine) => void;
-  onFlag: (line: ResultLine, status: "bad" | "ok" | null) => void;
-  onNote: (line: ResultLine) => void;
   onReport: (line: ResultLine) => void;
+  /** An earlier take is live again, so the row and the player can catch up. */
+  onRestored: (line: ResultLine, version: number) => void;
   onEditText: (line: ResultLine) => void;
   onRegenerate: (line: ResultLine) => void;
-  onRestore: (line: ResultLine) => void;
   /** Say this take is fine as it stands, despite a pronunciation having moved under it. */
   onClearDirty: (line: ResultLine) => void;
 };
@@ -64,25 +58,18 @@ const STATE_LABEL = {
 export function LineRow({
   line,
   current,
-  canReview,
   canRegenerate,
   canTriage,
   state,
   onPlay,
   onNarrowToZone,
-  onFlag,
-  onNote,
   onReport,
+  onRestored,
   onEditText,
   onRegenerate,
-  onRestore,
   onClearDirty,
 }: Props) {
   const playable = line.state !== "missing";
-  const status = line.flag?.status ?? null;
-  // More than one take means there is something to go back to. Restoring is free, so the
-  // control is only ever hidden when it would do nothing.
-  const restorable = (line.take?.takes ?? 0) > 1;
   const [expanded, setExpanded] = useState(false);
 
   /**
@@ -166,35 +153,6 @@ export function LineRow({
             </span>
           )}
 
-          {/* The regeneration outcome replaces the state chips: once a line has just been
-              made, "no audio" is stale and confusing rather than merely redundant. */}
-          {state?.phase === "error" ? (
-            <span className="text-destructive mt-0.5 max-w-[12rem] shrink-0 text-right text-xs">
-              {state.message}
-            </span>
-          ) : state?.phase === "done" ? (
-            <span className="mt-0.5 shrink-0 text-xs text-emerald-400">
-              regenerated · v{state.version}
-            </span>
-          ) : (
-            STATE_LABEL[line.state] && (
-              <span className={cn("mt-0.5 shrink-0 text-xs", STATE_STYLE[line.state])}>
-                {STATE_LABEL[line.state]}
-              </span>
-            )
-          )}
-
-          {/* Beside the state rather than inside it: the text has not moved, so this line is
-              `current` and dirty at once, and one word cannot say both. */}
-          {line.dirty && (
-            <span
-              className="mt-0.5 shrink-0 text-xs text-amber-300"
-              title="Cut before a pronunciation it speaks was changed"
-            >
-              pronunciation
-            </span>
-          )}
-
           {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle needs
               a real control. It doubles as the only thing on screen saying rows expand. */}
           <button
@@ -214,82 +172,49 @@ export function LineRow({
         </div>
       </td>
 
-      {/* The reviewer's verdict on this line, which is the zones section's own column: the
-          quests explorer has a machine's finding here instead. */}
-      <td className="px-2 py-2 whitespace-nowrap">
-        <div className="flex items-center gap-1.5">
-          {/* Without review rights the verdict is still worth seeing -- "someone has already
-              reported this one" is the answer to the question a listener who dislikes a line
-              is about to ask -- but only when there is one. An empty row of greyed-out
-              controls advertises three things that cannot be done. */}
-          {!canReview && status === "bad" && (
-            <span className="bg-destructive/15 text-destructive flex items-center gap-0.5 rounded px-1 text-xs">
-              <AlertTriangle size={11} /> bad
-            </span>
-          )}
-          {!canReview && status === "ok" && (
-            <span className="flex items-center gap-0.5 px-1 text-xs text-emerald-400">
-              <Check size={11} /> ok
-            </span>
-          )}
+      {/* Audio, in a column of its own rather than floated into the prose, the way the
+          books table has always had it: the point of a column is that it lines up down the
+          page, and "which of these has no clip yet" is the question this screen is most
+          often asked. It holds what the clip's state is, and which take that clip is. */}
+      <td className="px-2 py-2 text-xs whitespace-nowrap">
+        {/* The regeneration outcome replaces the state: once a line has just been made,
+            "no audio" is stale and confusing rather than merely redundant. */}
+        {state?.phase === "error" ? (
+          <span className="text-destructive">{state.message}</span>
+        ) : state?.phase === "done" ? (
+          <span className="text-emerald-400">v{state.version}</span>
+        ) : STATE_LABEL[line.state] ? (
+          <span className={STATE_STYLE[line.state]}>{STATE_LABEL[line.state]}</span>
+        ) : (
+          // Which take is live, and the way to any other. The label IS the control, so
+          // there is no second icon for a history nobody knew was there.
+          <TakeSelector
+            source="zones"
+            file={line.file}
+            version={line.take?.version ?? null}
+            canRestore={canRegenerate}
+            takes={line.take?.takes ?? 0}
+            onRestored={(version) => onRestored(line, version)}
+          />
+        )}
+        {/* Beneath the state rather than inside it: the text has not moved, so this line is
+            `current` and dirty at once, and one word cannot say both. */}
+        {line.dirty && (
+          <div className="text-amber-300" title="Cut before a pronunciation it speaks was changed">
+            pronunciation
+          </div>
+        )}
+      </td>
 
-          {/* Clicking the verdict you already hold clears it, so a mis-tap is undone where it
-              was made rather than through a separate control. */}
-          {canReview && (
-            <>
-              <button
-                type="button"
-                aria-pressed={status === "bad"}
-                onClick={() => onFlag(line, status === "bad" ? null : "bad")}
-                title={line.flag?.note ?? (status === "bad" ? "Clear (u)" : "Flag as bad (f)")}
-                className={cn(
-                  "flex items-center gap-0.5 rounded px-1 text-xs",
-                  status === "bad"
-                    ? "bg-destructive/15 text-destructive"
-                    : "text-muted-foreground/40 hover:text-destructive",
-                )}
-              >
-                <AlertTriangle size={11} />
-                {status === "bad" && "bad"}
-              </button>
-
-              <button
-                type="button"
-                aria-pressed={status === "ok"}
-                onClick={() => onFlag(line, status === "ok" ? null : "ok")}
-                title={status === "ok" ? "Clear (u)" : "Reviewed, sounds fine (g)"}
-                className={cn(
-                  "flex items-center gap-0.5 rounded px-1 text-xs",
-                  status === "ok"
-                    ? "text-emerald-400"
-                    : "text-muted-foreground/40 hover:text-emerald-400",
-                )}
-              >
-                <Check size={11} />
-                {status === "ok" && "ok"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onNote(line)}
-                title={line.flag?.note ? line.flag.note : "Add a note (n)"}
-                className={cn(
-                  "rounded px-0.5 text-xs",
-                  line.flag?.note
-                    ? "text-primary"
-                    : "text-muted-foreground/40 hover:text-foreground",
-                )}
-              >
-                <MessageSquare size={11} />
-              </button>
-            </>
-          )}
-
-          {/* The count is public; the bodies are not. So everyone sees how many open reports
-              a line carries -- the same argument the `bad` badge above makes -- and a triager
-              gets a link to where they can be read. A link to /reports rather than a panel
-              inside the row: the merged triage page shows both sections, so a report about a
-              zone and one about a quest are one queue rather than two places to look. */}
+      <td className="py-1.5 pr-1 pl-2">
+        <span className="flex items-center justify-end gap-1 whitespace-nowrap">
+          {/* The count is public; the bodies are not. So everyone sees how many open
+              reports a line carries -- "somebody has already said so" is the answer to the
+              question a dissatisfied listener is about to ask -- and a triager gets a link
+              to where they can be read. It sits beside the report button rather than in a
+              column of its own: it is the same subject, and the review column it used to
+              share is gone. A link to /reports rather than a panel inside the row, because
+              the triage page shows every section at once. */}
           {line.reportsOpen > 0 &&
             (canTriage ? (
               <Link
@@ -309,21 +234,6 @@ export function LineRow({
                 {line.reportsOpen}
               </span>
             ))}
-        </div>
-      </td>
-
-      <td className="py-1.5 pr-1 pl-2">
-        <span className="flex items-center justify-end gap-1">
-          {/* Which take is live, beside the two controls that change it. A line with one
-              take says nothing: v1 is what every untouched line is. */}
-          {line.take && line.take.takes > 1 && (
-            <span
-              className="text-muted-foreground flex items-center gap-0.5 font-mono text-xs"
-              title={`${line.take.takes} takes; v${line.take.version} is live`}
-            >
-              <RotateCw size={10} /> v{line.take.version}
-            </span>
-          )}
 
           {/* Outside the canRegenerate gate, deliberately: reporting is what a visitor who
               cannot sign in has, and /api/reports is unauthenticated for the same reason. */}
@@ -350,20 +260,6 @@ export function LineRow({
               >
                 <PencilIcon className="size-3.5" />
               </Button>
-
-              {/* Only once there is something to go back to, so an untouched line keeps a
-                  single control rather than two. */}
-              {restorable && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title="Restore an earlier take (free)"
-                  aria-label={`Restore an earlier take of ${line.name}`}
-                  onClick={() => onRestore(line)}
-                >
-                  <RotateCcw className="size-3.5" />
-                </Button>
-              )}
 
               {/* Only on a dirty row. A clean one keeps the control it would do nothing to,
                   and the mark is the whole reason this button exists. */}

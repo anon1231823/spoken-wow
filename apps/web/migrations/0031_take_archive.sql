@@ -1,0 +1,34 @@
+-- Where a take's bytes live in the history directory.
+--
+-- The three sections archive audio two different ways, and this column is what lets the one
+-- history panel read both without a single file being moved.
+--
+-- Quests archives every take at the moment it is cut: commitVersion writes the store file
+-- and then copies it to audio-history/{file}/{version}.mp3, so the archive is complete and
+-- the name IS the version. Zones and books archive the file they are about to overwrite,
+-- renaming it to audio-history/{file}/v{n}.mp3 where n counts what is already in the
+-- directory -- so the number is a position in a sequence of overwrites, not a take version,
+-- and the newest take is the one clip with no archive copy at all.
+--
+-- Those two disagree about which take a given file holds, and only the quests arrangement
+-- can answer "put v3 back" without guessing. So the quests arrangement wins: every take is
+-- archived under its own version when it is cut, a restore moves the live flag rather than
+-- copying bytes to a new number, and nothing ever deletes or renames an archived file.
+--
+-- This column records the name a take's bytes are under, because the zones and books files
+-- already on disk keep their old numbering forever. Rewriting them would mean renaming
+-- irreplaceable audio to tidy up a naming scheme, which is the one thing the audio rules
+-- here forbid. So:
+--
+--   null   the take predates this column, or its clip was never archived. Its bytes are
+--          found by its section's naming rule -- {version}.mp3 for quests, v{version}.mp3
+--          for zones and books -- or, for the live take, in the store.
+--   set    the exact basename, written when the take was cut or recovered.
+--
+-- Nothing reads the directory to decide what a take is called. Whether the named file is
+-- actually there is discovered by whoever plays or restores it, not predicted while a page
+-- renders.
+--
+-- Additive and forward-only per deploy/web/bin/migrate.sh: one nullable column.
+
+alter table "take" add column if not exists "archiveFile" text;

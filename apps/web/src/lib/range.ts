@@ -1,12 +1,12 @@
 /**
- * Serving mp3s out of the audio store.
+ * Serving mp3s: the audio archive and the voice clips.
  *
  * Range support is a requirement, not an optimisation: Safari opens audio with
  * `Range: bytes=0-1` and refuses to play a resource that answers 200, so a naive
  * whole-file response works in Chrome and silently fails in Safari.
  */
 
-/** Store-relative paths only: audio/ sits outside the web root. */
+/** A quests file as the addon names it: {quests,gossip}/<name>.mp3, nothing else. */
 const SAFE_PATH = /^(quests|gossip)\/[^/\\]+\.mp3$/;
 
 export function isSafeAudioPath(rel: string): boolean {

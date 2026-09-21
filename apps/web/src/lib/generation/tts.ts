@@ -1,19 +1,18 @@
 /**
  * Turning a line's text into an mp3.
  *
- * The TypeScript twin of synthesize_line in tts_cli/synthesize.py: same model, same
- * voice_settings object, same optional seed, and no output_format, so both sides take the
- * API's default. Audio produced here has to be near-indistinguishable from audio produced
- * there, because the addon resolves a sound by filename and cannot tell which made it.
+ * The only generator there is. The Python CLI had its own, synthesize.py, whose payload
+ * this still matches -- same model, same voice_settings object, same optional seed, and no
+ * output_format -- because much of the archive was cut by it, and the addon resolves a
+ * sound by filename and cannot tell which made it. That generator is retired: every take
+ * is cut here, by the site.
  *
- * Two fields the Python side does not send, and both are deliberate: the pronunciation
- * dictionary, and language_code. The CLI predates the lexicon and infers language from the
- * text; this path pins both, so a line generated here is the more correct of the two. The
- * version row records the model and the dictionary version, which is what makes the
- * difference visible after the fact rather than a mystery.
+ * Two fields synthesize.py did not send, and both are deliberate: the pronunciation
+ * dictionary, and language_code. The version row records the model and the dictionary
+ * version, which is what makes the difference visible after the fact.
  *
- * `fetch` and the base URL are injectable for the reason synthesize.py injects http_post:
- * no test should need an account, and none should ever spend money.
+ * `fetch` and the base URL are injectable: no test should need an account, and none should
+ * ever spend money.
  */
 import {
   DEFAULT_BASE_URL,
@@ -61,10 +60,9 @@ export type SpeechRequest = {
   /**
    * The pronunciation dictionary to apply, or null for none.
    *
-   * Null is the state the Python CLI is always in: synthesize.py sends no dictionary, so a
-   * line it produces and a line produced here can differ in pronunciation even with
-   * identical settings. That is the one place the two paths no longer match, and it is why
-   * the locator is recorded against every take.
+   * Null is what the retired Python generator always sent, so a take it cut and a take cut
+   * here can differ in pronunciation even with identical settings -- which is why the
+   * locator is recorded against every take.
    */
   dictionary?: DictionaryLocator | null;
 };
@@ -237,8 +235,8 @@ async function requestAudio(
     return { ok: false, failure: classifyUpstream(response.status, raw, "generating the line") };
   }
 
-  // The same check synthesize.py makes, and it earns its place: an error served with a 200
-  // would otherwise be written into the store as an mp3 and play as silence in the game.
+  // It earns its place: an error served with a 200 would otherwise be archived as an mp3
+  // and play as silence in the game.
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.startsWith("audio/")) {
     const raw = await response.text().catch(() => "");

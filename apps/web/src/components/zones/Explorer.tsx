@@ -11,9 +11,8 @@ import RegenerateDialog from "@/components/RegenerateDialog";
 import RegenerationPanel from "@/components/RegenerationPanel";
 import { LineRow, type RowState } from "@/components/zones/LineRow";
 import { LoreDialog } from "@/components/zones/LoreDialog";
-import { NoteDialog } from "@/components/zones/NoteDialog";
 import { Player } from "@/components/zones/Player";
-import ZoneReportDialog, { type ReportTarget } from "@/components/zones/ReportDialog";
+import ReportDialog from "@/components/ReportDialog";
 import { SearchBar } from "@/components/zones/SearchBar";
 import { useSession } from "@/lib/auth-client";
 import { totals as estimateTotals, LIST_RATE, type Estimate } from "@/lib/generation/billing";
@@ -28,7 +27,7 @@ import {
 } from "@/lib/generation/client";
 import { noApiKeyMessage } from "@/lib/no-api-key";
 import * as permissions from "@/lib/permissions";
-import type { LineFlag, ZoneFacet } from "@/lib/zones/catalogue";
+import type { ZoneFacet } from "@/lib/zones/catalogue";
 import { filterParams, filtersFromParams, PAGE_SIZE, type LineFilters } from "@/lib/zones/filters";
 import type { ResultLine, SearchResult } from "@/lib/zones/search";
 import { useClearDirty } from "@/lib/generation/use-clear-dirty";
@@ -58,7 +57,6 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // regenerating and a separate triage permission; this app's `collaborator` is the same
   // person, and splitting a role that nobody had split by hand would be inventing a
   // distinction to maintain.
-  const canReview = permissions.canRegenerate(role);
   const canRegenerate = permissions.canRegenerate(role);
   const canTriage = permissions.canRegenerate(role);
 
@@ -77,18 +75,13 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState<ResultLine | null>(null);
-  // Flags set since this page was fetched, overlaid on the fetched rows. Re-running
-  // the search after every keystroke of a review pass would reorder the table under
-  // the cursor -- and with ?flag=unreviewed it would make each line vanish as it is
-  // judged, moving the next one under the key you are about to press again.
-  const [flagged, setFlagged] = useState<Record<string, LineFlag | null>>({});
-  const [noteFor, setNoteFor] = useState<ResultLine | null>(null);
   const [editFor, setEditFor] = useState<ResultLine | null>(null);
-  // Text rewritten since this page was fetched, overlaid like `flagged` and for the same
-  // reason: re-running the search would reorder the table under the cursor, and with
-  // ?state=stale the line just edited would vanish as it was saved.
+  // Text rewritten since this page was fetched, overlaid on the fetched rows: re-running
+  // the search would reorder the table under the cursor, and with ?state=stale the line
+  // just edited would vanish as it was saved.
   const [rewritten, setRewritten] = useState<Record<string, string>>({});
-  const [reportFor, setReportFor] = useState<ReportTarget | null>(null);
+  // Anyone can open this one, signed in or not -- see ReportDialog.
+  const [reportFor, setReportFor] = useState<ResultLine | null>(null);
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
   // Bumped per line after a regeneration, to bust the browser's audio cache: the
   // filename does not change, so without this the old take keeps playing.
@@ -222,9 +215,6 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       .then((response) => response.json())
       .then((data: SearchResult) => {
         setResult(data);
-        // The fetched rows carry the flags as they now are, so the local overlay has
-        // done its job and would only go stale from here.
-        setFlagged({});
         setLoading(false);
       })
       .catch((err) => {
@@ -235,46 +225,16 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   }, [filterQuery, page]);
 
   //----------------------------------------------------------------------------
-  // Flags
+  // Pronunciation marks
   //----------------------------------------------------------------------------
 
-  // Held rather than refetched, for the reason the flag overlay is: a search rebuild to
+  // Held rather than refetched, for the reason the rewrite overlay is: a search rebuild to
   // unset one boolean is wasteful.
   const { cleared, clear: clearDirty } = useClearDirty("zones");
 
-  const setFlag = useCallback(
-    (line: ResultLine, status: "bad" | "ok" | null, note?: string) => {
-      // Optimistic: a review pass is one judgement per second and waiting for a round
-      // trip before showing it makes the whole thing feel broken. A failure rolls the
-      // row back rather than leaving the UI claiming something the database refused.
-      const previous = flagged[line.id] ?? line.flag;
-      setFlagged((current) => ({
-        ...current,
-        [line.id]:
-          status === null
-            ? null
-            : { status, note: note ?? previous?.note ?? null, updatedAt: new Date().toISOString() },
-      }));
-
-      fetch("/api/zones/flags", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lineId: line.id, status, note: note ?? null }),
-      })
-        .then((response) => (response.ok ? response.json() : Promise.reject(new Error("rejected"))))
-        .then((data: { flag: LineFlag | null }) => {
-          setFlagged((current) => ({ ...current, [line.id]: data.flag }));
-        })
-        .catch(() => {
-          setFlagged((current) => ({ ...current, [line.id]: previous }));
-        });
-    },
-    [flagged],
-  );
-
-  // The fetched row, with any judgement or rewrite made since it was fetched laid over
-  // the top. A rewritten line is stale by definition -- the text no longer hashes to what
-  // was spoken -- so the state moves with the text rather than waiting for a refetch.
+  // The fetched row, with any rewrite made since it was fetched laid over the top. A
+  // rewritten line is stale by definition -- the text no longer hashes to what was spoken
+  // -- so the state moves with the text rather than waiting for a refetch.
   /** Every dirty line the current filter matches, not just this page's. */
   const clearAllDirty = useCallback(() => {
     fetch(`/api/zones/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
@@ -283,10 +243,9 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       .catch(() => {});
   }, [clearDirty]);
 
-  const withFlag = useCallback(
+  const withEdits = useCallback(
     (line: ResultLine): ResultLine => {
       let out = line;
-      if (line.id in flagged) out = { ...out, flag: flagged[line.id] };
       if (line.id in rewritten) {
         const text = rewritten[line.id];
         out = {
@@ -303,7 +262,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       if (cleared.has(out.file)) out = { ...out, dirty: false };
       return out;
     },
-    [flagged, rewritten, cleared],
+    [rewritten, cleared],
   );
 
   //----------------------------------------------------------------------------
@@ -507,30 +466,6 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     };
   }, [canRegenerate, refetch]);
 
-  const restore = useCallback(
-    (line: ResultLine) => {
-      fetch(`/api/zones/restore?${new URLSearchParams({ lineId: line.id })}`)
-        .then((response) => response.json())
-        .then((data: { versions: number[] }) => {
-          const newest = data.versions[0];
-          if (newest === undefined) return;
-          return fetch("/api/zones/restore", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ lineId: line.id, version: newest }),
-          })
-            .then((response) => response.json())
-            .then((result: { version?: number }) => {
-              if (result.version !== undefined) {
-                setVersions((current) => ({ ...current, [line.id]: result.version! }));
-              }
-              refetch();
-            });
-        })
-        .catch(() => {});
-    },
-    [refetch],
-  );
   //----------------------------------------------------------------------------
   // Playback
   //----------------------------------------------------------------------------
@@ -593,28 +528,12 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       } else if (event.key === "k") {
         event.preventDefault();
         step(-1);
-      } else if (
-        // The review keys are gated with the buttons they mirror. Left ungated they would
-        // be the one way a member could still write a flag -- a shortcut for a control
-        // that is not on their screen, failing silently against a 403.
-        canReview &&
-        current &&
-        (event.key === "f" || event.key === "g" || event.key === "u")
-      ) {
-        event.preventDefault();
-        // f bad, g ok, u undo. Judging a line does NOT advance to the next one:
-        // deciding and moving on are separate thoughts, and a combined key would make
-        // a mistaken tap cost both a wrong verdict and a lost place.
-        setFlag(current, event.key === "f" ? "bad" : event.key === "g" ? "ok" : null);
-      } else if (canReview && current && event.key === "n") {
-        event.preventDefault();
-        setNoteFor(withFlag(current));
       }
     }
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canReview, current, setFlag, step, withFlag]);
+  }, [current, step]);
 
   // Keep the selected row visible when j/k walks off the bottom of the viewport.
   useEffect(() => {
@@ -635,7 +554,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       <SearchBar
         zones={zones}
         filters={filters}
-        canReview={canReview}
+        canTriage={canTriage}
         query={query}
         inputRef={searchInput}
         onQueryChange={setQuery}
@@ -703,23 +622,21 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           <col className="w-40" />
           <col className="w-44" />
           <col />
-          {/* The review column narrows for a visitor rather than being drawn empty: it
-              keeps the verdict badge and the report count, and loses the three controls.
-              The width lands on Lore, which is what anyone here to read came for. */}
-          <col className={canReview ? "w-40" : "w-20"} />
-          {/* Wide enough for what the cell actually holds: icon buttons are 32px, an editor
-              can have four side by side - report, edit, restore, regenerate - and the take
-              version sits in front of them. Anything narrower and the row overflows left
-              over the prose. w-10 for everyone else, who has the report button and nothing
-              more; never w-0, since that button is not gated. */}
-          <col className={canRegenerate ? "w-48" : "w-10"} />
+          {/* Audio: the state word, or the take selector, both of which are short. */}
+          <col className="w-28" />
+          {/* Wide enough for what the cell actually holds: icon buttons are 32px and an
+              editor can have three side by side - report, edit, regenerate - plus the
+              report count. Anything narrower and the row overflows left over the prose.
+              w-16 for everyone else, who has the report button and the count; never w-0,
+              since that button is not gated. */}
+          <col className={canRegenerate ? "w-40" : "w-16"} />
         </colgroup>
         <thead>
           <tr className="text-muted-foreground border-border border-b text-left text-xs">
             <th className="px-2 pb-1 font-medium">Zone</th>
             <th className="px-2 pb-1 font-medium">Subzone</th>
             <th className="px-2 pb-1 font-medium">Lore</th>
-            <th className="px-2 pb-1 font-medium">Review</th>
+            <th className="px-2 pb-1 font-medium">Audio</th>
             <th className="sr-only">Actions</th>
           </tr>
         </thead>
@@ -727,23 +644,23 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           {result?.lines.map((line) => (
             <LineRow
               key={line.id}
-              line={withFlag(line)}
+              line={withEdits(line)}
               current={line.id === current?.id}
-              canReview={canReview}
               canRegenerate={canRegenerate}
               canTriage={canTriage}
               onPlay={play}
               onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
               state={rowStates[line.id]}
-              onFlag={setFlag}
               onClearDirty={(l) => clearDirty([l.file])}
-              onNote={(l) => setNoteFor(withFlag(l))}
-              onReport={(l) =>
-                setReportFor({ lineId: l.id, file: l.file, name: l.name })
-              }
-              onEditText={(l) => setEditFor(withFlag(l))}
+              onRestored={(l, version) => {
+                // The player's cache buster: the file name does not move when a take is
+                // put back, so without this the browser replays the clip just replaced.
+                setVersions((current) => ({ ...current, [l.id]: version }));
+                refetch();
+              }}
+              onReport={setReportFor}
+              onEditText={(l) => setEditFor(withEdits(l))}
               onRegenerate={regenerateOne}
-              onRestore={restore}
             />
           ))}
         </tbody>
@@ -758,22 +675,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       <p className="text-muted-foreground mt-6 flex flex-wrap items-center gap-1.5 text-xs">
         <Key>/</Key> search · <Key>space</Key> play/pause · <Key>j</Key> <Key>k</Key> next and
         previous line on this page
-        {canReview && (
-          <>
-            {" "}
-            · <Key>f</Key> bad · <Key>g</Key> ok · <Key>u</Key> undo · <Key>n</Key> note
-          </>
-        )}
       </p>
-
-      <NoteDialog
-        line={noteFor}
-        onClose={() => setNoteFor(null)}
-        onSave={(line, note) => {
-          setFlag(line, line.flag?.status ?? "bad", note);
-          setNoteFor(null);
-        }}
-      />
 
       <LoreDialog
         line={editFor}
@@ -781,7 +683,10 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         onSaved={(line, full) => setRewritten((current) => ({ ...current, [line.id]: full }))}
       />
 
-      <ZoneReportDialog target={reportFor} onClose={() => setReportFor(null)} />
+      <ReportDialog
+        subject={reportFor && { source: "zones", line: reportFor }}
+        onClose={() => setReportFor(null)}
+      />
 
       <ApiKeyRequiredDialog message={keyRequired} onClose={() => setKeyRequired(null)} />
 

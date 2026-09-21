@@ -7,7 +7,14 @@
  * a form that merely cleared itself would leave them with no evidence anything happened and a
  * fair chance of filing the same thing twice.
  *
- * One form for both sections, against one endpoint and one table. The two sites each had
+ * A signed-in reporter is not asked who they are. The endpoint takes their identity from
+ * the session and drops whatever the body claims -- letting somebody sign in and then type
+ * another person's name is a way to put words in their mouth -- so the two fields were a
+ * lie to anyone signed in: filled in carefully, ignored on arrival. They are shown to a
+ * visitor, who has no other way to be reachable, and replaced by a line naming the account
+ * for everyone else.
+ *
+ * One form for all three sections, against one endpoint and one table. The two sites each had
  * their own, with their own category vocabulary, and triage was two lists -- which is two
  * places to forget to look. What differs between them is the address: a quest report carries
  * one the addon built and a zone report may carry none at all, because its report page is
@@ -16,7 +23,9 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { BODY_MAX, CATEGORIES, CATEGORY_LABELS, type Source } from "@/lib/reports/reports";
+import { useSession } from "@/lib/auth-client";
+import { BODY_MAX, CATEGORIES, CATEGORY_LABELS } from "@/lib/reports/reports";
+import type { Source } from "@/lib/sections";
 
 export default function ReportForm({
   source,
@@ -28,6 +37,10 @@ export default function ReportForm({
   target: string | null;
   lineId: string | null;
 }) {
+  // isPending rather than a bare null check: while the session is still loading, showing
+  // the fields and then pulling them out from under a half-typed name is worse than a
+  // moment without them.
+  const { data: session, isPending } = useSession();
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -103,20 +116,32 @@ export default function ReportForm({
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Your name (optional)
-        <input name="name" maxLength={200} className="bg-background rounded border px-2 py-1.5" />
-      </label>
+      {isPending ? null : session ? (
+        <p className="text-muted-foreground text-sm">
+          Filing as {session.user.name || session.user.email}.
+        </p>
+      ) : (
+        <>
+          <label className="flex flex-col gap-1 text-sm">
+            Your name (optional)
+            <input
+              name="name"
+              maxLength={200}
+              className="bg-background rounded border px-2 py-1.5"
+            />
+          </label>
 
-      <label className="flex flex-col gap-1 text-sm">
-        Email, if you want a reply (optional)
-        <input
-          name="email"
-          type="email"
-          maxLength={320}
-          className="bg-background rounded border px-2 py-1.5"
-        />
-      </label>
+          <label className="flex flex-col gap-1 text-sm">
+            Email, if you want a reply (optional)
+            <input
+              name="email"
+              type="email"
+              maxLength={320}
+              className="bg-background rounded border px-2 py-1.5"
+            />
+          </label>
+        </>
+      )}
 
       {/* A honeypot. sr-only rather than display:none, which bots know to skip. */}
       <label className="sr-only" aria-hidden="true">

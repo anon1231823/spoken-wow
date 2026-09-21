@@ -11,7 +11,8 @@
  * be several hundred rules for pronunciations no line will ever need, and a dictionary is
  * easier to reason about when every rule in it can fire.
  */
-import { loadCorpus, type CorpusLine } from "@/lib/corpus";
+import type { CorpusLine } from "@/lib/corpus";
+import { corpus } from "@/lib/quests/catalogue";
 
 /** Case-insensitive and word-bounded, matching how the rules themselves match. */
 function bounded(grapheme: string): RegExp {
@@ -73,12 +74,12 @@ type Holder = { [key]?: Memo };
 /**
  * Casings for the current lexicon, scanning only for names not already known.
  *
- * Memoised on globalThis the way sampleSentences is, and tied to the identity of the lines it
- * was built from: the corpus ships inside the release and cannot change under a running
- * process, but a test passes a fresh array per case and must not be answered from another.
+ * Memoised on globalThis the way sampleSentences is, and tied to the identity of the lines
+ * it was built from. That tie used to be about tests; it is load-bearing now, because the
+ * corpus is a table and an edit rebuilds the array under a running process.
  */
-export function graphemeCasings(graphemes: string[]): Record<string, string[]> {
-  const lines = loadCorpus().lines;
+export async function graphemeCasings(graphemes: string[]): Promise<Record<string, string[]>> {
+  const lines = (await corpus()).lines;
   const holder = globalThis as Holder;
 
   let memo = holder[key];

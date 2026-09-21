@@ -16,9 +16,10 @@ import { useState } from "react";
 import OverrideDialog from "@/components/OverrideDialog";
 import { Button } from "@/components/ui/button";
 import { detailOf, regeneratePath, type SourceLine } from "@/lib/reports/detail";
-import type { Source } from "@/lib/reports/reports";
+
 import { noApiKeyMessage } from "@/lib/no-api-key";
 import type { ResultLine as QuestLine } from "@/lib/search";
+import type { Source } from "@/lib/sections";
 
 type Props = {
   source: Source;

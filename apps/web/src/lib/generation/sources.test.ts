@@ -18,8 +18,7 @@ import { afterAll, expect, it } from "vitest";
 
 const { closeDb, query } = await import("@/lib/db");
 
-/** The sections the app writes rows for. lib/generation/queue.ts owns the type. */
-const SOURCES = ["quests", "zones", "books"] as const;
+import { SOURCES } from "@/lib/sections";
 
 afterAll(async () => {
   await closeDb();

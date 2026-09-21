@@ -1,0 +1,169 @@
+/**
+ * Committing a take, for all three sections.
+ *
+ * This used to be written three times -- quests in generation/history.ts, zones through the
+ * pipeline's store.mjs, books in books/store.ts -- and a rule changed in one did not reach
+ * the others.
+ *
+ * AUDIO FILES ARE WRITTEN ONCE AND NEVER CHANGED. A take is one file in the archive and one
+ * row; committing adds both and touches nothing already there. There is no "store" holding
+ * whichever take is live: which take is live is the row's `isCurrent`, and the addon's
+ * Sounds/ folder is assembled from the live rows when a pack is built
+ * (scripts/audio/sounds.mjs). So a new take cannot overwrite an old one, and there is no
+ * ordering between a store and the rows for a crash to fall in the middle of.
+ *
+ * THE ORDER: the bytes first, under a name that includes their hash, then the row. A crash
+ * between the two leaves a file no row names -- unreferenced and harmless -- never a row
+ * whose file is missing.
+ *
+ * The caller holds the file's lock, `${source}:${file}` (generation/lock.ts), across the
+ * whole generation, so that two requests for one line cannot both spend credits. Every
+ * section's regeneration and the restore route take the same key.
+ */
+import "server-only";
+
+import path from "node:path";
+
+import { db, query } from "@/lib/db";
+import type { Source } from "@/lib/sections";
+
+import { historyDirOf } from "./adapters";
+import { archiveName, writeAtomic } from "./bytes";
+
+/** What a take was made with. Anything unknown is null, which means unknown, not unchanged. */
+export type TakeFields = {
+  lineId: string;
+  voice?: string | null;
+  narratorVoice?: string | null;
+  voiceId?: string | null;
+  modelId?: string | null;
+  seed?: number | null;
+  outputFormat?: string | null;
+  settings?: unknown;
+  characters?: number | null;
+  credits?: number | null;
+  spokenHash?: string | null;
+  dictionaryId?: string | null;
+  dictionaryVersion?: string | null;
+  /**
+   * Whether the request carried a lead-in, and how many seconds were cut off the front.
+   * True with a null length is a take that asked for one and did not get it, so it still
+   * has the ramp-up in it. See lib/generation/leadin.ts. False when omitted: a take this
+   * app did not cut never had one.
+   */
+  leadIn?: boolean;
+  leadInSec?: number | null;
+  createdBy?: string | null;
+};
+
+export type Committed = {
+  version: number;
+  bytes: number;
+  archiveFile: string;
+  durationSec: number | null;
+};
+
+/**
+ * Write a new take and make it live.
+ *
+ * `measure` reads a clip's duration, where a section records one. It is given the archived
+ * file.
+ */
+export async function commitTake(
+  source: Source,
+  file: string,
+  data: Buffer,
+  fields: TakeFields,
+  options: { lang?: string; measure?: (clip: string) => Promise<number | null> } = {},
+): Promise<Committed> {
+  const lang = options.lang ?? "enUS";
+
+  const [{ next }] = await query<{ next: number }>(
+    `select coalesce(max("version"), 0) + 1 as "next" from "take"
+      where "source" = $1 and "file" = $2 and "lang" = $3`,
+    [source, file, lang],
+  );
+
+  const archiveFile = archiveName(next, data);
+  const archived = path.join(historyDirOf(source, file), archiveFile);
+  await writeAtomic(archived, data);
+  const durationSec = options.measure ? await options.measure(archived) : null;
+
+  await insertLive({
+    source,
+    file,
+    lang,
+    version: next,
+    fields,
+    bytes: data.byteLength,
+    durationSec,
+    archiveFile,
+  });
+
+  return { version: next, bytes: data.byteLength, archiveFile, durationSec };
+}
+
+/** Insert one take and make it the only live one, in one transaction. */
+async function insertLive(input: {
+  source: Source;
+  file: string;
+  lang: string;
+  version: number;
+  fields: TakeFields;
+  bytes: number;
+  durationSec: number | null;
+  archiveFile: string;
+}): Promise<void> {
+  const { source, file, lang, version, fields } = input;
+  const client = await db().connect();
+  try {
+    await client.query("begin");
+    await client.query(
+      `update "take" set "isCurrent" = false
+        where "source" = $1 and "file" = $2 and "lang" = $3 and "isCurrent"`,
+      [source, file, lang],
+    );
+    await client.query(
+      `insert into "take"
+         ("source", "lang", "file", "lineId", "version", "isCurrent", "origin",
+          "voice", "narratorVoice", "voiceId", "modelId", "seed", "outputFormat", "settings",
+          "characters", "credits", "durationSec", "bytes", "spokenHash", "dictionaryId",
+          "dictionaryVersion", "leadIn", "leadInSec", "createdBy", "archiveFile")
+       values ($1, $2, $3, $4, $5, true, 'generated', $6, $7, $8, $9, $10, $11, $12::jsonb,
+               $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)`,
+      [
+        source,
+        lang,
+        file,
+        fields.lineId,
+        version,
+        fields.voice ?? null,
+        fields.narratorVoice ?? null,
+        fields.voiceId ?? null,
+        fields.modelId ?? null,
+        fields.seed ?? null,
+        fields.outputFormat ?? null,
+        fields.settings === undefined || fields.settings === null
+          ? null
+          : JSON.stringify(fields.settings),
+        fields.characters ?? null,
+        fields.credits ?? null,
+        input.durationSec,
+        input.bytes,
+        fields.spokenHash ?? null,
+        fields.dictionaryId ?? null,
+        fields.dictionaryVersion ?? null,
+        fields.leadIn ?? false,
+        fields.leadInSec ?? null,
+        fields.createdBy ?? null,
+        input.archiveFile,
+      ],
+    );
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}

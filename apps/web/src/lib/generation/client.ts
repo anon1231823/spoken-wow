@@ -8,9 +8,8 @@
  */
 
 import { noApiKeyMessage } from "@/lib/no-api-key";
+import type { Source } from "@/lib/sections";
 
-/** Which section a job belongs to. Mirrors Source in lib/generation/queue.ts. */
-export type Source = "quests" | "zones" | "books";
 
 export type FailureKind =
   | "quota"
@@ -33,7 +32,6 @@ export type RegenerateOk = {
   voice: string;
   spokenText: string;
   sharedWith: number;
-  archivedInherited: boolean;
 };
 
 export type RegenerateFailed = {
@@ -87,40 +85,6 @@ export async function fetchGenerationStatus(
     return (await response.json()) as GenerationStatusResponse;
   } catch {
     // The page works without it: the balance goes unshown and no button is pre-disabled.
-    return null;
-  }
-}
-
-/**
- * How many takes each of these files has, and which of them are of text that has since moved.
- *
- * POST rather than GET because a search can name a few thousand files, and a query string
- * long enough to carry them would be refused before it arrived. Both answers in one trip
- * because it is the same page asking about the same files.
- */
-export type TakeInfo = {
-  counts: Record<string, number>;
-  stale: string[];
-  /** Files whose take predates a change to a pronunciation it speaks. See lib/generation/dirty. */
-  dirty: string[];
-};
-
-export async function fetchTakeCounts(
-  files: string[],
-  signal?: AbortSignal,
-): Promise<TakeInfo | null> {
-  try {
-    const response = await fetch("/api/quests/lines/versions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ files }),
-      signal,
-    });
-    if (!response.ok) return null;
-    return (await response.json()) as TakeInfo;
-  } catch {
-    // The page works without it: no line offers history, nothing is marked stale, and
-    // nothing else changes.
     return null;
   }
 }

@@ -16,9 +16,8 @@ import { npcKey } from "./corpus";
 import { audioRelPath } from "./audio";
 import { hasNarration, restoresOnlyNarration } from "./generation/narration";
 import type { NpcType, Source } from "./line-fields";
-import { categoryGroup, type LineIssues, type Severity } from "./issues/issues";
-import type { LineIgnore } from "./issues/ignores";
-import type { LineOverride } from "./issues/override";
+import type { LineIgnore } from "./quests/ignores";
+import type { LineOverride } from "./quests/override";
 import { isVoiceable } from "./text-gate";
 
 /** Which field the free-text query is matched against. */
@@ -51,24 +50,6 @@ export type LineFilters = {
    * Widening rather than narrowing, which is why activeFilterCount ignores it.
    */
   includeProgress?: boolean;
-  /**
-   * "any" for a line with any open finding, or a severity meaning "this bad or worse".
-   *
-   * Worse-or-equal rather than exact, because the severity carried by a line is the worst of
-   * however many findings touch it: asking for the ones that will break and being shown only
-   * lines with nothing else wrong would be a strange thing to offer.
-   */
-  issues?: "any" | Severity;
-  /** A category, or the group before its first hyphen. The dropdown offers groups. */
-  issueCategory?: string;
-  /**
-   * The lines of one finding, by its id.
-   *
-   * Exact where a text search cannot be: the bare `--` finding and `Hearthglen--you'll` are
-   * two findings whose text both contains `--`, and six dialect findings share one category.
-   * The finding already knows which lines it is about, so this asks it rather than guessing.
-   */
-  finding?: number;
   /**
    * One line by its id, which is how a report reaches the corpus.
    *
@@ -129,10 +110,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * Defaulted to empty so a caller that has neither still gets a search.
  */
 export type SearchContext = {
-  issues: Map<string, LineIssues>;
   overrides: Map<string, LineOverride>;
-  /** The lines of the finding `filters.finding` names, or null when it names none. */
-  findingLines?: Set<string> | null;
   /** When each file's live take was generated, epoch ms. Absent means no record. */
   generatedAt?: Map<string, number>;
   /**
@@ -151,9 +129,16 @@ export type SearchContext = {
    * the corpus, and a visible extra row is the safer way to be wrong.
    */
   ignores?: Map<string, LineIgnore>;
+  /**
+   * lineId -> how many reports about it are still open. The count only; the bodies are
+   * behind the triage role on /reports, as they are for the other two sections.
+   */
+  reports?: Map<string, number>;
+  /** file -> which take is live and how many there are. Public, like the other two rows'. */
+  takes?: Map<string, { version: number; takes: number }>;
 };
 
-export const NO_CONTEXT: SearchContext = { issues: new Map(), overrides: new Map() };
+export const NO_CONTEXT: SearchContext = { overrides: new Map() };
 
 export type SearchOptions = LineFilters & {
   offset?: number;
@@ -165,8 +150,21 @@ export type ResultLine = CorpusLine & {
   key: string;
   hasAudio: boolean;
   audioPath: string;
-  /** Open findings on this line, worst severity first. Null when there are none. */
-  issue: LineIssues | null;
+  /** How many reports about this line are still open. Zero when nobody has said anything. */
+  reportsOpen: number;
+  /**
+   * The live take of this line's file, and how many takes it has. Null when none is
+   * recorded, which means the line has never been generated. Shaped like the zones and
+   * books rows' `take` for the same reason the Audio column is shaped like theirs.
+   */
+  take: { version: number; takes: number } | null;
+  /** The live take was cut from text that has since changed. */
+  stale: boolean;
+  /**
+   * The live take was cut before a pronunciation it speaks was changed, and nobody has
+   * said since that it is fine. Orthogonal to `stale`: a lexicon edit moves no text.
+   */
+  dirty: boolean;
   /** The rewritten spoken text, or null. `text` stays what the corpus says. */
   override: string | null;
   /**
@@ -296,7 +294,7 @@ function matches(line: CorpusLine, q: string, filter: Filter): boolean {
 }
 
 /**
- * A gap: a line the generator would voice, with nothing in the store.
+ * A gap: a line the generator would voice, with no live take.
  *
  * Same definition as missing_lines (tts_cli/store.py) - lines the generator never voices
  * (progress text, unresolved template tokens) are expected absences, not gaps.
@@ -309,19 +307,6 @@ export function isGap(
   const audioPath = audioRelPath(line);
   const text = overrides.get(audioPath)?.text ?? line.text;
   return isVoiceable(line, text) && !store.has(audioPath);
-}
-
-/** Whether a line carries a finding the filter is asking for. */
-function issueMatch(found: LineIssues | undefined, want: NonNullable<LineFilters["issues"]>): boolean {
-  if (!found) return false;
-  return want === "any" || found.severity <= want;
-}
-
-function categoryMatch(found: LineIssues | undefined, want: string): boolean {
-  if (!found) return false;
-  // A group ("name") or a category ("name-apostrophe"), so the review queue can link to one
-  // finding's kind and the dropdown can offer the eight groups.
-  return found.categories.some((c) => c === want || categoryGroup(c) === want);
 }
 
 /**
@@ -363,9 +348,6 @@ export function matchingLines(
     npcType,
     includeProgress = false,
     narration = false,
-    issues,
-    issueCategory,
-    finding,
     line: lineId,
     overridden,
     outdated = false,
@@ -375,9 +357,7 @@ export function matchingLines(
     generatedAfter,
   }: LineFilters = {},
   {
-    issues: found,
     overrides,
-    findingLines,
     generatedAt,
     stale,
     dirty: dirtyOf,
@@ -416,15 +396,8 @@ export function matchingLines(
       hasNarration(overrides.get(audioRelPath(line))?.text ?? line.text),
     );
   }
-  if (issues) lines = lines.filter((line) => issueMatch(found.get(line.lineId), issues));
-  if (issueCategory) {
-    lines = lines.filter((line) => categoryMatch(found.get(line.lineId), issueCategory));
-  }
-  // An unknown id matches nothing rather than everything: "show me this finding's lines" has
-  // no honest answer for a finding that is not there, and the whole corpus is the wrong one.
-  if (finding) lines = lines.filter((line) => findingLines?.has(line.lineId) ?? false);
-  // Same rule as `finding`: an id the corpus no longer carries matches nothing rather than
-  // everything, because a report about a dropped line must not read as "here it is".
+  // An id the corpus no longer carries matches nothing rather than everything, because a
+  // report about a dropped line must not read as "here it is".
   if (lineId) lines = lines.filter((line) => line.lineId === lineId);
   // Absent `stale` means nobody asked for it, so nothing matches rather than everything: the
   // honest answer to "which audio is out of date?" without the data is none, not all.
@@ -483,7 +456,12 @@ export function search(
       key: keys.get(line)!,
       hasAudio: store.has(audioPath),
       audioPath,
-      issue: context.issues.get(line.lineId) ?? null,
+      reportsOpen: context.reports?.get(line.lineId) ?? 0,
+      take: context.takes?.get(audioPath) ?? null,
+      // From the context when it was asked for -- a filter on either needs the whole set.
+      // The search route fills in the page otherwise; see there.
+      stale: context.stale?.has(audioPath) ?? false,
+      dirty: context.dirty?.has(audioPath) ?? false,
       override,
       voiceable: isVoiceable(line, override ?? line.text),
       narration: hasNarration(override ?? line.text),

@@ -60,12 +60,16 @@ describe("isStoredSampleName", () => {
 describe("samplePath", () => {
   it("refuses an unknown voice slot", async () => {
     const { samplePath } = await load();
-    expect(() => samplePath("murloc-male", "deadbeef-a.mp3")).toThrow(/unknown voice slot/);
+    await expect(samplePath("murloc-male", "deadbeef-a.mp3")).rejects.toThrow(
+      /unknown voice slot/,
+    );
   });
 
   it("refuses a name it did not generate", async () => {
     const { samplePath } = await load();
-    expect(() => samplePath("orc-male-standard", "../../etc/passwd")).toThrow(/unsafe sample name/);
+    await expect(samplePath("orc-male-standard", "../../etc/passwd")).rejects.toThrow(
+      /unsafe sample name/,
+    );
   });
 });
 

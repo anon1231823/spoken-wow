@@ -10,20 +10,22 @@ data module are build outputs of this project.
 
 Every line the project knows about is browsable, playable and — for signed-in collaborators —
 re-voiceable at [voiceover.rusty.one](https://voiceover.rusty.one), which is the `web/`
-directory of this repo running against the same corpus and audio store the CLI produces.
+directory of this repo; it is also the only place audio is made.
 
-Five stages, and only the first needs a database:
+**Audio is made on the site and nowhere else.** Every take is cut there, archived as a file
+of its own that is never changed, and recorded as a row; which take is live is a flag on
+that row. This pipeline turns the world database into a corpus and turns the live takes
+into a pack:
 
 | Stage | Input | Output | Who runs it |
 | --- | --- | --- | --- |
 | `extract` | vmangos world DB | `corpus/corpus.json.gz` | a maintainer, when vmangos ships a new dump |
-| `import-audio` | an existing sound pack | `audio/` | once, to adopt audio you already have |
-| `synthesize` | corpus + voice config | mp3s in `audio/` | anyone producing lines |
+| `make quests-sounds` | live takes + `audio-history/` | `audio/` | before every build |
 | `build` | corpus + `audio/` | `dist/SpokenQuestsAudio/` | anyone cutting a release |
 | `install` | the built module | WoW AddOns folder | to try it in game |
 
-The corpus is **committed** — 17,507 lines, 2 MB gzipped — so producing audio needs no
-database, no dump, and no Docker.
+The corpus is **committed** — 17,507 lines, 2 MB gzipped — so building a pack from a given
+`audio/` needs no dump and no Docker.
 
 ## Below is for developers only. Go to [releases](https://github.com/mrthinger/wow-voiceover/releases) if youre looking to install the addon.
 
@@ -115,9 +117,9 @@ elwynn = lines_in_area(corpus, map_id=0, x_range=(-9900, -9000), y_range=(-600, 
 ### Producing a data module
 
 ```bash
-python cli-main.py import-audio                       # adopt an existing pack, once
-python cli-main.py synthesize --npc 240 --dry-run     # what would be made, and its cost
-python cli-main.py synthesize --npc 240               # make it
+make quests-pull-history                              # production's takes, the only audio there is
+make quests-sync                                      # production's corpus and take rows
+make quests-sounds                                    # audio/ from the live takes
 python cli-main.py build                              # dist/SpokenQuestsAudio/
 python cli-main.py install --force                    # into the AddOns folder
 ```
@@ -209,10 +211,10 @@ would be no smaller and audibly worse.
 
 Transcodes are cached in `audio-transcoded/<profile>/`, keyed on the **md5 of the master**, so
 a re-generated line misses the cache and everything else is reused, and the two profiles never
-read each other's entries. Keying on mtime would be wrong: `make pull` copies the droplet's
-timestamps, so a freshly pulled take can be older than the entry it should replace. The
-masters in `audio/` are never touched — they stay 128 kbps mp3 — which is what makes raising
-the shipped quality later a re-run rather than a second purchase.
+read each other's entries. Keying on mtime would be wrong: `audio/` is assembled afresh from
+the archive before every build, so an mtime says when, not what. The archived masters are
+never touched — they stay 128 kbps mp3 — which is what makes raising the shipped quality
+later a re-run rather than a second purchase.
 
 Durations stay honest for free: `build` computes the length table from the files it just
 copied, and mutagen reads a VBR mp3's Xing header and an Ogg page's granule position alike.
@@ -341,11 +343,10 @@ Apply migrations with that script rather than by hand: it is what the droplet an
 a migration that only works under an improvised `psql` fails here instead of mid-deploy. It
 reads `DATABASE_URL` from the environment, which `.env.local` does not export.
 
-Search by NPC name or id, or quest title or id, and play any line in the browser. The corpus
-and the audio store are read straight off disk; the corpus is never written. Postgres holds
-what the corpus cannot: accounts and roles, the take history behind each regeneration, the
-pronunciation lexicon, hand-written line overrides, the scan's findings and the regeneration
-queue. Run `import-audio` first, or every line shows as a gap.
+Search by NPC name or id, or quest title or id, and play any line in the browser. Postgres
+holds the corpus, accounts and roles, every take and which one is live, the pronunciation
+lexicon, hand-written line overrides and the regeneration queue; the only thing on disk is
+each take's audio, in `audio-history/`. A line with no live take shows as a gap.
 
 **Progress text is hidden by default.** Those 3,093 lines — 17.7% of the corpus — are never
 voiced by any code path, so leaving them in every result padded the list with rows nobody can
@@ -584,33 +585,20 @@ UPDATE "user" SET role = 'admin' WHERE email = 'you@example.com';
 The explorer runs at [voiceover.rusty.one](https://voiceover.rusty.one), on a DigitalOcean
 droplet behind nginx. Pushing to `master` builds and ships it automatically — the workflow
 typechecks, applies the migrations with the droplet's own script, runs the tests against a
-throwaway Postgres, and only then builds and swaps the release. The audio store moves
-separately, by hand, because it is 1.1 GB and belongs in neither git nor CI.
+throwaway Postgres, and only then builds and swaps the release. The audio does not travel
+with it: takes are cut on the droplet, and come home one way, by hand.
 
 ```bash
-make push            # local audio/ -> droplet, then reload (dry-run + confirm first)
-make pull            # droplet -> local audio/  (--delete: removes local extras)
-make audio-status    # file count and size on both sides
-make releases        # what is deployed, and what you can roll back to
-make rollback        # back one release; RELEASE=<name> to pick one
-```
-
-**The droplet is usually the newer side now**, because regeneration happens there through
-the web UI. `make push` runs two rsync dry runs to find files the droplet has changed since
-you last pulled, and refuses rather than let `--delete` take them; `make pull` first, or
-`FORCE=1` to overwrite anyway. It no longer needs a pm2 reload — `storeIndex()` re-reads
-whenever the store's mtime moves, which is also what lets a line generated by one pm2 worker
-be visible to the other.
-
-```bash
-make pull-history    # previous takes; v0 of each is unreproducible, so back this up
-make history-status
-make pull-ignores    # the ignore list, database -> corpus/ignored.json (commit the result)
+make quests-pull-history     # every take; some are unreproducible, so back this up
+make quests-history-status   # take count and size on both sides
+make quests-export-ignores   # the ignore list, database -> corpus/ignored.json (commit it)
+make web-releases            # what is deployed, and what you can roll back to
+make web-rollback            # back one release; RELEASE=<name> to pick one
 ```
 
 Deploys are versioned as directories under `/srv/voiceover/releases/`, with `current` a
 symlink that pm2 follows, so a rollback is a symlink swap needing neither CI nor network.
-The audio store lives outside every release in `shared/`: it is never copied on deploy and
+The take archive lives outside every release in `shared/`: it is never copied on deploy and
 survives a rollback untouched. Migrations run before the swap and are forward-only — a
 rollback restores code, never schema, so every release must run against the schema of the
 release after it.
@@ -622,40 +610,14 @@ it, which is what `kill_timeout` in `deploy/ecosystem.config.js` is for.
 First-time droplet setup, the nginx vhost, and the GitHub secrets the workflow needs are in
 [`deploy/README.md`](deploy/README.md).
 
-### Language Client Selection
-Currently there are no voice translations available for languages other than english. However, if you want to use the addon with a non English client, you can still do so by creating the lookup tables in the client's respective language.
-
-To create the lookup tables, you can use the following command, with `LANGUAGE_CODE` representing the required language for the client:
-```bash
-python cli-main.py gen_lookup_tables --lang=LANGUAGE_CODE
-```
-The default selection, when no language code is provided, is English. Please be aware that the quality of text completion for translations in languages other than English can vary significantly.
-
-Unlike `build`, this reads the world database directly, so it needs the Docker MySQL and the
-extraction dependencies — the committed corpus is English only.
-
-The following language codes are supported:
-| Language Code | Language |
-| ------------- | ------- |
-| enUS          | English |
-| enGB          | English |
-| koKR          | Korean |
-| frFR          | French |
-| deDE          | German |
-| zhCN          | Simplified Chinese |
-| zhTW          | Traditional Chinese |
-| esES          | European Spanish |
-| esMX          | Mexican Spanish |
-| ruRU          | Russian |
-
 ## Output
 
-`synthesize` writes into the audio store at `audio/{quests,gossip}/`, which is gitignored and
-is the project's most expensive asset — it moves between machines with `make push` / `make
-pull` and never through git or CI. `build` copies from there into
+`make quests-sounds` fills `audio/{quests,gossip}/` from the live takes in `audio-history/`,
+and is run again before every build rather than kept. `build` copies from there into
 `dist/SpokenQuestsAudio/generated/sounds/`, alongside every lookup table and the
 `sound_length_table.lua` computed from exactly those files. A pack for players goes through
-`make package-audio`, which stages an ogg copy of the store first — see *Packaging*.
+`make quests-package-audio`, which runs `quests-sounds` and stages an ogg copy first — see
+*Packaging*.
 
 ### Stage directions and the narrator
 
@@ -678,9 +640,6 @@ this unblocked 62 previously silent lines without regenerating the corpus. **Not
 generated in bulk.** Tick **has narration** in the explorer to find these lines, listen, and
 regenerate the ones worth fixing through the usual controls.
 
-This is the second place the two generators diverge: `tts_cli` knows none of it and still
-refuses every one of those lines, exactly as it sends no pronunciation dictionary.
-
 ### Lines nobody will ever voice
 
 Some lines are not worth audio and never will be. The war-effort tallies read `$2113w` — a
@@ -695,17 +654,14 @@ An ignored line disappears from searches unless **ignored only** is ticked, is r
 regeneration before a request is spent, and is left out of the addon's lookup tables so no
 entry resolves to a sound that will never exist.
 
-The Python CLI and the rsync targets have no database, so the list is exported:
+The pack build reads no database, so the list is exported:
 
 ```bash
-make pull-ignores    # database -> corpus/ignored.json; commit it
+make quests-export-ignores    # database -> corpus/ignored.json; commit it
 ```
 
-That file is what `tts_cli/ignores.py` reads. `push`, `pull` and their dry runs derive
-`.rsync-ignored` from it before every transfer and pass it to `--exclude-from`, which also
-stops `--delete` removing what it excludes — audio made before the decision is left where it
-is rather than destroyed. `make build` leaves both the audio and the lookup entries out of the
-module. **A file is only excluded when every line addressing it is ignored**, so ignoring one
+That file is what `tts_cli/ignores.py` reads. `build` leaves both the audio and the lookup
+entries out of the module; the takes themselves stay in the archive. **A file is only excluded when every line addressing it is ignored**, so ignoring one
 gendered variant of a shared gossip line strands nothing.
 
 Seeded with the 35 war-effort lines and quest 1 by migration `0017`.

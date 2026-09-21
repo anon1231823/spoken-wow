@@ -66,7 +66,7 @@ export async function POST(request: Request, context: Context) {
   const clips = await Promise.all(
     samples.map(async (sample) => ({
       name: sample.file,
-      data: await fs.readFile(samplePath(voice, sample.file)),
+      data: await fs.readFile(await samplePath(voice, sample.file)),
     })),
   );
 
