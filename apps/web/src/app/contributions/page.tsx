@@ -7,11 +7,12 @@ import { auth } from "@/lib/auth";
 import { pageById } from "@/lib/books/catalogue";
 import { corpusLookup } from "@/lib/contributions/existing";
 import { isStatus, type ContributionStatus } from "@/lib/contributions/contributions";
+import { matchesSpeaker, NEEDS_DECISION, type SpeakerFilter } from "@/lib/contributions/query";
 import { listContributions, type Contribution } from "@/lib/contributions/store";
 import { npcSummaryFrom, questFor, resolveMissing, type NpcSummary } from "@/lib/contributions/triage";
 import { facets } from "@/lib/facets";
 import { observedFrom, resolveNpc } from "@/lib/npc/resolve";
-import { isProvenance, getResolutions, resolutionKey, type NpcKind, type Provenance } from "@/lib/npc/store";
+import { isProvenance, getResolutions, resolutionKey, type NpcKind } from "@/lib/npc/store";
 import { canRegenerate } from "@/lib/permissions";
 import { lineByPath } from "@/lib/zones/catalogue";
 
@@ -140,17 +141,20 @@ export default async function Page({
       ? "all"
       : "new";
   // Defaults to "all", not a narrowing anyone needs applied before they ask for it. There used
-  // to be a second dimension here (a "confirmed" param) alongside this one: dropped, not just
-  // hidden, because it was the same filter under a different name. resolveNpc and the override
-  // route (api/contributions/npc/route.ts) are the only two places that ever write `confirmed`,
-  // and both only ever pair confirmed:true with provenance "corpus" or "moderator" and
-  // confirmed:false with "client" or "none" -- migration 0031's
-  // npc_resolution_confirmed_provenance_check constraint enforces the corpus/moderator half of
-  // that pairing at the schema level, and no code path in this app has ever written the other
-  // way round. So "confirmed" always meant exactly `provenance in ('corpus', 'moderator')`, and
-  // "unconfirmed" always meant `provenance in ('client', 'none')` -- a coarser way to ask a
-  // question `provenance` already answers, not a second question.
-  const provenance: Provenance | "all" = isProvenance(rawProvenance) ? rawProvenance : "all";
+  // to be a second dimension here (a "confirmed" param) alongside this one, spelled as its own
+  // Confirmed/Unconfirmed pills: gone, replaced by the NEEDS_DECISION sentinel folded into this
+  // same param. `confirmed` itself really is a strict function of provenance -- resolveNpc and
+  // the override route are the only two places that ever write it, and both only ever pair
+  // confirmed:true with "corpus"/"moderator" and confirmed:false with "client"/"none" (migration
+  // 0031's npc_resolution_confirmed_provenance_check enforces the corpus/moderator half at the
+  // schema level) -- but that derivation answers a different question than the one the old
+  // "Unconfirmed" pill asked. "Unconfirmed" was the union `provenance in ('client', 'none')`,
+  // the view this whole queue exists to serve (finding the NPCs nobody has settled yet), and no
+  // single provenance value can express a union of two -- so it was never a renamed duplicate of
+  // an existing option the way "Confirmed" (a union nobody triages) was safe to just drop.
+  // See lib/contributions/query.ts's own NEEDS_DECISION docstring for the rest of this.
+  const provenance: SpeakerFilter =
+    rawProvenance === NEEDS_DECISION ? NEEDS_DECISION : isProvenance(rawProvenance) ? rawProvenance : "all";
 
   const contributions = await listContributions(status);
   const existing = await existingTextFor(contributions);
@@ -175,13 +179,10 @@ export default async function Page({
       npc: npcs[row.id] ?? null,
       quest: questFor(row),
     }))
-    // A row with no npc at all has nothing for the filter to match -- "which rows never named
-    // an NPC" is not one of its values -- so it drops out the moment provenance narrows
-    // anything, rather than showing up under a specific-provenance view it was never part of.
-    .filter((row) => {
-      if (provenance === "all") return true;
-      return row.npc?.provenance === provenance;
-    });
+    // matchesSpeaker handles both a plain provenance and the NEEDS_DECISION sentinel; a row
+    // with no npc at all falls out of every narrowed view there, the same way it did before the
+    // sentinel existed -- "which rows never named an NPC" isn't a Speaker option either way.
+    .filter((row) => matchesSpeaker(row.npc?.provenance, provenance));
 
   const facetValues = await facets();
 

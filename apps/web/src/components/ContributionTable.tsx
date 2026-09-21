@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ContributionStatus } from "@/lib/contributions/contributions";
-import { contributionsHref } from "@/lib/contributions/query";
+import { contributionsHref, NEEDS_DECISION, type SpeakerFilter } from "@/lib/contributions/query";
 import type { Contribution } from "@/lib/contributions/store";
 // Both are computed server-side (npcSummaryFrom pulls in corpus.ts's flavorsFor) -- `import
 // type` erases the whole thing at compile time, so none of that follows the type in here. The
@@ -81,14 +81,14 @@ const PROVENANCE_LABELS: Record<Provenance, string> = {
   none: "No race",
 };
 
-// The Speaker dropdown's options: PROVENANCES's own four, unchanged. A "Confirmed"/"Unconfirmed"
-// pair used to sit alongside these as a second dropdown -- dropped, not merely hidden, because
-// it was the same filter under a different name (see page.tsx's own comment on `provenance` for
-// why: confirmed is a strict function of provenance in every write path this codebase has).
-const SPEAKER_CHIP_OPTIONS: ChipOption[] = PROVENANCES.map((option) => ({
-  value: option,
-  label: PROVENANCE_LABELS[option],
-}));
+// The Speaker dropdown's options: NEEDS_DECISION first -- it's the view this queue exists for,
+// "everything nobody has settled yet" -- then PROVENANCES's own four, unchanged. "Confirmed"
+// (the union nobody triages: settled rows) is deliberately not here; see NEEDS_DECISION's own
+// docstring in lib/contributions/query.ts for why that one dropped out while this one didn't.
+const SPEAKER_CHIP_OPTIONS: ChipOption[] = [
+  { value: NEEDS_DECISION, label: "Needs a decision" },
+  ...PROVENANCES.map((option) => ({ value: option, label: PROVENANCE_LABELS[option] })),
+];
 
 /** The day and the clock time, short enough to sit in a column, matching ReportTable's `when`. */
 function when(at: string): string {
@@ -140,7 +140,7 @@ export default function ContributionTable({
 }: {
   initial: ContributionRow[];
   status: ContributionStatus | "all";
-  provenance: Provenance | "all";
+  provenance: SpeakerFilter;
   /** id -> corpus text, present only where the row's key resolves to something on file. */
   existing: Record<number, string>;
   /** facets().races/genders -- every race and gender the corpus has, for the "nothing known" state's selects. */
@@ -243,7 +243,7 @@ export default function ContributionTable({
    * ReportTable.tsx's own `go`; the mapping itself is contributionsHref, pulled out to
    * lib/contributions/query.ts so it can be tested without rendering FilterChip or this table.
    */
-  function go(next: { status?: ContributionStatus | "all"; provenance?: Provenance | "all" }) {
+  function go(next: { status?: ContributionStatus | "all"; provenance?: SpeakerFilter }) {
     router.push(contributionsHref({ status, provenance }, next));
   }
 
@@ -263,7 +263,7 @@ export default function ContributionTable({
           label="speaker"
           value={provenance === "all" ? undefined : provenance}
           options={SPEAKER_CHIP_OPTIONS}
-          onChange={(next) => go({ provenance: next as Provenance | undefined })}
+          onChange={(next) => go({ provenance: next as SpeakerFilter | undefined })}
         />
       </nav>
 
