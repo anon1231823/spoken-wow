@@ -108,8 +108,9 @@ Expect("...of the quest frame itself", button.anchor and button.anchor.relativeT
 
 _G.QuestFrameCloseButton = stub.Widget("Button", "QuestFrameCloseButton")
 stub.FireEvent("QUEST_COMPLETE")
-Expect("beside the close button, where the client draws one", button.anchor and button.anchor.relativeTo == _G.QuestFrameCloseButton, true)
-Expect("...on its left", button.anchor and button.anchor.point, "RIGHT")
+Expect("under the close button, where the client draws one", button.anchor and button.anchor.relativeTo == _G.QuestFrameCloseButton, true)
+Expect("...right-aligned with it", button.anchor and button.anchor.point, "TOPRIGHT")
+Expect("...below it, in the strip under the title bar", button.anchor and button.anchor.relativePoint, "BOTTOMRIGHT")
 
 button:GetScript("OnEnter")(button)
 Expect("the tooltip says the quest is missing", GameTooltip.text, "Spoken Quests doesn't have this quest")

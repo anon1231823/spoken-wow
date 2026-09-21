@@ -24,6 +24,8 @@ setfenv(1, VoiceOver)
 local BUTTON_HEIGHT = 20
 local BUTTON_WIDTH = 90
 local GAP = 2
+-- From the close button's bottom edge down into the middle of the strip under the title bar.
+local STRIP_OFFSET = 12
 local CORNER_INSET = 32
 
 -- The events that flip a quest or gossip panel on or off, on every client generation this
@@ -75,9 +77,10 @@ local function CloseButtonOf(frame, global)
     return _G[global]
 end
 
---- Place the button in `frame`'s top right corner -- where a Play button sits in the quest log --
---- just left of the frame's own close button, or inset from the corner when the client draws
---- none this file can find. False only when there is no frame to place it on.
+--- Place the button in `frame`'s top right corner, in the empty strip under the title bar:
+--- right-aligned with the frame's own close button and just below it. Beside the close button,
+--- on the title bar itself, it ran into the NPC's name. Inset from the corner when the client
+--- draws no close button this file can find. False only when there is no frame to place it on.
 function ContributeButton:PositionAtCorner(frame, close)
     if not frame then
         return false
@@ -86,7 +89,7 @@ function ContributeButton:PositionAtCorner(frame, close)
     button:ClearAllPoints()
     button:SetWidth(BUTTON_WIDTH)
     if close then
-        button:SetPoint("RIGHT", close, "LEFT", -GAP, 0)
+        button:SetPoint("TOPRIGHT", close, "BOTTOMRIGHT", -GAP, -STRIP_OFFSET)
     else
         button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -CORNER_INSET, -CORNER_INSET)
     end
