@@ -16,10 +16,11 @@
  * fix adds an "edited" version on top, and the line is still one a player sent. It is also what
  * the importer (tts_cli/corpus_db.py) leaves alone when it replaces every extracted speaker.
  *
- * The contributed text is what the player's client displayed -- the game's own substitutions
- * (a class name standing in for `$c`, and so on) are already applied. Stored as-is in both
- * `text` and `originalText`; reversing a substitution is guesswork this module has no business
- * doing, and an editor already has the text-override flow for exactly this kind of fix.
+ * The contributed text is what the player's client displayed, with that player's name, class
+ * and race put back as `$N`, `$C` and `$R` by the addon -- the only side that knows which words
+ * they were. So it is a template, like the extract's: stored as `originalText`, with `text` its
+ * spoken form (tokens.ts). Anything else the client substituted -- the one branch of a `$G` it
+ * picked -- stays as displayed; an editor has the text-override flow for that.
  */
 import type { PoolClient } from "pg";
 
@@ -34,6 +35,7 @@ import { isVoice } from "@/lib/voices/voices";
 import type { ContributionStatus } from "./contributions";
 import { answersQuestMoment, lineIdentityFor, voiceNameFor, type LineIdentity } from "./naming";
 import { CONTRIBUTION_COLUMNS, observationMeta, type Contribution } from "./store";
+import { spokenFromTemplate } from "./tokens";
 import { idOnlyResolution } from "./triage";
 
 const COLUMNS = CONTRIBUTION_COLUMNS;
@@ -232,7 +234,7 @@ async function insertLine(
   contributionId: number,
   userId: string,
   identity: LineIdentity,
-  text: string,
+  template: string,
 ): Promise<void> {
   // A progress line is kept but never voiced, as the extract marks its own (skipReason
   // "progress"): the game plays no audio for that panel.
@@ -242,11 +244,11 @@ async function insertLine(
        ("lineId", "variant", "lang", "version", "isCurrent", "origin", "source", "questId",
         "questTitle", "playerGender", "fileName", "text", "originalText", "generatable",
         "skipReason", "editedBy", "note")
-     values ($1, 0, $2, 1, true, 'contributed', $3, $4, $5, null, $6, $7, $7, $8, $9, $10, $11)`,
+     values ($1, 0, $2, 1, true, 'contributed', $3, $4, $5, null, $6, $7, $8, $9, $10, $11, $12)`,
     [
       identity.lineId, BASE_LANG, identity.source, identity.questId, identity.questTitle,
-      identity.fileName, text, generatable, generatable ? null : "progress", userId,
-      `contribution #${contributionId}`,
+      identity.fileName, spokenFromTemplate(template), template, generatable, generatable ? null : "progress",
+      userId, `contribution #${contributionId}`,
     ],
   );
 }

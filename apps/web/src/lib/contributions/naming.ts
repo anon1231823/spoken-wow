@@ -10,8 +10,8 @@
  * shared code, because one is Python and the other TypeScript.
  *
  * No player-gender branch: naming.py's `:{m|f}` suffix exists for a template the game expands
- * differently per player gender, and a contribution carries no such variant -- it is the text
- * one specific player's client displayed, already substituted (see the accept.ts docstring).
+ * differently per player gender, and a contribution carries no such variant -- the client
+ * already picked one side of any `$G` (see the accept.ts docstring).
  */
 import { createHash } from "node:crypto";
 
