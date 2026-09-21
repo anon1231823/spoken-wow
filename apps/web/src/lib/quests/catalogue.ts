@@ -25,7 +25,7 @@
 import "server-only";
 
 import { query } from "@/lib/db";
-import type { Corpus, CorpusLine } from "@/lib/corpus";
+import { npcKey, type Corpus, type CorpusLine } from "@/lib/corpus";
 
 export const BASE_LANG = "enUS";
 
@@ -165,4 +165,28 @@ export async function lineIndex(lang: string = BASE_LANG): Promise<Map<string, C
     holder[indexKey] = { lines, index };
   }
   return holder[indexKey].index;
+}
+
+/**
+ * What the corpus already knows about an NPC, or null for one it has never carried.
+ *
+ * The corpus is the exact answer where it has one: it was built from the same display data the
+ * game uses, including the flavor that no client API exposes.
+ *
+ * A linear scan, not a new memoised index: lineIndex groups by lineId, and one lineId is shared
+ * by every NPC with the same gossip line, so it cannot answer "what does this one NPC carry"
+ * without a second index carrying its own cache-invalidation story alongside it. This runs once
+ * per contribution resolved, not per request, so the scan is the honest cost here.
+ */
+export async function npcVoiceFromCorpus(
+  npcType: string,
+  npcId: number,
+): Promise<{ race: string; gender: string; flavor: string | null; npcName: string } | null> {
+  const wanted = `${npcType}:${npcId}`;
+  for (const line of (await corpus()).lines) {
+    if (npcKey(line) === wanted) {
+      return { race: line.race, gender: line.gender, flavor: line.flavor, npcName: line.npcName };
+    }
+  }
+  return null;
 }
