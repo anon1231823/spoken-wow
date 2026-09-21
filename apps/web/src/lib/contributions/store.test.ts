@@ -13,7 +13,9 @@ import {
   countRecentContributions,
   createContribution,
   listContributions,
+  observationMeta,
   recordContributionHit,
+  setContributionNpcKind,
   setContributionStatus,
 } from "./store";
 
@@ -143,5 +145,31 @@ describe("setContributionStatus", () => {
 
   it("answers null for an id that is not there", async () => {
     expect(await setContributionStatus(999_999_999, "accepted", RESOLVER)).toBe(null);
+  });
+});
+
+describe("setContributionNpcKind", () => {
+  it("records a kind for a kind-less envelope", async () => {
+    await createContribution(submission());
+    const [row] = ours(await listContributions("new"));
+    expect(await setContributionNpcKind(row.id, "gameobject")).toBe(true);
+    const [after] = ours(await listContributions("new"));
+    expect(after.npcKind).toBe("gameobject");
+    expect(observationMeta(after).kind).toBe("gameobject");
+  });
+
+  it("refuses to override the kind the client's own envelope carried", async () => {
+    await createContribution(submission({ meta: { npc: "12345 X", kind: "creature" } }));
+    const [row] = ours(await listContributions("new"));
+    expect(await setContributionNpcKind(row.id, "gameobject")).toBe(false);
+    expect(observationMeta(row).kind).toBe("creature");
+  });
+});
+
+describe("observationMeta", () => {
+  it("puts build back and leaves an envelope's own kind alone", () => {
+    expect(
+      observationMeta({ meta: { kind: "creature", npc: "1 X" }, build: "1.15.7/1", npcKind: "gameobject" }),
+    ).toEqual({ kind: "creature", npc: "1 X", build: "1.15.7/1" });
   });
 });

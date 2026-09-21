@@ -58,22 +58,54 @@ export type NpcSummary = {
    * is computed once here rather than in the client component that renders it.
    */
   flavorOptions: string[];
+  /**
+   * A kind-less row whose id resolves differently as a creature and as a gameobject: each
+   * answer, for the moderator to pick one. Empty otherwise. See idOnlyResolution.
+   */
+  conflict: NpcConflictOption[];
 };
 
+export type NpcConflictOption = Pick<NpcResolution, "npcKind" | "race" | "gender" | "flavor" | "provenance">;
+
+/** What an id-only lookup found for a kind-less contribution: one answer, or a conflict. */
+export type IdOnlyLookup = {
+  resolution: NpcResolution | undefined;
+  /** Every disagreeing answer, for a moderator to choose between. Empty when there is no conflict. */
+  conflict: NpcResolution[];
+};
+
+const RANK: Record<Provenance, number> = { moderator: 3, corpus: 2, client: 1, none: 0 };
+
 /**
- * The one row an id-only lookup may stand in for, or undefined when the id doesn't resolve that
- * cleanly.
+ * Who a kind-less contribution's NPC is, from every npc_resolution row sharing its id.
  *
- * Exactly one row for the id means the number only exists in one of the two kind spaces for
- * this NPC, so there is nothing to guess between -- using it for display is as safe as a keyed
- * lookup would have been, had the envelope carried a kind. Two rows (a creature and a
- * gameobject sharing a number) is the real ambiguity a kind-less envelope can't rule out, and
- * guessing between them is exactly what resolveNpc's own docstring refuses to do at write time;
- * reading it here would just move the same guess into the queue instead. Zero rows means the id
- * hasn't been resolved under either kind, same as any other unresolved NPC.
+ * A kind-less envelope names an id that may exist as both a creature and a gameobject. When the
+ * rows that say anything (every provenance but `none`) agree on race, gender and flavor, that
+ * answer is used, the best-ranked row first, so a moderator's own answer is what shows. When
+ * they disagree it is a conflict: nothing is used, and the rows go back to the moderator to
+ * choose between, which records the kind on the contribution (store.ts's setContributionNpcKind)
+ * and turns every later read of it into a keyed one.
+ *
+ * Read-only, like getResolutionsById itself: choosing a kind is the moderator's, never this.
  */
-export function unambiguousResolution(rows: NpcResolution[] | undefined): NpcResolution | undefined {
-  return rows?.length === 1 ? rows[0] : undefined;
+export function idOnlyResolution(rows: NpcResolution[] | undefined): IdOnlyLookup {
+  if (!rows?.length) return { resolution: undefined, conflict: [] };
+
+  const answers = rows.filter((row) => row.provenance !== "none");
+  if (answers.length === 0) {
+    return { resolution: rows.length === 1 ? rows[0] : undefined, conflict: [] };
+  }
+
+  const voices = new Set(answers.map((row) => `${row.race}|${row.gender}|${row.flavor}`));
+  if (voices.size > 1) {
+    return {
+      resolution: undefined,
+      conflict: [...answers].sort((a, b) => RANK[b.provenance] - RANK[a.provenance]),
+    };
+  }
+
+  const best = answers.reduce((a, b) => (RANK[b.provenance] > RANK[a.provenance] ? b : a));
+  return { resolution: best, conflict: [] };
 }
 
 /**
@@ -87,6 +119,7 @@ export function unambiguousResolution(rows: NpcResolution[] | undefined): NpcRes
 export async function npcSummaryFrom(
   observed: { npcKind: NpcKind | null; npcId: number; npcName: string | null },
   resolution: NpcResolution | undefined,
+  conflict: NpcResolution[] = [],
 ): Promise<NpcSummary> {
   return {
     npcKind: resolution?.npcKind ?? observed.npcKind,
@@ -99,6 +132,7 @@ export async function npcSummaryFrom(
     confirmed: resolution?.confirmed ?? false,
     flavorOptions:
       resolution?.race && resolution?.gender ? await flavorsFor(resolution.race, resolution.gender) : [],
+    conflict: conflict.map(({ npcKind, race, gender, flavor, provenance }) => ({ npcKind, race, gender, flavor, provenance })),
   };
 }
 

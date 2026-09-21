@@ -11,13 +11,16 @@
  * envelopes has done two different things, and neither should silence the other.
  */
 import { db } from "@/lib/db";
+import type { NpcKind } from "@/lib/npc/npc";
 
 import type { ContributionStatus, Submission } from "./contributions";
 import type { EnvelopeSource } from "./envelope";
 
-const COLUMNS = `"id", "source", "key", "locale", "build", "text", "meta", "raw", "count",
+/** Exported for accept.ts, whose row lock reads the same shape inside its own transaction. */
+export const CONTRIBUTION_COLUMNS = `"id", "source", "key", "locale", "build", "text", "meta", "raw", "count",
                  "status", "body", "name", "email", "userId", "createdAt"::text,
-                 "updatedAt"::text, "resolvedBy"`;
+                 "updatedAt"::text, "resolvedBy", "npcKind"`;
+const COLUMNS = CONTRIBUTION_COLUMNS;
 
 export type Contribution = {
   id: number;
@@ -37,7 +40,33 @@ export type Contribution = {
   createdAt: string;
   updatedAt: string;
   resolvedBy: string | null;
+  /** The kind a moderator chose for a kind-less envelope's NPC (migration 0033); null otherwise. */
+  npcKind: NpcKind | null;
 };
+
+/**
+ * The fields observedFrom reads, off a stored row: `meta` as the client sent it, plus the two
+ * things kept in columns of their own -- `build` (split out at intake) and a moderator-chosen
+ * `kind`, which only ever fills in for an envelope that carried none.
+ */
+export function observationMeta(row: Pick<Contribution, "meta" | "build" | "npcKind">): Record<string, string> {
+  const meta: Record<string, string> = { ...row.meta, build: row.build };
+  if (!meta.kind && row.npcKind) meta.kind = row.npcKind;
+  return meta;
+}
+
+/**
+ * Record which kind a kind-less contribution's NPC is. A no-op, returning false, for a row whose
+ * envelope already carried a kind: that is the client's own observation and is not overridden.
+ */
+export async function setContributionNpcKind(id: number, npcKind: NpcKind): Promise<boolean> {
+  const { rowCount } = await db().query(
+    `update "contribution" set "npcKind" = $2, "updatedAt" = now()
+     where "id" = $1 and coalesce("meta"->>'kind', '') = ''`,
+    [id, npcKind],
+  );
+  return (rowCount ?? 0) > 0;
+}
 
 export async function createContribution(
   input: Submission & {

@@ -14,3 +14,4 @@
 
 embeds.xml
 addon.xml
+Contribute.xml

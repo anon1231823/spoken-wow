@@ -10,9 +10,10 @@
  * form, and the queue it came from is not public reading.
  */
 import { requireRegenerate } from "@/lib/generation/authz";
-import { acceptedContributions } from "@/lib/contributions/store";
+import { acceptedContributions, observationMeta } from "@/lib/contributions/store";
+import { idOnlyResolution } from "@/lib/contributions/triage";
 import { observedFrom } from "@/lib/npc/resolve";
-import { getResolutions, resolutionKey, type NpcKind } from "@/lib/npc/store";
+import { getResolutions, getResolutionsById, resolutionKey, type NpcKind } from "@/lib/npc/store";
 
 export const dynamic = "force-dynamic";
 
@@ -26,23 +27,30 @@ export async function GET() {
   // it runs twice (once to build the keys, once below per row) rather than kept in a parallel
   // array the two loops would need to stay in lockstep with.
   const keys: { npcKind: NpcKind; npcId: number }[] = [];
+  const idOnlyIds = new Set<number>();
   for (const row of rows) {
-    // build is its own column, not part of row.meta (submissionFrom strips it out at intake) --
-    // observedFrom needs it put back or every resolution built from a stored row loses it.
-    const observed = observedFrom({ ...row.meta, build: row.build });
-    if (observed.npcKind !== null && observed.npcId !== null) {
-      keys.push({ npcKind: observed.npcKind, npcId: observed.npcId });
-    }
+    // observationMeta puts back build and a moderator-chosen kind, the two things stored in
+    // columns of their own rather than in `meta`.
+    const observed = observedFrom(observationMeta(row));
+    if (observed.npcId === null) continue;
+    if (observed.npcKind !== null) keys.push({ npcKind: observed.npcKind, npcId: observed.npcId });
+    else idOnlyIds.add(observed.npcId);
   }
   const resolutions = await getResolutions(keys);
+  // A kind-less row is answered the way the triage page and accept answer it: by id alone, when
+  // the answers on file agree. A conflict leaves the speaker null and says so.
+  const idOnly = await getResolutionsById([...idOnlyIds]);
 
   const body = rows
     .map((row) => {
-      const observed = observedFrom({ ...row.meta, build: row.build });
-      const resolution =
-        observed.npcKind !== null && observed.npcId !== null
-          ? resolutions.get(resolutionKey(observed.npcKind, observed.npcId))
-          : undefined;
+      const observed = observedFrom(observationMeta(row));
+      const lookup =
+        observed.npcId === null
+          ? { resolution: undefined, conflict: [] }
+          : observed.npcKind !== null
+            ? { resolution: resolutions.get(resolutionKey(observed.npcKind, observed.npcId)), conflict: [] }
+            : idOnlyResolution(idOnly.get(observed.npcId));
+      const resolution = lookup.resolution;
 
       return JSON.stringify({
         id: row.id,
@@ -60,6 +68,9 @@ export async function GET() {
         flavor: resolution?.flavor ?? null,
         npcProvenance: resolution?.provenance ?? null,
         npcConfirmed: resolution?.confirmed ?? false,
+        npcKind: resolution?.npcKind ?? observed.npcKind,
+        // Two kinds sharing this id disagree, and no moderator has said which one it is yet.
+        npcConflict: lookup.conflict.length > 0,
       });
     })
     .join("\n");

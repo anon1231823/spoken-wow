@@ -102,12 +102,15 @@ local function Build()
     end
 
     -- The buttons live on Blizzard's quest, book and map frames, not on the player, but
-    -- they all open the player's box, so the one switch for them is here.
-    layout:Section(L.OPT_CONTRIBUTE_TITLE)
-    layout:Checkbox(L.OPT_HIDE_CONTRIBUTE, L.OPT_HIDE_CONTRIBUTE_TIP,
-        function() return Addon.db.profile.Contribute.HideButtons end,
-        function(v) Addon.db.profile.Contribute.HideButtons = v end,
-        function() Callbacks:Fire("CONTRIBUTE_SETTINGS_CHANGED") end)
+    -- they all open the player's box, so the one switch for them is here. Absent where
+    -- Contribute.xml is not loaded (the private-server clients): nothing there to hide.
+    if Spoken.Contribute then
+        layout:Section(L.OPT_CONTRIBUTE_TITLE)
+        layout:Checkbox(L.OPT_HIDE_CONTRIBUTE, L.OPT_HIDE_CONTRIBUTE_TIP,
+            function() return Addon.db.profile.Contribute.HideButtons end,
+            function(v) Addon.db.profile.Contribute.HideButtons = v end,
+            function() Callbacks:Fire("CONTRIBUTE_SETTINGS_CHANGED") end)
+    end
 
     layout:Section(L.OPT_MINIMAP_TITLE)
     layout:Checkbox(L.OPT_MINIMAP_SHOW, nil,

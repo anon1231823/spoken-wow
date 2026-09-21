@@ -903,14 +903,14 @@ libs["AceDB-3.0"] = {
 }
 
 --- Load the Spoken player addon against this stub and return its private environment.
---- Loads exactly what its addon.xml lists, in order, then initialises the saved
---- variables the way ADDON_LOADED would.
+--- Loads exactly what its addon.xml and then Contribute.xml list, in order (a Blizzard-client
+--- .toc's order), then initialises the saved variables the way ADDON_LOADED would.
 function M.LoadSpoken(addonDirectory)
     for _, file in ipairs({ "Environment", "Version", "Core", "SoundUtils", "Callbacks", "SoundQueue", "Sources",
-        "Strings", "UI/Layout", "UI/Portrait", "UI/Actions", "UI/ContributeBox", "UI/PlayerFrame", "UI/MinimapButton",
+        "Strings", "UI/Layout", "UI/Portrait", "UI/Actions", "UI/PlayerFrame", "UI/MinimapButton",
         -- Real LibDeflate, not a hand-faked stub library: Contribute:Encode's round trip through
         -- actual compression is the point of testing it at all.
-        "UI/Options", "API", "Libs/LibDeflate/LibDeflate", "Contribute", "Compat" }) do
+        "UI/Options", "API", "Libs/LibDeflate/LibDeflate", "Compat", "UI/ContributeBox", "Contribute" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     local env = _G.SpokenEnv
@@ -1029,7 +1029,7 @@ function M.LoadQuests(addonDirectory, spokenDirectory)
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
     for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "EasterEggs",
-        "DataModules", "ReportButton", "Player", "Contribute", "VoiceOver" }) do
+        "DataModules", "ReportButton", "Player", "VoiceOver", "Contribute" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     return VO, env
@@ -1054,7 +1054,7 @@ function M.LoadQuestsAlone(addonDirectory)
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
     for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "EasterEggs",
-        "DataModules", "ReportButton", "Player", "Contribute", "VoiceOver" }) do
+        "DataModules", "ReportButton", "Player", "VoiceOver", "Contribute" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     return VO

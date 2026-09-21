@@ -6,7 +6,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { closeDb, db } from "@/lib/db";
-import { createContribution, setContributionStatus } from "@/lib/contributions/store";
+import { createContribution, setContributionNpcKind, setContributionStatus } from "@/lib/contributions/store";
 import { upsertResolution } from "@/lib/npc/store";
 
 vi.mock("@/lib/generation/authz", () => ({
@@ -62,6 +62,27 @@ async function acceptedRow(key: string, meta: Record<string, string>) {
     [`dedup:${key}:${ip}`],
   );
   await setContributionStatus(rows[0].id, "accepted", RESOLVER);
+  return rows[0].id;
+}
+
+/** A resolution for this run's npcId, as the given kind and with the given voice. */
+async function answer(npcKind: "creature" | "gameobject", race: string, provenance: "moderator" | "corpus") {
+  await upsertResolution({
+    npcKind,
+    npcId,
+    npcName: "Some Guard",
+    race,
+    gender: "male",
+    flavor: null,
+    provenance,
+    confirmed: true,
+    modelFileId: null,
+    sex: null,
+    creatureType: null,
+    build: null,
+    note: null,
+    resolvedBy: RESOLVER,
+  });
 }
 
 async function exported(): Promise<Array<Record<string, unknown>>> {
@@ -104,6 +125,34 @@ describe("GET /api/contributions/export", () => {
       npcProvenance: "moderator",
       npcConfirmed: true,
     });
+  });
+
+  // The addon's earliest envelopes carry no `kind`: answered by id alone, as triage and accept do.
+  it("carries a moderator's answer for a kind-less row", async () => {
+    await answer("creature", "tauren", "moderator");
+    await acceptedRow(`kindless:${npcId}`, { npc: `${npcId} Some Guard` });
+
+    const row = (await exported()).find((r) => r.key === `kindless:${npcId}`);
+    expect(row).toMatchObject({ race: "tauren", npcProvenance: "moderator", npcKind: "creature", npcConflict: false });
+  });
+
+  it("leaves the speaker null and flags a conflict when two kinds disagree", async () => {
+    await answer("creature", "tauren", "moderator");
+    await answer("gameobject", "human", "corpus");
+    await acceptedRow(`conflict:${npcId}`, { npc: `${npcId} Some Guard` });
+
+    const row = (await exported()).find((r) => r.key === `conflict:${npcId}`);
+    expect(row).toMatchObject({ race: null, gender: null, npcProvenance: null, npcConflict: true });
+  });
+
+  it("reads a conflicted row by the kind a moderator chose for it", async () => {
+    await answer("creature", "tauren", "moderator");
+    await answer("gameobject", "human", "corpus");
+    const id = await acceptedRow(`chosen:${npcId}`, { npc: `${npcId} Some Guard` });
+    expect(await setContributionNpcKind(id, "gameobject")).toBe(true);
+
+    const row = (await exported()).find((r) => r.key === `chosen:${npcId}`);
+    expect(row).toMatchObject({ race: "human", npcKind: "gameobject", npcConflict: false });
   });
 
   it("leaves the npc fields null and unconfirmed for a row with no resolution", async () => {

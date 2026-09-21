@@ -10,12 +10,12 @@ import { corpusLookup } from "@/lib/contributions/existing";
 import { isStatus, type ContributionStatus } from "@/lib/contributions/contributions";
 import { lineIsInExplorer } from "@/lib/contributions/accept";
 import { matchesSpeaker, NEEDS_DECISION, type ClientFilter, type SpeakerFilter } from "@/lib/contributions/query";
-import { listContributions, type Contribution } from "@/lib/contributions/store";
+import { listContributions, observationMeta, type Contribution } from "@/lib/contributions/store";
 import {
   npcSummaryFrom,
   questFor,
   resolveMissing,
-  unambiguousResolution,
+  idOnlyResolution,
   type NpcSummary,
 } from "@/lib/contributions/triage";
 import { facets } from "@/lib/facets";
@@ -72,12 +72,11 @@ async function existingTextFor(contributions: Contribution[]): Promise<Record<nu
 async function npcFor(contributions: Contribution[]): Promise<Record<number, NpcSummary>> {
   const found: Record<number, NpcSummary> = {};
 
-  // build is its own column on a stored contribution, not part of `meta` (submissionFrom
-  // strips it out at intake) -- put back for observedFrom the way the intake route and the
-  // export do, even though this function only reads npcKind/npcId off the result.
+  // build and a moderator-chosen kind are columns of their own on a stored contribution, not
+  // part of `meta` -- observationMeta puts both back, the same way accept and the export do.
   const observed = contributions.map((row) => ({
     row,
-    observed: observedFrom({ ...row.meta, build: row.build }),
+    observed: observedFrom(observationMeta(row)),
   }));
 
   // One query for every row's NPC, not one per row -- getResolutions is exactly what the
@@ -134,13 +133,17 @@ async function npcFor(contributions: Contribution[]): Promise<Record<number, Npc
 
     // A kind-less observation can never be a key into `resolutions` (getResolutions and the
     // resolve loop above both require a kind), but it may still land on exactly one row of
-    // `idOnly` -- unambiguousResolution is what decides "exactly one", so a number that exists
-    // in both kind spaces falls through to undefined here rather than guessing.
-    const resolution =
+    // `idOnly` -- idOnlyResolution uses the answer the rows agree on, or reports a conflict for
+    // the moderator to settle rather than guessing between two kinds.
+    const lookup =
       o.npcKind !== null
-        ? resolutions.get(resolutionKey(o.npcKind, o.npcId))
-        : unambiguousResolution(idOnly.get(o.npcId));
-    found[row.id] = await npcSummaryFrom({ npcKind: o.npcKind, npcId: o.npcId, npcName: o.npcName }, resolution);
+        ? { resolution: resolutions.get(resolutionKey(o.npcKind, o.npcId)), conflict: [] }
+        : idOnlyResolution(idOnly.get(o.npcId));
+    found[row.id] = await npcSummaryFrom(
+      { npcKind: o.npcKind, npcId: o.npcId, npcName: o.npcName },
+      lookup.resolution,
+      lookup.conflict,
+    );
   }
 
   return found;

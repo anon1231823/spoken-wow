@@ -17,7 +17,7 @@ import { isGap, matchingLines, NO_CONTEXT } from "@/lib/search";
 
 import { lineIsInExplorer, resolveContribution } from "./accept";
 import { gossipFileName, gossipHash, gossipLineId, questFileName, questLineId } from "./naming";
-import { createContribution, type Contribution } from "./store";
+import { createContribution, setContributionNpcKind, type Contribution } from "./store";
 
 const RESOLVER = "test-contributions-accept";
 
@@ -134,6 +134,36 @@ async function linesFor(lineId: string): Promise<{ origin: string; generatable: 
 }
 
 describe("resolveContribution: quests accept", () => {
+  it("refuses a kind-less contribution whose id has conflicting answers, until one is chosen", async () => {
+    await speaker(npcId, "orc", "female");
+    await upsertResolution({
+      npcKind: "gameobject",
+      npcId,
+      npcName: "Test Speaker",
+      race: "human",
+      gender: "male",
+      flavor: null,
+      provenance: "corpus",
+      confirmed: true,
+      modelFileId: null,
+      sex: null,
+      creatureType: null,
+      build: null,
+      note: null,
+      resolvedBy: RESOLVER,
+    });
+    const id = await questContribution({ kind: "" });
+
+    const refused = await resolveContribution(id, "accepted", RESOLVER);
+    expect(refused).toMatchObject({ ok: false, reason: "needs-speaker" });
+    expect((refused as { message: string }).message).toMatch(/conflicting/);
+
+    expect(await setContributionNpcKind(id, "creature")).toBe(true);
+    expect((await resolveContribution(id, "accepted", RESOLVER)).ok).toBe(true);
+    const speakers = (await lineIndex()).get(questLineId(questId, "accept"))!;
+    expect(speakers[0]).toMatchObject({ race: "orc", contributionId: id });
+  });
+
   it("refuses a quests contribution whose NPC has no resolved speaker", async () => {
     const id = await questContribution();
     const outcome = await resolveContribution(id, "accepted", RESOLVER);

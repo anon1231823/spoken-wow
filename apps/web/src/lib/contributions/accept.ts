@@ -32,12 +32,10 @@ import { BASE_LANG, corpus } from "@/lib/quests/catalogue";
 
 import type { ContributionStatus } from "./contributions";
 import { answersQuestMoment, lineIdentityFor, voiceNameFor, type LineIdentity } from "./naming";
-import type { Contribution } from "./store";
-import { unambiguousResolution } from "./triage";
+import { CONTRIBUTION_COLUMNS, observationMeta, type Contribution } from "./store";
+import { idOnlyResolution } from "./triage";
 
-const COLUMNS = `"id", "source", "key", "locale", "build", "text", "meta", "raw", "count",
-                 "status", "body", "name", "email", "userId", "createdAt"::text,
-                 "updatedAt"::text, "resolvedBy"`;
+const COLUMNS = CONTRIBUTION_COLUMNS;
 
 /**
  * Where contributed speakers start in quest_line_speaker's `ord`. The importer numbers the
@@ -72,13 +70,18 @@ type Prepared =
 /** Who speaks a quests contribution, from npc_resolution -- the same lookup triage.ts's page renders from. */
 async function resolvedSpeaker(
   meta: Record<string, string>,
-): Promise<{ npcId: number; npcName: string | null; npcType: NpcKind; race: string; gender: string; flavor: string | null } | null> {
+): Promise<Speaker | "conflict" | null> {
   const observed = observedFrom(meta);
   if (observed.npcId === null) return null;
 
-  const resolution = observed.npcKind
-    ? await getResolution(observed.npcKind, observed.npcId)
-    : unambiguousResolution((await getResolutionsById([observed.npcId])).get(observed.npcId));
+  let resolution;
+  if (observed.npcKind) {
+    resolution = await getResolution(observed.npcKind, observed.npcId);
+  } else {
+    const lookup = idOnlyResolution((await getResolutionsById([observed.npcId])).get(observed.npcId));
+    if (lookup.conflict.length) return "conflict";
+    resolution = lookup.resolution;
+  }
 
   if (!resolution?.race || !resolution?.gender) return null;
 
@@ -106,7 +109,14 @@ async function resolvedSpeaker(
  *     speaker of it, unless they already are one.
  */
 async function prepareLine(contribution: Contribution): Promise<{ ok: true; prepared: Prepared } | ResolveRefusal> {
-  const speaker = await resolvedSpeaker(contribution.meta);
+  const speaker = await resolvedSpeaker(observationMeta(contribution));
+  if (speaker === "conflict") {
+    return {
+      ok: false,
+      reason: "needs-speaker",
+      message: "This NPC's id has conflicting answers -- pick which one it is first.",
+    };
+  }
   if (!speaker) {
     return {
       ok: false,

@@ -752,7 +752,9 @@ of the text, and `Contribute:HasGap()` puts a button reading **"Contribute"** â€
 the books addon's button carries â€” on the Blizzard quest frame itself, anchored into whichever
 of the accept, progress or reward panel's own button row is on screen, and beside the gossip
 frame's Goodbye button for an NPC line, exactly when there is text on screen and nothing queued
-to play. A player who does not want it turns it off with **Hide the Contribute buttons** in the
+to play. It exists on the Blizzard clients only: the 1.12, 2.4.3 and 3.3.5 clients are private
+servers, where contributing is off for now, and their `.toc` files leave out the `Contribute.xml`
+that loads it (the 1.12 client's Lua 5.0 could not parse it anyway). A player who does not want it turns it off with **Hide the Contribute buttons** in the
 Spoken Player settings, one switch for the quests, books and zones buttons alike; each addon
 asks `Spoken:AreContributeButtonsHidden()` in its gap check and refreshes on the player's
 `CONTRIBUTE_SETTINGS_CHANGED` callback, since toggling it fires no game event.
@@ -832,6 +834,14 @@ An envelope carrying no `kind` resolves to nothing rather than being assumed a c
 and such an envelope carries no `model` either, so the best row it could produce is a name we
 already have. Filing a gameobject under a creature id would merge two id spaces that overlap:
 creature 68 is a Stormwind City Guard, gameobject 68 is a Wanted Poster.
+
+Reading such a contribution is different from writing it. The triage page, accept and the
+export all look its id up under both kinds (`triage.ts:idOnlyResolution`): when the answers on
+file agree, that answer is used, a moderator's first. When a creature and a gameobject sharing
+the id disagree, nothing is used and the row shows the conflict; the moderator picks which one
+the contribution meant, and that pick is stored on the contribution (`contribution.npcKind`,
+migration 0033), never in `meta`, which stays what the client sent. From then on every reader
+treats the row as if its envelope had carried the kind.
 
 The answer is stored once per NPC, keyed on the kind *and* the id for that same reason, so one
 correction fixes every line that NPC speaks. `npc_resolution` also keeps what the client

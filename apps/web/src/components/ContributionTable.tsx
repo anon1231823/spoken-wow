@@ -34,7 +34,7 @@ import type { Contribution } from "@/lib/contributions/store";
 // Both are computed server-side (npcSummaryFrom pulls in corpus.ts's flavorsFor) -- `import
 // type` erases the whole thing at compile time, so none of that follows the type in here. The
 // same split existing.ts's `existing` prop already draws.
-import type { NpcSummary, QuestSummary } from "@/lib/contributions/triage";
+import type { NpcConflictOption, NpcSummary, QuestSummary } from "@/lib/contributions/triage";
 // From npc.ts, not npc/store.ts: store.ts imports @/lib/db, and pulling NPC_KINDS/PROVENANCES
 // (values, not just types) out of it would drag Postgres's own node built-ins into this bundle.
 import { NPC_KINDS, PROVENANCES, type NpcKind, type Provenance } from "@/lib/npc/npc";
@@ -213,6 +213,12 @@ export default function ContributionTable({
 
       if (!response?.ok) return;
       const { resolution } = (await response.json()) as { resolution: NpcResolution };
+      // A kind-less row's moderator just said which kind it is: record that on the contribution
+      // too, so a later answer for the other kind under the same id can never turn this row
+      // into a conflict.
+      if (npc.npcKind === null && answer.npcKind) {
+        await recordKind(contributionId, answer.npcKind);
+      }
       setNpcOverrides((current) => ({
         ...current,
         [contributionId]: {
@@ -233,6 +239,43 @@ export default function ContributionTable({
                   .filter((scope) => scope.race === resolution.race && scope.gender === resolution.gender)
                   .map((scope) => scope.flavor)
               : [],
+          conflict: [],
+        },
+      }));
+    },
+    [flavorScopes],
+  );
+
+  /**
+   * A conflict settled: the moderator picked which of the answers on file this contribution's
+   * NPC is. Recorded on the contribution (api/contributions/kind), then shown as that answer.
+   */
+  const pickConflict = useCallback(
+    async (contributionId: number, npc: NpcSummary, option: NpcConflictOption) => {
+      setNpcBusy(contributionId);
+      const ok = await recordKind(contributionId, option.npcKind);
+      setNpcBusy(null);
+      if (!ok) {
+        setRefusals((current) => ({ ...current, [contributionId]: "That didn't go through -- try again." }));
+        return;
+      }
+      setNpcOverrides((current) => ({
+        ...current,
+        [contributionId]: {
+          ...npc,
+          npcKind: option.npcKind,
+          race: option.race,
+          gender: option.gender,
+          flavor: option.flavor,
+          provenance: option.provenance,
+          confirmed: option.provenance === "corpus" || option.provenance === "moderator",
+          flavorOptions:
+            option.race && option.gender
+              ? flavorScopes
+                  .filter((scope) => scope.race === option.race && scope.gender === option.gender)
+                  .map((scope) => scope.flavor)
+              : [],
+          conflict: [],
         },
       }));
     },
@@ -398,14 +441,22 @@ export default function ContributionTable({
                             wh↗
                           </a>
                         </div>
-                        <SpeakerCell
-                          npc={npc}
-                          raceOptions={raceOptions}
-                          genderOptions={genderOptions}
-                          flavorScopes={flavorScopes}
-                          busy={npcBusy === row.id}
-                          onSave={(answer) => void overrideNpc(row.id, npc, answer)}
-                        />
+                        {npc.conflict.length > 0 ? (
+                          <NpcConflict
+                            npc={npc}
+                            busy={npcBusy === row.id}
+                            onPick={(option) => void pickConflict(row.id, npc, option)}
+                          />
+                        ) : (
+                          <SpeakerCell
+                            npc={npc}
+                            raceOptions={raceOptions}
+                            genderOptions={genderOptions}
+                            flavorScopes={flavorScopes}
+                            busy={npcBusy === row.id}
+                            onSave={(answer) => void overrideNpc(row.id, npc, answer)}
+                          />
+                        )}
                       </div>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -545,6 +596,56 @@ export default function ContributionTable({
         </table>
       )}
     </>
+  );
+}
+
+/** Record a kind-less contribution's NPC kind (api/contributions/kind). True when it landed. */
+async function recordKind(contributionId: number, npcKind: NpcKind): Promise<boolean> {
+  const response = await fetch("/api/contributions/kind", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: contributionId, npcKind }),
+  }).catch(() => null);
+  return Boolean(response?.ok);
+}
+
+/**
+ * A kind-less row whose id has disagreeing answers on file -- one as a creature, another as a
+ * gameobject. Each is shown with where it came from; the moderator picks the one this
+ * contribution meant, and nothing is used until they do (triage.ts's idOnlyResolution).
+ */
+function NpcConflict({
+  npc,
+  busy,
+  onPick,
+}: {
+  npc: NpcSummary;
+  busy: boolean;
+  onPick: (option: NpcConflictOption) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <p className="text-destructive">Conflicting answers for #{npc.npcId} -- which is it?</p>
+      {npc.conflict.map((option) => (
+        <div key={option.npcKind} className="flex items-center gap-2">
+          <span>
+            {option.npcKind}: {[option.race, option.gender, option.flavor].filter(Boolean).join("-") || "no race"}
+          </span>
+          <Badge variant="outline" className="py-0 leading-5">
+            {option.provenance}
+          </Badge>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-6 px-2 text-xs"
+            disabled={busy}
+            onClick={() => onPick(option)}
+          >
+            This one
+          </Button>
+        </div>
+      ))}
+    </div>
   );
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { npcSummaryFrom, questFor, resolveMissing, unambiguousResolution } from "./triage";
+import { idOnlyResolution, npcSummaryFrom, questFor, resolveMissing } from "./triage";
 
 describe("questFor", () => {
   it("reads the title and quest id off a quest-moment envelope", async () => {
@@ -68,7 +68,18 @@ describe("npcSummaryFrom", () => {
       provenance: "none",
       confirmed: false,
       flavorOptions: [],
+      conflict: [],
     });
+  });
+
+  it("carries a conflict's answers without their bookkeeping", async () => {
+    const other = resolution({ npcKind: "gameobject", race: "tauren", provenance: "moderator" });
+    expect(
+      (await npcSummaryFrom({ npcKind: null, npcId: 288, npcName: "Jitters" }, undefined, [other, resolution()])).conflict,
+    ).toEqual([
+      { npcKind: "gameobject", race: "tauren", gender: "male", flavor: "standard", provenance: "moderator" },
+      { npcKind: "creature", race: "human", gender: "male", flavor: "standard", provenance: "corpus" },
+    ]);
   });
 
   it("is fully unresolved for a known-kind observation with no resolution either", async () => {
@@ -107,20 +118,33 @@ describe("npcSummaryFrom", () => {
   });
 });
 
-describe("unambiguousResolution", () => {
-  it("gets a kind-less contribution's one matching row", () => {
-    expect(unambiguousResolution([resolution()])).toEqual(resolution());
+describe("idOnlyResolution", () => {
+  it("uses a kind-less contribution's one matching row", () => {
+    expect(idOnlyResolution([resolution()])).toEqual({ resolution: resolution(), conflict: [] });
   });
 
-  it("gets nothing when the id is ambiguous between two kinds", () => {
-    expect(
-      unambiguousResolution([resolution(), resolution({ npcKind: "gameobject", race: null })]),
-    ).toBeUndefined();
+  it("uses the answer two kinds agree on, the moderator's own row first", () => {
+    const moderator = resolution({ npcKind: "gameobject", provenance: "moderator" });
+    expect(idOnlyResolution([resolution(), moderator])).toEqual({ resolution: moderator, conflict: [] });
+  });
+
+  it("ignores a row that knows nothing when the other one answers", () => {
+    const nothing = resolution({ npcKind: "gameobject", race: null, gender: null, flavor: null, provenance: "none", confirmed: false });
+    expect(idOnlyResolution([nothing, resolution()])).toEqual({ resolution: resolution(), conflict: [] });
+  });
+
+  // The moderator's answer is used unless another kind disagrees -- then it is theirs to settle.
+  it("reports a conflict, best-ranked first, when the two kinds disagree", () => {
+    const moderator = resolution({ npcKind: "gameobject", race: "tauren", provenance: "moderator" });
+    expect(idOnlyResolution([resolution(), moderator])).toEqual({
+      resolution: undefined,
+      conflict: [moderator, resolution()],
+    });
   });
 
   it("gets nothing for an id nobody has resolved", () => {
-    expect(unambiguousResolution(undefined)).toBeUndefined();
-    expect(unambiguousResolution([])).toBeUndefined();
+    expect(idOnlyResolution(undefined)).toEqual({ resolution: undefined, conflict: [] });
+    expect(idOnlyResolution([])).toEqual({ resolution: undefined, conflict: [] });
   });
 });
 
