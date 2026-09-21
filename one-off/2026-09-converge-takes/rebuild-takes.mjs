@@ -1,12 +1,17 @@
 #!/usr/bin/env node
+// ONE-OFF, RUN ONCE BY run.sh. Kept for the record; see ../README.md. Not maintained.
+//
 // Rebuilds the quests take table from the two things that actually record what happened:
 // the rows already in Postgres, and the files in audio-history/.
 //
-//   node scripts/rebuild-takes.mjs --archive /tmp/prod-archive.txt --dry-run
-//   node scripts/rebuild-takes.mjs --archive /tmp/prod-archive.txt
+//   DATABASE_URL=… node rebuild-takes.mjs --listing shared.txt --dry-run
+//   DATABASE_URL=… node rebuild-takes.mjs --listing shared.txt
 //
-// Supersedes the store-only seed that came before it, which could only ever say "one take"
-// per line. RUN ONCE, THEN DELETE IT.
+// The listing is production's shared/ directory, taken by run.sh on the droplet: every mp3
+// under audio/ (the quests store), sounds/, books/ and audio-history/, one `<bytes> <path>`
+// per line. It is the only way this reads the disk, so it runs from a laptop against a
+// database it is pointed at, and a rehearsal against a copy reads exactly what production
+// has.
 //
 // ALL THREE SECTIONS, TWO JOBS. Quests needs its history rebuilt and renumbered, below.
 // Zones and books need only to be told where their bytes are: their versions already start
@@ -53,51 +58,52 @@
 // The live take is whichever number was live before, carried across to its new number. If
 // nothing was live -- a file the app never touched -- it is the newest take.
 
-import { readdir, readFile, stat } from "node:fs/promises";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { gunzipSync } from "node:zlib";
 
-import pg from "pg";
+// pg is the web app's dependency; this folder has no node_modules of its own, on purpose.
+const pg = createRequire(new URL("../../apps/web/package.json", import.meta.url))("pg");
 
-import { loadEnv } from "../../../pipelines/lib/env.mjs";
-
-await loadEnv("quests");
-
-const ROOT = new URL("../../../pipelines/quests/", import.meta.url).pathname;
-const SUBFOLDERS = ["quests", "gossip"];
 const LANG = "enUS";
+const CORPUS = new URL("../../pipelines/quests/corpus/corpus.json.gz", import.meta.url).pathname;
 
 const argv = process.argv.slice(2);
-const args = new Set(argv);
-const dryRun = args.has("--dry-run");
-const archiveArg = argv.includes("--archive") ? argv[argv.indexOf("--archive") + 1] : null;
+const dryRun = argv.includes("--dry-run");
+const listingPath = argv.includes("--listing") ? argv[argv.indexOf("--listing") + 1] : null;
+if (!listingPath) throw new Error("--listing <file> is required: run.sh takes it on the droplet");
 
-function storeDir() {
-  return process.env.SPOKEN_QUESTS_AUDIO ?? join(ROOT, "audio");
-}
-
-function archiveDir() {
-  return process.env.SPOKEN_QUESTS_AUDIO_HISTORY ?? join(ROOT, "audio-history");
-}
-
-function corpusPath() {
-  return process.env.SPOKEN_QUESTS_CORPUS ?? join(ROOT, "corpus", "corpus.json.gz");
-}
-
-/** Store-relative paths of every clip on disk, the way lib/audio.ts reads them. */
-async function filesOnDisk() {
-  const found = new Map();
-  for (const sub of SUBFOLDERS) {
-    const dir = join(storeDir(), sub);
-    if (!existsSync(dir)) continue;
-    for (const name of await readdir(dir)) {
-      if (!name.endsWith(".mp3")) continue;
-      const file = `${sub}/${name}`;
-      found.set(file, (await stat(join(dir, name))).size);
+/**
+ * Production's shared/ listing, split into what each step reads: the quests store as
+ * file -> bytes, and the archive as `<bytes> <section>/<path>` lines, the shape the
+ * parsers below were written for.
+ *
+ * Refuses a listing missing any of the four, because each is one step's whole input: a
+ * listing taken in the wrong directory would otherwise renumber quests from its rows alone
+ * and pin no zones or books take, and say it had succeeded.
+ */
+function splitListing(text) {
+  const store = new Map();
+  const archive = [];
+  const counts = { store: 0, quests: 0, zones: 0, books: 0 };
+  for (const line of text.split("\n")) {
+    const match = /^(\d+) (?:\.\/)?(.+)$/.exec(line.trim());
+    if (!match) continue;
+    const [, bytes, path] = match;
+    if (path.startsWith("audio/")) {
+      store.set(path.slice("audio/".length), Number(bytes));
+      counts.store++;
+    } else if (path.startsWith("audio-history/")) {
+      const relative = path.slice("audio-history/".length);
+      archive.push(`${bytes} ${relative}`);
+      const section = relative.split("/")[0];
+      if (section in counts) counts[section]++;
     }
   }
-  return found;
+  for (const [part, count] of Object.entries(counts)) {
+    if (count === 0) throw new Error(`the listing has no ${part} clips -- was it taken in shared/?`);
+  }
+  return { store, archive: archive.join("\n") };
 }
 
 /**
@@ -152,28 +158,6 @@ function parseArchive(text) {
   return { byFile, skipped };
 }
 
-/** The same listing, walked from a local quests audio-history. For testing without a droplet. */
-async function walkArchive(root) {
-  const lines = [];
-  async function walk(dir, prefix) {
-    let entries;
-    try {
-      entries = await readdir(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) await walk(join(dir, entry.name), relative);
-      else if (entry.name.endsWith(".mp3")) {
-        lines.push(`${(await stat(join(dir, entry.name))).size} ${relative}`);
-      }
-    }
-  }
-  await walk(root, "");
-  return lines.join("\n");
-}
-
 function fileIndex(corpus) {
   const index = new Map();
   for (const line of corpus.lines) {
@@ -189,7 +173,7 @@ if (!url) throw new Error("DATABASE_URL is not set -- the takes live in Postgres
 
 const pool = new pg.Pool({ connectionString: url });
 
-async function rebuildQuests(listing) {
+async function rebuildQuests(store, listing) {
   // Rebuilt before if any take points at a bare `{n}.mp3`. Only this script writes those:
   // everything commitTake archives is `v{n}-{hash}.mp3`. Asking whether ANY take has an
   // archiveFile would be wrong -- the first quests line regenerated after deploy has one,
@@ -203,16 +187,9 @@ async function rebuildQuests(listing) {
     return;
   }
 
-  const store = await filesOnDisk();
-  if (store.size === 0) {
-    throw new Error(
-      `no clips under ${storeDir()} -- run this where the store is, or set SPOKEN_QUESTS_AUDIO`,
-    );
-  }
-
   const archive = parseArchive(listing);
 
-  const corpus = JSON.parse(gunzipSync(await readFile(corpusPath())).toString("utf8"));
+  const corpus = JSON.parse(gunzipSync(await readFile(CORPUS)).toString("utf8"));
   const index = fileIndex(corpus);
 
   const { rows } = await pool.query(
@@ -286,7 +263,7 @@ async function rebuildQuests(listing) {
     0,
   );
 
-  console.log(`${store.size} clips in ${storeDir()}`);
+  console.log(`${store.size} clips in the quests store`);
   console.log(`${archive.byFile.size} files have archived takes (${archive.skipped} names skipped)`);
   console.log(`${rows.length} take rows now`);
   console.log(`${plan.length} files change: ${newRows} takes recovered, ${renumbered} renumbered`);
@@ -432,12 +409,10 @@ async function pinSection(source, listing) {
 }
 
 try {
-  const listing = archiveArg
-    ? await readFile(archiveArg, "utf8")
-    : await walkArchive(archiveDir());
-  await rebuildQuests(listing);
-  await pinSection("zones", listing);
-  await pinSection("books", listing);
+  const { store, archive } = splitListing(await readFile(listingPath, "utf8"));
+  await rebuildQuests(store, archive);
+  await pinSection("zones", archive);
+  await pinSection("books", archive);
   if (dryRun) console.log("\n--dry-run: nothing written");
 } finally {
   await pool.end();
