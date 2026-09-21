@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { corpus as catalogue } from "./quests/catalogue";
 import { buildFacets } from "./facets";
+import { RACES } from "./voices/voices";
 
 const corpus = await catalogue();
 const facets = buildFacets(corpus.lines);
@@ -18,9 +19,15 @@ describe("facets", () => {
     }
   });
 
-  it("offers nothing the corpus does not use", () => {
-    const races = new Set(corpus.lines.map((l) => l.race));
-    expect(facets.races.every((race) => races.has(race))).toBe(true);
+  it("offers the voiced races, including ones no line uses yet", () => {
+    expect(facets.races).toEqual([...RACES]);
+    expect(facets.races).toContain("skybourneelf");
+    // So the voice filter can reach the slot /voices shows for it.
+    expect(facets.voices).toContain("skybourneelf-female");
+  });
+
+  it("offers no bare voice for a race-gender the corpus already flavors", () => {
+    expect(facets.voices).not.toContain("orc-male");
   });
 
   // narrator-male and bloodelf-female have no NPC voice sets, so their lines carry no

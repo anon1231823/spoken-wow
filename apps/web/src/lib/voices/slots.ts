@@ -1,8 +1,10 @@
 /**
  * Which voices this project needs, and what a valid voice name is.
  *
- * The set is derived from the corpus rather than listed here, so a race added to
- * tts_cli/consts.py upstream cannot leave this page quietly missing a voice. The names are
+ * The set is derived from the corpus, so a race added to tts_cli/consts.py upstream cannot
+ * leave this page quietly missing a voice, plus a bare `race-gender` slot for every voiced
+ * race-gender (voices.ts) the corpus does not speak yet -- the voice has to exist to be cloned
+ * before the first line for it is accepted. The names are
  * the ones tts_cli/voices.py matches on: `race-gender-flavor`, and nothing else is usable,
  * because a stock library voice's name cannot express that mapping.
  *
@@ -11,6 +13,8 @@
  */
 import { corpus } from "@/lib/quests/catalogue";
 import { hasNarration, NARRATOR_VOICE } from "@/lib/generation/narration";
+
+import { unspokenVoices } from "./voices";
 
 export type VoiceSlot = {
   /** e.g. "orc-male-shady" — the ElevenLabs voice name this project resolves by. */
@@ -33,9 +37,11 @@ export type VoiceSlot = {
 export async function voiceSlots(): Promise<VoiceSlot[]> {
   const lines = new Map<string, number>();
   const npcs = new Map<string, Set<number>>();
+  const spoken = new Set<string>();
 
   for (const line of (await corpus()).lines) {
     if (!line.generatable) continue;
+    spoken.add(`${line.race}-${line.gender}`);
     lines.set(line.voice, (lines.get(line.voice) ?? 0) + 1);
     if (!npcs.has(line.voice)) npcs.set(line.voice, new Set());
     npcs.get(line.voice)!.add(line.npcId);
@@ -47,7 +53,12 @@ export async function voiceSlots(): Promise<VoiceSlot[]> {
     npcCount: npcs.get(name)!.size,
   }));
 
-  return [...derived, await narratorSlot()].sort((a, b) => a.name.localeCompare(b.name));
+  // The narrator is stated below rather than derived, so it is spoken whether or not a line
+  // names it.
+  spoken.add(NARRATOR_VOICE);
+  const unspoken = unspokenVoices(spoken).map((name) => ({ name, lineCount: 0, npcCount: 0 }));
+
+  return [...derived, ...unspoken, await narratorSlot()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**

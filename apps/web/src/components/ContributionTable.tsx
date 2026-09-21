@@ -39,6 +39,7 @@ import type { NpcConflictOption, NpcSummary, QuestSummary } from "@/lib/contribu
 // (values, not just types) out of it would drag Postgres's own node built-ins into this bundle.
 import { NPC_KINDS, PROVENANCES, type NpcKind, type Provenance } from "@/lib/npc/npc";
 import type { NpcResolution } from "@/lib/npc/store";
+import { GENDERS, gendersOf, RACES, type Gender } from "@/lib/voices/voices";
 import { wowheadEntityUrl, wowheadForeverUrl, wowheadQuestUrl } from "@/lib/wowhead";
 
 export type { NpcSummary };
@@ -148,8 +149,6 @@ export default function ContributionTable({
   provenance,
   client,
   existing,
-  raceOptions,
-  genderOptions,
   flavorScopes,
 }: {
   initial: ContributionRow[];
@@ -158,9 +157,6 @@ export default function ContributionTable({
   client: ClientFilter;
   /** id -> corpus text, present only where the row's key resolves to something on file. */
   existing: Record<number, string>;
-  /** facets().races/genders -- every race and gender the corpus has, for the "nothing known" state's selects. */
-  raceOptions: string[];
-  genderOptions: string[];
   /** facets().flavorScopes -- what lets that state's flavor select narrow to whatever race-gender was just chosen, without a round trip. */
   flavorScopes: FlavorScope[];
 }) {
@@ -449,8 +445,6 @@ export default function ContributionTable({
                         ) : (
                           <SpeakerCell
                             npc={npc}
-                            raceOptions={raceOptions}
-                            genderOptions={genderOptions}
                             flavorScopes={flavorScopes}
                             busy={npcBusy === row.id}
                             onSave={(answer) => void overrideNpc(row.id, npc, answer)}
@@ -660,9 +654,9 @@ function NpcConflict({
  *   - confirmed (corpus or moderator): plain text, no controls.
  *   - unconfirmed, race and gender known ("client"): race-gender as text, a flavor select
  *     narrowed to flavorsFor(race, gender) -- npc.flavorOptions, computed server-side.
- *   - unconfirmed, nothing known ("none"): race and gender selects from the corpus-wide
- *     raceOptions/genderOptions, and a flavor select that fills in from flavorScopes once both
- *     are chosen.
+ *   - unconfirmed, nothing known ("none"): race and gender selects from the voiced list
+ *     (lib/voices/voices.ts), gender narrowed to the chosen race, and a flavor select that fills
+ *     in from flavorScopes once both are chosen.
  *
  * Saving never resends a field the moderator didn't touch: the route's own orExisting is what
  * makes that safe, and doing it here too is what lets "this is a tauren male" (no flavor
@@ -671,15 +665,11 @@ function NpcConflict({
  */
 function SpeakerCell({
   npc,
-  raceOptions,
-  genderOptions,
   flavorScopes,
   busy,
   onSave,
 }: {
   npc: NpcSummary;
-  raceOptions: string[];
-  genderOptions: string[];
   flavorScopes: FlavorScope[];
   busy: boolean;
   onSave: (answer: Partial<{ npcKind: NpcKind; race: string; gender: string; flavor: string; note: string }>) => void;
@@ -784,12 +774,14 @@ function SpeakerCell({
               value={race}
               onChange={(event) => {
                 setRace(event.target.value);
+                // A gender the new race is not voiced in would post a pair nothing can speak.
+                if (event.target.value && !gendersOf(event.target.value).includes(gender as Gender)) setGender("");
                 setFlavor("");
               }}
               className="h-7 rounded border bg-transparent text-xs"
             >
               <option value="">race?</option>
-              {raceOptions.map((option) => (
+              {RACES.map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
@@ -804,7 +796,7 @@ function SpeakerCell({
               className="h-7 rounded border bg-transparent text-xs"
             >
               <option value="">gender?</option>
-              {genderOptions.map((option) => (
+              {(race ? gendersOf(race) : GENDERS).map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>

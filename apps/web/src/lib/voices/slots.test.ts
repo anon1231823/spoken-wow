@@ -13,6 +13,16 @@ describe("slots", () => {
     for (const name of names) expect(name).toMatch(/^[a-z]+-(male|female)(-[a-z]+)?$/);
   });
 
+  it("offers a voiced race-gender the corpus does not speak yet, so it can be cloned first", async () => {
+    const slot = (await slots()).find((s) => s.name === "skybourneelf-male");
+    expect(slot).toEqual({ name: "skybourneelf-male", lineCount: 0, npcCount: 0 });
+  });
+
+  it("adds no bare slot beside a race-gender's flavored ones", async () => {
+    const names = (await slots()).map((s) => s.name);
+    expect(names).not.toContain("orc-male");
+  });
+
   it("orders alphabetically", async () => {
     const names = (await slots()).map((s) => s.name);
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
