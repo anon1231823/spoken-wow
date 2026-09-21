@@ -32,6 +32,6 @@ VoiceOver = setmetatable({
     AddonFolder = "SpokenQuests",
     -- What /spq diagnostics prints. A literal because this file loads before the addon has any
     -- metadata API; scripts/package.sh refuses to build when it disagrees with the .toc.
-    AddonVersion = "2.0.4",
+    AddonVersion = "2.1.0",
     PreviousEnvironment = previousEnvironment,
 }, { __index = _G })

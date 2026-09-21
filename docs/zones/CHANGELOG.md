@@ -8,6 +8,13 @@ which of the two it belongs to when there is any doubt: a section headed `## <ve
 is the pack's, and `scripts/zones/release.sh` matches on the kind as well as the number. A
 section with no kind in its heading is the addon's.
 
+## 2.1.0 — 2026-09-21
+
+- **"No lore -- tell us".** Stand somewhere the panel has nothing for and a button appears
+  beside Report. It hands you a link carrying where you are -- the map, the zone, the subzone
+  and your position -- so the gap can be written. Hide it with **Hide the Contribute
+  buttons** in the Spoken Player settings.
+
 ## 2.0.3 — 2026-09-18
 
 - **A new icon in the AddOns list**: a gold four-pointed star on the Spoken shield, replacing

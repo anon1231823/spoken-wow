@@ -6,6 +6,17 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 2.1.0 — player
+
+- **A Contribute button, where a quest or an NPC has no voice.** Content newer than vanilla,
+  a language the corpus does not carry, a line an NPC says that nobody has recorded: the quest
+  frame and the gossip frame grow a **Contribute** button beside their own, and pressing it
+  hands you a link to send the text your client is showing. It also carries what the client
+  can see about who is speaking -- the model, the sex, the creature type -- which is how a new
+  NPC gets the right voice.
+- Hide it with **Hide the Contribute buttons** in the Spoken Player settings.
+- Not on the 1.12, 2.4.3 and 3.3.5 clients, where contributing is off for now.
+
 ## 2.0.4 — player
 
 - **Quests accepted and turned in by another addon are read again.** Leatrix Plus and the
