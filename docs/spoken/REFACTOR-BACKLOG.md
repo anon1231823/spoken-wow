@@ -164,11 +164,12 @@ they are meant to diverge — then say where — or one prop is enough.
 
 ## Noticed, not a refactor
 
-- **`make zones-push` / `zones-pull` rsync the wrong archive directory.** `REMOTE_HISTORY` in
-  `make/zones.mk` is the droplet's `shared/audio-history/` root, but zones' archive lives
-  under `shared/audio-history/zones/` — the root holds all three sections. A pull copies
-  every section's history into `pipelines/zones/audio-history/`; a push would put zones'
-  directories at the root, where the app does not look. Check before running either.
+- **The quests CLI ignores an explicit `DATABASE_URL`.** `pipelines/quests/tts_cli/env_vars.py`
+  loads `.env` with `override=True`, so `DATABASE_URL=… python cli-main.py import-corpus`
+  quietly uses whatever `.env` names instead -- the opposite of `pipelines/lib/env.mjs`,
+  where a variable already set wins. Found when a local replay of CI imported into the dev
+  database rather than the fresh one it was pointed at. `override=False` fixes it; check
+  nothing relies on `.env` beating the shell first.
 - **`worker.test.ts › claims nothing while it does not lead` is flaky**, about one run in
   five: it seeds pending jobs in the shared test database, and a worker from another test
   file can claim them. Isolate its rows, or run the worker tests serially.

@@ -16,7 +16,10 @@ include make/droplet.mk
 # fortnight of regenerated takes went unnoticed.
 REMOTE_AUDIO := $(REMOTE_ROOT)/shared/audio/
 REMOTE_VOICES := $(REMOTE_ROOT)/shared/voices/
-REMOTE_HISTORY := $(REMOTE_ROOT)/shared/audio-history/
+# Quests' own archive under the shared audio-history -- the directory
+# SPOKEN_QUESTS_AUDIO_HISTORY names in deploy/web/ecosystem.config.js. The root holds all
+# three sections; syncing against it would mix them.
+REMOTE_HISTORY := $(REMOTE_ROOT)/shared/audio-history/quests/
 REMOTE_PM2   := pm2
 
 # The ignore list and the rsync exclusion file derived from it.
@@ -182,10 +185,10 @@ voices-status: require-droplet ## Compare clip count and size on both sides
 
 # --- take history --------------------------------------------------------------------
 #
-# Previous takes of regenerated lines. Version 0 of each file is the audio that predated this
-# project's ability to reproduce it, so this is the one directory whose loss is permanent.
-# Small next to the store, and like the voice clips the droplet is usually the newer side -
-# so neither target uses --delete.
+# Previous takes of regenerated lines -- including audio the CLI narrated before this project
+# could reproduce it, so this is the one directory whose loss is permanent. Small next to the
+# store, and like the voice clips the droplet is usually the newer side -- so neither target
+# uses --delete, and archived audio is never removed by a sync.
 
 pull-history: require-droplet ## Fetch previous takes from the droplet (non-destructive)
 	$(preflight)

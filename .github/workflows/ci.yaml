@@ -69,6 +69,17 @@ jobs:
       # Several suites run against a real Postgres on purpose: the invariants they protect
       # live in schema constraints, so a mocked database would stop testing them.
       - run: deploy/web/bin/migrate.sh "$PWD/apps/web"
+      # The quests corpus lives in Postgres now, and the quests suites read it from there.
+      # Seeded from the committed export, exactly as `make quests-import-corpus` does it --
+      # the importer is Python so that the export round trip stays byte-identical.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements-extract.txt
+        working-directory: pipelines/quests
+      - run: python cli-main.py import-corpus
+        working-directory: pipelines/quests
       - run: pnpm --filter @spoken/web test
 
   zones-pipeline:

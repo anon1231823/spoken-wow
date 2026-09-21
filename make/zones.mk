@@ -193,7 +193,14 @@ LOCAL_SOUNDS  := addons/SpokenZonesAudio/Sounds/
 # case-sensitive, so the old spelling is a new empty directory rather than an error.
 REMOTE_SOUNDS_DIR := sounds
 REMOTE_SOUNDS  := $(DROPLET):$(REMOTE_ROOT)/shared/$(REMOTE_SOUNDS_DIR)/
-REMOTE_HISTORY := $(DROPLET):$(REMOTE_ROOT)/shared/audio-history/
+# Zones' own archive, beside quests' and books' under one shared audio-history -- the
+# directory SPOKEN_ZONES_AUDIO_HISTORY names in deploy/web/ecosystem.config.js. The root
+# holds all three sections, so syncing against it would pull the other two sections' takes
+# into this one's folder, or push this section's directories where nothing reads them.
+REMOTE_HISTORY := $(DROPLET):$(REMOTE_ROOT)/shared/audio-history/zones/
+# Never --delete for an archive: archived audio is append-only, and a mirror would remove
+# takes one side has and the other does not -- on the droplet, the takes cut through the UI.
+HISTORY_RSYNC_OPTS := -a --partial --human-readable --info=progress2 -e "$(SSH)"
 
 # Fail with an explanation rather than an rsync usage dump or a bare publickey refusal.
 define preflight
@@ -225,7 +232,7 @@ push: require-droplet ## Send the audio store to the droplet (DESTRUCTIVE: --del
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(LOCAL_SOUNDS) $(REMOTE_SOUNDS) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@$(RSYNC) $(RSYNC_OPTS) $(LOCAL_SOUNDS) $(REMOTE_SOUNDS)
-	@[ -d pipelines/zones/audio-history ] && $(RSYNC) $(RSYNC_OPTS) pipelines/zones/audio-history/ $(REMOTE_HISTORY) || true
+	@[ -d pipelines/zones/audio-history ] && $(RSYNC) $(HISTORY_RSYNC_OPTS) pipelines/zones/audio-history/ $(REMOTE_HISTORY) || true
 	@echo "==> pushed"
 
 pull-dry: ## Preview what `make pull` would change locally
@@ -240,7 +247,7 @@ pull: require-droplet ## Fetch the audio store from the droplet (DESTRUCTIVE: --
 	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE_SOUNDS) $(LOCAL_SOUNDS) | tail -20
 	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
 	@$(RSYNC) $(RSYNC_OPTS) $(REMOTE_SOUNDS) $(LOCAL_SOUNDS)
-	@[ -d pipelines/zones/audio-history ] && $(RSYNC) $(RSYNC_OPTS) $(REMOTE_HISTORY) pipelines/zones/audio-history/ || true
+	@[ -d pipelines/zones/audio-history ] && $(RSYNC) $(HISTORY_RSYNC_OPTS) $(REMOTE_HISTORY) pipelines/zones/audio-history/ || true
 	@echo "==> pulled. Rebuild the lookup table with:  make sync && make lookup"
 	@echo "    then package it with:  make package-audio"
 
