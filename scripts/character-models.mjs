@@ -8,6 +8,10 @@
 //   curl -sL <listfile release url> \
 //     | grep -E '^[0-9]+;character/[a-z]+/(male|female)/[a-z]+(_hd)?\.m2$' \
 //     | node scripts/character-models.mjs > apps/web/src/lib/npc/character-models.json
+//
+// UNNAMED covers character models the listfile has not named yet, which it lists only as
+// models/creature/unk_expNN_<id>/<id>.m2. Each was identified from what live clients reported
+// for NPCs of that race, with the gender taken from the sex they reported alongside it.
 import { readFileSync, writeFileSync } from "node:fs";
 
 const rows = readFileSync(0, "utf8")
@@ -16,7 +20,14 @@ const rows = readFileSync(0, "utf8")
   .filter(Boolean)
   .map((line) => line.split(";"));
 
-const models = {};
+const UNNAMED = {
+  // Skybourne elves, Midnight: Halaan Hawk-Eye, Rorian the Dayseeker.
+  7478487: { race: "skybourneelf", gender: "male" },
+  // Skybourne elves, Midnight: Dalia the Collector, Myriaal Mistwake, Tai'ree Farsight.
+  7478494: { race: "skybourneelf", gender: "female" },
+};
+
+const models = { ...UNNAMED };
 for (const [fileId, path] of rows) {
   const [, race, gender] = path.split("/");
   if (gender !== "male" && gender !== "female") continue;

@@ -17,6 +17,13 @@ describe("raceForModel", () => {
     expect(raceForModel(1022598)).toEqual({ race: "draenei", gender: "female" });
   });
 
+  it("resolves a model the listfile has not named yet", () => {
+    // models/creature/unk_exp00_7478494/7478494.m2 in the listfile; clients reported it for
+    // Skybourne elf NPCs with sex 3, and its partner 7478487 with sex 2.
+    expect(raceForModel(7478494)).toEqual({ race: "skybourneelf", gender: "female" });
+    expect(raceForModel(7478487)).toEqual({ race: "skybourneelf", gender: "male" });
+  });
+
   it("answers nothing for a creature model that is not a character", () => {
     // A murloc, a dragon, an elemental: a normal outcome, not an error.
     expect(raceForModel(1)).toBe(null);
