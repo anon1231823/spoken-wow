@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { pageById } from "@/lib/books/catalogue";
 import { corpusLookup } from "@/lib/contributions/existing";
 import { isStatus, type ContributionStatus } from "@/lib/contributions/contributions";
+import { lineIsInExplorer } from "@/lib/contributions/accept";
 import { matchesSpeaker, NEEDS_DECISION, type SpeakerFilter } from "@/lib/contributions/query";
 import { listContributions, type Contribution } from "@/lib/contributions/store";
 import {
@@ -181,6 +182,14 @@ export default async function Page({
   const existing = await existingTextFor(contributions);
   const npcs = await npcFor(contributions);
 
+  const linedIds = new Set(
+    (
+      await Promise.all(
+        contributions.map(async (row) => ((await lineIsInExplorer(row)) ? row.id : null)),
+      )
+    ).filter((id): id is number => id !== null),
+  );
+
   // ContributionTable is a client component: whatever shape crosses in `initial` lands in the
   // RSC flight payload and is readable in devtools, so the full row -- name, email, raw, the
   // ip listContributions doesn't even select -- never leaves this server function. `body` is
@@ -199,6 +208,7 @@ export default async function Page({
       body: row.body,
       npc: npcs[row.id] ?? null,
       quest: questFor(row),
+      hasLine: linedIds.has(row.id),
     }))
     // matchesSpeaker handles both a plain provenance and the NEEDS_DECISION sentinel; a row
     // with no npc at all falls out of every narrowed view there, the same way it did before the

@@ -89,6 +89,7 @@ type Row = {
   fileName: string;
   generatable: boolean;
   skipReason: string | null;
+  contributionId: number | null;
 };
 
 /**
@@ -103,7 +104,7 @@ async function build(lang: string): Promise<CorpusLine[]> {
     `select l."lineId", l."source", l."questId", l."questTitle",
             s."npcId", s."npcName", s."npcType", s."race", s."gender", s."flavor", s."voice",
             l."playerGender", l."text", l."originalText", l."fileName",
-            l."generatable", l."skipReason"
+            l."generatable", l."skipReason", s."contributionId"
        from "quest_line_speaker" s
        join "quest_line" l
          on l."lineId" = s."lineId" and l."variant" = s."variant"

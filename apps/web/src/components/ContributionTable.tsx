@@ -51,6 +51,12 @@ export type ContributionRow = Pick<
   npc: NpcSummary | null;
   /** Null when the source has no quest concept at all. See lib/contributions/triage.ts. */
   quest: QuestSummary | null;
+  /**
+   * Whether this contribution's line is already in the explorer (accept.ts's lineIsInExplorer).
+   * Only meaningful for an accepted quests row -- it is what decides whether "Add to explorer"
+   * is offered: a row accepted before this feature existed has none yet.
+   */
+  hasLine: boolean;
 };
 
 /** A race-gender-flavor triple the corpus actually has, for the "nothing known" state's selects. */
@@ -159,6 +165,10 @@ export default function ContributionTable({
    */
   const [resolved, setResolved] = useState<Record<number, Contribution["status"]>>({});
   const [busy, setBusy] = useState<number | null>(null);
+  /** Same overlay idea as `resolved`, for "Add to explorer" succeeding on an already-accepted row. */
+  const [lineCreated, setLineCreated] = useState<Set<number>>(new Set());
+  /** A refused resolve, in the words the route already gives -- cleared by the next attempt. */
+  const [refusals, setRefusals] = useState<Record<number, string>>({});
 
   /**
    * The npc column, overlaid on the server's rows for the same reason `resolved` is: the
@@ -228,8 +238,25 @@ export default function ContributionTable({
     }).catch(() => null);
     setBusy(null);
 
-    if (!response?.ok) return;
+    if (!response?.ok) {
+      // The route already gives a plain-words reason for needs-speaker and one-way (accept.ts);
+      // anything else (bad status, unknown row) degrades the same way this always has.
+      const body = await response?.json().catch(() => null);
+      setRefusals((current) => ({
+        ...current,
+        [id]: typeof body?.error === "string" ? body.error : "That didn't go through -- try again.",
+      }));
+      return;
+    }
+    setRefusals((current) => {
+      if (!(id in current)) return current;
+      const { [id]: _dropped, ...rest } = current;
+      return rest;
+    });
     setResolved((current) => ({ ...current, [id]: next }));
+    // "Add to explorer" is the same POST as Accept, re-sent for a row already accepted -- this
+    // is what hides the button once it has worked, without waiting for a reload.
+    if (next === "accepted") setLineCreated((current) => new Set(current).add(id));
   }, []);
 
   const rows = initial.filter((row) => {
@@ -296,7 +323,13 @@ export default function ContributionTable({
                 // height (race/gender/flavor selects, a note input), and centring every other
                 // cell against that made the short ones float to mid-row instead of sitting on
                 // a scannable line.
-                <tr key={row.id} className="align-top [&>td]:border-b [&>td]:py-2 [&>td]:leading-5">
+                <tr
+                  key={row.id}
+                  // Anchor, not just a key: an accepted quests row's line carries a link back
+                  // here (LineRow.tsx's "contributed" badge), and this is what it jumps to.
+                  id={`contribution-${row.id}`}
+                  className="align-top [&>td]:border-b [&>td]:py-2 [&>td]:leading-5"
+                >
                   <td className="text-muted-foreground pr-3 text-xs whitespace-nowrap">
                     {when(row.createdAt)}
                   </td>
@@ -437,6 +470,20 @@ export default function ContributionTable({
                         >
                           Accept
                         </Button>
+                      ) : row.source === "quests" && !(row.hasLine || lineCreated.has(row.id)) ? (
+                        // A quests row accepted before this feature existed (or reopened and
+                        // re-accepted since) has no line in the quest tables yet -- Accept itself is
+                        // hidden once `current` is already "accepted", so this is the only way
+                        // back to the same POST, still gated by resolveContribution's own rules
+                        // (needs-speaker, collision, one-way).
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={busy === row.id}
+                          onClick={() => void resolve(row.id, "accepted")}
+                        >
+                          Add to explorer
+                        </Button>
                       ) : null}
                       {current !== "rejected" ? (
                         <Button
@@ -459,6 +506,13 @@ export default function ContributionTable({
                         </Button>
                       ) : null}
                     </div>
+                    {refusals[row.id] ? (
+                      // Plain words, straight from resolveContribution's own refusal message --
+                      // silence here used to be the whole failure mode ("Degrade per row on a
+                      // failed resolve"), and a moderator staring at a button that visibly did
+                      // nothing has no way to tell "try again" from "fix something first".
+                      <p className="text-destructive mt-1 text-right text-xs">{refusals[row.id]}</p>
+                    ) : null}
                   </td>
                 </tr>
               );

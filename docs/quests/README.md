@@ -767,6 +767,21 @@ row. That count is the triage priority at `/contributions`, the contribution que
 contribution becomes corpus text and a regeneration job the same deliberate way a report
 becomes a fix, by a person reading it first.
 
+Accepting a quest row writes it into the quest tables, the same ones the extract fills
+(`lib/contributions/accept.ts`): a `quest_line` with origin `contributed`, named by the same
+rules `tts_cli/naming.py` uses, and a `quest_line_speaker` row carrying the contribution's id.
+From there it is an ordinary line — the explorer lists it under missing audio with a
+*contributed* badge linking back, an editor fixes the words the player's client substituted
+through the usual text override, generates a take, and the next export carries it into the
+pack. The speaker row is the mark, not the line's origin, because an edit puts an `edited`
+version on top; it is also what `corpus_db.py`'s import leaves alone when it replaces every
+extracted speaker, and it numbers from 1,000,000 so a re-import never meets it. The corpus
+wins where it already has the line: a quest moment is matched by quest id and moment alone
+(the tables carry some only as `:m`/`:f` variants), and a gossip line it already has gains the
+contributing NPC as one more speaker instead of a copy. Progress lines are kept, marked
+`progress` and never voiced, as the extract marks its own. Once written, a contribution cannot
+be moved back to new or rejected; ignoring the line in the explorer is how to back out.
+
 #### Who is speaking
 
 A line still needs a voice, and a voice name is `race-gender-flavor`. The corpus answers that
