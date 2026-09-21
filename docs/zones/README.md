@@ -84,7 +84,7 @@ pipelines/zones/tools/
   lib/loredata.mjs       reads the generated Lua data back into JS
   lib/env.mjs            binds pipelines/lib/env.mjs to this pipeline: the root .env,
                          then pipelines/zones/.env over it
-  voice/generate.mjs     select and synthesize voicelines (ElevenLabs)
+  voice/generate.mjs     report on voicelines: missing, stale, cost (makes no audio)
   voice/build-lookup.mjs manifest -> ZoneLoreAudio/Data/Sounds.lua
   voice/validate-audio.mjs  manifest, files and lookup table agree
   voice/naming.mjs       line ids and file paths, derived in one place
@@ -972,9 +972,9 @@ way, so nothing is saved by going straight to a full run, and the short entries 
 the ones to hear first: v3 is documented as unreliable below 250 characters and
 **305 of the 1353 entries are shorter**.
 
-After a batch the site publishes it: `exportManifest()` then `buildLookup()`, so
-`manifest.json` and the addon's lookup table are already in step by the time you
-pull the audio down with `make zones-pull`.
+The takes stay on the droplet. To build a pack from them, bring them home with
+`make zones-pull-history` and `make zones-sync`; `make zones-package-audio` assembles
+`Sounds/` from the live ones and rebuilds the lookup table.
 
 ### How long a full run takes
 
@@ -1315,32 +1315,24 @@ Postgres rather than in memory so it survives a pm2 restart. Resolving lives at
 two verbs on one path with opposite access rules is an arrangement a later edit quietly
 breaks.
 
-### Moving the audio between machines
+### Bringing the audio home
 
-1353 mp3s, ~795MB, gitignored and never in CI. The droplet is named by the environment
-and not by the repo — `export SPOKEN_DROPLET=deploy@<host>`, or pass
+Every take is one file in the droplet's archive, `shared/audio-history/zones/`, written
+once by the site and never changed; which take is live is a flag on its row. Takes are cut
+there and nowhere else, so audio only ever comes home. The droplet is named by the
+environment and not by the repo — `export SPOKEN_DROPLET=deploy@<host>`, or pass
 `DROPLET=deploy@<host>` for one invocation. See `make/droplet.mk`.
 
 ```sh
-make zones-audio-status     # local and droplet, side by side
-make zones-pull-dry         # what `make zones-pull` would change
-make zones-pull             # the audio the droplet regenerated
-make zones-sync             # the lore and takes behind it
+make zones-history-status   # archived takes, local and droplet, side by side
+make zones-pull-history     # every take the droplet has (never deletes)
+make zones-sync             # the lore and take rows
+make zones-sounds           # addons/SpokenZonesAudio/Sounds from the live takes
 make zones-lookup           # rebuild Sounds.lua from the database
 ```
 
-One language per transfer: every target above takes `LOCALE=deDE` and defaults to
-English. English keeps the droplet paths it always had (`shared/Sounds`,
-`shared/manifest.json`); another language lives beside them under its pack folder
-(`shared/ZoneLoreAudio_deDE`) and a suffixed manifest, which is what `store.mjs`
-derives on the droplet, so `make pull LOCALE=deDE` lands the masters in
-`addons/SpokenZonesAudio_deDE/Sounds/` — where `make lookup LOCALE=deDE` and
-`make package-audio LOCALE=deDE` expect them. `audio-history/` holds every language
-under one tree and moves whole.
-
-Both `push` and `pull` use `--delete` and both show a dry run and ask first: the
-droplet is a second copy, not a backup, and since regeneration happens through the web
-UI it is usually the *newer* side.
+`Sounds/` is not kept: it is thrown away and assembled again from the live takes before
+every build, so nothing in it is ever the only copy of anything.
 
 No `-z`: mp3 is already compressed, so it is pure CPU for nothing. The rsync-3.x
 preflight is load-bearing — macOS ships openrsync as `/usr/bin/rsync`, which reports

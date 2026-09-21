@@ -15,9 +15,12 @@ Scope expansion is expensive here specifically:
   happens on the droplet, through the site. `generate.mjs` reports on lines and
   cannot cut one; keep it that way, and do not reintroduce a generation flag as a
   convenience.
-- `make zones-push`, `make zones-pull` and `make zones-sync` are destructive
-  (`rsync --delete`, table replacement). Confirm before running one. Data only ever comes
-  home from production; there is no push for the database.
+- `make zones-sync` is destructive (table replacement). Confirm before running it. Data
+  only ever comes home from production: audio through `make zones-pull-history`, which
+  never deletes, and there is no push for either.
+- The take archive is the only audio. `addons/SpokenZonesAudio/Sounds/` is assembled from
+  the live takes by `make zones-sounds` before a build and is not a store; never treat a
+  file there as the record.
 - `addons/SpokenZones/Data/*.lua` and `addons/SpokenZonesAudio/Data/Sounds.lua` are
   generated. Fix the source, not the output. For lore text that source is the
   `lore_line` table -- edit it through the explorer, or re-scrape, then

@@ -61,8 +61,8 @@ narration home and regenerate it here:
 ```bash
 make books-sync        # the droplet's page text and takes -> local database
 make books-lookup      # -> addons/SpokenBooksAudio/Data/Sounds.lua (committed)
-make books-pull        # the mp3s -> pipelines/books/audio
-make books-sounds      # -> addons/SpokenBooksAudio/Sounds (not committed)
+make books-pull-history  # every take -> pipelines/books/audio-history
+make books-sounds      # the live takes -> addons/SpokenBooksAudio/Sounds (not committed)
 ```
 
 The zones side has the same arrangement for the same reason.

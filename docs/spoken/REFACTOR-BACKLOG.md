@@ -37,16 +37,13 @@ structural fields the lore save does not have.
 
 **Fix:** `withTransaction(fn)` in `lib/db.ts`.
 
-### Five copies of range-request audio serving
+### Two copies of range-request audio serving
 
-The stat, `parseRange`, 416 / 200 / 206 and header code repeats in
-`app/api/quests/audio/[...path]`, `app/api/zones/audio/[...path]`,
-`app/api/books/audio/[...path]`, `app/api/takes/audio` and
-`app/api/voices/[voice]/samples/[file]`.
+The four take routes share `serveTake` in `lib/takes/serve.ts`; the voice-sample route
+`app/api/voices/[voice]/samples/[file]` still has its own stat, `parseRange` and
+416 / 200 / 206 code.
 
-**Cost:** five places to fix a range-handling bug — and Safari is strict about these.
-
-**Fix:** `serveAudio(request, path, cacheControl)` in `lib/stream.ts` or `lib/range.ts`.
+**Fix:** let `serveTake`'s streaming half take a path, and use it there too.
 
 ### The open-report count and its chip
 
@@ -164,12 +161,6 @@ they are meant to diverge — then say where — or one prop is enough.
 
 ## Noticed, not a refactor
 
-- **The quests CLI ignores an explicit `DATABASE_URL`.** `pipelines/quests/tts_cli/env_vars.py`
-  loads `.env` with `override=True`, so `DATABASE_URL=… python cli-main.py import-corpus`
-  quietly uses whatever `.env` names instead -- the opposite of `pipelines/lib/env.mjs`,
-  where a variable already set wins. Found when a local replay of CI imported into the dev
-  database rather than the fresh one it was pointed at. `override=False` fixes it; check
-  nothing relies on `.env` beating the shell first.
 - **`worker.test.ts › claims nothing while it does not lead` is flaky**, about one run in
   five: it seeds pending jobs in the shared test database, and a worker from another test
   file can claim them. Isolate its rows, or run the worker tests serially.

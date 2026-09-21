@@ -17,7 +17,7 @@
 # Override per invocation when it is a one-off, which is what the IP is for when the
 # name is ever pointed at something that will not proxy SSH:
 #
-#     make zones-push DROPLET=deploy@203.0.113.10
+#     make zones-pull-history DROPLET=deploy@203.0.113.10
 
 DROPLET ?= $(SPOKEN_DROPLET)
 
