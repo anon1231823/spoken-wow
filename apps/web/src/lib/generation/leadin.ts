@@ -62,8 +62,11 @@ export const TAG_MODELS = ["eleven_v3"] as const;
  *
  * The lead-in is found by shape rather than by size, and this is the shape: a short opening
  * sound, then a pause, then the line. Across every clip we have that carried a lead-in, that
- * first sound ends between 0.50s and 1.14s - it is a throat clear, and a throat clear is
+ * first sound ends between 0.50s and 1.19s - it is a throat clear, and a throat clear is
  * brief. A first sound that runs past this is words, so there is no lead-in to cut.
+ *
+ * 1.6 rather than 1.2, because a slow voice clears its throat slowly: tauren-male-elder took
+ * 1.185s over it and came within 0.015s of being refused. The headroom is deliberate.
  *
  * WHY NOT BY DURATION, which is what this did until the gossip lines arrived. Every lead-in
  * gap measured, against every pause eleven_v3 inserted on its own:
@@ -75,7 +78,7 @@ export const TAG_MODELS = ["eleven_v3"] as const;
  * at ten it is clear no number separates them, because the pause runs 0.9s to 3.1s depending
  * on the voice and the line. Shape is the only thing that stayed constant.
  */
-export const HEAD_SECONDS = 1.2;
+export const HEAD_SECONDS = 1.6;
 
 /**
  * The pause after it, at its shortest.
@@ -90,11 +93,12 @@ export const GAP_SECONDS = 0.4;
 /**
  * Refuse a cut past this.
  *
- * Not a discriminator, a backstop. Nothing measured cuts later than 3.6s, so a cut beyond
- * this means the shape was matched by something that is not a lead-in, and storing the take
- * whole is better than storing it four seconds short.
+ * Not a discriminator, a backstop. It was 4s and it refused a real lead-in: a slow voice
+ * stretches both halves of the shape, and tauren-male-elder put its throat clear at 1.185s
+ * and its pause at 3.22s, for a cut at 4.36s. Measured cuts now run 1.66s to 4.36s, so 6s
+ * is clear of everything real while still catching a match that is plainly not a lead-in.
  */
-export const MAX_CUT_SECONDS = 4;
+export const MAX_CUT_SECONDS = 6;
 
 /**
  * How much of the clip to decode looking for it.
@@ -105,7 +109,7 @@ export const MAX_CUT_SECONDS = 4;
  * the END of a gap, and a qualifying gap has to be able to finish inside the decoded span or
  * it would be truncated into invisibility.
  */
-const SCAN_SECONDS = 6;
+const SCAN_SECONDS = 8;
 
 /** Cut this much before speech resumes, so the first phoneme survives the trim. */
 export const MARGIN_SECONDS = 0.05;

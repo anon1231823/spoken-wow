@@ -73,6 +73,12 @@ describe("cutPoint", () => {
     expect(cutPoint(detected([[0.8, GAP_SECONDS - 0.1]]))).toBeNull();
   });
 
+  // A slow voice stretches both halves: tauren-male-elder cleared its throat for 1.185s and
+  // paused for 3.22s, which is a 4.36s cut and was refused when the backstop was 4s.
+  it("cuts a slow voice, which takes longer over both halves", () => {
+    expect(cutPoint(detected([[1.185, 3.224]]))).toBeCloseTo(4.409 - MARGIN_SECONDS, 2);
+  });
+
   it("refuses a cut further in than any lead-in has ever ended", () => {
     expect(cutPoint(detected([[1.0, MAX_CUT_SECONDS]]))).toBeNull();
   });
