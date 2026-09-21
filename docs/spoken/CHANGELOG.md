@@ -7,8 +7,23 @@
   holding a link. Copy it, open it in a browser and press Send: the link already carries the
   text straight from your client, so there is nothing to paste. It is compressed, so a long
   book page still fits in one link.
-- **Hide the Contribute buttons**, a new Contributions section in the settings, turns every
-  one of those buttons off in one place.
+- **Or gather them as you play.** The first time you press Contribute you can choose to send
+  just that line, or to let Spoken quietly keep every line it has no voice for and send them
+  all at once. They are kept in a file of their own, `SpokenContributions.lua` in your
+  `SavedVariables` folder, which you upload at spoken.rusty.one/contribute whenever you like.
+  Nothing leaves your game until you do. `/spoken share` shows the steps again. Gathering
+  stops at the 2,000 most recent lines.
+- **A new Contributions section in the settings**: **Gather missing lines in the background**
+  turns gathering off, **How to send them** shows the steps, **Clear gathered lines** empties
+  the file once it has been sent, and **Hide the Contribute buttons** turns every one of those
+  buttons off in one place.
+- **The settings scroll.** With the new rows, the minimap and addon sections ran off the
+  bottom of the window on the modern clients' settings panel.
+- The link box has the keyboard as soon as it opens, so copying straight away works the
+  first time too.
+- The zip carries a second folder, **SpokenContributions**, which holds nothing but the
+  gathered lines' file. An addon manager installs it with the player; installing by hand,
+  copy both folders into `AddOns`.
 - Not on the 1.12, 2.4.3 and 3.3.5 clients, where contributing is off for now.
 
 ## 2.0.4 — 2026-09-18
