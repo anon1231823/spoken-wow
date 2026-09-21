@@ -237,13 +237,14 @@ else
 
   # Entries for masters since re-cut or deleted. Without this the cache keeps every
   # superseded encode forever, which is what audio-history/ is for and this is not.
+  # sed rather than -exec basename: a process per cached file took minutes on macOS.
   pruned=0
   while IFS= read -r stale; do
     [ -n "$stale" ] || continue
     rm -f "$cache/$stale"
     pruned=$((pruned + 1))
   done < <(comm -23 \
-    <(find "$cache" -name "*.$FORMAT" -exec basename {} \; | sort) \
+    <(find "$cache" -name "*.$FORMAT" | sed 's#.*/##' | sort) \
     <(awk -F'\t' -v ext=".$FORMAT" '$3 == "encode" {print $1 ext}' "$plan" | sort -u) || true)
 
   echo "  $hits reused, $encoded encoded, $kept masters kept as smaller, $pruned superseded entries dropped"
