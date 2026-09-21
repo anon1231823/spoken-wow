@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildLineIndex, npcKey } from "./corpus";
-import { corpus as catalogue, defaultFlavorFor, lineIndex, npcVoiceFromCorpus } from "./quests/catalogue";
+import { corpus as catalogue, defaultFlavorFor, flavorsFor, lineIndex, npcVoiceFromCorpus } from "./quests/catalogue";
 
 describe("corpus", async () => {
   const corpus = await catalogue();
@@ -105,5 +105,28 @@ describe("defaultFlavorFor", () => {
 
   it("is null for a race-gender the corpus has never carried a flavored line for at all", async () => {
     expect(await defaultFlavorFor("murloc", "male")).toBe(null);
+  });
+});
+
+describe("flavorsFor", async () => {
+  // The triage table's own flagship case: a moderator staring at a tauren male must be offered
+  // exactly the voice sets that exist for one, never a name that would produce a filename
+  // nothing can generate.
+  it("lists every flavor a race-gender carries, not just the default", async () => {
+    expect(await flavorsFor("tauren", "male")).toEqual(["elder", "shaman", "warrior"]);
+  });
+
+  it("lists a single flavor for a race-gender that has only one", async () => {
+    expect(await flavorsFor("goblin", "female")).toEqual(["zany"]);
+  });
+
+  it("is empty for a race-gender the corpus has never carried a flavored line for at all", async () => {
+    expect(await flavorsFor("murloc", "male")).toEqual([]);
+  });
+
+  it("agrees with defaultFlavorFor: the default is always one of the offered options", async () => {
+    for (const [race, gender] of [["human", "male"], ["tauren", "male"], ["goblin", "female"]] as const) {
+      expect(await flavorsFor(race, gender)).toContain(await defaultFlavorFor(race, gender));
+    }
   });
 });

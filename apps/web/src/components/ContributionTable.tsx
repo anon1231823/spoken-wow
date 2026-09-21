@@ -28,22 +28,18 @@ import { Input } from "@/components/ui/input";
 import type { ConfirmedFilter } from "@/app/contributions/page";
 import type { ContributionStatus } from "@/lib/contributions/contributions";
 import type { Contribution } from "@/lib/contributions/store";
-// From npc.ts, not npc/store.ts: store.ts imports @/lib/db, and pulling PROVENANCES (a value,
-// not just a type) out of it would drag Postgres's own node built-ins into this client bundle.
-import { PROVENANCES, type Provenance } from "@/lib/npc/npc";
+// Both are computed server-side (npcSummaryFrom pulls in corpus.ts's flavorsFor) -- `import
+// type` erases the whole thing at compile time, so none of that follows the type in here. The
+// same split existing.ts's `existing` prop already draws.
+import type { NpcSummary, QuestSummary } from "@/lib/contributions/triage";
+// From npc.ts, not npc/store.ts: store.ts imports @/lib/db, and pulling NPC_KINDS/PROVENANCES
+// (values, not just types) out of it would drag Postgres's own node built-ins into this bundle.
+import { NPC_KINDS, PROVENANCES, type NpcKind, type Provenance } from "@/lib/npc/npc";
 import type { NpcResolution } from "@/lib/npc/store";
 import { cn } from "@/lib/utils";
+import { wowheadEntityUrl, wowheadForeverUrl, wowheadQuestUrl } from "@/lib/wowhead";
 
-/**
- * Who a row's NPC is, in exactly the shape this table renders -- the same Pick<> discipline as
- * ContributionRow below, for the same reason: `npcName`, `modelFileId`, `sex`, `creatureType`,
- * `build`, `note` and `resolvedBy` are on NpcResolution but never drawn here, so they stay out
- * of the flight payload.
- */
-export type NpcSummary = Pick<
-  NpcResolution,
-  "npcKind" | "npcId" | "race" | "gender" | "flavor" | "provenance" | "confirmed"
->;
+export type { NpcSummary };
 
 /** The fields this table reads. page.tsx projects full Contribution rows down to this shape. */
 export type ContributionRow = Pick<
@@ -52,7 +48,12 @@ export type ContributionRow = Pick<
 > & {
   /** Null when the envelope never named an NPC at all -- zones and books, or a quest keyed on quest+event. */
   npc: NpcSummary | null;
+  /** Null when the source has no quest concept at all. See lib/contributions/triage.ts. */
+  quest: QuestSummary | null;
 };
+
+/** A race-gender-flavor triple the corpus actually has, for the "nothing known" state's selects. */
+type FlavorScope = { race: string; gender: string; flavor: string };
 
 const SOURCE_LABELS: Record<Contribution["source"], string> = {
   quests: "Quests",
@@ -121,6 +122,9 @@ export default function ContributionTable({
   provenance,
   confirmed,
   existing,
+  raceOptions,
+  genderOptions,
+  flavorScopes,
 }: {
   initial: ContributionRow[];
   status: ContributionStatus | "all";
@@ -128,6 +132,11 @@ export default function ContributionTable({
   confirmed: ConfirmedFilter;
   /** id -> corpus text, present only where the row's key resolves to something on file. */
   existing: Record<number, string>;
+  /** facets().races/genders -- every race and gender the corpus has, for the "nothing known" state's selects. */
+  raceOptions: string[];
+  genderOptions: string[];
+  /** facets().flavorScopes -- what lets that state's flavor select narrow to whatever race-gender was just chosen, without a round trip. */
+  flavorScopes: FlavorScope[];
 }) {
   /**
    * What this session resolved, overlaid on the server's rows -- the same shape ReportTable
@@ -150,13 +159,22 @@ export default function ContributionTable({
     async (
       contributionId: number,
       npc: NpcSummary,
-      answer: { race: string; gender: string; flavor: string; note: string },
+      // Partial on purpose -- a key left out entirely (not sent as "") tells the route to keep
+      // whatever is already on the row, which is what lets the "client" state save just a
+      // flavor and the "nothing known" state save just a race and gender. See the route's own
+      // orExisting for the other half of this. `npcKind` is only ever in here for a kind-less
+      // row (npc.npcKind === null): the moderator's own select is the only source for it then,
+      // since there is no existing row (or envelope) to fall back on the way race/gender/flavor
+      // can.
+      answer: Partial<{ npcKind: NpcKind; race: string; gender: string; flavor: string; note: string }>,
     ) => {
       setNpcBusy(contributionId);
       const response = await fetch("/api/contributions/npc", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ npcKind: npc.npcKind, npcId: npc.npcId, ...answer }),
+        // `...answer` last: its own npcKind (a kind-less row's moderator-chosen one) overrides
+        // the default, and is absent -- so has no effect -- for every other row.
+        body: JSON.stringify({ npcId: npc.npcId, npcKind: npc.npcKind, ...answer }),
       }).catch(() => null);
       setNpcBusy(null);
 
@@ -167,15 +185,25 @@ export default function ContributionTable({
         [contributionId]: {
           npcKind: resolution.npcKind,
           npcId: resolution.npcId,
+          npcName: resolution.npcName,
           race: resolution.race,
           gender: resolution.gender,
           flavor: resolution.flavor,
           provenance: resolution.provenance,
           confirmed: resolution.confirmed,
+          // A saved answer is always "settled" (provenance "moderator" is always confirmed --
+          // migration 0031), so nothing here ever renders the flavor select again to need
+          // these -- computed anyway so the type stays honest rather than lying with `[]`.
+          flavorOptions:
+            resolution.race && resolution.gender
+              ? flavorScopes
+                  .filter((scope) => scope.race === resolution.race && scope.gender === resolution.gender)
+                  .map((scope) => scope.flavor)
+              : [],
         },
       }));
     },
-    [],
+    [flavorScopes],
   );
 
   const resolve = useCallback(async (id: number, next: ContributionStatus) => {
@@ -281,7 +309,9 @@ export default function ContributionTable({
           <thead className="text-muted-foreground text-left text-xs">
             <tr>
               <th className="border-b py-2 pr-3 font-normal">Filed</th>
-              <th className="border-b py-2 pr-3 font-normal">Where</th>
+              <th className="border-b py-2 pr-3 font-normal">Source</th>
+              <th className="border-b py-2 pr-3 font-normal">NPC</th>
+              <th className="border-b py-2 pr-3 font-normal">Quest</th>
               <th className="border-b py-2 pr-3 font-normal">Locale</th>
               <th className="border-b py-2 pr-3 font-normal">Count</th>
               <th className="border-b py-2 pr-3 font-normal">What they sent</th>
@@ -303,15 +333,71 @@ export default function ContributionTable({
                     {when(row.createdAt)}
                   </td>
 
-                  <td className="max-w-[16rem] pr-3 text-xs">
-                    <div className="flex items-center gap-2 overflow-hidden whitespace-nowrap">
-                      <Badge variant="outline" className="shrink-0 py-0 leading-5">
-                        {SOURCE_LABELS[row.source]}
-                      </Badge>
-                      <span className="truncate font-mono" title={row.key}>
-                        {row.key}
-                      </span>
-                    </div>
+                  <td className="pr-3 text-xs whitespace-nowrap">
+                    {/* The raw triage key moved here, as a hover title -- the NPC and Quest
+                        columns are what a moderator scans now (finding 1), but the key is still
+                        worth having for a zones/books row, where neither column applies. */}
+                    <Badge variant="outline" className="py-0 leading-5" title={row.key}>
+                      {SOURCE_LABELS[row.source]}
+                    </Badge>
+                  </td>
+
+                  <td className="max-w-[14rem] pr-3 text-xs">
+                    {npc ? (
+                      <div className="flex items-center gap-1 whitespace-nowrap">
+                        <a
+                          href={`/quests?q=${npc.npcId}&filter=npc`}
+                          className="truncate hover:underline"
+                          title={npc.npcName ?? undefined}
+                        >
+                          {npc.npcName ?? "unnamed"}{" "}
+                          <span className="text-muted-foreground">#{npc.npcId}</span>
+                        </a>
+                        <a
+                          href={
+                            // The corpus's own exact answer means it has this NPC on the branch
+                            // the corpus is built from; anything else -- including a post-vanilla
+                            // NPC like 205729 -- is only ever on the client's own branch. See
+                            // wowhead.ts for why two branches exist rather than one.
+                            //
+                            // A kind-less row (npc.npcKind === null) has no real kind to link
+                            // with yet -- "creature" is a convenience guess for this link only,
+                            // never stored, and every quest/gossip npc field this table has ever
+                            // seen has in fact named one.
+                            npc.provenance === "corpus"
+                              ? wowheadEntityUrl(npc.npcKind ?? "creature", npc.npcId)
+                              : wowheadForeverUrl(npc.npcKind ?? "creature", npc.npcId)
+                          }
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-muted-foreground shrink-0 hover:underline"
+                        >
+                          wh↗
+                        </a>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+
+                  <td className="max-w-[14rem] pr-3 text-xs whitespace-nowrap">
+                    {row.quest === null ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : row.quest === "gossip" ? (
+                      "Gossip"
+                    ) : (
+                      <>
+                        <span className="truncate">{row.quest.title}</span>{" "}
+                        <a
+                          href={wowheadQuestUrl(row.quest.questId)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-muted-foreground hover:underline"
+                        >
+                          #{row.quest.questId}
+                        </a>
+                      </>
+                    )}
                   </td>
 
                   <td className="pr-3 text-xs whitespace-nowrap">{row.locale}</td>
@@ -352,27 +438,19 @@ export default function ContributionTable({
                           <p className="mt-1 whitespace-pre-wrap">{found}</p>
                         </div>
                       ) : null}
-                      {npc ? (
-                        <NpcOverrideForm
-                          npc={npc}
-                          busy={npcBusy === row.id}
-                          onSave={(answer) => void overrideNpc(row.id, npc, answer)}
-                        />
-                      ) : null}
                     </details>
                   </td>
 
                   <td className="pr-3 text-xs whitespace-nowrap">
                     {npc ? (
-                      <>
-                        <span>{speaker(npc)}</span>
-                        <Badge variant="outline" className="ml-1 py-0 leading-5">
-                          {npc.provenance}
-                        </Badge>
-                        {speakerNote(npc) ? (
-                          <p className="text-muted-foreground mt-0.5">{speakerNote(npc)}</p>
-                        ) : null}
-                      </>
+                      <SpeakerCell
+                        npc={npc}
+                        raceOptions={raceOptions}
+                        genderOptions={genderOptions}
+                        flavorScopes={flavorScopes}
+                        busy={npcBusy === row.id}
+                        onSave={(answer) => void overrideNpc(row.id, npc, answer)}
+                      />
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
@@ -425,67 +503,176 @@ export default function ContributionTable({
 }
 
 /**
- * The override, inside the same `<details>` as the submitted text: race, gender, flavor and a
- * note, posted to /api/contributions/npc.
+ * The Speaker column, in the three states finding 2 asks for -- keyed on `confirmed`, not
+ * `provenance` alone, for the reason speakerNote already draws that distinction: `confirmed` is
+ * the column resolveNpc and the override route agree means "trust this" (migration 0031 only
+ * ever sets it for "corpus" or "moderator"), so a moderator's own settled answer gets the same
+ * plain, uncontrolled rendering the corpus's does -- there is nothing left to decide either way,
+ * and re-opening one would need a distinct "reopen" affordance this table does not yet have.
  *
- * Its own inputs rather than lifting them into the table's state -- a form per row, opened one
- * at a time, is exactly what `<details>` already scopes, and the table has no other reason to
- * know what a moderator is mid-typing in a row nobody has saved yet.
+ *   - confirmed (corpus or moderator): plain text, no controls.
+ *   - unconfirmed, race and gender known ("client"): race-gender as text, a flavor select
+ *     narrowed to flavorsFor(race, gender) -- npc.flavorOptions, computed server-side.
+ *   - unconfirmed, nothing known ("none"): race and gender selects from the corpus-wide
+ *     raceOptions/genderOptions, and a flavor select that fills in from flavorScopes once both
+ *     are chosen.
+ *
+ * Saving never resends a field the moderator didn't touch: the route's own orExisting is what
+ * makes that safe, and doing it here too is what lets "this is a tauren male" (no flavor
+ * opinion) and "just the flavor" (client row, race/gender already right) both post a partial
+ * answer instead of a full one.
  */
-function NpcOverrideForm({
+function SpeakerCell({
   npc,
+  raceOptions,
+  genderOptions,
+  flavorScopes,
   busy,
   onSave,
 }: {
   npc: NpcSummary;
+  raceOptions: string[];
+  genderOptions: string[];
+  flavorScopes: FlavorScope[];
   busy: boolean;
-  onSave: (answer: { race: string; gender: string; flavor: string; note: string }) => void;
+  onSave: (answer: Partial<{ npcKind: NpcKind; race: string; gender: string; flavor: string; note: string }>) => void;
 }) {
   const [race, setRace] = useState(npc.race ?? "");
   const [gender, setGender] = useState(npc.gender ?? "");
   const [flavor, setFlavor] = useState(npc.flavor ?? "");
   const [note, setNote] = useState("");
+  // Only ever read for a kind-less row (npc.npcKind === null): NPC_KINDS's own values, "creature"
+  // or "gameobject", picked by the moderator rather than guessed -- see NpcSummary's own
+  // docstring for why resolveNpc refuses to make this guess itself.
+  const [kind, setKind] = useState<NpcKind | "">("");
+
+  if (npc.confirmed) {
+    return (
+      <>
+        <span>{speaker(npc)}</span>
+        <Badge variant="outline" className="ml-1 py-0 leading-5">
+          {npc.provenance}
+        </Badge>
+        {speakerNote(npc) ? <p className="text-muted-foreground mt-0.5">{speakerNote(npc)}</p> : null}
+      </>
+    );
+  }
+
+  const known = npc.provenance === "client";
+  // The "nothing known" state's own flavor options: flavorScopes is the whole corpus, so this
+  // narrows to whatever race and gender were just picked, the same shape flavorOptions already
+  // is for the "client" state -- there is no npc.flavorOptions to fall back on here because
+  // page.tsx has no row-specific race/gender to have asked flavorsFor about.
+  const flavorOptions = known
+    ? npc.flavorOptions
+    : flavorScopes.filter((scope) => scope.race === race && scope.gender === gender).map((scope) => scope.flavor);
 
   return (
-    <form
-      className="mt-2 rounded border p-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSave({ race, gender, flavor, note });
-      }}
-    >
-      <p className="text-muted-foreground text-xs font-medium">
-        Say who this is (empty clears a field):
-      </p>
-      <div className="mt-1 flex flex-wrap gap-2">
-        <Input
-          value={race}
-          onChange={(event) => setRace(event.target.value)}
-          placeholder="race"
-          className="h-8 w-28 text-xs"
-        />
-        <Input
-          value={gender}
-          onChange={(event) => setGender(event.target.value)}
-          placeholder="gender"
-          className="h-8 w-24 text-xs"
-        />
-        <Input
-          value={flavor}
-          onChange={(event) => setFlavor(event.target.value)}
-          placeholder="flavor"
-          className="h-8 w-28 text-xs"
-        />
+    <div className="flex flex-col gap-1 py-1">
+      <div className="flex flex-wrap items-center gap-1">
+        {known ? (
+          <span className="font-mono">
+            {npc.race}-{npc.gender}-
+          </span>
+        ) : (
+          <>
+            {npc.npcKind === null ? (
+              <>
+                <select
+                  value={kind}
+                  onChange={(event) => setKind(event.target.value as NpcKind | "")}
+                  className="h-7 rounded border bg-transparent text-xs"
+                >
+                  <option value="">kind?</option>
+                  {NPC_KINDS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <span>·</span>
+              </>
+            ) : null}
+            <select
+              value={race}
+              onChange={(event) => {
+                setRace(event.target.value);
+                setFlavor("");
+              }}
+              className="h-7 rounded border bg-transparent text-xs"
+            >
+              <option value="">race?</option>
+              {raceOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <span>-</span>
+            <select
+              value={gender}
+              onChange={(event) => {
+                setGender(event.target.value);
+                setFlavor("");
+              }}
+              className="h-7 rounded border bg-transparent text-xs"
+            >
+              <option value="">gender?</option>
+              {genderOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            <span>-</span>
+          </>
+        )}
+        {known || (race && gender) ? (
+          <select
+            value={flavor}
+            onChange={(event) => setFlavor(event.target.value)}
+            className="h-7 rounded border bg-transparent text-xs"
+          >
+            <option value="">flavor?</option>
+            {flavorOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        ) : null}
+        <Badge variant="outline" className="py-0 leading-5">
+          {npc.provenance}
+        </Badge>
+      </div>
+      <div className="flex items-center gap-1">
         <Input
           value={note}
           onChange={(event) => setNote(event.target.value)}
           placeholder="why (e.g. a Wowhead link)"
-          className="h-8 flex-1 text-xs"
+          className="h-7 flex-1 text-xs"
         />
-        <Button type="submit" size="sm" variant="outline" disabled={busy}>
+        <Button
+          size="sm"
+          variant="outline"
+          // A kind-less row with no kind picked yet has nothing valid to POST -- the route
+          // requires npcKind and would 400 -- so the button waits rather than silently failing.
+          disabled={busy || (npc.npcKind === null && !kind)}
+          onClick={() =>
+            // The "client" state never sends race/gender at all: leaving those keys off is what
+            // tells the route to keep what the client already reported, rather than resending
+            // (and risking retyping wrong) values this form doesn't even offer as inputs there.
+            onSave(
+              known
+                ? { flavor, note }
+                : { npcKind: kind || undefined, race, gender, flavor, note },
+            )
+          }
+        >
           Save
         </Button>
       </div>
-    </form>
+      {speakerNote(npc) ? <p className="text-muted-foreground">{speakerNote(npc)}</p> : null}
+    </div>
   );
 }

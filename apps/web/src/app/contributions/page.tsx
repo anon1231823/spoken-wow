@@ -2,13 +2,15 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
-import ContributionTable, { type ContributionRow, type NpcSummary } from "@/components/ContributionTable";
+import ContributionTable, { type ContributionRow } from "@/components/ContributionTable";
 import { auth } from "@/lib/auth";
 import { pageById } from "@/lib/books/catalogue";
 import { corpusLookup } from "@/lib/contributions/existing";
 import { isStatus, type ContributionStatus } from "@/lib/contributions/contributions";
 import { listContributions, type Contribution } from "@/lib/contributions/store";
-import { observedFrom } from "@/lib/npc/resolve";
+import { npcSummaryFrom, questFor, type NpcSummary } from "@/lib/contributions/triage";
+import { facets } from "@/lib/facets";
+import { observedFrom, resolveNpc } from "@/lib/npc/resolve";
 import { isProvenance, getResolutions, resolutionKey, type NpcKind, type Provenance } from "@/lib/npc/store";
 import { canRegenerate } from "@/lib/permissions";
 import { lineByPath } from "@/lib/zones/catalogue";
@@ -80,22 +82,39 @@ async function npcFor(contributions: Contribution[]): Promise<Record<number, Npc
   }
   const resolutions = await getResolutions(keys);
 
-  for (const { row, observed: o } of observed) {
-    if (!o.npcKind || o.npcId === null) continue;
+  // An NPC the batch read found nothing for is still resolvable, not merely displayable: an
+  // envelope this old predates resolveNpc being called at intake at all (the three real rows
+  // this table was designed against are exactly this -- filed before the addon reported `kind`
+  // or `model`). Resolving them now, once, is what lets a corpus hit surface instead of a blank
+  // "none" forever, and it persists a row a moderator's override can then rank against. Kept off
+  // the path entirely for a key already in `resolutions` -- resolveNpc would just re-read that
+  // same row back, and a row already answered (not least a moderator's own) must never be
+  // touched here. Deduplicated by key first: two of the three real rows name the same NPC, and
+  // without this, resolving them in the same Promise.all would race two upserts for one row.
+  const toResolve = new Map<string, (typeof observed)[number]["observed"]>();
+  for (const { observed: o } of observed) {
+    if (o.npcKind === null || o.npcId === null) continue;
+    const key = resolutionKey(o.npcKind, o.npcId);
+    if (!resolutions.has(key) && !toResolve.has(key)) toResolve.set(key, o);
+  }
+  const newlyResolved = await Promise.all(
+    [...toResolve.entries()].map(async ([key, o]) => [key, await resolveNpc(o)] as const),
+  );
+  for (const [key, resolution] of newlyResolved) {
+    if (resolution) resolutions.set(key, resolution);
+  }
 
-    // No resolution row yet -- an older contribution, or a best-effort resolve at intake that
-    // failed -- is still an NPC a moderator can answer for, so the kind/id survive into the
-    // summary even when there is nothing else to show yet.
-    const resolution = resolutions.get(resolutionKey(o.npcKind, o.npcId));
-    found[row.id] = {
-      npcKind: o.npcKind,
-      npcId: o.npcId,
-      race: resolution?.race ?? null,
-      gender: resolution?.gender ?? null,
-      flavor: resolution?.flavor ?? null,
-      provenance: resolution?.provenance ?? "none",
-      confirmed: resolution?.confirmed ?? false,
-    };
+  for (const { row, observed: o } of observed) {
+    // No npc named at all -- zones, books, or a quest keyed on quest+event -- is the one case
+    // with nothing to show; a kind-less envelope (o.npcKind === null) still has an id and a
+    // name and gets a summary too, npcSummaryFrom's own reason for allowing a null npcKind.
+    if (o.npcId === null) continue;
+
+    // A kind-less observation can never itself be a key into `resolutions` (getResolutions and
+    // the resolve loop above both require a kind), so there is nothing to look up for it here --
+    // only a resolution recorded under this envelope's own kind counts.
+    const resolution = o.npcKind !== null ? resolutions.get(resolutionKey(o.npcKind, o.npcId)) : undefined;
+    found[row.id] = await npcSummaryFrom({ npcKind: o.npcKind, npcId: o.npcId, npcName: o.npcName }, resolution);
   }
 
   return found;
@@ -152,6 +171,7 @@ export default async function Page({
       createdAt: row.createdAt,
       body: row.body,
       npc: npcs[row.id] ?? null,
+      quest: questFor(row),
     }))
     // A row with no npc at all has nothing for either filter to match -- neither filter is
     // "which rows never named an NPC", so it drops out the moment either one narrows anything,
@@ -164,6 +184,8 @@ export default async function Page({
       if (confirmed !== "all" && row.npc.confirmed !== (confirmed === "confirmed")) return false;
       return true;
     });
+
+  const facetValues = await facets();
 
   return (
     <main className="mx-auto max-w-6xl px-5 pt-6 pb-24">
@@ -180,6 +202,9 @@ export default async function Page({
         provenance={provenance}
         confirmed={confirmed}
         existing={existing}
+        raceOptions={facetValues.races}
+        genderOptions={facetValues.genders}
+        flavorScopes={facetValues.flavorScopes}
       />
     </main>
   );

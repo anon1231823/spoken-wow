@@ -130,6 +130,74 @@ describe("POST /api/contributions/npc", () => {
     });
   });
 
+  // The brief's own case: "this is a tauren male" without a flavor opinion must not force one.
+  it("leaves a field null when the POST omits it entirely, rather than treating absence as clearing it", async () => {
+    const response = await POST(post({ npcKind: "creature", npcId, race: "tauren", gender: "male" }));
+    expect(response.status).toBe(200);
+    const row = await getResolution("creature", npcId);
+    expect(row).toMatchObject({ race: "tauren", gender: "male", flavor: null, provenance: "moderator" });
+  });
+
+  // The other half: a moderator who only has an opinion about the flavor of a row the client
+  // already reported a race and gender for must not wipe those out by leaving them off the POST.
+  it("keeps an existing field the POST omits, rather than nulling it", async () => {
+    await upsertResolution({
+      npcKind: "creature",
+      npcId,
+      npcName: "Boarton Shadetotem",
+      race: "tauren",
+      gender: "male",
+      flavor: "warrior",
+      provenance: "client",
+      confirmed: false,
+      modelFileId: 122055,
+      sex: 2,
+      creatureType: "Humanoid",
+      build: "1.60.1/69913",
+      note: null,
+      resolvedBy: null,
+    });
+
+    const response = await POST(post({ npcKind: "creature", npcId, flavor: "grim" }));
+    expect(response.status).toBe(200);
+
+    const row = await getResolution("creature", npcId);
+    expect(row).toMatchObject({
+      race: "tauren",
+      gender: "male",
+      flavor: "grim",
+      provenance: "moderator",
+      confirmed: true,
+    });
+  });
+
+  // A field sent as an explicit empty string still clears it -- omission and clearing must stay
+  // distinguishable, or the previous test's fix would make clearing impossible instead.
+  it("still clears a field sent as an explicit empty string", async () => {
+    await upsertResolution({
+      npcKind: "creature",
+      npcId,
+      npcName: "Boarton Shadetotem",
+      race: "tauren",
+      gender: "male",
+      flavor: "warrior",
+      provenance: "client",
+      confirmed: false,
+      modelFileId: 122055,
+      sex: 2,
+      creatureType: "Humanoid",
+      build: "1.60.1/69913",
+      note: null,
+      resolvedBy: null,
+    });
+
+    const response = await POST(post({ npcKind: "creature", npcId, race: "tauren", gender: "male", flavor: "" }));
+    expect(response.status).toBe(200);
+
+    const row = await getResolution("creature", npcId);
+    expect(row).toMatchObject({ race: "tauren", gender: "male", flavor: null, provenance: "moderator" });
+  });
+
   it("lets a moderator clear every field without a constraint violation", async () => {
     await POST(post({ npcKind: "creature", npcId, race: "tauren", gender: "male", flavor: "grim" }));
 

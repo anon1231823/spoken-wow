@@ -209,6 +209,43 @@ export async function defaultFlavorFor(race: string, gender: string): Promise<st
   return (await flavorDefaults()).get(`${race}-${gender}`) ?? null;
 }
 
+/**
+ * Every flavor a race-gender's voice actually has, for the triage table's flavor picker.
+ *
+ * A moderator confirming a client-provenance row (race and gender known, flavor only guessed)
+ * must be offered exactly the voice sets tts_cli can generate for that race-gender -- goblin
+ * female has only "zany"; tauren male has no "standard" at all (defaultFlavorFor's own flagship
+ * case) but does have elder/shaman/warrior. Anything wider would let a moderator pick a voice
+ * name that produces no file.
+ */
+export async function flavorsFor(race: string, gender: string): Promise<string[]> {
+  const tally = (await flavorTallies()).get(`${race}-${gender}`);
+  return tally ? [...tally.keys()].sort((a, b) => a.localeCompare(b)) : [];
+}
+
+const flavorTalliesKey = Symbol.for("spoken.quests-flavor-tallies");
+type FlavorTalliesHolder = { [flavorTalliesKey]?: { lines: CorpusLine[]; tallies: Map<string, Map<string, number>> } };
+
+// race-gender -> flavor -> how many corpus lines carry it. Shared by flavorDefaults and
+// flavorsFor, which ask the identical question of the identical data, and tied to the
+// catalogue's own array so it re-tallies exactly when the tables move.
+async function flavorTallies(): Promise<Map<string, Map<string, number>>> {
+  const lines = (await corpus()).lines;
+  const holder = globalThis as FlavorTalliesHolder;
+  if (!holder[flavorTalliesKey] || holder[flavorTalliesKey].lines !== lines) {
+    const counts = new Map<string, Map<string, number>>();
+    for (const line of lines) {
+      if (!line.flavor) continue;
+      const raceGender = `${line.race}-${line.gender}`;
+      const tally = counts.get(raceGender) ?? new Map<string, number>();
+      tally.set(line.flavor, (tally.get(line.flavor) ?? 0) + 1);
+      counts.set(raceGender, tally);
+    }
+    holder[flavorTalliesKey] = { lines, tallies: counts };
+  }
+  return holder[flavorTalliesKey].tallies;
+}
+
 const flavorDefaultsKey = Symbol.for("spoken.quests-default-flavors");
 type FlavorDefaultsHolder = { [flavorDefaultsKey]?: { lines: CorpusLine[]; defaults: Map<string, string> } };
 
@@ -218,15 +255,7 @@ async function flavorDefaults(): Promise<Map<string, string>> {
   const lines = (await corpus()).lines;
   const holder = globalThis as FlavorDefaultsHolder;
   if (!holder[flavorDefaultsKey] || holder[flavorDefaultsKey].lines !== lines) {
-    const counts = new Map<string, Map<string, number>>();
-    for (const line of lines) {
-      if (!line.flavor) continue;
-      const raceGender = `${line.race}-${line.gender}`;
-      const tally = counts.get(raceGender) ?? new Map<string, number>();
-      tally.set(line.flavor, (tally.get(line.flavor) ?? 0) + 1);
-      counts.set(raceGender, tally);
-    }
-
+    const counts = await flavorTallies();
     const defaults = new Map<string, string>();
     for (const [raceGender, tally] of counts) {
       if (tally.has("standard")) {

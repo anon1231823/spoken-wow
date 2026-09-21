@@ -1,0 +1,108 @@
+import { describe, expect, it } from "vitest";
+
+import { npcSummaryFrom, questFor } from "./triage";
+
+describe("questFor", () => {
+  it("reads the title and quest id off a quest-moment envelope", async () => {
+    // A real row from the local database (id 518): meta carries both, so the Quest column has
+    // something to show and a link to build.
+    expect(
+      questFor({ source: "quests", meta: { quest: "76156", title: "Stalk With The Earthmother" } }),
+    ).toEqual({ title: "Stalk With The Earthmother", questId: 76156 });
+  });
+
+  // checkEnvelope's other quests-source shape: an `npc:<id>` key, carrying neither field.
+  // "Gossip" rather than an empty cell, so it never reads as "we lost the quest".
+  it("is 'gossip' for a quests-source envelope with neither field", async () => {
+    expect(questFor({ source: "quests", meta: { npc: "205729 Boarton Shadetotem" } })).toBe("gossip");
+  });
+
+  it("is null for a source that has no quest concept at all", async () => {
+    expect(questFor({ source: "zones", meta: { map: "1519" } })).toBe(null);
+    expect(questFor({ source: "books", meta: { page: "42" } })).toBe(null);
+  });
+
+  it("is 'gossip' rather than a half-answer when only one of the two fields is present", async () => {
+    // Not a shape checkEnvelope itself produces, but meta is stored text a client wrote --
+    // treating a partial pair as gossip (empty, not a false quest link) is the safer read of
+    // data this table's own docstring already calls out as not to be trusted blindly.
+    expect(questFor({ source: "quests", meta: { quest: "76156" } })).toBe("gossip");
+    expect(questFor({ source: "quests", meta: { title: "Stalk With The Earthmother" } })).toBe("gossip");
+  });
+});
+
+function resolution(overrides: Partial<Parameters<typeof npcSummaryFrom>[1] & object> = {}) {
+  return {
+    npcKind: "creature" as const,
+    npcId: 288,
+    npcName: "Jitters",
+    race: "human",
+    gender: "male",
+    flavor: "standard",
+    provenance: "corpus" as const,
+    confirmed: true,
+    modelFileId: null,
+    sex: null,
+    creatureType: null,
+    build: null,
+    note: null,
+    resolvedBy: null,
+    updatedAt: "now",
+    ...overrides,
+  };
+}
+
+describe("npcSummaryFrom", () => {
+  // The exact hardest case this table was designed against: the three real rows in the local
+  // database, none of which carry `kind` at all (filed before the addon reported it).
+  it("is fully unresolved for a kind-less observation with no resolution", async () => {
+    expect(
+      await npcSummaryFrom({ npcKind: null, npcId: 205729, npcName: "Boarton Shadetotem" }, undefined),
+    ).toEqual({
+      npcKind: null,
+      npcId: 205729,
+      npcName: "Boarton Shadetotem",
+      race: null,
+      gender: null,
+      flavor: null,
+      provenance: "none",
+      confirmed: false,
+      flavorOptions: [],
+    });
+  });
+
+  it("is fully unresolved for a known-kind observation with no resolution either", async () => {
+    expect(
+      await npcSummaryFrom({ npcKind: "creature", npcId: 999, npcName: "Some Guard" }, undefined),
+    ).toMatchObject({ npcKind: "creature", provenance: "none", confirmed: false, flavorOptions: [] });
+  });
+
+  it("carries the resolution's own answer, and derives its flavor options from it", async () => {
+    const summary = await npcSummaryFrom(
+      { npcKind: "creature", npcId: 288, npcName: "Jitters" },
+      resolution(),
+    );
+    expect(summary).toMatchObject({ race: "human", gender: "male", flavor: "standard", provenance: "corpus" });
+    // human-male: pinned against the real corpus, the same way corpus.test.ts pins flavorsFor.
+    expect(summary.flavorOptions).toContain("standard");
+  });
+
+  // A resolution can only exist at all if some envelope -- this one, or an earlier one for the
+  // same NPC -- carried a kind; that makes it strictly more informed than the current envelope's
+  // own kind, which may be null.
+  it("prefers the resolution's kind over a kind-less observation's", async () => {
+    const summary = await npcSummaryFrom(
+      { npcKind: null, npcId: 205729, npcName: "Boarton Shadetotem" },
+      resolution({ npcKind: "creature", npcId: 205729, race: "tauren", gender: "male", flavor: "warrior", provenance: "client", confirmed: false }),
+    );
+    expect(summary.npcKind).toBe("creature");
+  });
+
+  it("has no flavor options when the resolution names no race or gender", async () => {
+    const summary = await npcSummaryFrom(
+      { npcKind: "creature", npcId: 1, npcName: "A Narrator" },
+      resolution({ race: null, gender: null, flavor: null, provenance: "none", confirmed: false }),
+    );
+    expect(summary.flavorOptions).toEqual([]);
+  });
+});

@@ -52,20 +52,30 @@ export async function POST(request: Request) {
   // the NPC, and the next person to look may want to know what the guess was based on.
   const existing = await getResolution(npcKind, npcId);
 
+  // Absent from the body and sent-as-empty are different answers, and the form now posts race,
+  // gender and flavor independently: a moderator confirming "this is a tauren male" has no
+  // opinion on the flavor yet, and one who only has an opinion on the flavor of a client-guessed
+  // row must not blank out the race and gender that guess already got right. `undefined` -- the
+  // key was left off the POST entirely -- keeps whatever is already on the row (null, the first
+  // time); `""` is still a real answer and still clears it, the same as before this existed, so
+  // "lets a moderator clear every field" below keeps working unchanged.
+  const orExisting = (value: unknown, current: string | null, max: number) =>
+    value === undefined ? current : text(value, max);
+
   const row = await upsertResolution({
     npcKind,
     npcId,
     npcName: existing?.npcName ?? null,
-    race: text(body.race, 64),
-    gender: text(body.gender, 16),
-    flavor: text(body.flavor, 64),
+    race: orExisting(body.race, existing?.race ?? null, 64),
+    gender: orExisting(body.gender, existing?.gender ?? null, 16),
+    flavor: orExisting(body.flavor, existing?.flavor ?? null, 64),
     provenance: "moderator",
     confirmed: true,
     modelFileId: existing?.modelFileId ?? null,
     sex: existing?.sex ?? null,
     creatureType: existing?.creatureType ?? null,
     build: existing?.build ?? null,
-    note: text(body.note, 2000),
+    note: orExisting(body.note, existing?.note ?? null, 2000),
     resolvedBy: session.user.id,
   });
 
