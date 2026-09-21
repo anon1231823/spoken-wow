@@ -20,7 +20,7 @@ process.env.SPOKEN_QUESTS_AUDIO = path.join(root, "audio");
 process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
-const { listTakes, noteArchiveFile, setLiveTake, takeHistory, takePath } = await import(
+const { listTakes, noteArchiveFile, setLiveTake, takePath } = await import(
   "./store"
 );
 
@@ -36,12 +36,6 @@ async function record(version: number, isCurrent = false, archiveFile: string | 
      values ('quests', 'enUS', $1, 'g:test', $2, $3, 'generated', 1, $4)`,
     [file, version, isCurrent, archiveFile],
   );
-}
-
-function archive(name: string) {
-  const dir = path.join(root, "audio-history", "gossip", path.basename(file, ".mp3"));
-  fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, name), "x");
 }
 
 beforeAll(async () => {
@@ -71,29 +65,15 @@ afterAll(async () => {
 
 describe("listing takes", () => {
   it("returns them newest first, which is the order the panel reads in", async () => {
-    await record(0);
     await record(1);
-    await record(2, true);
+    await record(2);
+    await record(3, true);
 
-    expect((await listTakes("quests", file)).map((take) => take.version)).toEqual([2, 1, 0]);
+    expect((await listTakes("quests", file)).map((take) => take.version)).toEqual([3, 2, 1]);
   });
 
   it("answers for a file with no takes at all rather than throwing", async () => {
     expect(await listTakes("quests", file)).toEqual([]);
-  });
-});
-
-describe("what the history panel is told", () => {
-  it("lists every take, without asking the filesystem anything", async () => {
-    // It used to list the archive directory and grey out the takes it could not find,
-    // which made drawing a list depend on where the bytes happen to live -- and where they
-    // are not on the machine serving the page, every past take looked lost. Nothing here
-    // touches disk; whether a clip is really there is answered by playing or restoring it.
-    await record(0, false, "0.mp3");
-    await record(1, true);
-
-    const history = await takeHistory("quests", file);
-    expect(history.map((take) => take.version)).toEqual([1, 0]);
   });
 });
 

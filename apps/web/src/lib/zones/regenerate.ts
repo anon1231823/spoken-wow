@@ -193,10 +193,6 @@ export async function regenerateZoneLine(
       // Nothing else plays this file: naming.mjs gives every line its own, which is the
       // whole difference from a gossip file named after its text.
       sharedWith: 0,
-      // Version 0 inherited audio is a quests idea -- there, the app took over a store the
-      // Python CLI had already filled. Here the first take this app writes is a new row
-      // beside the imported one, so there is never anything to archive on the way in.
-      archivedLive: false,
     };
   } catch (error) {
     return { ok: false, failure: asFailure(error) };

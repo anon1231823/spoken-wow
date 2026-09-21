@@ -15,7 +15,7 @@
 import { requireRegenerate } from "@/lib/generation/authz";
 import { isSource } from "@/lib/reports/reports";
 import { isAddressableFile } from "@/lib/takes/files";
-import { takeHistory } from "@/lib/takes/store";
+import { listTakes } from "@/lib/takes/store";
 
 export const dynamic = "force-dynamic";
 
@@ -34,5 +34,5 @@ export async function GET(request: Request) {
     return Response.json({ error: "unknown file" }, { status: 404 });
   }
 
-  return Response.json({ source, file, takes: await takeHistory(source, file) });
+  return Response.json({ source, file, takes: await listTakes(source, file) });
 }

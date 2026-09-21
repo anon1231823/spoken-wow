@@ -181,7 +181,6 @@ describe("a line with no audio yet", () => {
     if (!result.ok) return;
     expect(result.file).toBe("quests/5-accept.mp3");
     expect(result.version).toBe(1);
-    expect(result.archivedLive).toBe(false);
     expect(result.voice).toBe("human-male-standard");
     expect(result.voiceId).toBe("voice-human-male-standard");
     expect(fs.readFileSync(storePath(result.file))).toEqual(MP3);
@@ -258,7 +257,6 @@ describe("a line whose audio already exists", () => {
 
     expect(second.ok).toBe(true);
     if (!second.ok) return;
-    expect(second.archivedLive).toBe(true);
     expect(second.version).toBe(2);
     expect(fs.readFileSync(versionPath(file, 1))).toEqual(MP3);
     expect(fs.readFileSync(storePath(file))).toEqual(MP3);

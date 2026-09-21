@@ -52,7 +52,6 @@ export type RegenerateSuccess = {
   dictionaryVersion: string | null;
   /** Other NPCs whose lines resolve to this same file, and who therefore also changed. */
   sharedWith: number;
-  archivedLive: boolean;
 };
 
 export type RegenerateResult = RegenerateSuccess | { ok: false; failure: Failure };
@@ -243,7 +242,6 @@ export async function regenerateLine(
       spokenText,
       dictionaryVersion: dictionary?.versionId ?? null,
       sharedWith: new Set(group.map((l) => `${l.npcType}:${l.npcId}`)).size - 1,
-      archivedLive: committed.archivedLive,
     };
   });
 

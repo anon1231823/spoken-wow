@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
   const file = params.get("file");
   const version = Number(params.get("version"));
 
-  if (!isSource(source) || !file || !Number.isInteger(version) || version < 0) {
+  if (!isSource(source) || !file || !Number.isInteger(version) || version < 1) {
     return new Response("bad take", { status: 400 });
   }
   if (!(await isAddressableFile(source, file))) {

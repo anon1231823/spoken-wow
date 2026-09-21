@@ -153,9 +153,6 @@ export async function regenerateBookLine(
       dictionaryVersion: config.dictionaryVersionId ?? null,
       spokenText: page.spoken,
       sharedWith: 0,
-      // A quests idea: there the app took over a store the Python CLI had filled. The
-      // books store starts empty, so there is never inherited audio to archive on the way in.
-      archivedLive: false,
     };
   } catch (error) {
     return { ok: false, failure: asFailure(error) };

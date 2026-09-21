@@ -300,7 +300,7 @@ export default function LineRow({
           <span className="text-destructive">{state.message}</span>
         ) : state?.phase === "done" ? (
           <span className="text-emerald-400">
-            {state.version > 0 ? `v${state.version}` : "regenerated"}
+            v{state.version}
           </span>
         ) : missing ? (
           <span

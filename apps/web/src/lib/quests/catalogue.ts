@@ -124,17 +124,20 @@ async function build(lang: string): Promise<CorpusLine[]> {
 }
 
 const cacheKey = Symbol.for("spoken.quests-catalogue");
-type Holder = { [cacheKey]?: { stamp: string; lines: CorpusLine[] } };
+type Holder = { [cacheKey]?: { stamp: string; corpus: Corpus } };
 
 /** Every line, rebuilt only when the tables have moved. */
 export async function corpus(lang: string = BASE_LANG): Promise<Corpus> {
   const holder = globalThis as Holder;
   const stamp = await stampOf(lang);
 
+  // The same object every time until the stamp moves, not a fresh wrapper: search.ts keys
+  // its row keys on the corpus's identity, and a new wrapper per call rebuilt them all on
+  // every request.
   if (!holder[cacheKey] || holder[cacheKey].stamp !== stamp) {
-    holder[cacheKey] = { stamp, lines: await build(lang) };
+    holder[cacheKey] = { stamp, corpus: { lines: await build(lang) } };
   }
-  return { lines: holder[cacheKey].lines };
+  return holder[cacheKey].corpus;
 }
 
 const indexKey = Symbol.for("spoken.quests-line-index");

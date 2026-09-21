@@ -354,7 +354,7 @@ export async function archiveTake(file, version) {
   // With no database there are no take rows and so no version to name a file after: the
   // manifest is the record, and the archive falls back to counting what is already in the
   // directory, exactly as it did before. That is the no-Postgres path this module exists
-  // to keep working, and lib/takes/archive.ts reads both namings for this reason.
+  // to keep working; with a database the take's row records the name it was given.
   const name = version === null || version === undefined
     ? `v${(await readdir(dir).catch(() => [])).reduce((max, entry) => {
         const match = /^v(\d+)\.mp3$/.exec(entry);
@@ -390,7 +390,7 @@ export async function liveTakeVersion(file) {
 
 // Archives the clip that is live NOW, before something replaces it.
 //
-// The counterpart of the quests side's archiveInherited, and needed for the same reason:
+// The counterpart of the quests side's archiveLive, and needed for the same reason:
 // a clip imported from the old sound pack -- or written before takes were archived by
 // version -- has a row but no archive copy, and overwriting it would destroy audio that
 // cost money and cannot be reproduced. Called with the live take's own version, so the
@@ -430,34 +430,6 @@ export async function durationOf(path) {
   const seconds = Number(stdout.trim());
   if (!Number.isFinite(seconds)) throw new Error(`ffprobe gave no duration for ${path}`);
   return Math.round(seconds * 1000) / 1000;
-}
-
-// Puts an archived take back into the store. No API call and no credits -- this is the
-// undo for a re-roll that came out worse, which is the whole reason takes are kept.
-//
-// A COPY, NOT A MOVE. This used to rename the archived file into the store, which meant
-// restoring a take destroyed the only archived copy of it: undo once and the take you
-// restored could never be found again. The caller marks the restored take current; no new
-// row is written and no bytes are displaced, because the clip being replaced is itself
-// already archived under its own version.
-//
-// `name` is the archived file's basename, resolved by the caller -- `v3.mp3` for anything
-// cut since takes were archived by version, and whatever the directory holds for the clips
-// that predate it. See lib/takes/archive.ts for how one is paired with the other.
-export async function restoreTake(file, name) {
-  const archived = join(historyDir(), file, name);
-  if (!existsSync(archived)) {
-    throw new Error(`no archived take at ${archived}`);
-  }
-
-  const path = join(soundsDir(), `${file}.mp3`);
-  await mkdir(dirname(path), { recursive: true });
-
-  const temp = `${path}.part`;
-  await copyFile(archived, temp);
-  await rename(temp, path);
-
-  return path;
 }
 
 // Scripts are short-lived and an open pool keeps the process alive after main()

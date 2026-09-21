@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   if (typeof body.file !== "string" || !(await isAddressableFile(source, body.file))) {
     return Response.json({ error: "unknown file" }, { status: 404 });
   }
-  if (typeof body.version !== "number" || !Number.isInteger(body.version) || body.version < 0) {
+  if (typeof body.version !== "number" || !Number.isInteger(body.version) || body.version < 1) {
     return Response.json({ error: "version must be a whole number" }, { status: 400 });
   }
 

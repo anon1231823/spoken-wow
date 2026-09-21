@@ -15,16 +15,18 @@ export async function GET(request: NextRequest) {
   // ever changes; the offset is arithmetic and belongs on this side of it.
   const page = Math.max(1, Math.floor(Number(params.get("page")) || 1));
 
-  const filters = await filtersFromParams(params);
+  // Only the context depends on the filters; the corpus and the voiced set do not, so
+  // they are fetched alongside rather than after.
+  const [filters, lines, voiced] = await Promise.all([
+    filtersFromParams(params),
+    corpus(),
+    voicedFiles(),
+  ]);
   const result = search(
-    await corpus(),
-    await voicedFiles(),
+    lines,
+    voiced,
     { ...filters, offset: (page - 1) * limit, limit },
-    await searchContext(
-      needsDates(filters),
-      needsStale(filters),
-      needsDirty(filters),
-    ),
+    await searchContext(needsDates(filters), needsStale(filters), needsDirty(filters)),
   );
 
   return NextResponse.json(result);

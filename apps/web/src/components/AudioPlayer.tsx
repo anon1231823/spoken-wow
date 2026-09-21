@@ -80,6 +80,11 @@ export default function AudioPlayer({
   // that serves this page.
   const [failed, setFailed] = useState(false);
 
+  const fail = () => {
+    setFailed(true);
+    setPlaying(false);
+  };
+
   // Both refs point at the same element: this component reads it for its own chrome, the
   // explorer drives playback through it.
   const attach = (el: HTMLAudioElement | null) => {
@@ -99,10 +104,7 @@ export default function AudioPlayer({
     const onVolume = () => setMuted(el.muted);
     // Not declared as onError on the element: a media element's error event does not
     // bubble, so React's delegation never sees it.
-    const onError = () => {
-      setFailed(true);
-      setPlaying(false);
-    };
+    const onError = fail;
 
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("loadedmetadata", onMeta);
@@ -140,12 +142,7 @@ export default function AudioPlayer({
     // Both paths, because a 404 reaches an <audio> either way: play() rejects in some
     // browsers, and in others it resolves and the element fires `error` instead. Handling
     // only one leaves the button stuck, which is how this was found in the take popover.
-    void (el.paused
-      ? el.play().catch(() => {
-          setFailed(true);
-          setPlaying(false);
-        })
-      : el.pause());
+    void (el.paused ? el.play().catch(fail) : el.pause());
   };
 
   const cycleRate = () => {

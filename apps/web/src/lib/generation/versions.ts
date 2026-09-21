@@ -14,6 +14,8 @@
  * The zones side reads the same table through its own module, keyed on the lineId.
  */
 import { db } from "@/lib/db";
+import { archiveNameFor } from "@/lib/takes/archive";
+import { setLiveTake } from "@/lib/takes/store";
 
 import type { VoiceSettings } from "./config";
 
@@ -152,12 +154,14 @@ export async function voicedFiles(): Promise<Set<string>> {
  */
 export async function liveTakes(): Promise<Map<string, { version: number; takes: number }>> {
   const { rows } = await db().query<{ file: string; version: number; takes: string }>(
-    `select t."file", t."version",
-            (select count(*) from "take" a
-              where a."source" = 'quests' and a."lang" = t."lang" and a."file" = t."file")
-              as "takes"
-       from "take" t
-      where t."source" = 'quests' and t."isCurrent"`,
+    // One grouped pass, not a count subquery per live row: Postgres does not flatten a
+    // scalar subquery in the select list, and at 11,000 live files that was one index scan
+    // each, on every search.
+    `select "file", max("version") filter (where "isCurrent") as "version", count(*) as "takes"
+       from "take"
+      where "source" = 'quests'
+      group by "lang", "file"
+     having bool_or("isCurrent")`,
   );
   return new Map(
     rows.map((row) => [row.file, { version: row.version, takes: Number(row.takes) }]),
@@ -221,22 +225,6 @@ export async function nextVersion(file: string): Promise<number> {
   return rows[0]?.next ?? 1;
 }
 
-/**
- * The version of the take that is live for this file, or null when it has never been
- * generated.
- *
- * What the bytes in the store are, which is what commitVersion needs to know before it
- * writes over them.
- */
-export async function liveVersionOf(file: string): Promise<number | null> {
-  const { rows } = await db().query<{ version: number }>(
-    `select "version" from "take"
-      where "source" = 'quests' and "file" = $1 and "isCurrent"`,
-    [file],
-  );
-  return rows[0]?.version ?? null;
-}
-
 export async function recordVersion(version: NewVersion): Promise<void> {
   await db().query(
     `insert into "take"
@@ -271,38 +259,16 @@ export async function recordVersion(version: NewVersion): Promise<void> {
       // and always has, so this is not news here -- it is recorded anyway, because a take
       // that says where its own audio is needs nothing worked out about it, and that is
       // what lets one history panel read all three sections.
-      `${version.version}.mp3`,
+      archiveNameFor("quests", version.version),
     ],
   );
 }
 
 /**
- * Mark one version live.
- *
- * Both statements in one transaction: a partial index enforces at most one current row per
- * file, so clearing and setting must not be separable - between them the file would have no
- * current version, and a concurrent read would report the line as never generated.
+ * Mark one version live. The take layer's setLiveTake, which every section uses: one
+ * transaction, one partial index, and a refusal when the version was never recorded.
  */
 export async function setCurrentVersion(file: string, version: number): Promise<void> {
-  const client = await db().connect();
-  try {
-    await client.query("begin");
-    await client.query(
-      `update "take" set "isCurrent" = false
-        where "source" = 'quests' and "file" = $1 and "isCurrent"`,
-      [file],
-    );
-    await client.query(
-      `update "take" set "isCurrent" = true
-        where "source" = 'quests' and "file" = $1 and "version" = $2`,
-      [file, version],
-    );
-    await client.query("commit");
-  } catch (error) {
-    await client.query("rollback").catch(() => {});
-    throw error;
-  } finally {
-    client.release();
-  }
+  await setLiveTake("quests", file, version);
 }
 

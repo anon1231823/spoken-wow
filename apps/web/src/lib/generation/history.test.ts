@@ -112,7 +112,6 @@ describe("the first take of a line", () => {
   it("is version 1, because there is no take before the first one", async () => {
     const result = await take();
 
-    expect(result.archivedLive).toBe(false);
     expect(result.version).toBe(1);
     expect(archived(file)).toEqual([1]);
     expect((await listVersions(file))[0].origin).toBe("generated");
@@ -125,8 +124,8 @@ describe("re-rolling a line", () => {
     // and a take that was already archived when it was cut is simply copied over itself.
     await take({ data: Buffer.from("first") });
 
-    expect((await take({ data: Buffer.from("second") })).archivedLive).toBe(true);
-    expect((await take({ data: Buffer.from("third") })).archivedLive).toBe(true);
+    await take({ data: Buffer.from("second") });
+    await take({ data: Buffer.from("third") });
 
     expect(archived(file)).toEqual([1, 2, 3]);
     expect(fs.readFileSync(versionPath(file, 1), "utf8")).toBe("first");

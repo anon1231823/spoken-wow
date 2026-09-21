@@ -20,15 +20,14 @@
 -- irreplaceable audio to tidy up a naming scheme, which is the one thing the audio rules
 -- here forbid. So:
 --
---   null   the take predates this column. Its file is found the way its section always
---          found it -- {version}.mp3 for quests, or by pairing the directory's v{n}.mp3
---          names in order against that file's takes for zones and books.
---   set    the exact basename, written when the take was cut.
+--   null   the take predates this column, or its clip was never archived. Its bytes are
+--          found by its section's naming rule -- {version}.mp3 for quests, v{version}.mp3
+--          for zones and books -- or, for the live take, in the store.
+--   set    the exact basename, written when the take was cut or recovered.
 --
--- A backfill fills in what it can pair with certainty and leaves the rest null; a take
--- whose bytes cannot be named is shown as unplayable rather than pointed at a guess, which
--- is the failure mode that matters here. Restoring the wrong clip is silent, and the person
--- who notices is a player hearing the wrong line.
+-- Nothing reads the directory to decide what a take is called. Whether the named file is
+-- actually there is discovered by whoever plays or restores it, not predicted while a page
+-- renders.
 --
 -- Additive and forward-only per deploy/web/bin/migrate.sh: one nullable column.
 

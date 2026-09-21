@@ -16,9 +16,9 @@ import "server-only";
 
 import path from "node:path";
 
-import { AUDIO_DIR, AUDIO_HISTORY_DIR } from "@/lib/paths";
 import type { Source } from "@/lib/generation/queue";
 import { soundsDir as booksSounds } from "@/lib/books/audio";
+import { historyDir as questsHistory, storePath as questsStore } from "@/lib/generation/archive";
 import { historyDir as booksHistory } from "@/lib/books/store";
 import { historyDir as zonesHistory, soundsDir as zonesSounds } from "@/lib/zones/tools";
 
@@ -31,11 +31,11 @@ export type StoreAdapter = {
 
 export const ADAPTERS: Record<Source, StoreAdapter> = {
   // The history mirrors the store one level deeper, so a take is addressable by path
-  // alone: audio-history/gossip/31ab…/0.mp3 beside audio/gossip/31ab….mp3.
+  // alone: audio-history/gossip/31ab…/1.mp3 beside audio/gossip/31ab….mp3. The quests
+  // module owns the rule, and its versions refuse any path that is not a store-relative mp3.
   quests: {
-    historyDir: (file) =>
-      path.join(AUDIO_HISTORY_DIR, path.dirname(file), path.basename(file, ".mp3")),
-    storePath: (file) => path.join(AUDIO_DIR, file),
+    historyDir: questsHistory,
+    storePath: questsStore,
   },
   // A sibling of Sounds/ rather than a child, because validate-audio.mjs walks Sounds/ and
   // would otherwise flag every archived take as a clip the lookup table does not know.

@@ -10,8 +10,8 @@
 // spend going forward; this claws back what already shipped: the takes flip to
 // non-current in the take table and the masters move to audio-history/, the
 // same reversible retirement a re-roll performs. Nothing is deleted -- the
-// takes were paid for, and restoreTake puts any of them back without a second
-// purchase.
+// takes were paid for, and the site's take selector (lib/takes/restore.ts) puts
+// any of them back without a second purchase.
 //
 // Run `make lookup` afterwards to re-export the manifest and rebuild Sounds.lua.
 //

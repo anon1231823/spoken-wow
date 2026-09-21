@@ -6,18 +6,9 @@ import { ChevronDown, Loader2, Pause, Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Source } from "@/lib/generation/client";
+// Type-only, so it is erased from the bundle and the store's server-only guard never runs.
+import type { Take } from "@/lib/takes/store";
 import { cn } from "@/lib/utils";
-
-export type Take = {
-  version: number;
-  isCurrent: boolean;
-  origin: "imported" | "generated";
-  characters: number | null;
-  credits: number | null;
-  modelId: string | null;
-  createdAt: string;
-  createdByName: string | null;
-};
 
 function when(iso: string): string {
   const date = new Date(iso);
@@ -130,11 +121,7 @@ export default function TakeSelector({
     if (!element || !open) return;
 
     function onError() {
-      const take = playingRef.current;
-      if (take === null) return;
-      playingRef.current = null;
-      setPlaying(null);
-      setError(`v${take} could not be played — its audio is not on the server`);
+      if (playingRef.current !== null) failed(playingRef.current);
     }
 
     element.addEventListener("error", onError);

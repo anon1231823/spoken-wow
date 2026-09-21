@@ -15,13 +15,16 @@
  *   2. write the new bytes
  *   3. record the row and mark it current
  *
- * A crash between 2 and 3 leaves a store file with no row, which reads as inherited audio
- * and archives correctly on the next attempt. The reverse order would lose the previous take
- * outright, which is the one outcome worth engineering against.
+ * A crash between 2 and 3 leaves a store file no row describes, and the next attempt refuses
+ * rather than write over it (see archiveLive): a lost clip is recoverable from the archive,
+ * an overwritten one is not. The reverse order would lose the previous take outright, which
+ * is the one outcome worth engineering against.
  */
 import { createHash } from "node:crypto";
 
-import { liveVersionOf, nextVersion, recordVersion, setCurrentVersion } from "./versions";
+import { liveVersion } from "@/lib/takes/store";
+
+import { nextVersion, recordVersion, setCurrentVersion } from "./versions";
 import { archiveStoreFile, storeFileExists, writeStoreFile } from "./archive";
 import type { VoiceSettings } from "./config";
 import type { VoicelineVersion } from "./versions";
@@ -64,8 +67,6 @@ export type CommitInput = {
 export type CommitResult = {
   version: number;
   bytes: number;
-  /** Set when the take being replaced had to be archived before this one overwrote it. */
-  archivedLive: boolean;
 };
 
 /**
@@ -89,8 +90,8 @@ export type CommitResult = {
  * cheap: the bytes are the same, so the write is idempotent, and the alternative is a stat
  * that makes the archive authoritative again for a question the table can answer.
  */
-async function archiveLive(file: string): Promise<boolean> {
-  const live = await liveVersionOf(file);
+async function archiveLive(file: string): Promise<void> {
+  const live = await liveVersion("quests", file);
   const inStore = await storeFileExists(file);
 
   // A clip with no take row is audio the database does not know exists, and there is no
@@ -104,10 +105,9 @@ async function archiveLive(file: string): Promise<boolean> {
         "nothing recorded. Give it a row before generating over it.",
     );
   }
-  if (live === null || !inStore) return false;
+  if (live === null || !inStore) return;
 
   await archiveStoreFile(file, live);
-  return true;
 }
 
 /**
@@ -124,7 +124,7 @@ export function spokenHash(spokenText: string): string {
 
 /** Write a new take into the store and record it. Caller must hold the file's lock. */
 export async function commitVersion(input: CommitInput): Promise<CommitResult> {
-  const archivedLive = await archiveLive(input.file);
+  await archiveLive(input.file);
 
   // From the rows, and only the rows. This used to take the larger of the table's next
   // number and one past the highest file in the history directory, to survive a row going
@@ -158,5 +158,5 @@ export async function commitVersion(input: CommitInput): Promise<CommitResult> {
   });
   await setCurrentVersion(input.file, version);
 
-  return { version, bytes: input.data.byteLength, archivedLive };
+  return { version, bytes: input.data.byteLength };
 }

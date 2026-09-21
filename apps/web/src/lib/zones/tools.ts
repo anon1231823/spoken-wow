@@ -121,11 +121,6 @@ export const insertTake = storeModule.insertTake as (
   origin: "imported" | "generated",
   settings?: Record<string, unknown> | null,
 ) => Promise<number>;
-/** Copies an archived take back into the store, by its file's basename. */
-export const restoreTake = storeModule.restoreTake as (
-  file: string,
-  name: string,
-) => Promise<string>;
 
 // What the addon actually ships, rebuilt after a batch drains rather than after every line:
 // buildLookup rewrites the whole table, and doing that 1,353 times would be the slowest part

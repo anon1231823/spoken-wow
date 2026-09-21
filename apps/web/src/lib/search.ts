@@ -154,8 +154,7 @@ export type ResultLine = CorpusLine & {
   reportsOpen: number;
   /**
    * The live take of this line's file, and how many takes it has. Null when none is
-   * recorded, which is what an unbackfilled store looks like -- not a claim that the line
-   * has never been spoken. Shaped like the zones and books rows' `take` for the same reason
+   * recorded, which means the line has never been generated. Shaped like the zones and books rows' `take` for the same reason
    * the Audio column is shaped like theirs.
    */
   take: { version: number; takes: number } | null;

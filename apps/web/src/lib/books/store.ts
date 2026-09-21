@@ -156,8 +156,8 @@ export async function archiveTake(file: string, version: number): Promise<boolea
 /**
  * Archives the clip that is live NOW, before something replaces it.
  *
- * The counterpart of the quests side's archiveInherited, and there for the same reason: a
- * clip written before takes were archived by version has a row and no archive copy, and
+ * The counterpart of the quests side's archiveLive, and there for the same reason: a clip
+ * written before takes were archived by version has a row and no archive copy, and
  * overwriting it would destroy audio that cost money and cannot be reproduced.
  */
 export async function archiveLive(file: string, lang: string = BASE_LANG): Promise<boolean> {

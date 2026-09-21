@@ -78,18 +78,18 @@ export function archiveNameOf(source: Source, take: Pick<Take, "version" | "arch
   return take.archiveFile ?? archiveNameFor(source, take.version);
 }
 
-/**
- * Every take of one file, newest first.
- *
- * The same shape the panel draws, and it is one query: what a take is, who made it and what
- * it cost are all columns.
- */
-export async function takeHistory(
+/** The version of the live take of one file, or null when it has never been generated. */
+export async function liveVersion(
   source: Source,
   file: string,
   lang = "enUS",
-): Promise<Take[]> {
-  return listTakes(source, file, lang);
+): Promise<number | null> {
+  const rows = await query<{ version: number }>(
+    `select "version" from "take"
+      where "source" = $1 and "file" = $2 and "lang" = $3 and "isCurrent"`,
+    [source, file, lang],
+  );
+  return rows[0]?.version ?? null;
 }
 
 /**
