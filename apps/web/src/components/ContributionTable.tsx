@@ -28,7 +28,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { ContributionStatus } from "@/lib/contributions/contributions";
-import { contributionsHref, NEEDS_DECISION, type SpeakerFilter } from "@/lib/contributions/query";
+import { CLIENT_FAMILIES, CLIENT_FAMILY_LABELS, type ClientSummary } from "@/lib/contributions/client";
+import { contributionsHref, NEEDS_DECISION, type ClientFilter, type SpeakerFilter } from "@/lib/contributions/query";
 import type { Contribution } from "@/lib/contributions/store";
 // Both are computed server-side (npcSummaryFrom pulls in corpus.ts's flavorsFor) -- `import
 // type` erases the whole thing at compile time, so none of that follows the type in here. The
@@ -47,6 +48,8 @@ export type ContributionRow = Pick<
   Contribution,
   "id" | "source" | "key" | "locale" | "count" | "text" | "status" | "createdAt" | "body"
 > & {
+  /** The game client the text came from, classified from the envelope's `build`. */
+  client: ClientSummary;
   /** Null when the envelope never named an NPC at all -- zones and books, or a quest keyed on quest+event. */
   npc: NpcSummary | null;
   /** Null when the source has no quest concept at all. See lib/contributions/triage.ts. */
@@ -96,6 +99,11 @@ const SPEAKER_CHIP_OPTIONS: ChipOption[] = [
   ...PROVENANCES.map((option) => ({ value: option, label: PROVENANCE_LABELS[option] })),
 ];
 
+const CLIENT_CHIP_OPTIONS: ChipOption[] = CLIENT_FAMILIES.map((option) => ({
+  value: option,
+  label: CLIENT_FAMILY_LABELS[option],
+}));
+
 /** The day and the clock time, short enough to sit in a column, matching ReportTable's `when`. */
 function when(at: string): string {
   return new Date(at).toLocaleString(undefined, {
@@ -139,6 +147,7 @@ export default function ContributionTable({
   initial,
   status,
   provenance,
+  client,
   existing,
   raceOptions,
   genderOptions,
@@ -147,6 +156,7 @@ export default function ContributionTable({
   initial: ContributionRow[];
   status: ContributionStatus | "all";
   provenance: SpeakerFilter;
+  client: ClientFilter;
   /** id -> corpus text, present only where the row's key resolves to something on file. */
   existing: Record<number, string>;
   /** facets().races/genders -- every race and gender the corpus has, for the "nothing known" state's selects. */
@@ -270,13 +280,13 @@ export default function ContributionTable({
    * ReportTable.tsx's own `go`; the mapping itself is contributionsHref, pulled out to
    * lib/contributions/query.ts so it can be tested without rendering FilterChip or this table.
    */
-  function go(next: { status?: ContributionStatus | "all"; provenance?: SpeakerFilter }) {
-    router.push(contributionsHref({ status, provenance }, next));
+  function go(next: { status?: ContributionStatus | "all"; provenance?: SpeakerFilter; client?: ClientFilter }) {
+    router.push(contributionsHref({ status, provenance, client }, next));
   }
 
   return (
     <>
-      {/* Two dropdowns, the same control the explorers filter with -- matching ReportTable.
+      {/* Dropdowns, the same control the explorers filter with -- matching ReportTable.
           Status/Speaker being one dropdown each, rather than a row of link pills, is what makes
           "New / Accepted / Rejected / All" and the six speaker pills fit without crowding. */}
       <nav className="mb-4 flex flex-wrap items-center gap-2">
@@ -292,6 +302,12 @@ export default function ContributionTable({
           options={SPEAKER_CHIP_OPTIONS}
           onChange={(next) => go({ provenance: next as SpeakerFilter | undefined })}
         />
+        <FilterChip
+          label="client"
+          value={client === "all" ? undefined : client}
+          options={CLIENT_CHIP_OPTIONS}
+          onChange={(next) => go({ client: next as ClientFilter | undefined })}
+        />
       </nav>
 
       {rows.length === 0 ? (
@@ -304,7 +320,7 @@ export default function ContributionTable({
               <th className="border-b py-2 pr-3 font-normal">Source</th>
               <th className="border-b py-2 pr-3 font-normal">NPC</th>
               <th className="border-b py-2 pr-3 font-normal">Quest</th>
-              <th className="border-b py-2 pr-3 font-normal">Locale</th>
+              <th className="border-b py-2 pr-3 font-normal">Client</th>
               <th className="border-b py-2 pr-3 font-normal">Count</th>
               <th className="border-b py-2 pr-3 font-normal">What they sent</th>
               <th className="border-b py-2 pr-3 font-normal">Status</th>
@@ -416,7 +432,15 @@ export default function ContributionTable({
                     )}
                   </td>
 
-                  <td className="pr-3 text-xs whitespace-nowrap">{row.locale}</td>
+                  {/* Which game, then the locale and the exact build underneath: the version is
+                      in the label, and the build number is what tells a beta's builds apart. */}
+                  <td className="pr-3 text-xs whitespace-nowrap">
+                    <div>{row.client.label}</div>
+                    <div className="text-muted-foreground">
+                      {row.locale}
+                      {row.client.buildNumber ? ` · ${row.client.buildNumber}` : null}
+                    </div>
+                  </td>
 
                   <td className="pr-3 text-xs whitespace-nowrap">{row.count}</td>
 

@@ -1,5 +1,5 @@
 /**
- * The query string /contributions's two filter dropdowns write to, and the Speaker dropdown's
+ * The query string /contributions's filter dropdowns write to, and the Speaker dropdown's
  * one sentinel value.
  *
  * A free function, not inlined in ContributionTable's click handler, so the mapping -- combine
@@ -8,6 +8,7 @@
  * contributions.ts and npc.ts, whose types this one only composes: ContributionTable is a client
  * component and calls this directly on every dropdown change.
  */
+import type { ClientFamily } from "./client";
 import type { ContributionStatus } from "./contributions";
 import type { Provenance } from "../npc/npc";
 
@@ -34,22 +35,26 @@ export const NEEDS_DECISION = "needs-decision" as const;
 
 export type SpeakerFilter = Provenance | "all" | typeof NEEDS_DECISION;
 
+export type ClientFilter = ClientFamily | "all";
+
 export type ContributionFilters = {
   status: ContributionStatus | "all";
   provenance: SpeakerFilter;
+  client: ClientFilter;
 };
 
 type FilterChange = {
   status?: ContributionStatus | "all";
   provenance?: SpeakerFilter;
+  client?: ClientFilter;
 };
 
 /**
- * The next filter state after one dropdown changes, keeping the other where it stood.
+ * The next filter state after one dropdown changes, keeping the others where they stood.
  *
  * A key present in `next` always wins, even set to `undefined` -- FilterChip's own way of
  * saying "reset to any", which this maps back to "all". A key simply absent from `next` (the
- * dimension that did not change) is the only case that falls back to `current`.
+ * dimensions that did not change) is the only case that falls back to `current`.
  */
 export function nextContributionFilters(
   current: ContributionFilters,
@@ -58,13 +63,18 @@ export function nextContributionFilters(
   return {
     status: "status" in next ? (next.status ?? "all") : current.status,
     provenance: "provenance" in next ? (next.provenance ?? "all") : current.provenance,
+    client: "client" in next ? (next.client ?? "all") : current.client,
   };
 }
 
 /** nextContributionFilters, turned into the href /contributions's own rows read back. */
 export function contributionsHref(current: ContributionFilters, next: FilterChange): string {
   const filters = nextContributionFilters(current, next);
-  const params = new URLSearchParams({ status: filters.status, provenance: filters.provenance });
+  const params = new URLSearchParams({
+    status: filters.status,
+    provenance: filters.provenance,
+    client: filters.client,
+  });
   return `/contributions?${params}`;
 }
 
