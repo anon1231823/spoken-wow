@@ -442,4 +442,22 @@ VoiceOver.Contribute:HasGap()
 Expect("asking whether there is a gap with nothing on screen never touches the model probe",
     (stub.SetUnitCount and stub.SetUnitCount() or 0), idleSetUnitBefore)
 
+------------------------------------------------------------------ a closed window keeps no button
+-- Walking away from an NPC closes the gossip window with none of the refresh events, and the
+-- client goes on answering GetGossipText with the last words. The button used to stay up,
+-- anchored to the hidden frame, floating mid-screen.
+SpokenEnv.Addon.db.profile.Contribute.HideButtons = false
+stub.HidePanels()
+world.npcName, world.npcGUID = "Deathguard Linnea", "Creature-0-0-0-0-12345-0"
+stub.ShowGossip("Words nobody has voiced.")
+stub.FireEvent("GOSSIP_SHOW")
+local lingering = VoiceOver.ContributeButton.button
+Expect("the button is up while the gossip window is", lingering:IsShown(), true)
+
+world.panels.GossipFrame = nil -- closed; GetGossipText still answers with the old words
+for _, hook in ipairs(_G.GossipFrame.hooks.OnHide or {}) do hook(_G.GossipFrame) end
+Expect("closing the window with no event takes the button with it", lingering:IsShown(), false)
+stub.FireEvent("QUEST_FINISHED")
+Expect("...and no later event brings it back while nothing is open", lingering:IsShown(), false)
+
 os.exit(Failures() == 0 and 0 or 1)

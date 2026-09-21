@@ -10,6 +10,7 @@ Options = {}
 
 local INDENT = 20
 local panel
+local scroller
 local pendingLinks = {}
 
 -- Rows, headings and the spacing between them come from UI/Layout.lua, the file every
@@ -26,16 +27,27 @@ end
 
 local CHANNELS = { "Master", "SFX", "Music", "Ambience", "Dialog" }
 
-local function Build()
+local function Build(canvas)
     panel = CreateFrame("Frame", "SpokenOptionsPanel", UIParent)
     panel.name = "Spoken Player"
+    -- On the settings canvas the rows are laid out in a scroller, as the books and zones
+    -- panels are: the canvas neither scrolls nor clips, and the contributions rows pushed
+    -- this panel past its bottom edge, drawing the minimap section over the game world. The
+    -- legacy window grows to fit its rows instead (FitWindow), so it keeps laying out on
+    -- the panel itself and never meets a ScrollFrame on a client that has not been tried.
+    local host = panel
+    if canvas then
+        scroller = Layout.Scroll(panel)
+        host = scroller.child
+        panel.content = host
+    end
     local cfg = function() return Addon.db.profile.Frame end
     local audio = function() return Addon.db.profile.Audio end
     local mm = function() return Addon.db.profile.Minimap.LibDBIcon end
     local refresh = function() PlayerFrame:RefreshConfig() end
 
-    Heading(panel, "Spoken Player", INDENT, -16)
-    local layout = Layout.New(panel, INDENT, -52)
+    Heading(host, "Spoken Player", INDENT, -16)
+    local layout = Layout.New(host, INDENT, -52)
     panel.layout = layout
 
     layout:Section(L.OPT_WINDOW_TITLE)
@@ -145,8 +157,13 @@ local function Build()
 end
 
 -- The legacy window's height: never shorter than it always was, and tall enough for every
--- row, including a link a feature addon added after the window was built.
+-- row, including a link a feature addon added after the window was built. On the canvas,
+-- the scroller's content height instead, for the same late links.
 local function FitWindow()
+    if scroller and panel then
+        scroller:SetContentHeight(52 + panel.layout:Height() + 40)
+        return
+    end
     if not (panel and panel.isWindow) then return end
     local needed = 52 + panel.layout:Height() + 16
     if needed > (panel:GetHeight() or 0) then
@@ -156,8 +173,10 @@ end
 
 function Options:Setup()
     if panel then return end
-    Build()
-    if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
+    local canvas = Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory
+    Build(canvas)
+    if canvas then
+        FitWindow()
         self.category = Settings.RegisterCanvasLayoutCategory(panel, "Spoken Player")
         Settings.RegisterAddOnCategory(self.category)
     else

@@ -137,10 +137,13 @@ function ContributeButton:Refresh()
     if QuestPanelOnScreen() then
         self.gossip = false
         placed = self:PositionAtCorner(_G.QuestFrame, CloseButtonOf(_G.QuestFrame, "QuestFrameCloseButton"))
-    else
+    elseif IsFrameVisible(_G.GossipFrame) then
         self.gossip = true
         placed = self:PositionAtCorner(_G.GossipFrame, CloseButtonOf(_G.GossipFrame, "GossipFrameCloseButton"))
     end
+    -- Neither frame up means nothing to sit on, whatever HasGap says: the client keeps
+    -- answering GetGossipText with the last words after the gossip window has gone, and a
+    -- button placed against a hidden frame floats mid-screen with nothing around it.
     if placed then
         button:Show()
     else
@@ -207,6 +210,17 @@ function ContributeButton:Setup()
         end
     end)
     self.watcher = watcher
+
+    -- Walking away, or another window taking the screen, closes these frames without any of
+    -- the events above, so hear about it from the frames themselves.
+    for _, name in ipairs({ "QuestFrame", "GossipFrame" }) do
+        local host = _G[name]
+        if type(host) == "table" and host.HookScript then
+            host:HookScript("OnHide", function()
+                ContributeButton:Refresh()
+            end)
+        end
+    end
 
     -- The hide setting lives in the Spoken Player settings, and toggling it fires no game
     -- event, so the button hears about it from the player instead.

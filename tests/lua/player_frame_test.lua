@@ -221,7 +221,7 @@ Expect("1.12: GetSettingsCategory is nil rather than an error", _G.Spoken:GetSet
 -- height and the gap that follows it, and no caller does arithmetic.
 Boot("11509")
 local rows, headings = {}, {}
-for _, child in ipairs(_G.SpokenOptionsPanel.children) do
+for _, child in ipairs((_G.SpokenOptionsPanel.content or _G.SpokenOptionsPanel).children) do
     if child.anchor and child.anchor.y then
         if child.layoutHeading then
             table.insert(headings, { y = child.layoutY, height = child.layoutHeight })
@@ -242,6 +242,14 @@ local function Distinct(values)
 end
 
 Expect("the panel has rows to space", #rows > 4, true)
+-- The settings canvas neither scrolls nor clips, so the rows sit in a scroller whose content
+-- reaches past the last of them; the contributions rows once pushed the minimap section off
+-- the bottom of the window and over the game world.
+local content = _G.SpokenOptionsPanel.content
+Expect("on the settings canvas the rows sit in a scroller", content ~= nil, true)
+local lowest = 0
+for _, row in ipairs(rows) do lowest = math.max(lowest, -row.y + row.height) end
+Expect("...tall enough to reach the last row", content and content:GetHeight() >= lowest, true)
 local gaps = {}
 for index = 2, #rows do
     local previous = rows[index - 1]
@@ -267,7 +275,7 @@ Expect("no control escapes the row it was given", escaped, 0)
 -- Label on the left, control on the right, at the same column for every row: a panel
 -- whose controls start at different places reads as several panels.
 local columns, captioned = {}, 0
-for _, child in ipairs(_G.SpokenOptionsPanel.children) do
+for _, child in ipairs((_G.SpokenOptionsPanel.content or _G.SpokenOptionsPanel).children) do
     if child.layoutColumn then
         captioned = captioned + 1
         columns[string.format("%.1f", child.layoutColumn)] = true
@@ -345,7 +353,7 @@ Expect("...not by the queue's title", labels["Up next"], nil)
 Expect("the scale slider is labelled", labels["Player scale"], true)
 Expect("...with its value beside the bar", labels["70%"], true)
 local scale
-for _, child in ipairs(_G.SpokenOptionsPanel.children) do
+for _, child in ipairs((_G.SpokenOptionsPanel.content or _G.SpokenOptionsPanel).children) do
     if child.frameType == "Slider" then scale = scale or child end
 end
 Expect("the scale slider is a slider", scale ~= nil, true)

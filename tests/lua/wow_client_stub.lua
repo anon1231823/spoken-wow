@@ -506,6 +506,7 @@ function _G.GetGossipText() return world.gossipText or "" end
 --- panel behind it.
 function M.ShowGossip(text)
     world.gossipText = text
+    world.panels.GossipFrame = true
 end
 --- The namespaced gossip API. SetClient hands it to the clients that have one.
 M.gossipAPI = {
