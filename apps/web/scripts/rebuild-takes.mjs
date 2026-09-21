@@ -312,40 +312,40 @@ async function rebuildQuests(listing) {
           [LANG, entry.file],
         );
         for (const take of entry.takes) {
-          const row = take.row;
+          // A take with a row keeps EVERY column of it -- whatever the table has grown since
+          // this was written, a lead-in, a duration -- and changes only what the rebuild is
+          // for: its number, whether it is live, and where its bytes are. A fixed column list
+          // here silently dropped whatever it did not name.
+          const values = take.row
+            ? { ...take.row }
+            : {
+                source: "quests",
+                lang: LANG,
+                file: entry.file,
+                lineId: entry.line.lineId,
+                voice: entry.line.voice,
+                createdAt: new Date(),
+              };
+          delete values.id;
+          Object.assign(values, {
+            version: take.version,
+            isCurrent: take.isCurrent,
+            // A row this app wrote stays 'generated'; a take only the archive remembers, or a
+            // store file with no history, is 'imported' -- this app did not cut it, or cut
+            // it under a record that pruning destroyed.
+            origin: take.row?.origin === "generated" ? "generated" : "imported",
+            bytes: take.bytes,
+            archiveFile: take.archiveFile,
+          });
+          const columns = Object.keys(values);
           await client.query(
-            `insert into "take"
-               ("source", "lang", "file", "lineId", "version", "isCurrent", "origin",
-                "voice", "narratorVoice", "voiceId", "modelId", "seed", "settings",
-                "characters", "credits", "bytes", "spokenHash", "dictionaryVersion",
-                "createdAt", "createdBy", "archiveFile")
-             values ('quests', $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-                     $15, $16, $17, $18, $19, $20)`,
-            [
-              LANG,
-              entry.file,
-              row?.lineId ?? entry.line.lineId,
-              take.version,
-              take.isCurrent,
-              // A row this app wrote stays 'generated'; a take only the archive remembers,
-              // or a store file with no history, is 'imported' -- this app did not cut it,
-              // or cut it under a record that pruning destroyed.
-              row?.origin === "generated" ? "generated" : "imported",
-              row?.voice ?? entry.line.voice,
-              row?.narratorVoice ?? null,
-              row?.voiceId ?? null,
-              row?.modelId ?? null,
-              row?.seed ?? null,
-              row?.settings ?? null,
-              row?.characters ?? null,
-              row?.credits ?? null,
-              take.bytes,
-              row?.spokenHash ?? null,
-              row?.dictionaryVersion ?? null,
-              row?.createdAt ?? new Date(),
-              row?.createdBy ?? null,
-              take.archiveFile,
-            ],
+            `insert into "take" (${columns.map((c) => `"${c}"`).join(", ")})
+             values (${columns.map((_, i) => `$${i + 1}`).join(", ")})`,
+            columns.map((c) =>
+              c === "settings" && values[c] !== null && typeof values[c] === "object"
+                ? JSON.stringify(values[c])
+                : values[c],
+            ),
           );
         }
         await client.query("commit");
