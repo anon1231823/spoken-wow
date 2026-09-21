@@ -307,10 +307,13 @@ export default function Explorer({ facets }: { facets: Facets }) {
     const controller = new AbortController();
     void fetchTakeCounts(files, controller.signal).then((info) => {
       if (!info) return;
+      // The row already carries both numbers from the search -- that is what a signed-out
+      // visitor sees, and what these overlay. The fetched values win over this session's
+      // own: a regeneration writes its version here for the moment before the refetch
+      // lands, and once the refetch has landed the server is the newer answer, including
+      // when somebody else regenerated the same file.
       setTakes((current) => ({ ...current, ...info.counts }));
-      // The live version per file, which the Audio column prints. Merged rather than
-      // replaced, because a regeneration in this session has already written its own.
-      setVersions((current) => ({ ...info.live, ...current }));
+      setVersions((current) => ({ ...current, ...info.live }));
       // Replaced rather than merged: a file that has just been regenerated must leave the
       // set, and merging could only ever add to it.
       setStale(new Set(info.stale));
@@ -802,8 +805,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 canTriage={showRegenerate}
                 state={lineStates[line.lineId]}
                 blocked={blockedReason(line)}
-                takes={takes[line.audioPath] ?? 0}
-                version={versions[line.audioPath] ?? null}
+                takes={takes[line.audioPath] ?? line.take?.takes ?? 0}
+                version={versions[line.audioPath] ?? line.take?.version ?? null}
                 stale={stale.has(line.audioPath)}
                 dirty={dirty.has(line.audioPath) && !cleared.has(line.audioPath)}
                 onClearDirty={(l) => clearDirty([l.audioPath])}

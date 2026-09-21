@@ -18,7 +18,7 @@
  * reads as its corpus text. Nothing is generated from this - regenerate.ts reads the
  * override itself, and there a failure *should* be fatal.
  */
-import { generatedAt } from "../generation/versions";
+import { generatedAt, liveTakes } from "../generation/versions";
 import { dirtyQuestFiles } from "./dirtiness";
 import { staleFiles } from "./staleness";
 import type { SearchContext } from "../search";
@@ -57,10 +57,11 @@ export async function searchContext(
   dirty = false,
 ): Promise<SearchContext> {
   try {
-    const [overrides, ignores, reports, dates, stale, dirt] = await Promise.all([
+    const [overrides, ignores, reports, takes, dates, stale, dirt] = await Promise.all([
       readOverrides(),
       readIgnores(),
       openReports(),
+      liveTakes(),
       dated ? generatedAt() : null,
       outdated ? staleFiles() : null,
       dirty ? dirtyQuestFiles() : null,
@@ -69,6 +70,7 @@ export async function searchContext(
       overrides,
       ignores,
       reports,
+      takes,
       generatedAt: dates ?? undefined,
       stale: stale ?? undefined,
       dirty: dirt ?? undefined,

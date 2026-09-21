@@ -133,6 +133,32 @@ export async function voicedFiles(): Promise<Set<string>> {
 }
 
 /**
+ * The live take of every quests file, with how many takes that file has.
+ *
+ * What a row needs to print its Audio column, and it is PUBLIC, like the same two numbers
+ * on a zones or books row: which take is playing and how many exist say nothing a listener
+ * should not see. It travels in the search result for that reason, rather than through the
+ * collaborator-only counts endpoint -- which is how the column came to be blank for anyone
+ * signed out, showing nothing where the other two sections show v1.
+ *
+ * One query with a count beside it rather than two: the panel asks both questions about the
+ * same rows, and a file with one take is the overwhelming majority.
+ */
+export async function liveTakes(): Promise<Map<string, { version: number; takes: number }>> {
+  const { rows } = await db().query<{ file: string; version: number; takes: string }>(
+    `select t."file", t."version",
+            (select count(*) from "take" a
+              where a."source" = 'quests' and a."lang" = t."lang" and a."file" = t."file")
+              as "takes"
+       from "take" t
+      where t."source" = 'quests' and t."isCurrent"`,
+  );
+  return new Map(
+    rows.map((row) => [row.file, { version: row.version, takes: Number(row.takes) }]),
+  );
+}
+
+/**
  * Which version is live for each of these files, so a row can say what it is playing.
  *
  * The live take rather than the highest, which are not the same thing once a restore has

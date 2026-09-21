@@ -134,6 +134,8 @@ export type SearchContext = {
    * behind the triage role on /reports, as they are for the other two sections.
    */
   reports?: Map<string, number>;
+  /** file -> which take is live and how many there are. Public, like the other two rows'. */
+  takes?: Map<string, { version: number; takes: number }>;
 };
 
 export const NO_CONTEXT: SearchContext = { overrides: new Map() };
@@ -150,6 +152,13 @@ export type ResultLine = CorpusLine & {
   audioPath: string;
   /** How many reports about this line are still open. Zero when nobody has said anything. */
   reportsOpen: number;
+  /**
+   * The live take of this line's file, and how many takes it has. Null when none is
+   * recorded, which is what an unbackfilled store looks like -- not a claim that the line
+   * has never been spoken. Shaped like the zones and books rows' `take` for the same reason
+   * the Audio column is shaped like theirs.
+   */
+  take: { version: number; takes: number } | null;
   /** The rewritten spoken text, or null. `text` stays what the corpus says. */
   override: string | null;
   /**
@@ -442,6 +451,7 @@ export function search(
       hasAudio: store.has(audioPath),
       audioPath,
       reportsOpen: context.reports?.get(line.lineId) ?? 0,
+      take: context.takes?.get(audioPath) ?? null,
       override,
       voiceable: isVoiceable(line, override ?? line.text),
       narration: hasNarration(override ?? line.text),
