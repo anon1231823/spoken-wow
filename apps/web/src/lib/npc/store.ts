@@ -178,3 +178,18 @@ export async function getResolutions(
   );
   return new Map(rows.map((row) => [resolutionKey(row.npcKind, row.npcId), row]));
 }
+
+/**
+ * Every NPC of a kind that nobody has settled: no answer at all, or only a guess.
+ *
+ * What /contributions/game-data asks the client about. The unconfirmed index covers it.
+ */
+export async function listUnconfirmed(kind: NpcKind): Promise<NpcResolution[]> {
+  const { rows } = await db().query<NpcResolution>(
+    `select ${COLUMNS} from "npc_resolution"
+      where "confirmed" = false and "npcKind" = $1
+      order by "npcId"`,
+    [kind],
+  );
+  return rows;
+}

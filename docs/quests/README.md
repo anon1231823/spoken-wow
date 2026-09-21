@@ -866,6 +866,19 @@ changes a row. A new race or voice set is added to the roster in
 `apps/web/src/lib/voices/voices.ts`: that puts it in the triage selects and gives it a slot on
 `/voices`, marked as not existing in the account until it is cloned.
 
+`/contributions/game-data`, unlinked and collaborator-only, resolves NPCs from a game client
+instead of by hand. It lists chat commands that make the client ask its server about every
+unresolved NPC. The answers land in the client's `creaturecache.wdb`, which the page reads in
+the browser for each NPC's appearance ids. The server turns those into voices with
+`apps/web/src/lib/npc/display-voices.json`, and **Apply** writes them as moderator answers.
+The voice set decides over the model, because it is what the player hears.
+`display-voices.json` comes from a local install, so regenerate it when the client updates:
+
+```bash
+curl -sL https://github.com/wowdev/wow-listfile/releases/latest/download/community-listfile.csv -o /tmp/listfile.csv
+python tools/export_display_voices.py --listfile /tmp/listfile.csv
+```
+
 ## Addon Install
 
 ```bash
