@@ -346,7 +346,7 @@ export default function ContributionTable({
                             rel="noreferrer"
                             className="text-muted-foreground shrink-0 hover:underline"
                           >
-                            Wowhead ↗
+                            wh↗
                           </a>
                         </div>
                         <SpeakerCell
