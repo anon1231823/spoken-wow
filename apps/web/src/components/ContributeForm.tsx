@@ -1,16 +1,12 @@
 "use client";
 
 /**
- * The form a player pastes an envelope into.
+ * The form a player lands on from the link an addon's Contribute button gives them.
  *
- * THE PREVIEW IS THE POINT. The payload is text out of their own client and they cannot read
- * it in the box -- it is a wall of key=value lines -- so the parse is rendered field by field
- * above the Send button. Nobody should be asked to send something they cannot read.
- *
- * The parse runs here rather than on submit for the same reason a bad paste is explained in
- * the reader's terms: half a copied envelope is the commonest failure this page will see, and
- * "you pasted half of it" is help, while "checksum" is a diagnosis in a language they do not
- * speak.
+ * The envelope arrives in the link's `#e1=` fragment and never in a box: every addon hands out
+ * a link, so there is nothing to paste, and a raw key=value wall on the page would only be
+ * something to read past. What the player does see is the preview -- the parse, field by field,
+ * above the Send button -- because nobody should be asked to send something they cannot read.
  */
 import { useEffect, useState } from "react";
 
@@ -42,21 +38,20 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 const MESSAGES: Record<ParseError, string> = {
-  truncated: "That looks like part of a copy. Select the whole box in the game and copy again.",
-  checksum: "That text was changed after it was copied. Copy it again without editing it.",
+  truncated: "That link was cut short. Copy the whole link from the game again.",
+  checksum: "That link was changed after it was copied. Copy it again without editing it.",
   version: "That came from a newer addon than this page knows. Update the site's addons, or tell me.",
   source: "That is not something this page can take.",
   oversize: "That is far larger than anything the addon produces.",
-  malformed: "That is not an addon's text. Copy the whole box in the game, starting at !SPOKEN.",
+  malformed: "That link does not carry an addon's contribution. Copy it from the game again.",
 };
 
 const LINK_MESSAGES: Record<DecodeError, string> = {
-  malformed: "That link is missing its payload. Paste the addon's text into the box below instead.",
-  corrupt: "That link looks broken -- copy it again, or paste the addon's text into the box below.",
+  malformed: "That link is missing its payload. Copy the whole link from the game again.",
+  corrupt: "That link looks broken -- copy it from the game again.",
   // DecompressionStream is missing on pre-16.4 Safari: said plainly, rather than leaving the
   // player looking at a form that silently never fills in.
-  unsupported:
-    "This browser can't open this kind of link. Paste the addon's text into the box below instead.",
+  unsupported: "This browser can't open this kind of link. Try it in a current browser.",
 };
 
 export type Preview =
@@ -89,6 +84,9 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
+  // Whether the fragment has been read yet: before that, an empty form is "loading", not "no
+  // link". False on the server render, where window.location does not exist.
+  const [read, setRead] = useState(false);
   const [description, setDescription] = useState("");
 
   // The one-copy flow: a #e1= link fills the box itself, so pressing Send is the only thing
@@ -98,7 +96,10 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
   // decoded game text a second time.
   useEffect(() => {
     const hash = window.location.hash;
-    if (!hash.startsWith("#e1=")) return;
+    if (!hash.startsWith("#e1=")) {
+      setRead(true);
+      return;
+    }
 
     window.history.replaceState(null, "", window.location.pathname + window.location.search);
 
@@ -110,6 +111,7 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
       } else {
         setLinkError(LINK_MESSAGES[result.error]);
       }
+      setRead(true);
     });
     return () => {
       cancelled = true;
@@ -154,6 +156,27 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
     );
   }
 
+  // Nothing until the fragment is read: a form with no envelope in it is neither the empty
+  // state nor the real one, and flashing it for a frame reads as a page that changed its mind.
+  if (!read) return null;
+
+  if (linkError) {
+    return (
+      <p role="alert" className="text-sm text-red-400">
+        {linkError}
+      </p>
+    );
+  }
+
+  if (read && !raw) {
+    return (
+      <p className="text-muted-foreground text-sm">
+        This page opens from the link an addon gives you. In the game, press <strong>Contribute</strong>{" "}
+        where Spoken has no voice or no lore, copy the link it shows you, and open it here.
+      </p>
+    );
+  }
+
   if (sent) {
     // The same reasoning as ReportForm's success screen: the sender cannot read their
     // submission back, so a form that merely cleared itself would leave them with no evidence.
@@ -166,24 +189,6 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
 
   return (
     <form onSubmit={submit} className="flex max-w-xl flex-col gap-4">
-      {linkError ? (
-        <p role="alert" className="text-sm text-red-400">
-          {linkError}
-        </p>
-      ) : null}
-
-      <label className="flex flex-col gap-1 text-sm">
-        Paste what the addon gave you
-        <textarea
-          id="envelope"
-          rows={10}
-          value={raw}
-          onChange={(e) => setRaw(e.target.value)}
-          required
-          className="bg-background rounded border px-2 py-1.5 font-mono text-xs"
-        />
-      </label>
-
       {!preview.ok && preview.message ? (
         <p role="alert" className="text-sm text-red-400">
           {preview.message}
