@@ -56,7 +56,7 @@ export default async function Page() {
     <main className="mx-auto max-w-4xl px-5 pt-6 pb-36">
       <h1 className="text-xl font-semibold">Voices</h1>
       <p className="text-muted-foreground mt-1 mb-5 text-sm">
-        The corpus needs {all.length} voices: one per race, gender and flavor — the two or
+        The roster has {all.length} voices: one per race, gender and flavor — the two or
         three distinct voice sets the game gives every race-gender. The generator resolves
         them by name, so a voice only counts once it is called exactly{" "}
         <code className="text-foreground">race-gender-flavor</code> in the ElevenLabs account.

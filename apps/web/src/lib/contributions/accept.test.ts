@@ -135,7 +135,7 @@ async function linesFor(lineId: string): Promise<{ origin: string; generatable: 
 
 describe("resolveContribution: quests accept", () => {
   it("refuses a kind-less contribution whose id has conflicting answers, until one is chosen", async () => {
-    await speaker(npcId, "orc", "female");
+    await speaker(npcId, "orc", "female", "standard");
     await upsertResolution({
       npcKind: "gameobject",
       npcId,
@@ -162,6 +162,15 @@ describe("resolveContribution: quests accept", () => {
     expect((await resolveContribution(id, "accepted", RESOLVER)).ok).toBe(true);
     const speakers = (await lineIndex()).get(questLineId(questId, "accept"))!;
     expect(speakers[0]).toMatchObject({ race: "orc", contributionId: id });
+  });
+
+  it("refuses a speaker whose voice is not on the roster", async () => {
+    // A client guess can name any race the model table knows; voices.ts decides what is voiced.
+    await speaker(npcId, "draenei", "female");
+    const id = await questContribution();
+    const outcome = await resolveContribution(id, "accepted", RESOLVER);
+    expect(outcome).toMatchObject({ ok: false, reason: "needs-speaker" });
+    expect((outcome as { message: string }).message).toMatch(/draenei-female isn't a voice yet/);
   });
 
   it("refuses a quests contribution whose NPC has no resolved speaker", async () => {
@@ -213,7 +222,7 @@ describe("resolveContribution: quests accept", () => {
   });
 
   it("keeps a progress line but never voices it, as the extract marks its own", async () => {
-    await speaker(npcId, "orc", "female");
+    await speaker(npcId, "orc", "female", "standard");
     const id = await questContribution({ event: "progress" });
     expect((await resolveContribution(id, "accepted", RESOLVER)).ok).toBe(true);
 
@@ -223,7 +232,7 @@ describe("resolveContribution: quests accept", () => {
   });
 
   it("does not duplicate on re-accept", async () => {
-    await speaker(npcId, "orc", "female");
+    await speaker(npcId, "orc", "female", "standard");
 
     const id = await questContribution();
     await resolveContribution(id, "accepted", RESOLVER);
@@ -234,7 +243,7 @@ describe("resolveContribution: quests accept", () => {
   });
 
   it("refuses to move an accepted line back to new or rejected", async () => {
-    await speaker(npcId, "orc", "female");
+    await speaker(npcId, "orc", "female", "standard");
 
     const id = await questContribution();
     await resolveContribution(id, "accepted", RESOLVER);
@@ -274,8 +283,8 @@ describe("resolveContribution: quests accept", () => {
     // dedup is on (source, key, locale, text) -- a druid and a mage accepting the same quest
     // moment are two different contributions for one q:X:event.
     const secondNpcId = npcId + 1;
-    await speaker(npcId, "orc", "female");
-    await speaker(secondNpcId, "orc", "female");
+    await speaker(npcId, "orc", "female", "standard");
+    await speaker(secondNpcId, "orc", "female", "standard");
 
     const first = await questContribution({}, npcId, "Bring me six wolf pelts, druid.");
     const second = await questContribution({}, secondNpcId, "Bring me six wolf pelts, mage.");

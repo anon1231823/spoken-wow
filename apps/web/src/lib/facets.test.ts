@@ -1,16 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { corpus as catalogue } from "./quests/catalogue";
-import { buildFacets } from "./facets";
-import { declaredFlavorScopes, RACES } from "./voices/voices";
+import { facets as readFacets } from "./facets";
+import { RACES, VOICE_NAMES, VOICES } from "./voices/voices";
 
 const corpus = await catalogue();
-const facets = buildFacets(corpus.lines);
+const facets = await readFacets();
 
 describe("facets", () => {
   it("offers every value the corpus actually uses", () => {
-    // The point of deriving these: a race added upstream in tts_cli/consts.py cannot leave
-    // the filter bar quietly unable to select it.
+    // voices.test.ts keeps the corpus inside the roster; this is the filter bar's side of it.
     for (const line of corpus.lines) {
       expect(facets.races).toContain(line.race);
       expect(facets.genders).toContain(line.gender);
@@ -19,16 +18,12 @@ describe("facets", () => {
     }
   });
 
-  it("offers the voiced races, including ones no line uses yet", () => {
+  it("offers the roster, including voices no line uses yet", () => {
     expect(facets.races).toEqual([...RACES]);
-    expect(facets.races).toContain("skybourneelf");
+    expect(facets.voices).toEqual([...VOICE_NAMES].sort((a, b) => a.localeCompare(b)));
     // So the voice and flavor filters can reach the slots /voices shows for it.
-    expect(facets.voices).toContain("skybourneelf-female-3773");
-    expect(facets.flavorScopes).toContainEqual({ race: "skybourneelf", gender: "female", flavor: "3773" });
-  });
-
-  it("offers no bare voice for a race-gender the corpus already flavors", () => {
-    expect(facets.voices).not.toContain("orc-male");
+    expect(facets.voices).toContain("skybourneelf-female-3774");
+    expect(facets.flavorScopes).toContainEqual({ race: "skybourneelf", gender: "female", flavor: "3774" });
   });
 
   // narrator-male and bloodelf-female have no NPC voice sets, so their lines carry no
@@ -50,11 +45,8 @@ describe("facets", () => {
       }
     });
 
-    it("pairs nothing the corpus or voices.ts does not", () => {
-      const keys = new Set([
-        ...corpus.lines.filter((l) => l.flavor).map((l) => `${l.race}-${l.gender}-${l.flavor}`),
-        ...declaredFlavorScopes().map((s) => `${s.race}-${s.gender}-${s.flavor}`),
-      ]);
+    it("pairs nothing the roster does not", () => {
+      const keys = new Set(VOICES.filter((v) => v.flavor).map((v) => `${v.race}-${v.gender}-${v.flavor}`));
       expect(facets.flavorScopes).toHaveLength(keys.size);
       for (const scope of facets.flavorScopes) {
         expect(keys).toContain(`${scope.race}-${scope.gender}-${scope.flavor}`);

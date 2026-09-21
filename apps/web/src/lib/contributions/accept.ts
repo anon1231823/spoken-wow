@@ -29,6 +29,7 @@ import { db } from "@/lib/db";
 import { observedFrom } from "@/lib/npc/resolve";
 import { getResolution, getResolutionsById, type NpcKind } from "@/lib/npc/store";
 import { BASE_LANG, corpus } from "@/lib/quests/catalogue";
+import { isVoice } from "@/lib/voices/voices";
 
 import type { ContributionStatus } from "./contributions";
 import { answersQuestMoment, lineIdentityFor, voiceNameFor, type LineIdentity } from "./naming";
@@ -122,6 +123,17 @@ async function prepareLine(contribution: Contribution): Promise<{ ok: true; prep
       ok: false,
       reason: "needs-speaker",
       message: "Set the speaker first -- a line needs a voice.",
+    };
+  }
+  // The roster is what /voices, the filters and the triage selects offer, so a line in a voice
+  // outside it -- a client guess naming a race nobody has added -- would be unvoiceable and
+  // unfindable. Adding the voice to voices.ts is the fix, not accepting the line anyway.
+  const voice = voiceNameFor(speaker.race, speaker.gender, speaker.flavor);
+  if (!isVoice(voice)) {
+    return {
+      ok: false,
+      reason: "needs-speaker",
+      message: `${voice} isn't a voice yet -- pick another speaker, or add it to voices.ts.`,
     };
   }
 
