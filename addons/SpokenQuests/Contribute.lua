@@ -380,7 +380,18 @@ function Contribute:Detemplate(text)
         end
     end
 
-    add(UnitName and UnitName("player"), "$N")
+    local name = UnitName and UnitName("player")
+    add(name, "$N")
+    -- A character with a surname (the Classic beta gives Skybourne elves one) is named whole by
+    -- UnitName -- "Valaas Dawnsight" -- while a line greets them by one part: "Greetings, young
+    -- Valaas". Each part is the player too.
+    if type(name) == "string" then
+        for part in string.gmatch(name, "%S+") do
+            if part ~= name then
+                add(part, "$N")
+            end
+        end
+    end
     if UnitClass then
         local localized, classFile = UnitClass("player")
         addCased(localized, "$C", "$c")

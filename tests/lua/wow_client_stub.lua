@@ -335,7 +335,7 @@ function _G.GetTitleText() return world.title end
 function _G.GetQuestText() return world.questText end
 function _G.GetProgressText() return world.progressText end
 function _G.GetRewardText() return world.rewardText end
-function _G.UnitName(unit) return unit == "player" and "Tester" or world.npcName end
+function _G.UnitName(unit) return unit == "player" and (world.playerName or "Tester") or world.npcName end
 -- Nil unless a test sets them: a class or race the stub made up would be swapped out of every
 -- text a test captures, and only the tests about that swap should see it happen.
 function _G.UnitClass() return world.playerClass, world.playerClassFile end

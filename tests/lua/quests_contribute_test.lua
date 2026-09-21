@@ -72,6 +72,13 @@ local inflected = VoiceOver.Contribute:Capture()
 Expect("...and the class in either gender's form", inflected:match("\nEine %$C, %$N%.\n") ~= nil, true)
 _G.LOCALIZED_CLASS_NAMES_FEMALE = nil
 
+world.playerName = "Valaas Dawnsight"
+world.questText = "Greetings, young Valaas. The Dawnsight name is known, Valaas Dawnsight."
+local surnamed = VoiceOver.Contribute:Capture()
+Expect("a surnamed character is swapped whole and by either part",
+    surnamed:match("\nGreetings, young %$N%. The %$N name is known, %$N%.\n") ~= nil, true)
+world.playerName = nil
+
 stub.HidePanels()
 stub.ShowGossip("Well met, Tester.")
 local _, key = VoiceOver.Contribute:Capture()
