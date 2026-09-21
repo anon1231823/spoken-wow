@@ -110,7 +110,11 @@ SQL
   wc -l <"$work/adopted.tsv" | xargs printf '  archived %s\n'
 fi
 
-step "Done. Live takes still without a clip, per section (their audio was not kept anywhere):"
+if [ -n "$rehearse" ]; then
+  step "Done. Live takes without a clip before step 5, per section:"
+else
+  step "Done. Live takes still without a clip, per section (their audio was not kept anywhere):"
+fi
 q -c "select source || ': ' || count(*) from take
        where \"isCurrent\" and \"archiveFile\" is null group by source order by source"
 echo
