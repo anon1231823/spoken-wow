@@ -21,10 +21,11 @@ type Loaded = { envelopes: string[]; counts: Record<string, number>; unreadable:
 
 function load(text: string): Loaded {
   const counts: Record<string, number> = {};
-  const titles: string[] = [];
+  const titles = new Set<string>();
   const envelopes: string[] = [];
   let unreadable = 0;
-  for (const envelope of envelopesFromSavedVariables(text)) {
+  // Cut to the cap first, so the preview counts exactly what Send will send.
+  for (const envelope of envelopesFromSavedVariables(text).slice(0, MAX_ENVELOPES)) {
     const preview = previewOf(envelope);
     if (!preview.ok) {
       unreadable += 1;
@@ -33,9 +34,9 @@ function load(text: string): Loaded {
     envelopes.push(envelope);
     counts[preview.source] = (counts[preview.source] ?? 0) + 1;
     const title = preview.rows.find((row) => row.label === "Title" || row.label === "Book")?.value;
-    if (title && !titles.includes(title)) titles.push(title);
+    if (title) titles.add(title);
   }
-  return { envelopes: envelopes.slice(0, MAX_ENVELOPES), counts, unreadable, titles };
+  return { envelopes, counts, unreadable, titles: [...titles] };
 }
 
 export default function UploadGathered({ signedInAs }: { signedInAs: string | null }) {
@@ -181,6 +182,7 @@ export default function UploadGathered({ signedInAs }: { signedInAs: string | nu
         </>
       ) : null}
 
+      {/* A honeypot. sr-only rather than display:none, which bots know to skip. */}
       <label className="sr-only" aria-hidden="true">
         Website
         <input name="website" tabIndex={-1} autoComplete="off" />

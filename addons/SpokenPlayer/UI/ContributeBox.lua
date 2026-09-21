@@ -145,7 +145,13 @@ local function GameFolder()
     return "<your game folder>"
 end
 
+local function EnsureBox()
+    box = box or Build()
+    Spoken.ContributeBox = box
+end
+
 local function ShowPayload(payload, address, isLink)
+    EnsureBox()
     Face(false, false)
     box.payload = payload
     box.editBox:SetText(payload)
@@ -164,16 +170,20 @@ local function ShowPayload(payload, address, isLink)
     box.frame:Show()
 end
 
+-- Prose in place of the payload, with or without the first-click choice under it. Nothing to
+-- copy, so no payload for OnTextChanged to restore.
+local function ShowProse(text, choice)
+    EnsureBox()
+    Face(true, choice)
+    box.payload = nil
+    box.body:SetText(text)
+    box.frame:Show()
+end
+
 --- How to send what was gathered. Also what "How to send them" in the settings and
 --- /spoken share open, so the steps are never only in a window the player closed.
 function Spoken:ShowGatherInstructions()
-    box = box or Build()
-    Spoken.ContributeBox = box
-    Face(true, false)
-    box.payload = nil
-    box.body:SetText(format(L.GATHER_INSTRUCTIONS, Gather and Gather:Count() or 0, GameFolder()))
-    box.frame:Show()
-    return true
+    ShowProse(format(L.GATHER_INSTRUCTIONS, Gather:Count(), GameFolder()), false)
 end
 
 --- Show something ready to copy: a contribute link, or (isLink falsy) the raw envelope plus
@@ -190,13 +200,8 @@ function Spoken:ShowContribution(payload, address, isLink, gather)
         return false
     end
 
-    box = box or Build()
-    Spoken.ContributeBox = box
-
     if type(gather) == "table" and Gather and not Gather:IsIntroduced() then
-        Face(true, true)
-        box.payload = nil
-        box.body:SetText(L.CONTRIBUTE_INTRO)
+        ShowProse(L.CONTRIBUTE_INTRO, true)
         box.justThis:SetScript("OnClick", function()
             Gather:SetIntroduced()
             ShowPayload(payload, address, isLink)
@@ -207,7 +212,6 @@ function Spoken:ShowContribution(payload, address, isLink, gather)
             Gather:Add(gather.key, gather.envelope)
             Spoken:ShowGatherInstructions()
         end)
-        box.frame:Show()
         return true
     end
 

@@ -25,20 +25,23 @@ function SpokenBooks:CaptureContribution()
 		return nil
 	end
 
+	-- Once: the page field and Gather's key are the same checksum, and it is a pass over the
+	-- whole page each time.
+	local sum = self:ChecksumOf(text)
 	local fields =
 	{
 		{ "addon", format("SpokenBooks/%s", self.version or "dev") },
 		{ "build", format("%s/%s", (GetBuildInfo and select(1, GetBuildInfo())) or "?",
 		                           (GetBuildInfo and select(2, GetBuildInfo())) or "?") },
 		{ "locale", (GetLocale and GetLocale()) or "enUS" },
-		{ "page", self:ChecksumOf(text) },
+		{ "page", sum },
 		{ "book", (ItemTextGetItem and ItemTextGetItem()) or "" },
 		{ "number", (ItemTextGetPage and ItemTextGetPage()) or 1 },
 	}
 
 	-- The second value is what Gather keys the page on: its checksum, the same id the site
 	-- files it under, so reading a page twice keeps it once.
-	return Spoken.Contribute:Envelope("books", fields, text), format("b:%d", self:ChecksumOf(text))
+	return Spoken.Contribute:Envelope("books", fields, text), format("b:%d", sum)
 end
 
 --- Keep the page on screen for later, if the player opted into gathering and the corpus has

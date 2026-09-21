@@ -11,6 +11,26 @@ import { signOut, useSession } from "@/lib/auth-client";
 import { canConfigureGeneration, canManageVoices, canRegenerate, isAdmin } from "@/lib/permissions";
 
 /**
+ * What every visitor gets, signed in or not: the three sections, and the page an addon's
+ * Contribute button leads to -- which is also where a player uploads what they gathered, and
+ * had no way in from the site itself.
+ */
+const SECTIONS = [
+  { href: "/quests", label: "Quests" },
+  { href: "/zones", label: "Zones" },
+  { href: "/books", label: "Books" },
+  { href: "/contribute", label: "Contribute" },
+];
+
+function Sections() {
+  return SECTIONS.map((section) => (
+    <Button key={section.href} asChild variant="ghost" size="sm">
+      <Link href={section.href}>{section.label}</Link>
+    </Button>
+  ));
+}
+
+/**
  * The session indicator in the header.
  *
  * It reads the session in the browser rather than through a server component on purpose:
@@ -18,30 +38,6 @@ import { canConfigureGeneration, canManageVoices, canRegenerate, isAdmin } from 
  * put a database round trip in front of every page view of a tool that is otherwise served
  * entirely off disk.
  */
-/**
- * What every visitor gets, signed in or not: the three sections, and the page an addon's
- * Contribute button leads to -- which is also where a player uploads what they gathered, and
- * had no way in from the site itself.
- */
-function Sections() {
-  return (
-    <>
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/quests">Quests</Link>
-      </Button>
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/zones">Zones</Link>
-      </Button>
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/books">Books</Link>
-      </Button>
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/contribute">Contribute</Link>
-      </Button>
-    </>
-  );
-}
-
 export default function UserMenu() {
   const router = useRouter();
   const { data: session, isPending } = useSession();

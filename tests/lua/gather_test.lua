@@ -71,7 +71,7 @@ SpokenEnv.Addon.db.profile.Contribute.HideButtons = false
 
 stub.FireEvent("QUEST_DETAIL")
 stub.Advance(2)
-Expect("the same panel again, and its delayed recapture, keep it once", Gather:Count(), 1)
+Expect("the same panel again keeps it once", Gather:Count(), 1)
 
 world.rewardText = "Here is your reward."
 stub.ShowPanel("QuestFrameRewardPanel")
@@ -96,6 +96,24 @@ stub.ShowPanel("QuestFrameDetailPanel")
 stub.FireEvent("QUEST_DETAIL")
 Expect("a line some pack voices is not gathered", Gather:Count(), 3)
 world.questID = 9123
+
+-- The NPC's model loads after the panel opens. The line is kept at once, without it, and
+-- taken again under the same key the moment the load finishes.
+Gather:Clear()
+world.questID = 9125
+world.npcGUID = "Creature-0-0-0-0-777-0"
+world.modelFileID = 123456
+world.modelStillLoading = true
+stub.ShowPanel("QuestFrameDetailPanel")
+stub.FireEvent("QUEST_DETAIL")
+local early = _G.SpokenContributionsDB.Lines[1]
+Expect("a line whose model is still loading is kept at once", Gather:Count(), 1)
+Expect("...without the model", early and early.envelope:match("\nmodel=") == nil, true)
+world.modelStillLoading = false
+stub.FinishModelLoad()
+Expect("...and replaced, not added to, once the model is in", Gather:Count(), 1)
+Expect("...now carrying it", _G.SpokenContributionsDB.Lines[1].envelope:match("\nmodel=123456\n") ~= nil, true)
+world.questID, world.npcGUID, world.modelFileID = 9123, "Creature-0-0-0-0-12345-0", nil
 
 -------------------------------------------------------------------- the first click
 Gather:Clear()

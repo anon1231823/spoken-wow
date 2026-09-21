@@ -9,6 +9,8 @@ setfenv(1, SpokenEnv)
 Options = {}
 
 local INDENT = 20
+local TOP = 52    -- where the first row starts, under the heading
+local BOTTOM = 16 -- the margin under the last row
 local panel
 local scroller
 local pendingLinks = {}
@@ -47,7 +49,7 @@ local function Build(canvas)
     local refresh = function() PlayerFrame:RefreshConfig() end
 
     Heading(host, "Spoken Player", INDENT, -16)
-    local layout = Layout.New(host, INDENT, -52)
+    local layout = Layout.New(host, INDENT, -TOP)
     panel.layout = layout
 
     layout:Section(L.OPT_WINDOW_TITLE)
@@ -161,11 +163,11 @@ end
 -- the scroller's content height instead, for the same late links.
 local function FitWindow()
     if scroller and panel then
-        scroller:SetContentHeight(52 + panel.layout:Height() + 40)
+        scroller:SetContentHeight(TOP + panel.layout:Height() + BOTTOM)
         return
     end
     if not (panel and panel.isWindow) then return end
-    local needed = 52 + panel.layout:Height() + 16
+    local needed = TOP + panel.layout:Height() + BOTTOM
     if needed > (panel:GetHeight() or 0) then
         panel:SetHeight(needed)
     end

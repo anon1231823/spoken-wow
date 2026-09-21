@@ -1,5 +1,5 @@
 /**
- * The envelopes inside a Spoken Player saved variables file.
+ * The envelopes inside the saved variables file the addon gathers into.
  *
  * The addon's background gathering (addons/SpokenPlayer/Gather.lua) keeps every envelope it
  * would have offered a Contribute link for, and the game writes them into
@@ -36,46 +36,48 @@ const SIMPLE: Record<string, number> = {
   "\n": 10,
 };
 
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
 /**
  * One literal's body, unescaped. Built as bytes rather than characters because a `\ddd`
  * escape is a byte, and a multi-byte character written that way only means something once
- * its bytes are decoded together.
+ * its bytes are decoded together. The text between escapes is copied a run at a time.
  */
 export function decodeLuaString(body: string): string {
-  const encoder = new TextEncoder();
-  const bytes: number[] = [];
-  let run = "";
-  const flush = () => {
-    if (run) bytes.push(...encoder.encode(run));
-    run = "";
-  };
-
-  for (let i = 0; i < body.length; i++) {
-    const char = body[i];
-    if (char !== "\\") {
-      run += char;
-      continue;
-    }
-    const next = body[i + 1];
-    const digits = /^\d{1,3}/.exec(body.slice(i + 1, i + 4));
-    flush();
+  // Runs as encoded chunks, escapes as single bytes, joined once at the end: spreading a run
+  // into a number[] would pass every byte of it as a function argument.
+  const parts: Uint8Array[] = [];
+  const byte = (value: number) => parts.push(Uint8Array.of(value));
+  let from = 0;
+  for (let at = body.indexOf("\\"); at !== -1; at = body.indexOf("\\", from)) {
+    if (at > from) parts.push(encoder.encode(body.slice(from, at)));
+    const next = body[at + 1];
+    const digits = /^\d{1,3}/.exec(body.slice(at + 1, at + 4));
     if (digits) {
-      bytes.push(Number(digits[0]) & 0xff);
-      i += digits[0].length;
-    } else if (next === "\r" && body[i + 2] === "\n") {
-      bytes.push(10);
-      i += 2;
+      byte(Number(digits[0]) & 0xff);
+      from = at + 1 + digits[0].length;
+    } else if (next === "\r" && body[at + 2] === "\n") {
+      byte(10);
+      from = at + 3;
     } else if (next !== undefined && next in SIMPLE) {
-      bytes.push(SIMPLE[next]);
-      i += 1;
+      byte(SIMPLE[next]);
+      from = at + 2;
     } else {
       // An escape Lua 5.1 would reject. Kept literally rather than dropped: an envelope this
       // mangles fails its checksum and is reported, which is better than one silently altered.
-      run += char;
+      byte(92);
+      from = at + 1;
     }
   }
-  flush();
-  return new TextDecoder().decode(new Uint8Array(bytes));
+  if (from < body.length) parts.push(encoder.encode(body.slice(from)));
+  const joined = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
+  let offset = 0;
+  for (const part of parts) {
+    joined.set(part, offset);
+    offset += part.length;
+  }
+  return decoder.decode(joined);
 }
 
 /** Every distinct envelope in the file, in the order the file holds them. */

@@ -12,6 +12,13 @@ import { MAX_ENVELOPES } from "@/lib/contributions/saved-variables";
 
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: async () => null } } }));
+vi.mock("@/lib/npc/resolve", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/npc/resolve")>();
+  return { ...actual, resolveNpc: vi.fn(async () => undefined) };
+});
+
+import { checksum } from "@/lib/contributions/envelope";
+import { resolveNpc } from "@/lib/npc/resolve";
 
 import { POST } from "./route";
 
@@ -30,7 +37,14 @@ function post(body: unknown): Request {
   });
 }
 
+/** A gossip line from npc 9123, checksummed the way the addon's writer does. */
+function gossip(words: string): string {
+  const body = `!SPOKEN1 quests\naddon=SpokenQuests/2.1.0\nbuild=1.60.1/69913\nlocale=enUS\nnpc=9123 Tester\nkind=creature\ntext<<\n${words}\n>>\n`;
+  return `${body}sum=${checksum(body)}\n`;
+}
+
 afterEach(async () => {
+  vi.mocked(resolveNpc).mockClear();
   await db().query(`delete from "contribution" where "ip" = $1`, [ip]);
   await db().query(`delete from "contribution_hit" where "ip" = $1`, [ip]);
 });
@@ -59,6 +73,11 @@ describe("POST /api/contributions/batch", () => {
       { source: "books", name: "Tester" },
       { source: "quests", name: "Tester" },
     ]);
+  });
+
+  it("resolves each speaker once, however many of their lines arrive", async () => {
+    await POST(post({ envelopes: [gossip("Hail."), gossip("Farewell."), gossip("Well met.")] }));
+    expect(resolveNpc).toHaveBeenCalledTimes(1);
   });
 
   it("counts one upload as one hit against the shared limit", async () => {

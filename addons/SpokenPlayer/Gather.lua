@@ -1,7 +1,7 @@
 setfenv(1, SpokenEnv)
 
 -- Contributing in the background: every line a feature addon would have offered a Contribute
--- button for, kept in this addon's saved variables until the player uploads the file.
+-- button for, kept in SpokenContributions.lua until the player uploads the file.
 --
 -- WHY THE SAVED VARIABLES AND NOT A LINK. A Contribute link carries one envelope, and a
 -- player who meets a hundred gaps in an evening will not click a hundred times. The saved
@@ -20,55 +20,37 @@ setfenv(1, SpokenEnv)
 -- own checksum: an envelope captured again a second later can differ only in the NPC model a
 -- slow cache has since answered, and that should replace the first rather than sit beside it.
 
-local CAP = 2000 -- a few kilobytes each, so a full store stays a file the site will take
-
-Gather = {}
+Gather = { CAP = 2000 } -- a few kilobytes each, so a full store stays a file the site will take
 Spoken.Gather = Gather
 
+-- Read through _G on every call rather than cached: the client assigns the table when the
+-- SpokenContributions folder loads, which may be after this file ran. A player installed
+-- without that folder still gathers, into a table the client simply never writes out.
 local function Store()
-    -- Read through _G on every call rather than cached: the client assigns the table when the
-    -- SpokenContributions folder loads, which may be after this file ran. A player installed
-    -- without that folder still gathers, into a table the client simply never writes out.
     local store = rawget(_G, "SpokenContributionsDB")
     if type(store) ~= "table" then
         store = {}
         _G.SpokenContributionsDB = store
     end
+    store.Lines = store.Lines or {}
     return store
 end
 
-local function Lines()
-    local store = Store()
-    if not store then
-        return nil
-    end
-    store.Lines = store.Lines or {}
-    return store.Lines
-end
-
 function Gather:IsEnabled()
-    local store = Store()
-    return store and store.Enabled and true or false
+    return Store().Enabled and true or false
 end
 
 function Gather:SetEnabled(enabled)
-    local store = Store()
-    if store then
-        store.Enabled = enabled and true or false
-        Callbacks:Fire("CONTRIBUTE_SETTINGS_CHANGED")
-    end
+    Store().Enabled = enabled and true or false
+    Callbacks:Fire("CONTRIBUTE_SETTINGS_CHANGED")
 end
 
 function Gather:IsIntroduced()
-    local store = Store()
-    return store and store.Introduced and true or false
+    return Store().Introduced and true or false
 end
 
 function Gather:SetIntroduced()
-    local store = Store()
-    if store then
-        store.Introduced = true
-    end
+    Store().Introduced = true
 end
 
 --- Keep one envelope under `key`, replacing whatever that key held. Does nothing unless the
@@ -81,7 +63,7 @@ function Gather:Add(key, envelope)
     if type(key) ~= "string" or key == "" or type(envelope) ~= "string" or envelope == "" then
         return false
     end
-    local lines = Lines()
+    local lines = Store().Lines
     for i = 1, #lines do
         if lines[i].key == key then
             lines[i].envelope = envelope
@@ -91,24 +73,18 @@ function Gather:Add(key, envelope)
     lines[#lines + 1] = { key = key, envelope = envelope }
     -- Oldest out first. The player has almost certainly uploaded those already, or was never
     -- going to, and a file that grows forever is one the site eventually refuses whole.
-    while #lines > CAP do
+    while #lines > self.CAP do
         table.remove(lines, 1)
     end
     return true
 end
 
 function Gather:Count()
-    local lines = Lines()
-    return lines and #lines or 0
+    return #Store().Lines
 end
 
 --- Forget everything gathered. The addon cannot see the upload happen, so this is the
 --- player's to press once they have sent the file.
 function Gather:Clear()
-    local store = Store()
-    if store then
-        store.Lines = {}
-    end
+    Store().Lines = {}
 end
-
-Gather.CAP = CAP

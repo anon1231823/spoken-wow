@@ -15,24 +15,18 @@ import { headers } from "next/headers";
 
 import { auth } from "@/lib/auth";
 import { clientIp } from "@/lib/reports/client-ip";
-import { MAX_BYTES, parseEnvelope } from "@/lib/contributions/envelope";
-import { MAX_ENVELOPES } from "@/lib/contributions/saved-variables";
-import { submissionFrom } from "@/lib/contributions/submission";
+import { parseEnvelope } from "@/lib/contributions/envelope";
 import {
-  countRecentContributions,
-  createContribution,
-  recordContributionHit,
-} from "@/lib/contributions/store";
-import { observedFrom, resolveNpc } from "@/lib/npc/resolve";
+  CONTRIBUTION_WINDOW_MS,
+  CONTRIBUTIONS_PER_HOUR,
+  storeSubmission,
+  stringOrNull,
+} from "@/lib/contributions/intake";
+import { MAX_ENVELOPES } from "@/lib/contributions/saved-variables";
+import { countRecentContributions, recordContributionHit } from "@/lib/contributions/store";
+import { submissionFrom } from "@/lib/contributions/submission";
 
 export const dynamic = "force-dynamic";
-
-/**
- * The same bucket and the same allowance as a single contribution, one hit per upload: a batch
- * is one deliberate act, and a separate allowance would be a second way round the first.
- */
-const PER_HOUR = 10;
-const WINDOW_MS = 60 * 60 * 1000;
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
@@ -51,11 +45,15 @@ export async function POST(request: Request) {
   }
 
   const ip = clientIp(request);
-  if ((await countRecentContributions(ip, WINDOW_MS)) >= PER_HOUR) {
+  // One hit per upload against the single route's allowance -- see intake.ts.
+  const [recent, session] = await Promise.all([
+    countRecentContributions(ip, CONTRIBUTION_WINDOW_MS),
+    auth.api.getSession({ headers: await headers() }),
+  ]);
+  if (recent >= CONTRIBUTIONS_PER_HOUR) {
     return Response.json({ error: "too many contributions" }, { status: 429 });
   }
 
-  const session = await auth.api.getSession({ headers: await headers() });
   const identity = {
     body: null,
     userId: session?.user.id ?? null,
@@ -69,16 +67,15 @@ export async function POST(request: Request) {
   const refuse = (reason: string) => {
     refused[reason] = (refused[reason] ?? 0) + 1;
   };
+  const resolved = new Set<string>();
 
   for (const raw of envelopes) {
     if (typeof raw !== "string") {
       refuse("malformed");
       continue;
     }
-    if (new TextEncoder().encode(raw).length > MAX_BYTES) {
-      refuse("oversize");
-      continue;
-    }
+    // parseEnvelope refuses an oversized one itself; the single route measures first only
+    // because it answers that case with its own status code.
     const parsed = parseEnvelope(raw);
     if (!parsed.ok) {
       refuse(parsed.error);
@@ -93,26 +90,11 @@ export async function POST(request: Request) {
       refuse("incomplete");
       continue;
     }
-
-    await createContribution({ ...submission, ...identity });
+    await storeSubmission(submission, identity, resolved);
     accepted += 1;
-
-    // As on the single route: who is speaking is worked out now, and a failure to work it out
-    // never costs the text.
-    try {
-      await resolveNpc(observedFrom({ ...submission.meta, build: submission.build }));
-    } catch (error) {
-      console.error("contribution stored but npc resolution failed", error);
-    }
   }
 
   await recordContributionHit(ip);
 
   return Response.json({ ok: true, accepted, refused });
-}
-
-function stringOrNull(value: unknown, max: number): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed ? trimmed.slice(0, max) : null;
 }

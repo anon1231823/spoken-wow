@@ -19,17 +19,14 @@ import { COMPLAINT_MAX, descriptionFrom } from "@/lib/contributions/contribution
 import { MAX_BYTES, parseEnvelope } from "@/lib/contributions/envelope";
 import { submissionFrom } from "@/lib/contributions/submission";
 import {
-  countRecentContributions,
-  createContribution,
-  recordContributionHit,
-} from "@/lib/contributions/store";
-import { observedFrom, resolveNpc } from "@/lib/npc/resolve";
+  CONTRIBUTION_WINDOW_MS,
+  CONTRIBUTIONS_PER_HOUR,
+  storeSubmission,
+  stringOrNull,
+} from "@/lib/contributions/intake";
+import { countRecentContributions, recordContributionHit } from "@/lib/contributions/store";
 
 export const dynamic = "force-dynamic";
-
-/** Deliberately not configurable, as the reports limit is not: a knob nobody turns is set wrong. */
-const PER_HOUR = 10;
-const WINDOW_MS = 60 * 60 * 1000;
 
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
@@ -72,7 +69,7 @@ export async function POST(request: Request) {
   const complaint = typeof body.body === "string" ? body.body.trim().slice(0, COMPLAINT_MAX) : "";
 
   const ip = clientIp(request);
-  if ((await countRecentContributions(ip, WINDOW_MS)) >= PER_HOUR) {
+  if ((await countRecentContributions(ip, CONTRIBUTION_WINDOW_MS)) >= CONTRIBUTIONS_PER_HOUR) {
     return Response.json({ error: "too many contributions" }, { status: 429 });
   }
 
@@ -81,8 +78,7 @@ export async function POST(request: Request) {
   // way to put words in their mouth.
   const session = await auth.api.getSession({ headers: await headers() });
 
-  await createContribution({
-    ...submission,
+  await storeSubmission(submission, {
     body: complaint || null,
     userId: session?.user.id ?? null,
     name: session ? null : stringOrNull(body.name, 200),
@@ -94,25 +90,5 @@ export async function POST(request: Request) {
   // paste that only bumped a count is still a paste.
   await recordContributionHit(ip);
 
-  // Who is speaking, worked out now rather than at triage: it costs a corpus lookup and one
-  // upsert, it reaches no network, and it means the queue never shows a blank where a name
-  // should be. A failure here must not fail the contribution -- the text is the thing worth
-  // keeping, and an unresolved NPC is a row a moderator can fix.
-  try {
-    // build is not in submission.meta -- submissionFrom destructures it out into its own
-    // column (the spec, migration 0030 and the README all promise it survives), so it has to
-    // be put back here or observedFrom reads meta.build as undefined and every resolution from
-    // this path loses it.
-    await resolveNpc(observedFrom({ ...submission.meta, build: submission.build }));
-  } catch (error) {
-    console.error("contribution stored but npc resolution failed", error);
-  }
-
   return Response.json({ ok: true });
-}
-
-function stringOrNull(value: unknown, max: number): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed ? trimmed.slice(0, max) : null;
 }

@@ -137,13 +137,10 @@ function ContributeButton:Refresh()
     if QuestPanelOnScreen() then
         self.gossip = false
         placed = self:PositionAtCorner(_G.QuestFrame, CloseButtonOf(_G.QuestFrame, "QuestFrameCloseButton"))
-    elseif IsFrameVisible(_G.GossipFrame) then
+    else
         self.gossip = true
         placed = self:PositionAtCorner(_G.GossipFrame, CloseButtonOf(_G.GossipFrame, "GossipFrameCloseButton"))
     end
-    -- Neither frame up means nothing to sit on, whatever HasGap says: the client keeps
-    -- answering GetGossipText with the last words after the gossip window has gone, and a
-    -- button placed against a hidden frame floats mid-screen with nothing around it.
     if placed then
         button:Show()
     else
@@ -201,13 +198,9 @@ function ContributeButton:Setup()
         pcall(watcher.RegisterEvent, watcher, event)
     end
     watcher:SetScript("OnEvent", function()
+        -- Also what drives gathering: HasGap, which Refresh asks, keeps the line when the
+        -- player opted in, so these seven events are the only ones gathering needs.
         ContributeButton:Refresh()
-        -- The same events are exactly the moments a line appears, so gathering rides on them
-        -- rather than registering a third frame for the seven. After Refresh, whose HasGap has
-        -- by then started the model load a gathered line wants.
-        if Contribute.Gather then
-            Contribute:Gather()
-        end
     end)
     self.watcher = watcher
 
