@@ -184,7 +184,11 @@ def test_the_player_ships_on_its_own_for_blizzard_clients(player_built):
                                   ("", "_Mainline", "_TBC", "_Vanilla", "_Wrath"))
     for client in LEGACY_CLIENTS:
         assert not any(name.startswith(f"{PLAYER}/{client}/") for name in names)
-    assert {entry.split("/", 1)[0] for entry in names} == {PLAYER}
+    # The player and the folder whose only job is to name the gathered-lines file
+    # (addons/SpokenContributions/SpokenContributions.toc): one .toc, no Lua.
+    assert {entry.split("/", 1)[0] for entry in names} == {PLAYER, "SpokenContributions"}
+    assert [name for name in names if name.startswith("SpokenContributions/") and not name.endswith("/")] \
+        == ["SpokenContributions/SpokenContributions.toc"]
 
 
 def test_the_player_loads_after_the_tombstones_whose_variables_it_migrates(player_built):
