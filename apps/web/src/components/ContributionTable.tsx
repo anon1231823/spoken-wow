@@ -139,7 +139,6 @@ function speakerNote(npc: NpcSummary): string | null {
   if (npc.confirmed) {
     return npc.race || npc.gender || npc.flavor ? null : "confirmed: no race";
   }
-  if (npc.provenance === "client") return "guessed from the model the client reported";
   return null;
 }
 
@@ -832,7 +831,12 @@ function SpeakerCell({
             still earns one, since "a guess came from somewhere" is real information the form
             alone doesn't carry. */}
         {npc.provenance !== "none" ? (
-          <Badge variant="outline" className="py-0 leading-5">
+          <Badge
+            variant="outline"
+            className="py-0 leading-5"
+            // What `client` means, on hover rather than as a caption repeating the badge.
+            title={npc.provenance === "client" ? "Guessed from the model the client reported" : undefined}
+          >
             {npc.provenance}
           </Badge>
         ) : null}
