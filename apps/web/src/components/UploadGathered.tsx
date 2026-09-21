@@ -8,7 +8,7 @@
  * previewed with the same check the single-link form uses, so what the player is told they are
  * sending is what the server will take.
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { envelopesFromSavedVariables, MAX_ENVELOPES } from "@/lib/contributions/saved-variables";
@@ -43,12 +43,15 @@ export default function UploadGathered({ signedInAs }: { signedInAs: string | nu
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ accepted: number; refused: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const input = useRef<HTMLInputElement>(null);
 
-  async function pick(event: React.ChangeEvent<HTMLInputElement>) {
+  async function read(file: File | undefined) {
     setError(null);
     setResult(null);
-    const file = event.target.files?.[0];
     if (!file) return;
+    setFileName(file.name);
     const next = load(await file.text());
     if (next.envelopes.length === 0) {
       setLoaded(null);
@@ -105,15 +108,46 @@ export default function UploadGathered({ signedInAs }: { signedInAs: string | nu
 
   return (
     <form onSubmit={submit} className="flex max-w-xl flex-col gap-4">
-      <label className="flex flex-col gap-1 text-sm">
-        Upload a file
-        <span className="text-muted-foreground text-xs">
-          If you turned on gathering in the game, log out, then pick{" "}
-          <code>WTF/Account/&lt;your account&gt;/SavedVariables/SpokenPlayer.lua</code> from your World of
-          Warcraft game folder. Only the gathered lines are sent, never your settings.
+      {/* The whole zone is the drop target and the button, so a file dragged from Finder or
+          Explorer lands anywhere on it; the input itself is hidden because the browser's own
+          "Choose File / No file chosen" reads as a broken page on a dark theme. */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => input.current?.click()}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            input.current?.click();
+          }
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragging(false);
+          void read(event.dataTransfer.files[0]);
+        }}
+        className={
+          "flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center text-sm transition-colors outline-none focus-visible:ring-3 " +
+          (dragging ? "border-primary bg-muted" : "border-muted-foreground/40 hover:border-muted-foreground hover:bg-muted/50")
+        }
+      >
+        <strong>{fileName ?? "Drop SpokenPlayer.lua here"}</strong>
+        <span className="text-muted-foreground">
+          {fileName ? "Drop another file, or click to choose one." : "or click to choose it"}
         </span>
-        <input type="file" accept=".lua,.bak,text/plain" onChange={pick} className="text-sm" />
-      </label>
+        <input
+          ref={input}
+          type="file"
+          accept=".lua,.bak,text/plain"
+          onChange={(event) => void read(event.target.files?.[0])}
+          className="hidden"
+        />
+      </div>
 
       {loaded ? (
         <section aria-label="What will be sent" className="bg-muted rounded border p-3 text-sm">
