@@ -25,18 +25,37 @@ function SpokenBooks:CaptureContribution()
 		return nil
 	end
 
+	-- Once: the page field and Gather's key are the same checksum, and it is a pass over the
+	-- whole page each time.
+	local sum = self:ChecksumOf(text)
 	local fields =
 	{
 		{ "addon", format("SpokenBooks/%s", self.version or "dev") },
 		{ "build", format("%s/%s", (GetBuildInfo and select(1, GetBuildInfo())) or "?",
 		                           (GetBuildInfo and select(2, GetBuildInfo())) or "?") },
 		{ "locale", (GetLocale and GetLocale()) or "enUS" },
-		{ "page", self:ChecksumOf(text) },
+		{ "page", sum },
 		{ "book", (ItemTextGetItem and ItemTextGetItem()) or "" },
 		{ "number", (ItemTextGetPage and ItemTextGetPage()) or 1 },
 	}
 
-	return Spoken.Contribute:Envelope("books", fields, text)
+	-- The second value is what Gather keys the page on: its checksum, the same id the site
+	-- files it under, so reading a page twice keeps it once.
+	return Spoken.Contribute:Envelope("books", fields, text), format("b:%d", sum)
+end
+
+--- Keep the page on screen for later, if the player opted into gathering and the corpus has
+--- no id for it. Called on every ITEM_TEXT_READY, which fires for each page turned; the
+--- hide-buttons setting does not apply, and mail is refused by CaptureContribution itself.
+function SpokenBooks:GatherContribution()
+	if not (_G.Spoken and Spoken.Gather and Spoken.Gather:IsEnabled()) then
+		return false
+	end
+	if self:PageOnScreen() then
+		return false
+	end
+	local envelope, key = self:CaptureContribution()
+	return envelope and Spoken.Gather:Add(key, envelope) or false
 end
 
 --- Whether the contribute button belongs on the page: text to send, and no page id for it.
@@ -59,17 +78,18 @@ end
 -- there would tax every page the player merely reads, for a result thrown away unhandled on
 -- every one that isn't a gap. This runs once, on the click.
 function SpokenBooks:ShowContribution()
-	local envelope = self:CaptureContribution()
+	local envelope, key = self:CaptureContribution()
 	if not envelope then
 		return
 	end
+	local gather = { key = key, envelope = envelope }
 	local address = format("%s/contribute", self.SITE_URL)
 	-- Encode is absent on an older SpokenPlayer a legacy-client zip can still bundle; Link
 	-- returns nil for that or for an oversized result, and the two-copy fallback still works.
 	local link = Spoken.Contribute.Encode and Spoken.Contribute:Link(address, envelope)
 	if link then
-		Spoken:ShowContribution(link, address, true)
+		Spoken:ShowContribution(link, address, true, gather)
 	else
-		Spoken:ShowContribution(envelope, address)
+		Spoken:ShowContribution(envelope, address, nil, gather)
 	end
 end

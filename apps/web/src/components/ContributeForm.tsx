@@ -171,8 +171,8 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
   if (read && !raw) {
     return (
       <p className="text-muted-foreground text-sm">
-        This page opens from the link an addon gives you. In the game, press <strong>Contribute</strong>{" "}
-        where Spoken has no voice or no lore, copy the link it shows you, and open it here.
+        For a single line: in the game, press <strong>Contribute</strong> where Spoken has no voice
+        or no lore, copy the link it shows you, and open it in your browser.
       </p>
     );
   }

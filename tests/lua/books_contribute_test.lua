@@ -50,6 +50,9 @@ Expect("mail is never contributed", B:CaptureContribution(), nil)
 Expect("...and offers no button", B:HasContributionGap(), false)
 
 ------------------------------------------------------------------------------- Show()
+-- The first-click choice between one line and gathering is gather_test.lua's; here the
+-- player has already answered it, so Show() goes straight to the payload.
+env.Spoken.Gather:SetIntroduced()
 -- Compression must run on the click alone -- see the perf comment on ShowContribution -- so
 -- this spies on Encode rather than merely trusting the comment: an assertion that only reads
 -- the source would still pass if a future edit moved the call into CaptureContribution.

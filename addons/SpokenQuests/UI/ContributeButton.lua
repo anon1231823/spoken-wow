@@ -198,9 +198,22 @@ function ContributeButton:Setup()
         pcall(watcher.RegisterEvent, watcher, event)
     end
     watcher:SetScript("OnEvent", function()
+        -- Also what drives gathering: HasGap, which Refresh asks, keeps the line when the
+        -- player opted in, so these seven events are the only ones gathering needs.
         ContributeButton:Refresh()
     end)
     self.watcher = watcher
+
+    -- Walking away, or another window taking the screen, closes these frames without any of
+    -- the events above, so hear about it from the frames themselves.
+    for _, name in ipairs({ "QuestFrame", "GossipFrame" }) do
+        local host = _G[name]
+        if type(host) == "table" and host.HookScript then
+            host:HookScript("OnHide", function()
+                ContributeButton:Refresh()
+            end)
+        end
+    end
 
     -- The hide setting lives in the Spoken Player settings, and toggling it fires no game
     -- event, so the button hears about it from the player instead.

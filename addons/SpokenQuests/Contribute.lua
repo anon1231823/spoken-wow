@@ -123,6 +123,10 @@ end
 --- The one place that finalises a load, regardless of what noticed it was time to: the
 --- OnModelLoaded callback (the fast path), or PollLoadingGUID reading the probe directly
 --- (the fallback that does not depend on that callback ever firing).
+-- Defined further down, beside the gap checks it needs; FinishModelLoad calls it once the
+-- model it waited for is in.
+local GatherLine
+
 local function FinishModelLoad(guid)
     -- First act, not last: ClearModel below can itself fire OnModelLoaded on some clients, and
     -- that callback is this same function closed over this same guid. Clearing the script
@@ -150,6 +154,11 @@ local function FinishModelLoad(guid)
     -- Absent rather than zero: the site reads a missing model as "race unknown", and 0 is a
     -- file id that would mean something.
     modelCache[guid] = (ok and type(id) == "number" and id > 0) and id or false
+    -- A line gathered while this load was in flight was kept without its model. Take it again
+    -- now the model is known, if the same NPC is still on screen: the same key replaces it.
+    if GatherLine and Utils:GetNPCGUID() == guid then
+        GatherLine()
+    end
 end
 
 --- Put the probe away without deciding anything about `guid` -- the difference between this
@@ -297,6 +306,18 @@ local function EventOnScreen()
     return nil, nil
 end
 
+--- The gossip text on screen, or nil once the gossip window is gone. GetGossipText goes on
+--- answering with the last words after the window closes -- walking away closes it with no
+--- event this addon hears -- so the frame is what says whether they are still being spoken.
+--- A client without a GossipFrame to ask is taken at its word.
+local function GossipOnScreen()
+    local frame = _G.GossipFrame
+    if frame and frame.IsVisible and not frame:IsVisible() then
+        return nil
+    end
+    return GetGossipText and GetGossipText()
+end
+
 --- The fields every quests envelope starts with: which addon, which client, which language.
 local function BaseFields()
     return
@@ -328,7 +349,10 @@ function Contribute:Capture()
         fields[#fields + 1] = { "npc", NPCField() }
         Observations(fields)
         fields[#fields + 1] = { "title", GetTitleText and GetTitleText() or "" }
-        return Spoken.Contribute:Envelope("quests", fields, text)
+        -- The second value is what Gather keys the line on: the quest, the moment and who said
+        -- it. The text is left out on purpose -- the same panel read twice is one line.
+        return Spoken.Contribute:Envelope("quests", fields, text),
+            format("q:%s:%s:%s", tostring(questID or 0), EVENT_PATHS[event], tostring(NPCID() or ""))
     end
 
     -- Gossip: no quest and no event, but an NPC saying something this corpus has never heard.
@@ -339,11 +363,13 @@ function Contribute:Capture()
     -- offering none. Two ways to arrive here without an id: the frame closing under us, where
     -- the words are still readable and the unit is already gone, and the 1.12 client, which has
     -- no UnitGUID and so can never name the creature.
-    local gossip = GetGossipText and GetGossipText()
+    local gossip = GossipOnScreen()
     if gossip and gossip ~= "" and NPCID() then
         fields[#fields + 1] = { "npc", NPCField() }
         Observations(fields)
-        return Spoken.Contribute:Envelope("quests", fields, gossip)
+        -- An NPC can say several different things, so gossip is keyed on the words as well.
+        return Spoken.Contribute:Envelope("quests", fields, gossip),
+            format("g:%d:%d", NPCID(), Spoken.Contribute:Checksum(gossip))
     end
 
     return nil
@@ -362,7 +388,7 @@ local function HasSoundForCurrent()
         return DataModules:PrepareSound({ event = event, questID = GetQuestID and GetQuestID() or 0 })
     end
 
-    local gossip = GetGossipText and GetGossipText()
+    local gossip = GossipOnScreen()
     local guid = Utils:GetNPCGUID()
     local name = Utils:GetNPCName()
     -- Both absent is the case Addon:GOSSIP_SHOW guards with the same test and the comment
@@ -395,11 +421,26 @@ local function HasSomethingToSend()
     if event and text and text ~= "" then
         return true
     end
-    local gossip = GetGossipText and GetGossipText()
+    local gossip = GossipOnScreen()
     if gossip and gossip ~= "" and NPCID() then
         return true
     end
     return false
+end
+
+local function IsMissing()
+    return HasSomethingToSend() and not HasSoundForCurrent()
+end
+
+--- Keep the line on screen for later. Only reached once a caller has established it is
+--- missing (HasGap), or when its model has just arrived (FinishModelLoad) -- so it re-checks
+--- only what the latter cannot know: that the line is still a gap.
+function GatherLine()
+    if not (Spoken.Gather and Spoken.Gather:IsEnabled()) or not IsMissing() then
+        return false
+    end
+    local envelope, key = Contribute:Capture()
+    return envelope and Spoken.Gather:Add(key, envelope) or false
 end
 
 --- Whether the contribute button belongs on screen: something to send, and nothing to play.
@@ -416,9 +457,19 @@ function Contribute:HasGap()
     -- Hidden in the Spoken Player settings: no gap to show, and so no model to prime. The
     -- method is guarded because an older bundled player does not have it.
     local hidden = Spoken.AreContributeButtonsHidden and Spoken:AreContributeButtonsHidden()
-    local gap = not hidden and HasSomethingToSend() and not HasSoundForCurrent()
-    if gap then
+    -- Gathering needs the model primed as much as a click does, and runs with the buttons
+    -- hidden as readily as with them shown.
+    local gathering = Spoken.Gather and Spoken.Gather:IsEnabled()
+    local missing = (not hidden or gathering) and IsMissing()
+    local gap = not hidden and missing
+    if missing then
         PrimeModelCache(Utils:GetNPCGUID())
+        -- Gathered here, on the one pass that already knows the line is missing, rather than
+        -- by a second caller asking PrepareSound all over again. This runs on every quest and
+        -- gossip event through ContributeButton's refresh, which is what drives gathering.
+        if gathering then
+            GatherLine()
+        end
     elseif loadingGUID then
         -- No gap, but a load is still in flight for whatever NPC started it: the player closed
         -- the dialog, or a pack picked up the line, with no click and no retarget to trigger
@@ -510,16 +561,19 @@ end
 
 --- Hand the player an envelope: as one link where the bundled player can build one, and as the
 --- raw text and the address otherwise.
-local function Offer(envelope)
+local function Offer(envelope, key)
     local address = format("%s/contribute", SITE_URL)
+    -- What the first-click choice gathers if the player takes it. Only for a line with a key:
+    -- a quest log entry has no NPC in front of it, so it is sent but never kept.
+    local gather = key and { key = key, envelope = envelope } or nil
     -- Encode is absent on an older SpokenPlayer a legacy-client zip can still bundle; Link
     -- returns nil for that or for an oversized result. Either way, the two-copy fallback still
     -- works, which is the whole point of shipping it alongside the link instead of replacing it.
     local link = Spoken.Contribute.Encode and Spoken.Contribute:Link(address, envelope)
     if link then
-        Spoken:ShowContribution(link, address, true)
+        Spoken:ShowContribution(link, address, true, gather)
     else
-        Spoken:ShowContribution(envelope, address)
+        Spoken:ShowContribution(envelope, address, nil, gather)
     end
 end
 
@@ -537,8 +591,8 @@ end
 -- result almost always thrown away unhandled. Show() runs once, when they have already decided
 -- to send it.
 function Contribute:Show()
-    local envelope = self:Capture()
+    local envelope, key = self:Capture()
     if envelope then
-        Offer(envelope)
+        Offer(envelope, key)
     end
 end

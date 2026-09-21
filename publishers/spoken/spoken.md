@@ -32,7 +32,7 @@ Install one of those and your addon manager brings Spoken Player with it. Instal
 
 ## Settings
 
-Game Menu → Options → AddOns → **Spoken**, or `/spoken options`. Each Spoken addon keeps its own settings beside it. **Hide the Contribute buttons** turns off, in one place, the button every Spoken addon shows when it has no voice for something. On first login the window position, scale and lock, the minimap button and the sound channel are carried over from VoiceOver Redux or ZoneLore.
+Game Menu → Options → AddOns → **Spoken**, or `/spoken options`. Each Spoken addon keeps its own settings beside it. **Hide the Contribute buttons** turns off, in one place, the button every Spoken addon shows when it has no voice for something. **Gather missing lines in the background** keeps every line a Spoken addon has no voice for in `SavedVariables/SpokenContributions.lua` instead, so you can send them all at once at spoken.rusty.one/contribute; the zip carries a small SpokenContributions folder for that file. On first login the window position, scale and lock, the minimap button and the sound channel are carried over from VoiceOver Redux or ZoneLore.
 
 ```
 /spoken, /sp         play/pause

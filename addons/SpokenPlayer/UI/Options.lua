@@ -9,7 +9,10 @@ setfenv(1, SpokenEnv)
 Options = {}
 
 local INDENT = 20
+local TOP = 52    -- where the first row starts, under the heading
+local BOTTOM = 16 -- the margin under the last row
 local panel
+local scroller
 local pendingLinks = {}
 
 -- Rows, headings and the spacing between them come from UI/Layout.lua, the file every
@@ -26,16 +29,27 @@ end
 
 local CHANNELS = { "Master", "SFX", "Music", "Ambience", "Dialog" }
 
-local function Build()
+local function Build(canvas)
     panel = CreateFrame("Frame", "SpokenOptionsPanel", UIParent)
     panel.name = "Spoken Player"
+    -- On the settings canvas the rows are laid out in a scroller, as the books and zones
+    -- panels are: the canvas neither scrolls nor clips, and the contributions rows pushed
+    -- this panel past its bottom edge, drawing the minimap section over the game world. The
+    -- legacy window grows to fit its rows instead (FitWindow), so it keeps laying out on
+    -- the panel itself and never meets a ScrollFrame on a client that has not been tried.
+    local host = panel
+    if canvas then
+        scroller = Layout.Scroll(panel)
+        host = scroller.child
+        panel.content = host
+    end
     local cfg = function() return Addon.db.profile.Frame end
     local audio = function() return Addon.db.profile.Audio end
     local mm = function() return Addon.db.profile.Minimap.LibDBIcon end
     local refresh = function() PlayerFrame:RefreshConfig() end
 
-    Heading(panel, "Spoken Player", INDENT, -16)
-    local layout = Layout.New(panel, INDENT, -52)
+    Heading(host, "Spoken Player", INDENT, -16)
+    local layout = Layout.New(host, INDENT, -TOP)
     panel.layout = layout
 
     layout:Section(L.OPT_WINDOW_TITLE)
@@ -110,6 +124,19 @@ local function Build()
             function() return Addon.db.profile.Contribute.HideButtons end,
             function(v) Addon.db.profile.Contribute.HideButtons = v end,
             function() Callbacks:Fire("CONTRIBUTE_SETTINGS_CHANGED") end)
+        -- The opt-out the first Contribute click promises. Independent of hiding the buttons:
+        -- a player who gathers has no use for them, and hiding them must not stop it.
+        if Gather then
+            layout:Checkbox(L.OPT_GATHER, L.OPT_GATHER_TIP,
+                function() return Gather:IsEnabled() end,
+                function(v)
+                    -- Choosing here is an answer to the first-click question too.
+                    Gather:SetIntroduced()
+                    Gather:SetEnabled(v)
+                end)
+            layout:Button(L.OPT_GATHER_SHARE, 200, function() Spoken:ShowGatherInstructions() end)
+            layout:Button(L.OPT_GATHER_CLEAR, 200, function() Gather:Clear() end, L.OPT_GATHER_CLEAR_TIP)
+        end
     end
 
     layout:Section(L.OPT_MINIMAP_TITLE)
@@ -132,10 +159,15 @@ local function Build()
 end
 
 -- The legacy window's height: never shorter than it always was, and tall enough for every
--- row, including a link a feature addon added after the window was built.
+-- row, including a link a feature addon added after the window was built. On the canvas,
+-- the scroller's content height instead, for the same late links.
 local function FitWindow()
+    if scroller and panel then
+        scroller:SetContentHeight(TOP + panel.layout:Height() + BOTTOM)
+        return
+    end
     if not (panel and panel.isWindow) then return end
-    local needed = 52 + panel.layout:Height() + 16
+    local needed = TOP + panel.layout:Height() + BOTTOM
     if needed > (panel:GetHeight() or 0) then
         panel:SetHeight(needed)
     end
@@ -143,8 +175,10 @@ end
 
 function Options:Setup()
     if panel then return end
-    Build()
-    if Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory then
+    local canvas = Settings and Settings.RegisterCanvasLayoutCategory and Settings.RegisterAddOnCategory
+    Build(canvas)
+    if canvas then
+        FitWindow()
         self.category = Settings.RegisterCanvasLayoutCategory(panel, "Spoken Player")
         Settings.RegisterAddOnCategory(self.category)
     else

@@ -193,6 +193,8 @@ function Addon:Enable()
             SoundQueue:Skip()
         elseif command == "options" or command == "settings" then
             Options:Open()
+        elseif command == "share" and Gather then
+            Spoken:ShowGatherInstructions()
         elseif command == "reset" then
             PlayerFrame:Reset()
         elseif command == "diagnostics" then
