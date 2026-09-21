@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 
 import ContributeForm from "@/components/ContributeForm";
+import UploadGathered from "@/components/UploadGathered";
 import { auth } from "@/lib/auth";
 
 /**
@@ -40,6 +41,11 @@ export default async function Page() {
         </p>
 
         <ContributeForm signedInAs={signedInAs} />
+
+        {/* Below the single-line form, not instead of it: most arrivals come from a link, and
+            the file is for players who turned gathering on in the game. */}
+        <h2 className="mt-10 mb-2 text-base font-semibold">Everything you gathered</h2>
+        <UploadGathered signedInAs={signedInAs} />
       </article>
     </main>
   );
