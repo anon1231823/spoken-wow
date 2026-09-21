@@ -49,7 +49,7 @@ export default async function Page() {
           If you chose <strong>Gather as I play</strong> in the game, log out (or type{" "}
           <code>/reload</code>) so the game writes its files, then drop in{" "}
           <code className="break-all">
-            World of Warcraft/&lt;game folder&gt;/WTF/Account/&lt;your account&gt;/SavedVariables/SpokenPlayer.lua
+            World of Warcraft/&lt;game folder&gt;/WTF/Account/&lt;your account&gt;/SavedVariables/SpokenContributions.lua
           </code>
           . Only the gathered lines are sent, never your settings.
         </p>

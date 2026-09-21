@@ -29,14 +29,14 @@ Gather:SetEnabled(true)
 Expect("once on, Add keeps a line", Gather:Add("q:1:accept:2", "first"), true)
 Gather:Add("q:1:accept:2", "second")
 Expect("the same key is kept once", Gather:Count(), 1)
-Expect("...holding the newer capture", SpokenEnv.Addon.db.global.Gather.Lines[1].envelope, "second")
+Expect("...holding the newer capture", _G.SpokenContributionsDB.Lines[1].envelope, "second")
 Expect("an empty key is refused", Gather:Add("", "x"), false)
 Expect("an empty envelope is refused", Gather:Add("k", ""), false)
 
 for i = 1, Gather.CAP + 5 do
     Gather:Add("cap:" .. i, "e" .. i)
 end
-local lines = SpokenEnv.Addon.db.global.Gather.Lines
+local lines = _G.SpokenContributionsDB.Lines
 Expect("the store never grows past its cap", Gather:Count(), Gather.CAP)
 Expect("...dropping the oldest first", lines[1].key, "cap:6")
 Expect("...and keeping the newest", lines[#lines].key, "cap:" .. (Gather.CAP + 5))
@@ -63,7 +63,7 @@ Gather:SetEnabled(true)
 SpokenEnv.Addon.db.profile.Contribute.HideButtons = true
 stub.FireEvent("QUEST_DETAIL")
 Expect("with gathering on, a missing quest line is kept even with the buttons hidden", Gather:Count(), 1)
-local kept = SpokenEnv.Addon.db.global.Gather.Lines[1]
+local kept = _G.SpokenContributionsDB.Lines[1]
 Expect("...keyed on the quest, the moment and the speaker", kept.key, "q:9123:accept:12345")
 Expect("...holding the same envelope a click would send",
     kept.envelope, (VoiceOver.Contribute:Capture()))
@@ -77,14 +77,14 @@ world.rewardText = "Here is your reward."
 stub.ShowPanel("QuestFrameRewardPanel")
 stub.FireEvent("QUEST_COMPLETE")
 Expect("the turn-in is a line of its own", Gather:Count(), 2)
-Expect("...keyed as the complete moment", SpokenEnv.Addon.db.global.Gather.Lines[2].key, "q:9123:complete:12345")
+Expect("...keyed as the complete moment", _G.SpokenContributionsDB.Lines[2].key, "q:9123:complete:12345")
 
 stub.HidePanels()
 stub.ShowGossip("We stand ready.")
 stub.FireEvent("GOSSIP_SHOW")
 Expect("gossip is gathered too", Gather:Count(), 3)
 Expect("...keyed on the speaker and the words",
-    SpokenEnv.Addon.db.global.Gather.Lines[3].key,
+    _G.SpokenContributionsDB.Lines[3].key,
     "g:12345:" .. Spoken.Contribute:Checksum("We stand ready."))
 
 -- A line a pack already voices is not a gap, and is not kept.
@@ -116,13 +116,13 @@ Expect("...without turning gathering on", Gather:IsEnabled(), false)
 VoiceOver.Contribute:Show()
 Expect("the choice is offered once, not on every click", box.gather:IsShown(), false)
 
-SpokenEnv.Addon.db.global.Gather.Introduced = false
+_G.SpokenContributionsDB.Introduced = false
 VoiceOver.Contribute:Show()
 box.gather:Click()
 Expect("choosing to gather turns gathering on", Gather:IsEnabled(), true)
 Expect("...keeps the line that was clicked", Gather:Count(), 1)
 Expect("...and says how to send the file",
-    box.body:GetText():match("SavedVariables\\SpokenPlayer%.lua") ~= nil, true)
+    box.body:GetText():match("SavedVariables\\SpokenContributions%.lua") ~= nil, true)
 Expect("...counting what is kept", box.body:GetText():match("1 line") ~= nil, true)
 
 ------------------------------------------------------------------------------- books
@@ -137,7 +137,7 @@ Gather:Clear()
 local UNKNOWN = "A page no corpus has ever held.\n\nWritten for this test alone."
 stub.ShowPage({ title = "Ledger of Nothing", number = 2, text = UNKNOWN })
 Expect("an unknown page is gathered", SpokenBooks:GatherContribution(), true)
-Expect("...keyed on its checksum", SpokenEnv.Addon.db.global.Gather.Lines[1].key, "b:" .. SpokenBooks:ChecksumOf(UNKNOWN))
+Expect("...keyed on its checksum", _G.SpokenContributionsDB.Lines[1].key, "b:" .. SpokenBooks:ChecksumOf(UNKNOWN))
 SpokenBooks:GatherContribution()
 Expect("...once", Gather:Count(), 1)
 

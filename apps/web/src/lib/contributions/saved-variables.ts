@@ -3,7 +3,7 @@
  *
  * The addon's background gathering (addons/SpokenPlayer/Gather.lua) keeps every envelope it
  * would have offered a Contribute link for, and the game writes them into
- * WTF/Account/<account>/SavedVariables/SpokenPlayer.lua as Lua string literals. The player
+ * WTF/Account/<account>/SavedVariables/SpokenContributions.lua as Lua string literals. The player
  * uploads that file as it is, so this reads it as it is: every string literal in it, decoded,
  * and kept when it is an envelope. Nothing depends on where in the table the strings sit, so a
  * later change to the store's shape cannot make an older file unreadable.

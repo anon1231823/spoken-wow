@@ -24,9 +24,9 @@ const quoted = (text: string) =>
 
 function file(literals: string[]): string {
   const lines = literals
-    .map((literal, i) => `\t\t\t\t{\n\t\t\t\t\t["key"] = "k${i}",\n\t\t\t\t\t["envelope"] = ${literal},\n\t\t\t\t}, -- [${i + 1}]`)
+    .map((literal, i) => `\t\t{\n\t\t\t["key"] = "k${i}",\n\t\t\t["envelope"] = ${literal},\n\t\t}, -- [${i + 1}]`)
     .join("\n");
-  return `\nSpokenPlayerDB = {\n\t["global"] = {\n\t\t["Gather"] = {\n\t\t\t["Enabled"] = true,\n\t\t\t["Lines"] = {\n${lines}\n\t\t\t},\n\t\t},\n\t},\n\t["profiles"] = {\n\t\t["Default"] = {\n\t\t\t["Audio"] = {\n\t\t\t\t["SoundChannel"] = "Dialog",\n\t\t\t},\n\t\t},\n\t},\n}\n`;
+  return `\nSpokenContributionsDB = {\n\t["Enabled"] = true,\n\t["Introduced"] = true,\n\t["Lines"] = {\n${lines}\n\t},\n}\n`;
 }
 
 describe("envelopesFromSavedVariables", () => {

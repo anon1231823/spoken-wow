@@ -58,7 +58,7 @@ export default function UploadGathered({ signedInAs }: { signedInAs: string | nu
       setError(
         next.unreadable
           ? "Nothing in that file could be read. Log out of the game once so it writes the file again, then pick it."
-          : "That file holds nothing gathered. It should be SpokenPlayer.lua, after gathering was turned on and you logged out.",
+          : "That file holds nothing gathered. It should be SpokenContributions.lua, after gathering was turned on and you logged out.",
       );
       return;
     }
@@ -136,7 +136,7 @@ export default function UploadGathered({ signedInAs }: { signedInAs: string | nu
           (dragging ? "border-primary bg-muted" : "border-muted-foreground/40 hover:border-muted-foreground hover:bg-muted/50")
         }
       >
-        <strong>{fileName ?? "Drop SpokenPlayer.lua here"}</strong>
+        <strong>{fileName ?? "Drop SpokenContributions.lua here"}</strong>
         <span className="text-muted-foreground">
           {fileName ? "Drop another file, or click to choose one." : "or click to choose it"}
         </span>

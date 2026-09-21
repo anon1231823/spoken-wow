@@ -10,6 +10,9 @@ setfenv(1, SpokenEnv)
 -- so the server checks them exactly as it checks a click.
 --
 -- Here, not in each feature addon, so there is one file to upload whichever addons gathered.
+-- The table itself is SpokenContributionsDB, declared by the SpokenContributions folder the
+-- player ships beside itself, so the file is SavedVariables/SpokenContributions.lua and holds
+-- nothing but this: a file named after the player would carry its settings along too.
 -- Loaded from Contribute.xml alone: the private-server clients, where contributing is off,
 -- never have a Gather table, so nothing is gathered there either.
 --
@@ -23,12 +26,15 @@ Gather = {}
 Spoken.Gather = Gather
 
 local function Store()
-    local global = Addon.db and Addon.db.global
-    if not global then
-        return nil
+    -- Read through _G on every call rather than cached: the client assigns the table when the
+    -- SpokenContributions folder loads, which may be after this file ran. A player installed
+    -- without that folder still gathers, into a table the client simply never writes out.
+    local store = rawget(_G, "SpokenContributionsDB")
+    if type(store) ~= "table" then
+        store = {}
+        _G.SpokenContributionsDB = store
     end
-    global.Gather = global.Gather or {}
-    return global.Gather
+    return store
 end
 
 local function Lines()
