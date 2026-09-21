@@ -90,6 +90,24 @@ const PROVENANCE_LABELS: Record<Provenance, string> = {
   none: "No race",
 };
 
+// A speaker's provenance as a pill: a letter or two, so the answer and its Edit fit on one
+// line, with what it means on hover.
+const PROVENANCE_PILLS: Record<Provenance, { short: string; title: string }> = {
+  corpus: { short: "C", title: "Corpus: the game's own data for this NPC" },
+  client: { short: "G", title: "Guess: from the model the client reported" },
+  moderator: { short: "M", title: "Moderator: set by hand in triage" },
+  none: { short: "?", title: "No race: nothing known about this NPC" },
+};
+
+function ProvenanceBadge({ provenance }: { provenance: Provenance }) {
+  const pill = PROVENANCE_PILLS[provenance];
+  return (
+    <Badge variant="outline" className="cursor-help px-1.5 py-0 leading-5" title={pill.title}>
+      {pill.short}
+    </Badge>
+  );
+}
+
 // The Speaker dropdown's options: NEEDS_DECISION first -- it's the view this queue exists for,
 // "everything nobody has settled yet" -- then PROVENANCES's own four, unchanged. "Confirmed"
 // (the union nobody triages: settled rows) is deliberately not here; see NEEDS_DECISION's own
@@ -637,9 +655,7 @@ function NpcConflict({
           <span>
             {option.npcKind}: {[option.race, option.gender, option.flavor].filter(Boolean).join("-") || "no race"}
           </span>
-          <Badge variant="outline" className="py-0 leading-5">
-            {option.provenance}
-          </Badge>
+          <ProvenanceBadge provenance={option.provenance} />
           <Button
             size="sm"
             variant="outline"
@@ -715,13 +731,13 @@ function SpeakerCell({
     // no "edit" affordance either: overriding the corpus's own answer would need to be a
     // deliberate act (e.g. direct SQL), not an accident of a form this table always shows.
     return (
-      <>
-        <span>{speaker(npc)}</span>
-        <Badge variant="outline" className="ml-1 py-0 leading-5">
-          corpus
-        </Badge>
+      <div>
+        <div className="flex items-center gap-1 whitespace-nowrap">
+          <span>{speaker(npc)}</span>
+          <ProvenanceBadge provenance="corpus" />
+        </div>
         {speakerNote(npc) ? <p className="text-muted-foreground mt-0.5">{speakerNote(npc)}</p> : null}
-      </>
+      </div>
     );
   }
 
@@ -734,21 +750,21 @@ function SpeakerCell({
     // moderator write over a moderator row update") -- so nothing there needs to change for
     // this to work.
     return (
-      <>
-        <span>{speaker(npc)}</span>
-        <Badge variant="outline" className="ml-1 py-0 leading-5">
-          {npc.provenance}
-        </Badge>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="ml-1 h-5 px-1.5 py-0 text-xs"
-          onClick={() => setEditing(true)}
-        >
-          Edit
-        </Button>
+      <div>
+        <div className="flex items-center gap-1 whitespace-nowrap">
+          <span>{speaker(npc)}</span>
+          <ProvenanceBadge provenance={npc.provenance} />
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-5 px-1.5 py-0 text-xs"
+            onClick={() => setEditing(true)}
+          >
+            Edit
+          </Button>
+        </div>
         {speakerNote(npc) ? <p className="text-muted-foreground mt-0.5">{speakerNote(npc)}</p> : null}
-      </>
+      </div>
     );
   }
 
@@ -848,14 +864,7 @@ function SpeakerCell({
             still earns one, since "a guess came from somewhere" is real information the form
             alone doesn't carry. */}
         {npc.provenance !== "none" ? (
-          <Badge
-            variant="outline"
-            className="py-0 leading-5"
-            // What `client` means, on hover rather than as a caption repeating the badge.
-            title={npc.provenance === "client" ? "Guessed from the model the client reported" : undefined}
-          >
-            {npc.provenance}
-          </Badge>
+          <ProvenanceBadge provenance={npc.provenance} />
         ) : null}
       </div>
       <div className="flex items-center gap-1">
