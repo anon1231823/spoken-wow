@@ -116,6 +116,10 @@ function SpokenZones:CreateContributeButton(parent)
 		end
 	end
 	SpokenZones:OnZoneChanged(Refresh)
+	-- Toggling the hide setting in the Spoken Player settings fires no game event.
+	if _G.Spoken and Spoken.RegisterCallback then
+		Spoken:RegisterCallback("CONTRIBUTE_SETTINGS_CHANGED", Refresh)
+	end
 	Refresh()
 
 	return button

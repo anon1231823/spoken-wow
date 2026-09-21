@@ -41,7 +41,7 @@ Without the pack it loads, stays quiet, and `/spb status` tells you what is miss
 
 ## When there is no voice
 
-The corpus is built from a 1.12 world database, so it has nothing for a book written after vanilla, for languages that database does not carry, or for whatever a private server wrote for itself. Open one of those and the Play button reads **Contribute** instead: press it and it hands you a link carrying the page's own text, copied straight off your screen. Copy it, open it in your browser, and press Send — the same page sent by several readers is what moves a book up the queue. Your mail is never sent this way; the addon still checks for a sender or an open mailbox first.
+The corpus is built from a 1.12 world database, so it has nothing for a book written after vanilla, for languages that database does not carry, or for whatever a private server wrote for itself. Open one of those and the Play button reads **Contribute** instead: press it and it hands you a link carrying the page's own text, copied straight off your screen. Copy it, open it in your browser, and press Send — the same page sent by several readers is what moves a book up the queue. Your mail is never sent this way; the addon still checks for a sender or an open mailbox first. Rather not see the button? **Hide the Contribute buttons** in the Spoken Player settings turns it off.
 
 ## Settings
 

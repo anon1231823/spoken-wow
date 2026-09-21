@@ -237,5 +237,13 @@ function ContributeButton:Setup()
     end)
     self.watcher = watcher
 
+    -- The hide setting lives in the Spoken Player settings, and toggling it fires no game
+    -- event, so the button hears about it from the player instead.
+    if _G.Spoken and Spoken.RegisterCallback then
+        Spoken:RegisterCallback("CONTRIBUTE_SETTINGS_CHANGED", function()
+            ContributeButton:Refresh()
+        end)
+    end
+
     return button
 end

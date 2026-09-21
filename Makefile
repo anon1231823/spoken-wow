@@ -21,6 +21,7 @@ LUA ?= $(shell command -v luajit || command -v lua5.1)
 
 .PHONY: help test test-player contribute-fixtures lint package-all \
         descriptions descriptions-check descriptions-published \
+        character-models \
         audio-release audio-release-dry
 
 help: ## Show this help
@@ -55,6 +56,7 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@$(LUA) tests/lua/sources_test.lua
 	@$(LUA) tests/lua/api_contract_test.lua
 	@$(LUA) tests/lua/contribute_envelope_test.lua
+	@$(LUA) tests/lua/contribute_toc_test.lua
 	@$(LUA) tests/lua/contribute_box_test.lua
 	@$(LUA) tests/lua/quests_contribute_test.lua
 	@$(LUA) tests/lua/player_frame_test.lua
@@ -117,6 +119,12 @@ descriptions-check: ## Confirm the addon READMEs match publishers/
 
 descriptions-published: ## Record the current descriptions as pasted into the site
 	@node scripts/descriptions.mjs --published
+
+# Not a target that runs itself -- scripts/character-models.mjs takes the listfile on stdin
+# so this step never pulls 152 MB on its own. Run it by hand when a new race ships.
+
+character-models: ## Print how to regenerate apps/web/src/lib/npc/character-models.json
+	@sed -n '2,10p' scripts/character-models.mjs | sed -e 's/^\/\/ //' -e 's/^\/\/$$//'
 
 # The sound packs' third channel. CurseForge takes them and Wago does not -- 280-452 MB a
 # pack, and that upload endpoint answers 413 -- so a player who installed an addon from Wago

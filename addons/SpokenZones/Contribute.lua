@@ -99,6 +99,10 @@ function SpokenZones:HasContributionGap()
     if not (_G.Spoken and Spoken.Contribute and Spoken.ShowContribution) then
         return false
     end
+    -- Hidden in the Spoken Player settings. Guarded: an older bundled player lacks the method.
+    if Spoken.AreContributeButtonsHidden and Spoken:AreContributeButtonsHidden() then
+        return false
+    end
     if self:LoreForCurrentPlace() then
         return false
     end

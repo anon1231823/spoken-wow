@@ -52,9 +52,12 @@ function post(body: unknown): Request {
 
 describe("POST /api/contributions/resolve", () => {
   it("accepts a row", async () => {
+    // Books, not quests: accepting a quests row now also needs a resolved speaker
+    // (lib/contributions/accept.ts), which is its own test suite (accept.test.ts). This is
+    // just the plain status flip, which books and zones still get unchanged.
     const { rows } = await db().query<{ id: number }>(
       `insert into "contribution" ("source", "key", "raw", "dedup", "text", "ip")
-       values ('quests', '1:accept', 'raw', $2, 'Words.', $1) returning "id"`,
+       values ('books', '123', 'raw', $2, 'Words.', $1) returning "id"`,
       [ip, `${dedup}-accept`],
     );
     const response = await POST(post({ id: rows[0].id, status: "accepted" }));
@@ -68,5 +71,27 @@ describe("POST /api/contributions/resolve", () => {
 
   it("answers 404 for an id that is not there", async () => {
     expect((await POST(post({ id: 999_999_999, status: "accepted" }))).status).toBe(404);
+  });
+
+  it("refuses 409, with {error, kind}, to accept a quests row with no resolved speaker", async () => {
+    // No npc_resolution row for this npc at all -- resolvedSpeaker (accept.ts) answers null,
+    // which is the route's mapping of a ResolveRefusal this test exists to pin: needs-speaker
+    // and one-way are both 409s carrying `kind`, not the bare 400/404 the other refusals get.
+    // Far outside anything the corpus or a real submission could produce -- no npc_resolution
+    // row is written for it, but the id itself must still never collide with real data.
+    const npcId = 970_000_000 + Math.floor(Math.random() * 20_000_000);
+    const { rows } = await db().query<{ id: number }>(
+      `insert into "contribution" ("source", "key", "raw", "dedup", "text", "ip", "meta")
+       values ('quests', $4, 'raw', $2, 'Words.', $1, $3::jsonb) returning "id"`,
+      [ip, `${dedup}-needs-speaker`, JSON.stringify({ kind: "creature", npc: `${npcId} Nobody` }), `npc:${npcId}`],
+    );
+    const response = await POST(post({ id: rows[0].id, status: "accepted" }));
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.kind).toBe("needs-speaker");
+    expect(typeof body.error).toBe("string");
+
+    const { rows: after } = await db().query(`select "status" from "contribution" where "id" = $1`, [rows[0].id]);
+    expect(after[0].status).toBe("new");
   });
 });

@@ -23,6 +23,7 @@ import {
   createContribution,
   recordContributionHit,
 } from "@/lib/contributions/store";
+import { observedFrom, resolveNpc } from "@/lib/npc/resolve";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +86,20 @@ export async function POST(request: Request) {
   // After the write, and unconditionally: the hit is what the limiter counts, and an identical
   // paste that only bumped a count is still a paste.
   await recordContributionHit(ip);
+
+  // Who is speaking, worked out now rather than at triage: it costs a corpus lookup and one
+  // upsert, it reaches no network, and it means the queue never shows a blank where a name
+  // should be. A failure here must not fail the contribution -- the text is the thing worth
+  // keeping, and an unresolved NPC is a row a moderator can fix.
+  try {
+    // build is not in submission.meta -- submissionFrom destructures it out into its own
+    // column (the spec, migration 0030 and the README all promise it survives), so it has to
+    // be put back here or observedFrom reads meta.build as undefined and every resolution from
+    // this path loses it.
+    await resolveNpc(observedFrom({ ...submission.meta, build: submission.build }));
+  } catch (error) {
+    console.error("contribution stored but npc resolution failed", error);
+  }
 
   return Response.json({ ok: true });
 }
