@@ -77,10 +77,27 @@ local function CloseButtonOf(frame, global)
     return _G[global]
 end
 
---- Place the button in `frame`'s top right corner, in the empty strip under the title bar:
---- right-aligned with the frame's own close button and just below it. Beside the close button,
---- on the title bar itself, it ran into the NPC's name. Inset from the corner when the client
---- draws no close button this file can find. False only when there is no frame to place it on.
+-- How far the quest log's details Play sits from its panel's right edge: it mirrors the Back
+-- button's left inset (Compatibility.lua's UpdateDetailsPlayButton), so read it off the same
+-- button, and fall back to the number that anchor falls back to.
+local function PlayButtonInset()
+    local details = _G.QuestMapFrame and QuestMapFrame.DetailsFrame
+    local header = details and (details.BackFrame or details)
+    local back = header and header.BackButton
+    if type(back) == "table" and back.GetPoint then
+        local _, _, _, x = back:GetPoint(1)
+        if type(x) == "number" and x > 0 then
+            return x
+        end
+    end
+    return 11
+end
+
+--- Place the button in `frame`'s top right corner, in the empty strip under the title bar: just
+--- below the close button, and as far in from the frame's right edge as the quest log's details
+--- Play is from its own, so the two read as the same control. On the title bar itself, beside
+--- the close button, it ran into the NPC's name. Inset from the corner when the client draws no
+--- close button this file can find. False only when there is no frame to place it on.
 function ContributeButton:PositionAtCorner(frame, close)
     if not frame then
         return false
@@ -88,7 +105,11 @@ function ContributeButton:PositionAtCorner(frame, close)
     local button = self.button
     button:ClearAllPoints()
     button:SetWidth(BUTTON_WIDTH)
-    if close then
+    local frameTop, closeBottom = frame.GetTop and frame:GetTop(), close and close.GetBottom and close:GetBottom()
+    if type(frameTop) == "number" and type(closeBottom) == "number" then
+        button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -PlayButtonInset(), -(frameTop - closeBottom + STRIP_OFFSET))
+    elseif close then
+        -- Not laid out yet, so no edges to measure: under the close button, right-aligned with it.
         button:SetPoint("TOPRIGHT", close, "BOTTOMRIGHT", -GAP, -STRIP_OFFSET)
     else
         button:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -CORNER_INSET, -CORNER_INSET)
