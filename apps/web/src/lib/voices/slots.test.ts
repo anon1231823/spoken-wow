@@ -16,10 +16,12 @@ describe("slots", () => {
   });
 
   it("offers a voice the corpus does not speak yet, so it can be cloned first", async () => {
-    // 3775 rather than 3776: the busier set is the one an accepted contribution lands on first.
-    const slot = (await slots()).find((s) => s.name === "skybourneelf-male-3775");
-    expect(slot).toEqual({ name: "skybourneelf-male-3775", lineCount: 0, npcCount: 0 });
-    expect((await slots()).map((s) => s.name)).not.toContain("skybourneelf-male");
+    // The corpus picks up a voice as contributions are accepted -- both male sets and one
+    // female set speak since the first Skybourne lines landed -- so this names the one set no
+    // line has reached. Move it to another silent set when this one starts speaking.
+    const slot = (await slots()).find((s) => s.name === "skybourneelf-female-3774");
+    expect(slot).toEqual({ name: "skybourneelf-female-3774", lineCount: 0, npcCount: 0 });
+    expect((await slots()).map((s) => s.name)).not.toContain("skybourneelf-female");
   });
 
   it("is exactly the roster in voices.ts", async () => {
@@ -36,7 +38,7 @@ describe("slots", () => {
     // Progress text is never voiced, so a voice's line count must be below the raw total.
     const total = (await slots()).reduce((sum, s) => sum + s.lineCount, 0);
     expect(total).toBeGreaterThan(0);
-    expect(total).toBeLessThan(17507);
+    expect(total).toBeLessThan(17564);
   });
 });
 

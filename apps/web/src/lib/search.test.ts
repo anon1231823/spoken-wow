@@ -166,17 +166,17 @@ describe("field filters", () => {
   });
 
   it("hides progress text unless asked for", () => {
-    // 3,093 of the corpus's 17,507 lines, and no code path will ever voice one.
+    // 3,096 of the corpus's 17,564 lines, and no code path will ever voice one.
     expect(asShipped().every((l) => l.source !== "progress")).toBe(true);
-    expect(asShipped()).toHaveLength(14414);
-    expect(all()).toHaveLength(17507);
+    expect(asShipped()).toHaveLength(14468);
+    expect(all()).toHaveLength(17564);
   });
 
   it("treats asking for the progress source as asking to see them", () => {
     // Otherwise picking `progress` in the source filter would return nothing at all, which
     // reads as a broken filter rather than as a default doing its job.
     const lines = asShipped({ source: "progress" });
-    expect(lines).toHaveLength(3093);
+    expect(lines).toHaveLength(3096);
     expect(lines.every((l) => l.source === "progress")).toBe(true);
   });
 });
