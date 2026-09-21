@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   GAP_SECONDS,
+  HEAD_SECONDS,
   LEAD_IN,
   MARGIN_SECONDS,
-  WINDOW_SECONDS,
+  MAX_CUT_SECONDS,
   cutPoint,
   performsTags,
   withLeadIn,
@@ -49,18 +50,31 @@ describe("cutPoint", () => {
     expect(cutPoint(detected([[0.84, 2.28]]))).toBeCloseTo(3.12 - MARGIN_SECONDS, 2);
   });
 
-  it("ignores gaps shorter than the lead-in pause", () => {
-    expect(cutPoint(detected([[0.5, GAP_SECONDS - 0.1]]))).toBeNull();
+  // The gossip lines that forced the shape rule: 0.899s and 1.158s pauses, both of which a
+  // duration threshold set from longer clips refused to cut.
+  it("cuts a short pause, which is what a fast voice gives", () => {
+    expect(cutPoint(detected([[0.81, 0.899]]))).toBeCloseTo(1.709 - MARGIN_SECONDS, 2);
+    expect(cutPoint(detected([[0.80, 1.158]]))).toBeCloseTo(1.958 - MARGIN_SECONDS, 2);
   });
 
-  // The measured lead-in ends between 3.11s and 3.32s; a sentence pause this late is the
-  // narrator breathing, and cutting there would eat the opening sentence.
-  it("ignores a long gap that arrives after the window", () => {
-    expect(cutPoint(detected([[WINDOW_SECONDS + 1, 2.5]]))).toBeNull();
+  // Measured: two clips opened with gaps of 0.32s and 0.21s before the real one.
+  it("walks past a breath inside the throat clear", () => {
+    const output = detected([[0, 0.32], [0.41, 0.21], [0.86, 2.65]]);
+    expect(cutPoint(output)).toBeCloseTo(3.51 - MARGIN_SECONDS, 2);
   });
 
-  it("takes the first qualifying gap when a later one is longer", () => {
-    expect(cutPoint(detected([[0.8, 2.0], [5.0, 3.0]]))).toBeCloseTo(2.8 - MARGIN_SECONDS, 2);
+  // The whole point of the shape rule: a first sound that runs long is speech, and the pause
+  // after it is eleven_v3 inserting one nobody asked for.
+  it("refuses once the opening sound has run past a throat clear's length", () => {
+    expect(cutPoint(detected([[HEAD_SECONDS + 0.1, 2.5]]))).toBeNull();
+  });
+
+  it("ignores a gap too short to be the pause", () => {
+    expect(cutPoint(detected([[0.8, GAP_SECONDS - 0.1]]))).toBeNull();
+  });
+
+  it("refuses a cut further in than any lead-in has ever ended", () => {
+    expect(cutPoint(detected([[1.0, MAX_CUT_SECONDS]]))).toBeNull();
   });
 
   it("is null when the model ignored the tag and produced no gap", () => {
