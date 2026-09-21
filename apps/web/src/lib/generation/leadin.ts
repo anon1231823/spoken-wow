@@ -58,49 +58,54 @@ export const LEAD_IN = "[clears throat] [long pause] ";
 export const TAG_MODELS = ["eleven_v3"] as const;
 
 /**
- * A gap at least this long is the lead-in; anything shorter is punctuation.
+ * How long the throat clear may run.
  *
- * Set between two measured populations, and the space between them is 0.044 seconds. Every
- * clip we have, by the duration of its first gap:
+ * The lead-in is found by shape rather than by size, and this is the shape: a short opening
+ * sound, then a pause, then the line. Across every clip we have that carried a lead-in, that
+ * first sound ends between 0.50s and 1.14s - it is a throat clear, and a throat clear is
+ * brief. A first sound that runs past this is words, so there is no lead-in to cut.
  *
- *   lead-in performed    2.529  2.276  1.980  1.516
- *   no lead-in in it     1.472  1.404  1.266  1.218  1.153
+ * WHY NOT BY DURATION, which is what this did until the gossip lines arrived. Every lead-in
+ * gap measured, against every pause eleven_v3 inserted on its own:
  *
- * The second row is eleven_v3 inserting pauses nobody asked for - a separate defect, seen
- * mid-phrase and at the top of a clip. 1.5 is the only value that separates the two rows,
- * and it was 1.8 until a draw came back with a 1.516s gap and kept its throat clear.
+ *   lead-in performed  3.126 2.645 2.529 2.276 2.048 1.980 1.733 1.516 1.158 0.899
+ *   no lead-in in it                     1.472 1.404 1.266 1.218 1.153
  *
- * Both failure modes are re-rollable, so the choice is which way to be wrong. A missed trim
- * announces itself in the first second and gets re-rolled. A cut that fires on a spurious
- * pause silently deletes the opening words, and on a page that starts mid-sentence it reads
- * as nothing worse than an abrupt open. Erring towards missing is erring towards the error
- * somebody notices.
- *
- * The margin is thin enough that this deserves a proper measurement - eight or ten draws of
- * one text - rather than the handful of clips above.
+ * The rows overlap. At four lead-in samples they did not, and 1.5 looked like a threshold;
+ * at ten it is clear no number separates them, because the pause runs 0.9s to 3.1s depending
+ * on the voice and the line. Shape is the only thing that stayed constant.
  */
-export const GAP_SECONDS = 1.5;
+export const HEAD_SECONDS = 1.2;
 
 /**
- * How far into the clip the gap may start.
+ * The pause after it, at its shortest.
  *
- * Every lead-in gap measured starts between 0.79s and 1.14s, so 3s is generous. It cannot
- * separate a lead-in from a spurious pause - those start at 0.67s to 1.04s, right on top of
- * the same range - so this is a guard against cutting at a mid-clip sentence pause, not a
- * discriminator.
+ * Low, because it no longer has to carry the whole decision - HEAD_SECONDS does that. It is
+ * here to skip a breath inside the throat clear: two clips opened with gaps of 0.32s and
+ * 0.21s before the real one, so the search walks past short gaps rather than taking the
+ * first it sees.
  */
-export const WINDOW_SECONDS = 3;
+export const GAP_SECONDS = 0.4;
+
+/**
+ * Refuse a cut past this.
+ *
+ * Not a discriminator, a backstop. Nothing measured cuts later than 3.6s, so a cut beyond
+ * this means the shape was matched by something that is not a lead-in, and storing the take
+ * whole is better than storing it four seconds short.
+ */
+export const MAX_CUT_SECONDS = 4;
 
 /**
  * How much of the clip to decode looking for it.
  *
- * Nothing starting after WINDOW_SECONDS can be the lead-in, so decoding a whole book page -
+ * Nothing starting after HEAD_SECONDS can be the lead-in, so decoding a whole book page -
  * minutes of audio, several jobs at a time - to inspect its first seconds is most of the
- * cost of the trim. The cap is well clear of the window rather than equal to it: the cut is
- * the END of a gap, and a qualifying gap that starts just inside the window has to be able
- * to finish inside the decoded span or it would be truncated into invisibility.
+ * cost of the trim. The cap is well clear of the head rather than equal to it: the cut is
+ * the END of a gap, and a qualifying gap has to be able to finish inside the decoded span or
+ * it would be truncated into invisibility.
  */
-const SCAN_SECONDS = 10;
+const SCAN_SECONDS = 6;
 
 /** Cut this much before speech resumes, so the first phoneme survives the trim. */
 export const MARGIN_SECONDS = 0.05;
@@ -119,9 +124,15 @@ export function withLeadIn(text: string, modelId: string): string {
 /**
  * Where to cut, from silencedetect's own output, or null if the lead-in is not in there.
  *
- * The first qualifying gap wins rather than the longest. A dramatic mid-clip pause can be
- * longer than the lead-in - we have measured 1.4s ones - and cutting at the longest would
- * throw away the opening sentences of exactly the takes that needed help.
+ * THIS CANNOT TELL A THROAT CLEAR FROM A SHORT OPENING PHRASE, and the shape it matches is
+ * one both produce: "The Tauren" is 0.67s followed by a 1.47s pause, which is indistinguish-
+ * able here from a throat clear followed by the lead-in's pause. Loudness does not separate
+ * them either - a cloned voice clears its throat about as loudly as it speaks, measured.
+ *
+ * So this is a bet that the tag is performed whenever it is sent, which it was on all ten
+ * clips where we asked. When that bet loses, the opening words are cut and nothing in the
+ * audio says so; `leadInSec` on the take is the only record, and an unusually large value is
+ * what to look for.
  */
 export function cutPoint(output: string): number | null {
   const starts = [...output.matchAll(/silence_start: ([\d.]+)/g)].map((m) => Number(m[1]));
@@ -131,8 +142,12 @@ export function cutPoint(output: string): number | null {
     const end = ends[index];
     // A start with no end is a clip that fades out into silence and never speaks again.
     if (end === undefined) return null;
-    if (start > WINDOW_SECONDS) return null;
-    if (end - start >= GAP_SECONDS) return Math.max(0, end - MARGIN_SECONDS);
+    // The opening sound ran past a throat clear's length, so it was words.
+    if (start > HEAD_SECONDS) return null;
+    // A breath inside the throat clear rather than the pause after it: keep looking.
+    if (end - start < GAP_SECONDS) continue;
+    const cut = Math.max(0, end - MARGIN_SECONDS);
+    return cut <= MAX_CUT_SECONDS ? cut : null;
   }
   return null;
 }
