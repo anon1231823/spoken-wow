@@ -10,6 +10,11 @@ local CURRENT_MODULE_VERSION = 1
 -- transition carries both, so that it also loads under the addon's previous release.
 local MODULE_KEY_PREFIXES = { "X-SpokenQuests-DataModule-", "X-VoiceOver-DataModule-" }
 
+-- The language a pack was recorded in, read off the pack's own TOC. Deliberately not a
+-- DataModule- key: it describes the recording rather than the data format, and a pack
+-- built for upstream AI_VoiceOver never carries it. Absent is English -- see Language.lua.
+local LANGUAGE_KEY = "X-SpokenQuests-Language"
+
 --- One of a pack's module keys, whichever generation it declares.
 ---@param addon string|number Addon folder name, or its index in the addon list
 ---@param suffix string "Version" | "Priority" | "Maps"
@@ -38,6 +43,7 @@ local LOAD_ALL_MODULES = true
 ---@field ContentVersion? string Module's content version (TOC ##Version)
 ---@field Title string Module's title (TOC ##Title or addon name if missing)
 ---@field Maps number[] Map IDs in which the module should load (TOC ##X-SpokenQuests-DataModule-Maps or ##X-VoiceOver-DataModule-Maps)
+---@field Language string The language the pack was recorded in (TOC ##X-SpokenQuests-Language; absent means enUS)
 
 ---@class DataModule
 ---@field METADATA DataModuleMetadata
@@ -252,6 +258,7 @@ function DataModules:EnumerateAddons(loadModules)
                 ContentVersion = GetAddOnMetadata(name, "Version"),
                 Title = GetAddOnMetadata(name, "Title") or name,
                 Maps = maps,
+                Language = Language:Normalize(GetAddOnMetadata(i, LANGUAGE_KEY)),
             }
             self.presentModules[name] = module
             table.insert(self.presentModulesOrdered, module)
@@ -408,9 +415,15 @@ function DataModules:GetNPCGossipTextHash(soundData)
 
     local text_entries = {}
 
+    -- The selected language only, and no fallback. A gossip hash indexes the NPC's text
+    -- as *this* client renders it, so a pack recorded against another locale holds hashes
+    -- for text this client never shows; merging those in would let a pack in the wrong
+    -- language supply the key that then fails to resolve to a clip.
+    local language = Language:GetVoiceLanguage()
+
     for _, module in self:GetModules() do
         local data = module[table]
-        if data then
+        if data and module.METADATA.Language == language then
             local npc_gossip_table = data[npc]
             if npc_gossip_table then
                 for text, hash in pairs(npc_gossip_table) do
@@ -581,24 +594,47 @@ function DataModules:PrepareSound(soundData)
         return false
     end
 
-    for _, module in self:GetModules() do
-        local data = module.SoundLengthLookupByFileName
-        if data then
-            local playerGenderedFileName = DataModules:AddPlayerGenderToFilename(soundData.fileName)
-            local length = data[playerGenderedFileName]
-            if length then
-                soundData.fileName = playerGenderedFileName
-            else
-                length = data[soundData.fileName]
-            end
-            if length then
-                soundData.filePath = format([[Interface\AddOns\%s\%s]], module.METADATA.AddonName,
-                    module.GetSoundPath and module:GetSoundPath(soundData.fileName, soundData.event) or
-                    soundData.fileName)
-                soundData.length = length
-                soundData.module = module
-                EasterEggs:Apply(soundData)
-                return true
+    -- Language before priority. A pack that holds the line in the language the player
+    -- asked for answers it even if a higher-priority pack holds the same line in another
+    -- language; only when no pack in the selected language has it does the fallback
+    -- language get a turn, and the packs within each language keep their own priority
+    -- order. A single-language install -- which is every install that exists today --
+    -- runs exactly one pass and behaves as it always has.
+    --
+    -- Gossip is the exception and gets no second pass: a gossip line is addressed by a
+    -- hash of the client's own rendering of the NPC's text, so a pack recorded in another
+    -- language hashes it differently and cannot hold this client's key at all. Falling
+    -- back there could only ever find nothing, and searching for it would be a promise
+    -- this addon cannot keep.
+    local languages = Language:ResolutionOrder()
+    if Enums.SoundEvent:IsGossipEvent(soundData.event) then
+        languages = { languages[1] }
+    end
+
+    local wantedFileName = soundData.fileName
+    for _, language in ipairs(languages) do
+        for _, module in self:GetModules() do
+            local data = module.SoundLengthLookupByFileName
+            if data and module.METADATA.Language == language then
+                local playerGenderedFileName = DataModules:AddPlayerGenderToFilename(wantedFileName)
+                local fileName = wantedFileName
+                local length = data[playerGenderedFileName]
+                if length then
+                    fileName = playerGenderedFileName
+                else
+                    length = data[wantedFileName]
+                end
+                if length then
+                    soundData.fileName = fileName
+                    soundData.filePath = format([[Interface\AddOns\%s\%s]], module.METADATA.AddonName,
+                        module.GetSoundPath and module:GetSoundPath(fileName, soundData.event) or
+                        fileName)
+                    soundData.length = length
+                    soundData.module = module
+                    soundData.language = language
+                    EasterEggs:Apply(soundData)
+                    return true
+                end
             end
         end
     end

@@ -305,6 +305,12 @@ local defaults = {
             -- /spq read is typed. GossipFrequency then has nothing to decide.
             Autoplay = true,
             OGThrall = false,
+            -- Follow the client, and fall back on English. Every pack that exists today
+            -- is English and declares no language, so an English-speaking player with the
+            -- packs they already have resolves enUS on the first pass and hears exactly
+            -- what they heard before this setting existed.
+            VoiceLanguage = "auto",
+            FallbackLanguage = "enUS",
         },
         DebugEnabled = false,
     },

@@ -80,6 +80,42 @@ local GeneralTab =
                     end,
                 },
                 LineBreak3 = { type = "description", name = "", order = 7 },
+                VoiceLanguage = {
+                    type = "select",
+                    width = 1.1,
+                    order = 9,
+                    name = "Voice Language",
+                    desc = "Which language's sound pack to speak in. Follow Client uses the language your game client runs in. A language is only heard if a sound pack recorded in it is installed.",
+                    values = function()
+                        local values = { [Language.AUTO] = format("Follow Client (%s)", Language:GetName(Language:GetClientLanguage())) }
+                        for _, locale in ipairs(Language.LOCALES) do
+                            values[locale.code] = locale.name
+                        end
+                        return values
+                    end,
+                    get = function(info) return Addon.db.profile.Audio.VoiceLanguage end,
+                    set = function(info, value)
+                        Addon.db.profile.Audio.VoiceLanguage = value
+                    end,
+                },
+                FallbackLanguage = {
+                    type = "select",
+                    width = 1.1,
+                    order = 10,
+                    name = "Fallback Language",
+                    desc = "What to play when no pack in your chosen language holds a line. None leaves that line silent rather than speaking it in a language you did not ask for. NPC greetings never fall back: they are matched on the client's own text.",
+                    values = function()
+                        local values = { none = "None (stay silent)" }
+                        for _, locale in ipairs(Language.LOCALES) do
+                            values[locale.code] = locale.name
+                        end
+                        return values
+                    end,
+                    get = function(info) return Addon.db.profile.Audio.FallbackLanguage end,
+                    set = function(info, value)
+                        Addon.db.profile.Audio.FallbackLanguage = value
+                    end,
+                },
                 OGThrall = {
                     type = "toggle",
                     order = 8,
@@ -276,6 +312,7 @@ function Options:AddDataModule(module, order)
             Title = MakeDescription(L.OPT_ROW_TITLE, module.Title),
             ModuleVersion = MakeDescription(L.OPT_ROW_FORMAT_VERSION, module.ModuleVersion),
             ModulePriority = MakeDescription(L.OPT_ROW_PRIORITY, module.ModulePriority),
+            Language = MakeDescription(L.OPT_ROW_LANGUAGE, function() return Language:GetName(module.Language) end),
             ContentVersion = MakeDescription(L.OPT_ROW_CONTENT_VERSION, module.ContentVersion),
             LoadOnDemand = MakeDescription(L.OPT_ROW_LOAD_ON_DEMAND, module.LoadOnDemand and YES or NO),
             Loaded = MakeDescription(L.OPT_ROW_LOADED, function() return DataModules:GetModule(module.AddonName) and YES or NO end),

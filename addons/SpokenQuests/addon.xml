@@ -3,6 +3,7 @@
     <Include file="Version.lua"/>
     <Include file="Enums.lua"/>
     <Include file="Utils.lua"/>
+    <Include file="Language.lua"/>
     <Include file="Debug.lua"/>
     <Include file="Strings.lua"/>
     <Include file="Locale\deDE.lua"/>

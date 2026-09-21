@@ -212,9 +212,10 @@ function Player:Enqueue(soundData)
     end
 
     if not DataModules:PrepareSound(soundData) then
-        Debug:Record("data-lookup-failed", format("No sound entry for event %s, quest ID %s, title %q",
+        Debug:Record("data-lookup-failed", format("No sound entry for event %s, quest ID %s, title %q, language %s",
             Enums.SoundEvent:GetName(soundData.event) or tostring(soundData.event),
-            tostring(soundData.questID or "none"), soundData.title or soundData.name or ""))
+            tostring(soundData.questID or "none"), soundData.title or soundData.name or "",
+            table.concat(Language:ResolutionOrder(), " then ")))
         return false
     end
 

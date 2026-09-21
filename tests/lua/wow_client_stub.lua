@@ -605,7 +605,11 @@ function _G.hooksecurefunc(owner, name, hook)
     return true
 end
 function _G.IsLoggedIn() return true end
-function _G.GetLocale() return "enUS" end
+M.locale = "enUS"
+--- The client's locale, as GetLocale reports it. A test sets this to run the addon on,
+--- say, a Portuguese client.
+function M.SetLocale(locale) M.locale = locale end
+function _G.GetLocale() return M.locale end
 M.print = print
 function _G.print() end
 -- With the client's `limit`: strsplit("-", "a-b-c", 2) is "a", "b-c". GetIDFromGUID
@@ -1079,7 +1083,7 @@ function M.LoadQuests(addonDirectory, spokenDirectory)
     for _, module in ipairs({ "QuestOverlayUI", "Options" }) do
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
-    for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "Strings", "FuzzySearch", "EasterEggs",
+    for _, file in ipairs({ "Version", "Enums", "Utils", "Language", "Debug", "Strings", "FuzzySearch", "EasterEggs",
         "DataModules", "ReportButton", "Player", "VoiceOver", "Contribute" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
@@ -1104,7 +1108,7 @@ function M.LoadQuestsAlone(addonDirectory)
     for _, module in ipairs({ "QuestOverlayUI", "Options" }) do
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
-    for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "Strings", "FuzzySearch", "EasterEggs",
+    for _, file in ipairs({ "Version", "Enums", "Utils", "Language", "Debug", "Strings", "FuzzySearch", "EasterEggs",
         "DataModules", "ReportButton", "Player", "VoiceOver", "Contribute" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
