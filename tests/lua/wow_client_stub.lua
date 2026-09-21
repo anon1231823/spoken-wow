@@ -387,6 +387,17 @@ function _G.CreateFrame(kind, name, parent)
         function f:GetMaxBytes() return self.maxBytes or 0 end
         function f:HighlightText() self.highlighted = true end
         function f:SetAutoFocus() end
+        -- A real client ignores SetFocus on an edit box that is not on screen, which is how a
+        -- copy box can open with its text selected and the keyboard still on the game.
+        function f:SetFocus()
+            local frame = self
+            while frame do
+                if frame.shown == false then return end
+                frame = frame.parent
+            end
+            self.focused = true
+        end
+        function f:HasFocus() return self.focused == true end
         function f:SetScript(event, fn) self.handlers = self.handlers or {}; self.handlers[event] = fn end
     end
     -- A PlayerModel only loads while it is shown, and answers nothing until it has -- so the

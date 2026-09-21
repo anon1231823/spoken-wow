@@ -153,10 +153,15 @@ end
 local function ShowPayload(payload, address, isLink)
     EnsureBox()
     Face(false, false)
+    -- Shown before the focus is asked for: a hidden edit box ignores SetFocus, so the first
+    -- time the box opened, the keyboard stayed with the game and a Cmd+C straight away copied
+    -- nothing. Only a box that was already up -- the second contribution, or "Just this one"
+    -- -- ever had it.
+    box.frame:Show()
     box.payload = payload
     box.editBox:SetText(payload)
-    box.editBox:HighlightText()
     box.editBox:SetFocus()
+    box.editBox:HighlightText()
     if isLink then
         -- The link already carries the address in it (https://.../contribute#e1=...), so a
         -- second line repeating just the host would tell the player nothing the payload above
@@ -167,7 +172,6 @@ local function ShowPayload(payload, address, isLink)
         box.hint:SetText("Press Ctrl+C, then paste it at:")
         box.address:SetText(address or "")
     end
-    box.frame:Show()
 end
 
 -- Prose in place of the payload, with or without the first-click choice under it. Nothing to
