@@ -26,6 +26,7 @@ import "server-only";
 
 import { query } from "@/lib/db";
 import { npcKey, type Corpus, type CorpusLine } from "@/lib/corpus";
+import { declaredFlavors } from "@/lib/voices/voices";
 
 export const BASE_LANG = "enUS";
 
@@ -207,7 +208,9 @@ export async function npcVoiceFromCorpus(
  * the row this feeds is unconfirmed regardless.
  */
 export async function defaultFlavorFor(race: string, gender: string): Promise<string | null> {
-  return (await flavorDefaults()).get(`${race}-${gender}`) ?? null;
+  // A race-gender the corpus has no flavored line for yet falls back to the busiest voice set
+  // voices.ts declares for it.
+  return (await flavorDefaults()).get(`${race}-${gender}`) ?? declaredFlavors(race, gender)[0] ?? null;
 }
 
 /**
@@ -221,7 +224,9 @@ export async function defaultFlavorFor(race: string, gender: string): Promise<st
  */
 export async function flavorsFor(race: string, gender: string): Promise<string[]> {
   const tally = (await flavorTallies()).get(`${race}-${gender}`);
-  return tally ? [...tally.keys()].sort((a, b) => a.localeCompare(b)) : [];
+  // Plus what voices.ts declares, so a race-gender offers its voice sets before its first line.
+  const flavors = new Set([...(tally?.keys() ?? []), ...declaredFlavors(race, gender)]);
+  return [...flavors].sort((a, b) => a.localeCompare(b));
 }
 
 const flavorTalliesKey = Symbol.for("spoken.quests-flavor-tallies");

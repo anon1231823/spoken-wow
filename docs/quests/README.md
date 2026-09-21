@@ -550,8 +550,10 @@ carries, and marks which exist in the ElevenLabs account. The flavored voices ar
 the corpus, so a race added upstream cannot leave the page quietly missing a voice. The
 race-genders themselves are listed by hand in `apps/web/src/lib/voices/voices.ts`, which the
 triage selects and the explorer filters read too: a race-gender listed there that no line
-speaks yet gets a bare `race-gender` slot, so its voice can be cloned before the first line
-for it is accepted.
+speaks yet gets a slot anyway, so its voice can be cloned before the first line for it is
+accepted: one per flavor the list declares for it, or a bare `race-gender` if it declares
+none. The Skybourne elves declare the game's two voice sets per gender, named by their
+NPCSounds id (`skybourneelf-male-3776`) until they have better names.
 
 Expanding one shows the clips it would be cloned from: upload, play back, delete, and
 **merge** a selection into one take with an adjustable pause. A slot finds its own source

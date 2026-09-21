@@ -3,8 +3,8 @@
  *
  * Races and genders are the voiced list in lib/voices/voices.ts, so a race-gender added there
  * is filterable before any line uses it. Flavors and voices are derived from the corpus, as
- * voiceSlots is (lib/voices/slots.ts), plus the bare voice of a voiced race-gender the corpus
- * does not speak yet.
+ * voiceSlots is (lib/voices/slots.ts), plus the flavors voices.ts declares and the voices it
+ * names that the corpus does not speak yet.
  *
  * Being closed sets also makes them a whitelist, which is what lets /api/search take these
  * straight from a query string.
@@ -14,7 +14,7 @@
  */
 import type { CorpusLine } from "./corpus";
 import { corpus } from "./quests/catalogue";
-import { GENDERS, RACES, unspokenVoices } from "./voices/voices";
+import { declaredFlavorScopes, GENDERS, RACES, unspokenVoices } from "./voices/voices";
 
 export type Facets = {
   races: string[];
@@ -48,12 +48,17 @@ export function buildFacets(lines: CorpusLine[]): Facets {
     scopes.set(line.voice, { race: line.race, gender: line.gender, flavor: line.flavor });
   }
 
+  for (const scope of declaredFlavorScopes()) {
+    flavors.add(scope.flavor);
+    scopes.set(`${scope.race}-${scope.gender}-${scope.flavor}`, scope);
+  }
+
   const sorted = (values: Set<string>) => [...values].sort((a, b) => a.localeCompare(b));
   return {
     races: [...RACES],
     genders: [...GENDERS],
     flavors: sorted(flavors),
-    voices: sorted(new Set([...voices, ...unspokenVoices(spoken)])),
+    voices: sorted(new Set([...voices, ...unspokenVoices(spoken, voices)])),
     flavorScopes: [...scopes.values()].sort(
       (a, b) =>
         a.race.localeCompare(b.race) ||

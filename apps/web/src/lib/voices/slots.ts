@@ -2,9 +2,9 @@
  * Which voices this project needs, and what a valid voice name is.
  *
  * The set is derived from the corpus, so a race added to tts_cli/consts.py upstream cannot
- * leave this page quietly missing a voice, plus a bare `race-gender` slot for every voiced
- * race-gender (voices.ts) the corpus does not speak yet -- the voice has to exist to be cloned
- * before the first line for it is accepted. The names are
+ * leave this page quietly missing a voice, plus the voices voices.ts names that the corpus does
+ * not speak yet -- a declared flavor, or a bare `race-gender` -- since a voice has to exist to
+ * be cloned before the first line for it is accepted. The names are
  * the ones tts_cli/voices.py matches on: `race-gender-flavor`, and nothing else is usable,
  * because a stock library voice's name cannot express that mapping.
  *
@@ -56,7 +56,7 @@ export async function voiceSlots(): Promise<VoiceSlot[]> {
   // The narrator is stated below rather than derived, so it is spoken whether or not a line
   // names it.
   spoken.add(NARRATOR_VOICE);
-  const unspoken = unspokenVoices(spoken).map((name) => ({ name, lineCount: 0, npcCount: 0 }));
+  const unspoken = unspokenVoices(spoken, new Set(lines.keys())).map((name) => ({ name, lineCount: 0, npcCount: 0 }));
 
   return [...derived, ...unspoken, await narratorSlot()].sort((a, b) => a.name.localeCompare(b.name));
 }

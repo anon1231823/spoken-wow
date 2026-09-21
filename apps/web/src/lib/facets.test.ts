@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { corpus as catalogue } from "./quests/catalogue";
 import { buildFacets } from "./facets";
-import { RACES } from "./voices/voices";
+import { declaredFlavorScopes, RACES } from "./voices/voices";
 
 const corpus = await catalogue();
 const facets = buildFacets(corpus.lines);
@@ -22,8 +22,9 @@ describe("facets", () => {
   it("offers the voiced races, including ones no line uses yet", () => {
     expect(facets.races).toEqual([...RACES]);
     expect(facets.races).toContain("skybourneelf");
-    // So the voice filter can reach the slot /voices shows for it.
-    expect(facets.voices).toContain("skybourneelf-female");
+    // So the voice and flavor filters can reach the slots /voices shows for it.
+    expect(facets.voices).toContain("skybourneelf-female-3773");
+    expect(facets.flavorScopes).toContainEqual({ race: "skybourneelf", gender: "female", flavor: "3773" });
   });
 
   it("offers no bare voice for a race-gender the corpus already flavors", () => {
@@ -49,10 +50,11 @@ describe("facets", () => {
       }
     });
 
-    it("pairs nothing the corpus does not", () => {
-      const keys = new Set(
-        corpus.lines.filter((l) => l.flavor).map((l) => `${l.race}-${l.gender}-${l.flavor}`),
-      );
+    it("pairs nothing the corpus or voices.ts does not", () => {
+      const keys = new Set([
+        ...corpus.lines.filter((l) => l.flavor).map((l) => `${l.race}-${l.gender}-${l.flavor}`),
+        ...declaredFlavorScopes().map((s) => `${s.race}-${s.gender}-${s.flavor}`),
+      ]);
       expect(facets.flavorScopes).toHaveLength(keys.size);
       for (const scope of facets.flavorScopes) {
         expect(keys).toContain(`${scope.race}-${scope.gender}-${scope.flavor}`);

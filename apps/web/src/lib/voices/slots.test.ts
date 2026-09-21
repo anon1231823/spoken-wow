@@ -10,12 +10,15 @@ describe("slots", () => {
     // Every name must be the race-gender[-flavor] shape tts_cli/voices.py matches on, or the
     // Python side will not find the voice we create. The flavor is optional: narrator-male
     // is a pseudo-race for gameobjects with no NPC voice sets to choose between.
-    for (const name of names) expect(name).toMatch(/^[a-z]+-(male|female)(-[a-z]+)?$/);
+    // A placeholder flavor may be a voice set's id (voices.ts), hence the digits.
+    for (const name of names) expect(name).toMatch(/^[a-z]+-(male|female)(-[a-z0-9]+)?$/);
   });
 
-  it("offers a voiced race-gender the corpus does not speak yet, so it can be cloned first", async () => {
-    const slot = (await slots()).find((s) => s.name === "skybourneelf-male");
-    expect(slot).toEqual({ name: "skybourneelf-male", lineCount: 0, npcCount: 0 });
+  it("offers a declared flavor the corpus does not speak yet, so it can be cloned first", async () => {
+    // 3775 rather than 3776: the busier set is the one an accepted contribution lands on first.
+    const slot = (await slots()).find((s) => s.name === "skybourneelf-male-3775");
+    expect(slot).toEqual({ name: "skybourneelf-male-3775", lineCount: 0, npcCount: 0 });
+    expect((await slots()).map((s) => s.name)).not.toContain("skybourneelf-male");
   });
 
   it("adds no bare slot beside a race-gender's flavored ones", async () => {

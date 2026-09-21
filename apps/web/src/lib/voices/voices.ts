@@ -8,9 +8,10 @@
  * is the whole of supporting it -- the voice list, the triage selects and the explorer filters
  * all read this.
  *
- * Flavors stay derived from the corpus (facets.ts, slots.ts): they come from the game's own
- * voice sets, and a race-gender with none gets a bare `race-gender` voice, the way
- * narrator-male always has.
+ * Flavors are derived from the corpus (facets.ts, slots.ts): they come from the game's own
+ * voice sets. A race-gender the corpus does not speak yet can declare its flavors here, so its
+ * voices exist on /voices and in the triage flavor select before its first line; one with
+ * neither gets a bare `race-gender` voice, the way narrator-male always has.
  *
  * The corpus must stay inside this list -- voices.test.ts fails on a line whose race-gender
  * is missing, so a race added upstream in tts_cli/consts.py cannot drop out of the filters.
@@ -19,7 +20,15 @@
  */
 export type Gender = "male" | "female";
 
-export type RaceGender = { race: string; gender: Gender };
+export type RaceGender = {
+  race: string;
+  gender: Gender;
+  /**
+   * The game's voice sets for this race-gender, busiest first -- the first is the default for
+   * an NPC whose set is not known yet. Only needed while the corpus has no flavored line for it.
+   */
+  flavors?: readonly string[];
+};
 
 export const VOICES: readonly RaceGender[] = [
   { race: "bloodelf", gender: "female" },
@@ -40,8 +49,11 @@ export const VOICES: readonly RaceGender[] = [
   { race: "orc", gender: "male" },
   { race: "scourge", gender: "female" },
   { race: "scourge", gender: "male" },
-  { race: "skybourneelf", gender: "female" },
-  { race: "skybourneelf", gender: "male" },
+  // Named by their NPCSounds id until they have better names: the client ships no names for
+  // them, where the older races' come from sound entries like OrcMaleShadyNPCGreetings.
+  // 3773 and 3776 are the sets on 81 and 70 of the Skybourne displays, 3774 and 3775 on 8 and 10.
+  { race: "skybourneelf", gender: "female", flavors: ["3773", "3774"] },
+  { race: "skybourneelf", gender: "male", flavors: ["3776", "3775"] },
   { race: "tauren", gender: "female" },
   { race: "tauren", gender: "male" },
   { race: "troll", gender: "female" },
@@ -63,13 +75,30 @@ export function isVoiced(race: string, gender: string): boolean {
   return VOICES.some((voice) => voice.race === race && voice.gender === gender);
 }
 
+/** The flavors declared for a race-gender, busiest first; empty for one that declares none. */
+export function declaredFlavors(race: string, gender: string): string[] {
+  return [...(VOICES.find((voice) => voice.race === race && voice.gender === gender)?.flavors ?? [])];
+}
+
+/** Every declared race-gender-flavor, for pairing flavors with the race-gender they belong to. */
+export function declaredFlavorScopes(): { race: string; gender: Gender; flavor: string }[] {
+  return VOICES.flatMap(({ race, gender, flavors }) => (flavors ?? []).map((flavor) => ({ race, gender, flavor })));
+}
+
 /**
- * The voice a race-gender gets while the corpus has no line for it: bare `race-gender`, since
- * nothing has said which of the game's voice sets it would use yet.
+ * The voices the list names that the corpus does not speak yet: each declared flavor as
+ * `race-gender-flavor`, and a bare `race-gender` for a race-gender with no flavors anywhere.
  *
- * `spoken` is every race-gender the corpus already has a voice for, as `race-gender`, so a
- * race-gender with flavored corpus voices does not also gain an unflavored one.
+ * `spokenVoices` is every voice name the corpus has, and `spokenRaceGenders` every race-gender
+ * it has a voice for, so a race-gender with flavored corpus voices does not also gain an
+ * unflavored one.
  */
-export function unspokenVoices(spoken: ReadonlySet<string>): string[] {
-  return VOICES.map((voice) => `${voice.race}-${voice.gender}`).filter((name) => !spoken.has(name));
+export function unspokenVoices(spokenRaceGenders: ReadonlySet<string>, spokenVoices: ReadonlySet<string>): string[] {
+  return VOICES.flatMap((voice) => {
+    const raceGender = `${voice.race}-${voice.gender}`;
+    if (voice.flavors?.length) {
+      return voice.flavors.map((flavor) => `${raceGender}-${flavor}`).filter((name) => !spokenVoices.has(name));
+    }
+    return spokenRaceGenders.has(raceGender) ? [] : [raceGender];
+  });
 }
