@@ -35,8 +35,12 @@ export async function restoreTake(
   // The row is what says the take exists. A version nobody recorded is a caller asking for
   // something that never happened; a version whose BYTES are missing is a different failure
   // and belongs below, where the copy is attempted and says so.
-  const source_path = await takePath(source, file, version);
-  if (!source_path) throw new Error(`no version ${version} of ${file} in ${source}`);
+  const bytes = await takePath(source, file, version);
+  if (bytes.kind === "none") throw new Error(`no version ${version} of ${file} in ${source}`);
+  if (bytes.kind === "gone") {
+    throw new Error(`the audio of version ${version} of ${file} was not kept, so it cannot be restored`);
+  }
+  const source_path = bytes.path;
 
   const target = storePathOf(source, file);
   // Already live: its bytes are the store file, and copying a file over itself truncates

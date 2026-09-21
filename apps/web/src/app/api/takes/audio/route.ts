@@ -51,11 +51,13 @@ export async function GET(request: NextRequest) {
     return new Response("unknown file", { status: 404 });
   }
 
-  // The take was never recorded. Distinct from the 404 below, which is a take that exists
-  // and whose bytes do not -- the panel no longer predicts either, so this is where a
-  // listener finds out.
-  const target = await takePath(source, file, version);
-  if (!target) return new Response("no such take", { status: 404 });
+  // Three different 404s, because the panel predicts none of them and this is where a
+  // listener finds out: a take nobody recorded, a take whose clip was not kept, and a take
+  // whose named file is missing from this machine.
+  const bytes = await takePath(source, file, version);
+  if (bytes.kind === "none") return new Response("no such take", { status: 404 });
+  if (bytes.kind === "gone") return new Response("this take's audio was not kept", { status: 404 });
+  const target = bytes.path;
 
   let size: number;
   try {

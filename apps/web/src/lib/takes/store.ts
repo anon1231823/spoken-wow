@@ -20,7 +20,6 @@ import path from "node:path";
 
 import { db, query } from "@/lib/db";
 
-import { archiveNameFor } from "./archive";
 import { historyDirOf, storePathOf } from "./adapters";
 import type { Source } from "@/lib/sections";
 
@@ -57,25 +56,6 @@ export async function listTakes(
     [source, file, lang],
   );
   return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));
-}
-
-/**
- * Where a take's bytes are, as a name inside its line's history directory.
- *
- * NOTHING HERE LOOKS AT THE DISK. The database is what says a take exists, and a row that
- * records its own `archiveFile` needs nothing worked out about it. Rows written before that
- * column fall back to the naming rule their section has always used, which is a fact about
- * how the file was written rather than a guess about what is there.
- *
- * This used to read the directory and mark a take unplayable when its bytes were missing,
- * so that a history panel could grey it out. That made rendering a list of takes depend on
- * a filesystem -- and on the droplet, where the archive is not where the app is, it made
- * every past take look like it had been lost. Whether the bytes are really there is a
- * question for the moment somebody plays or restores them, and both of those say so when
- * they fail.
- */
-export function archiveNameOf(source: Source, take: Pick<Take, "version" | "archiveFile">): string {
-  return take.archiveFile ?? archiveNameFor(source, take.version);
 }
 
 /** One section's live take of one file, with how many takes that file has. */
@@ -184,36 +164,47 @@ export function archivePath(source: Source, file: string, name: string): string 
   return path.join(historyDirOf(source, file), name);
 }
 
+/** Where one take's bytes are, or why there are none to read. */
+export type TakeBytes =
+  | { kind: "file"; path: string }
+  /** The take exists, and nothing kept its clip. */
+  | { kind: "gone" }
+  /** No such take was ever recorded. */
+  | { kind: "none" };
+
 /**
- * Where one take's bytes are, absolute, or null when no such take was ever recorded.
+ * Where one take's bytes are, from its row alone.
  *
- * The live take is in the store; every other take is in the archive. That is not a
- * fallback, it is the layout: the store holds exactly one clip per line, the one the addon
- * ships, and the archive holds the rest.
+ * Three answers, and none of them reads the disk:
  *
- * It matters because a take can be live without ever having been archived. Audio the CLI
- * narrated before any of this kept records has one row and one file, in the store, and
- * looking for it under audio-history/ would be looking for a copy nothing had reason to
- * make. commitVersion archives the live take before it overwrites it, so the copy appears
- * exactly when it is needed.
+ *   - live: the store, which holds exactly the clip the addon ships
+ *   - archiveFile set: that file in the line's history directory
+ *   - neither: the take happened and its clip was not kept -- pruned by the code before
+ *     this branch, consumed by its rename-to-restore, or retired somewhere this archive
+ *     never saw. Known to be gone, so nothing is looked for.
  *
- * One query. Whether the take is live is a column, not something to infer from a second
- * lookup that could disagree with the first.
+ * There used to be a fourth: a row with no archiveFile was given the name its section's
+ * rule would have written, and the file was looked for under it. For zones and books that
+ * rule named clips by their position in a sequence of overwrites, not by version, so the
+ * guess could find a real file holding a different take. Every row that has a clip now
+ * records it, so nothing is guessed.
+ *
+ * Whether a named file is really there is answered by whoever reads it.
  */
 export async function takePath(
   source: Source,
   file: string,
   version: number,
   lang = "enUS",
-): Promise<string | null> {
-  const rows = await query<Pick<Take, "version" | "archiveFile" | "isCurrent">>(
-    `select "version", "archiveFile", "isCurrent" from "take"
+): Promise<TakeBytes> {
+  const rows = await query<Pick<Take, "archiveFile" | "isCurrent">>(
+    `select "archiveFile", "isCurrent" from "take"
       where "source" = $1 and "file" = $2 and "lang" = $3 and "version" = $4`,
     [source, file, lang, version],
   );
   const take = rows[0];
-  if (!take) return null;
-  return take.isCurrent
-    ? storePathOf(source, file)
-    : archivePath(source, file, archiveNameOf(source, take));
+  if (!take) return { kind: "none" };
+  if (take.isCurrent) return { kind: "file", path: storePathOf(source, file) };
+  if (take.archiveFile) return { kind: "file", path: archivePath(source, file, take.archiveFile) };
+  return { kind: "gone" };
 }

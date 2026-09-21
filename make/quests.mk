@@ -78,7 +78,7 @@ endef
         package-audio-complete package-meta push-complete icon \
         downloads-status \
         factions release release-audio release-wago release-curse \
-        release-dry rebuild-takes import-corpus export-corpus export-ignores \
+        release-dry import-corpus export-corpus export-ignores \
         fold-overrides sync check-synced
 
 help: ## Show this help
@@ -384,18 +384,6 @@ sync: require-droplet ## Replace the local quests corpus and takes with the drop
 # the reasoning; every section's packaging runs the same one.
 check-synced: ## Compare the local quests data with the droplet's, and prompt if they differ
 	@$(DB_ENV) scripts/db/check-synced.sh quests
-
-# ONE-OFF. Rebuilds the take table from the rows already in Postgres and the clips in
-# audio-history, so the database records every take that happened -- including the ones the
-# old pruning deleted the rows for and left the files behind. Run it once on the droplet,
-# where both live, and then delete this target and the script.
-#
-# A machine holding half the store would write rows for the half it has and leave the rest
-# reading as ungenerated, so the script refuses an empty store and says what it is about to
-# do first. ARGS=--dry-run to see without writing.
-
-rebuild-takes: ## ONE-OFF: rebuild the take table from the rows and the archive (ARGS=--dry-run)
-	@cd apps/web && node scripts/rebuild-quests-takes.mjs $(ARGS)
 
 audio-status: require-droplet ## Compare file count and size on both sides
 	@echo "local:  $$(find audio -name '*.mp3' | wc -l | tr -d ' ') files, $$(du -sh audio | cut -f1)"

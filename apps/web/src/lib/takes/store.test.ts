@@ -81,40 +81,41 @@ describe("finding a take's bytes", () => {
   const stem = () => path.basename(file, ".mp3");
 
   it("believes the name a take recorded for itself", async () => {
-    await record(3, false, "v3.mp3");
+    await record(3, false, "v3-1a2b3c4d.mp3");
     await record(4, true);
 
-    expect(await takePath("quests", file, 3)).toBe(
-      path.join(root, "audio-history", "gossip", stem(), "v3.mp3"),
-    );
-  });
-
-  it("falls back to the section's naming rule for a take that predates the column", async () => {
-    // Quests named an archived take after its version from the start, so the rule is a
-    // fact about how the file was written rather than a guess about what is there.
-    await record(3);
-    await record(4, true);
-
-    expect(await takePath("quests", file, 3)).toBe(
-      path.join(root, "audio-history", "gossip", stem(), "3.mp3"),
-    );
+    expect(await takePath("quests", file, 3)).toEqual({
+      kind: "file",
+      path: path.join(root, "audio-history", "gossip", stem(), "v3-1a2b3c4d.mp3"),
+    });
   });
 
   it("puts the live take in the store, which is where its bytes actually are", async () => {
     // A take can be live without ever having been archived: audio narrated before this app
-    // kept records has one row and one file, in the store. commitVersion makes the archived
+    // kept records has one row and one file, in the store. commitTake makes the archived
     // copy at the moment a re-roll is about to overwrite it, and not before.
     await record(1, true);
 
-    expect(await takePath("quests", file, 1)).toBe(path.join(root, "audio", file));
+    expect(await takePath("quests", file, 1)).toEqual({
+      kind: "file",
+      path: path.join(root, "audio", file),
+    });
   });
 
-  it("answers null for a version nobody recorded", async () => {
-    // Distinct from a take whose bytes are missing: that one exists, and the failure
-    // belongs to whoever tries to play or restore it.
+  it("says a clip was not kept, rather than guessing a name for it", async () => {
+    // This used to fall back to the section's naming rule. For zones and books that rule
+    // named clips by overwrite position, not version, so the guess could land on a real
+    // file holding a different take.
+    await record(2);
+    await record(3, true);
+
+    expect(await takePath("quests", file, 2)).toEqual({ kind: "gone" });
+  });
+
+  it("says when a version was never recorded", async () => {
     await record(1, true);
 
-    expect(await takePath("quests", file, 9)).toBe(null);
+    expect(await takePath("quests", file, 9)).toEqual({ kind: "none" });
   });
 });
 

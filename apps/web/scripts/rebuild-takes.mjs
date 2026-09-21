@@ -2,11 +2,25 @@
 // Rebuilds the quests take table from the two things that actually record what happened:
 // the rows already in Postgres, and the files in audio-history/.
 //
-//   node scripts/rebuild-quests-takes.mjs --archive /tmp/prod-archive.txt --dry-run
-//   node scripts/rebuild-quests-takes.mjs --archive /tmp/prod-archive.txt
+//   node scripts/rebuild-takes.mjs --archive /tmp/prod-archive.txt --dry-run
+//   node scripts/rebuild-takes.mjs --archive /tmp/prod-archive.txt
 //
 // Supersedes the store-only seed that came before it, which could only ever say "one take"
 // per line. RUN ONCE, THEN DELETE IT.
+//
+// ALL THREE SECTIONS, TWO JOBS. Quests needs its history rebuilt and renumbered, below.
+// Zones and books need only to be told where their bytes are: their versions already start
+// at 1, and every take already has a row. Their archives were written by the code before
+// this branch, which MOVED the live clip to v{n}.mp3 with n counted from the directory --
+// a position in a sequence of overwrites, not a take version. So a zones or books row is
+// matched to its clip by size, which rows record and the listing carries: identical sizes
+// in one line's history are identical bytes (a restore of an older take), so every row of
+// a given size may point at the one clip. A row that matches nothing had its clip consumed
+// by the old rename-to-restore, and is left without one.
+//
+// SAFE TO RE-RUN. Zones and books only ever fill an empty archiveFile. Quests is skipped
+// once any of its takes carries one, because renumbering is not repeatable: a second pass
+// would union the new numbers with the archive's old ones and invent takes.
 //
 // WHY THE TABLE IS NOT ALREADY THE ANSWER. The app used to prune: keep the newest few
 // takes, delete the rest, rows and files together (KEEP_VERSIONS, deleteVersions,
@@ -138,7 +152,7 @@ function parseArchive(text) {
   return { byFile, skipped };
 }
 
-/** The same shape, walked from a local audio-history. For testing without a droplet. */
+/** The same listing, walked from a local quests audio-history. For testing without a droplet. */
 async function walkArchive(root) {
   const lines = [];
   async function walk(dir, prefix) {
@@ -157,7 +171,7 @@ async function walkArchive(root) {
     }
   }
   await walk(root, "");
-  return parseArchive(lines.join("\n"));
+  return lines.join("\n");
 }
 
 function fileIndex(corpus) {
@@ -175,7 +189,16 @@ if (!url) throw new Error("DATABASE_URL is not set -- the takes live in Postgres
 
 const pool = new pg.Pool({ connectionString: url });
 
-try {
+async function rebuildQuests(listing) {
+  const { rows: done } = await pool.query(
+    `select count(*)::int as "n" from "take"
+      where "source" = 'quests' and "archiveFile" is not null`,
+  );
+  if (done[0].n > 0) {
+    console.log(`quests: ${done[0].n} takes already carry archiveFile -- rebuilt before, skipped`);
+    return;
+  }
+
   const store = await filesOnDisk();
   if (store.size === 0) {
     throw new Error(
@@ -183,9 +206,7 @@ try {
     );
   }
 
-  const archive = archiveArg
-    ? parseArchive(await readFile(archiveArg, "utf8"))
-    : await walkArchive(archiveDir());
+  const archive = parseArchive(listing);
 
   const corpus = JSON.parse(gunzipSync(await readFile(corpusPath())).toString("utf8"));
   const index = fileIndex(corpus);
@@ -337,8 +358,80 @@ try {
       done++;
       if (done % 500 === 0) console.log(`  ${done}/${plan.length}`);
     }
-    console.log(`\nrebuilt ${done} files`);
+    console.log(`\nquests: rebuilt ${done} files`);
   }
+}
+
+/**
+ * Zones or books: point every row that has no archiveFile at its clip, matched by size.
+ *
+ * The listing's paths are `<section>/<file>/v<n>.mp3`, where <file> is the store path
+ * without its extension -- one directory for zones ('1417/northfold-manor'), one segment
+ * for books ('306').
+ */
+async function pinSection(source, listing) {
+  const clips = new Map(); // file -> [{ name, bytes }]
+  for (const line of listing.split("\n")) {
+    const match = /^(\d+) (?:\.\/)?([a-z]+)\/(.+)\/(v\d+\.mp3)$/.exec(line.trim());
+    if (!match || match[2] !== source) continue;
+    const [, bytes, , file, name] = match;
+    if (!clips.has(file)) clips.set(file, []);
+    clips.get(file).push({ name, bytes: Number(bytes) });
+  }
+  // Lowest name first, so of two identical clips the older is the one pointed at.
+  for (const list of clips.values()) {
+    list.sort((a, b) => Number(a.name.slice(1, -4)) - Number(b.name.slice(1, -4)));
+  }
+
+  const { rows } = await pool.query(
+    `select "file", "version", "bytes"::float8 as "bytes" from "take"
+      where "source" = $1 and "lang" = $2 and "archiveFile" is null`,
+    [source, LANG],
+  );
+
+  const pins = [];
+  let unmatched = 0;
+  for (const row of rows) {
+    const clip = (clips.get(row.file) ?? []).find((c) => c.bytes === row.bytes);
+    if (clip) pins.push({ file: row.file, version: row.version, name: clip.name });
+    else unmatched++;
+  }
+
+  console.log(
+    `${source}: ${clips.size} files have archived clips; ${rows.length} takes have no ` +
+      `archiveFile, ${pins.length} matched by size, ${unmatched} have no clip`,
+  );
+  if (dryRun) return;
+
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    for (const pin of pins) {
+      await client.query(
+        `update "take" set "archiveFile" = $5
+          where "source" = $1 and "lang" = $2 and "file" = $3 and "version" = $4
+            and "archiveFile" is null`,
+        [source, LANG, pin.file, pin.version, pin.name],
+      );
+    }
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+  console.log(`${source}: pinned ${pins.length}`);
+}
+
+try {
+  const listing = archiveArg
+    ? await readFile(archiveArg, "utf8")
+    : await walkArchive(archiveDir());
+  await rebuildQuests(listing);
+  await pinSection("zones", listing);
+  await pinSection("books", listing);
+  if (dryRun) console.log("\n--dry-run: nothing written");
 } finally {
   await pool.end();
 }

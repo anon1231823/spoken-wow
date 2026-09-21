@@ -11,7 +11,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help dev build typecheck test bootstrap deploy-scripts releases rollback logs \
-        ssh-check store migrate-books db-pull
+        ssh-check store migrate-books db-pull rebuild-takes
 
 APP := @spoken/web
 
@@ -149,3 +149,15 @@ migrate-books: require-droplet ## Copy the local books corpus onto the droplet (
 # resolve -- the dump's own statements say public.book_line for exactly this reason. Left
 # bare, this line aborts the transaction and rolls the whole load back, while the sequence
 # it was fixing keeps its new value, because sequences are not transactional.
+
+# ONE-OFF. Makes the take table record every take that happened, in all three sections:
+# quests' history rebuilt from its rows and the archive (the old pruning destroyed the rows
+# of thousands of re-rolls whose clips survived), and every zones and books take pointed at
+# its archived clip. Run once on the droplet, where the archive is, then delete this target
+# and apps/web/scripts/rebuild-takes.mjs.
+#
+# Safe to re-run: quests is skipped once rebuilt, and zones and books only ever fill an
+# empty archiveFile. ARGS=--dry-run to see without writing; ARGS="--archive <listing>" to
+# read the archive from a `find -printf '%s %P\n'` listing instead of walking it.
+rebuild-takes: ## ONE-OFF: make the take table record every take (ARGS=--dry-run)
+	@cd apps/web && node scripts/rebuild-takes.mjs $(ARGS)
