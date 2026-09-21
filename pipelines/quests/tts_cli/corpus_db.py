@@ -7,7 +7,7 @@ lore_line and book_line, and turns the committed file into an EXPORT of that tab
 same arrangement zones has with tools/voice/manifest.json.
 
 WHAT DOES NOT CHANGE: producing audio and building a sound pack still need no database.
-tts_cli.build and tts_cli.synthesize read the committed file exactly as they always have,
+tts_cli.build reads the committed file exactly as it always has,
 and a clone with no Postgres can still ship a pack. That is the promise requirements.txt
 makes, and the reason this is an import/export pair rather than a rewrite of the CLI.
 

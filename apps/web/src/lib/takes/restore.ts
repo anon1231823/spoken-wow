@@ -4,7 +4,7 @@
  * ONE STEP: move the live flag onto that take. No file is read, copied or written. Every
  * take is its own file in the archive, written once when it was cut, and the live one is
  * whichever row says so -- the site plays it from there, and a pack build copies it into
- * Sounds/ (pipelines/lib/sounds.mjs). So a restore is a statement about which take is
+ * Sounds/ (scripts/audio/sounds.mjs). So a restore is a statement about which take is
  * right, the same thing it means for a lore version (lib/zones/lore.ts), and it cannot lose
  * audio because it touches none.
  *

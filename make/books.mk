@@ -17,7 +17,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help db extract import export lookup deploy deploy-copy status remove \
-        pull pull-dry sounds sync check-synced package package-audio release-dry release release-wago release-curse icon test
+        pull-history sounds sync check-synced package package-audio release-dry release release-wago release-curse icon test
 
 PIPELINE := pipelines/books
 QUESTS   := pipelines/quests
@@ -45,13 +45,15 @@ lookup: ## take -> addons/SpokenBooksAudio/Data/Sounds.lua (needs DATABASE_URL)
 # The narration
 #
 # Generation happens on the droplet -- that is where the site runs and where the queue
-# spends the credits -- so the masters live there and come here to be packaged and to be
-# listened to in a client. Audio is not in git; see the root .gitignore.
+# spends the credits -- so the take archive lives there and comes here to be packaged and to
+# be listened to in a client. Audio is not in git; see the root .gitignore.
 #-------------------------------------------------------------------------------
 
 include make/droplet.mk
-REMOTE_BOOKS := /srv/spoken/shared/books/
-LOCAL_BOOKS  := pipelines/books/audio/
+# Books' own archive under the shared audio-history, the directory
+# SPOKEN_BOOKS_AUDIO_HISTORY names in deploy/web/ecosystem.config.js.
+REMOTE_HISTORY := $(REMOTE_ROOT)/shared/audio-history/books/
+LOCAL_HISTORY  := pipelines/books/audio-history/
 
 # macOS ships openrsync as /usr/bin/rsync, which reports itself as "2.6.9 compatible" and
 # rejects --info. Prefer a real rsync 3.x anywhere on PATH.
@@ -59,11 +61,8 @@ RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(comman
 	[ -x "$$r" ] && "$$r" --version 2>/dev/null | head -1 | grep -q 'version 3' && { echo "$$r"; exit 0; }; \
 	done)
 
-# No --delete, unlike the zones targets. Nothing here is irreplaceable in the way a hand
-# imported store is -- every clip can be cut again -- but a mirror that silently removes
-# local files is still the wrong default for a directory somebody may have pulled a subset
-# into. Stale files cost disk; deleted ones cost credits.
-RSYNC_OPTS := -az --info=stats1,progress2 --human-readable
+# No -z: mp3 is already compressed. Never --delete: archived audio is only ever added to.
+RSYNC_OPTS := -a --partial --info=stats1,progress2 --human-readable
 
 # One direction only: production is upstream for every edit and every take. The recipe is
 # shared with quests and zones -- see scripts/db/sync-section.sh. This used to fetch the
@@ -75,21 +74,15 @@ sync: require-droplet ## Replace the local book text and takes with the droplet'
 check-synced: ## Compare the local books data with the droplet's, and prompt if they differ
 	@$(DB_ENV) scripts/db/check-synced.sh books
 
-pull-dry: require-droplet ## Preview what `make books-pull` would fetch
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run -e "$(SSH)" $(DROPLET):$(REMOTE_BOOKS) $(LOCAL_BOOKS)
+pull-history: require-droplet ## Fetch the droplet's archived takes (non-destructive)
+	@mkdir -p $(LOCAL_HISTORY)
+	@$(RSYNC) $(RSYNC_OPTS) -e "$(SSH)" $(DROPLET):$(REMOTE_HISTORY) $(LOCAL_HISTORY)
+	@echo "==> pulled. Build the pack's Sounds/ with:  make books-sounds"
 
-pull: require-droplet ## Fetch the narration from the droplet into pipelines/books/audio
-	@mkdir -p $(LOCAL_BOOKS)
-	@$(RSYNC) $(RSYNC_OPTS) -e "$(SSH)" $(DROPLET):$(REMOTE_BOOKS) $(LOCAL_BOOKS)
-	@echo "==> pulled. Put it where the addon reads it with:  make books-sounds"
-
-# The pack folder the client loads, filled from the store. A copy rather than a symlink to
-# the store directory, because the client follows neither into a folder it does not own --
-# and the pack is what gets zipped for release.
-sounds: ## Copy the narration into addons/SpokenBooksAudio/Sounds
-	@mkdir -p addons/SpokenBooksAudio/Sounds
-	@$(RSYNC) -a $(LOCAL_BOOKS) addons/SpokenBooksAudio/Sounds/
-	@echo "==> $$(find addons/SpokenBooksAudio/Sounds -name '*.mp3' | wc -l | tr -d ' ') mp3 in addons/SpokenBooksAudio/Sounds"
+# The pack folder the client loads and the release zips: not kept, but assembled from the
+# live takes and the archive before every build. See scripts/audio/sounds.mjs.
+sounds: ## Assemble addons/SpokenBooksAudio/Sounds from the live takes and the archive
+	@$(DB_ENV) node scripts/audio/sounds.mjs books
 
 package: ## Zip the addon into dist/ (for a release)
 	@./scripts/books/package.sh
@@ -107,8 +100,7 @@ package: ## Zip the addon into dist/ (for a release)
 # where the client will never look.
 # From the database, against production's data: the lookup table is rebuilt here rather than
 # on the droplet after every generation, which is what the site used to do.
-package-audio: check-synced lookup ## Zip the sound pack into dist/ (for another machine, or a release)
-	@test -d addons/SpokenBooksAudio/Sounds || { echo "no Sounds/ -- run: make books-pull && make books-sounds"; exit 1; }
+package-audio: check-synced sounds lookup ## Zip the sound pack into dist/ (for another machine, or a release)
 	@mkdir -p dist
 	@version=$$(sed -n 's/^## Version: //p' addons/SpokenBooksAudio/SpokenBooksAudio.toc); \
 	 zip_path="$$PWD/dist/SpokenBooksAudio-$$version.zip"; \

@@ -29,37 +29,25 @@ const execFileAsync = promisify(execFile);
 // dropped here -- so every row this module reads names the one value there is.
 export const LANG = BASE_LOCALE;
 
-// Each of these can be overridden by an environment variable, and on the droplet each
-// one is: SPOKEN_ZONES_ROOT points at the current release, and these three point *outside*
-// it. What they have in common is that the app writes them, so leaving them inside a
-// release would mean prune.sh deleting them five deploys later. See deploy/README.md.
-// Unset, which is every local run, they are exactly the repo paths they always were.
-//
-// The environment overrides are what the droplet sets: they point outside the release
-// directory so a deploy cannot move ~700 MB and prune.sh cannot delete it. Unset, which
-// is every local run, these are exactly the repo paths they always were.
+// Two of these can be overridden by an environment variable, and on the droplet both are:
+// they point outside the release directory, so a deploy cannot move them and prune.sh
+// cannot delete them. Unset, which is every local run, they are the repo paths.
 
 export function manifestPath() {
   return process.env.SPOKEN_ZONES_MANIFEST
     || join(ROOT, "pipelines/zones/tools/voice/manifest.json");
 }
 
-// The masters, at full bitrate, inside the pack's high tier. package-audio.sh
-// transcodes down from there.
+// The pack's Sounds/, inside its high tier: assembled from the live takes and the archive
+// by scripts/audio/sounds.mjs before a build, and read by build-lookup, validate-audio and
+// package-audio.sh. Not kept anywhere -- the archive is the only audio there is.
 export function soundsDir() {
-  return process.env.SPOKEN_ZONES_SOUNDS
-    || join(ROOT, "addons", packFolder(BASE_LOCALE, "high"), "Sounds");
+  return join(ROOT, "addons", packFolder(BASE_LOCALE, "high"), "Sounds");
 }
 
-// A sibling of Sounds/, never a subdirectory: validate-audio.mjs walks Sounds/ and
-// would report every archived take as an mp3 with no manifest entry. The same
-// reasoning is written down at ../wow-voiceover/web/src/lib/paths.ts:53.
+// Every take, one directory per file, each written once by the site and never changed.
 //
-// This is the one directory whose loss is permanent: version 1 of each file is the
-// take the corpus was originally cut with, and restoring it is the undo for a re-roll
-// that came out worse.
-// Superseded takes, in the flat audio-history/{file}/v{n}.mp3 layout the droplet
-// already has on disk.
+// This is the one directory whose loss is permanent.
 export function historyDir() {
   return process.env.SPOKEN_ZONES_AUDIO_HISTORY
     || join(ROOT, "pipelines/zones/audio-history");

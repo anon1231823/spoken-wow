@@ -96,9 +96,8 @@ module.exports = {
         // Quests
         //--------------------------------------------------------------------------
 
-        // Audio is shared across releases (1.1 GB, never copied on deploy); the corpus
-        // ships inside each release and moves with a rollback.
-        SPOKEN_QUESTS_AUDIO: `${SHARED}/audio`,
+        // The corpus ships inside each release and moves with a rollback.
+        //
         // The hiccup scan's findings sit beside this file and paths.ts derives their
         // location from it, deliberately: an env var of their own would live here, and this
         // file only reaches the process through `make web-deploy-scripts` -- so a deploy
@@ -111,13 +110,10 @@ module.exports = {
         // they land somewhere no Makefile target backs up.
         SPOKEN_QUESTS_VOICE_SAMPLES: `${SHARED}/voices`,
 
-        // Previous takes of regenerated quest lines. Shared for the strongest version of
-        // the same reason: version 0 of each file is audio that predates this project's
-        // ability to reproduce it, and a release directory is deleted five deploys later.
-        //
-        // A sibling of the store, never inside it: readStoreIndex walks audio/{quests,gossip}
-        // and `make quests-push` rsyncs audio/, so takes living under there would be
-        // mistaken for store files by both.
+        // Every take of every quest line, the live one included: the only place quests
+        // audio lives. Shared for the strongest version of the same reason: some of it
+        // predates this project's ability to reproduce it, and a release directory is
+        // deleted five deploys later.
         SPOKEN_QUESTS_AUDIO_HISTORY: `${SHARED}/audio-history/quests`,
 
         // Rendered pronunciation previews. Shared, and this one is load-bearing in a way
@@ -145,12 +141,8 @@ module.exports = {
         // that expects them.
         SPOKEN_ZONES_ROOT: CURRENT,
 
-        // The zone masters (~795 MB), shared across releases like the quests store. Without
-        // this they would resolve inside the release and a deploy would move them.
-        SPOKEN_ZONES_SOUNDS: `${SHARED}/sounds`,
-
-        // Superseded zone takes, beside the quests ones and separate from them: the two
-        // pipelines number versions independently and share no filenames.
+        // Every zone take, beside the quests ones and separate from them: the two sections
+        // number versions independently and share no filenames.
         SPOKEN_ZONES_AUDIO_HISTORY: `${SHARED}/audio-history/zones`,
 
         // The exported manifest. In shared/ rather than the release because the app writes
@@ -162,13 +154,9 @@ module.exports = {
         // Books
         //--------------------------------------------------------------------------
 
-        // The book page clips. Empty at first -- nothing has been narrated yet -- but the
-        // variable has to be set from the first deploy: lib/books/audio.ts falls back to a
-        // path inside the release, and a release directory is deleted five deploys later.
-        SPOKEN_BOOKS_AUDIO: `${SHARED}/books`,
-
-        // Superseded book takes, beside the other two sections' and separate from them.
-        // Each pipeline numbers versions independently and they share no filenames.
+        // Every book take, beside the other two sections' and separate from them. Has to be
+        // set: lib/books/audio.ts falls back to a path inside the release, and a release
+        // directory is deleted five deploys later.
         SPOKEN_BOOKS_AUDIO_HISTORY: `${SHARED}/audio-history/books`,
 
         // DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, SPOKEN_SECRET_KEY and

@@ -9,7 +9,7 @@
  * row; committing adds both and touches nothing already there. There is no "store" holding
  * whichever take is live: which take is live is the row's `isCurrent`, and the addon's
  * Sounds/ folder is assembled from the live rows when a pack is built
- * (pipelines/lib/sounds.mjs). So a new take cannot overwrite an old one, and there is no
+ * (scripts/audio/sounds.mjs). So a new take cannot overwrite an old one, and there is no
  * ordering between a store and the rows for a crash to fall in the middle of.
  *
  * THE ORDER: the bytes first, under a name that includes their hash, then the row. A crash

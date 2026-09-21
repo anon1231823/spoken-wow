@@ -95,9 +95,9 @@ THRESHOLD="${THRESHOLD:-80}"
 #
 # CONTENT-ADDRESSED, so a cache hit cannot be stale: the entry is named for the
 # md5 of the master it came from, and a regenerated line hashes differently and
-# misses. Keying on mtime would be cheaper and wrong - `make pull` copies the
-# droplet's timestamps, so a freshly pulled take can be older than the entry it
-# ought to replace.
+# misses. Keying on mtime would be cheaper and wrong - audio/ is assembled afresh
+# from the archive before every build, so an mtime says when it was assembled, not
+# what the clip holds.
 CACHE_ROOT="${CACHE_ROOT:-$QUESTS/audio-transcoded}"
 
 PYTHON="${PYTHON:-$([ -x "$QUESTS/.venv/bin/python" ] && echo "$QUESTS/.venv/bin/python" || command -v python3)}"

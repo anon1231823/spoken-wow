@@ -11,7 +11,7 @@
  * the addon's own path: gossip/31ab….mp3 is archived under audio-history/gossip/31ab…/.
  * What a take's archived file is called is its row's business (`archiveFile`); this only
  * says which directory it is in. There is no live copy anywhere else: the live take is a
- * flag on its row, and a pack build copies it to the addon's path (pipelines/lib/sounds.mjs).
+ * flag on its row, and a pack build copies it to the addon's path (scripts/audio/sounds.mjs).
  *
  * A total Record rather than a switch, for the reason lib/generation/worker.ts gives:
  * adding a section and forgetting one of these is then a type error rather than a route

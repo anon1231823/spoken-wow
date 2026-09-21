@@ -7,14 +7,14 @@ up that no player can reach. Neither is a text defect an override can fix, so ne
 belongs in the queue, the store, or the module.
 
 The decision is made in the web app and lives in Postgres, which is where a collaborator
-can make it with a reason attached. `make pull-ignores` exports it to corpus/ignored.json,
-committed beside the corpus, and this module is how the Python side and the Makefile read
-that export. The file is a snapshot: the database stays the authority, and a checkout with
+can make it with a reason attached. `make quests-export-ignores` exports it to
+corpus/ignored.json, committed beside the corpus, and this module is how the pack build
+reads that export. The file is a snapshot: the database stays the authority, and a checkout with
 no export simply ignores nothing.
 
 A LINE IS IGNORED, A FILE IS ONLY DERIVED. 1,076 mp3s are shared by several NPCs, so a file
 may be addressed by a dead line and a live one at once. ignored_files refuses to name such a
-file: excluding it from an rsync would strand the line that still needs it.
+file: leaving it out of a pack would strand the line that still needs it.
 """
 import json
 import os
@@ -39,10 +39,8 @@ def ignored_line_ids(path: str = DEFAULT_IGNORED_PATH) -> set:
 
 
 def ignored_files(corpus: dict, ignored: dict) -> list:
-    """Store-relative paths whose every corpus line is ignored, sorted.
-
-    Sorted because this feeds an rsync --exclude-from and a diff of two runs should be a
-    diff of the decisions, not of dictionary order.
+    """Addon-relative paths whose every corpus line is ignored, sorted, so two runs differ
+    only where the decisions do.
     """
     owners = {}
     for line in corpus["lines"]:

@@ -4,7 +4,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy \
         status remove clean voice voice-zones lookup export \
-        push push-dry pull pull-dry audio-status ssh-check sync check-synced \
+        pull-history history-status sounds ssh-check sync check-synced \
         icon lore-import lore-export lore-check lore-rewrite aliases languages locale-check \
         release release-dry release-wago release-curse
 
@@ -159,10 +159,11 @@ locale-check: ## Report per-language string coverage, and check Languages.lua is
 # The droplet
 #
 # The site is deployed by GitHub Actions on every push to master. Everything here is the
-# half CI does not do: the audio store and the database contents. See deploy/web/README.md.
+# half CI does not do: bringing production's audio and database home to build a pack from.
+# See deploy/web/README.md.
 #
-#   make push              ~700MB of mp3s, the first time and after a local bulk run
-#   make sync              bring production's lore and takes home
+#   make pull-history      production's archived takes, the only audio there is
+#   make sync              production's lore and takes
 #
 # Droplet setup, releases and rollback are make/web.mk's: one /srv/spoken tree, one
 # deploy, one place holding the guards.
@@ -170,8 +171,8 @@ locale-check: ## Report per-language string coverage, and check Languages.lua is
 
 include make/droplet.mk
 
-# /srv/spoken, not /srv/zonelore. The cutover has run: the sounds and the take history
-# live under /srv/spoken/shared (symlinks into the block volume at /mnt/voice/spoken) and
+# /srv/spoken, not /srv/zonelore. The cutover has run: the take archive lives under
+# /srv/spoken/shared (symlinks into the block volume at /mnt/voice/spoken) and
 # the `spoken` pm2 app serves them. REMOTE_ROOT is set in make/droplet.mk.
 
 
@@ -181,25 +182,13 @@ RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(comman
 	[ -x "$$r" ] && "$$r" --version 2>/dev/null | head -1 | grep -q 'version 3' && { echo "$$r"; exit 0; }; \
 	done)
 
-# No -z: mp3 is already compressed, so it is pure CPU for ~0 gain.
-# --delete keeps the two stores in exact correspondence, which is what makes the
-# "missing" counts in the explorer trustworthy.
-# -e is not optional: without it rsync spawns a plain ssh that cannot authenticate.
-RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)"
-
-# The paths mirror soundsDir()/manifestPath() in pipelines/zones/tools/voice/store.mjs.
-LOCAL_SOUNDS  := addons/SpokenZonesAudio/Sounds/
-# Lowercase on the new store, where it was shared/Sounds on /srv/zonelore. The volume is
-# case-sensitive, so the old spelling is a new empty directory rather than an error.
-REMOTE_SOUNDS_DIR := sounds
-REMOTE_SOUNDS  := $(DROPLET):$(REMOTE_ROOT)/shared/$(REMOTE_SOUNDS_DIR)/
 # Zones' own archive, beside quests' and books' under one shared audio-history -- the
 # directory SPOKEN_ZONES_AUDIO_HISTORY names in deploy/web/ecosystem.config.js. The root
 # holds all three sections, so syncing against it would pull the other two sections' takes
-# into this one's folder, or push this section's directories where nothing reads them.
+# into this one's folder.
 REMOTE_HISTORY := $(DROPLET):$(REMOTE_ROOT)/shared/audio-history/zones/
-# Never --delete for an archive: archived audio is append-only, and a mirror would remove
-# takes one side has and the other does not -- on the droplet, the takes cut through the UI.
+# No -z: mp3 is already compressed. Never --delete: archived audio is only ever added to.
+# -e is not optional: without it rsync spawns a plain ssh that cannot authenticate.
 HISTORY_RSYNC_OPTS := -a --partial --human-readable --info=progress2 -e "$(SSH)"
 
 # Fail with an explanation rather than an rsync usage dump or a bare publickey refusal.
@@ -219,52 +208,24 @@ ssh-check: require-droplet ## Confirm the droplet is reachable and set up
 	$(preflight)
 	@$(SSH) $(DROPLET) 'echo "ok: $$(hostname)"; ls -d $(REMOTE_ROOT)/bin $(REMOTE_ROOT)/shared 2>/dev/null || echo "missing tree - run: make bootstrap"'
 
-push-dry: ## Preview what `make push` would send to the droplet
+# The archive is the only audio: every take the site has cut, one file each, never changed.
+# It comes here one way, to be packaged and listened to; nothing on this machine makes a
+# take, so there is nothing to send back.
+pull-history: require-droplet ## Fetch the droplet's archived takes (non-destructive)
 	$(preflight)
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(LOCAL_SOUNDS) $(REMOTE_SOUNDS)
+	@mkdir -p pipelines/zones/audio-history
+	$(RSYNC) $(HISTORY_RSYNC_OPTS) $(REMOTE_HISTORY) pipelines/zones/audio-history/
+	@echo "==> pulled. Build the pack's Sounds/ with:  make zones-sounds"
 
-# --delete propagates local deletions, and the droplet is where regeneration happens
-# through the UI, so it can be the newer side. `make pull` first if in doubt: this is a
-# second copy of the audio, not a backup.
-push: require-droplet ## Send the audio store to the droplet (DESTRUCTIVE: --delete)
-	$(preflight)
-	@echo "==> dry run (local -> $(DROPLET))"
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(LOCAL_SOUNDS) $(REMOTE_SOUNDS) | tail -20
-	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	@$(RSYNC) $(RSYNC_OPTS) $(LOCAL_SOUNDS) $(REMOTE_SOUNDS)
-	@[ -d pipelines/zones/audio-history ] && $(RSYNC) $(HISTORY_RSYNC_OPTS) pipelines/zones/audio-history/ $(REMOTE_HISTORY) || true
-	@echo "==> pushed"
+history-status: require-droplet ## Compare archived take count and size on both sides
+	@echo "local:   $$(find pipelines/zones/audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ') takes, $$(du -sh pipelines/zones/audio-history 2>/dev/null | cut -f1 || echo 0)"
+	@$(SSH) $(DROPLET) 'echo "droplet: $$(find $(REMOTE_ROOT)/shared/audio-history/zones -name "*.mp3" 2>/dev/null | wc -l | tr -d " ") takes, $$(du -sh $(REMOTE_ROOT)/shared/audio-history/zones 2>/dev/null | cut -f1)"' \
+	  || echo "droplet unreachable (try: make ssh-check)"
 
-pull-dry: ## Preview what `make pull` would change locally
-	$(preflight)
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE_SOUNDS) $(LOCAL_SOUNDS)
-
-pull: require-droplet ## Fetch the audio store from the droplet (DESTRUCTIVE: --delete)
-	$(preflight)
-	@echo "==> dry run ($(DROPLET) -> local)"
-	@echo "    --delete will REMOVE local files the droplet does not have."
-	@mkdir -p $(LOCAL_SOUNDS)
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(REMOTE_SOUNDS) $(LOCAL_SOUNDS) | tail -20
-	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	@$(RSYNC) $(RSYNC_OPTS) $(REMOTE_SOUNDS) $(LOCAL_SOUNDS)
-	@[ -d pipelines/zones/audio-history ] && $(RSYNC) $(HISTORY_RSYNC_OPTS) $(REMOTE_HISTORY) pipelines/zones/audio-history/ || true
-	@echo "==> pulled. Rebuild the lookup table with:  make sync && make lookup"
-	@echo "    then package it with:  make package-audio"
-
-audio-status: require-droplet ## What is on disk locally and on the droplet
-	@printf 'local     live      %5s mp3  %s\n' \
-		"$$(find $(LOCAL_SOUNDS) -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
-		"$$(du -sh $(LOCAL_SOUNDS) 2>/dev/null | cut -f1)"
-	@printf 'local     archived  %5s mp3  %s\n' \
-		"$$(find pipelines/zones/audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')" \
-		"$$(du -sh pipelines/zones/audio-history 2>/dev/null | cut -f1)"
-	@$(SSH) $(DROPLET) 'printf "droplet   live      %5s mp3  %s\n" \
-		"$$(find $(REMOTE_ROOT)/shared/$(REMOTE_SOUNDS_DIR) -name "*.mp3" 2>/dev/null | wc -l | tr -d " ")" \
-		"$$(du -sh $(REMOTE_ROOT)/shared/$(REMOTE_SOUNDS_DIR) 2>/dev/null | cut -f1)"; \
-	  printf "droplet   archived  %5s mp3  %s\n" \
-		"$$(find $(REMOTE_ROOT)/shared/audio-history -name "*.mp3" 2>/dev/null | wc -l | tr -d " ")" \
-		"$$(du -sh $(REMOTE_ROOT)/shared/audio-history 2>/dev/null | cut -f1)"' 2>/dev/null \
-	  || echo "droplet   unreachable (try: make ssh-check)"
+# The pack's Sounds/ is not kept: it is assembled from the live takes and the archive, and
+# made again before every build. See scripts/audio/sounds.mjs.
+sounds: ## Assemble addons/SpokenZonesAudio/Sounds from the live takes and the archive
+	@$(DB_ENV) node scripts/audio/sounds.mjs zones
 
 #-------------------------------------------------------------------------------
 # Moving the database between machines
@@ -287,7 +248,7 @@ check-synced: ## Compare the local zones data with the droplet's, and prompt if 
 
 # From the database, against production's data: the lookup table is rebuilt here rather than
 # on the droplet after every generation, which is what the site used to do.
-package-audio: check-synced lookup validate-audio ## Build the sound-pack zip
+package-audio: check-synced sounds lookup validate-audio ## Build the sound-pack zip
 	@./scripts/zones/package-audio.sh
 
 release-dry: ## Show what `make release` would upload to CurseForge and Wago

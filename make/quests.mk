@@ -1,20 +1,20 @@
-# Audio store sync and droplet plumbing for the voiceline explorer.
+# Droplet plumbing and packaging for the quests addon and its sound packs.
 #
-# The audio store (1.1 GB, 9,456 mp3s) is gitignored and never travels through CI - it
-# moves between your machine and the droplet with rsync, only when you say so.
+# The audio is the take archive (audio-history/), gitignored and never through CI. Takes
+# are cut on the droplet, through the site, so it only ever comes home -- `make pull-history`
+# -- to be built into a pack.
 #
 # The host, the deploy user and the key come from make/droplet.mk, which reads them
 # out of the environment. Override for one invocation with DROPLET=deploy@<host>.
 include make/droplet.mk
 
 
-# /srv/spoken, not /srv/voiceover. The cutover has run: the audio store, the voices and the
-# take history live under /srv/spoken/shared (symlinks into the block volume at
+# /srv/spoken, not /srv/voiceover. The cutover has run: the voices and the take archive
+# live under /srv/spoken/shared (symlinks into the block volume at
 # /mnt/voice/spoken), the `spoken` pm2 app is what serves them, and `voiceover` is stopped.
 # Pointing these at the old tree is not an error rsync can report -- it finds a complete,
 # consistent store there and syncs happily against a site nobody is using, which is how a
 # fortnight of regenerated takes went unnoticed.
-REMOTE_AUDIO := $(REMOTE_ROOT)/shared/audio/
 REMOTE_VOICES := $(REMOTE_ROOT)/shared/voices/
 # Quests' own archive under the shared audio-history -- the directory
 # SPOKEN_QUESTS_AUDIO_HISTORY names in deploy/web/ecosystem.config.js. The root holds all
@@ -22,24 +22,16 @@ REMOTE_VOICES := $(REMOTE_ROOT)/shared/voices/
 REMOTE_HISTORY := $(REMOTE_ROOT)/shared/audio-history/quests/
 REMOTE_PM2   := pm2
 
-# The ignore list and the rsync exclusion file derived from it.
-#
-# pipelines/quests/corpus/ignored.json is committed and written from the database by
-# `make quests-export-ignores`;
-# .rsync-ignored is regenerated before every transfer and gitignored. Deriving it each time
-# rather than committing it means a stale exclusion cannot survive a decision being undone.
 # Passed straight through to scripts/package-audio.sh, which documents each one. Empty
 # means the script's own default, so `make pack` needs no arguments to do the usual thing.
 VERSION ?=
 ENCODE  ?=
 JOBS    ?=
 
-IGNORED_JSON := pipelines/quests/corpus/ignored.json
-IGNORED_LIST := .rsync-ignored
 # The pipeline's own interpreter, and its own directory: cli-main.py and the venv are under
 # pipelines/quests/, while every path in this file is relative to the repo root because the
 # dispatcher runs it from there. Resolving .venv/bin/python against the root found nothing,
-# fell back to the system python3, and every push/pull target died in its preflight on a
+# fell back to the system python3, and every target calling the CLI died on a
 # cli-main.py that was never there -- the one thing the merge moved and this did not follow.
 QUESTS_DIR   := pipelines/quests
 PYTHON       ?= $(shell [ -x $(QUESTS_DIR)/.venv/bin/python ] && echo $(abspath $(QUESTS_DIR)/.venv/bin/python) || command -v python3)
@@ -51,22 +43,8 @@ RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(comman
 	done)
 
 
-# No -z: mp3 is already compressed, so it is pure CPU for ~0 gain.
-# --delete keeps the two stores in exact correspondence, which is what makes the "missing
-# audio" badges in the UI trustworthy - see isGap() in apps/web/src/lib/search.ts.
-#
-# --exclude-from keeps the lines nobody will ever voice out of both directions. It also stops
-# --delete removing what it excludes, on either side: an ignored line's audio is left where it
-# already is rather than destroyed, because ignoring is a decision about a line and not a
-# licence to throw away a take. See tts_cli/ignores.py.
-RSYNC_OPTS := -a --delete --partial --human-readable --info=progress2 -e "$(SSH)" \
-	--exclude-from=$(IGNORED_LIST)
-
 # Fail with an explanation rather than an rsync usage dump or a silent no-op reload.
 define preflight
-	@$(PYTHON) $(QUESTS_DIR)/cli-main.py ignored-files --corpus $(QUESTS_DIR)/corpus/corpus.json.gz \
-	  --ignored $(IGNORED_JSON) > $(IGNORED_LIST) \
-	  || { echo "could not derive $(IGNORED_LIST) from $(IGNORED_JSON)"; exit 1; }
 	@[ -n "$(RSYNC)" ] || { echo "No rsync 3.x found. macOS ships openrsync, which lacks --info."; \
 	                        echo "Install one:  brew install rsync"; exit 1; }
 	@case "$(DROPLET)" in root@*) \
@@ -76,8 +54,8 @@ define preflight
 endef
 
 .DEFAULT_GOAL := help
-.PHONY: help push pull push-dry pull-dry audio-status pull-voices push-voices voices-status \
-        pull-history push-history history-status package package-audio \
+.PHONY: help pull-voices push-voices voices-status \
+        pull-history history-status sounds package package-audio \
         package-audio-complete package-meta push-complete icon \
         downloads-status \
         factions release release-audio release-wago release-curse \
@@ -95,75 +73,14 @@ help: ## Show this help
 # test-player moved to the root Makefile: tests/lua/ is shared by every addon now,
 # not just this one.
 
-# --- audio store ----------------------------------------------------------------------
-
-push-dry: require-droplet ## Preview what `make push` would change on the droplet
-	$(preflight)
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO)
-
-pull-dry: require-droplet ## Preview what `make pull` would change locally
-	$(preflight)
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) pipelines/quests/audio/
-
-# Which local files would overwrite something NEWER on the droplet.
-#
-# Two dry runs and a set difference, no remote script. `-u` skips files the receiver has a
-# newer copy of, so anything in the first listing and not the second is exactly a file the
-# droplet has changed since you last pulled - which the web app now does every time someone
-# regenerates a line. Before that existed the droplet could only ever be stale; now it is
-# usually the newer side, and --delete would take the difference with it.
-#
-# -i is load-bearing: without it rsync prints bare filenames, `grep '^>f'` matches nothing,
-# and the guard passes every time while looking like it ran.
-define freshness
-	@a=$$(mktemp); b=$$(mktemp); \
-	$(RSYNC) $(RSYNC_OPTS) -i --dry-run    pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO) | grep '^>f' | awk '{print $$2}' | sort > $$a; \
-	$(RSYNC) $(RSYNC_OPTS) -i -u --dry-run pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO) | grep '^>f' | awk '{print $$2}' | sort > $$b; \
-	newer=$$(comm -23 $$a $$b); rm -f $$a $$b; \
-	if [ -n "$$newer" ]; then \
-	  echo; echo "REFUSING: the droplet has newer audio for these files:"; \
-	  echo "$$newer" | sed 's/^/    /' | head -30; \
-	  echo "$$newer" | wc -l | xargs printf '    (%s files)\n'; \
-	  echo; echo "Those takes were made on the droplet and are not here. Run 'make pull' first,"; \
-	  echo "or 'make push FORCE=1' to overwrite them anyway."; \
-	  [ "$(FORCE)" = 1 ] || exit 1; \
-	  echo "FORCE=1 given, continuing."; \
-	fi
-endef
-
-push: require-droplet ## Upload pipelines/quests/audio/ to the droplet (refuses to clobber newer droplet takes)
-	$(preflight)
-	$(freshness)
-	@echo "==> dry run (local -> $(DROPLET))"
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO) | tail -20
-	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	$(RSYNC) $(RSYNC_OPTS) pipelines/quests/audio/ $(DROPLET):$(REMOTE_AUDIO)
-	@# No pm2 reload: nothing in the request path caches the store any more. Whether a line
-	@# has audio is a take row, and this push does not change one. The rows are the record
-	@# of what was generated; the store is a cache of the bytes, which this keeps in step.
-	@echo "==> pushed"
-
-pull: require-droplet ## Download the droplet's audio store into pipelines/quests/audio/ (DESTRUCTIVE: --delete)
-	$(preflight)
-	@echo "==> dry run ($(DROPLET) -> local)"
-	@echo "    --delete will REMOVE local files the droplet does not have."
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run $(DROPLET):$(REMOTE_AUDIO) pipelines/quests/audio/ | tail -20
-	@printf 'Proceed? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	$(RSYNC) $(RSYNC_OPTS) $(DROPLET):$(REMOTE_AUDIO) pipelines/quests/audio/
-	@echo "==> pulled"
-	@# --delete means a local file can have gone, and no take row is touched for it. A take
-	@# is a row; a clip this machine does not happen to hold is a missing file, which the
-	@# player reports when somebody asks for it. Retiring rows to match a local rsync would
-	@# make the laptop's disk an authority on what production has generated.
-
 # --- voice clips ----------------------------------------------------------------------
 #
 # The clips a voice was cloned from. Small (kilobytes each) but irreplaceable: an ElevenLabs
 # voice cannot be exported, so losing these means a voice can never be remade - the exact
 # failure that left this project with inherited voices it could not reproduce.
 #
-# Uploads happen on the droplet through the web UI, so unlike the audio store the droplet is
-# usually the newer side. Neither target uses --delete for that reason: these are two
+# Uploads happen on the droplet through the web UI, so the droplet is usually the newer
+# side. Neither target uses --delete for that reason: these are two
 # collections being kept in sync by hand, not a mirror with an authoritative side.
 
 pull-voices: require-droplet ## Fetch voice clips from the droplet (non-destructive)
@@ -183,29 +100,27 @@ voices-status: require-droplet ## Compare clip count and size on both sides
 	@echo "local:  $$(find pipelines/quests/voice/samples -type f 2>/dev/null | wc -l | tr -d ' ') clips, $$(du -sh pipelines/quests/voice/samples 2>/dev/null | cut -f1 || echo 0)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_VOICES) -type f 2>/dev/null | wc -l | tr -d " ") clips, $$(du -sh $(REMOTE_VOICES) 2>/dev/null | cut -f1)"'
 
-# --- take history --------------------------------------------------------------------
+# --- take archive -------------------------------------------------------------------
 #
-# Previous takes of regenerated lines -- including audio the CLI narrated before this project
-# could reproduce it, so this is the one directory whose loss is permanent. Small next to the
-# store, and like the voice clips the droplet is usually the newer side -- so neither target
-# uses --delete, and archived audio is never removed by a sync.
+# Every take of every line, the live one included: the only quests audio there is, and the
+# one directory whose loss is permanent, since some of it predates this project's ability to
+# reproduce it. Takes are cut on the droplet, through the site, so it only ever comes home,
+# and never with --delete.
 
-pull-history: require-droplet ## Fetch previous takes from the droplet (non-destructive)
+pull-history: require-droplet ## Fetch the droplet's archived takes (non-destructive)
 	$(preflight)
 	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
 		$(DROPLET):$(REMOTE_HISTORY) pipelines/quests/audio-history/
-	@echo "==> pulled into pipelines/quests/audio-history/"
-
-push-history: require-droplet ## Upload previous takes to the droplet (non-destructive)
-	$(preflight)
-	@[ -d pipelines/quests/audio-history ] || { echo "no pipelines/quests/audio-history/ to push"; exit 1; }
-	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
-		pipelines/quests/audio-history/ $(DROPLET):$(REMOTE_HISTORY)
-	@echo "==> pushed"
+	@echo "==> pulled into pipelines/quests/audio-history/. Build a pack's audio with:  make quests-sounds"
 
 history-status: require-droplet ## Compare take count and size on both sides
 	@echo "local:  $$(find pipelines/quests/audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ') takes, $$(du -sh pipelines/quests/audio-history 2>/dev/null | cut -f1 || echo 0)"
 	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_HISTORY) -name "*.mp3" 2>/dev/null | wc -l | tr -d " ") takes, $$(du -sh $(REMOTE_HISTORY) 2>/dev/null | cut -f1)"'
+
+# The folder a pack is built from, pipelines/quests/audio/: not kept, but assembled from the
+# live takes and the archive before every build. See scripts/audio/sounds.mjs.
+sounds: ## Assemble pipelines/quests/audio from the live takes and the archive
+	@$(DB_ENV) node scripts/audio/sounds.mjs quests
 
 # --- packaging ------------------------------------------------------------------------
 #
@@ -252,7 +167,7 @@ icon: ## Rebuild the addons' icon.tga and the minimap BLP from pipelines/quests/
 package: ## Zip the player addon into dist/: one Blizzard zip, one per legacy client
 	@./scripts/quests/package.sh
 
-package-audio: ## Transcode, build and zip the five sound packs into dist/ (VERSION=1.4.0)
+package-audio: check-synced sounds ## Transcode, build and zip the five sound packs into dist/ (VERSION=1.4.0)
 	@VERSION=$(VERSION) ENCODE=$(if $(ENCODE),$(ENCODE),ogg-q0-44k) MODULE=SpokenQuestsAudio \
 	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
 
@@ -262,7 +177,7 @@ package-audio: ## Transcode, build and zip the five sound packs into dist/ (VERS
 # so installing it beside them is possible but pointless. The site hosts it: `push-complete`
 # below, under the one current name -- see the note there.
 
-package-audio-complete: ## Build the whole corpus as one folder for the site (~1.3 GB)
+package-audio-complete: check-synced sounds ## Build the whole corpus as one folder for the site (~1.3 GB)
 	@VERSION=$(VERSION) ENCODE=ogg-q0-44k PACKS=all \
 	  MODULE_NAME=SpokenQuestsAudioComplete TITLE="Spoken Quests Audio: Complete" \
 	  JOBS=$(JOBS) ./scripts/quests/package-audio.sh
@@ -387,10 +302,6 @@ sync: require-droplet ## Replace the local quests corpus and takes with the drop
 # the reasoning; every section's packaging runs the same one.
 check-synced: ## Compare the local quests data with the droplet's, and prompt if they differ
 	@$(DB_ENV) scripts/db/check-synced.sh quests
-
-audio-status: require-droplet ## Compare file count and size on both sides
-	@echo "local:  $$(find audio -name '*.mp3' | wc -l | tr -d ' ') files, $$(du -sh audio | cut -f1)"
-	@$(SSH) $(DROPLET) 'echo "remote: $$(find $(REMOTE_AUDIO) -name "*.mp3" | wc -l | tr -d " ") files, $$(du -sh $(REMOTE_AUDIO) | cut -f1)"'
 
 # One store at a time, for the case a release half-landed: a zip CurseForge took and Wago
 # refused, or the other way round. Re-running `release` would upload the file twice to the

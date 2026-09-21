@@ -17,17 +17,27 @@ every address the addons have ever emitted still resolves.
     app.env               secrets, mode 600                    on root
     ecosystem.config.js   pm2's config, `make web-deploy-scripts`  on root
     manifest.json         the zones manifest, rewritten on drain   on root
-    audio/          -> the quests store              ~3.1 GB  \
-    sounds/         -> the zones masters             ~453 MB   |
-    audio-history/  -> superseded takes, quests/ and zones/     > symlinks to
+    audio/          -> the old quests store, frozen  ~3.1 GB  \
+    sounds/         -> the old zones store, frozen   ~453 MB   |
+    books/          -> the old books store, frozen             |
+    audio-history/  -> every take: quests/ zones/ books/        > symlinks to
     voices/         -> clone clips                              |  /mnt/voice
     audio-previews/ -> rendered pronunciation previews          |
     downloads/      -> the complete sound pack, served off disk /
 
 /mnt/voice/spoken/        a 30 GB block volume; `deploy/web/store.sh` sets it up
   .store                  marker: present only while the volume is mounted
-  audio/ sounds/ audio-history/{quests,zones}/ voices/ audio-previews/ downloads/
+  audio/ sounds/ books/ audio-history/{quests,zones,books}/ voices/ audio-previews/ downloads/
 ```
+
+**`audio-history/` is the only audio.** Every take is one file there, written once by the
+site and never changed; which take is live is a flag on its row, and a sound pack is built
+by copying the live takes out of it (`scripts/audio/sounds.mjs`). `audio/`, `sounds/` and
+`books/` are the stores each section used to overwrite with its live take. Nothing reads or
+writes them since the take table became the record
+(`one-off/2026-09-converge-takes/`, which hard-linked their live clips into the archive);
+they stay only so a rollback to a release from before that still has its audio, and a
+cleanup may remove them later.
 
 Everything under `shared/` is there for one reason: a release directory is deleted five
 deploys later, and every one of those is either irreplaceable or was paid for.
@@ -39,8 +49,8 @@ the bytes live on `/mnt/voice`, a block volume that can be resized without touch
 droplet.
 
 `shared/<store>` reaches it through a symlink, so that name still means what it meant:
-`ecosystem.config.js` builds every path variable from it, `make/quests.mk` and
-`make/zones.mk` rsync into it, nginx aliases `/downloads/` at it. One path to reason about,
+`ecosystem.config.js` builds every path variable from it, each section's `pull-history`
+rsyncs out of it, nginx aliases `/downloads/` at it. One path to reason about,
 and the disk it sits on is an implementation detail.
 
 ```bash
@@ -69,13 +79,12 @@ no longer lives in is one somebody sets on the wrong box.
 |---|---|---|
 | `SPOKEN_QUESTS_CORPUS` | `current/pipelines/quests/corpus/corpus.json.gz` | per release |
 | `SPOKEN_QUESTS_VOICE_CONFIG` | `current/pipelines/quests/voice` | per release |
-| `SPOKEN_QUESTS_AUDIO` | `shared/audio` | shared; a symlink onto `/mnt/voice` |
 | `SPOKEN_QUESTS_AUDIO_HISTORY` | `shared/audio-history/quests` | shared; **must be set**, or the archive of every take — including audio nothing can reproduce — lands in a release |
 | `SPOKEN_QUESTS_VOICE_SAMPLES` | `shared/voices` | shared; **must be set**, or clone clips land where nothing backs them up |
 | `SPOKEN_QUESTS_PREVIEWS` | `shared/audio-previews` | shared; **must be set**, or previews land inside `releases/`, where `prune.sh` counts them as a release and eventually deletes them |
 | `SPOKEN_ZONES_ROOT` | `current` | per release; the zones pipeline resolves its own paths from it |
-| `SPOKEN_ZONES_SOUNDS` | `shared/sounds` | shared |
 | `SPOKEN_ZONES_AUDIO_HISTORY` | `shared/audio-history/zones` | shared |
+| `SPOKEN_BOOKS_AUDIO_HISTORY` | `shared/audio-history/books` | shared; **must be set**, for the reason the quests one must |
 | `SPOKEN_ZONES_MANIFEST` | `shared/manifest.json` | shared; the app rewrites it whenever a batch drains |
 
 Five more come from `shared/app.env`, which `ecosystem.config.js` parses and merges into the
@@ -257,8 +266,8 @@ location straight at the directory, so the file never passes through the app.
 make web-releases                  # list, marking the live one
 make web-rollback                  # one release older
 make web-rollback RELEASE=20260727-2143-a1b2c3d
-make quests-audio-status           # store parity between local and droplet
-make zones-audio-status
+make quests-history-status         # archive parity between local and droplet
+make zones-history-status
 make web-logs                      # pm2 logs spoken
 ```
 
@@ -334,19 +343,17 @@ interrupted batch waits.
 
 ## Gotchas worth knowing
 
-- **`make quests-push` refuses to overwrite newer droplet audio.** Regeneration happens on
-  the droplet through the web UI, so it is usually the newer side — and `--delete` would take
-  the difference with it. Two rsync dry runs, one with `-u`, name exactly the files the
-  droplet has changed since you last pulled. `make quests-pull` first, or `FORCE=1` to
-  overwrite anyway.
-- **`audio-history/` is the one directory whose loss is permanent.** Version 0 of each file
-  is audio that predates this project's ability to reproduce it — the same failure that left
-  this project with voices it could not remake. `make quests-pull-history` it somewhere safe.
+- **Audio only ever comes home.** Takes are cut on the droplet, through the site, and nowhere
+  else, so every sync of audio runs droplet to laptop (`make <section>-pull-history`) and
+  none of them deletes anything.
+- **`audio-history/` is the one directory whose loss is permanent.** Some of it is audio that
+  predates this project's ability to reproduce it — the same failure that left this project
+  with voices it could not remake. `make <section>-pull-history` it somewhere safe.
 - **`cp -a`, never `cp -r`, when assembling a release.** pnpm's `node_modules/next` is a
   symlink into `.pnpm/`; a dereferencing copy (which is what BSD `cp -r` does) detaches it
   from its siblings and the bundle dies at boot with
   `Cannot find module 'styled-jsx/package.json'`.
-- **The droplet is a second copy of the audio, not a backup.** `make quests-push` propagates
-  local deletions within seconds. Keep the real backup wherever it is today.
+- **The droplet is the only copy of the audio, not a backup.** Keep the real backup
+  wherever it is today.
 - **`pm2 save` runs on every activate**, which is what lets pm2's systemd unit resurrect the
   app after a reboot. Nothing is saved until the first successful deploy.
