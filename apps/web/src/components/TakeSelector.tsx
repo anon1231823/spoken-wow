@@ -5,10 +5,11 @@ import { ChevronDown, Loader2, Pause, Play, RotateCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Source } from "@/lib/generation/client";
+
 // Type-only, so it is erased from the bundle and the store's server-only guard never runs.
 import type { Take } from "@/lib/takes/store";
 import { cn } from "@/lib/utils";
+import type { Source } from "@/lib/sections";
 
 function when(iso: string): string {
   const date = new Date(iso);

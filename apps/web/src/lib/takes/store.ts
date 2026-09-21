@@ -19,10 +19,10 @@ import "server-only";
 import path from "node:path";
 
 import { db, query } from "@/lib/db";
-import type { Source } from "@/lib/generation/queue";
 
 import { archiveNameFor } from "./archive";
 import { historyDirOf, storePathOf } from "./adapters";
+import type { Source } from "@/lib/sections";
 
 export type Take = {
   version: number;

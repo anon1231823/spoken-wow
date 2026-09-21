@@ -27,10 +27,11 @@ import { NextRequest } from "next/server";
 
 import { requireRegenerate } from "@/lib/generation/authz";
 import { parseRange } from "@/lib/range";
-import { isSource } from "@/lib/reports/reports";
+
 import { streamOf } from "@/lib/stream";
 import { isAddressableFile } from "@/lib/takes/files";
 import { takePath } from "@/lib/takes/store";
+import { isSource } from "@/lib/sections";
 
 export const dynamic = "force-dynamic";
 

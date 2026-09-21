@@ -12,9 +12,10 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 
 import { closeDb, db } from "@/lib/db";
 import * as queue from "./queue";
-import { createBatch, enqueue, type QueueEntry, type Source } from "./queue";
+import { createBatch, enqueue, type QueueEntry } from "./queue";
 import type { RegenerateResult } from "./regenerate";
 import { backoffFor, startWorker } from "./worker";
+import type { Source } from "@/lib/sections";
 
 let prefix: string;
 const batches: string[] = [];

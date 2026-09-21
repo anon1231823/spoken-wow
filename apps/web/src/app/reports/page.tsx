@@ -5,15 +5,9 @@ import { notFound } from "next/navigation";
 import ReportTable from "@/components/ReportTable";
 import { auth } from "@/lib/auth";
 import { canRegenerate } from "@/lib/permissions";
-import {
-  isCategory,
-  isSource,
-  isStatus,
-  type Category,
-  type Source,
-  type Status,
-} from "@/lib/reports/reports";
+import { isCategory, isStatus, type Category, type Status } from "@/lib/reports/reports";
 import { listReports } from "@/lib/reports/store";
+import { type Source, isSource } from "@/lib/sections";
 
 export const metadata: Metadata = { title: "Reports · Spoken" };
 

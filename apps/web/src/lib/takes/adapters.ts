@@ -16,11 +16,11 @@ import "server-only";
 
 import path from "node:path";
 
-import type { Source } from "@/lib/generation/queue";
 import { soundsDir as booksSounds } from "@/lib/books/audio";
 import { historyDir as questsHistory, storePath as questsStore } from "@/lib/generation/archive";
 import { historyDir as booksHistory } from "@/lib/books/store";
 import { historyDir as zonesHistory, soundsDir as zonesSounds } from "@/lib/zones/tools";
+import type { Source } from "@/lib/sections";
 
 export type StoreAdapter = {
   /** Where one line's archived takes live. */

@@ -22,10 +22,9 @@ import "server-only";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import type { Source } from "@/lib/generation/queue";
-
 import { storePathOf } from "./adapters";
 import { setLiveTake, takePath } from "./store";
+import type { Source } from "@/lib/sections";
 
 /**
  * Rebuild what the addon reads, for the sections that keep a lookup table.

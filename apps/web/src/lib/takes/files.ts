@@ -11,8 +11,9 @@ import "server-only";
 
 import { corpusFiles } from "@/lib/audio";
 import { addressableFiles as booksFiles } from "@/lib/books/audio";
-import type { Source } from "@/lib/generation/queue";
+
 import { addressableFiles as zonesFiles } from "@/lib/zones/audio";
+import type { Source } from "@/lib/sections";
 
 /** Zones and books name a file without its extension; their addressable sets carry one. */
 export async function isAddressableFile(source: Source, file: string): Promise<boolean> {

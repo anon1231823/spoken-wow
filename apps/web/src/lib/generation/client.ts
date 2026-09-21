@@ -8,9 +8,8 @@
  */
 
 import { noApiKeyMessage } from "@/lib/no-api-key";
+import type { Source } from "@/lib/sections";
 
-/** Which section a job belongs to. Mirrors Source in lib/generation/queue.ts. */
-export type Source = "quests" | "zones" | "books";
 
 export type FailureKind =
   | "quota"

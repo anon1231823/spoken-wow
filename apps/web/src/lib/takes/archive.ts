@@ -1,3 +1,4 @@
+import type { Source } from "@/lib/sections";
 /**
  * What an archived take is called.
  *
@@ -23,7 +24,6 @@
  * or its section's rule does, and a listing of the archive is not consulted by anything the
  * site serves.
  */
-import type { Source } from "@/lib/generation/queue";
 
 /** The name a take is archived under, per its section's rule. */
 export function archiveNameFor(source: Source, version: number): string {

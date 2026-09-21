@@ -16,9 +16,10 @@
  */
 import { requireRegenerate } from "@/lib/generation/authz";
 import { BUSY, withFileLock } from "@/lib/generation/lock";
-import { isSource } from "@/lib/reports/reports";
+
 import { isAddressableFile } from "@/lib/takes/files";
 import { restoreTake } from "@/lib/takes/restore";
+import { isSource } from "@/lib/sections";
 
 export const dynamic = "force-dynamic";
 

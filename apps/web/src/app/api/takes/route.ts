@@ -13,9 +13,10 @@
  * of somebody's work, and restoring from it is a collaborator's decision.
  */
 import { requireRegenerate } from "@/lib/generation/authz";
-import { isSource } from "@/lib/reports/reports";
+
 import { isAddressableFile } from "@/lib/takes/files";
 import { listTakes } from "@/lib/takes/store";
+import { isSource } from "@/lib/sections";
 
 export const dynamic = "force-dynamic";
 

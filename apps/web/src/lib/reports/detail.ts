@@ -15,7 +15,7 @@ import type { ResultLine as QuestLine } from "@/lib/search";
 import type { ResultLine as ZoneLine } from "@/lib/zones/search";
 
 import { targetForLine } from "./line-target";
-import type { Source } from "./reports";
+import type { Source } from "@/lib/sections";
 
 /** Whichever shape the section's search endpoint answered with. */
 export type SourceLine = QuestLine | ZoneLine | BookLine;

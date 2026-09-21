@@ -20,9 +20,9 @@
  * fine, because deciding that is the whole content of the mark.
  */
 import { db } from "@/lib/db";
-import type { Source } from "@/lib/reports/reports";
 
 import { kindOf, type LexiconEntry } from "./lexicon";
+import type { Source } from "@/lib/sections";
 
 /**
  * One save's worth of movement for one word. `changedAt` is epoch ms.

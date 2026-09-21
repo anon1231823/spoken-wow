@@ -14,11 +14,12 @@ import { headers } from "next/headers";
 
 import { auth } from "@/lib/auth";
 import { clientIp } from "@/lib/reports/client-ip";
-import { isSource, validateSubmission, type Source } from "@/lib/reports/reports";
+import { validateSubmission } from "@/lib/reports/reports";
 import { countRecent, createReport } from "@/lib/reports/store";
 import { formatTarget, parseTarget, resolveTarget } from "@/lib/reports/target";
 import { BASE_LANG as BOOKS_LANG, pageById } from "@/lib/books/catalogue";
 import { lineByPath } from "@/lib/zones/catalogue";
+import { type Source, isSource } from "@/lib/sections";
 
 export const dynamic = "force-dynamic";
 

@@ -24,7 +24,8 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
-import { BODY_MAX, CATEGORIES, CATEGORY_LABELS, type Source } from "@/lib/reports/reports";
+import { BODY_MAX, CATEGORIES, CATEGORY_LABELS } from "@/lib/reports/reports";
+import type { Source } from "@/lib/sections";
 
 export default function ReportForm({
   source,

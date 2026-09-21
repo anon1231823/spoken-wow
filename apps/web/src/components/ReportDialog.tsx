@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import ReportForm from "./ReportForm";
 import { detailOf, reportTargetOf, type SourceLine } from "@/lib/reports/detail";
-import type { Source } from "@/lib/reports/reports";
+import type { Source } from "@/lib/sections";
 
 /** The line being reported and which corpus it belongs to, or null when the dialog is shut. */
 export type ReportSubject = { source: Source; line: SourceLine } | null;

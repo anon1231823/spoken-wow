@@ -13,21 +13,13 @@ import { readApiKey } from "@/lib/api-key";
 import { POOL_MAX } from "@/lib/db";
 
 import { budgetFor, afterRateLimit, clampToPool } from "./concurrency";
-import {
-  batchStopped,
-  cancelPending,
-  claimNext,
-  failJob,
-  finishJob,
-  retryJob,
-  type QueueJob,
-  type Source,
-} from "./queue";
+import { batchStopped, cancelPending, claimNext, failJob, finishJob, retryJob, type QueueJob } from "./queue";
 import { regenerateLine, type RegenerateResult } from "./regenerate";
 import { publish as publishBooks, regenerateBookLine } from "@/lib/books/regenerate";
 import { publish as publishZones, regenerateZoneLine } from "@/lib/zones/regenerate";
 import { readSettings } from "./settings";
 import { generationStatus } from "./status";
+import type { Source } from "@/lib/sections";
 
 /**
  * How many times a rate-limited job is retried before it is failed.
