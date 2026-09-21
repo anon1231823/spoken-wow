@@ -40,6 +40,8 @@ echo "commit $(git -C "$repo" rev-parse --short HEAD) -- the one about to be dep
 if [ -n "$rehearse" ]; then
   db=$rehearse
   : "${LISTING:?LISTING=<a shared/ listing> is needed to rehearse}"
+  [ -s "$LISTING" ] || { echo "no listing at $LISTING -- take one on the droplet first (README.md)"; exit 1; }
+  psql "$db" -c 'select 1' >/dev/null 2>&1 || { echo "cannot reach $db -- make web-db-pull TARGET_DB=... first"; exit 1; }
   cp "$LISTING" "$work/shared.txt"
   echo "REHEARSING against $db"
 else
