@@ -1,14 +1,18 @@
 /**
- * The three things the take layer cannot write once: where a section keeps its audio.
+ * Where each section keeps its audio: the one thing the take layer cannot write once.
  *
- * Everything else about a take is the same in all three -- one table, one archive rule, one
- * history panel -- but the paths and the file naming are frozen by AGENTS.md and differ on
- * purpose. A quests file carries its extension and is shared by several NPCs
- * ('gossip/31ab….mp3'); a zones or books file is extension-less and belongs to one line
- * ('1411/razor-hill'). Renaming either means re-shipping a sound pack every user has
- * already downloaded.
+ * Everything else about a take is the same in all three -- one table, one commit, one
+ * history panel -- but the paths are frozen by AGENTS.md and differ on purpose. A quests
+ * file carries its extension and is shared by several NPCs ('gossip/31ab….mp3'); a zones or
+ * books file is extension-less and belongs to one line ('1411/razor-hill'). Renaming either
+ * means re-shipping a sound pack every user has already downloaded.
  *
- * A total Record rather than a switch, for the reason lib/generation/worker.ts:122 gives:
+ * Each section's archive mirrors its store one level deeper, so a take is addressable by
+ * path alone: audio-history/gossip/31ab…/v3-1a2b3c4d.mp3 beside audio/gossip/31ab….mp3.
+ * What a take's archived file is called is its row's business (`archiveFile`); this only
+ * says which directory it is in.
+ *
+ * A total Record rather than a switch, for the reason lib/generation/worker.ts gives:
  * adding a section and forgetting one of these is then a type error rather than a route
  * that resolves to the wrong directory.
  */
@@ -16,26 +20,33 @@ import "server-only";
 
 import path from "node:path";
 
-import { soundsDir as booksSounds } from "@/lib/books/audio";
-import { historyDir as questsHistory, storePath as questsStore } from "@/lib/generation/archive";
-import { historyDir as booksHistory } from "@/lib/books/store";
-import { historyDir as zonesHistory, soundsDir as zonesSounds } from "@/lib/zones/tools";
+import { historyDir as booksHistory, soundsDir as booksSounds } from "@/lib/books/audio";
+import { AUDIO_DIR, AUDIO_HISTORY_DIR } from "@/lib/paths";
+import { isSafeAudioPath } from "@/lib/range";
 import type { Source } from "@/lib/sections";
+import { historyDir as zonesHistory, soundsDir as zonesSounds } from "@/lib/zones/tools";
 
-export type StoreAdapter = {
+type StoreAdapter = {
   /** Where one line's archived takes live. */
   historyDir: (file: string) => string;
   /** Where the live clip lives. */
   storePath: (file: string) => string;
 };
 
-export const ADAPTERS: Record<Source, StoreAdapter> = {
-  // The history mirrors the store one level deeper, so a take is addressable by path
-  // alone: audio-history/gossip/31ab…/1.mp3 beside audio/gossip/31ab….mp3. The quests
-  // module owns the rule, and its versions refuse any path that is not a store-relative mp3.
+/**
+ * Quests paths come from a request body more directly than the other two, and are checked
+ * against a whitelist pattern -- not sanitised -- the same one /api/quests/audio uses.
+ */
+function questsFile(file: string): string {
+  if (!isSafeAudioPath(file)) throw new Error(`unsafe store path ${file}`);
+  return file;
+}
+
+const ADAPTERS: Record<Source, StoreAdapter> = {
   quests: {
-    historyDir: questsHistory,
-    storePath: questsStore,
+    historyDir: (file) =>
+      path.join(AUDIO_HISTORY_DIR, path.dirname(questsFile(file)), path.basename(file, ".mp3")),
+    storePath: (file) => path.join(AUDIO_DIR, questsFile(file)),
   },
   // A sibling of Sounds/ rather than a child, because validate-audio.mjs walks Sounds/ and
   // would otherwise flag every archived take as a clip the lookup table does not know.

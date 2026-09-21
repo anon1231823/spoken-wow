@@ -97,7 +97,7 @@ describe("finding a take's bytes", () => {
     await record(1, true);
 
     expect(await takePath("quests", file, 1)).toEqual({
-      kind: "file",
+      kind: "live",
       path: path.join(root, "audio", file),
     });
   });

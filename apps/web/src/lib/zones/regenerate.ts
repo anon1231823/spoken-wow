@@ -12,34 +12,18 @@
  * remaining line identically and stops the batch, while one line whose text cannot be
  * voiced is just one line.
  *
- * THE REQUEST ITSELF IS lib/generation/tts.ts, the same client quests and books narrate
- * through. Zones used to reach into pipelines/zones/tools/voice/elevenlabs.mjs for it,
- * which left the repository with two ElevenLabs clients and put one of them in a pipeline
- * that does no generating. One client means one retry policy, one failure taxonomy and one
- * place a request's shape is decided.
+ * Resolving the narrator, the request and the commit are lib/generation/narrated.ts, shared
+ * with books. Zones used to reach into pipelines/zones/tools/voice/elevenlabs.mjs for the
+ * request, which left the repository with two ElevenLabs clients and put one of them in a
+ * pipeline that does no generating.
  */
 import "server-only";
 
 import { failure } from "@/lib/generation/errors";
-import { BUSY, withFileLock } from "@/lib/generation/lock";
+import { regenerateNarrated } from "@/lib/generation/narrated";
 import type { RegenerateResult } from "@/lib/generation/regenerate";
-import { textToSpeech } from "@/lib/generation/tts";
-import { commitTake } from "@/lib/takes/commit";
 
 import { catalogue, type CatalogueEntry } from "./catalogue";
-import { durationOf } from "./tools";
-import { narratorConfig, NarratorMissing, type VoiceConfig } from "./voice";
-
-/**
- * Resolving the narrator can fail before any request is made.
- *
- * Only this one kind now: textToSpeech returns its own classified failure rather than
- * throwing, so there is nothing to recover from a message.
- */
-function asFailure(error: unknown) {
-  if (error instanceof NarratorMissing) return failure("voice-missing", error.message);
-  return failure("upstream", error instanceof Error ? error.message : String(error));
-}
 
 async function entryFor(lineId: string): Promise<CatalogueEntry | undefined> {
   return (await catalogue()).find((candidate) => candidate.id === lineId);
@@ -55,7 +39,6 @@ export async function regenerateZoneLine(
   createdBy: string,
   options: { apiKey: string },
 ): Promise<RegenerateResult> {
-
   const entry = await entryFor(lineId);
   if (!entry) {
     return { ok: false, failure: { ...failure("bad-request", `no line ${lineId}`), status: 404 } };
@@ -74,98 +57,10 @@ export async function regenerateZoneLine(
     };
   }
 
-  let config: VoiceConfig;
-  try {
-    config = await narratorConfig(options.apiKey);
-  } catch (error) {
-    return { ok: false, failure: asFailure(error) };
-  }
-
-  // Held across the ElevenLabs call, not just the write, for the reason quests holds it:
-  // two requests for one line must not both spend credits. The key is the one the restore
-  // route and every other section use, so a restore cannot interleave with a generation.
-  const outcome = await withFileLock(`zones:${entry.file}`, async (): Promise<RegenerateResult> => {
-    // No seed: a zone line is narrated once and re-rolled by hand if it comes out wrong,
-    // so there is nothing to reproduce bit for bit.
-    const speech = await textToSpeech(
-      {
-        voiceId: config.voiceId!,
-        text: entry.spoken,
-        modelId: config.modelId,
-        voiceSettings: config.voiceSettings,
-        seed: null,
-        dictionary:
-          config.dictionaryId && config.dictionaryVersionId
-            ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
-            : null,
-      },
-      { apiKey: options.apiKey },
-    );
-    if (!speech.ok) return { ok: false, failure: speech.failure };
-    // Already trimmed of its lead-in by tts.ts: what is written here is what the addon plays.
-    const { audio, credits } = speech;
-
-    try {
-      const committed = await commitTake(
-        "zones",
-        entry.file,
-        audio,
-        {
-          lineId: entry.id,
-          voiceId: config.voiceId ?? null,
-          modelId: config.modelId,
-          outputFormat: config.outputFormat,
-          // Unlike an imported take, this one knows exactly what it was made with, so a
-          // version that sounded right can be reproduced after the settings have moved on.
-          settings: config.voiceSettings,
-          characters: entry.spoken.length,
-          credits,
-          spokenHash: entry.hash,
-          dictionaryId: config.dictionaryId ?? null,
-          dictionaryVersion: config.dictionaryVersionId ?? null,
-          leadIn: speech.leadIn,
-          leadInSec: speech.leadInSec,
-          createdBy,
-        },
-        { measure: durationOf },
-      );
-
-      return {
-        ok: true,
-        lineId,
-        file: entry.file,
-        version: committed.version,
-        bytes: committed.bytes,
-        characters: entry.spoken.length,
-        credits,
-        // No seed. The quests side derives one per NPC so a file shared by several of them
-        // regenerates the same way whichever row the button was pressed on; here every line
-        // has a file of its own and one narrator, so there is nothing to hold steady.
-        seed: null,
-        voice: config.voiceName,
-        // narratorConfig resolves this or throws, so it is set by the time we are here.
-        voiceId: config.voiceId!,
-        dictionaryVersion: config.dictionaryVersionId ?? null,
-        spokenText: entry.spoken,
-        // Nothing else plays this file: naming.mjs gives every line its own, which is the
-        // whole difference from a gossip file named after its text.
-        sharedWith: 0,
-      };
-    } catch (error) {
-      return { ok: false, failure: asFailure(error) };
-    }
-  });
-
-  if (outcome === BUSY) {
-    return {
-      ok: false,
-      failure: {
-        ...failure("upstream", `${entry.file} is already being regenerated; try again in a moment`),
-        status: 409,
-        fatal: false,
-      },
-    };
-  }
-  return outcome;
+  return regenerateNarrated(
+    "zones",
+    { lineId: entry.id, file: entry.file, spoken: entry.spoken, hash: entry.hash },
+    createdBy,
+    options,
+  );
 }
-

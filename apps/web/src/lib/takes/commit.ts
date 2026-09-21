@@ -70,7 +70,7 @@ export type Committed = {
   durationSec: number | null;
 };
 
-type Row = { version: number; isCurrent: boolean; archiveFile: string | null };
+type Row = { version: number; isCurrent: boolean; archiveFile: string | null; bytes: number };
 
 /**
  * Write a new take and make it live.
@@ -89,18 +89,19 @@ export async function commitTake(
   const store = storePathOf(source, file);
   const history = historyDirOf(source, file);
 
-  const rows = await query<Row>(
-    `select "version", "isCurrent", "archiveFile" from "take"
-      where "source" = $1 and "file" = $2 and "lang" = $3`,
-    [source, file, lang],
-  );
+  const [rows, current] = await Promise.all([
+    query<Row>(
+      `select "version", "isCurrent", "archiveFile", "bytes"::float8 as "bytes" from "take"
+        where "source" = $1 and "file" = $2 and "lang" = $3`,
+      [source, file, lang],
+    ),
+    readIfPresent(store),
+  ]);
   let next = rows.reduce((max, row) => Math.max(max, row.version), 0) + 1;
 
   // 1. Whatever is in the store now, kept.
-  const current = await readIfPresent(store);
-  if (current) {
-    const kept = await preserve({ source, file, lang, history, rows, next, current, fields });
-    if (kept === "adopted") next += 1;
+  if (current && (await preserve({ source, file, lang, history, rows, next, current, fields }))) {
+    next += 1;
   }
 
   // 2. The new bytes, archived under their own name before anything points at them.
@@ -128,7 +129,8 @@ export async function commitTake(
 }
 
 /**
- * Make sure the clip in the store survives being written over.
+ * Make sure the clip in the store survives being written over. True when that took a new
+ * take number, which the caller's own take then has to follow.
  *
  * Three cases, decided from the rows and the bytes themselves rather than a directory
  * listing:
@@ -152,10 +154,10 @@ async function preserve(input: {
   next: number;
   current: Buffer;
   fields: TakeFields;
-}): Promise<"known" | "archived" | "adopted"> {
+}): Promise<boolean> {
   const { source, file, lang, history, rows, next, current, fields } = input;
 
-  if (await describedBy(rows, history, current)) return "known";
+  if (await describedBy(rows, history, current)) return false;
 
   const live = rows.find((row) => row.isCurrent);
   if (live && !live.archiveFile) {
@@ -166,7 +168,7 @@ async function preserve(input: {
         where "source" = $1 and "file" = $2 and "lang" = $3 and "version" = $4`,
       [source, file, lang, live.version, name],
     );
-    return "archived";
+    return false;
   }
 
   const name = archiveName(next, current);
@@ -178,26 +180,30 @@ async function preserve(input: {
      values ($1, $2, $3, $4, $5, false, 'imported', $6, $7)`,
     [source, lang, file, fields.lineId, next, current.byteLength, name],
   );
-  return "adopted";
+  return true;
 }
 
 /**
  * Whether some take of this file already has exactly these bytes in the archive.
  *
  * A name carrying a content id answers without reading anything. Names from before they
- * carried one are compared byte for byte, which is a handful of small files at most and
- * only ever at the moment a take is being replaced.
+ * carried one are compared byte for byte -- but only for takes whose recorded size matches,
+ * and the live take first, since the store almost always holds exactly that. Everything
+ * else is never read.
  */
 async function describedBy(rows: Row[], history: string, bytes: Buffer): Promise<boolean> {
   const id = contentId(bytes);
-  for (const row of rows) {
-    if (!row.archiveFile) continue;
-    const embedded = contentIdIn(row.archiveFile);
+  const candidates = rows
+    .filter((row) => row.archiveFile)
+    .sort((a, b) => Number(b.isCurrent) - Number(a.isCurrent));
+  for (const row of candidates) {
+    const embedded = contentIdIn(row.archiveFile!);
     if (embedded !== null) {
       if (embedded === id) return true;
       continue;
     }
-    const archived = await readIfPresent(path.join(history, row.archiveFile));
+    if (row.bytes !== bytes.byteLength) continue;
+    const archived = await readIfPresent(path.join(history, row.archiveFile!));
     if (archived && archived.equals(bytes)) return true;
   }
   return false;

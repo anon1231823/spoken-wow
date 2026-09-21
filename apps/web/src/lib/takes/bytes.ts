@@ -5,9 +5,9 @@
  * reader -- the audio routes, the addon build -- never sees half a clip. The leading dot
  * keeps an interrupted write out of anything that lists *.mp3.
  *
- * This used to be written five times, once per store and archive per section, and the
- * copies had drifted: some cleaned up their `.part` file on failure and some left it, some
- * used a leading dot and some did not.
+ * This used to be written six times -- per store and archive per section, and once more
+ * for voice samples -- and the copies had drifted: some cleaned up their `.part` file on
+ * failure and some left it, some used a leading dot and some did not.
  */
 import "server-only";
 
@@ -42,12 +42,12 @@ export function contentIdIn(name: string): string | null {
   return /^v\d+-([0-9a-f]{8})\.mp3$/.exec(name)?.[1] ?? null;
 }
 
-/** Write `data` to `target`, atomically. */
-export async function writeAtomic(target: string, data: Buffer): Promise<void> {
+/** Run `fill` against a dotted `.part` beside `target`, then rename it into place. */
+async function atomically(target: string, fill: (partial: string) => Promise<void>) {
   await fs.mkdir(path.dirname(target), { recursive: true });
   const partial = path.join(path.dirname(target), `.${path.basename(target)}.part`);
   try {
-    await fs.writeFile(partial, data);
+    await fill(partial);
     await fs.rename(partial, target);
   } catch (error) {
     await fs.rm(partial, { force: true });
@@ -55,17 +55,14 @@ export async function writeAtomic(target: string, data: Buffer): Promise<void> {
   }
 }
 
+/** Write `data` to `target`, atomically. */
+export function writeAtomic(target: string, data: Buffer): Promise<void> {
+  return atomically(target, (partial) => fs.writeFile(partial, data));
+}
+
 /** Copy `source` to `target`, atomically. A copy, never a move: archived audio stays put. */
-export async function copyAtomic(source: string, target: string): Promise<void> {
-  await fs.mkdir(path.dirname(target), { recursive: true });
-  const partial = path.join(path.dirname(target), `.${path.basename(target)}.part`);
-  try {
-    await fs.copyFile(source, partial);
-    await fs.rename(partial, target);
-  } catch (error) {
-    await fs.rm(partial, { force: true });
-    throw error;
-  }
+export function copyAtomic(source: string, target: string): Promise<void> {
+  return atomically(target, (partial) => fs.copyFile(source, partial));
 }
 
 /** The file's bytes, or null when there is no such file. */

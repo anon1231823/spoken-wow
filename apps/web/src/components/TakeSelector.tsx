@@ -36,11 +36,8 @@ function when(iso: string): string {
  *
  * A take this app did not cut is labelled `no record`, and shows no model and no cost:
  * nothing wrote down how it was made, and inventing a value would suggest it could be
- * reproduced. Most quests takes are in that state -- the corpus was narrated by tts_cli,
- * and the pruning this branch removed destroyed the rows of thousands of re-rolls whose
- * clips survived in the archive. It used to say `original`, from when the only such take
- * was the single one that predated the app; it is now the common case, and calling a third
- * re-roll "original" said the opposite of what is true.
+ * reproduced. That is most quests takes -- the corpus was narrated by tts_cli, and old
+ * pruning destroyed the rows of many re-rolls whose clips survived.
  */
 export default function TakeSelector({
   source,

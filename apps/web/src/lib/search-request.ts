@@ -54,11 +54,6 @@ export async function filtersFromParams(params: URLSearchParams): Promise<LineFi
   };
 }
 
-/** Whether a search needs generation dates fetched for it. See searchContext. */
-export function needsDates(filters: LineFilters): boolean {
-  return Boolean(filters.generatedBefore || filters.generatedAfter);
-}
-
 /** Whether staleness has to be answered for the whole corpus, which is a query and a hash per take. */
 export function needsStale(filters: LineFilters): boolean {
   return Boolean(filters.outdated);

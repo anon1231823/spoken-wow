@@ -6,7 +6,7 @@
  * code - this one has none. The NEXT_RUNTIME guard inside register() stops the code running
  * there, but not being bundled, so webpack's dev compiler has to resolve the whole server
  * graph for a runtime that will never execute it: pg's optional native binding first, then
- * fs, path, stream, and finally our own history.ts reaching node:crypto. `next dev` answers
+ * fs, path, stream, and finally our own modules reaching node:crypto. `next dev` answers
  * 500 and no next.config.ts setting fixes it, because the problem is the compile happening
  * at all. `next build` never hits this: it only produces an edge compile when the app
  * actually contains edge code, so production was always fine.

@@ -28,11 +28,3 @@ export const fileFor = namingModule.fileFor as (pageId: number) => string;
 /** The checksum the addon recomputes in Lua to tell two same-named books apart. */
 export const pageChecksum = namingModule.pageChecksum as (text: string) => number;
 
-/**
- * A clip's duration, by ffprobe.
- *
- * Borrowed from the zones store rather than written again: it takes an absolute path and
- * knows nothing about which corpus produced the file, and the duration is what stops the
- * addon's Play button resetting at the wrong moment.
- */
-export { durationOf } from "@/lib/zones/tools";

@@ -15,7 +15,7 @@
  * would sit in the store under the winner's version number.
  */
 import { requireRegenerate } from "@/lib/generation/authz";
-import { BUSY, withFileLock } from "@/lib/generation/lock";
+import { BUSY, withTakeLock } from "@/lib/generation/lock";
 
 import { isAddressableFile } from "@/lib/takes/files";
 import { restoreTake } from "@/lib/takes/restore";
@@ -48,10 +48,7 @@ export async function POST(request: Request) {
   const file = body.file;
   const version = body.version;
 
-  // Namespaced by source, because the two sides name files by different frozen rules and
-  // nothing guarantees the namespaces stay disjoint -- the same argument migration 0020
-  // makes for putting the source in every key.
-  const outcome = await withFileLock(`${source}:${file}`, async () => {
+  const outcome = await withTakeLock(source, file, async () => {
     try {
       await restoreTake(source, file, version);
       return { ok: true as const };

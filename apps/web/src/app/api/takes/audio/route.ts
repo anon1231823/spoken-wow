@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
   const bytes = await takePath(source, file, version);
   if (bytes.kind === "none") return new Response("no such take", { status: 404 });
   if (bytes.kind === "gone") return new Response("this take's audio was not kept", { status: 404 });
+  // Live or archived, the answer is a file to stream.
   const target = bytes.path;
 
   let size: number;

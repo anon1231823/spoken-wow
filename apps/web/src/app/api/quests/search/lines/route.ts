@@ -8,18 +8,20 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 
-import { voicedFiles } from "@/lib/generation/versions";
 import { corpus } from "@/lib/quests/catalogue";
 import { searchContext } from "@/lib/quests/context";
-import { filtersFromParams, needsDates, needsStale } from "@/lib/search-request";
+import { filtersFromParams, needsStale } from "@/lib/search-request";
 import { batchJobs, matchingLines } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const filters = await filtersFromParams(request.nextUrl.searchParams);
-  const context = await searchContext(needsDates(filters), needsStale(filters));
-  const lines = matchingLines(await corpus(), await voicedFiles(), filters, context);
+  const [catalogue, { voiced, context }] = await Promise.all([
+    corpus(),
+    searchContext(needsStale(filters)),
+  ]);
+  const lines = matchingLines(catalogue, voiced, filters, context);
   // The same overrides the estimate is built from, so the quote prices the text that will
   // actually be sent rather than the text the corpus happens to hold.
   return NextResponse.json({ jobs: batchJobs(lines, context.overrides) });

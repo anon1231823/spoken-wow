@@ -3,9 +3,9 @@
 import "server-only";
 
 import { catalogue } from "./catalogue";
-import { historyDir, soundsDir } from "./tools";
+import { soundsDir } from "./tools";
 
-export { historyDir, soundsDir };
+export { soundsDir };
 
 /** Store-relative, e.g. '1411/razor-hill.mp3'. Also the /api/zones/audio/ route path. */
 export function audioRelPath(file: string): string {

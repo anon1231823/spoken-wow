@@ -9,7 +9,7 @@
  */
 import "server-only";
 
-import { corpusFiles } from "@/lib/audio";
+import { fileIndex } from "@/lib/audio";
 import { addressableFiles as booksFiles } from "@/lib/books/audio";
 
 import { addressableFiles as zonesFiles } from "@/lib/zones/audio";
@@ -17,7 +17,7 @@ import type { Source } from "@/lib/sections";
 
 /** Zones and books name a file without its extension; their addressable sets carry one. */
 export async function isAddressableFile(source: Source, file: string): Promise<boolean> {
-  if (source === "quests") return (await corpusFiles()).has(file);
+  if (source === "quests") return (await fileIndex()).has(file);
   const files = source === "zones" ? await zonesFiles() : await booksFiles();
   return files.has(`${file}.mp3`);
 }

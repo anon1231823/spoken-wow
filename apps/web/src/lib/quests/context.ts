@@ -18,7 +18,7 @@
  * reads as its corpus text. Nothing is generated from this - regenerate.ts reads the
  * override itself, and there a failure *should* be fatal.
  */
-import { generatedAt, liveTakes } from "../generation/versions";
+import { liveTakes } from "../takes/store";
 import { dirtyQuestFiles } from "./dirtiness";
 import { staleFiles } from "./staleness";
 import type { SearchContext } from "../search";
@@ -46,37 +46,52 @@ async function openReports(): Promise<Map<string, number>> {
 }
 
 /**
- * @param dated whether a generation-date bound is in force. The dates are one query over the
- *   whole table, so they are fetched only for the searches that read them.
- * @param outdated whether the audio-outdated filter is in force. Same bargain: one query and a
- *   sha-256 per take, paid for only by the searches that ask.
+ * Everything a quests search reads from the database: which files have a live take, and
+ * the context the rows are marked from.
+ *
+ * The live takes are fetched ONCE and everything about them derived from those rows -- the
+ * voiced set, the take count, the generation date. Each used to be its own call to the same
+ * eleven-thousand-row query, so a search paid for it two or three times.
+ *
+ * The voiced set is not fail-soft, and is fetched outside the catch for that reason: a
+ * search that cannot tell which lines have audio has nothing honest to show, where a
+ * missing override or report count only leaves a row unmarked.
+ *
+ * @param outdated whether the audio-outdated filter is in force. One query and a sha-256
+ *   per take, paid for only by the searches that ask.
+ * @param dirty whether the pronunciation filter is in force. The same bargain.
  */
 export async function searchContext(
-  dated = false,
   outdated = false,
   dirty = false,
-): Promise<SearchContext> {
+): Promise<{ voiced: Set<string>; context: SearchContext }> {
+  const live = await liveTakes("quests");
+  const voiced = new Set(live.map((row) => row.file));
+  const takes = new Map(live.map((row) => [row.file, { version: row.version, takes: row.takes }]));
+  const generatedAt = new Map(live.map((row) => [row.file, row.createdAt.getTime()]));
+
   try {
-    const [overrides, ignores, reports, takes, dates, stale, dirt] = await Promise.all([
+    const [overrides, ignores, reports, stale, dirt] = await Promise.all([
       readOverrides(),
       readIgnores(),
       openReports(),
-      liveTakes(),
-      dated ? generatedAt() : null,
       outdated ? staleFiles() : null,
       dirty ? dirtyQuestFiles() : null,
     ]);
     return {
-      overrides,
-      ignores,
-      reports,
-      takes,
-      generatedAt: dates ?? undefined,
-      stale: stale ?? undefined,
-      dirty: dirt ?? undefined,
+      voiced,
+      context: {
+        overrides,
+        ignores,
+        reports,
+        takes,
+        generatedAt,
+        stale: stale ?? undefined,
+        dirty: dirt ?? undefined,
+      },
     };
   } catch (error) {
     console.warn("[quests] search context unavailable, serving unmarked results:", error);
-    return NO_CONTEXT;
+    return { voiced, context: { ...NO_CONTEXT, takes, generatedAt } };
   }
 }

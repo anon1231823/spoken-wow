@@ -31,8 +31,8 @@ import { currentConfig } from "./settings";
 import { generationStatus } from "./status";
 import { accentTagged, audioTags, NARRATOR_VOICE, segments } from "./narration";
 import { textToDialogue, textToSpeech } from "./tts";
-import { BUSY, withFileLock } from "./lock";
-import { failure, type Failure } from "./errors";
+import { BUSY, withTakeLock } from "./lock";
+import { busy, failure, type Failure } from "./errors";
 import type { ElevenLabsOptions } from "@/lib/voices/elevenlabs";
 
 export type RegenerateSuccess = {
@@ -140,7 +140,7 @@ export async function regenerateLine(
     };
   }
 
-  const outcome = await withFileLock(`quests:${file}`, async (): Promise<RegenerateResult> => {
+  const outcome = await withTakeLock("quests", file, async (): Promise<RegenerateResult> => {
     const config = await currentConfig();
     // The accent direction goes on last, so it sits in front of the words rather than in
     // front of a `<hic>` audioTags has yet to rewrite. Inside spokenText and not bolted on at
@@ -244,15 +244,6 @@ export async function regenerateLine(
     };
   });
 
-  if (outcome === BUSY) {
-    return {
-      ok: false,
-      failure: {
-        ...failure("upstream", `${file} is already being regenerated; try again in a moment`),
-        status: 409,
-        fatal: false,
-      },
-    };
-  }
+  if (outcome === BUSY) return { ok: false, failure: busy(file) };
   return outcome;
 }

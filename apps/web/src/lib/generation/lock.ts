@@ -17,6 +17,7 @@
  * lock would block that file until the process restarts.
  */
 import { db } from "@/lib/db";
+import type { Source } from "@/lib/sections";
 
 /**
  * Namespaces these locks away from anything else that might use advisory locks on the same
@@ -58,4 +59,24 @@ export async function withFileLock<T>(
     }
     client.release();
   }
+}
+
+/**
+ * Run `work` holding the lock on one section's file, or return BUSY.
+ *
+ * The one place the key is built. Every regeneration and every restore goes through here,
+ * because excluding each other is the whole point: a restore must not copy a clip into the
+ * store while a generation is writing it. When the key was spelled out at each call site,
+ * quests regeneration locked `file` and the restore route locked `quests:file`, and the two
+ * never excluded each other at all.
+ *
+ * Namespaced by section, because the sections name files by different frozen rules and
+ * nothing guarantees the namespaces stay disjoint.
+ */
+export function withTakeLock<T>(
+  source: Source,
+  file: string,
+  work: () => Promise<T>,
+): Promise<T | typeof BUSY> {
+  return withFileLock(`${source}:${file}`, work);
 }

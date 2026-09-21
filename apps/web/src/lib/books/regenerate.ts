@@ -1,38 +1,19 @@
 /**
  * Narrating one book page, on the shared queue's terms.
  *
- * lib/zones/regenerate.ts's shape, and deliberately its voice: the design calls for one
- * narrator across the section, and that narrator is the one the zones side already
- * resolves from generation_setting and the pronunciation lexicon. Resolving a second
- * would be a second answer to "who reads this", with nothing asking the question.
- *
- * The result is a RegenerateResult rather than an exception because the worker decides
- * what to do next from `kind` and `fatal`: running out of credits fails every remaining
- * line identically and stops the batch, while one page that cannot be voiced is one page.
+ * Deliberately the zones narrator's voice: the design calls for one narrator across the
+ * section, and resolving a second would be a second answer to "who reads this", with
+ * nothing asking the question. Everything from resolving it to committing the take is
+ * lib/generation/narrated.ts, shared with zones; what is here is finding a page and
+ * deciding whether it can be voiced.
  */
 import "server-only";
 
 import { failure } from "@/lib/generation/errors";
-import { BUSY, withFileLock } from "@/lib/generation/lock";
+import { regenerateNarrated } from "@/lib/generation/narrated";
 import type { RegenerateResult } from "@/lib/generation/regenerate";
-import { textToSpeech } from "@/lib/generation/tts";
-import { commitTake } from "@/lib/takes/commit";
-import { type VoiceConfig } from "@/lib/zones/voice";
-import { narratorConfig, NarratorMissing } from "@/lib/zones/voice";
 
 import { catalogue, BASE_LANG, type BookPage } from "./catalogue";
-import { durationOf } from "./tools";
-
-/**
- * Resolving the narrator can fail before any request is made.
- *
- * Only this one kind now: textToSpeech returns its own classified failure rather than
- * throwing, so there is nothing to recover from a message.
- */
-function asFailure(error: unknown) {
-  if (error instanceof NarratorMissing) return failure("voice-missing", error.message);
-  return failure("upstream", error instanceof Error ? error.message : String(error));
-}
 
 async function pageFor(lineId: string, lang: string): Promise<BookPage | undefined> {
   return (await catalogue(lang)).find((candidate) => candidate.id === lineId);
@@ -64,92 +45,10 @@ export async function regenerateBookLine(
     };
   }
 
-  let config: VoiceConfig;
-  try {
-    config = await narratorConfig(options.apiKey);
-  } catch (error) {
-    return { ok: false, failure: asFailure(error) };
-  }
-
-  // Held across the ElevenLabs call, for the reason every section holds it: two requests
-  // for one page must not both spend credits, and a restore must not interleave.
-  const outcome = await withFileLock(`books:${page.file}`, async (): Promise<RegenerateResult> => {
-    // No seed: a page is narrated once and re-rolled by hand if it comes out wrong.
-    const speech = await textToSpeech(
-      {
-        voiceId: config.voiceId,
-        text: page.spoken,
-        modelId: config.modelId,
-        voiceSettings: config.voiceSettings,
-        seed: null,
-        dictionary:
-          config.dictionaryId && config.dictionaryVersionId
-            ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
-            : null,
-      },
-      { apiKey: options.apiKey },
-    );
-    if (!speech.ok) return { ok: false, failure: speech.failure };
-    // Already trimmed of its lead-in by tts.ts: what is written here is what the addon plays.
-    const { audio, credits } = speech;
-
-    try {
-      const committed = await commitTake(
-        "books",
-        page.file,
-        audio,
-        {
-          lineId: page.id,
-          voiceId: config.voiceId,
-          modelId: config.modelId,
-          outputFormat: config.outputFormat,
-          // Unlike an imported take this one knows what it was made with, so a version that
-          // sounded right can be reproduced after the settings have moved on.
-          settings: config.voiceSettings,
-          characters: page.spoken.length,
-          credits,
-          spokenHash: page.hash,
-          dictionaryId: config.dictionaryId ?? null,
-          dictionaryVersion: config.dictionaryVersionId ?? null,
-          leadIn: speech.leadIn,
-          leadInSec: speech.leadInSec,
-          createdBy,
-        },
-        { lang, measure: durationOf },
-      );
-
-      return {
-        ok: true,
-        lineId,
-        file: page.file,
-        version: committed.version,
-        bytes: committed.bytes,
-        characters: page.spoken.length,
-        credits,
-        // No seed: one page is one file and one narrator, so there is nothing to hold steady
-        // across the several NPCs a quests file can be shared by.
-        seed: null,
-        voice: config.voiceName,
-        // narratorConfig resolves this or throws, so it is set by the time we are here.
-        voiceId: config.voiceId!,
-        dictionaryVersion: config.dictionaryVersionId ?? null,
-        spokenText: page.spoken,
-        sharedWith: 0,
-      };
-    } catch (error) {
-      return { ok: false, failure: asFailure(error) };
-    }
-  });
-
-  if (outcome === BUSY) {
-    return {
-      ok: false,
-      failure: {
-        ...failure("upstream", `${page.file} is already being regenerated; try again in a moment`),
-        status: 409,
-        fatal: false,
-      },
-    };
-  }
-  return outcome;
+  return regenerateNarrated(
+    "books",
+    { lineId: page.id, file: page.file, spoken: page.spoken, hash: page.hash },
+    createdBy,
+    { ...options, lang },
+  );
 }

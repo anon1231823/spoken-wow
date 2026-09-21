@@ -57,6 +57,15 @@ export function failure(kind: FailureKind, message: string): Failure {
   return { kind, message, status: STATUS[kind], fatal: FATAL[kind] };
 }
 
+/** Another request holds this file's lock. Not fatal: the batch moves on and retries. */
+export function busy(file: string): Failure {
+  return {
+    ...failure("upstream", `${file} is already being regenerated; try again in a moment`),
+    status: 409,
+    fatal: false,
+  };
+}
+
 /**
  * The `status` slug ElevenLabs puts inside `detail`, when it puts one there.
  *

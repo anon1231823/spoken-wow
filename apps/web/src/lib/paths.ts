@@ -51,7 +51,8 @@ export const NPC_LINES_DIR =
   process.env.SPOKEN_QUESTS_NPC_LINES ?? path.join(DATA_ROOT, "voice", "npc-lines");
 
 /**
- * Previous takes of a regenerated line: <sub>/<fileName>/<version>.mp3.
+ * Previous takes of a regenerated line, one directory per file: <sub>/<fileName>/, holding
+ * whatever name each take's row records in archiveFile.
  *
  * A sibling of the store rather than a directory inside it, and deliberately so:
  * readStoreIndex walks audio/{quests,gossip} and `make push` rsyncs audio/, so anything

@@ -94,7 +94,7 @@ LOCAL_DB ?= postgres://localhost/spoken_quests_dev
 
 # pg_dump 16.10 and later wrap output in \restrict / \unrestrict, psql meta-commands that
 # an older psql fails on. Both clusters are ours, so strip them rather than requiring the
-# droplet's psql to match this one. Same reasoning as make/zones.mk's UNRESTRICT.
+# droplet's psql to match this one. scripts/db/sync-section.sh strips them the same way.
 UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
 
 # The whole production database, copied into a local one of its own.

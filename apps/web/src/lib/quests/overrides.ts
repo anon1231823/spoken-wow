@@ -40,8 +40,8 @@ const cacheKey = Symbol.for("wow-voiceover.line-overrides");
 type CacheHolder = { [cacheKey]?: { map: Map<string, LineOverride>; stamp: string } };
 
 /**
- * Every override, by file. Memoised behind the stamp for the reason storeIndex is: search
- * needs it for every row of every page, and regeneration needs it to be right rather than
+ * Every override, by file. Memoised behind the stamp because search needs it for every
+ * row of every page, and regeneration needs it to be right rather than
  * recent - pm2 runs two workers, and an edit made on one must reach the other.
  *
  * Whole-table because there are tens of these, not thousands: an override is a line someone

@@ -9,9 +9,9 @@
  * voice/pronunciation.json change and when the corpus text does, so "this take predates the
  * current text" is answered for all three at once - which is the honest question anyway.
  *
- * A null hash is UNKNOWN, not unchanged, and is reported as fresh. Version 0 is audio this
- * project inherited and every take from before 0006 has no hash, so calling those stale would
- * mark most of the store on a claim nothing can support.
+ * A null hash is UNKNOWN, not unchanged, and is reported as fresh. Audio the CLI narrated
+ * before the app kept records, and every take from before 0006, has no hash, so calling
+ * those stale would mark most of the store on a claim nothing can support.
  */
 import { fileIndex } from "../audio";
 import { db } from "../db";

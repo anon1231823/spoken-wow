@@ -16,8 +16,8 @@ import Link from "next/link";
 
 import ReportForm from "@/components/ReportForm";
 import { audioRelPath } from "@/lib/audio";
-import { currentVersion } from "@/lib/reports/current-version";
 import { formatTarget, parseTarget, resolveTarget } from "@/lib/reports/target";
+import { liveVersion } from "@/lib/takes/store";
 
 export const metadata: Metadata = { title: "Report a voice line · VoiceOver" };
 
@@ -50,7 +50,9 @@ export default async function ReportPage({
   // One candidate needs no choosing; several mean the reporter picked one from the list below.
   const line =
     lines.find((candidate) => candidate.lineId === chosen) ?? (lines.length === 1 ? lines[0] : null);
-  const version = line ? await currentVersion(audioRelPath(line)) : null;
+  // Which take is live, to bust the audio cache: without it someone returning to hear a fix
+  // hears the browser's copy of the very clip they complained about, and reports it again.
+  const version = line ? await liveVersion("quests", audioRelPath(line)) : null;
 
   return (
     <main className="mx-auto max-w-3xl px-5 pt-6 pb-24">

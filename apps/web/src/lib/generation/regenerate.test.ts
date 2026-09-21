@@ -16,7 +16,9 @@ process.env.SPOKEN_QUESTS_AUDIO = path.join(root, "audio");
 process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 
 const { closeDb, db } = await import("@/lib/db");
-const { historyDir, storePath } = await import("./archive");
+const { historyDirOf, storePathOf } = await import("@/lib/takes/adapters");
+const historyDir = (file: string) => historyDirOf("quests", file);
+const storePath = (file: string) => storePathOf("quests", file);
 const { archiveName } = await import("@/lib/takes/bytes");
 const { listTakes } = await import("@/lib/takes/store");
 const { regenerateLine } = await import("./regenerate");

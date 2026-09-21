@@ -154,18 +154,11 @@ export async function setLiveTake(
   }
 }
 
-/**
- * Absolute path of one archived take, for streaming or copying it back.
- *
- * The one place a take's bytes are located, and it is called only by the two things that
- * actually touch them: the audio route and the restore. Neither exists to render anything.
- */
-export function archivePath(source: Source, file: string, name: string): string {
-  return path.join(historyDirOf(source, file), name);
-}
-
 /** Where one take's bytes are, or why there are none to read. */
 export type TakeBytes =
+  /** The live take: its bytes are the store file, which is what the addon ships. */
+  | { kind: "live"; path: string }
+  /** An earlier take, archived. */
   | { kind: "file"; path: string }
   /** The take exists, and nothing kept its clip. */
   | { kind: "gone" }
@@ -204,7 +197,9 @@ export async function takePath(
   );
   const take = rows[0];
   if (!take) return { kind: "none" };
-  if (take.isCurrent) return { kind: "file", path: storePathOf(source, file) };
-  if (take.archiveFile) return { kind: "file", path: archivePath(source, file, take.archiveFile) };
+  if (take.isCurrent) return { kind: "live", path: storePathOf(source, file) };
+  if (take.archiveFile) {
+    return { kind: "file", path: path.join(historyDirOf(source, file), take.archiveFile) };
+  }
   return { kind: "gone" };
 }

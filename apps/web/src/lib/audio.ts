@@ -25,40 +25,20 @@ export function audioRelPath(line: Pick<CorpusLine, "source" | "fileName">): str
 }
 
 /**
- * Every store path the corpus can address.
- *
- * A whitelist, and the reason the history playback route is traversal-proof by construction:
- * a path either names a file some corpus line owns or it does not exist, and no amount of
- * `../` produces a member of this set. Same reasoning as isVoiceSlot for voice names.
- *
- * Distinct from storeIndex, which is what is *on disk*. An archived take can be served for a
- * line whose current audio is missing, so membership here cannot depend on the store.
- */
-const corpusFilesKey = Symbol.for("wow-voiceover.corpus-files");
-type FilesHolder = { [corpusFilesKey]?: { lines: CorpusLine[]; files: Set<string> } };
-
-export async function corpusFiles(): Promise<Set<string>> {
-  const lines = (await corpus()).lines;
-  const holder = globalThis as FilesHolder;
-
-  // Tied to the identity of the array rather than memoised outright: the catalogue rebuilds
-  // when the table moves, and a set built from the lines before an edit would keep claiming
-  // a file for a line that no longer writes one.
-  if (!holder[corpusFilesKey] || holder[corpusFilesKey].lines !== lines) {
-    holder[corpusFilesKey] = { lines, files: new Set(lines.map(audioRelPath)) };
-  }
-  return holder[corpusFilesKey].files;
-}
-
-/**
  * A line for each store path, the reverse of audioRelPath.
  *
  * One line, not the group: everything that shares a file shares its text and its voice, which
  * is the whole reason they share the file. So the first is as good as any for "what would be
  * spoken for this mp3", which is what staleness needs to know.
  *
- * Beside corpusFiles because they are the same walk over the same lines, and memoised for the
- * same reason: 17,507 entries built once rather than per request.
+ * Also the whitelist of paths the corpus can address, and the reason the history playback
+ * route is traversal-proof by construction: a path either names a file some corpus line owns
+ * or it does not exist, and no amount of `../` produces a key of this map. Membership does
+ * not depend on what is on disk -- an archived take can be served for a line whose current
+ * audio is missing.
+ *
+ * Memoised on the corpus's identity: 17,507 entries built once rather than per request, and
+ * rebuilt exactly when the catalogue is.
  */
 const fileIndexKey = Symbol.for("wow-voiceover.file-index");
 type FileIndexHolder = { [fileIndexKey]?: { lines: CorpusLine[]; index: Map<string, CorpusLine> } };
@@ -78,6 +58,10 @@ export async function fileIndex(): Promise<Map<string, CorpusLine>> {
   return holder[fileIndexKey].index;
 }
 
+/**
+ * Which of the store's clips this machine holds. Test-only: whether a line has audio is a
+ * take row, and a clip missing here is reported by the player, not read as ungenerated.
+ */
 export function readStoreIndex(audioDir: string = AUDIO_DIR): Set<string> {
   const found = new Set<string>();
   for (const sub of SUBFOLDERS) {
@@ -90,20 +74,3 @@ export function readStoreIndex(audioDir: string = AUDIO_DIR): Set<string> {
   return found;
 }
 
-/**
- * WHAT IS ON DISK NO LONGER DECIDES WHAT HAS AUDIO. That question is a take row now
- * (voicedFiles in lib/generation/versions.ts), the way zones and books have always
- * answered it -- a directory listing can say a file exists, but not which take is live,
- * what it cost, or whether it is the one somebody restored.
- *
- * readStoreIndex survives for the tests, which need to know which of this store's clips a
- * machine actually holds before asserting anything about it, and for the one-off that seeds
- * the take rows for audio narrated before the app recorded any. Nothing the site serves
- * calls it. A clip this machine does not hold is a missing file, reported by the player
- * when somebody asks to hear it -- never a line that reads as ungenerated.
- *
- * The memoised storeIndex(), its directory-mtime stamp and noteStored() are gone with the
- * search path that used them. They existed because a search read this per request and two
- * pm2 workers had to agree about a file one of them had just written; nothing reads it per
- * request any more, and a cache nobody reads is a thing to keep in step for no reason.
- */

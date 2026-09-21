@@ -13,7 +13,9 @@ const HISTORY = path.join(root, "audio-history");
 process.env.SPOKEN_QUESTS_AUDIO = AUDIO;
 process.env.SPOKEN_QUESTS_AUDIO_HISTORY = HISTORY;
 
-const { historyDir, storePath } = await import("./archive");
+const { historyDirOf, storePathOf } = await import("./adapters");
+const historyDir = (file: string) => historyDirOf("quests", file);
+const storePath = (file: string) => storePathOf("quests", file);
 
 const FILE = "gossip/31ab172e1a375db1c9157d594eb608d9.mp3";
 

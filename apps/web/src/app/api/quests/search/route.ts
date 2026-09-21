@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { voicedFiles } from "@/lib/generation/versions";
 import { corpus } from "@/lib/quests/catalogue";
 import { searchContext } from "@/lib/quests/context";
 import { dirtyQuestFiles } from "@/lib/quests/dirtiness";
 import { staleFiles } from "@/lib/quests/staleness";
-import { filtersFromParams, needsDates, needsDirty, needsStale } from "@/lib/search-request";
+import { filtersFromParams, needsDirty, needsStale } from "@/lib/search-request";
 import { PAGE_SIZE, search } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
@@ -25,21 +24,20 @@ export async function GET(request: NextRequest) {
   // ever changes; the offset is arithmetic and belongs on this side of it.
   const page = Math.max(1, Math.floor(Number(params.get("page")) || 1));
 
-  // Only the context depends on the filters; the corpus and the voiced set do not, so
-  // they are fetched alongside rather than after.
-  const [filters, lines, voiced] = await Promise.all([
-    filtersFromParams(params),
-    corpus(),
-    voicedFiles(),
-  ]);
-  const context = await searchContext(needsDates(filters), needsStale(filters), needsDirty(filters));
+  // Only the context depends on the filters, so the corpus is fetched alongside them.
+  const [filters, lines] = await Promise.all([filtersFromParams(params), corpus()]);
+  const { voiced, context } = await searchContext(needsStale(filters), needsDirty(filters));
 
   // "Clear all" needs every dirty file the filter matches, not a page of rows. The same
   // shape the zones search route answers for its own explorer.
   if (params.get("ids") === "1") {
     const all = search(lines, voiced, { ...filters, offset: 0, limit: Number.MAX_SAFE_INTEGER }, context);
-    const files = [...new Set(all.lines.map((line) => line.audioPath))];
-    return NextResponse.json({ dirtyFiles: [...(await dirtyQuestFiles(files))] });
+    // The whole dirty set, intersected here, rather than the match set sent to Postgres as a
+    // parameter: unfiltered, that is eleven thousand paths in an `= any($1)`, and several
+    // times slower than asking for every dirty file.
+    const dirty = context.dirty ?? (await dirtyQuestFiles());
+    const files = new Set(all.lines.map((line) => line.audioPath));
+    return NextResponse.json({ dirtyFiles: [...dirty].filter((file) => files.has(file)) });
   }
 
   const result = search(lines, voiced, { ...filters, offset: (page - 1) * limit, limit }, context);

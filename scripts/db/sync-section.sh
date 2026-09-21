@@ -17,6 +17,7 @@
 #   SOURCE_DB                   instead of the droplet, dump from this database directly --
 #                               for rehearsing the sync against a local copy
 set -euo pipefail
+. "$(dirname "$0")/lib.sh"
 
 source_name=${1:?usage: sync-section.sh <source> <table>...}
 shift
@@ -24,22 +25,6 @@ tables=("$@")
 [ ${#tables[@]} -gt 0 ] || { echo "no corpus tables given" >&2; exit 2; }
 
 : "${LOCAL_DB:?LOCAL_DB is not set}"
-REMOTE_ROOT=${REMOTE_ROOT:-/srv/spoken}
-
-# Run a command against production's database, or against SOURCE_DB when rehearsing.
-upstream() {
-  if [ -n "${SOURCE_DB:-}" ]; then
-    DATABASE_URL="$SOURCE_DB" bash -c "$1"
-  else
-    : "${DROPLET:?no droplet configured: export SPOKEN_DROPLET=deploy@<host>}"
-    # shellcheck disable=SC2086 -- SSH carries its own flags
-    $SSH "$DROPLET" "set -a; . $REMOTE_ROOT/shared/app.env; set +a; $1"
-  fi
-}
-
-# pg_dump 16.10 and later wrap output in \restrict / \unrestrict, psql meta-commands an
-# older psql fails on. Both clusters are ours, so strip them.
-unrestrict() { sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'; }
 
 counts="select (select count(*) from \"${tables[0]}\") || ' ${tables[0]} rows, '
                || (select count(*) from \"take\" where \"source\" = '$source_name') || ' $source_name takes'"
@@ -61,6 +46,10 @@ quoted=$(printf '"%s", ' "${tables[@]}")
 # author this machine does not have is left blank. Production keeps the attribution; this
 # copy is for building and testing.
 staging=sync_staging
+take_columns=$(psql "$LOCAL_DB" -tAc "select string_agg(quote_ident(column_name), ', '
+                                          order by ordinal_position)
+                                     from information_schema.columns
+                                    where table_schema = 'public' and table_name = 'take'")
 {
   echo 'begin;'
   echo "drop schema if exists $staging cascade; create schema $staging;"
@@ -69,14 +58,13 @@ staging=sync_staging
   done
   upstream "pg_dump \"\$DATABASE_URL\" --data-only ${dump_tables[*]}" \
     | unrestrict | sed -E "s/^COPY public\./COPY $staging./"
-  # take is shared by all three sections, and pg_dump has no WHERE. --column-inserts puts
-  # each row on its own line, names its columns -- so a local table whose columns were added
-  # in a different order still receives each value in the right place -- and starts the
-  # values with id then source, so this section's rows are selected by position rather than
-  # by the word appearing anywhere in a row.
-  upstream "pg_dump \"\$DATABASE_URL\" --data-only --table=take --column-inserts" \
-    | grep -E "^INSERT INTO public\.take \(.*\) VALUES \([0-9]+, '$source_name'," \
-    | sed -E "s/^INSERT INTO public\.take /INSERT INTO $staging.take /" || true
+  # This section's rows of the shared take table, selected on production with a WHERE
+  # rather than grepped out of a dump. Named columns, in this machine's order: a local table
+  # whose columns were added in a different order still gets each value in its place.
+  echo "copy $staging.\"take\" ($take_columns) from stdin;"
+  upstream 'psql "$DATABASE_URL" -X -q -f -' \
+    <<<"copy (select $take_columns from \"take\" where \"source\" = '$source_name') to stdout;"
+  echo '\.'
   # pg_dump's output empties search_path for the session; put it back for what follows.
   echo 'set search_path = public;'
   cat <<SQL

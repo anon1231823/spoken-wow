@@ -40,22 +40,18 @@ export async function restoreTake(
   if (bytes.kind === "gone") {
     throw new Error(`the audio of version ${version} of ${file} was not kept, so it cannot be restored`);
   }
-  const source_path = bytes.path;
-
-  const target = storePathOf(source, file);
-  // Already live: its bytes are the store file, and copying a file over itself truncates
-  // it. Nothing to move, and the flag is where it belongs.
-  if (source_path === target) return;
+  // Already live, so already in the store: nothing to copy, and the flag is where it belongs.
+  if (bytes.kind === "live") return;
 
   // THIS is where missing bytes are discovered, and the only place that should discover
   // them: nothing about drawing a list of takes depends on the archive being reachable, so
   // a restore that cannot find its clip fails here, with the path it looked for, and the
   // live flag is not moved.
   try {
-    await copyAtomic(source_path, target);
+    await copyAtomic(bytes.path, storePathOf(source, file));
   } catch (error) {
     const reason = (error as NodeJS.ErrnoException)?.code === "ENOENT" ? "is not on disk" : "could not be read";
-    throw new Error(`the audio of version ${version} of ${file} ${reason} (${source_path})`);
+    throw new Error(`the audio of version ${version} of ${file} ${reason} (${bytes.path})`);
   }
 
   await setLiveTake(source, file, version);

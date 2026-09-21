@@ -44,10 +44,18 @@ export type LineDetail = {
  * Only quests can answer null. Its addresses are built from what a client can see, and a
  * line neither a quest nor a gossip address can name would arrive in triage unresolvable.
  */
+const TARGETS: Record<Source, (line: SourceLine) => string | null> = {
+  quests: (line) => targetForLine(line as QuestLine),
+  zones: (line) => (line as ZoneLine).file,
+  books: (line) => String((line as BookLine).pageId),
+};
+
+/**
+ * A total Record rather than an if-chain whose last branch is books by default: a fourth
+ * section is then a type error here, not a report quietly addressed like a book page.
+ */
 export function reportTargetOf(source: Source, line: SourceLine): string | null {
-  if (source === "quests") return targetForLine(line as QuestLine);
-  if (source === "zones") return (line as ZoneLine).file;
-  return String((line as BookLine).pageId);
+  return TARGETS[source](line);
 }
 
 /** The section's search, narrowed to the one line a report is about. */

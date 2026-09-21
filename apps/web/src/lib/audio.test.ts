@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { corpus as catalogue } from "./quests/catalogue";
-import { audioRelPath, corpusFiles, readStoreIndex, subfolder } from "./audio";
+import { audioRelPath, readStoreIndex, subfolder, fileIndex } from "./audio";
 
 describe("audio paths", () => {
   it("puts quest lines under quests/", () => {
@@ -54,8 +54,8 @@ describe("store reconciliation", async () => {
 });
 
 
-describe("corpusFiles", async () => {
-  const files = await corpusFiles();
+describe("fileIndex as the whitelist of addressable paths", async () => {
+  const files = await fileIndex();
 
   it("contains every path the explorer would link to", async () => {
     for (const line of (await catalogue()).lines.slice(0, 500)) {
@@ -85,6 +85,6 @@ describe("corpusFiles", async () => {
   });
 
   it("memoises", async () => {
-    expect(await corpusFiles()).toBe(files);
+    expect(await fileIndex()).toBe(files);
   });
 });

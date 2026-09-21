@@ -24,6 +24,11 @@ export function soundsDir(): string {
   );
 }
 
+/** Previous takes, one directory per file, beside the live store. */
+export function historyDir(): string {
+  return process.env.SPOKEN_BOOKS_AUDIO_HISTORY ?? `${soundsDir()}-history`;
+}
+
 /** Store-relative, e.g. '1381.mp3'. Also the /api/books/audio/ route path. */
 export function audioRelPath(file: string): string {
   return `${file}.mp3`;
