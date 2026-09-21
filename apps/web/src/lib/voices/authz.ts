@@ -21,7 +21,7 @@ export async function denyVoiceRequest(voice?: string): Promise<Response | null>
   }
   // Checked after the session so an unauthorized caller cannot use the response to learn
   // which voice names exist.
-  if (voice !== undefined && !isVoiceSlot(voice)) {
+  if (voice !== undefined && !(await isVoiceSlot(voice))) {
     return Response.json({ error: `unknown voice ${voice}` }, { status: 404 });
   }
   return null;
