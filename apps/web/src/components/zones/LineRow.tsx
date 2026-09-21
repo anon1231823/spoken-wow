@@ -4,14 +4,13 @@ import {
   ChevronDownIcon,
   Eraser,
   FlagIcon,
-  MessageSquare,
   PencilIcon,
   PlayIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
 import RegenerateButton from "@/components/RegenerateButton";
+import ReportsBadge from "@/components/ReportsBadge";
 import TakeSelector from "@/components/TakeSelector";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,7 +26,7 @@ type Props = {
   current: boolean;
   /** Editor and up: the rewrite and regenerate controls. */
   canRegenerate: boolean;
-  /** Editor and up: may read the report bodies, so the count badge links to the queue. */
+  /** Editor and up: may read the report bodies and resolve them from the row. */
   canTriage: boolean;
   state?: RowState;
   onPlay: (line: ResultLine) => void;
@@ -208,32 +207,14 @@ export function LineRow({
 
       <td className="py-1.5 pr-1 pl-2">
         <span className="flex items-center justify-end gap-1 whitespace-nowrap">
-          {/* The count is public; the bodies are not. So everyone sees how many open
-              reports a line carries -- "somebody has already said so" is the answer to the
-              question a dissatisfied listener is about to ask -- and a triager gets a link
-              to where they can be read. It sits beside the report button rather than in a
-              column of its own: it is the same subject, and the review column it used to
-              share is gone. A link to /reports rather than a panel inside the row, because
-              the triage page shows every section at once. */}
-          {line.reportsOpen > 0 &&
-            (canTriage ? (
-              <Link
-                href="/reports?source=zones"
-                title={`${line.reportsOpen} open report${line.reportsOpen === 1 ? "" : "s"}`}
-                className="flex items-center gap-0.5 rounded bg-amber-500/15 px-1 text-xs text-amber-400"
-              >
-                <MessageSquare size={11} />
-                {line.reportsOpen}
-              </Link>
-            ) : (
-              <span
-                className="flex items-center gap-0.5 rounded bg-amber-500/15 px-1 text-xs text-amber-400"
-                title={`${line.reportsOpen} open report${line.reportsOpen === 1 ? "" : "s"}`}
-              >
-                <MessageSquare size={11} />
-                {line.reportsOpen}
-              </span>
-            ))}
+          {/* Beside the report button rather than in a column of its own: it is the same
+              subject. ReportsBadge says what it shows to whom. */}
+          <ReportsBadge
+            source="zones"
+            lineId={line.id}
+            count={line.reportsOpen}
+            canTriage={canTriage}
+          />
 
           {/* Outside the canRegenerate gate, deliberately: reporting is what a visitor who
               cannot sign in has, and /api/reports is unauthenticated for the same reason. */}

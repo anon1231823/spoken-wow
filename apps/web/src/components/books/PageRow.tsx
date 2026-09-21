@@ -4,6 +4,7 @@ import { ChevronDownIcon, Eraser, FlagIcon, PencilIcon, PlayIcon } from "lucide-
 import { useState } from "react";
 
 import RegenerateButton from "@/components/RegenerateButton";
+import ReportsBadge from "@/components/ReportsBadge";
 import TakeSelector from "@/components/TakeSelector";
 import { Button } from "@/components/ui/button";
 import { materialName } from "@/lib/books/filters";
@@ -18,7 +19,7 @@ export type RowState =
 type Props = {
   line: ResultLine;
   current: boolean;
-  /** Editor and up: the regenerate control. */
+  /** Editor and up: the regenerate control, and reading and resolving the row's reports. */
   canRegenerate: boolean;
   /**
    * How many rows this book occupies here, or 0 when this is not its first row.
@@ -226,6 +227,15 @@ export function PageRow({
           column keeps its width whatever a row happens to offer. */}
       <td className="py-1.5 pr-1 pl-2">
         <span className="flex items-center justify-end gap-1 whitespace-nowrap">
+        {/* The same chip the quests and zones rows carry; ReportsBadge says why. Books has
+            no separate triage flag: the editors who regenerate a page are the ones who
+            answer for it. */}
+        <ReportsBadge
+          source="books"
+          lineId={line.id}
+          count={line.reportsOpen}
+          canTriage={canRegenerate}
+        />
         {/* Outside the canRegenerate gate, deliberately: reporting is what a reader who
             cannot sign in has, and /api/reports is unauthenticated for the same reason.
             Every page has an address -- it is the page id the addon builds its link from --
