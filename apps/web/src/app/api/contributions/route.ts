@@ -15,7 +15,7 @@ import { headers } from "next/headers";
 
 import { auth } from "@/lib/auth";
 import { clientIp } from "@/lib/reports/client-ip";
-import { COMPLAINT_MAX } from "@/lib/contributions/contributions";
+import { COMPLAINT_MAX, descriptionFrom } from "@/lib/contributions/contributions";
 import { MAX_BYTES, parseEnvelope } from "@/lib/contributions/envelope";
 import { submissionFrom } from "@/lib/contributions/submission";
 import {
@@ -57,7 +57,14 @@ export async function POST(request: Request) {
     return Response.json({ error: parsed.error }, { status: 400 });
   }
 
-  const submission = submissionFrom(parsed.value, raw);
+  // A place with no lore is only worth filing with something said about it: the addon names
+  // the place, and the description is the contribution.
+  const description = parsed.value.source === "zones" ? descriptionFrom(body.description) : null;
+  if (parsed.value.source === "zones" && !description) {
+    return Response.json({ error: "describe" }, { status: 400 });
+  }
+
+  const submission = submissionFrom(parsed.value, raw, description);
   if (!submission) {
     return Response.json({ error: "incomplete" }, { status: 400 });
   }

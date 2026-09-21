@@ -35,6 +35,11 @@ describe("previewOf", () => {
     expect(preview.text).toContain("Убей шестерых.");
   });
 
+  it("says which source the paste is, which decides what the form asks for", () => {
+    const preview = previewOf(build("zones", { map: "1537", locale: "enUS" }));
+    expect(preview).toMatchObject({ ok: true, source: "zones" });
+  });
+
   it("explains a bad paste in the reader's terms, not the parser's", () => {
     const preview = previewOf(envelope.slice(0, 80));
     expect(preview.ok).toBe(false);

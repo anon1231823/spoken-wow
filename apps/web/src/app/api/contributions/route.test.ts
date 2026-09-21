@@ -37,6 +37,10 @@ const envelope = readFileSync(
   new URL("../../../../../../tests/fixtures/contributions/quests-accept.txt", import.meta.url),
   "utf8",
 );
+const zonesEnvelope = readFileSync(
+  new URL("../../../../../../tests/fixtures/contributions/zones-subzone.txt", import.meta.url),
+  "utf8",
+);
 const observedEnvelope = readFileSync(
   new URL("../../../../../../tests/fixtures/contributions/quests-observed.txt", import.meta.url),
   "utf8",
@@ -85,6 +89,28 @@ describe("POST /api/contributions", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].key).toBe("9123:accept");
     expect(rows[0].locale).toBe("ruRU");
+  });
+
+  it("refuses a place with no lore unless the player describes it", async () => {
+    const bare = await POST(post({ envelope: zonesEnvelope, body: "It's empty." }));
+    expect(bare.status).toBe(400);
+    expect((await bare.json()).error).toBe("describe");
+
+    const short = await POST(post({ envelope: zonesEnvelope, description: "idk" }));
+    expect(short.status).toBe(400);
+
+    const { rows } = await db().query(`select 1 from "contribution" where "ip" = $1`, [ip]);
+    expect(rows).toHaveLength(0);
+  });
+
+  it("keeps a place's description as the contribution's text", async () => {
+    const description = "A drafty nook behind the forge where the smiths leave their broken tongs.";
+    expect((await POST(post({ envelope: zonesEnvelope, description }))).status).toBe(200);
+    const { rows } = await db().query<{ key: string; text: string }>(
+      `select "key", "text" from "contribution" where "ip" = $1`,
+      [ip],
+    );
+    expect(rows).toEqual([{ key: "1537:A Nook With No Lore", text: description }]);
   });
 
   it("answers a filled honeypot with 200 and writes nothing", async () => {

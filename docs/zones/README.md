@@ -1317,21 +1317,22 @@ breaks.
 
 ### A gap has no text to send, only a place
 
-Feedback presumes an entry exists and is wrong. Standing somewhere the panel has nothing for —
-Outland, or any other corner the lore hasn't reached yet — is a different report, and the lore
-is wiki-sourced rather than client-sourced, so the client has no text to hand over for it.
-`HasContributionGap` puts a button reading **"No lore -- tell us"** on the map panel beside
-the Report button, and it carries no page of text: only the map, the zone, the subzone and
-the player's coordinates on the current map, from the one lookup this addon did not already
-have a reason to make (`Contribute.lua`'s `PlayerPosition`). Coordinates are sent only when
-the client can place the player on the current map at all; indoors and in instances they are
-left out rather than sent as zero.
+Every zone and subzone the client can name is already in the corpus; what is missing for some
+of them is the lore itself. So a gap is not reported, it is written. Where the map panel says a
+place "is on the map, but nobody has written its lore yet" (or that there is no lore for it at
+all), a **Contribute** button sits right under that sentence, in the panel's body. It sends the
+place the panel is showing -- the map, the zone's name, the subzone -- not where the player
+stands, since a place can be described from anywhere. The client has no text to hand over, so
+the envelope carries none.
+
+The contribute page asks for the missing part: for a zones paste it replaces the optional
+"Anything to add?" with a required **Describe this place** (at least 20 characters), and that
+description is stored as the contribution's text, where every other source keeps what it sent.
 
 The envelope travels the same plain-text format and the same `spoken.rusty.one/contribute` page
 as the quests and books ones, for one reason: one triage queue for three addons. What
-differs is only what is in it. The same place reported again bumps a count instead of filing a
-second row, and that count is what moves it up `/contributions` ahead of a corner nobody has
-mentioned twice.
+differs is only what is in it. Two players describing the same place in different words are two
+rows under one key, and the same description sent twice bumps a count instead.
 
 ### Bringing the audio home
 

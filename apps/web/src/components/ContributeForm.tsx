@@ -15,7 +15,12 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { checkEnvelope, COMPLAINT_MAX } from "@/lib/contributions/contributions";
+import {
+  checkEnvelope,
+  COMPLAINT_MAX,
+  DESCRIPTION_MAX,
+  DESCRIPTION_MIN,
+} from "@/lib/contributions/contributions";
 import { decodeFragment, type DecodeError, parseEnvelope, type ParseError } from "@/lib/contributions/envelope";
 
 const FIELD_LABELS: Record<string, string> = {
@@ -55,7 +60,7 @@ const LINK_MESSAGES: Record<DecodeError, string> = {
 };
 
 export type Preview =
-  | { ok: true; rows: { label: string; value: string }[]; text: string | null }
+  | { ok: true; source: string; rows: { label: string; value: string }[]; text: string | null }
   | { ok: false; message: string };
 
 /** Exported for its test: what the page will show for a given paste. */
@@ -75,7 +80,7 @@ export function previewOf(raw: string): Preview {
     label: FIELD_LABELS[key] ?? key,
     value,
   }));
-  return { ok: true, rows, text: parsed.value.text };
+  return { ok: true, source: parsed.value.source, rows, text: parsed.value.text };
 }
 
 export default function ContributeForm({ signedInAs }: { signedInAs: string | null }) {
@@ -84,6 +89,7 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [description, setDescription] = useState("");
 
   // The one-copy flow: a #e1= link fills the box itself, so pressing Send is the only thing
   // left for the player to do. Runs once, client-side only -- window.location.hash never
@@ -111,6 +117,10 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
   }, []);
 
   const preview = previewOf(raw);
+  // A place with no lore: the addon can only name it, so what is sent is the player's own
+  // description of it -- required, and in place of the optional note every other source gets.
+  const isPlace = preview.ok && preview.source === "zones";
+  const described = description.trim().length >= DESCRIPTION_MIN;
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,7 +133,8 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         envelope: raw,
-        body: data.get("body"),
+        body: isPlace ? null : data.get("body"),
+        description: isPlace ? description : null,
         name: signedInAs ? null : data.get("name"),
         email: signedInAs ? null : data.get("email"),
         website: data.get("website"),
@@ -133,9 +144,14 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
     setBusy(false);
     if (response?.ok) {
       setSent(true);
-    } else {
-      setError("That did not go through. Try again in a minute.");
+      return;
     }
+    const failure = (await response?.json().catch(() => null)) as { error?: string } | null;
+    setError(
+      failure?.error === "describe"
+        ? `Describe the place in a sentence or two -- at least ${DESCRIPTION_MIN} characters.`
+        : "That did not go through. Try again in a minute.",
+    );
   }
 
   if (sent) {
@@ -187,15 +203,35 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
         </section>
       ) : null}
 
-      <label className="flex flex-col gap-1 text-sm">
-        Anything to add? (optional)
-        <textarea
-          name="body"
-          maxLength={COMPLAINT_MAX}
-          rows={3}
-          className="bg-background rounded border px-2 py-1.5"
-        />
-      </label>
+      {isPlace ? (
+        <label className="flex flex-col gap-1 text-sm">
+          Describe this place
+          <span className="text-muted-foreground text-xs">
+            Nobody has written its lore yet. What is it, who lives there, what happened there?
+            A few sentences in your own words is plenty.
+          </span>
+          <textarea
+            name="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+            minLength={DESCRIPTION_MIN}
+            maxLength={DESCRIPTION_MAX}
+            rows={6}
+            className="bg-background rounded border px-2 py-1.5"
+          />
+        </label>
+      ) : (
+        <label className="flex flex-col gap-1 text-sm">
+          Anything to add? (optional)
+          <textarea
+            name="body"
+            maxLength={COMPLAINT_MAX}
+            rows={3}
+            className="bg-background rounded border px-2 py-1.5"
+          />
+        </label>
+      )}
 
       {/*
         Asking a signed-in person for their name is asking them to answer a question the server
@@ -235,7 +271,7 @@ export default function ContributeForm({ signedInAs }: { signedInAs: string | nu
       ) : null}
 
       <div>
-        <Button type="submit" disabled={busy || !preview.ok}>
+        <Button type="submit" disabled={busy || !preview.ok || (isPlace && !described)}>
           {busy ? "Sending…" : "Send it"}
         </Button>
       </div>

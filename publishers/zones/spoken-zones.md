@@ -32,7 +32,7 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 
 ## When there is no lore at all
 
-Zone lore is written from the wiki, not from anything the client carries, so there is no text in your client for the addon to hand over the way Spoken Quests and Spoken Books can. What it hands over instead is the place itself: stand somewhere the panel has nothing for — Outland, a corner the lore hasn't reached yet — and a button reading **"No lore -- tell us"** appears beside Report. Press it and it gives you a link carrying the map, the zone, the subzone and your coordinates, no text attached. Copy it, open it in your browser, and press Send. The same place sent in by several players is what moves it up the queue. Rather not see the button? **Hide the Contribute buttons** in the Spoken Player settings turns it off.
+Every place in the game is on the panel, but some of them nobody has written about yet. Open one and the panel says so, with a **Contribute** button right under it. Press it and it gives you a link naming the place; open it in your browser, describe the place in your own words -- what it is, who lives there, what happened there -- and press Send. Rather not see the button? **Hide the Contribute buttons** in the Spoken Player settings turns it off.
 
 ## Narration needs a sound pack
 

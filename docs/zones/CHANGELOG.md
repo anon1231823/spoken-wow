@@ -10,10 +10,10 @@ section with no kind in its heading is the addon's.
 
 ## 2.1.0 — 2026-09-21
 
-- **"No lore -- tell us".** Stand somewhere the panel has nothing for and a button appears
-  beside Report. It hands you a link carrying where you are -- the map, the zone, the subzone
-  and your position -- so the gap can be written. Hide it with **Hide the Contribute
-  buttons** in the Spoken Player settings.
+- **Describe a place nobody has written about.** Where the panel says a place has no lore yet,
+  a **Contribute** button sits right under that sentence. It hands you a link naming the
+  place; the page it opens asks you to describe it in your own words. Hide it with **Hide the
+  Contribute buttons** in the Spoken Player settings.
 
 ## 2.0.3 — 2026-09-18
 

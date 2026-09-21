@@ -13,7 +13,7 @@ local ADDON_NAME, SpokenZones = ...
 
 local BUTTON_WIDTH = 58
 local BUTTON_HEIGHT = 20
-local CONTRIBUTE_WIDTH = 132
+local CONTRIBUTE_WIDTH = 100
 
 local ReportButton = {}
 
@@ -76,31 +76,24 @@ end
 -- The "no lore here" button
 --------------------------------------------------------------------------------
 
--- Report is only ever aimed at an entry that exists -- SetTarget above parks and hides it
--- otherwise, which is exactly right for reporting a problem with a line that is on screen.
--- This button's whole reason to exist is the opposite entry, the one that does not, and its
--- question is about the player's own location, not whatever a map panel or the lore window
--- happens to be displaying -- so it cannot share SetTarget/Refresh's plumbing.
---
--- It refreshes off SpokenZones:OnZoneChanged instead: the same funnel Autoplay.lua's login
--- greeting and NarrateUnheard already ride, fed by Core.lua's own ZONE_CHANGED/
--- ZONE_CHANGED_INDOORS/ZONE_CHANGED_NEW_AREA handler. That means no new event frame and no
--- timer of its own -- see the quests task's review, which rejected a 0.2s poll for precisely
--- this reason.
+-- The Contribute button, in the panel's body under "nobody has written its lore yet" rather
+-- than on the footer: every place is already known, and what is missing is the lore itself,
+-- so the offer belongs beside the words that say so. Pointed at a place with SetTarget; hidden
+-- with no target, or where this client cannot contribute (SpokenZones:CanContribute).
 function SpokenZones:CreateContributeButton(parent)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-	button:SetSize(CONTRIBUTE_WIDTH, BUTTON_HEIGHT)
-	button:SetText("No lore -- tell us")
+	button:SetSize(CONTRIBUTE_WIDTH, BUTTON_HEIGHT + 2)
+	button:SetText("Contribute")
 	button:Hide()
 
-	button:SetScript("OnClick", function()
-		SpokenZones:ShowContribution()
+	button:SetScript("OnClick", function(self)
+		SpokenZones:ShowContribution(self.mapID, self.subzone)
 	end)
 
 	button:SetScript("OnEnter", function(self)
-		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-		GameTooltip:SetText("No lore for here")
-		GameTooltip:AddLine("Zone lore is written by hand from the wiki, not read out of the client -- this sends your location so the gap can be filled.", 1, 0.8, 0.2, true)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetText("Spoken Zones has no lore for this place")
+		GameTooltip:AddLine("Contribute by describing it: what it is, who lives there, what happened there.", 1, 0.8, 0.2, true)
 		GameTooltip:Show()
 	end)
 
@@ -108,19 +101,14 @@ function SpokenZones:CreateContributeButton(parent)
 		GameTooltip:Hide()
 	end)
 
-	local function Refresh()
-		if SpokenZones:HasContributionGap() then
-			button:Show()
+	function button:SetTarget(mapID, subzone)
+		self.mapID, self.subzone = mapID, subzone
+		if mapID and SpokenZones:CanContribute() then
+			self:Show()
 		else
-			button:Hide()
+			self:Hide()
 		end
 	end
-	SpokenZones:OnZoneChanged(Refresh)
-	-- Toggling the hide setting in the Spoken Player settings fires no game event.
-	if _G.Spoken and Spoken.RegisterCallback then
-		Spoken:RegisterCallback("CONTRIBUTE_SETTINGS_CHANGED", Refresh)
-	end
-	Refresh()
 
 	return button
 end
