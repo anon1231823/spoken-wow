@@ -39,12 +39,13 @@ dump_tables=()
 for table in "${tables[@]}"; do dump_tables+=("--table=$table"); done
 quoted=$(printf '"%s", ' "${tables[@]}")
 
-# Loaded into a staging copy of each table first, then moved across. The reason is authors:
-# a take or an ignore records who made it, and those accounts exist on production and not
-# here -- so a straight load fails the foreign key into "user". Copying production's user
-# table would bring real accounts and email addresses onto this machine, so instead an
-# author this machine does not have is left blank. Production keeps the attribution; this
-# copy is for building and testing.
+# Loaded into a staging copy of each table first, then moved across. The reason is rows the
+# sync does not bring: a take or an ignore records who made it, and a settled speaker the
+# contribution it came from, and those rows exist on production and not here -- so a straight
+# load fails the foreign key into "user" or "contribution". Copying those tables would bring
+# real accounts, email addresses and players' submissions onto this machine, so instead a
+# reference this machine cannot satisfy is left blank. Production keeps the link; this copy
+# is for building and testing.
 staging=sync_staging
 take_columns=$(psql "$LOCAL_DB" -tAc "select string_agg(quote_ident(column_name), ', '
                                           order by ordinal_position)
@@ -71,20 +72,25 @@ take_columns=$(psql "$LOCAL_DB" -tAc "select string_agg(quote_ident(column_name)
 do \$\$
 declare fk record;
 begin
-  -- Every column in the staged tables that points at "user", blanked where the account is
-  -- not on this machine.
+  -- Every single-column foreign key from a staged table into a table the sync does not
+  -- bring, blanked where the row it names is not on this machine. Found from the catalog
+  -- rather than listed, so the next such column -- contributionId was the second, after the
+  -- authors -- cannot fail a sync again.
   for fk in
-    select c.conrelid::regclass::text as tbl, a.attname as col
+    select src.relname as tbl, a.attname as col, dst.relname as ref, ra.attname as refcol
       from pg_constraint c
-      join pg_attribute a on a.attrelid = c.conrelid and a.attnum = any(c.conkey)
-     where c.contype = 'f' and c.confrelid = '"user"'::regclass
+      join pg_class src on src.oid = c.conrelid
+      join pg_class dst on dst.oid = c.confrelid
+      join pg_attribute a on a.attrelid = c.conrelid and a.attnum = c.conkey[1]
+      join pg_attribute ra on ra.attrelid = c.confrelid and ra.attnum = c.confkey[1]
+     where c.contype = 'f' and cardinality(c.conkey) = 1
        and c.connamespace = 'public'::regnamespace
+       and to_regclass(format('$staging.%I', src.relname)) is not null
+       and to_regclass(format('$staging.%I', dst.relname)) is null
   loop
-    if to_regclass('$staging.' || quote_ident(split_part(fk.tbl, '.', 1))) is not null then
-      execute format(
-        'update $staging.%I set %I = null where %I is not null and %I not in (select "id" from "user")',
-        replace(fk.tbl, '"', ''), fk.col, fk.col, fk.col);
-    end if;
+    execute format(
+      'update $staging.%I set %I = null where %I is not null and %I not in (select %I from public.%I)',
+      fk.tbl, fk.col, fk.col, fk.col, fk.refcol, fk.ref);
   end loop;
 end
 \$\$;
