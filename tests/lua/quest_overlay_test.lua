@@ -12,7 +12,7 @@ stub.SetClient("16001"); stub.ResetSound(); stub.ResetTimers()
 -- Two quests in the log: one the sound pack has a line for, one it does not.
 stub.SetModernQuestLog({
     { questID = 748, title = "Poison Water", level = 8 },
-    { questID = 96130, title = "Chakuyak", level = 9 },
+    { questID = 96130, title = "Chakuyak", level = 9, description = "Bring me the tusks, and be quick about it." },
 })
 
 local VO = stub.LoadQuestsOverlay(here .. "/../../addons/SpokenQuests/", here .. "/../../addons/SpokenPlayer/")
@@ -41,6 +41,11 @@ VO.DataModules:Register("TestPack", {
 })
 -- Wait out the deferred data module load that OnInitialize schedules.
 stub.Advance(2)
+
+-- Contribute buttons hidden in the Spoken Player settings: a quest with no line is exactly the
+-- greyed-out Play it always was. The Contribute half is checked further down.
+local SpokenEnv = _G.SpokenEnv
+SpokenEnv.Addon.db.profile.Contribute.HideButtons = true
 
 -- What the client does when it draws the list.
 QuestLogQuests_Update()
@@ -120,6 +125,40 @@ before = table.getn(played)
 detailsButton:Click()
 stub.Advance(3)
 Expect("...and plays nothing", table.getn(played), before)
+
+-- Contributing on: a quest the pack has no line for offers Contribute where its Play would be.
+SpokenEnv.Addon.db.profile.Contribute.HideButtons = false
+QuestLogQuests_Update()
+local contribute = VO.QuestOverlayUI.questContributeButtons[96130]
+Expect("with contributing on, a quest with no line gets a Contribute button", contribute ~= nil, true)
+Expect("...shown", contribute and contribute:IsShown(), true)
+Expect("...in place of its Play", buttons[96130]:IsShown(), false)
+Expect("...where Play sits", contribute and contribute.anchor and contribute.anchor.point, "TOPLEFT")
+Expect("a quest with a line keeps its Play", buttons[748]:IsShown(), true)
+Expect("...and gets no Contribute", VO.QuestOverlayUI.questContributeButtons[748], nil)
+
+if contribute then
+    contribute:GetScript("OnEnter")(contribute)
+    Expect("the tooltip says what is missing", GameTooltip.text, "Spoken Quests doesn't have this quest")
+    contribute:Click()
+    local box = Spoken.ContributeBox
+    Expect("clicking it opens the contribute box", box and box.frame:IsShown(), true)
+    local link = box and box.editBox:GetText() or ""
+    Expect("...holding a link to the contribute page", link:match("^https://spoken%.rusty%.one/contribute#e1=") ~= nil, true)
+    local envelope = VO.Contribute:CaptureFromLog(96130, "Chakuyak")
+    Expect("the log's envelope carries the quest", envelope:match("\nquest=96130\n") ~= nil, true)
+    Expect("...as its accept moment", envelope:match("\nevent=accept\n") ~= nil, true)
+    Expect("...says it came from the log", envelope:match("\nfrom=log\n") ~= nil, true)
+    Expect("...and carries the quest's own text", envelope:match("Bring me the tusks, and be quick about it%.") ~= nil, true)
+    Expect("...but no NPC, which the log does not know", envelope:match("\nnpc=") == nil, true)
+end
+
+-- The details view says Contribute on the same button instead of greying out.
+QuestMapFrame_ShowQuestDetails(96130)
+Expect("the details button offers Contribute for a quest with no line", detailsButton:GetText(), "Contribute")
+Expect("...lit", detailsButton:IsEnabled(), true)
+QuestMapFrame_ShowQuestDetails(748)
+Expect("...and says Play again for a quest with one", detailsButton:GetText(), "Play")
 
 if failures > 0 then
     print(string.format("\n%d check(s) failed", failures))

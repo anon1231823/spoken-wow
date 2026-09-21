@@ -96,48 +96,33 @@ stub.HidePanels()
 stub.FireEvent("QUEST_FINISHED")
 Expect("...and stays hidden once the panel closes", VoiceOver.ContributeButton.button:IsShown(), false)
 
--- The Reward panel on a modern client ships no Cancel button at all (RowButtonsFor's
--- comment): faked here by removing the global, since the stub otherwise creates all six quest
--- buttons regardless of client. The button must still place itself off the one button that
--- exists.
-_G.QuestFrameCancelButton = nil
+-- Where the button sits: the quest frame's top right corner, where a Play button sits in the
+-- quest log -- just left of the frame's own close button when the client draws one.
 world.rewardText = "Here is your reward."
 stub.ShowPanel("QuestFrameRewardPanel")
 stub.FireEvent("QUEST_COMPLETE")
-Expect("the button still shows beside CompleteQuestButton when there is no Cancel button",
-    VoiceOver.ContributeButton.button:IsShown(), true)
--- Pinning the branch, not just surviving it: only the fixed-width fallback calls SetWidth(CONTRIBUTE_WIDTH)
--- at all, so a regression that instead tried (and silently mis-anchored) a two-point SetPoint
--- against the missing right-hand button would leave the button at its untouched default width
--- rather than the fallback width, and this would catch it even though IsShown() above would not.
-Expect("...at the fixed fallback width, not a stretched two-point anchor",
-    VoiceOver.ContributeButton.button:GetWidth(), 110)
+local button = VoiceOver.ContributeButton.button
+Expect("the button shows on the reward panel too", button:IsShown(), true)
+Expect("...in the quest frame's top right corner", button.anchor and button.anchor.point, "TOPRIGHT")
+Expect("...of the quest frame itself", button.anchor and button.anchor.relativeTo == _G.QuestFrame, true)
+
+_G.QuestFrameCloseButton = stub.Widget("Button", "QuestFrameCloseButton")
+stub.FireEvent("QUEST_COMPLETE")
+Expect("beside the close button, where the client draws one", button.anchor and button.anchor.relativeTo == _G.QuestFrameCloseButton, true)
+Expect("...on its left", button.anchor and button.anchor.point, "RIGHT")
+
+button:GetScript("OnEnter")(button)
+Expect("the tooltip says the quest is missing", GameTooltip.text, "Spoken Quests doesn't have this quest")
+_G.QuestFrameCloseButton = nil
 stub.HidePanels()
 
--- Gossip, on the client generations whose GossipFrame this addon can actually anchor to (see
--- GossipGoodbyeButton's comment): no quest panel, so PositionOnQuestPanel never runs, and the
--- button is placed beside GossipFrame.GreetingPanel.GoodbyeButton instead.
+-- Gossip: the same corner of the gossip frame, and a tooltip about a line rather than a quest.
 stub.ShowGossip("We stand ready.")
 stub.FireEvent("GOSSIP_SHOW")
-Expect("the button appears on gossip too, once a Goodbye button can be found",
-    VoiceOver.ContributeButton.button:IsShown(), true)
-
--- The legacy fallback: no GreetingPanel.GoodbyeButton (as the three original 1.12/2.4.3/3.3.5
--- clients might not have -- see GossipGoodbyeButton's comment), but a flat, older-style global
--- in its place. The field is removed outright rather than through stub.absentAPI: absentAPI
--- only changes what the Widget metatable answers when a lookup falls through to it, and
--- GreetingPanel is a real field this stub assigns once at load (not something the metatable
--- was ever asked about), so absentAPI has no effect on it -- setting it, as an earlier version
--- of this test did, left the real GreetingPanel.GoodbyeButton in place and passed without ever
--- reaching the fallback. Saved and restored so later code in this file still sees the real one.
-local savedGreetingPanel = _G.GossipFrame.GreetingPanel
-_G.GossipFrame.GreetingPanel = nil
-_G.GossipGreetingGoodbyeButton = stub.Widget("Button", "GossipGreetingGoodbyeButton")
-stub.ShowGossip("Legacy words.")
-stub.FireEvent("GOSSIP_SHOW")
-Expect("the legacy global is used when the parentKey path is absent",
-    VoiceOver.ContributeButton.button:IsShown(), true)
-_G.GossipFrame.GreetingPanel = savedGreetingPanel
+Expect("the button appears on gossip too", button:IsShown(), true)
+Expect("...in the gossip frame's top right corner", button.anchor and button.anchor.relativeTo == _G.GossipFrame, true)
+button:GetScript("OnEnter")(button)
+Expect("...saying the line is missing", GameTooltip.text, "Spoken Quests doesn't have this line")
 
 ---------------------------------------------------------------- the closing gossip frame
 -- CloseGossip fires GOSSIP_CLOSED, which refreshes the button, and on a real client the

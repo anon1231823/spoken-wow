@@ -693,20 +693,34 @@ if QuestLogQuests_Update and QuestScrollFrame and QuestScrollFrame.titleFramePoo
                     self:CreatePlayButton(questID)
                 end
                 local playButton = self.questPlayButtons[questID]
+                local shown = playButton
 
                 if DataModules:PrepareSound({ event = Enums.SoundEvent.QuestAccept, questID = questID }) then
                     self:UpdatePlayButton(QuestOverlayUI:GetQuestTitle(questID, row), questID, row, row.Text,
                         row.Checkbox)
                     playButton:Enable()
                 else
-                    playButton:SetParent(row:GetParent())
-                    self:UpdateQuestTitle(row, playButton)
-                    playButton:Disable()
+                    -- No sound: Contribute where Play would be, or Play greyed out where this
+                    -- client cannot contribute.
+                    local contribute = self:ContributeButtonFor(questID, QuestOverlayUI:GetQuestTitle(questID, row))
+                    if contribute then
+                        playButton:Hide()
+                        shown = contribute
+                    else
+                        playButton:Disable()
+                    end
+                    shown:SetParent(row:GetParent())
+                    if contribute then
+                        contribute:SetFrameLevel(row:GetFrameLevel() + 2)
+                    end
+                    self:UpdateQuestTitle(row, shown)
                 end
 
-                playButton:Show()
-                self:UpdatePlayButtonTexture(questID)
-                table.insert(self.displayedButtons, playButton)
+                shown:Show()
+                if shown == playButton then
+                    self:UpdatePlayButtonTexture(questID)
+                end
+                table.insert(self.displayedButtons, shown)
             end
         end
     end
@@ -759,7 +773,11 @@ if QuestLogQuests_Update and QuestScrollFrame and QuestScrollFrame.titleFramePoo
                 local _, _, _, backInset, backOffset = backButton and backButton:GetPoint(1)
                 playButton:SetPoint("RIGHT", header, "RIGHT", -(backInset or 11), backOffset or 4)
                 playButton.setPlayState = function(button, isPlaying)
-                    button:SetText(isPlaying and "Stop" or "Play")
+                    if button.contributing then
+                        button:SetText("Contribute")
+                    else
+                        button:SetText(isPlaying and "Stop" or "Play")
+                    end
                 end
                 self.detailsPlayButton = playButton
             end
@@ -769,7 +787,28 @@ if QuestLogQuests_Update and QuestScrollFrame and QuestScrollFrame.titleFramePoo
             playButton.soundData = nil
             self:BindPlayButton(playButton, questID, self:GetQuestTitle(questID))
 
+            -- No sound: the same button offers Contribute instead of greying out, where this
+            -- client can contribute at all (Contribute:CanOfferFromLog).
+            local contribute = rawget(VoiceOver, "Contribute")
+            playButton.contributing = nil
+            playButton:SetScript("OnEnter", nil)
+            playButton:SetScript("OnLeave", nil)
             if DataModules:PrepareSound({ event = Enums.SoundEvent.QuestAccept, questID = questID }) then
+                playButton:Enable()
+            elseif contribute and contribute.CanOfferFromLog and contribute:CanOfferFromLog() then
+                local title = self:GetQuestTitle(questID)
+                playButton.contributing = true
+                playButton:SetScript("OnClick", function()
+                    contribute:ShowFromLog(questID, title)
+                end)
+                playButton:SetScript("OnEnter", function(button)
+                    contribute:ShowTooltip(button)
+                end)
+                playButton:SetScript("OnLeave", function()
+                    if GameTooltip then
+                        GameTooltip:Hide()
+                    end
+                end)
                 playButton:Enable()
             else
                 playButton:Disable()

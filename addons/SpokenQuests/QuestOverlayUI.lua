@@ -8,6 +8,8 @@ local TEXTURES = format([[Interface\AddOns\%s\Textures\]], AddonFolder)
 QuestOverlayUI = {
     ---@type table<number, QuestPlayButton>
     questPlayButtons = {},
+    ---@type table<number, Button>
+    questContributeButtons = {},
     ---@type QuestPlayButton[]
     displayedButtons = {},
 }
@@ -39,6 +41,48 @@ end
 
 function QuestOverlayUI:CreatePlayButton(questID)
     self.questPlayButtons[questID] = self:MakePlayButton()
+end
+
+--- Contribute.lua, or nil where it is not loaded: the private-server clients leave it out
+--- (Contribute.xml), and this file runs on them too. rawget, so a global of the same name from
+--- some other addon is never mistaken for it.
+local function ContributeModule()
+    return rawget(VoiceOver, "Contribute")
+end
+
+--- The Contribute button for a quest the log has no sound for, sitting where its Play would,
+--- or nil when this client cannot offer one (no Contribute.lua, buttons hidden, or no sound
+--- pack at all -- see Contribute:CanOfferFromLog). The client's own plus icon, the same size as
+--- Play: the row has room for an icon and not for a word, and the tooltip says what it does.
+---@return Button?
+function QuestOverlayUI:ContributeButtonFor(questID, title)
+    local contribute = ContributeModule()
+    if not (contribute and contribute.CanOfferFromLog and contribute:CanOfferFromLog()) then
+        return nil
+    end
+    local button = self.questContributeButtons[questID]
+    if not button then
+        button = CreateFrame("Button", nil, self:GetPlayButtonParent())
+        button:SetWidth(20)
+        button:SetHeight(20)
+        button:SetHitRectInsets(2, 2, 2, 2)
+        button:SetNormalTexture("Interface\\Buttons\\UI-PlusButton-Up")
+        button:SetPushedTexture("Interface\\Buttons\\UI-PlusButton-Down")
+        button:SetHighlightTexture("Interface\\Buttons\\UI-PlusButton-Hilight")
+        button:SetScript("OnEnter", function(self)
+            contribute:ShowTooltip(self)
+        end)
+        button:SetScript("OnLeave", function()
+            if GameTooltip then
+                GameTooltip:Hide()
+            end
+        end)
+        self.questContributeButtons[questID] = button
+    end
+    button:SetScript("OnClick", function()
+        contribute:ShowFromLog(questID, title)
+    end)
+    return button
 end
 
 local prefix
@@ -165,19 +209,33 @@ function QuestOverlayUI:Update()
                 self:CreatePlayButton(questID)
             end
 
+            local playButton = self.questPlayButtons[questID]
+            local shown = playButton
             if DataModules:PrepareSound({ event = Enums.SoundEvent.QuestAccept, questID = questID }) then
                 self:UpdatePlayButton(title, questID, questLogTitleFrame, normalText, questCheck)
-                self.questPlayButtons[questID]:Enable()
+                playButton:Enable()
             else
-                self:UpdateQuestTitle(questLogTitleFrame, self.questPlayButtons[questID], normalText, questCheck)
-                self.questPlayButtons[questID]:Disable()
+                -- No sound: Contribute where Play would be, or Play greyed out where this
+                -- client cannot contribute.
+                local contribute = self:ContributeButtonFor(questID, title)
+                if contribute then
+                    playButton:Hide()
+                    contribute:SetParent(questLogTitleFrame:GetParent())
+                    contribute:SetFrameLevel(questLogTitleFrame:GetFrameLevel() + 2)
+                    shown = contribute
+                else
+                    playButton:Disable()
+                end
+                self:UpdateQuestTitle(questLogTitleFrame, shown, normalText, questCheck)
             end
 
-            self.questPlayButtons[questID]:Show()
-            self:UpdatePlayButtonTexture(questID)
+            shown:Show()
+            if shown == playButton then
+                self:UpdatePlayButtonTexture(questID)
+            end
 
             -- Add the button to displayedButtons
-            table.insert(self.displayedButtons, self.questPlayButtons[questID])
+            table.insert(self.displayedButtons, shown)
         end
     end
 end

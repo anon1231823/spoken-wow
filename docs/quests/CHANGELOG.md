@@ -10,10 +10,12 @@ carries that version. The heading says which.
 
 - **A Contribute button, where a quest or an NPC has no voice.** Content newer than vanilla,
   a language the corpus does not carry, a line an NPC says that nobody has recorded: the quest
-  frame and the gossip frame grow a **Contribute** button beside their own, and pressing it
-  hands you a link to send the text your client is showing. It also carries what the client
-  can see about who is speaking -- the model, the sex, the creature type -- which is how a new
-  NPC gets the right voice.
+  frame and the gossip frame show a **Contribute** button in their top right corner, and
+  pressing it hands you a link to send the text your client is showing. It also carries what
+  the client can see about who is speaking -- the model, the sex, the creature type -- which
+  is how a new NPC gets the right voice.
+- **The quest log offers it too**, where a quest's Play would be: a plus icon in the list, and
+  **Contribute** on the details view's button.
 - Hide it with **Hide the Contribute buttons** in the Spoken Player settings.
 - Not on the 1.12, 2.4.3 and 3.3.5 clients, where contributing is off for now.
 

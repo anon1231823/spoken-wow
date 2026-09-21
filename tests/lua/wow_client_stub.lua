@@ -962,6 +962,7 @@ function M.SetModernQuestLog(quests)
     }
 
     local titles = {}
+    local descriptions = {}
     for _, quest in ipairs(quests) do
         local row = _G.CreateFrame("Button", nil, scroll.Contents)
         row.questID = quest.questID
@@ -971,6 +972,7 @@ function M.SetModernQuestLog(quests)
         row.Checkbox = _G.CreateFrame("Frame", nil, row)
         table.insert(active, row)
         titles[quest.questID] = quest.title
+        descriptions[getn(active)] = quest.description
     end
 
     -- The details view the list opens a quest into, and the one function that opens it.
@@ -988,7 +990,16 @@ function M.SetModernQuestLog(quests)
     _G.C_QuestLog = {
         GetTitleForQuestID = function(questID) return titles[questID] end,
         GetNumQuestLogEntries = function() return getn(active) end,
+        GetLogIndexForQuestID = function(questID)
+            for index, row in ipairs(active) do
+                if row.questID == questID then return index end
+            end
+        end,
     }
+    -- The modern log's text is asked for by entry index; it has no selection to read it from.
+    _G.GetQuestLogQuestText = function(index)
+        return descriptions[index], ""
+    end
     -- What the client redraws the list through, and what the overlay hooks.
     _G.QuestLogQuests_Update = function() end
 

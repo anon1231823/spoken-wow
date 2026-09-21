@@ -297,10 +297,9 @@ local function EventOnScreen()
     return nil, nil
 end
 
---- The envelope for what is on screen, or nil when there is nothing to send.
-function Contribute:Capture()
-    local event, text = EventOnScreen()
-    local fields =
+--- The fields every quests envelope starts with: which addon, which client, which language.
+local function BaseFields()
+    return
     {
         -- VoiceOver.VERSION does not exist -- nothing in this addon ever assigns it. The
         -- addon's own .toc version, read the way DataModules.lua already reads every sound
@@ -313,6 +312,12 @@ function Contribute:Capture()
                                    (GetBuildInfo and select(2, GetBuildInfo())) or "?") },
         { "locale", (GetLocale and GetLocale()) or "enUS" },
     }
+end
+
+--- The envelope for what is on screen, or nil when there is nothing to send.
+function Contribute:Capture()
+    local event, text = EventOnScreen()
+    local fields = BaseFields()
 
     if event and text and text ~= "" then
         local questID = GetQuestID and GetQuestID() or 0
@@ -426,16 +431,86 @@ function Contribute:HasGap()
     return gap
 end
 
--- Compression happens here and nowhere upstream of a click: HasGap/Capture run on every quest
--- and gossip event to decide whether the button belongs on screen at all, and paying deflate's
--- cost on each of those would be work spent on every panel the player merely glances at, for a
--- result almost always thrown away unhandled. Show() runs once, when they have already decided
--- to send it.
-function Contribute:Show()
-    local envelope = self:Capture()
-    if not envelope then
+--- A quest's own text, as its quest log entry shows it: the description, which is what the
+--- quest giver reads out on the accept panel. Nil when the log does not have the quest.
+---
+--- Two quest logs, two ways to ask. The classic one (Era, Anniversary) answers only for the
+--- selected entry, so the entry is selected for the read and the player's own selection put
+--- back straight after. The modern one (the Forever client) has no selection functions at all
+--- and takes the entry's index instead -- asked second, because a classic client that also
+--- carries C_QuestLog would ignore the index and answer for whatever is selected.
+local function QuestLogDescription(questID)
+    if GetQuestLogSelection and SelectQuestLogEntry and GetNumQuestLogEntries and GetQuestLogTitle then
+        for index = 1, (GetNumQuestLogEntries()) do
+            local id = select(8, GetQuestLogTitle(index))
+            if id == questID then
+                local previous = GetQuestLogSelection()
+                SelectQuestLogEntry(index)
+                local description = GetQuestLogQuestText and GetQuestLogQuestText()
+                SelectQuestLogEntry(previous or 0)
+                return description
+            end
+        end
+        return nil
+    end
+    if C_QuestLog and C_QuestLog.GetLogIndexForQuestID and GetQuestLogQuestText then
+        local index = C_QuestLog.GetLogIndexForQuestID(questID)
+        if index then
+            return (GetQuestLogQuestText(index))
+        end
+    end
+    return nil
+end
+
+--- The envelope for a quest in the quest log, or nil when its text cannot be read.
+---
+--- The accept moment, since that is the text the log carries. No NPC: the log does not say who
+--- gave the quest, so the site asks a moderator for the speaker, or takes it from a
+--- contribution sent from the quest giver's own dialog. `from=log` says which of the two this
+--- was.
+function Contribute:CaptureFromLog(questID, title)
+    local text = questID and QuestLogDescription(questID)
+    if not text or text == "" then
+        return nil
+    end
+    local fields = BaseFields()
+    fields[#fields + 1] = { "quest", questID }
+    fields[#fields + 1] = { "event", "accept" }
+    fields[#fields + 1] = { "title", title or "" }
+    fields[#fields + 1] = { "from", "log" }
+    return Spoken.Contribute:Envelope("quests", fields, text)
+end
+
+--- Whether the quest log should offer Contribute in place of a Play it cannot give.
+---
+--- Only with at least one sound pack registered: without one, every quest in the log lacks
+--- sound, and offering to contribute all of them would say the corpus is missing what is in
+--- fact simply not installed.
+function Contribute:CanOfferFromLog()
+    if not (_G.Spoken and Spoken.Contribute and Spoken.ShowContribution) then
+        return false
+    end
+    if Spoken.AreContributeButtonsHidden and Spoken:AreContributeButtonsHidden() then
+        return false
+    end
+    return DataModules:HasRegisteredModules()
+end
+
+--- The tooltip every Contribute button in this addon shows. `gossip` for an NPC's line rather
+--- than a quest, which the first line then says instead.
+function Contribute:ShowTooltip(owner, gossip)
+    if not GameTooltip then
         return
     end
+    GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+    GameTooltip:SetText(gossip and "Spoken Quests doesn't have this line" or "Spoken Quests doesn't have this quest")
+    GameTooltip:AddLine("Contribute your data by sharing data from your client", 1, 0.8, 0.2, true)
+    GameTooltip:Show()
+end
+
+--- Hand the player an envelope: as one link where the bundled player can build one, and as the
+--- raw text and the address otherwise.
+local function Offer(envelope)
     local address = format("%s/contribute", SITE_URL)
     -- Encode is absent on an older SpokenPlayer a legacy-client zip can still bundle; Link
     -- returns nil for that or for an oversized result. Either way, the two-copy fallback still
@@ -445,5 +520,25 @@ function Contribute:Show()
         Spoken:ShowContribution(link, address, true)
     else
         Spoken:ShowContribution(envelope, address)
+    end
+end
+
+--- Contribute a quest from the quest log. Compressed on the click, like Show.
+function Contribute:ShowFromLog(questID, title)
+    local envelope = self:CaptureFromLog(questID, title)
+    if envelope then
+        Offer(envelope)
+    end
+end
+
+-- Compression happens here and nowhere upstream of a click: HasGap/Capture run on every quest
+-- and gossip event to decide whether the button belongs on screen at all, and paying deflate's
+-- cost on each of those would be work spent on every panel the player merely glances at, for a
+-- result almost always thrown away unhandled. Show() runs once, when they have already decided
+-- to send it.
+function Contribute:Show()
+    local envelope = self:Capture()
+    if envelope then
+        Offer(envelope)
     end
 end

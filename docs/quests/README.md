@@ -749,10 +749,12 @@ the corpus is built from a 1.12 world database, so it has nothing for content th
 vanilla, for a locale that database does not carry, or for whatever a private server invented
 on top of it. In those three cases the client in front of the player is holding the only copy
 of the text, and `Contribute:HasGap()` puts a button reading **"Contribute"** — the same word
-the books addon's button carries — on the Blizzard quest frame itself, anchored into whichever
-of the accept, progress or reward panel's own button row is on screen, and beside the gossip
-frame's Goodbye button for an NPC line, exactly when there is text on screen and nothing queued
-to play. It exists on the Blizzard clients only: the 1.12, 2.4.3 and 3.3.5 clients are private
+the books addon's button carries — in the top right corner of the Blizzard quest or gossip
+frame, just left of its close button, exactly when there is text on screen and nothing queued
+to play. The quest log offers the same thing where a quest's Play would be: a small plus icon
+in the list, and the details view's Play reading **Contribute**. A contribution from the log
+carries the quest's own description as its accept text and `from=log`, but no NPC — the log
+does not say who gave the quest. It exists on the Blizzard clients only: the 1.12, 2.4.3 and 3.3.5 clients are private
 servers, where contributing is off for now, and their `.toc` files leave out the `Contribute.xml`
 that loads it (the 1.12 client's Lua 5.0 could not parse it anyway). A player who does not want it turns it off with **Hide the Contribute buttons** in the
 Spoken Player settings, one switch for the quests, books and zones buttons alike; each addon
