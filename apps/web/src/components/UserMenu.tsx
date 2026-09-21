@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { signOut, useSession } from "@/lib/auth-client";
 import { canConfigureGeneration, canManageVoices, canRegenerate, isAdmin } from "@/lib/permissions";
 
@@ -16,9 +18,36 @@ import { canConfigureGeneration, canManageVoices, canRegenerate, isAdmin } from 
  * put a database round trip in front of every page view of a tool that is otherwise served
  * entirely off disk.
  */
+/**
+ * What every visitor gets, signed in or not: the three sections, and the page an addon's
+ * Contribute button leads to -- which is also where a player uploads what they gathered, and
+ * had no way in from the site itself.
+ */
+function Sections() {
+  return (
+    <>
+      <Button asChild variant="ghost" size="sm">
+        <Link href="/quests">Quests</Link>
+      </Button>
+      <Button asChild variant="ghost" size="sm">
+        <Link href="/zones">Zones</Link>
+      </Button>
+      <Button asChild variant="ghost" size="sm">
+        <Link href="/books">Books</Link>
+      </Button>
+      <Button asChild variant="ghost" size="sm">
+        <Link href="/contribute">Contribute</Link>
+      </Button>
+    </>
+  );
+}
+
 export default function UserMenu() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  // Controlled, so choosing a link closes the menu: a Radix popover stays open across a
+  // client-side navigation otherwise, hanging over the page it just opened.
+  const [open, setOpen] = useState(false);
 
   // Rendering nothing until the session resolves avoids a "Sign in" flash for a user who
   // is in fact signed in.
@@ -27,15 +56,7 @@ export default function UserMenu() {
   if (!session) {
     return (
       <nav className="flex items-center gap-1">
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/quests">Quests</Link>
-        </Button>
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/zones">Zones</Link>
-        </Button>
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/books">Books</Link>
-        </Button>
+        <Sections />
         <Button asChild variant="ghost" size="sm">
           <Link href="/login">Sign in</Link>
         </Button>
@@ -47,63 +68,55 @@ export default function UserMenu() {
   }
 
   const role = session.user.role;
+  // Everything only a signed-in person can reach, in one menu rather than a header row that
+  // grew a button per role until it wrapped.
+  const links = [
+    canManageVoices(role) && { href: "/voices", label: "Voices" },
+    canConfigureGeneration(role) && { href: "/lexicon", label: "Pronunciation" },
+    canRegenerate(role) && { href: "/reports", label: "Reports" },
+    canRegenerate(role) && { href: "/contributions", label: "Contributions" },
+    isAdmin(role) && { href: "/admin", label: "Users" },
+    // Everyone signed in has one, and for a collaborator it is where the ElevenLabs key
+    // lives - which is the thing standing between them and the Regenerate button.
+    { href: "/profile", label: "Profile" },
+  ].filter((link): link is { href: string; label: string } => Boolean(link));
 
   return (
-    <nav className="flex items-center gap-2">
-      {/* The three sections, for everyone: they are what the site is, and a visitor who
-          landed on one should be able to find the others without going back to the door. */}
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/quests">Quests</Link>
-      </Button>
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/zones">Zones</Link>
-      </Button>
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/books">Books</Link>
-      </Button>
-      {canManageVoices(role) && (
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/voices">Voices</Link>
-        </Button>
-      )}
-      {canConfigureGeneration(role) && (
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/lexicon">Pronunciation</Link>
-        </Button>
-      )}
-      {canRegenerate(role) && (
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/reports">Reports</Link>
-        </Button>
-      )}
-      {canRegenerate(role) && (
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/contributions">Contributions</Link>
-        </Button>
-      )}
-      {isAdmin(role) && (
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/admin">Users</Link>
-        </Button>
-      )}
-      {/* Everyone signed in has one, and for a collaborator it is where the ElevenLabs
-          key lives - which is the thing standing between them and the Regenerate button. */}
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/profile">Profile</Link>
-      </Button>
-      <span className="text-muted-foreground hidden text-xs sm:inline">
-        {session.user.email}
-      </span>
-      <Badge variant="outline" className="uppercase">
-        {role ?? "member"}
-      </Badge>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => signOut().then(() => router.refresh())}
-      >
-        Sign out
-      </Button>
+    <nav className="flex items-center gap-1">
+      <Sections />
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="ml-1">
+            Profile
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="flex w-56 flex-col gap-0.5 p-1.5">
+          <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+            <span className="text-muted-foreground truncate text-xs">{session.user.email}</span>
+            <Badge variant="outline" className="uppercase">
+              {role ?? "member"}
+            </Badge>
+          </div>
+          {links.map((link) => (
+            <Button key={link.href} asChild variant="ghost" size="sm" className="justify-start">
+              <Link href={link.href} onClick={() => setOpen(false)}>
+                {link.label}
+              </Link>
+            </Button>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start"
+            onClick={() => {
+              setOpen(false);
+              signOut().then(() => router.refresh());
+            }}
+          >
+            Sign out
+          </Button>
+        </PopoverContent>
+      </Popover>
     </nav>
   );
 }
