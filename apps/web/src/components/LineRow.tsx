@@ -9,9 +9,9 @@ import {
   PencilIcon,
   PlayIcon,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
+import ReportsBadge from "./ReportsBadge";
 import TakeSelector from "./TakeSelector";
 import RegenerateButton from "./RegenerateButton";
 import { Button } from "./ui/button";
@@ -77,7 +77,7 @@ type Props = {
   line: ResultLine;
   current: boolean;
   canRegenerate: boolean;
-  /** Editor and up: may read the report bodies, so the count links to the queue. */
+  /** Editor and up: may read the report bodies and resolve them from the row. */
   canTriage: boolean;
   state?: LineState;
   blocked: string | null;
@@ -356,29 +356,13 @@ export default function LineRow({
 
       <td className="py-1.5 pr-1 pl-0">
         <span className="flex items-center justify-end whitespace-nowrap">
-          {/* The count is public; the bodies are not. So everyone sees how many open
-              reports a line carries -- "somebody has already said so" is the answer to the
-              question a dissatisfied listener is about to ask -- and a triager gets a link
-              to where they can be read. The same chip the zones and books rows carry. */}
-          {line.reportsOpen > 0 &&
-            (canTriage ? (
-              <Link
-                href="/reports?source=quests"
-                title={`${line.reportsOpen} open report${line.reportsOpen === 1 ? "" : "s"}`}
-                className="flex items-center gap-0.5 rounded bg-amber-500/15 px-1 text-xs text-amber-400"
-              >
-                <MessageSquareIcon className="size-3" />
-                {line.reportsOpen}
-              </Link>
-            ) : (
-              <span
-                className="flex items-center gap-0.5 rounded bg-amber-500/15 px-1 text-xs text-amber-400"
-                title={`${line.reportsOpen} open report${line.reportsOpen === 1 ? "" : "s"}`}
-              >
-                <MessageSquareIcon className="size-3" />
-                {line.reportsOpen}
-              </span>
-            ))}
+          {/* The same chip the zones and books rows carry; ReportsBadge says why. */}
+          <ReportsBadge
+            source="quests"
+            lineId={line.lineId}
+            count={line.reportsOpen}
+            canTriage={canTriage}
+          />
 
           {/* Outside the canRegenerate gate, deliberately: reporting is what a player who
               cannot sign in has, and /api/reports is unauthenticated for the same reason.
