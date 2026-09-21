@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildLineIndex, npcKey } from "./corpus";
-import { corpus as catalogue, lineIndex, npcVoiceFromCorpus } from "./quests/catalogue";
+import { corpus as catalogue, defaultFlavorFor, lineIndex, npcVoiceFromCorpus } from "./quests/catalogue";
 
 describe("corpus", async () => {
   const corpus = await catalogue();
@@ -80,5 +80,30 @@ describe("npcVoiceFromCorpus", () => {
 
   it("is null for an npc the corpus has never carried", async () => {
     expect(await npcVoiceFromCorpus("creature", 999_999_999)).toBe(null);
+  });
+});
+
+describe("defaultFlavorFor", () => {
+  // Mirrors tts_cli/flavors.py's fallback_flavors -- pinned against the real, committed
+  // corpus rather than a fixture, so a change to either side that breaks the mirror shows up
+  // here. tauren-male is the branch's own flagship case (model 122055): it has no "standard"
+  // voice in the game at all, only elder/shaman/warrior, so the busiest -- warrior -- is the
+  // honest default, not a hardcoded name that would point at nothing.
+  it("is the busiest flavor for a race-gender with no standard voice", async () => {
+    expect(await defaultFlavorFor("tauren", "male")).toBe("warrior");
+  });
+
+  it("is the busiest flavor for another race-gender with no standard voice", async () => {
+    expect(await defaultFlavorFor("goblin", "female")).toBe("zany");
+  });
+
+  // human-male's busiest flavor is "official" (1164 lines vs. standard's 845), and "standard"
+  // still wins: fallback_flavors picks it whenever it exists at all, busiest or not.
+  it("is 'standard' for a race-gender that has one, even when it is not the busiest", async () => {
+    expect(await defaultFlavorFor("human", "male")).toBe("standard");
+  });
+
+  it("is null for a race-gender the corpus has never carried a flavored line for at all", async () => {
+    expect(await defaultFlavorFor("murloc", "male")).toBe(null);
   });
 });

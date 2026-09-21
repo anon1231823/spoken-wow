@@ -190,3 +190,55 @@ export async function npcVoiceFromCorpus(
   }
   return null;
 }
+
+/**
+ * The flavor to give a race-gender the game data does not answer for -- an NPC resolved only
+ * from the model file id the addon reported, which names a race and a gender but never a
+ * flavor.
+ *
+ * Mirrors pipelines/quests/tts_cli/flavors.py's fallback_flavors exactly: "standard" where
+ * that race-gender has any corpus lines carrying it, otherwise its busiest flavor. Never a
+ * constant -- four race-genders (dwarf-female, goblin-female, goblin-male, tauren-male) have
+ * no standard voice in the game at all, so a constant would point at nothing for them.
+ *
+ * A race-gender the corpus carries no flavored line for at all (not merely no "standard" one)
+ * answers null, not a guess: there is nothing in the data to derive a busiest flavor from, and
+ * the row this feeds is unconfirmed regardless.
+ */
+export async function defaultFlavorFor(race: string, gender: string): Promise<string | null> {
+  return (await flavorDefaults()).get(`${race}-${gender}`) ?? null;
+}
+
+const flavorDefaultsKey = Symbol.for("spoken.quests-default-flavors");
+type FlavorDefaultsHolder = { [flavorDefaultsKey]?: { lines: CorpusLine[]; defaults: Map<string, string> } };
+
+// Tied to the catalogue's own array, as lineIndex is, so it re-tallies exactly when the tables
+// move and never otherwise.
+async function flavorDefaults(): Promise<Map<string, string>> {
+  const lines = (await corpus()).lines;
+  const holder = globalThis as FlavorDefaultsHolder;
+  if (!holder[flavorDefaultsKey] || holder[flavorDefaultsKey].lines !== lines) {
+    const counts = new Map<string, Map<string, number>>();
+    for (const line of lines) {
+      if (!line.flavor) continue;
+      const raceGender = `${line.race}-${line.gender}`;
+      const tally = counts.get(raceGender) ?? new Map<string, number>();
+      tally.set(line.flavor, (tally.get(line.flavor) ?? 0) + 1);
+      counts.set(raceGender, tally);
+    }
+
+    const defaults = new Map<string, string>();
+    for (const [raceGender, tally] of counts) {
+      if (tally.has("standard")) {
+        defaults.set(raceGender, "standard");
+        continue;
+      }
+      // Busiest first, then name, so a tie does not depend on Map iteration order --
+      // fallback_flavors' own tie-break, kept identical so the two sides never disagree.
+      const [flavor] = [...tally.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+      defaults.set(raceGender, flavor);
+    }
+    holder[flavorDefaultsKey] = { lines, defaults };
+  }
+  return holder[flavorDefaultsKey].defaults;
+}
