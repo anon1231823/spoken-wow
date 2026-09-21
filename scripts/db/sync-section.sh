@@ -91,6 +91,27 @@ end
 SQL
   echo "truncate ${quoted%, };"
   echo "delete from \"take\" where \"source\" = '$source_name';"
+  # Take ids are one sequence across all three sections, so another section's local row can
+  # hold an id production has since given to one of these -- a quests take here sitting on
+  # production's books take 10049 failed the whole sync on the primary key. Such a row is not
+  # production's anyway: that section's own sync replaces every row it has. So it goes, and
+  # the count says which section to sync next. A warning, not a notice: the dump sets
+  # client_min_messages to warning, and a notice would never be seen.
+  cat <<SQL
+do \$\$
+declare r record;
+begin
+  for r in
+    with gone as (
+      delete from public."take" t using $staging."take" s where t."id" = s."id" returning t."source")
+    select "source", count(*) as n from gone group by 1
+  loop
+    raise warning '% local % takes held ids production uses for $source_name; run make %-sync',
+      r.n, r."source", r."source";
+  end loop;
+end
+\$\$;
+SQL
   for table in "${tables[@]}" take; do
     echo "insert into public.\"$table\" select * from $staging.\"$table\";"
   done
