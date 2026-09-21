@@ -85,7 +85,14 @@ cut -f1 "$work/live.tsv" | sort | uniq -c | sed 's/^/  /'
 if [ ! -s "$work/live.tsv" ]; then
   echo "  none"
 elif [ -n "$rehearse" ]; then
-  echo "  (rehearsal: the files are on the droplet, so nothing is archived here)"
+  # The files are on the droplet, so nothing is archived here; the listing says which of
+  # them adopt-store.sh would find.
+  awk -F'\t' 'NR == FNR { split($0, f, " "); have[substr($0, length(f[1]) + 2)] = 1; next }
+    { path = $1 == "quests" ? "audio/" $2 : ($1 == "zones" ? "sounds/" : "books/") $2 ".mp3"
+      if (path in have) found[$1]++; else lost[$1]++ }
+    END { for (s in found) printf "  %s: would archive %d\n", s, found[s]
+          for (s in lost) printf "  %s: %d have no store file on the droplet\n", s, lost[s] }' \
+    "$work/shared.txt" "$work/live.tsv"
 else
   ask "Hard-link these store files into the archive and record them?"
   $SSH "$DROPLET" "cat > /tmp/converge-adopt.sh" <"$here/adopt-store.sh"
