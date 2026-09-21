@@ -117,12 +117,16 @@ elwynn = lines_in_area(corpus, map_id=0, x_range=(-9900, -9000), y_range=(-600, 
 ### Producing a data module
 
 ```bash
-make quests-pull-history                              # production's takes, the only audio there is
 make quests-sync                                      # production's corpus and take rows
+make quests-pull-live                                 # the live takes those rows name, and no others
 make quests-sounds                                    # audio/ from the live takes
 python cli-main.py build                              # dist/SpokenQuestsAudio/
 python cli-main.py install --force                    # into the AddOns folder
 ```
+
+Sync first: `pull-live` reads its list from the local database, so a stale one fetches takes
+production has already replaced. `make quests-full-release VERSION=x.y.z` runs sync, pull-live,
+the pack build and, after one confirmation, the CurseForge and GitHub uploads.
 
 `build` emits the sounds, every lookup table and a `sound_length_table.lua` computed from
 the mp3s it just copied. The addon resolves sounds through that table rather than the

@@ -973,8 +973,9 @@ the ones to hear first: v3 is documented as unreliable below 250 characters and
 **305 of the 1353 entries are shorter**.
 
 The takes stay on the droplet. To build a pack from them, bring them home with
-`make zones-pull-history` and `make zones-sync`; `make zones-package-audio` assembles
-`Sounds/` from the live ones and rebuilds the lookup table.
+`make zones-sync` and then `make zones-pull-live`, which fetches only the takes the synced
+rows mark live; `make zones-package-audio` assembles `Sounds/` from them and rebuilds the
+lookup table. `make zones-full-release` does all of it and, after asking, uploads the pack.
 
 ### How long a full run takes
 

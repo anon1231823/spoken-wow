@@ -55,12 +55,12 @@ endef
 
 .DEFAULT_GOAL := help
 .PHONY: help pull-voices push-voices voices-status \
-        pull-history history-status sounds package package-audio \
+        pull-history pull-live history-status sounds package package-audio \
         package-audio-complete package-meta push-complete icon \
         downloads-status \
         factions release release-audio release-wago release-curse \
         release-dry import-corpus export-corpus export-ignores \
-        sync check-synced
+        sync check-synced full-release
 
 help: ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -112,6 +112,12 @@ pull-history: require-droplet ## Fetch the droplet's archived takes (non-destruc
 	$(RSYNC) -a --partial --human-readable --info=progress2 -e "$(SSH)" \
 		$(DROPLET):$(REMOTE_HISTORY) pipelines/quests/audio-history/
 	@echo "==> pulled into pipelines/quests/audio-history/. Build a pack's audio with:  make quests-sounds"
+
+# Only the takes a pack is built from: the live ones, as the local database has them, so run
+# `make quests-sync` first. pull-history is the whole archive, for listening to old takes.
+pull-live: require-droplet ## Fetch only the live takes the local database names (after sync)
+	$(preflight)
+	@$(DB_ENV) RSYNC="$(RSYNC)" scripts/audio/pull-live.sh quests
 
 history-status: require-droplet ## Compare take count and size on both sides
 	@echo "local:  $$(find pipelines/quests/audio-history -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ') takes, $$(du -sh pipelines/quests/audio-history 2>/dev/null | cut -f1 || echo 0)"
@@ -241,6 +247,34 @@ release: ## Upload the built zips to CurseForge and Wago (needs both tokens)
 
 release-audio: ## Upload the four packs and their meta addon
 	@./scripts/quests/release.sh audio-alliance audio-horde audio-shared audio-gossip audio-all
+
+# The whole pack release, from production's data to the stores, with one question before
+# anything is uploaded. Each step is its own target and still runs alone; this is their order.
+#
+# VERSION is required, not defaulted: package-audio.sh would otherwise stamp its own default,
+# and a release under a number already on CurseForge is a duplicate file there. It needs a
+# `## <VERSION>` pack section in docs/quests/CHANGELOG.md, which both uploads quote.
+#
+# The packs go to CurseForge only -- Wago answers 413 to a file this size (scripts/lib/wago.sh)
+# -- and to GitHub, which is where a Wago player gets them. The meta addon is kilobytes and
+# goes to both stores. The complete pack for the site is not built here: it is another
+# 1.3 GB, and `make quests-package-audio-complete push-complete` is the step if it is wanted.
+PACKS_AUDIO := audio-alliance audio-horde audio-shared audio-gossip
+
+full-release: require-droplet ## Sync, pull live takes, build and upload the packs (VERSION=2.1.0)
+	@[ -n "$(VERSION)" ] || { echo "VERSION is required:  make quests-full-release VERSION=2.1.0"; exit 1; }
+	@$(MAKE) --no-print-directory -f make/quests.mk sync
+	@$(MAKE) --no-print-directory -f make/quests.mk pull-live
+	@$(MAKE) --no-print-directory -f make/quests.mk package-audio
+	@$(MAKE) --no-print-directory -f make/quests.mk package-meta
+	@./scripts/quests/release.sh --dry-run --store=curseforge $(PACKS_AUDIO)
+	@./scripts/quests/release.sh --dry-run audio-all
+	@./scripts/audio-github-release.sh --dry-run $(addprefix quests-,$(PACKS_AUDIO))
+	@printf 'Upload quests packs $(VERSION) to CurseForge and GitHub? [y/N] '; \
+	  read -r answer; [ "$$answer" = y ] || { echo aborted; exit 1; }
+	@./scripts/quests/release.sh --store=curseforge $(PACKS_AUDIO)
+	@./scripts/quests/release.sh audio-all
+	@./scripts/audio-github-release.sh $(addprefix quests-,$(PACKS_AUDIO))
 
 # --- the ignore list ------------------------------------------------------------------
 #

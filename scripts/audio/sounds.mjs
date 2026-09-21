@@ -2,14 +2,15 @@
 // Assemble a section's Sounds folder from the database: every live take, copied out of the
 // archive under the path the addon plays it from.
 //
-//   node scripts/audio/sounds.mjs <quests|zones|books>      (LOCAL_DB names the database)
+//   node scripts/audio/sounds.mjs <quests|zones|books>          (LOCAL_DB names the database)
+//   node scripts/audio/sounds.mjs --list <quests|zones|books>   the archive files it would copy
 //
 // THE ARCHIVE IS THE ONLY AUDIO THERE IS. Every take is one file there, written once by the
 // site and never changed; which take is live is a flag on its row. So the folder a pack is
 // built from is not kept anywhere -- it is made here, from the live rows and the archive,
 // right before packaging, and thrown away and made again the next time.
 //
-// Needs the section's archive on this machine (make <section>-pull-history) and a database
+// Needs the section's live takes on this machine (make <section>-pull-live) and a database
 // that matches production (make <section>-sync). A live take whose file is not here is a
 // pack that would ship silence for that line, so it stops rather than build one.
 //
@@ -43,23 +44,20 @@ const SECTIONS = {
   },
 };
 
-const section = process.argv[2];
+// --list prints, relative to the archive, every file this would copy, and copies nothing.
+// scripts/audio/pull-live.sh hands it to rsync, so a pull fetches exactly what a build reads,
+// decided by the same query.
+const args = process.argv.slice(2);
+const list = args.includes("--list");
+const section = args.find((arg) => !arg.startsWith("--"));
 const paths = SECTIONS[section];
 if (!paths) {
-  console.error("usage: sounds.mjs <quests|zones|books>");
+  console.error("usage: sounds.mjs [--list] <quests|zones|books>");
   process.exit(1);
 }
 const database = process.env.LOCAL_DB;
 if (!database) {
   console.error("LOCAL_DB is not set");
-  process.exit(1);
-}
-
-const marker = join(paths.out, ".from-takes");
-if (existsSync(paths.out) && !existsSync(marker) && readdirSync(paths.out).length > 0) {
-  console.error(`refusing: ${paths.out} holds audio this script did not put there.`);
-  console.error("It is from before the archive was the record. Move it aside, then run this again:");
-  console.error(`  mv '${paths.out}' '${paths.out}.before-archive'`);
   process.exit(1);
 }
 
@@ -77,6 +75,30 @@ const listing = execFileSync(
   },
 );
 
+// The archive path of a live take: the take's own directory -- its file without the
+// extension -- holding the archive file. Blank when the take's clip was never kept.
+const live = listing
+  .split("\n")
+  .filter(Boolean)
+  .map((row) => {
+    const [file, name] = row.split("\t");
+    const stem = file.replace(/\.mp3$/, "");
+    return { file, stem, archived: name ? join(stem, name) : "" };
+  });
+
+if (list) {
+  for (const take of live) if (take.archived) console.log(take.archived);
+  process.exit(0);
+}
+
+const marker = join(paths.out, ".from-takes");
+if (existsSync(paths.out) && !existsSync(marker) && readdirSync(paths.out).length > 0) {
+  console.error(`refusing: ${paths.out} holds audio this script did not put there.`);
+  console.error("It is from before the archive was the record. Move it aside, then run this again:");
+  console.error(`  mv '${paths.out}' '${paths.out}.before-archive'`);
+  process.exit(1);
+}
+
 await rm(paths.out, { recursive: true, force: true });
 await mkdir(paths.out, { recursive: true });
 await writeFile(marker, "");
@@ -85,15 +107,12 @@ let copied = 0;
 const gone = [];
 const missing = [];
 const made = new Set();
-for (const row of listing.split("\n")) {
-  if (!row) continue;
-  const [file, name] = row.split("\t");
-  const stem = file.replace(/\.mp3$/, "");
-  if (!name) {
+for (const { file, stem, archived } of live) {
+  if (!archived) {
     gone.push(file);
     continue;
   }
-  const source = join(paths.archive, stem, name);
+  const source = join(paths.archive, archived);
   const target = join(paths.out, `${stem}.mp3`);
   const dir = dirname(target);
   if (!made.has(dir)) {
@@ -118,6 +137,6 @@ if (gone.length) {
 if (missing.length) {
   console.error(`  ${missing.length} live takes are not in this machine's archive, e.g.:`);
   for (const path of missing.slice(0, 5)) console.error(`    ${path}`);
-  console.error(`  Fetch them with:  make ${section}-pull-history`);
+  console.error(`  Fetch them with:  make ${section}-pull-live`);
   process.exit(1);
 }

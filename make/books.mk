@@ -17,7 +17,8 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help db extract import export lookup deploy deploy-copy status remove \
-        pull-history sounds sync check-synced package package-audio release-dry release release-wago release-curse icon test
+        pull-history pull-live sounds sync check-synced package package-audio release-dry release release-wago release-curse icon test \
+        full-release
 
 PIPELINE := pipelines/books
 QUESTS   := pipelines/quests
@@ -78,6 +79,11 @@ pull-history: require-droplet ## Fetch the droplet's archived takes (non-destruc
 	@mkdir -p $(LOCAL_HISTORY)
 	@$(RSYNC) $(RSYNC_OPTS) -e "$(SSH)" $(DROPLET):$(REMOTE_HISTORY) $(LOCAL_HISTORY)
 	@echo "==> pulled. Build the pack's Sounds/ with:  make books-sounds"
+
+# Only the takes the pack is built from: the live ones, as the local database has them, so run
+# `make books-sync` first. pull-history is the whole archive, for listening to old takes.
+pull-live: require-droplet ## Fetch only the live takes the local database names (after sync)
+	@$(DB_ENV) RSYNC="$(RSYNC)" scripts/audio/pull-live.sh books
 
 # The pack folder the client loads and the release zips: not kept, but assembled from the
 # live takes and the archive before every build. See scripts/audio/sounds.mjs.
@@ -162,3 +168,21 @@ release-wago: ## Upload the built zips to Wago only (needs WAGO_TOKEN)
 
 release-curse: ## Upload the built zips to CurseForge only (needs CURSEFORGE_TOKEN)
 	@./scripts/books/release.sh --store=curseforge
+
+# The whole pack release, from production's data to the stores, with one question before
+# anything is uploaded. Each step is its own target and still runs alone; this is their order.
+#
+# The version is SpokenBooksAudio.toc's, so bump it and add its `## <version>` section to
+# docs/books/CHANGELOG.md first; both uploads quote that section. The pack goes to CurseForge
+# only -- Wago answers 413 to a file this size (scripts/lib/wago.sh) -- and to GitHub, which
+# is where a Wago player gets it.
+full-release: require-droplet ## Sync, pull live takes, build and upload the sound pack
+	@$(MAKE) --no-print-directory -f make/books.mk sync
+	@$(MAKE) --no-print-directory -f make/books.mk pull-live
+	@$(MAKE) --no-print-directory -f make/books.mk package-audio
+	@./scripts/books/release.sh --dry-run --store=curseforge audio
+	@./scripts/audio-github-release.sh --dry-run books-audio
+	@printf 'Upload the books pack to CurseForge and GitHub? [y/N] '; \
+	  read -r answer; [ "$$answer" = y ] || { echo aborted; exit 1; }
+	@./scripts/books/release.sh --store=curseforge audio
+	@./scripts/audio-github-release.sh books-audio
