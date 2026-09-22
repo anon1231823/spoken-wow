@@ -15,6 +15,7 @@ import pg from "pg";
 import { loadEnv, MYSQL_VARS } from "../../lib/env.mjs";
 import { localeInfo, BASE_LOCALE } from "../../lib/locales.mjs";
 import { localizedPages, localizedTitles } from "./lib/locale.mjs";
+import { chunks, progress, writeNames } from "../../lib/bulk.mjs";
 import { decideImport } from "./lib/promote.mjs";
 
 await loadEnv("books", { override: MYSQL_VARS });
@@ -88,34 +89,46 @@ try {
   }
 
   await inTransaction(async (client) => {
-    for (const { page, promote } of writes) {
-      const base = structure.get(page.lineId);
-      if (promote) {
+    const bar = progress("pages", writes.length);
+    for (const batch of chunks(writes)) {
+      const retiring = batch.filter((write) => write.promote).map((write) => write.page.lineId);
+      if (retiring.length > 0) {
         await client.query(
           `update "book_line" set "isCurrent" = false
-            where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
-          [page.lineId, lang],
+            where "lineId" = any($1::text[]) and "lang" = $2 and "isCurrent"`,
+          [retiring, lang],
         );
       }
-      // Structure is the English row's: where a page sits is a fact about the world, not a
-      // translation. The title column is required and carries the English; the language's
-      // own title for the owner lives in entity_name.
+      // Structure is the English row's, joined in: where a page sits is a fact about the
+      // world, not a translation. The title column is required and carries the English; the
+      // language's own title for the owner lives in entity_name.
       await client.query(
         `insert into "book_line"
            ("lineId", "lang", "version", "isCurrent", "origin", "pageId", "bookId",
             "pageNumber", "pageCount", "title", "ownerKind", "ownerIds", "material",
             "text", "generatable", "skipReason")
-         select $1, $2, coalesce(max("version"), 0) + 1, $3, 'extracted', $4, $5, $6, $7, $8,
-                $9, $10, $11, $12, $13, $14
-           from "book_line" where "lineId" = $1 and "lang" = $2`,
+         select r."lineId", $1,
+                coalesce((select max(m."version") from "book_line" m
+                           where m."lineId" = r."lineId" and m."lang" = $1), 0) + 1,
+                r."promote", 'extracted', e."pageId", e."bookId", e."pageNumber",
+                e."pageCount", e."title", e."ownerKind", e."ownerIds", e."material",
+                r."text", r."generatable", r."skipReason"
+           from unnest($2::text[], $3::boolean[], $4::text[], $5::boolean[], $6::text[])
+                as r("lineId", "promote", "text", "generatable", "skipReason")
+           join "book_line" e on e."lineId" = r."lineId" and e."lang" = $7 and e."isCurrent"`,
         [
-          page.lineId, lang, promote,
-          base.pageId, base.bookId, base.pageNumber, base.pageCount, base.title,
-          base.ownerKind, base.ownerIds, base.material,
-          page.text, page.generatable, page.skipReason,
+          lang,
+          batch.map((w) => w.page.lineId),
+          batch.map((w) => w.promote),
+          batch.map((w) => w.page.text),
+          batch.map((w) => w.page.generatable),
+          batch.map((w) => w.page.skipReason),
+          BASE_LOCALE,
         ],
       );
+      bar.add(batch.length);
     }
+    bar.end();
   });
 
   // The owners the English corpus names, and nothing else: the dump localises every item.
@@ -142,27 +155,11 @@ try {
     const { action } = decideImport(currentNames.get(`${title.kind}:${title.entityId}`) ?? null, {
       text: title.name,
     });
-    if (action !== "skip") nameWrites.push({ title, promote: action === "promote" });
+    if (action !== "skip") nameWrites.push({ ...title, promote: action === "promote" });
   }
   counts.names = nameWrites.length;
 
-  await inTransaction(async (client) => {
-    for (const { title, promote } of nameWrites) {
-      if (promote) {
-        await client.query(
-          `update "entity_name" set "isCurrent" = false
-            where "kind" = $1 and "entityId" = $2 and "lang" = $3 and "isCurrent"`,
-          [title.kind, title.entityId, lang],
-        );
-      }
-      await client.query(
-        `insert into "entity_name" ("kind", "entityId", "lang", "version", "isCurrent", "origin", "name")
-         select $1, $2, $3, coalesce(max("version"), 0) + 1, $4, 'extracted', $5
-           from "entity_name" where "kind" = $1 and "entityId" = $2 and "lang" = $3`,
-        [title.kind, title.entityId, lang, promote, title.name],
-      );
-    }
-  });
+  await inTransaction((client) => writeNames(client, lang, nameWrites, "titles"));
 
   console.log(
     `${lang}: ${counts.promote} pages promoted, ${counts.record} recorded, ${counts.skip} unchanged, ` +

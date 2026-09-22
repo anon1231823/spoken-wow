@@ -19,6 +19,7 @@ import { loadEnvFile } from "../lib/env.mjs";
 import { decideImport } from "../../../lib/promote.mjs";
 import { namesFromAliases, parseAliases } from "../lib/aliases.mjs";
 import { ROOT } from "../lib/loredata.mjs";
+import { writeNames } from "../../../lib/bulk.mjs";
 
 await loadEnvFile();
 const { close, isEnabled, query, transaction } = await import("../voice/db.mjs");
@@ -62,23 +63,7 @@ try {
     if (action !== "skip") writes.push({ ...name, promote: action === "promote" });
   }
 
-  await transaction(async (client) => {
-    for (const name of writes) {
-      if (name.promote) {
-        await client.query(
-          `update "entity_name" set "isCurrent" = false
-            where "kind" = $1 and "entityId" = $2 and "lang" = $3 and "isCurrent"`,
-          [name.kind, name.entityId, lang],
-        );
-      }
-      await client.query(
-        `insert into "entity_name" ("kind", "entityId", "lang", "version", "isCurrent", "origin", "name")
-         select $1, $2, $3, coalesce(max("version"), 0) + 1, $4, 'extracted', $5
-           from "entity_name" where "kind" = $1 and "entityId" = $2 and "lang" = $3`,
-        [name.kind, name.entityId, lang, name.promote, name.name],
-      );
-    }
-  });
+  await transaction((client) => writeNames(client, lang, writes, "place names"));
 
   console.log(
     `${lang}: ${counts.promote} names written, ${counts.record} recorded under an edit, ` +

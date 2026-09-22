@@ -29,7 +29,10 @@ leaves empty, and nothing is compared with the English: a German title that happ
 spelled like the English one is still German.
 """
 import re
+import sys
 from collections import Counter
+
+from psycopg2.extras import execute_values
 
 from tts_cli.corpus import _skip_reason
 from tts_cli.naming import line_id_for_row
@@ -103,6 +106,25 @@ def decide(current, value) -> str:
     return "record" if origin == "edited" else "promote"
 
 
+# Rows per statement. Written a row at a time, an import through the ssh tunnel production is
+# reached by (scripts/db/import-locale.sh) was twenty thousand round trips and minutes of a
+# silent terminal; pipelines/lib/bulk.mjs is the Node half of the same fix.
+BATCH = 500
+
+
+def _write(cur, label: str, sql: str, rows: list, template: str | None = None) -> None:
+    """execute_values in pages of BATCH, with a counter on stderr as it goes."""
+    tty = sys.stderr.isatty()
+    for start in range(0, len(rows), BATCH):
+        page = rows[start:start + BATCH]
+        execute_values(cur, sql, page, template=template, page_size=BATCH)
+        done = start + len(page)
+        print(f"\r  {label} {done}/{len(rows)}" if tty else f"  {label} {done}/{len(rows)}",
+              end="" if tty else "\n", file=sys.stderr, flush=True)
+    if tty and rows:
+        print(file=sys.stderr)
+
+
 def import_locale(conn, lang: str, lines: list, names: dict) -> Counter:
     """Write a language's lines and names. Returns what happened, counted."""
     counts = Counter()
@@ -127,6 +149,7 @@ def import_locale(conn, lang: str, lines: list, names: dict) -> Counter:
         )
         highest = {(r[0], r[1]): r[2] for r in cur.fetchall()}
 
+        retire, insert = [], []
         for line in lines:
             anchor = english.get((line["lineId"], line["originalText"]))
             if anchor is None:
@@ -140,25 +163,26 @@ def import_locale(conn, lang: str, lines: list, names: dict) -> Counter:
                 continue
             # Only a line that has a live row has one to retire: on a first import that is none.
             if action == "promote" and key in live:
-                cur.execute(
-                    """update "quest_line" set "isCurrent" = false
-                        where "lineId" = %s and "variant" = %s and "lang" = %s
-                          and "isCurrent" """,
-                    (line["lineId"], variant, lang),
-                )
-            cur.execute(
-                """insert into "quest_line"
-                     ("lineId", "variant", "lang", "version", "isCurrent", "origin",
-                      "source", "questId", "playerGender", "fileName", "text",
-                      "originalText", "localeText", "generatable", "skipReason")
-                   values (%s, %s, %s, %s, %s, 'extracted', %s, %s, %s, %s, %s, %s, %s,
-                           %s, %s)""",
-                (line["lineId"], variant, lang, highest.get(key, 0) + 1,
-                 action == "promote", source, quest_id, player_gender, file_name,
-                 line["text"], line["originalText"], line["localeText"],
-                 line["generatable"], line["skipReason"]),
-            )
+                retire.append(key)
             highest[key] = highest.get(key, 0) + 1
+            insert.append((line["lineId"], variant, lang, highest[key], action == "promote",
+                           source, quest_id, player_gender, file_name, line["text"],
+                           line["originalText"], line["localeText"], line["generatable"],
+                           line["skipReason"]))
+
+        # Retired first, all of them: the one-live-row index would refuse an insert that
+        # landed beside a row still current.
+        _write(cur, "lines retired", """update "quest_line" as q set "isCurrent" = false
+                 from (values %s) as r("lineId", "variant")
+                where q."lineId" = r."lineId" and q."variant" = r."variant"
+                  and q."lang" = """ + cur.mogrify("%s", (lang,)).decode() + """ and q."isCurrent" """,
+               retire)
+        _write(cur, "lines", """insert into "quest_line"
+                 ("lineId", "variant", "lang", "version", "isCurrent", "origin",
+                  "source", "questId", "playerGender", "fileName", "text",
+                  "originalText", "localeText", "generatable", "skipReason")
+               values %s""", insert,
+               template="(%s, %s, %s, %s, %s, 'extracted', %s, %s, %s, %s, %s, %s, %s, %s, %s)")
 
         cur.execute(
             """select "kind", "entityId", "origin", "name" from "entity_name"
@@ -173,6 +197,7 @@ def import_locale(conn, lang: str, lines: list, names: dict) -> Counter:
         )
         highest_names = {(r[0], r[1]): r[2] for r in cur.fetchall()}
 
+        retire, insert = [], []
         for (kind, entity_id), name in names.items():
             key = (kind, entity_id)
             action = decide(live_names.get(key), name)
@@ -180,19 +205,19 @@ def import_locale(conn, lang: str, lines: list, names: dict) -> Counter:
             if action == "skip":
                 continue
             if action == "promote" and key in live_names:
-                cur.execute(
-                    """update "entity_name" set "isCurrent" = false
-                        where "kind" = %s and "entityId" = %s and "lang" = %s
-                          and "isCurrent" """,
-                    (kind, entity_id, lang),
-                )
-            cur.execute(
-                """insert into "entity_name"
-                     ("kind", "entityId", "lang", "version", "isCurrent", "origin", "name")
-                   values (%s, %s, %s, %s, %s, 'extracted', %s)""",
-                (kind, entity_id, lang, highest_names.get(key, 0) + 1,
-                 action == "promote", name),
-            )
+                retire.append(key)
+            highest_names[key] = highest_names.get(key, 0) + 1
+            insert.append((kind, entity_id, lang, highest_names[key], action == "promote", name))
+
+        _write(cur, "names retired", """update "entity_name" as e set "isCurrent" = false
+                 from (values %s) as r("kind", "entityId")
+                where e."kind" = r."kind" and e."entityId" = r."entityId"
+                  and e."lang" = """ + cur.mogrify("%s", (lang,)).decode() + """ and e."isCurrent" """,
+               retire)
+        _write(cur, "names", """insert into "entity_name"
+                 ("kind", "entityId", "lang", "version", "isCurrent", "origin", "name")
+               values %s""", insert,
+               template="(%s, %s, %s, %s, %s, 'extracted', %s)")
     return counts
 
 
@@ -203,10 +228,12 @@ def extract_and_import(lang: str) -> Counter:
     from tts_cli.tts_utils import TTSProcessor
     from tts_cli.utils import language_code_to_language_number
 
+    print(f"  reading {lang} from the vmangos dump...", file=sys.stderr, flush=True)
     df = query_dataframe_for_all_quests_and_gossip(
         language_code_to_language_number(lang), raw=True)
     rows = TTSProcessor.preprocess_dataframe(TTSProcessor.__new__(TTSProcessor), df)
     records = rows.to_dict("records")
+    print("  reading what Postgres already has...", file=sys.stderr, flush=True)
     conn = connect()
     try:
         return import_locale(conn, lang, extracted_lines(records), extracted_names(records))
