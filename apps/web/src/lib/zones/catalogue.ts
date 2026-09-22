@@ -14,6 +14,7 @@ import "server-only";
 
 import { query } from "@/lib/db";
 import { loadDirtyContext, NO_DIRT, type DirtyContext } from "@/lib/generation/dirty";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 
 import { corpusRows, currentLore } from "./lore";
 import { liveTakes } from "@/lib/takes/store";
@@ -113,10 +114,12 @@ export const EMPTY_CONTEXT: SearchContext = {
  * it, and reported that only when somebody pressed save.
  */
 export class CorpusEmpty extends Error {
-  constructor() {
+  constructor(lang: Lang = BASE_LANG) {
     super(
-      "lore_line holds no English lines -- seed it with: make zones-lore-import " +
-        "(and check DATABASE_URL points at the database you mean)",
+      lang === BASE_LANG
+        ? "lore_line holds no English lines -- seed it with: make zones-lore-import " +
+            "(and check DATABASE_URL points at the database you mean)"
+        : `lore_line holds no ${lang} lines yet`,
     );
     this.name = "CorpusEmpty";
   }
@@ -164,33 +167,36 @@ export function isCorpusEmpty(error: unknown): boolean {
  */
 type Memo<T> = { stamp: string; value: Promise<T> };
 
+/** One memo per language, so a site switching between two does not rebuild on each request. */
 const globalForCatalogue = globalThis as unknown as {
-  zonesCatalogue?: Memo<CatalogueEntry[]>;
-  zonesByPath?: Memo<Map<string, CatalogueEntry>>;
+  zonesCatalogue?: Map<string, Memo<CatalogueEntry[]>>;
+  zonesByPath?: Map<string, Memo<Map<string, CatalogueEntry>>>;
 };
 
-/** What the lore rows are, as one comparable value. See the note above. */
-async function stampOf(): Promise<string> {
+/** What one language's lore rows are, as one comparable value. See the note above. */
+async function stampOf(lang: Lang = BASE_LANG): Promise<string> {
   const rows = await query<{ stamp: string }>(
     `select coalesce(max("id"), 0) || ':' || count(*) || ':'
              || coalesce(sum("id") filter (where "isCurrent"), 0) as "stamp"
-       from "lore_line"`,
+       from "lore_line" where "lang" = $1`,
+    [lang],
   );
   return rows[0]?.stamp ?? "0:0:0";
 }
 
 async function memoised<T>(
-  read: () => Memo<T> | undefined,
-  write: (memo: Memo<T>) => void,
+  slot: "zonesCatalogue" | "zonesByPath",
+  lang: Lang,
   build: () => Promise<T>,
 ): Promise<T> {
-  const stamp = await stampOf();
+  const stamp = await stampOf(lang);
+  const memo = (globalForCatalogue[slot] ??= new Map()) as Map<string, Memo<T>>;
 
-  const existing = read();
+  const existing = memo.get(lang);
   if (existing && existing.stamp === stamp) return existing.value;
 
   const value = build();
-  write({ stamp, value });
+  memo.set(lang, { stamp, value });
   return value;
 }
 
@@ -201,9 +207,9 @@ async function memoised<T>(
  * tools/voice/generate.mjs derives it, so a line's id, audio path and hash are the same
  * whether the explorer or the CLI worked them out.
  */
-async function buildEnglishCorpus(): Promise<CorpusEntry[]> {
-  const [rows, rules] = await Promise.all([corpusRows(), loadPronunciation()]);
-  if (rows.length === 0) throw new CorpusEmpty();
+async function buildCorpus(lang: Lang): Promise<CorpusEntry[]> {
+  const [rows, rules] = await Promise.all([corpusRows(lang), loadPronunciation()]);
+  if (rows.length === 0) throw new CorpusEmpty(lang);
 
   const files = assignFiles(rows);
   const zoneNames = new Map(
@@ -229,12 +235,8 @@ async function buildEnglishCorpus(): Promise<CorpusEntry[]> {
   });
 }
 
-export function catalogue(): Promise<CatalogueEntry[]> {
-  return memoised(
-    () => globalForCatalogue.zonesCatalogue,
-    (memo) => { globalForCatalogue.zonesCatalogue = memo; },
-    buildEnglishCorpus,
-  );
+export function catalogue(lang: Lang = BASE_LANG): Promise<CatalogueEntry[]> {
+  return memoised("zonesCatalogue", lang, () => buildCorpus(lang));
 }
 
 /**
@@ -258,25 +260,26 @@ export { stampOf as catalogueStamp };
  *
  * Memoised like catalogue() and addressableFiles(), and for the same reason.
  */
-function linesByPath(): Promise<Map<string, CatalogueEntry>> {
+function linesByPath(lang: Lang): Promise<Map<string, CatalogueEntry>> {
   return memoised(
-    () => globalForCatalogue.zonesByPath,
-    (memo) => { globalForCatalogue.zonesByPath = memo; },
-    async () => new Map((await catalogue()).map((entry) => [entry.file, entry])),
+    "zonesByPath",
+    lang,
+    async () => new Map((await catalogue(lang)).map((entry) => [entry.file, entry])),
   );
 }
 
 export async function lineByPath(
   mapID: number,
   slug: string,
+  lang: Lang = BASE_LANG,
 ): Promise<CatalogueEntry | undefined> {
   if (!Number.isInteger(mapID)) return undefined;
-  return (await linesByPath()).get(`${mapID}/${slug}`);
+  return (await linesByPath(lang)).get(`${mapID}/${slug}`);
 }
 
-export async function loadContext(): Promise<SearchContext> {
+export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext> {
   const [takeRows, reportRows, dirt] = await Promise.all([
-    liveTakes("zones"),
+    liveTakes("zones", lang),
     // Grouped in the database rather than counted here: the resolved rows are the ones
     // that accumulate, and there is no reason to carry them across the wire to drop them.
     // `lineId is not null` excludes a report about the project, which belongs to no line.
@@ -284,9 +287,11 @@ export async function loadContext(): Promise<SearchContext> {
       `select "lineId", count(*)::int as "open"
          from "report"
         where "source" = 'zones' and "status" = 'open' and "lineId" is not null
+          and "lang" = $1
         group by "lineId"`,
+      [lang],
     ),
-    loadDirtyContext("zones"),
+    loadDirtyContext("zones", lang),
   ]);
 
   return {
@@ -328,8 +333,8 @@ export async function isKnownLine(lineId: string): Promise<boolean> {
 /** The zone dropdown's options, derived from the catalogue rather than hardcoded. */
 export type ZoneFacet = { mapID: number; name: string; lines: number };
 
-export async function zoneFacets(): Promise<ZoneFacet[]> {
-  const entries = await catalogue();
+export async function zoneFacets(lang: Lang = BASE_LANG): Promise<ZoneFacet[]> {
+  const entries = await catalogue(lang);
   const counts = new Map<number, ZoneFacet>();
 
   for (const entry of entries) {

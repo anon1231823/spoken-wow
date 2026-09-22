@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import AudioPlayer from "@/components/AudioPlayer";
 import type { ResultLine } from "@/lib/search";
 
@@ -35,12 +37,16 @@ type Props = {
 };
 
 export default function Player({ line, version, ref }: Props) {
+  const lang = useLang();
   return (
     <AudioPlayer
       audioRef={ref}
       src={
         line
-          ? `/api/quests/audio/${line.audioPath}${version === undefined ? "" : `?v=${version}`}`
+          ? withLang(
+              lang,
+              `/api/quests/audio/${line.audioPath}${version === undefined ? "" : `?v=${version}`}`,
+            )
           : undefined
       }
       title={line?.npcName ?? null}

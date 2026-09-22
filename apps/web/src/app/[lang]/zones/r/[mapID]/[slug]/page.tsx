@@ -1,5 +1,7 @@
+import { pageLang } from "@/lib/lang-server";
+import { withLang } from "@/lib/lang";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { notFound } from "next/navigation";
 
 import ReportForm from "@/components/ReportForm";
@@ -24,11 +26,13 @@ import { isCorpusEmpty, lineByPath, loadContext } from "@/lib/zones/catalogue";
  * nothing to escape. See SpokenZones' ReportURL. Builds already in players' hands point at
  * lore.rusty.one/{lang}/r/... and lore.rusty.one/r/...; both are redirected here.
  */
-type Params = { mapID: string; slug: string };
+type Params = { lang: string; mapID: string; slug: string };
 
-async function resolve({ mapID, slug }: Params) {
+async function resolve(params: Promise<Params>) {
+  const lang = await pageLang(params);
+  const { mapID, slug } = await params;
   try {
-    return await lineByPath(Number(mapID), slug);
+    return await lineByPath(Number(mapID), slug, lang);
   } catch (error) {
     // An unseeded corpus names no lines, so no address resolves to one. The page a player
     // arriving from the game should see is the same one an unknown place gives them.
@@ -44,7 +48,7 @@ export async function generateMetadata({
 }: {
   params: Promise<Params>;
 }): Promise<Metadata> {
-  const entry = await resolve(await params);
+  const entry = await resolve(params);
   // notFound() belongs in the page, not here; this just declines to name a title.
   if (!entry) return {};
   return {
@@ -54,13 +58,14 @@ export async function generateMetadata({
 }
 
 export default async function Page({ params }: { params: Promise<Params> }) {
-  const entry = await resolve(await params);
+  const lang = await pageLang(params);
+  const entry = await resolve(params);
   if (!entry) notFound();
 
   // The current take is the only thing here that is not derivable from committed files,
   // and it answers one question: is there narration to listen to before complaining about
   // it.
-  const take = (await loadContext()).takes.get(entry.id);
+  const take = (await loadContext(lang)).takes.get(entry.id);
 
   return (
     <main className="mx-auto max-w-6xl px-5 pt-8 pb-24">
@@ -80,7 +85,7 @@ export default async function Page({ params }: { params: Promise<Params> }) {
             className="mt-4 w-full"
             // The take version busts the browser cache after a regeneration; without it
             // someone sent back to check a fix would hear the clip they complained about.
-            src={`/api/zones/audio/${audioRelPath(entry.file)}?v=${take.version}`}
+            src={withLang(lang, `/api/zones/audio/${audioRelPath(entry.file)}?v=${take.version}`)}
           />
         ) : (
           <p className="text-muted-foreground mt-4 text-sm">

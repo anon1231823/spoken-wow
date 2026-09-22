@@ -16,6 +16,7 @@
  * to a paid one is how a typo fix ends up costing credits.
  */
 import { requireRegenerate } from "@/lib/generation/authz";
+import { langParam } from "@/lib/lang-server";
 import { isKnownLine } from "@/lib/books/catalogue";
 import {
   BookConflict,
@@ -37,16 +38,20 @@ function failed(error: unknown): Response {
 export async function GET(request: Request) {
   const { denied } = await requireRegenerate();
   if (denied) return denied;
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
 
   const lineId = new URL(request.url).searchParams.get("lineId");
   if (!lineId) return Response.json({ error: "lineId is required" }, { status: 400 });
 
-  return Response.json({ lineId, versions: await bookHistory(lineId) });
+  return Response.json({ lineId, versions: await bookHistory(lineId, lang) });
 }
 
 export async function PUT(request: Request) {
   const { session, denied } = await requireRegenerate();
   if (denied) return denied;
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
 
   const body = (await request.json().catch(() => ({}))) as {
     lineId?: unknown;
@@ -79,6 +84,7 @@ export async function PUT(request: Request) {
 
   try {
     const version = await saveBookText({
+      lang,
       lineId: body.lineId,
       text: body.text,
       note: (body.note as string | null | undefined) ?? null,
@@ -95,6 +101,8 @@ export async function PUT(request: Request) {
 export async function POST(request: Request) {
   const { denied } = await requireRegenerate();
   if (denied) return denied;
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
 
   const body = (await request.json().catch(() => ({}))) as {
     lineId?: unknown;
@@ -109,7 +117,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const version = await restoreBookText(body.lineId, body.version as number);
+    const version = await restoreBookText(body.lineId, body.version as number, lang);
     return Response.json({ lineId: body.lineId, version });
   } catch (error) {
     return failed(error);

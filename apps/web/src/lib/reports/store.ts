@@ -11,6 +11,7 @@
  * flood would otherwise get through. It does not filter by source, deliberately: the limit is
  * on a person, and filing ten from each page is filing twenty.
  */
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import { db } from "@/lib/db";
 
 import { type Category, type Report, type Status } from "./reports";
@@ -24,7 +25,7 @@ const COLUMNS = `"id", "source", "lineId", "target", "category", "body", "status
 
 export async function createReport(input: {
   source: Source;
-  lang?: string;
+  lang?: Lang;
   lineId: string | null;
   target: string | null;
   category: Category;
@@ -42,7 +43,7 @@ export async function createReport(input: {
      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
     [
       input.source,
-      input.lang ?? "enUS",
+      input.lang ?? BASE_LANG,
       input.lineId,
       input.target,
       input.category,
@@ -71,9 +72,12 @@ export async function listReports(
   source: Source | "all" = "all",
   category: Category | "all" = "all",
   limit = 500,
+  lang: Lang = BASE_LANG,
 ): Promise<Report[]> {
-  const where: string[] = [];
-  const params: unknown[] = [limit];
+  // One language's reports, like every other list on a page in that language: a claim about
+  // how a Portuguese take sounds is for whoever looks after the Portuguese.
+  const where: string[] = [`"lang" = $2`];
+  const params: unknown[] = [limit, lang];
   if (status !== "all") where.push(`"status" = $${params.push(status)}`);
   if (source !== "all") where.push(`"source" = $${params.push(source)}`);
   // Across sources on purpose: "everyone who says a word is being read wrong" is one
@@ -91,13 +95,17 @@ export async function listReports(
   return rows;
 }
 
-export async function reportsForLine(source: Source, lineId: string): Promise<Report[]> {
+export async function reportsForLine(
+  source: Source,
+  lineId: string,
+  lang: Lang = BASE_LANG,
+): Promise<Report[]> {
   const { rows } = await db().query<Report>(
     `select ${COLUMNS}
        from "report"
-      where "source" = $1 and "lineId" = $2
+      where "source" = $1 and "lineId" = $2 and "lang" = $3
       order by "status" = 'open' desc, "createdAt" desc`,
-    [source, lineId],
+    [source, lineId, lang],
   );
   return rows;
 }

@@ -12,6 +12,8 @@ import { headers } from "next/headers";
 
 import { readApiKey } from "@/lib/api-key";
 import { auth } from "@/lib/auth";
+import { BASE_LANG, type Lang } from "@/lib/lang";
+import { langParam } from "@/lib/lang-server";
 import { NO_API_KEY } from "@/lib/no-api-key";
 import { canConfigureGeneration, canRegenerate } from "@/lib/permissions";
 
@@ -84,4 +86,33 @@ export async function requireApiKey(userId: string): Promise<KeyGuard> {
   }
 
   return { key, denied: null };
+}
+
+//------------------------------------------------------------------------------
+// Language
+//------------------------------------------------------------------------------
+
+/**
+ * The language a generation request is in, if this build can generate in it.
+ *
+ * English only, for now: the generators read English text and commit English takes, and a
+ * request for another language would come back as an English recording filed under the
+ * wrong one. The worker refuses the same jobs (worker.ts), so a batch queued some other way
+ * still fails whole rather than spending anything.
+ */
+export async function requireGenerationLang(
+  request: Request,
+): Promise<{ lang: Lang; denied: null } | { lang: null; denied: Response }> {
+  const { lang, denied } = await langParam(request);
+  if (denied) return { lang: null, denied };
+  if (lang !== BASE_LANG) {
+    return {
+      lang: null,
+      denied: Response.json(
+        { error: `generating in ${lang} is not supported yet`, kind: "bad-request" },
+        { status: 400 },
+      ),
+    };
+  }
+  return { lang, denied: null };
 }

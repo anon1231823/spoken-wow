@@ -1,5 +1,6 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,7 @@ type Props = {
  * per source, which is what reportTargetOf does.
  */
 export default function ReportDialog({ subject, onClose }: Props) {
+  const lang = useLang();
   const target = subject ? reportTargetOf(subject.source, subject.line) : null;
 
   // No address means no report: a line the addressing scheme cannot name would arrive in
@@ -41,7 +43,7 @@ export default function ReportDialog({ subject, onClose }: Props) {
   // is the second half of one decision rather than a case anyone should reach.
   if (!subject || !target) return null;
 
-  const detail = detailOf(subject.source, subject.line);
+  const detail = detailOf(subject.source, subject.line, undefined, lang);
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>

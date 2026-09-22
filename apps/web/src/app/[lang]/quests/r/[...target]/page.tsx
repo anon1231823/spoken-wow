@@ -11,8 +11,11 @@
  * One catch-all segment serves both address shapes, so there is one page rather than two that
  * drift apart.
  */
+import { pageLang } from "@/lib/lang-server";
+import { withLang } from "@/lib/lang";
+import { corpus, isCorpusEmpty } from "@/lib/quests/catalogue";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 
 import ReportForm from "@/components/ReportForm";
 import { audioRelPath } from "@/lib/audio";
@@ -27,9 +30,10 @@ export default async function ReportPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ target: string[] }>;
+  params: Promise<{ lang: string; target: string[] }>;
   searchParams: Promise<{ line?: string }>;
 }) {
+  const lang = await pageLang(params);
   const segments = (await params).target;
   const chosen = (await searchParams).line ?? null;
   const target = parseTarget(segments);
@@ -46,13 +50,21 @@ export default async function ReportPage({
     );
   }
 
-  const lines = await resolveTarget(target);
+  // A language with no lines yet resolves nothing, the same as an address naming nothing:
+  // the reporter still gets the form.
+  const lines = await corpus(lang).then(
+    (lines) => resolveTarget(target, lines),
+    (error) => {
+      if (isCorpusEmpty(error)) return [];
+      throw error;
+    },
+  );
   // One candidate needs no choosing; several mean the reporter picked one from the list below.
   const line =
     lines.find((candidate) => candidate.lineId === chosen) ?? (lines.length === 1 ? lines[0] : null);
   // Which take is live, to bust the audio cache: without it someone returning to hear a fix
   // hears the browser's copy of the very clip they complained about, and reports it again.
-  const version = line ? await liveVersion("quests", audioRelPath(line)) : null;
+  const version = line ? await liveVersion("quests", audioRelPath(line), lang) : null;
 
   return (
     <main className="mx-auto max-w-3xl px-5 pt-6 pb-24">
@@ -71,7 +83,10 @@ export default async function ReportPage({
           <audio
             controls
             className="mt-3 w-full"
-            src={`/api/quests/audio/${audioRelPath(line)}${version === null ? "" : `?v=${version}`}`}
+            src={withLang(
+              lang,
+              `/api/quests/audio/${audioRelPath(line)}${version === null ? "" : `?v=${version}`}`,
+            )}
           />
         </section>
       ) : null}

@@ -16,6 +16,7 @@
  */
 import { requireRegenerate } from "@/lib/generation/authz";
 import { BUSY, withTakeLock } from "@/lib/generation/lock";
+import { langParam } from "@/lib/lang-server";
 
 import { isAddressableFile } from "@/lib/takes/files";
 import { restoreTake } from "@/lib/takes/restore";
@@ -47,10 +48,12 @@ export async function POST(request: Request) {
 
   const file = body.file;
   const version = body.version;
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
 
   const outcome = await withTakeLock(source, file, async () => {
     try {
-      await restoreTake(source, file, version);
+      await restoreTake(source, file, version, lang);
       return { ok: true as const };
     } catch (error) {
       // restoreTake refuses a version that was never recorded, and one whose clip was not
@@ -58,7 +61,7 @@ export async function POST(request: Request) {
       // the live take where it was.
       return { ok: false as const, error: error instanceof Error ? error.message : String(error) };
     }
-  });
+  }, lang);
 
   if (outcome === BUSY) {
     return Response.json(

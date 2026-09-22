@@ -42,10 +42,12 @@ export { BASE_LANG } from "@/lib/lang";
  * somewhere further down.
  */
 export class CorpusEmpty extends Error {
-  constructor() {
+  constructor(lang: Lang = BASE_LANG) {
     super(
-      "quest_line holds no English lines -- seed it with: make quests-import-corpus " +
-        "(and check DATABASE_URL points at the database you mean)",
+      lang === BASE_LANG
+        ? "quest_line holds no English lines -- seed it with: make quests-import-corpus " +
+            "(and check DATABASE_URL points at the database you mean)"
+        : `quest_line holds no ${lang} lines yet`,
     );
     this.name = "CorpusEmpty";
   }
@@ -118,7 +120,7 @@ async function build(lang: Lang): Promise<CorpusLine[]> {
     [lang],
   );
 
-  if (rows.length === 0) throw new CorpusEmpty();
+  if (rows.length === 0) throw new CorpusEmpty(lang);
 
   return rows.map((row) => ({
     ...row,

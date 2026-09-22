@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -38,6 +40,7 @@ import * as echo from "@/lib/url-echo";
 const DEBOUNCE_MS = 500;
 
 export function Explorer({ books }: { books: BookFacet[] }) {
+  const lang = useLang();
   const pathname = usePathname();
   const params = useSearchParams();
 
@@ -190,7 +193,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
     const search = new URLSearchParams(filterQuery);
     if (page > 1) search.set("page", String(page));
 
-    fetch(`/api/books/search?${search}`, { signal: controller.signal })
+    fetch(withLang(lang, `/api/books/search?${search}`), { signal: controller.signal })
       .then(async (response) => {
         const data = await response.json();
         // 503 with a code, not a crash: "nobody has run the import yet" is a deployment
@@ -209,16 +212,16 @@ export function Explorer({ books }: { books: BookFacet[] }) {
       });
 
     return () => controller.abort();
-  }, [filterQuery, page]);
+  }, [filterQuery, page, lang]);
 
   const refetch = useCallback(() => {
     const search = new URLSearchParams(filterQueryRef.current);
     if (pageRef.current > 1) search.set("page", String(pageRef.current));
-    fetch(`/api/books/search?${search}`)
+    fetch(withLang(lang, `/api/books/search?${search}`))
       .then((response) => response.json())
       .then((data: SearchResult) => setResult(data))
       .catch(() => {});
-  }, []);
+  }, [lang]);
 
   //----------------------------------------------------------------------------
   // Regeneration
@@ -243,7 +246,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
     (line: ResultLine) => {
       setRowStates((state) => ({ ...state, [line.id]: { phase: "busy" } }));
 
-      fetch("/api/books/regenerate", {
+      fetch(withLang(lang, "/api/books/regenerate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lineId: line.id }),
@@ -290,7 +293,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
           }));
         });
     },
-    [refetch],
+    [refetch, lang],
   );
 
   /**
@@ -302,16 +305,16 @@ export function Explorer({ books }: { books: BookFacet[] }) {
    */
   /** Every dirty page the current filter matches, not just this screen's. */
   const clearAllDirty = useCallback(() => {
-    fetch(`/api/books/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
+    fetch(withLang(lang, `/api/books/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`))
       .then((response) => response.json())
       .then(({ dirtyFiles }: { dirtyFiles?: string[] }) => clearDirty(dirtyFiles ?? []))
       .catch(() => {});
-  }, [clearDirty]);
+  }, [clearDirty, lang]);
 
   const askToRegenerateAll = useCallback(() => {
     if (!result || result.total === 0) return;
 
-    fetch(`/api/books/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
+    fetch(withLang(lang, `/api/books/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`))
       .then((response) => response.json())
       .then(({ ids, totalChars }: { ids: string[]; totalChars: number }) => {
         if (ids.length === 0) return;
@@ -328,7 +331,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
         });
       })
       .catch(() => {});
-  }, [result, status]);
+  }, [result, status, lang]);
 
   /** Hand the batch to the queue. The ids are the ones the estimate was built from. */
   const startBatch = useCallback(async () => {
@@ -337,7 +340,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
     setPendingBatch(null);
     setQueueNote(null);
 
-    const queued = await queueBatch({ source: "books", lineIds }, label);
+    const queued = await queueBatch({ source: "books", lineIds }, label, lang);
 
     if (!queued) {
       // No reason offered because none was given: the route refused for a cause this
@@ -354,7 +357,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
       cursor.current = snapshot.cursor;
       setQueue(snapshot);
     }
-  }, [pendingBatch]);
+  }, [pendingBatch, lang]);
 
   /**
    * The queue, polled.

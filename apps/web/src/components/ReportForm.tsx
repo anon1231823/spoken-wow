@@ -20,6 +20,8 @@
  * one the addon built and a zone report may carry none at all, because its report page is
  * reached with the line already identified.
  */
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -37,6 +39,7 @@ export default function ReportForm({
   target: string | null;
   lineId: string | null;
 }) {
+  const lang = useLang();
   // isPending rather than a bare null check: while the session is still loading, showing
   // the fields and then pulling them out from under a half-typed name is worse than a
   // moment without them.
@@ -51,7 +54,7 @@ export default function ReportForm({
     setError(null);
 
     const data = new FormData(event.currentTarget);
-    const response = await fetch("/api/reports", {
+    const response = await fetch(withLang(lang, "/api/reports"), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

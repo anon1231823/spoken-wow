@@ -1,3 +1,4 @@
+import { pageLang } from "@/lib/lang-server";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -16,10 +17,11 @@ export const metadata: Metadata = { title: "Books · Spoken" };
  */
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
+export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
+  const lang = await pageLang(params);
   let books;
   try {
-    books = await bookFacets();
+    books = await bookFacets(lang);
   } catch (error) {
     // Said on the page rather than thrown at it. On any database that has the migration and
     // no rows this is the normal state, and a stack trace is the wrong way to tell somebody

@@ -8,6 +8,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 
+import { langParam } from "@/lib/lang-server";
 import { corpus } from "@/lib/quests/catalogue";
 import { searchContext } from "@/lib/quests/context";
 import { filtersFromParams, needsStale } from "@/lib/search-request";
@@ -16,10 +17,12 @@ import { batchJobs, matchingLines } from "@/lib/search";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const { lang, denied } = await langParam(request);
+  if (denied) return denied;
   const filters = await filtersFromParams(request.nextUrl.searchParams);
   const [catalogue, { voiced, context }] = await Promise.all([
-    corpus(),
-    searchContext(needsStale(filters)),
+    corpus(lang),
+    searchContext(needsStale(filters), false, lang),
   ]);
   const lines = matchingLines(catalogue, voiced, filters, context);
   // The same overrides the estimate is built from, so the quote prices the text that will

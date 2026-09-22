@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 
@@ -33,6 +35,7 @@ type Props = {
 };
 
 export function LoreDialog({ line, onClose, onSaved }: Props) {
+  const lang = useLang();
   const dialog = useRef<HTMLDialogElement | null>(null);
   const [text, setText] = useState("");
   const [note, setNote] = useState("");
@@ -61,7 +64,7 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
     let cancelled = false;
     const params = new URLSearchParams({ lineId: line.id });
 
-    fetch(`/api/zones/lore?${params}`)
+    fetch(withLang(lang, `/api/zones/lore?${params}`))
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("could not load history"))))
       .then((data: { versions: Version[] }) => {
         if (cancelled) return;
@@ -75,14 +78,14 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [line]);
+  }, [line, lang]);
 
   const save = useCallback(async () => {
     if (!line) return;
     setBusy(true);
     setError(null);
 
-    const res = await fetch("/api/zones/lore", {
+    const res = await fetch(withLang(lang, "/api/zones/lore"), {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -111,7 +114,7 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
       setBusy(true);
       setError(null);
 
-      const res = await fetch("/api/zones/lore", {
+      const res = await fetch(withLang(lang, "/api/zones/lore"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ lineId: line.id, version }),

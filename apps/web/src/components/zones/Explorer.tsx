@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -40,6 +42,7 @@ import * as echo from "@/lib/url-echo";
 const DEBOUNCE_MS = 500;
 
 export function Explorer({ zones }: { zones: ZoneFacet[] }) {
+  const lang = useLang();
   const pathname = usePathname();
   const params = useSearchParams();
 
@@ -212,7 +215,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     const search = new URLSearchParams(filterQuery);
     if (page > 1) search.set("page", String(page));
 
-    fetch(`/api/zones/search?${search}`, { signal: controller.signal })
+    fetch(withLang(lang, `/api/zones/search?${search}`), { signal: controller.signal })
       .then((response) => response.json())
       .then((data: SearchResult) => {
         setResult(data);
@@ -223,7 +226,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       });
 
     return () => controller.abort();
-  }, [filterQuery, page]);
+  }, [filterQuery, page, lang]);
 
   //----------------------------------------------------------------------------
   // Pronunciation marks
@@ -238,11 +241,11 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // -- so the state moves with the text rather than waiting for a refetch.
   /** Every dirty line the current filter matches, not just this page's. */
   const clearAllDirty = useCallback(() => {
-    fetch(`/api/zones/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
+    fetch(withLang(lang, `/api/zones/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`))
       .then((response) => response.json())
       .then(({ dirtyFiles }: { dirtyFiles?: string[] }) => clearDirty(dirtyFiles ?? []))
       .catch(() => {});
-  }, [clearDirty]);
+  }, [clearDirty, lang]);
 
   const withEdits = useCallback(
     (line: ResultLine): ResultLine => {
@@ -273,11 +276,11 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const refetch = useCallback(() => {
     const search = new URLSearchParams(filterQueryRef.current);
     if (pageRef.current > 1) search.set("page", String(pageRef.current));
-    fetch(`/api/zones/search?${search}`)
+    fetch(withLang(lang, `/api/zones/search?${search}`))
       .then((response) => response.json())
       .then((data: SearchResult) => setResult(data))
       .catch(() => {});
-  }, []);
+  }, [lang]);
 
   // What the plan allows and what is left of it, for the confirmation dialog. Shared with
   // the quests section because it is one account and one budget.
@@ -298,7 +301,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     (line: ResultLine) => {
       setRowStates((current) => ({ ...current, [line.id]: { phase: "busy" } }));
 
-      fetch("/api/zones/regenerate", {
+      fetch(withLang(lang, "/api/zones/regenerate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lineId: line.id }),
@@ -345,7 +348,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           }));
         });
     },
-    [refetch],
+    [refetch, lang],
   );
 
   /**
@@ -360,7 +363,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const askToRegenerateAll = useCallback(() => {
     if (!result || result.total === 0) return;
 
-    fetch(`/api/zones/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
+    fetch(withLang(lang, `/api/zones/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`))
       .then((response) => response.json())
       .then(({ ids, totalChars }: { ids: string[]; totalChars: number }) => {
         if (ids.length === 0) return;
@@ -378,7 +381,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         });
       })
       .catch(() => {});
-  }, [result, status]);
+  }, [result, status, lang]);
 
   /**
    * Hand the batch to the queue.
@@ -394,7 +397,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     setDismissed(false);
     setQueueNote(null);
 
-    const queued = await queueBatch({ source: "zones", lineIds }, pendingBatch.label);
+    const queued = await queueBatch({ source: "zones", lineIds }, pendingBatch.label, lang);
 
     if (!queued) {
       // No reason offered because none was given: the route refused for a cause this
@@ -411,7 +414,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       cursor.current = snapshot.cursor;
       setQueue(snapshot);
     }
-  }, [pendingBatch]);
+  }, [pendingBatch, lang]);
 
   /**
    * The queue, polled.
@@ -444,7 +447,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
 
         // Only this section's finished jobs. The queue carries both, and a zones page told
         // that a quests file is now at version 3 would look for a line it does not have.
-        const mine = snapshot.finished.filter((job) => job.source === "zones");
+        const mine = snapshot.finished.filter((job) => job.source === "zones" && job.lang === lang);
         if (mine.length > 0) {
           setVersions((current) => {
             const next = { ...current };
@@ -465,7 +468,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [canRegenerate, refetch]);
+  }, [canRegenerate, refetch, lang]);
 
   //----------------------------------------------------------------------------
   // Playback

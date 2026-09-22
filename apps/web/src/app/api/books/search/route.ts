@@ -4,7 +4,8 @@
  * The URL carries `page`, not `offset`, so a shared link survives a change to PAGE_SIZE.
  * The arithmetic stays here. Shaped on the zones route, including the 503 below.
  */
-import { catalogue, isCorpusEmpty, loadContext, BASE_LANG } from "@/lib/books/catalogue";
+import { catalogue, isCorpusEmpty, loadContext } from "@/lib/books/catalogue";
+import { langParam } from "@/lib/lang-server";
 import { filtersFromParams, PAGE_SIZE } from "@/lib/books/filters";
 import { search } from "@/lib/books/search";
 
@@ -24,7 +25,8 @@ function corpusEmpty(error: unknown): Response {
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const filters = filtersFromParams(params);
-  const lang = BASE_LANG;
+  const { lang, denied } = await langParam(request);
+  if (denied) return denied;
   const page = Math.max(1, Number(params.get("page")) || 1);
 
   let pages;

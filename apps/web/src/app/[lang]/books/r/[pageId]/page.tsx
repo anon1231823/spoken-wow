@@ -1,10 +1,12 @@
+import { pageLang } from "@/lib/lang-server";
+import { withLang } from "@/lib/lang";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { notFound } from "next/navigation";
 
 import ReportForm from "@/components/ReportForm";
 import { audioRelPath } from "@/lib/books/audio";
-import { BASE_LANG, isCorpusEmpty, loadContext, pageById } from "@/lib/books/catalogue";
+import { isCorpusEmpty, loadContext, pageById } from "@/lib/books/catalogue";
 
 /**
  * One page of one book, and the form to complain about it.
@@ -24,11 +26,13 @@ import { BASE_LANG, isCorpusEmpty, loadContext, pageById } from "@/lib/books/cat
  * escape. docs/books/AGENTS.md freezes that id, which is what makes the address safe to bake
  * into a release. See SpokenBooks' ReportURL.
  */
-type Params = { pageId: string };
+type Params = { lang: string; pageId: string };
 
-async function resolve({ pageId }: Params) {
+async function resolve(params: Promise<Params>) {
+  const lang = await pageLang(params);
+  const { pageId } = await params;
   try {
-    return await pageById(Number(pageId), BASE_LANG);
+    return await pageById(Number(pageId), lang);
   } catch (error) {
     // An unseeded corpus names no pages, so no address resolves to one. What a player
     // arriving from the game should see is the same page an unknown id gives them.
@@ -44,7 +48,7 @@ export async function generateMetadata({
 }: {
   params: Promise<Params>;
 }): Promise<Metadata> {
-  const page = await resolve(await params);
+  const page = await resolve(params);
   // notFound() belongs in the page, not here; this just declines to name a title.
   if (!page) return {};
   return {
@@ -54,12 +58,13 @@ export async function generateMetadata({
 }
 
 export default async function Page({ params }: { params: Promise<Params> }) {
-  const page = await resolve(await params);
+  const lang = await pageLang(params);
+  const page = await resolve(params);
   if (!page) notFound();
 
   // The current take is the only thing here that is not derivable from the corpus row, and it
   // answers one question: is there narration to listen to before complaining about it.
-  const take = (await loadContext(BASE_LANG)).takes.get(page.id);
+  const take = (await loadContext(lang)).takes.get(page.id);
 
   return (
     <main className="mx-auto max-w-6xl px-5 pt-8 pb-24">
@@ -81,7 +86,7 @@ export default async function Page({ params }: { params: Promise<Params> }) {
             className="mt-4 w-full"
             // The take version busts the browser cache after a regeneration; without it
             // somebody sent back to check a fix would hear the clip they complained about.
-            src={`/api/books/audio/${audioRelPath(page.file)}?v=${take.version}`}
+            src={withLang(lang, `/api/books/audio/${audioRelPath(page.file)}?v=${take.version}`)}
           />
         ) : (
           <p className="text-muted-foreground mt-4 text-sm">

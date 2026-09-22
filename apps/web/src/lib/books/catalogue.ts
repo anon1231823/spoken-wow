@@ -96,10 +96,12 @@ export const EMPTY_CONTEXT: SearchContext = {
  * answer than one that looks like the game has no books in it.
  */
 export class CorpusEmpty extends Error {
-  constructor() {
+  constructor(lang: Lang = BASE_LANG) {
     super(
-      "book_line holds no English pages -- seed it with: make books-extract && make books-import " +
-        "(and check DATABASE_URL points at the database you mean)",
+      lang === BASE_LANG
+        ? "book_line holds no English pages -- seed it with: make books-extract && " +
+            "make books-import (and check DATABASE_URL points at the database you mean)"
+        : `book_line holds no ${lang} pages yet`,
     );
     this.name = "CorpusEmpty";
   }
@@ -162,7 +164,7 @@ async function build(lang: Lang): Promise<BookPage[]> {
       order by "bookId", "pageNumber"`,
     [lang],
   );
-  if (rows.length === 0) throw new CorpusEmpty();
+  if (rows.length === 0) throw new CorpusEmpty(lang);
 
   return rows.map((row) => {
     const spoken = spokenText(row.text);

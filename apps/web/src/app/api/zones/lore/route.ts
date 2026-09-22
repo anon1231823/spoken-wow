@@ -18,6 +18,7 @@
  * invalidation. See the note on the memo in lib/zones/catalogue.ts.
  */
 import { requireRegenerate } from "@/lib/generation/authz";
+import { langParam } from "@/lib/lang-server";
 import { isKnownLine } from "@/lib/zones/catalogue";
 import { LoreConflict, LoreMissing, loreHistory, restoreLore, saveLore } from "@/lib/zones/lore";
 
@@ -36,16 +37,20 @@ function failed(error: unknown): Response {
 export async function GET(request: Request) {
   const { denied } = await requireRegenerate();
   if (denied) return denied;
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
 
   const lineId = new URL(request.url).searchParams.get("lineId");
   if (!lineId) return Response.json({ error: "lineId is required" }, { status: 400 });
 
-  return Response.json({ lineId, versions: await loreHistory(lineId) });
+  return Response.json({ lineId, versions: await loreHistory(lineId, lang) });
 }
 
 export async function PUT(request: Request) {
   const { session, denied } = await requireRegenerate();
   if (denied) return denied;
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
 
   const body = (await request.json().catch(() => ({}))) as {
     lineId?: unknown;
@@ -82,6 +87,7 @@ export async function PUT(request: Request) {
 
   try {
     const version = await saveLore({
+      lang,
       lineId: body.lineId,
       full: body.full,
       short: (body.short as string | null | undefined) ?? null,
@@ -99,6 +105,8 @@ export async function PUT(request: Request) {
 export async function POST(request: Request) {
   const { denied } = await requireRegenerate();
   if (denied) return denied;
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
 
   const body = (await request.json().catch(() => ({}))) as {
     lineId?: unknown;
@@ -113,7 +121,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const version = await restoreLore(body.lineId, body.version as number);
+    const version = await restoreLore(body.lineId, body.version as number, lang);
     return Response.json({ lineId: body.lineId, version });
   } catch (error) {
     return failed(error);

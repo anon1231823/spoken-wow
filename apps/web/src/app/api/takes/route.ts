@@ -13,6 +13,7 @@
  * of somebody's work, and restoring from it is a collaborator's decision.
  */
 import { requireRegenerate } from "@/lib/generation/authz";
+import { langParam } from "@/lib/lang-server";
 
 import { isAddressableFile } from "@/lib/takes/files";
 import { listTakes } from "@/lib/takes/store";
@@ -35,5 +36,8 @@ export async function GET(request: Request) {
     return Response.json({ error: "unknown file" }, { status: 404 });
   }
 
-  return Response.json({ source, file, takes: await listTakes(source, file) });
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
+
+  return Response.json({ source, file, takes: await listTakes(source, file, lang) });
 }

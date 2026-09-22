@@ -1,3 +1,4 @@
+import { pageLang } from "@/lib/lang-server";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -15,10 +16,13 @@ export const metadata: Metadata = { title: "Reports · Spoken" };
 export const dynamic = "force-dynamic";
 
 export default async function Page({
+  params,
   searchParams,
 }: {
+  params: Promise<{ lang: string }>;
   searchParams: Promise<{ view?: string; source?: string; category?: string }>;
 }) {
+  const lang = await pageLang(params);
   const session = await auth.api.getSession({ headers: await headers() });
 
   // 404 rather than a redirect, matching /issues and /voices: a member has no business
@@ -33,7 +37,7 @@ export default async function Page({
   // Unknown reads as "all" rather than as a filter nothing matches, which would look like
   // an empty queue - the same bargain every explorer's filter parser makes.
   const category: Category | "all" = isCategory(rawCategory) ? rawCategory : "all";
-  const reports = await listReports(status, source, category);
+  const reports = await listReports(status, source, category, undefined, lang);
 
   return (
     <main className="mx-auto max-w-6xl px-5 pt-6 pb-24">

@@ -10,7 +10,7 @@
  * it contains colons ('s:1411:razor hill'), and round-tripping those through a dynamic
  * segment is encoding risk for no benefit.
  */
-import { requireApiKey, requireRegenerate } from "@/lib/generation/authz";
+import { requireApiKey, requireGenerationLang, requireRegenerate } from "@/lib/generation/authz";
 import { regenerateZoneLine } from "@/lib/zones/regenerate";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +18,8 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   const { session, denied } = await requireRegenerate();
   if (denied) return denied;
+  const { denied: badLang } = await requireGenerationLang(request);
+  if (badLang) return badLang;
 
   // After the role check, never instead of it: a key is a credential, not a permission.
   const { key, denied: noKey } = await requireApiKey(session.user.id);

@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -76,6 +78,7 @@ function filterParams(filters: LineFilters): URLSearchParams {
 
 export default function Explorer({ facets }: { facets: Facets }) {
   const router = useRouter();
+  const lang = useLang();
   const params = useSearchParams();
   const pathname = usePathname();
   const { data: session } = useSession();
@@ -281,7 +284,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
     if (page > 1) search.set("page", String(page));
 
     setLoading(true);
-    fetch(`/api/quests/search?${search}`, { signal: controller.signal })
+    fetch(withLang(lang, `/api/quests/search?${search}`), { signal: controller.signal })
       .then((r) => r.json())
       .then((data: SearchResult) => {
         setResult(data);
@@ -292,7 +295,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       });
 
     return () => controller.abort();
-  }, [filterQuery, page, refreshKey]);
+  }, [filterQuery, page, refreshKey, lang]);
 
   useEffect(() => {
     if (!showRegenerate) return;
@@ -456,7 +459,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
         setQueue(snapshot);
         // Every line that landed since the last poll, adopted the same way a click's result
         // is - which is what makes another admin's work show up on this page.
+        // Only this section's, in this page's language: the queue carries all of them.
         for (const job of snapshot.finished) {
+          if (job.source !== "quests" || job.lang !== lang) continue;
           applySuccess(job.file, job.version, job.lineId);
         }
         if (snapshot.active) setDismissed(false);
@@ -471,7 +476,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [showRegenerate, applySuccess]);
+  }, [showRegenerate, applySuccess, lang]);
 
   /**
    * Regenerate one line.
@@ -484,7 +489,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const regenerateLine = useCallback(async (line: ResultLine) => {
     setLineStates((current) => ({ ...current, [line.lineId]: { phase: "busy" } }));
 
-    const response = await regenerate(line.lineId);
+    const response = await regenerate(line.lineId, undefined, lang);
 
     if (!response.ok) {
       setLineStates((current) => ({
@@ -495,7 +500,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
     }
 
     applySuccess(response.file, response.version, line.lineId);
-  }, [applySuccess]);
+  }, [applySuccess, lang]);
 
   /**
    * Clear every dirty file the current search matches, not just this page's.
@@ -507,11 +512,11 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const clearAllDirty = useCallback(async () => {
     const params = new URLSearchParams(filterQuery);
     params.set("ids", "1");
-    const response = await fetch(`/api/quests/search?${params}`).catch(() => null);
+    const response = await fetch(withLang(lang, `/api/quests/search?${params}`)).catch(() => null);
     if (!response?.ok) return;
     const { dirtyFiles } = (await response.json()) as { dirtyFiles?: string[] };
     clearDirty(dirtyFiles ?? []);
-  }, [filterQuery, clearDirty]);
+  }, [filterQuery, clearDirty, lang]);
 
   /**
    * Ask to regenerate everything the current search matches.
@@ -523,7 +528,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
    */
   const requestBatch = useCallback(async () => {
     const quoted = filterQuery;
-    const jobs = await fetchBatchJobs(new URLSearchParams(quoted));
+    const jobs = await fetchBatchJobs(new URLSearchParams(quoted), undefined, lang);
     if (!jobs || jobs.length === 0) return;
 
     // The same arithmetic the server would do, from the rate it reported. Falls back to
@@ -539,7 +544,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
         rate,
       ),
     });
-  }, [filterQuery, status]);
+  }, [filterQuery, status, lang]);
 
   /**
    * Hand the confirmed batch to the server.
@@ -558,6 +563,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
     const result = await queueBatch(
       { source: "quests", filters: new URLSearchParams(pendingBatch.filters) },
       pendingBatch.label,
+      lang,
     );
     if (!result) {
       // No reason offered because none was given: the route refused for a cause this
@@ -578,7 +584,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       cursor.current = snapshot.cursor;
       setQueue(snapshot);
     }
-  }, [pendingBatch]);
+  }, [pendingBatch, lang]);
 
   const play = useCallback((line: ResultLine) => {
     setCurrent(line);

@@ -1,3 +1,4 @@
+import { pageLang } from "@/lib/lang-server";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -17,10 +18,11 @@ export const metadata: Metadata = { title: "Zones · Spoken" };
  */
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
+export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
+  const lang = await pageLang(params);
   let zones;
   try {
-    zones = await zoneFacets();
+    zones = await zoneFacets(lang);
   } catch (error) {
     // Said on the page rather than thrown at it. Between a fresh deployment and its
     // cutover this section has no rows yet, and a stack trace is the wrong way to tell

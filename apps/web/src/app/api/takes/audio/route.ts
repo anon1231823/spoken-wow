@@ -24,6 +24,7 @@
 import { NextRequest } from "next/server";
 
 import { requireRegenerate } from "@/lib/generation/authz";
+import { langParam } from "@/lib/lang-server";
 import { serveTake } from "@/lib/takes/serve";
 import { isAddressableFile } from "@/lib/takes/files";
 import { takePath } from "@/lib/takes/store";
@@ -46,6 +47,8 @@ export async function GET(request: NextRequest) {
   if (!(await isAddressableFile(source, file))) {
     return new Response("unknown file", { status: 404 });
   }
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
 
-  return serveTake(request, await takePath(source, file, version), { immutable: true });
+  return serveTake(request, await takePath(source, file, version, lang), { immutable: true, lang });
 }

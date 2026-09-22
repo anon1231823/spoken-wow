@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import AudioPlayer from "@/components/AudioPlayer";
 import type { ResultLine } from "@/lib/books/search";
 
@@ -17,6 +19,7 @@ type Props = {
 };
 
 export function Player({ line, version, audioRef }: Props) {
+  const lang = useLang();
   const query = new URLSearchParams();
   if (version !== undefined) query.set("v", String(version));
 
@@ -28,7 +31,7 @@ export function Player({ line, version, audioRef }: Props) {
     <AudioPlayer
       audioRef={audioRef}
       src={
-        playable ? `/api/books/audio/${line.file}.mp3${query.size ? `?${query}` : ""}` : undefined
+        playable ? withLang(lang, `/api/books/audio/${line.file}.mp3${query.size ? `?${query}` : ""}`) : undefined
       }
       title={
         line === null
