@@ -217,9 +217,11 @@ function MinimalPlayer:BuildPortrait()
     self.badge:SetSize(16, 16)
     self.badge:SetPoint("CENTER", host, "TOPLEFT", 90 * 56.5 / 71, -90 * 56.5 / 71)
 
-    local button = CreateFrame("Button", nil, chrome)
+    -- Beneath the chrome, so the paused wash never dims the ring or the badge.
+    local button = CreateFrame("Button", nil, host)
     self.pause = button
     button:SetAllPoints()
+    button:SetFrameLevel(chrome:GetFrameLevel() - 1)
     button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     button.wash = button:CreateTexture(nil, "BACKGROUND")
     button.wash:SetAllPoints()
