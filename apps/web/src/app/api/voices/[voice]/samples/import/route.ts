@@ -71,8 +71,10 @@ export async function POST(request: Request, context: Context) {
   let merged = stored.length === 1 ? stored[0] : null;
   if (!merged) {
     try {
+      // The clone, like every other call here: the clips were stored under the language's
+      // own directory, and the slot's is English's.
       merged = await mergeSamples(
-        voice,
+        clone,
         stored.map((s) => s.file),
         DEFAULT_PAUSE_SECONDS,
       );
