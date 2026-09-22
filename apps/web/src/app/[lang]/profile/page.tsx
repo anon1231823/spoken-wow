@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import ApiKeySection from "@/components/ApiKeySection";
 import { apiKeyStatus } from "@/lib/api-key";
 import { auth } from "@/lib/auth";
+import { localeHref } from "@/lib/lang";
+import { pageLang } from "@/lib/lang-server";
 import { canRegenerate } from "@/lib/permissions";
 
 export const metadata: Metadata = { title: "Profile · Spoken" };
@@ -19,9 +21,10 @@ export const dynamic = "force-dynamic";
  * A redirect to /login rather than the 404 /admin and /voices give a member: every signed-in
  * user has a profile, so the only question here is who is asking, and signing in answers it.
  */
-export default async function Page() {
+export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
+  const lang = await pageLang(params);
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/login");
+  if (!session) redirect(localeHref(lang, "/login"));
 
   const role = session.user.role;
   // The status, never the key. Sent to a client component as props, so this is the shape

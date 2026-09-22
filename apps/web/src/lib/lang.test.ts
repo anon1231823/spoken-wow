@@ -32,3 +32,38 @@ describe("the site's language list", () => {
     expect(langTag("ptBR")).toBe("pt-BR");
   });
 });
+
+describe("addresses", () => {
+  it("leaves English where it always was", async () => {
+    const { localeHref } = await import("./lang");
+    expect(localeHref("enUS", "/quests?q=1")).toBe("/quests?q=1");
+    expect(localeHref("enUS", "/")).toBe("/");
+  });
+
+  it("prefixes another language's pages, and nothing else", async () => {
+    const { localeHref } = await import("./lang");
+    expect(localeHref("ptBR", "/quests?q=1")).toBe("/ptBR/quests?q=1");
+    expect(localeHref("ptBR", "/")).toBe("/ptBR");
+    expect(localeHref("ptBR", "/api/quests/search")).toBe("/api/quests/search");
+    expect(localeHref("ptBR", "https://www.wowhead.com/classic")).toBe("https://www.wowhead.com/classic");
+    expect(localeHref("ptBR", "//cdn.example")).toBe("//cdn.example");
+  });
+
+  it("takes a prefix off again, and only a real language's", async () => {
+    const { stripLang } = await import("./lang");
+    expect(stripLang("/ptBR/quests?q=1")).toEqual({ lang: "ptBR", path: "/quests?q=1" });
+    expect(stripLang("/ptBR")).toEqual({ lang: "ptBR", path: "/" });
+    expect(stripLang("/ptBR?x=1")).toEqual({ lang: "ptBR", path: "/?x=1" });
+    expect(stripLang("/quests")).toEqual({ lang: "enUS", path: "/quests" });
+    expect(stripLang("/xxYY/quests")).toEqual({ lang: "enUS", path: "/xxYY/quests" });
+  });
+
+  it("asks an API for a language only when it is not English", async () => {
+    const { withLang } = await import("./lang");
+    expect(withLang("enUS", "/api/quests/search?q=1")).toBe("/api/quests/search?q=1");
+    expect(withLang("ptBR", "/api/quests/search?q=1")).toBe("/api/quests/search?q=1&lang=ptBR");
+    expect(withLang("ptBR", "/api/quests/audio/quests/1-accept.mp3")).toBe(
+      "/api/quests/audio/quests/1-accept.mp3?lang=ptBR",
+    );
+  });
+});

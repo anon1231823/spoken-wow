@@ -48,3 +48,42 @@ export function langName(lang: Lang): string {
 export function langTag(lang: Lang): string {
   return LOCALES.find((locale) => locale.code === lang)?.bcp47 ?? "en-US";
 }
+
+/**
+ * A page's address in a language: the bare path for English, `/ptBR/...` for the rest.
+ *
+ * English keeps the addresses it has always had -- every link already out there, from the
+ * addons' Report buttons to a bookmark, is a bare path, and the proxy (src/middleware.ts)
+ * answers one as English. Only a path on this site gets a prefix: an API route is addressed
+ * by `?lang=` instead (see withLang), and an external URL is not ours to rewrite.
+ */
+export function localeHref(lang: Lang, href: string): string {
+  if (lang === BASE_LANG || !href.startsWith("/") || href.startsWith("//")) return href;
+  if (href.startsWith("/api/") || href === "/api") return href;
+  return href === "/" ? `/${lang}` : `/${lang}${href}`;
+}
+
+/**
+ * The same path without its language, for the switcher: what `/ptBR/quests?q=1` is in
+ * any other language. A path with no prefix is already English.
+ */
+export function stripLang(href: string): { lang: Lang; path: string } {
+  const match = href.match(/^\/([a-z]{2}[A-Z]{2})(?=\/|\?|#|$)(.*)$/);
+  if (match && isLang(match[1])) {
+    const rest = match[2];
+    return { lang: match[1], path: rest.startsWith("/") ? rest : `/${rest}` };
+  }
+  return { lang: BASE_LANG, path: href };
+}
+
+/**
+ * An API URL asking for a language's rows. English sends no parameter, so every URL the
+ * site requested before languages existed is byte for byte what it requests now -- the
+ * audio routes' cache entries included.
+ */
+export function withLang(lang: Lang, url: string): string {
+  if (lang === BASE_LANG) return url;
+  const [base, hash] = url.split("#", 2);
+  const joined = `${base}${base.includes("?") ? "&" : "?"}lang=${lang}`;
+  return hash === undefined ? joined : `${joined}#${hash}`;
+}

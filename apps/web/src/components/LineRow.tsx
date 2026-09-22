@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { localeHref } from "@/lib/lang";
 import {
   ChevronDownIcon,
   Eraser,
@@ -151,6 +153,7 @@ export default function LineRow({
 }: Props) {
   const missing = absence(line);
   const [expanded, setExpanded] = useState(false);
+  const lang = useLang();
 
   /**
    * Clicking the row shows the whole line, but only when the click meant that.
@@ -259,7 +262,7 @@ export default function LineRow({
                 // ?status=accepted -- page.tsx defaults to status=new, and a contributed
                 // line's own contribution is by definition accepted, so a bare /contributions
                 // link would land on a queue that never shows the row it points at.
-                href={`/contributions?status=accepted#contribution-${line.contributionId}`}
+                href={localeHref(lang, `/contributions?status=accepted#contribution-${line.contributionId}`)}
                 onClick={(event) => event.stopPropagation()}
                 title="Accepted from a player's contribution"
                 className="text-muted-foreground hover:text-foreground underline underline-offset-2"

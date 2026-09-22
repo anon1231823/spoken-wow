@@ -2,9 +2,13 @@ import type { Metadata } from "next";
 import "../globals.css";
 import { Geist } from "next/font/google";
 import Image from "next/image";
-import Link from "next/link";
 import Script from "next/script";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { LangProvider } from "@/components/LangProvider";
+import Link from "@/components/LocaleLink";
 import UserMenu from "@/components/UserMenu";
+import { langTag } from "@/lib/lang";
+import { pageLang } from "@/lib/lang-server";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -14,30 +18,56 @@ export const metadata: Metadata = {
   description: "Voiced dialogue, lore and text for World of Warcraft Classic",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/**
+ * The root layout, under the language: every page is in exactly one, and says so in
+ * <html lang>.
+ *
+ * pageLang answers an English page without a query or a session read; only another language
+ * asks whether it is switched on, and whether the visitor is an admin who may see it early.
+ *
+ * NOTHING HERE IS PRERENDERED, including the four English pages that were (the landing page,
+ * /quests, /login and /register). A generateStaticParams for English would keep them static,
+ * but it also makes Next render every other language as a static page on first request, and
+ * the admin check above reads the session -- which a static render may not, and which fails
+ * as a 500 at runtime rather than at build. Those four pages do no database work for English,
+ * so rendering them per request costs a React render and nothing else.
+ */
+export default async function RootLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ lang: string }>;
+}) {
+  const lang = await pageLang(params);
   return (
     // Dark-only for now: this is a tool for listening to game dialog, and the light
     // palette is untested. The shadcn tokens make flipping it a one-line change.
-    <html lang="en" className={cn("dark font-sans", geist.variable)}>
+    <html lang={langTag(lang)} className={cn("dark font-sans", geist.variable)}>
       <body>
-        <header className="border-b">
-          <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-3 px-5">
-            <Link href="/" aria-label="Spoken">
-              {/* Intrinsic 1024x187; height is what the header constrains, so the
-                  width below is that ratio and only exists to stop the reflow. */}
-              <Image
-                src="/logo.png"
-                alt="Spoken"
-                width={142}
-                height={26}
-                priority
-                className="h-[26px] w-auto"
-              />
-            </Link>
-            <UserMenu />
-          </div>
-        </header>
-        {children}
+        <LangProvider lang={lang}>
+          <header className="border-b">
+            <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-3 px-5">
+              <Link href="/" aria-label="Spoken">
+                {/* Intrinsic 1024x187; height is what the header constrains, so the
+                    width below is that ratio and only exists to stop the reflow. */}
+                <Image
+                  src="/logo.png"
+                  alt="Spoken"
+                  width={142}
+                  height={26}
+                  priority
+                  className="h-[26px] w-auto"
+                />
+              </Link>
+              <div className="flex items-center gap-1">
+                <LanguageSwitcher />
+                <UserMenu />
+              </div>
+            </div>
+          </header>
+          {children}
+        </LangProvider>
         {/* Cloudflare Web Analytics. Production only, so local page views don't
             land in the same dashboard as real traffic. */}
         {process.env.NODE_ENV === "production" && (

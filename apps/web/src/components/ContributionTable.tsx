@@ -20,6 +20,8 @@
  * regardless of what this file goes on to render. `ip`, `name`, `email` and `raw` have no
  * reason to make that crossing at all.
  */
+import { useLang } from "@/components/LangProvider";
+import { localeHref } from "@/lib/lang";
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -181,6 +183,7 @@ export default function ContributionTable({
   flavorScopes: FlavorScope[];
 }) {
   const router = useRouter();
+  const lang = useLang();
 
   /**
    * What this session resolved, overlaid on the server's rows -- the same shape ReportTable
@@ -347,7 +350,7 @@ export default function ContributionTable({
    * lib/contributions/query.ts so it can be tested without rendering FilterChip or this table.
    */
   function go(next: { status?: ContributionStatus | "all"; provenance?: SpeakerFilter; client?: ClientFilter }) {
-    router.push(contributionsHref({ status, provenance, client }, next));
+    router.push(localeHref(lang, contributionsHref({ status, provenance, client }, next)));
   }
 
   return (
@@ -438,7 +441,7 @@ export default function ContributionTable({
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1 whitespace-nowrap">
                           <a
-                            href={`/quests?q=${npc.npcId}&filter=npc`}
+                            href={localeHref(lang, `/quests?q=${npc.npcId}&filter=npc`)}
                             className="truncate hover:underline"
                             title={npc.npcName ?? undefined}
                           >
