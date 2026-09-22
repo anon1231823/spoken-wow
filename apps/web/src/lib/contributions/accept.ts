@@ -22,7 +22,7 @@
  * spoken form (tokens.ts). Anything else the client substituted -- the one branch of a `$G` it
  * picked -- stays as displayed; an editor has the text-override flow for that.
  */
-import { hasInvalidChars } from "@/lib/text-gate";
+import { skipReasonFor } from "@/lib/text-gate";
 import type { PoolClient } from "pg";
 
 import { normaliseText } from "@books-tools/lib/text.mjs";
@@ -30,7 +30,8 @@ import { normaliseText } from "@books-tools/lib/text.mjs";
 import { db } from "@/lib/db";
 import { observedFrom } from "@/lib/npc/resolve";
 import { getResolution, getResolutionsById, type NpcKind } from "@/lib/npc/store";
-import { BASE_LANG, corpus } from "@/lib/quests/catalogue";
+import { BASE_LANG } from "@/lib/lang";
+import { corpus } from "@/lib/quests/catalogue";
 import { isVoice } from "@/lib/voices/voices";
 
 import type { ContributionStatus } from "./contributions";
@@ -298,8 +299,7 @@ async function acceptTranslation(
   }
 
   const text = contribution.text;
-  const skipReason =
-    identity.source === "progress" ? "progress" : hasInvalidChars(text) ? "invalid-chars" : null;
+  const skipReason = skipReasonFor(identity.source, text);
   const seen = new Set<string>();
   for (const line of english) {
     const key = `${line.lineId}#${line.variant ?? 0}`;

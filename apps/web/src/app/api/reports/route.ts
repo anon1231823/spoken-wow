@@ -18,7 +18,7 @@ import { validateSubmission } from "@/lib/reports/reports";
 import { langParam } from "@/lib/lang-server";
 import { countRecent, createReport } from "@/lib/reports/store";
 import { formatTarget, parseTarget, resolveTarget } from "@/lib/reports/target";
-import { BASE_LANG as BOOKS_LANG, pageById } from "@/lib/books/catalogue";
+import { pageById } from "@/lib/books/catalogue";
 import { lineByPath } from "@/lib/zones/catalogue";
 import { type Source, isSource } from "@/lib/sections";
 
@@ -136,7 +136,7 @@ async function booksTarget(
 ): Promise<{ lineId: string | null; target: string } | null> {
   if (!raw) return null;
 
-  const page = await pageById(Number(raw), BOOKS_LANG);
+  const page = await pageById(Number(raw));
   if (!page) return null;
 
   return { lineId: page.id, target: page.file };

@@ -1,6 +1,6 @@
 "use client";
 
-import { TranslateDialog, type TranslateSubject } from "@/components/TranslateDialog";
+import { nameSubject, TranslateDialog, type TranslateSubject } from "@/components/TranslateDialog";
 import { useLang } from "@/components/LangProvider";
 import { BASE_LANG, withLang } from "@/lib/lang";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -174,25 +174,25 @@ export default function Explorer({ facets }: { facets: Facets }) {
     [lang],
   );
   const rename = useCallback((line: ResultLine, what: "npc" | "quest") => {
-    const npc = what === "npc";
-    setTranslating({
-      title: npc ? line.npcName : (line.questTitle ?? `quest ${line.questId}`),
-      subtitle: npc ? `${line.npcType} ${line.npcId}` : `quest ${line.questId}`,
-      english: (npc ? line.english?.npcName : line.english?.questTitle) ?? "",
-      current: npc
-        ? line.missing?.npcName
-          ? null
-          : line.npcName
-        : line.missing?.questTitle
-          ? null
-          : line.questTitle,
-      endpoint: "/api/names",
-      address: npc
-        ? { kind: line.npcType, entityId: String(line.npcId) }
-        : { kind: "quest", entityId: String(line.questId) },
-      field: "name",
-      multiline: false,
-    });
+    setTranslating(
+      what === "npc"
+        ? nameSubject({
+            kind: line.npcType,
+            entityId: String(line.npcId),
+            title: line.npcName,
+            subtitle: `${line.npcType} ${line.npcId}`,
+            english: line.english?.npcName ?? "",
+            current: line.missing?.npcName ? null : line.npcName,
+          })
+        : nameSubject({
+            kind: "quest",
+            entityId: String(line.questId),
+            title: line.questTitle ?? `quest ${line.questId}`,
+            subtitle: `quest ${line.questId}`,
+            english: line.english?.questTitle ?? "",
+            current: line.missing?.questTitle ? null : line.questTitle,
+          }),
+    );
   }, []);
   const [ignoring, setIgnoring] = useState<ResultLine | null>(null);
   // Anyone can open this one, signed in or not - see ReportDialog.

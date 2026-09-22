@@ -559,37 +559,16 @@ SELECT
     source,
     quest,
     IFNULL(NULLIF(lq.title_loc{lang}, ''), quest_title) as quest_title,
-    IFNULL(NULLIF(CASE source
-        WHEN 'gossip' THEN (CASE
-            WHEN broadcast_text_id = 0 THEN qg.content_loc{lang}
-            WHEN ALL_DATA.type = 'creature' THEN IF(DisplaySexID = 0, lbt.male_text_loc{lang}, lbt.female_text_loc{lang})
-            ELSE IFNULL(NULLIF(lbt.male_text_loc{lang}, ''), lbt.female_text_loc{lang})
-        END)
-        WHEN 'accept'   THEN lq.Details_loc{lang}
-        WHEN 'progress' THEN lq.RequestItemsText_loc{lang}
-        WHEN 'complete' THEN lq.OfferRewardText_loc{lang}
-        ELSE NULL
-    END, ''), text) as text,
+    IFNULL(NULLIF({localized_text}, ''), text) as text,
     DisplayRaceID,
     DisplaySexID,
     npc_sound_name,
-    IFNULL(NULLIF(CASE ALL_DATA.type
-        WHEN 'creature'   THEN lc.name_loc{lang}
-        WHEN 'gameobject' THEN lg.name_loc{lang}
-        WHEN 'item'       THEN li.name_loc{lang}
-        ELSE NULL
-    END, ''), name) as name,
+    IFNULL(NULLIF({localized_name}, ''), name) as name,
     ALL_DATA.type,
     id,
     text as original_text
 FROM ALL_DATA
-    LEFT JOIN mangos.locales_quest          lq  ON lq .entry = quest
-    LEFT JOIN mangos.locales_broadcast_text lbt ON lbt.entry = broadcast_text_id
-    LEFT JOIN mangos.locales_creature       lc  ON lc .entry = id AND type = 'creature'
-    LEFT JOIN mangos.locales_gameobject     lg  ON lg .entry = id AND type = 'gameobject'
-    LEFT JOIN mangos.locales_item           li  ON li .entry = id AND type = 'item'
-    LEFT JOIN mangos.quest_greeting         qg  ON qg .entry = id AND qg.type = (CASE ALL_DATA.type WHEN 'creature' THEN 0 WHEN 'gameobject' THEN 1 ELSE -1 END)
-        '''
+{localized_joins}'''
 
     with db.cursor() as cursor:
         cursor.execute(sql_query)

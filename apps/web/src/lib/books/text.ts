@@ -25,8 +25,7 @@ import "server-only";
 
 import { db, query } from "@/lib/db";
 
-import { BASE_LANG } from "./catalogue";
-import type { Lang } from "@/lib/lang";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 
 export type BookVersion = {
   lineId: string;

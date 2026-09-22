@@ -44,6 +44,28 @@ export type TranslateSubject = {
   multiline: boolean;
 };
 
+/** A thing's name: a quest's, an NPC's, a book owner's, a place's. */
+export function nameSubject(args: {
+  kind: string;
+  entityId: string;
+  title: string;
+  subtitle: string;
+  english: string;
+  /** The language's own name, or null where it has none yet. */
+  current: string | null;
+}): TranslateSubject {
+  return {
+    title: args.title,
+    subtitle: args.subtitle,
+    english: args.english,
+    current: args.current,
+    endpoint: "/api/names",
+    address: { kind: args.kind, entityId: args.entityId },
+    field: "name",
+    multiline: false,
+  };
+}
+
 type Props = {
   subject: TranslateSubject | null;
   onClose: () => void;

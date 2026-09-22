@@ -4,7 +4,9 @@ import "server-only";
 
 import path from "node:path";
 
-import { catalogue, BASE_LANG } from "./catalogue";
+import { BASE_LANG } from "@/lib/lang";
+
+import { catalogue } from "./catalogue";
 import type { Lang } from "@/lib/lang";
 
 /**

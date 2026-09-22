@@ -84,12 +84,14 @@ export async function readSettings(lang: Lang = BASE_LANG): Promise<EffectiveSet
  * with someone else's.
  */
 async function readLanguageSettings(lang: Lang): Promise<EffectiveSettings> {
-  const english = await readSettings(BASE_LANG);
-  const { rows } = await db().query<Row>(
-    `select "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy"
-       from "generation_setting_locale" where "lang" = $1`,
-    [lang],
-  );
+  const [english, { rows }] = await Promise.all([
+    readSettings(BASE_LANG),
+    db().query<Row>(
+      `select "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy"
+         from "generation_setting_locale" where "lang" = $1`,
+      [lang],
+    ),
+  ]);
   const row = rows[0];
   if (!row) {
     return {
@@ -199,6 +201,35 @@ export function validateRaceTags(raw: unknown): Record<string, string> {
   return tags;
 }
 
+/**
+ * Another language's settings row, created whole from `config` and otherwise updating only
+ * `columns` -- the model form and the accent tags are saved from different pages, and each
+ * must not revert what the other just wrote.
+ */
+async function upsertLanguage(
+  lang: Lang,
+  config: GenerationConfig,
+  updatedBy: string | null,
+  columns: ("modelId" | "voiceSettings" | "seedStrategy" | "raceTags")[],
+): Promise<void> {
+  const set = columns.map((column) => `"${column}" = excluded."${column}"`).join(", ");
+  await db().query(
+    `insert into "generation_setting_locale"
+       ("lang", "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy")
+     values ($1, $2, $3, $4, $5, now(), $6)
+     on conflict ("lang") do update set
+       ${set}, "updatedAt" = excluded."updatedAt", "updatedBy" = excluded."updatedBy"`,
+    [
+      lang,
+      config.modelId,
+      JSON.stringify(config.voiceSettings),
+      config.seedStrategy,
+      JSON.stringify(config.raceTags),
+      updatedBy,
+    ],
+  );
+}
+
 export async function writeSettings(
   config: GenerationConfig,
   updatedBy: string,
@@ -206,25 +237,7 @@ export async function writeSettings(
 ): Promise<void> {
   if (lang !== BASE_LANG) {
     // The tags ride along only on the insert, for the reason the English upsert below gives.
-    await db().query(
-      `insert into "generation_setting_locale"
-         ("lang", "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy")
-       values ($1, $2, $3, $4, $5, now(), $6)
-       on conflict ("lang") do update set
-         "modelId"       = excluded."modelId",
-         "voiceSettings" = excluded."voiceSettings",
-         "seedStrategy"  = excluded."seedStrategy",
-         "updatedAt"     = excluded."updatedAt",
-         "updatedBy"     = excluded."updatedBy"`,
-      [
-        lang,
-        config.modelId,
-        JSON.stringify(config.voiceSettings),
-        config.seedStrategy,
-        JSON.stringify(config.raceTags),
-        updatedBy,
-      ],
-    );
+    await upsertLanguage(lang, config, updatedBy, ["modelId", "voiceSettings", "seedStrategy"]);
     return;
   }
   await db().query(
@@ -278,23 +291,7 @@ export async function writeRaceTags(
     // As for English: the row has to exist to hold a tag, and is created from the settings
     // in force -- English's, for a language nobody has configured.
     const current = (await readSettings(lang)).config;
-    await db().query(
-      `insert into "generation_setting_locale"
-         ("lang", "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy")
-       values ($1, $2, $3, $4, $5, now(), $6)
-       on conflict ("lang") do update set
-         "raceTags"  = excluded."raceTags",
-         "updatedAt" = excluded."updatedAt",
-         "updatedBy" = excluded."updatedBy"`,
-      [
-        lang,
-        current.modelId,
-        JSON.stringify(current.voiceSettings),
-        current.seedStrategy,
-        JSON.stringify(tags),
-        updatedBy,
-      ],
-    );
+    await upsertLanguage(lang, { ...current, raceTags: tags }, updatedBy, ["raceTags"]);
     return;
   }
   const defaults = fileDefaults().config;

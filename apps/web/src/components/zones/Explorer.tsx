@@ -1,6 +1,6 @@
 "use client";
 
-import { TranslateDialog, type TranslateSubject } from "@/components/TranslateDialog";
+import { nameSubject, TranslateDialog, type TranslateSubject } from "@/components/TranslateDialog";
 import { useCan } from "@/components/useCan";
 import { useLang } from "@/components/LangProvider";
 import { BASE_LANG, withLang } from "@/lib/lang";
@@ -673,16 +673,16 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
               onRename={
                 lang !== BASE_LANG && canEdit
                   ? (l) =>
-                      setNaming({
-                        title: l.name,
-                        subtitle: l.id,
-                        english: l.englishName ?? l.name,
-                        current: l.nameMissing ? null : l.name,
-                        endpoint: "/api/names",
-                        address: { kind: l.kind, entityId: l.id },
-                        field: "name",
-                        multiline: false,
-                      })
+                      setNaming(
+                        nameSubject({
+                          kind: l.kind,
+                          entityId: l.id,
+                          title: l.name,
+                          subtitle: l.id,
+                          english: l.englishName ?? l.name,
+                          current: l.nameMissing ? null : l.name,
+                        }),
+                      )
                   : null
               }
               onRegenerate={regenerateOne}

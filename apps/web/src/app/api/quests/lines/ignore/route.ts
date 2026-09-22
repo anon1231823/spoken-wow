@@ -13,7 +13,7 @@
 import { requireConfigure, requireIn } from "@/lib/generation/authz";
 import type { Lang } from "@/lib/lang";
 import { lineIndex } from "@/lib/quests/catalogue";
-import { clearIgnore, IgnoreConflict, writeIgnore } from "@/lib/quests/ignores";
+import { clearIgnore, writeIgnore } from "@/lib/quests/ignores";
 
 export const dynamic = "force-dynamic";
 
@@ -67,15 +67,7 @@ export async function PUT(request: Request) {
     return Response.json({ error: `reason must be ${MAX_REASON} characters or fewer` }, { status: 400 });
   }
 
-  try {
-    const ignore = await writeIgnore(lineId, reason, userId, lang);
-    return Response.json({ ignore });
-  } catch (error) {
-    if (error instanceof IgnoreConflict) {
-      return Response.json({ error: error.message }, { status: 409 });
-    }
-    throw error;
-  }
+  return Response.json({ ignore: await writeIgnore(lineId, reason, userId, lang) });
 }
 
 export async function DELETE(request: Request) {

@@ -82,13 +82,6 @@ export async function readIgnores(lang: Lang = BASE_LANG): Promise<Map<string, L
   return map;
 }
 
-/**
- * The write collided with another row for the line. Unreachable since migration 0038 dropped
- * the one-row-per-line key, and kept for a database still behind it, where the route answers
- * it as a 409 rather than a 500.
- */
-export class IgnoreConflict extends Error {}
-
 export async function writeIgnore(
   lineId: string,
   reason: string,
@@ -100,26 +93,18 @@ export async function writeIgnore(
   const trimmed = reason.trim();
   if (!trimmed) throw new Error("an ignore needs a reason: a decision nobody can revisit is a bug");
 
-  try {
-    const { rows } = await db().query<IgnoreRow>(
-      `insert into "line_ignore" ("lineId", "lang", "reason", "createdBy")
-       values ($1, $4, $2, $3)
-       on conflict ("lineId", (coalesce("lang", ''))) do update
-          set "reason" = excluded."reason",
-              "createdAt" = now(),
-              "createdBy" = excluded."createdBy"
-       returning "lineId", "lang", "reason", "createdAt", "createdBy"`,
-      [lineId, trimmed, userId, lang],
-    );
-    return toIgnore(rows[0]);
-  } catch (error) {
-    if ((error as { code?: string }).code === "23505") {
-      throw new IgnoreConflict(`${lineId} is already ignored at another level`);
-    }
-    throw error;
-  } finally {
-    forgetIgnores();
-  }
+  const { rows } = await db().query<IgnoreRow>(
+    `insert into "line_ignore" ("lineId", "lang", "reason", "createdBy")
+     values ($1, $4, $2, $3)
+     on conflict ("lineId", (coalesce("lang", ''))) do update
+        set "reason" = excluded."reason",
+            "createdAt" = now(),
+            "createdBy" = excluded."createdBy"
+     returning "lineId", "lang", "reason", "createdAt", "createdBy"`,
+    [lineId, trimmed, userId, lang],
+  );
+  forgetIgnores();
+  return toIgnore(rows[0]);
 }
 
 export async function clearIgnore(lineId: string, lang: Lang | null = null): Promise<boolean> {

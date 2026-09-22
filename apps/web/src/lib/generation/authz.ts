@@ -15,6 +15,7 @@ import { auth } from "@/lib/auth";
 import { BASE_LANG, type Lang } from "@/lib/lang";
 import { langParam } from "@/lib/lang-server";
 import { NO_API_KEY } from "@/lib/no-api-key";
+import { currentSession } from "@/lib/session";
 import { viewerOf } from "@/lib/grants/store";
 import { can, canConfigureGeneration, type Capability } from "@/lib/permissions";
 
@@ -28,12 +29,10 @@ const FORBIDDEN = () => Response.json({ error: "not allowed" }, { status: 403 })
  * Returns the session rather than just a verdict because every caller needs the user id for
  * provenance, and fetching it twice would mean two session lookups per regenerated line.
  */
-export async function requireRegenerate(
-  lang: Lang = BASE_LANG,
-): Promise<
+export async function requireRegenerate(): Promise<
   { session: NonNullable<Session>; denied: null } | { session: null; denied: Response }
 > {
-  return requireCapability("regenerate", lang);
+  return requireCapability("regenerate", BASE_LANG);
 }
 
 /**
@@ -49,7 +48,7 @@ export async function requireCapability(
 ): Promise<
   { session: NonNullable<Session>; denied: null } | { session: null; denied: Response }
 > {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await currentSession();
   if (!session || !can(await viewerOf(session), capability, lang)) {
     return { session: null, denied: FORBIDDEN() };
   }
@@ -143,8 +142,9 @@ export async function requireAnyRegenerate(): Promise<
   const viewer = await viewerOf(session);
   const allowed =
     viewer !== null &&
-    (can(viewer, "regenerate", BASE_LANG) ||
-      viewer.grants.some((grant) => can(viewer, "regenerate", grant.lang as Lang)));
+    [BASE_LANG, ...viewer.grants.map((grant) => grant.lang as Lang)].some((lang) =>
+      can(viewer, "regenerate", lang),
+    );
   if (!session || !allowed) return { session: null, denied: FORBIDDEN() };
   return { session, denied: null };
 }

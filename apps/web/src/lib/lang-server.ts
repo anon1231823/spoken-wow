@@ -10,12 +10,12 @@
  */
 import "server-only";
 
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
-import { auth } from "@/lib/auth";
 import { BASE_LANG, isLang, type Lang } from "@/lib/lang";
 import { isEnabled } from "@/lib/languages/store";
+import { currentSession } from "@/lib/session";
 import { viewerOf } from "@/lib/grants/store";
 import { worksIn } from "@/lib/permissions";
 
@@ -24,14 +24,14 @@ import { worksIn } from "@/lib/permissions";
  * holding a grant in it -- the translators who are preparing it.
  */
 async function mayPreview(lang: Lang): Promise<boolean> {
-  const session = await auth.api.getSession({ headers: await headers() });
-  return worksIn(await viewerOf(session), lang);
+  return worksIn(await viewerOf(await currentSession()), lang);
 }
 
-async function visible(lang: Lang): Promise<boolean> {
+/** Cached per render: the layout and the page under it both ask, of the same language. */
+const visible = cache(async (lang: Lang): Promise<boolean> => {
   if (lang === BASE_LANG) return true;
   return (await isEnabled(lang)) || (await mayPreview(lang));
-}
+});
 
 /**
  * An API route's language, or the response to return instead.

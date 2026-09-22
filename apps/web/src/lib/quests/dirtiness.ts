@@ -15,8 +15,7 @@ import { BASE_LANG, type Lang } from "../lang";
 import { fileIndex } from "../audio";
 import { db } from "../db";
 import { dirtyFiles, loadDirtyContext } from "../generation/dirty";
-import { fileDefaults } from "../generation/files";
-import { applyPronunciation } from "../generation/pronunciation";
+import { committedPronunciation } from "../generation/files";
 import { readOverrides } from "./overrides";
 
 /**
@@ -32,7 +31,6 @@ export async function dirtyQuestFiles(
   lang: Lang = BASE_LANG,
 ): Promise<Set<string>> {
   if (files?.length === 0) return new Set();
-  const english = lang === BASE_LANG;
 
   const [{ rows }, context, overrides] = await Promise.all([
     files
@@ -51,13 +49,12 @@ export async function dirtyQuestFiles(
     // In the same round as the rest: memoised behind a stamp, so this is a timestamp check
     // rather than a table read, but it is still a round trip to sit behind the others.
     // English's alone: overrides rewrite the English corpus.
-    english ? readOverrides() : new Map<string, { text: string }>(),
+    readOverrides(lang),
   ]);
 
   if (!context.changes.length) return new Set();
 
   const lines = await fileIndex(lang);
-  const rules = english ? fileDefaults().rules : null;
 
   const takes = [];
   for (const row of rows) {
@@ -68,7 +65,7 @@ export async function dirtyQuestFiles(
       file: row.file,
       // The regex rules, as regenerate.ts applies them: a rule that rewrites a name before
       // the request is sent changes which lexicon entries the text can still match.
-      text: rules ? applyPronunciation(text, rules) : text,
+      text: committedPronunciation(text, lang),
       generatedAt: row.generatedAt?.getTime() ?? null,
     });
   }

@@ -16,10 +16,9 @@
 import { BASE_LANG, type Lang } from "../lang";
 import { fileIndex } from "../audio";
 import { db } from "../db";
-import { fileDefaults } from "../generation/files";
+import { committedPronunciation } from "../generation/files";
 import { spokenHash } from "../generation/spoken-hash";
 import { accentTagged, audioTags } from "../generation/narration";
-import { applyPronunciation } from "../generation/pronunciation";
 import { currentConfig } from "../generation/settings";
 import { readOverrides } from "./overrides";
 
@@ -52,10 +51,8 @@ export async function staleFiles(
 
   // What regenerate.ts would send now, in the same language: English's overrides and file
   // rules, or neither for another language, which speaks its own text with its own lexicon.
-  const english = lang === BASE_LANG;
-  const overrides = english ? await readOverrides() : new Map<string, { text: string }>();
+  const overrides = await readOverrides(lang);
   const lines = await fileIndex(lang);
-  const rules = english ? fileDefaults().rules : null;
   // Once for the whole sweep, unlike regenerate.ts which reads it per line: this answers a
   // question about the takes as they stand, and a settings change landing mid-sweep would
   // only make half the answer describe a configuration that was never used to generate.
@@ -71,7 +68,7 @@ export async function staleFiles(
     // string that was sent, so a take of "[hic]" must be compared against "[hic]" and not
     // "<hic>", and a dwarf take made with its accent direction against that same direction -
     // otherwise every dwarf line reads as stale forever rather than once.
-    const pronounced = rules ? applyPronunciation(text, rules) : text;
+    const pronounced = committedPronunciation(text, lang);
     const spoken = accentTagged(audioTags(pronounced), raceTags[line.race]);
     if (spokenHash(spoken) !== row.spokenHash) {
       stale.add(row.file);

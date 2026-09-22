@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { GrantRow } from "@/lib/grants/store";
-import { CODES, langName, type Lang } from "@/lib/lang";
+import { BASE_LANG, CODES, isLang, langName, type Lang } from "@/lib/lang";
 import { CAPABILITIES, type Capability } from "@/lib/permissions";
 
 /**
@@ -25,7 +25,8 @@ export default function GrantTable({
 }) {
   const [rows, setRows] = useState(initial);
   const [email, setEmail] = useState("");
-  const offeredLangs = (languages ?? CODES.filter((code) => code !== "enUS")) as Lang[];
+  const offeredLangs: readonly Lang[] =
+    languages?.filter(isLang) ?? CODES.filter((code) => code !== BASE_LANG);
   const offeredCaps: readonly Capability[] = languages === null ? CAPABILITIES : ["edit", "regenerate"];
   const [lang, setLang] = useState<Lang | "">(offeredLangs[0] ?? "");
   const [capability, setCapability] = useState<Capability>("edit");

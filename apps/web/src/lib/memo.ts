@@ -1,0 +1,17 @@
+/**
+ * A value per language, kept on globalThis and rebuilt when its version moves.
+ *
+ * On globalThis because `next dev` re-evaluates modules and each evaluation would otherwise
+ * start empty; per language because a site switching between two would rebuild on every
+ * other request if there were one slot. `version` is compared with ===: a stamp string, or
+ * the identity of the array a derived index was built from.
+ */
+export function memoByLang<T>(key: symbol, lang: string, version: unknown, build: () => T): T {
+  const holder = globalThis as unknown as Record<symbol, Map<string, { version: unknown; value: T }>>;
+  const memo = (holder[key] ??= new Map());
+  const existing = memo.get(lang);
+  if (existing && existing.version === version) return existing.value;
+  const value = build();
+  memo.set(lang, { version, value });
+  return value;
+}

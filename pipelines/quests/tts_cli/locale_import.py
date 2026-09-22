@@ -138,7 +138,8 @@ def import_locale(conn, lang: str, lines: list, names: dict) -> Counter:
             counts[f"lines {action}"] += 1
             if action == "skip":
                 continue
-            if action == "promote":
+            # Only a line that has a live row has one to retire: on a first import that is none.
+            if action == "promote" and key in live:
                 cur.execute(
                     """update "quest_line" set "isCurrent" = false
                         where "lineId" = %s and "variant" = %s and "lang" = %s
@@ -178,7 +179,7 @@ def import_locale(conn, lang: str, lines: list, names: dict) -> Counter:
             counts[f"names {action}"] += 1
             if action == "skip":
                 continue
-            if action == "promote":
+            if action == "promote" and key in live_names:
                 cur.execute(
                     """update "entity_name" set "isCurrent" = false
                         where "kind" = %s and "entityId" = %s and "lang" = %s

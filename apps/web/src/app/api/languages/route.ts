@@ -15,9 +15,11 @@ import { isAdmin } from "@/lib/permissions";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const [session, states] = await Promise.all([
+    auth.api.getSession({ headers: await headers() }),
+    languageStates(),
+  ]);
   const admin = isAdmin(session?.user.role);
-  const states = await languageStates();
   return Response.json({
     languages: states
       .filter((state) => state.enabled || admin)

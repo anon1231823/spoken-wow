@@ -77,9 +77,8 @@ export async function searchContext(
   try {
     // Overrides are English's alone -- they rewrite the English corpus. Staleness and dirt
     // are per language: a take is compared with its own language's text and lexicon.
-    const english = lang === BASE_LANG;
     const [overrides, ignores, reports, stale, dirt] = await Promise.all([
-      english ? readOverrides() : new Map(),
+      readOverrides(lang),
       readIgnores(lang),
       openReports(lang),
       outdated ? staleFiles(undefined, lang) : null,

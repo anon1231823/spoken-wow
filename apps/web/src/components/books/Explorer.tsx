@@ -1,6 +1,6 @@
 "use client";
 
-import { TranslateDialog, type TranslateSubject } from "@/components/TranslateDialog";
+import { nameSubject, TranslateDialog, type TranslateSubject } from "@/components/TranslateDialog";
 import { useCan } from "@/components/useCan";
 import { useLang } from "@/components/LangProvider";
 import { BASE_LANG, withLang } from "@/lib/lang";
@@ -20,7 +20,13 @@ import { SearchBar } from "@/components/books/SearchBar";
 import { Loading, Refreshing } from "@/components/Loading";
 import { Button } from "@/components/ui/button";
 import type { BookFacet } from "@/lib/books/catalogue";
-import { filterParams, filtersFromParams, PAGE_SIZE, type PageFilters } from "@/lib/books/filters";
+import {
+  filterParams,
+  filtersFromParams,
+  ownerEntityKind,
+  PAGE_SIZE,
+  type PageFilters,
+} from "@/lib/books/filters";
 import type { ResultLine, SearchResult } from "@/lib/books/search";
 import { totals as estimateTotals, LIST_RATE, type Estimate } from "@/lib/generation/billing";
 import {
@@ -516,19 +522,16 @@ export function Explorer({ books }: { books: BookFacet[] }) {
               onRename={
                 lang !== BASE_LANG && canEdit
                   ? (l) =>
-                      setNaming({
-                        title: l.title,
-                        subtitle: `${l.ownerKind} ${l.ownerIds[0]}`,
-                        english: l.englishTitle ?? l.title,
-                        current: l.missing?.title ? null : l.title,
-                        endpoint: "/api/names",
-                        address: {
-                          kind: l.ownerKind === "object" ? "gameobject" : "item",
+                      setNaming(
+                        nameSubject({
+                          kind: ownerEntityKind(l.ownerKind),
                           entityId: String(l.ownerIds[0]),
-                        },
-                        field: "name",
-                        multiline: false,
-                      })
+                          title: l.title,
+                          subtitle: `${l.ownerKind} ${l.ownerIds[0]}`,
+                          english: l.englishTitle ?? l.title,
+                          current: l.missing?.title ? null : l.title,
+                        }),
+                      )
                   : null
               }
               onRestored={(line, version) => {

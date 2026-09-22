@@ -57,3 +57,13 @@ export function isVoiceable(
   if (line.skipReason === "progress" || line.skipReason === "untranslated") return false;
   return !hasInvalidChars(effectiveText);
 }
+
+/**
+ * Why a quest line written here would not be voiced, or null: the extract's own rule
+ * (tts_cli/corpus.py _skip_reason), for text the extract never saw -- a translation typed on
+ * the site or accepted from a player.
+ */
+export function skipReasonFor(source: string, text: string): "progress" | "invalid-chars" | null {
+  if (source === "progress") return "progress";
+  return hasInvalidChars(text) ? "invalid-chars" : null;
+}

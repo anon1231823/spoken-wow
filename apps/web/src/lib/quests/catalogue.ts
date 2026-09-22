@@ -25,13 +25,12 @@
 import "server-only";
 
 import { query } from "@/lib/db";
+import { memoByLang } from "@/lib/memo";
+import { nameStamp, versionStamp } from "@/lib/stamp";
 import { npcKey, type Corpus, type CorpusLine } from "@/lib/corpus";
 import { BASE_LANG, type Lang } from "@/lib/lang";
 import { flavorsOf } from "@/lib/voices/voices";
 
-/** Re-exported from lib/lang.ts, the one definition, so the routes importing it here keep
- *  their import. */
-export { BASE_LANG } from "@/lib/lang";
 
 /**
  * The corpus holds no lines at all, which is a different thing from a search matching none.
@@ -65,33 +64,19 @@ export function isCorpusEmpty(error: unknown): boolean {
 }
 
 async function stampOf(lang: Lang): Promise<string> {
+  const english = `${versionStamp("quest_line", `"lang" = '${BASE_LANG}'`)} || '/' ||
+    (select coalesce(max("id"), 0) || ':' || count(*)
+       from "quest_line_speaker" where "lang" = '${BASE_LANG}')`;
   // Another language is read over the English lines and speakers, so its memo moves when
-  // they do as well as when its own text or names do.
-  if (lang !== BASE_LANG) {
-    const rows = await query<{ stamp: string }>(
-      `select (select coalesce(max("id"), 0) || ':' || count(*) || ':'
-                      || coalesce(sum("id") filter (where "isCurrent"), 0)
-                 from "quest_line" where "lang" = $1)
-             || '/' ||
-              (select coalesce(max("id"), 0) || ':' || count(*) || ':'
-                      || coalesce(sum("id") filter (where "isCurrent"), 0)
-                 from "entity_name"
-                where "lang" = $1 and "kind" in ('quest', 'creature', 'gameobject', 'item'))
-             as "stamp"`,
-      [lang],
-    );
-    return `${await stampOf(BASE_LANG)}|${rows[0]?.stamp ?? ""}`;
-  }
+  // they do as well as when its own text or names do -- one statement either way.
   const rows = await query<{ stamp: string }>(
-    `select (select coalesce(max("id"), 0) || ':' || count(*) || ':'
-                    || coalesce(sum("id") filter (where "isCurrent"), 0)
-               from "quest_line" where "lang" = $1)
-           || '/' ||
-            (select coalesce(max("id"), 0) || ':' || count(*)
-               from "quest_line_speaker" where "lang" = $1) as "stamp"`,
-    [lang],
+    lang === BASE_LANG
+      ? `select ${english} as "stamp"`
+      : `select ${english} || '|' || ${versionStamp("quest_line", `"lang" = $1`)} || '/' ||
+                ${nameStamp(["quest", "creature", "gameobject", "item"])} as "stamp"`,
+    lang === BASE_LANG ? [] : [lang],
   );
-  return rows[0]?.stamp ?? "0:0:0/0:0";
+  return rows[0]?.stamp ?? "";
 }
 
 type Row = {
@@ -220,35 +205,23 @@ async function buildTranslated(lang: Lang): Promise<CorpusLine[]> {
   });
 }
 
-const cacheKey = Symbol.for("spoken.quests-catalogue");
+// One memo per language (lib/memo.ts). A single slot would be rebuilt on every request that
+// asked for a different language from the last one -- seventeen thousand rows re-read and
+// search.ts's row keys rebuilt with them.
+const cacheKey = Symbol.for("spoken.quests-catalogue.by-lang");
+const indexKey = Symbol.for("spoken.quests-line-index.by-lang");
+
 /**
- * One memo per language. A single slot would be rebuilt on every request that asked for a
- * different language from the last one, which on a site switching between two is every
- * other request -- seventeen thousand rows re-read and search.ts's row keys rebuilt with them.
+ * Every line, rebuilt only when the tables have moved.
+ *
+ * The same object every time until the stamp moves, not a fresh wrapper: search.ts keys its
+ * row keys on the corpus's identity, and a new wrapper per call rebuilt them all on every
+ * request.
  */
-type Holder = { [cacheKey]?: Map<string, { stamp: string; corpus: Corpus }> };
-
-/** Every line, rebuilt only when the tables have moved. */
 export async function corpus(lang: Lang = BASE_LANG): Promise<Corpus> {
-  const holder = globalThis as Holder;
-  const memo = (holder[cacheKey] ??= new Map());
   const stamp = await stampOf(lang);
-
-  // The same object every time until the stamp moves, not a fresh wrapper: search.ts keys
-  // its row keys on the corpus's identity, and a new wrapper per call rebuilt them all on
-  // every request.
-  let entry = memo.get(lang);
-  if (!entry || entry.stamp !== stamp) {
-    entry = { stamp, corpus: { lines: await build(lang) } };
-    memo.set(lang, entry);
-  }
-  return entry.corpus;
+  return memoByLang(cacheKey, lang, stamp, async () => ({ lines: await build(lang) }));
 }
-
-const indexKey = Symbol.for("spoken.quests-line-index");
-type IndexHolder = {
-  [indexKey]?: Map<string, { lines: CorpusLine[]; index: Map<string, CorpusLine[]> }>;
-};
 
 /**
  * lineId -> every row carrying it, which is not one row: a gossip line is a hash of its
@@ -260,21 +233,15 @@ type IndexHolder = {
  */
 export async function lineIndex(lang: Lang = BASE_LANG): Promise<Map<string, CorpusLine[]>> {
   const lines = (await corpus(lang)).lines;
-  const holder = globalThis as IndexHolder;
-  const memo = (holder[indexKey] ??= new Map());
-
-  let entry = memo.get(lang);
-  if (!entry || entry.lines !== lines) {
+  return memoByLang(indexKey, lang, lines, () => {
     const index = new Map<string, CorpusLine[]>();
     for (const line of lines) {
       const group = index.get(line.lineId);
       if (group) group.push(line);
       else index.set(line.lineId, [line]);
     }
-    entry = { lines, index };
-    memo.set(lang, entry);
-  }
-  return entry.index;
+    return index;
+  });
 }
 
 /**

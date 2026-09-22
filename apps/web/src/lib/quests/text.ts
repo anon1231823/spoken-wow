@@ -17,7 +17,7 @@ import "server-only";
 
 import { db, query } from "@/lib/db";
 import { BASE_LANG, type Lang } from "@/lib/lang";
-import { hasInvalidChars } from "@/lib/text-gate";
+import { skipReasonFor } from "@/lib/text-gate";
 
 export type QuestTextVersion = {
   lineId: string;
@@ -134,8 +134,7 @@ export async function saveQuestText(args: {
     // Whether the line can be voiced is decided from the text now being written, by the
     // same rules the English uses: progress text never is, and a line still holding a $N
     // or a stray bracket would have it read aloud.
-    const skipReason =
-      english.source === "progress" ? "progress" : hasInvalidChars(text) ? "invalid-chars" : null;
+    const skipReason = skipReasonFor(english.source, text);
 
     // Structure from the row being replaced, or from the English one for a first
     // translation; localeText from the replaced row only, since the English has none.

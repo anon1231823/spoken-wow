@@ -11,15 +11,14 @@
 import "server-only";
 
 import { query } from "@/lib/db";
+import { memoByLang } from "@/lib/memo";
+import { nameStamp, versionStamp } from "@/lib/stamp";
 import { loadDirtyContext, NO_DIRT, type DirtyContext } from "@/lib/generation/dirty";
 
-import type { OwnerKind } from "./filters";
+import { ownerEntityKind, type OwnerKind } from "./filters";
 import { spokenText, textHash, fileFor } from "./tools";
 import { liveTakes } from "@/lib/takes/store";
 
-/** Re-exported from lib/lang.ts, the one definition, so the routes importing it here keep
- *  their import. */
-export { BASE_LANG } from "@/lib/lang";
 import { BASE_LANG, type Lang } from "@/lib/lang";
 
 /** One voiceable page of one book. */
@@ -128,39 +127,28 @@ export function isCorpusEmpty(error: unknown): boolean {
   return error instanceof Error && error.name === "CorpusEmpty";
 }
 
-type Memo = { stamp: string; value: Promise<BookPage[]> };
-
-/** One memo per language, so a site switching between two does not rebuild on every request. */
-const globalForBooks = globalThis as unknown as { booksCatalogue?: Map<string, Memo> };
+/** One memo per language (lib/memo.ts), so switching between two does not rebuild each time. */
+const cacheKey = Symbol.for("spoken.books-catalogue.by-lang");
 
 /**
- * What the corpus's rows are, as one comparable value.
+ * What the corpus's rows are, as one comparable value (lib/stamp.ts).
  *
  * Validated rather than invalidated, exactly as the zones catalogue is and for the same
  * reason: this app runs two pm2 workers, so a memo one worker drops after a save is a memo
- * the other keeps serving. The three terms catch the three ways the table moves -- an edit
- * inserts a version so the highest id moves, an import can delete so the count moves, and a
- * restore moves the live flag between existing rows, which only the sum of current ids sees.
+ * the other keeps serving.
  */
 async function stampOf(lang: Lang): Promise<string> {
-  const rows = await query<{ stamp: string }>(
-    `select coalesce(max("id"), 0) || ':' || count(*) || ':'
-             || coalesce(sum("id") filter (where "isCurrent"), 0) as "stamp"
-       from "book_line" where "lang" = $1`,
-    [lang],
-  );
-  const own = rows[0]?.stamp ?? "0:0:0";
-  if (lang === BASE_LANG) return own;
-
+  const english = versionStamp("book_line", `"lang" = '${BASE_LANG}'`);
   // Another language is read over the English pages and names their owners in entity_name,
-  // so its memo moves with either of those as well as with its own text.
-  const names = await query<{ stamp: string }>(
-    `select coalesce(max("id"), 0) || ':' || count(*) || ':'
-             || coalesce(sum("id") filter (where "isCurrent"), 0) as "stamp"
-       from "entity_name" where "lang" = $1 and "kind" in ('item', 'gameobject')`,
-    [lang],
+  // so its memo moves with either of those as well as with its own text: one statement.
+  const rows = await query<{ stamp: string }>(
+    lang === BASE_LANG
+      ? `select ${english} as "stamp"`
+      : `select ${english} || '|' || ${versionStamp("book_line", `"lang" = $1`)} || '|' ||
+                ${nameStamp(["item", "gameobject"])} as "stamp"`,
+    lang === BASE_LANG ? [] : [lang],
   );
-  return `${await stampOf(BASE_LANG)}|${own}|${names[0]?.stamp ?? ""}`;
+  return rows[0]?.stamp ?? "";
 }
 
 /**
@@ -192,17 +180,20 @@ async function buildTranslated(lang: Lang): Promise<BookPage[]> {
 
   return english.map((page) => {
     const text = texts.get(page.id);
-    const owner = `${page.ownerKind === "object" ? "gameobject" : "item"}:${page.ownerIds[0]}`;
+    const owner = `${ownerEntityKind(page.ownerKind)}:${page.ownerIds[0]}`;
     const title = titles.get(owner);
-    const spoken = text ? spokenText(text.text) : "";
     return {
       ...page,
+      ...(text
+        ? {
+            text: text.text,
+            spoken: spokenText(text.text),
+            hash: textHash(text.text),
+            generatable: text.generatable,
+            skipReason: text.skipReason,
+          }
+        : { spoken: "", hash: textHash(""), generatable: false, skipReason: "untranslated" }),
       title: title ?? page.title,
-      text: text ? text.text : page.text,
-      spoken,
-      hash: textHash(text ? text.text : ""),
-      generatable: text ? text.generatable : false,
-      skipReason: text ? text.skipReason : "untranslated",
       english: page.text,
       englishTitle: page.title,
       ...(!text || title === undefined
@@ -260,14 +251,7 @@ async function build(lang: Lang): Promise<BookPage[]> {
 }
 
 export async function catalogue(lang: Lang = BASE_LANG): Promise<BookPage[]> {
-  const stamp = await stampOf(lang);
-  const memo = (globalForBooks.booksCatalogue ??= new Map());
-  const existing = memo.get(lang);
-  if (existing && existing.stamp === stamp) return existing.value;
-
-  const value = build(lang);
-  memo.set(lang, { stamp, value });
-  return value;
+  return memoByLang(cacheKey, lang, await stampOf(lang), () => build(lang));
 }
 
 export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext> {

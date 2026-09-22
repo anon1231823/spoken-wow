@@ -1,9 +1,8 @@
 /**
  * language_grant: the only module that knows its columns.
  *
- * Read once per request (viewerOf is wrapped in React's cache), because a page and the
- * routes it calls ask "may this person do that here" many times over and the answer does
- * not change inside one request.
+ * Read once per render (the grants are cached on the user id), because a page asks "may
+ * this person do that here" more than once and the answer does not change inside it.
  */
 import "server-only";
 
@@ -22,15 +21,16 @@ export async function grantsOf(userId: string): Promise<Grant[]> {
   return rows.filter((row) => isCapability(row.capability)) as Grant[];
 }
 
+/** Keyed on the user id, a string, which is what lets React's cache find it again. */
+const cachedGrants = cache(grantsOf);
+
 /** Who a session belongs to, with their grants. Null for nobody signed in. */
-export const viewerOf = cache(
-  async (
-    session: { user: { id: string; role?: string | null } } | null,
-  ): Promise<Viewer | null> => {
-    if (!session) return null;
-    return { role: session.user.role, grants: await grantsOf(session.user.id) };
-  },
-);
+export async function viewerOf(
+  session: { user: { id: string; role?: string | null } } | null,
+): Promise<Viewer | null> {
+  if (!session) return null;
+  return { role: session.user.role, grants: await cachedGrants(session.user.id) };
+}
 
 export type GrantRow = {
   userId: string;

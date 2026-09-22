@@ -24,8 +24,7 @@ import { commitTake } from "@/lib/takes/commit";
 import { INVALID_CHARS, isVoiceable } from "@/lib/text-gate";
 
 import { currentLocator } from "./dictionary";
-import { fileDefaults } from "./files";
-import { applyPronunciation } from "./pronunciation";
+import { committedPronunciation } from "./files";
 import { canonicalNpcId, seedFor } from "./seed";
 import { spokenHash } from "./spoken-hash";
 import { currentConfig } from "./settings";
@@ -80,7 +79,6 @@ export async function regenerateLine(
   options: ElevenLabsOptions & { lang?: Lang } = {},
 ): Promise<RegenerateResult> {
   const lang = options.lang ?? BASE_LANG;
-  const english = lang === BASE_LANG;
   const group = await resolve(lineId, lang);
   if (!group) {
     return { ok: false, failure: { ...failure("bad-request", `no line ${lineId}`), status: 404 } };
@@ -112,7 +110,7 @@ export async function regenerateLine(
   //
   // English only: an override rewrites the English corpus. Another language's rewrites are
   // versions of its own text, which `line` already is.
-  const overrides = english ? await readOverrides() : new Map();
+  const overrides = await readOverrides(lang);
   const source = overrides.get(file)?.text ?? line.text;
 
   if (!isVoiceable(line, source)) {
@@ -165,7 +163,7 @@ export async function regenerateLine(
     // The committed pronunciation rules are English's spellings of English words; another
     // language is spoken with its own lexicon, through the dictionary below, and nothing else.
     const spokenText = accentTagged(
-      audioTags(english ? applyPronunciation(source, fileDefaults().rules) : source),
+      audioTags(committedPronunciation(source, lang)),
       config.raceTags[line.race],
     );
     // Read inside the lock and per line, not hoisted: an admin saving the lexicon mid-batch

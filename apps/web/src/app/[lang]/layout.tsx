@@ -4,6 +4,7 @@ import { Geist } from "next/font/google";
 import Image from "next/image";
 import Script from "next/script";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { GrantsProvider } from "@/components/GrantsProvider";
 import { LangProvider } from "@/components/LangProvider";
 import Link from "@/components/LocaleLink";
 import UserMenu from "@/components/UserMenu";
@@ -46,27 +47,29 @@ export default async function RootLayout({
     <html lang={langTag(lang)} className={cn("dark font-sans", geist.variable)}>
       <body>
         <LangProvider lang={lang}>
-          <header className="border-b">
-            <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-3 px-5">
-              <Link href="/" aria-label="Spoken">
-                {/* Intrinsic 1024x187; height is what the header constrains, so the
-                    width below is that ratio and only exists to stop the reflow. */}
-                <Image
-                  src="/logo.png"
-                  alt="Spoken"
-                  width={142}
-                  height={26}
-                  priority
-                  className="h-[26px] w-auto"
-                />
-              </Link>
-              <div className="flex items-center gap-1">
-                <LanguageSwitcher />
-                <UserMenu />
+          <GrantsProvider>
+            <header className="border-b">
+              <div className="mx-auto flex h-12 max-w-6xl items-center justify-between gap-3 px-5">
+                <Link href="/" aria-label="Spoken">
+                  {/* Intrinsic 1024x187; height is what the header constrains, so the
+                      width below is that ratio and only exists to stop the reflow. */}
+                  <Image
+                    src="/logo.png"
+                    alt="Spoken"
+                    width={142}
+                    height={26}
+                    priority
+                    className="h-[26px] w-auto"
+                  />
+                </Link>
+                <div className="flex items-center gap-1">
+                  <LanguageSwitcher />
+                  <UserMenu />
+                </div>
               </div>
-            </div>
-          </header>
-          {children}
+            </header>
+            {children}
+          </GrantsProvider>
         </LangProvider>
         {/* Cloudflare Web Analytics. Production only, so local page views don't
             land in the same dashboard as real traffic. */}

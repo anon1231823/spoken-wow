@@ -60,7 +60,7 @@ export type GenerationStatus = {
 export const STATUS_TTL_MS = 60_000;
 
 const cacheKey = Symbol.for("wow-voiceover.generation-status");
-type Entry = { at: number; value: Promise<GenerationStatus> };
+type Entry = { at: number; value: Promise<AccountStatus> };
 type Holder = { [cacheKey]?: Map<string, Entry> };
 
 function memo(): Map<string, Entry> {
@@ -89,7 +89,7 @@ export function invalidateStatus(): void {
  */
 const MEMO_MAX = 32;
 
-async function read(options: ElevenLabsOptions): Promise<GenerationStatus> {
+async function read(options: ElevenLabsOptions): Promise<AccountStatus> {
   const fetchedAt = new Date().toISOString();
   try {
     // Both together: they fail for the same reasons (no key, bad key, ElevenLabs down), so
@@ -100,8 +100,6 @@ async function read(options: ElevenLabsOptions): Promise<GenerationStatus> {
       listModels(options),
     ]);
     return {
-      voices: [],
-      voiceIds: new Map(),
       clones,
       models,
       subscription,
@@ -110,8 +108,6 @@ async function read(options: ElevenLabsOptions): Promise<GenerationStatus> {
     };
   } catch (error) {
     return {
-      voices: [],
-      voiceIds: new Map(),
       clones: new Map(),
       models: [],
       subscription: null,
@@ -139,7 +135,7 @@ export function generationStatus(
 }
 
 /** The account read once, for every language: which one is asked about is a filter. */
-function inLanguage(status: GenerationStatus, lang: Lang): GenerationStatus {
+function inLanguage(status: AccountStatus, lang: Lang): GenerationStatus {
   const voiceIds = new Map<string, string>();
   for (const [name, id] of status.clones) {
     const clone = parseCloneName(name);
@@ -148,7 +144,10 @@ function inLanguage(status: GenerationStatus, lang: Lang): GenerationStatus {
   return { ...status, voices: [...voiceIds.keys()].sort(), voiceIds };
 }
 
-function accountStatus(options: ElevenLabsOptions): Promise<GenerationStatus> {
+/** The account as read, before a language is picked out of it. */
+type AccountStatus = Omit<GenerationStatus, "voices" | "voiceIds">;
+
+function accountStatus(options: ElevenLabsOptions): Promise<AccountStatus> {
   if (options.fetchImpl || options.baseUrl) return read(options);
   if (!options.apiKey) return read(options);
 

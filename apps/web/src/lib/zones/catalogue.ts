@@ -13,6 +13,8 @@
 import "server-only";
 
 import { query } from "@/lib/db";
+import { memoByLang } from "@/lib/memo";
+import { nameStamp, versionStamp } from "@/lib/stamp";
 import { loadDirtyContext, NO_DIRT, type DirtyContext } from "@/lib/generation/dirty";
 import { BASE_LANG, type Lang } from "@/lib/lang";
 
@@ -174,50 +176,22 @@ export function isCorpusEmpty(error: unknown): boolean {
  * and a deploy restarts the process.
  *
  */
-type Memo<T> = { stamp: string; value: Promise<T> };
-
-/** One memo per language, so a site switching between two does not rebuild on each request. */
-const globalForCatalogue = globalThis as unknown as {
-  zonesCatalogue?: Map<string, Memo<CatalogueEntry[]>>;
-  zonesByPath?: Map<string, Memo<Map<string, CatalogueEntry>>>;
-};
+const catalogueKey = Symbol.for("spoken.zones-catalogue.by-lang");
+const byPathKey = Symbol.for("spoken.zones-by-path.by-lang");
 
 /** What one language's lore rows are, as one comparable value. See the note above. */
 async function stampOf(lang: Lang = BASE_LANG): Promise<string> {
+  const english = versionStamp("lore_line", `"lang" = '${BASE_LANG}'`);
+  // Another language is read over the English lines and names its places in entity_name, so
+  // its memo moves with either of those as well as with its own prose: one statement.
   const rows = await query<{ stamp: string }>(
-    `select coalesce(max("id"), 0) || ':' || count(*) || ':'
-             || coalesce(sum("id") filter (where "isCurrent"), 0) as "stamp"
-       from "lore_line" where "lang" = $1`,
-    [lang],
+    lang === BASE_LANG
+      ? `select ${english} as "stamp"`
+      : `select ${english} || '|' || ${versionStamp("lore_line", `"lang" = $1`)} || '|' ||
+                ${nameStamp(["zone", "subzone"])} as "stamp"`,
+    lang === BASE_LANG ? [] : [lang],
   );
-  const own = rows[0]?.stamp ?? "0:0:0";
-  if (lang === BASE_LANG) return own;
-
-  // Another language is read over the English lines and names its places in entity_name,
-  // so its memo moves with either of those as well as with its own prose.
-  const names = await query<{ stamp: string }>(
-    `select coalesce(max("id"), 0) || ':' || count(*) || ':'
-             || coalesce(sum("id") filter (where "isCurrent"), 0) as "stamp"
-       from "entity_name" where "lang" = $1 and "kind" in ('zone', 'subzone')`,
-    [lang],
-  );
-  return `${await stampOf(BASE_LANG)}|${own}|${names[0]?.stamp ?? ""}`;
-}
-
-async function memoised<T>(
-  slot: "zonesCatalogue" | "zonesByPath",
-  lang: Lang,
-  build: () => Promise<T>,
-): Promise<T> {
-  const stamp = await stampOf(lang);
-  const memo = (globalForCatalogue[slot] ??= new Map()) as Map<string, Memo<T>>;
-
-  const existing = memo.get(lang);
-  if (existing && existing.stamp === stamp) return existing.value;
-
-  const value = build();
-  memo.set(lang, { stamp, value });
-  return value;
+  return rows[0]?.stamp ?? "";
 }
 
 /**
@@ -280,32 +254,30 @@ async function buildTranslated(lang: Lang): Promise<CorpusEntry[]> {
   const named = new Map(names.map((row) => [row.entityId, row.name]));
 
   return english.map((entry) => {
-    const text = own.get(entry.id);
+    const found = own.get(entry.id);
+    const text = found && found.full.trim() !== "" ? found : undefined;
     const name = named.get(entry.id);
-    const textMissing = !text || text.full.trim() === "";
     // No pronunciation rules: the committed ones are English spellings of English words, and
     // a language is spoken with its own lexicon, through the dictionary at generation.
-    const spoken = textMissing ? "" : toSpokenText(text.full, {});
+    const spoken = text ? toSpokenText(text.full, {}) : "";
     return {
       ...entry,
+      ...(text ? { full: text.full, short: text.short, source: text.source ?? undefined } : {}),
       name: name ?? entry.name,
       zoneName: named.get(`z:${entry.mapID}`) ?? entry.zoneName,
-      full: text && !textMissing ? text.full : entry.full,
-      short: text && !textMissing ? text.short : entry.short,
-      source: text && !textMissing ? (text.source ?? undefined) : entry.source,
       spoken,
       hash: textHash(spoken),
       english: entry.full,
       englishName: entry.name,
-      ...(textMissing || name === undefined
-        ? { missing: { text: textMissing, name: name === undefined } }
+      ...(!text || name === undefined
+        ? { missing: { text: !text, name: name === undefined } }
         : {}),
     };
   });
 }
 
-export function catalogue(lang: Lang = BASE_LANG): Promise<CatalogueEntry[]> {
-  return memoised("zonesCatalogue", lang, () => buildCorpus(lang));
+export async function catalogue(lang: Lang = BASE_LANG): Promise<CatalogueEntry[]> {
+  return memoByLang(catalogueKey, lang, await stampOf(lang), () => buildCorpus(lang));
 }
 
 /**
@@ -329,12 +301,11 @@ export { stampOf as catalogueStamp };
  *
  * Memoised like catalogue() and addressableFiles(), and for the same reason.
  */
-function linesByPath(lang: Lang): Promise<Map<string, CatalogueEntry>> {
-  return memoised(
-    "zonesByPath",
-    lang,
-    async () => new Map((await catalogue(lang)).map((entry) => [entry.file, entry])),
-  );
+async function linesByPath(lang: Lang): Promise<Map<string, CatalogueEntry>> {
+  // Keyed on the catalogue it was built from, so it rebuilds exactly when that does and
+  // asks the database nothing of its own.
+  const entries = await catalogue(lang);
+  return memoByLang(byPathKey, lang, entries, () => new Map(entries.map((e) => [e.file, e])));
 }
 
 export async function lineByPath(

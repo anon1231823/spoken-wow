@@ -26,10 +26,6 @@ export async function languageStates(): Promise<LanguageState[]> {
   return CODES.map((code) => ({ code, enabled: code === BASE_LANG || enabled.has(code) }));
 }
 
-export async function enabledLanguages(): Promise<Lang[]> {
-  return (await languageStates()).filter((state) => state.enabled).map((state) => state.code);
-}
-
 export async function isEnabled(lang: Lang): Promise<boolean> {
   if (lang === BASE_LANG) return true;
   const rows = await query<{ enabled: boolean }>(

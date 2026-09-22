@@ -43,6 +43,21 @@ const connection = await mysql.createConnection({
 
 const counts = { promote: 0, record: 0, skip: 0, names: 0 };
 
+/** One transaction for a batch of writes: an import that fails leaves nothing half-applied. */
+async function inTransaction(work) {
+  const client = await pool.connect();
+  try {
+    await client.query("begin");
+    await work(client);
+    await client.query("commit");
+  } catch (error) {
+    await client.query("rollback");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 try {
   const { rows: english } = await pool.query(
     `select "lineId", "pageId", "bookId", "pageNumber", "pageCount", "title", "ownerKind",
@@ -58,26 +73,24 @@ try {
   );
   const { pages, withoutEnglish } = localizedPages(pageRows, new Set(structure.keys()));
 
+  // What is live, read once and decided in memory, then written in one transaction: a
+  // re-run that changes nothing is one query, not one per page.
+  const { rows: livePages } = await pool.query(
+    `select "lineId", "origin", "text" from "book_line" where "lang" = $1 and "isCurrent"`,
+    [lang],
+  );
+  const current = new Map(livePages.map((row) => [row.lineId, row]));
+  const writes = [];
   for (const page of pages) {
-    const base = structure.get(page.lineId);
-    const { rows } = await pool.query(
-      `select "origin", "text" from "book_line"
-        where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
-      [page.lineId, lang],
-    );
-    const { action } = decideImport(rows[0] ?? null, page);
+    const { action } = decideImport(current.get(page.lineId) ?? null, page);
     counts[action]++;
-    if (action === "skip") continue;
+    if (action !== "skip") writes.push({ page, promote: action === "promote" });
+  }
 
-    const client = await pool.connect();
-    try {
-      await client.query("begin");
-      const { rows: versions } = await client.query(
-        `select coalesce(max("version"), 0) as "max" from "book_line"
-          where "lineId" = $1 and "lang" = $2`,
-        [page.lineId, lang],
-      );
-      if (action === "promote") {
+  await inTransaction(async (client) => {
+    for (const { page, promote } of writes) {
+      const base = structure.get(page.lineId);
+      if (promote) {
         await client.query(
           `update "book_line" set "isCurrent" = false
             where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
@@ -92,22 +105,18 @@ try {
            ("lineId", "lang", "version", "isCurrent", "origin", "pageId", "bookId",
             "pageNumber", "pageCount", "title", "ownerKind", "ownerIds", "material",
             "text", "generatable", "skipReason")
-         values ($1, $2, $3, $4, 'extracted', $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+         select $1, $2, coalesce(max("version"), 0) + 1, $3, 'extracted', $4, $5, $6, $7, $8,
+                $9, $10, $11, $12, $13, $14
+           from "book_line" where "lineId" = $1 and "lang" = $2`,
         [
-          page.lineId, lang, Number(versions[0].max) + 1, action === "promote",
+          page.lineId, lang, promote,
           base.pageId, base.bookId, base.pageNumber, base.pageCount, base.title,
           base.ownerKind, base.ownerIds, base.material,
           page.text, page.generatable, page.skipReason,
         ],
       );
-      await client.query("commit");
-    } catch (error) {
-      await client.query("rollback");
-      throw error;
-    } finally {
-      client.release();
     }
-  }
+  });
 
   // The owners the English corpus names, and nothing else: the dump localises every item.
   const owners = { object: new Set(), item: new Set() };
@@ -122,19 +131,24 @@ try {
     ownerRows.push(...rows.map((row) => ({ kind, ...row })));
   }
 
+  const { rows: liveNames } = await pool.query(
+    `select "kind", "entityId", "origin", "name" as "text" from "entity_name"
+      where "lang" = $1 and "kind" in ('item', 'gameobject') and "isCurrent"`,
+    [lang],
+  );
+  const currentNames = new Map(liveNames.map((row) => [`${row.kind}:${row.entityId}`, row]));
+  const nameWrites = [];
   for (const title of localizedTitles(ownerRows)) {
-    const { rows } = await pool.query(
-      `select "origin", "name" as "text" from "entity_name"
-        where "kind" = $1 and "entityId" = $2 and "lang" = $3 and "isCurrent"`,
-      [title.kind, title.entityId, lang],
-    );
-    const { action } = decideImport(rows[0] ?? null, { text: title.name });
-    if (action === "skip") continue;
-    counts.names++;
-    const client = await pool.connect();
-    try {
-      await client.query("begin");
-      if (action === "promote") {
+    const { action } = decideImport(currentNames.get(`${title.kind}:${title.entityId}`) ?? null, {
+      text: title.name,
+    });
+    if (action !== "skip") nameWrites.push({ title, promote: action === "promote" });
+  }
+  counts.names = nameWrites.length;
+
+  await inTransaction(async (client) => {
+    for (const { title, promote } of nameWrites) {
+      if (promote) {
         await client.query(
           `update "entity_name" set "isCurrent" = false
             where "kind" = $1 and "entityId" = $2 and "lang" = $3 and "isCurrent"`,
@@ -145,16 +159,10 @@ try {
         `insert into "entity_name" ("kind", "entityId", "lang", "version", "isCurrent", "origin", "name")
          select $1, $2, $3, coalesce(max("version"), 0) + 1, $4, 'extracted', $5
            from "entity_name" where "kind" = $1 and "entityId" = $2 and "lang" = $3`,
-        [title.kind, title.entityId, lang, action === "promote", title.name],
+        [title.kind, title.entityId, lang, promote, title.name],
       );
-      await client.query("commit");
-    } catch (error) {
-      await client.query("rollback");
-      throw error;
-    } finally {
-      client.release();
     }
-  }
+  });
 
   console.log(
     `${lang}: ${counts.promote} pages promoted, ${counts.record} recorded, ${counts.skip} unchanged, ` +

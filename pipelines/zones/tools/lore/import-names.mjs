@@ -16,6 +16,7 @@ import { join } from "node:path";
 
 import { BASE_LOCALE, isLocale } from "../../../lib/locales.mjs";
 import { loadEnvFile } from "../lib/env.mjs";
+import { decideImport } from "../../../lib/promote.mjs";
 import { namesFromAliases, parseAliases } from "../lib/aliases.mjs";
 import { ROOT } from "../lib/loredata.mjs";
 
@@ -43,24 +44,27 @@ try {
   );
   if (lines.length === 0) throw new Error("lore_line holds no English lines; run make zones-lore-import");
 
+  // What is live, read once and decided in memory: a re-run that changes nothing is one
+  // query, not three per place.
+  const { rows: live } = await query(
+    `select "kind", "entityId", "origin", "name" as "text" from "entity_name"
+      where "lang" = $1 and "kind" in ('zone', 'subzone') and "isCurrent"`,
+    [lang],
+  );
+  const current = new Map(live.map((row) => [`${row.kind}:${row.entityId}`, row]));
+
+  const writes = [];
   for (const name of namesFromAliases(lines, parseAliases(lua))) {
-    await transaction(async (client) => {
-      const { rows } = await client.query(
-        `select "origin", "name" from "entity_name"
-          where "kind" = $1 and "entityId" = $2 and "lang" = $3 and "isCurrent" for update`,
-        [name.kind, name.entityId, lang],
-      );
-      const current = rows[0];
-      const action = !current
-        ? "promote"
-        : current.name === name.name
-          ? "skip"
-          : current.origin === "edited"
-            ? "record"
-            : "promote";
-      counts[action]++;
-      if (action === "skip") return;
-      if (action === "promote") {
+    const { action } = decideImport(current.get(`${name.kind}:${name.entityId}`) ?? null, {
+      text: name.name,
+    });
+    counts[action]++;
+    if (action !== "skip") writes.push({ ...name, promote: action === "promote" });
+  }
+
+  await transaction(async (client) => {
+    for (const name of writes) {
+      if (name.promote) {
         await client.query(
           `update "entity_name" set "isCurrent" = false
             where "kind" = $1 and "entityId" = $2 and "lang" = $3 and "isCurrent"`,
@@ -71,10 +75,10 @@ try {
         `insert into "entity_name" ("kind", "entityId", "lang", "version", "isCurrent", "origin", "name")
          select $1, $2, $3, coalesce(max("version"), 0) + 1, $4, 'extracted', $5
            from "entity_name" where "kind" = $1 and "entityId" = $2 and "lang" = $3`,
-        [name.kind, name.entityId, lang, action === "promote", name.name],
+        [name.kind, name.entityId, lang, name.promote, name.name],
       );
-    });
-  }
+    }
+  });
 
   console.log(
     `${lang}: ${counts.promote} names written, ${counts.record} recorded under an edit, ` +

@@ -29,12 +29,16 @@ function administered(viewer: Viewer): string[] | null {
   return viewer.grants.filter((grant) => grant.capability === "admin").map((grant) => grant.lang);
 }
 
-export async function GET() {
-  const who = await viewer();
-  if (!who) return FORBIDDEN();
-  const langs = administered(who.viewer);
+/** What `viewer` may see: every grant for an admin, their own languages' for a language admin. */
+async function listing(viewer: Viewer): Promise<Response> {
+  const langs = administered(viewer);
   if (langs !== null && langs.length === 0) return FORBIDDEN();
   return Response.json({ grants: await listGrants(langs ?? undefined), languages: langs });
+}
+
+export async function GET() {
+  const who = await viewer();
+  return who ? listing(who.viewer) : FORBIDDEN();
 }
 
 export async function PUT(request: Request) {
@@ -57,7 +61,7 @@ export async function PUT(request: Request) {
   if (!user) return Response.json({ error: `nobody has registered as ${body.email}` }, { status: 404 });
 
   await addGrant(user.id, body.lang, body.capability, who.userId);
-  return GET();
+  return listing(who.viewer);
 }
 
 export async function DELETE(request: Request) {
@@ -74,5 +78,5 @@ export async function DELETE(request: Request) {
   if (!canGrant(who.viewer, capability, lang)) return FORBIDDEN();
 
   await removeGrant(userId, lang, capability);
-  return GET();
+  return listing(who.viewer);
 }
