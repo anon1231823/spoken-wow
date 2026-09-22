@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import ApiKeySection from "@/components/ApiKeySection";
 import { apiKeyStatus } from "@/lib/api-key";
-import { auth } from "@/lib/auth";
+import { viewerOf } from "@/lib/grants/store";
 import { localeHref } from "@/lib/lang";
 import { pageLang } from "@/lib/lang-server";
-import { canRegenerate } from "@/lib/permissions";
+import { spendsCredits } from "@/lib/permissions";
+import { currentSession } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Profile · Spoken" };
 
@@ -23,13 +23,14 @@ export const dynamic = "force-dynamic";
  */
 export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
   const lang = await pageLang(params);
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await currentSession();
   if (!session) redirect(localeHref(lang, "/login"));
 
   const role = session.user.role;
+  const spends = spendsCredits(await viewerOf(session));
   // The status, never the key. Sent to a client component as props, so this is the shape
   // that decides what the browser can possibly learn.
-  const status = canRegenerate(role) ? await apiKeyStatus(session.user.id) : null;
+  const status = spends ? await apiKeyStatus(session.user.id) : null;
 
   return (
     <main className="mx-auto max-w-4xl px-5 pt-6 pb-36">
@@ -44,15 +45,15 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
         </dd>
       </dl>
 
-      {canRegenerate(role) ? (
+      {spends ? (
         <ApiKeySection initial={status} />
       ) : (
         // Said rather than hidden: a member who has been told "go and regenerate that line"
         // needs to know which of the two things they are missing.
         <p className="text-muted-foreground max-w-xl text-sm">
           Generating audio needs the <strong className="text-foreground">collaborator</strong>{" "}
-          role. Ask an admin for it, and this page will then ask you for an ElevenLabs key of
-          your own.
+          role, or the right to regenerate in a language. Ask an admin for it, and this page
+          will then ask you for an ElevenLabs key of your own.
         </p>
       )}
     </main>

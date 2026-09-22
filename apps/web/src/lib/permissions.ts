@@ -122,6 +122,15 @@ export function langsWhere(viewer: Viewer | null, capability: Capability): Lang[
   return CODES.filter((lang) => can(viewer, capability, lang));
 }
 
+/**
+ * Whether somebody does anything that spends ElevenLabs credits, anywhere: regenerating, or
+ * configuring a lexicon that is synced to ElevenLabs. They are who may store a key, since
+ * every such action is paid for with the caller's own.
+ */
+export function spendsCredits(viewer: Viewer | null): boolean {
+  return CODES.some((lang) => can(viewer, "regenerate", lang) || can(viewer, "configure", lang));
+}
+
 /** Whether somebody may hand out `capability` in `lang`. */
 export function canGrant(viewer: Viewer | null, capability: Capability, lang: Lang): boolean {
   if (!viewer) return false;

@@ -5,6 +5,7 @@ import {
   can,
   canGrant,
   langsWhere,
+  spendsCredits,
   worksIn,
   canConfigureGeneration,
   canManageVoices,
@@ -159,6 +160,14 @@ describe("per-language permissions", () => {
     ]);
     expect(langsWhere(member([{ lang: "ptBR", capability: "edit" }]), "regenerate")).toEqual([]);
     expect(langsWhere(null, "regenerate")).toEqual([]);
+  });
+
+  it("lets anybody who regenerates or configures anywhere hold a key", () => {
+    expect(spendsCredits({ role: "collaborator", grants: [] })).toBe(true);
+    expect(spendsCredits(member([{ lang: "ptBR", capability: "regenerate" }]))).toBe(true);
+    expect(spendsCredits(member([{ lang: "ptBR", capability: "configure" }]))).toBe(true);
+    expect(spendsCredits(member([{ lang: "ptBR", capability: "edit" }]))).toBe(false);
+    expect(spendsCredits(member([]))).toBe(false);
   });
 
   it("lets somebody working in a language see it before it is switched on", () => {
