@@ -11,7 +11,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help dev build typecheck test bootstrap deploy-scripts releases rollback logs \
-        ssh-check store migrate-books db-pull
+        ssh-check store migrate-books db-pull import-locale
 
 APP := @spoken/web
 
@@ -126,6 +126,14 @@ db-pull: require-droplet ## Copy the whole droplet database into a local one (TA
 	@echo "==> copied. Tables:"
 	@psql "postgres:///$(TARGET_DB)" -tAc "select count(*) || ' tables' from information_schema.tables where table_schema = 'public'"
 	@echo "==> rehearse the migration with:  DATABASE_URL=postgres:///$(TARGET_DB) deploy/web/bin/migrate.sh \"$$PWD/apps/web\""
+
+# One language's text, from the vmangos dump and the addon's aliases, into production's
+# database through an ssh tunnel. Run here because only a workstation has the dump; see the
+# script. Re-running is safe, and it switches nothing on. LOCALE and not LANG, which every
+# shell sets.
+import-locale: require-droplet ## Load a language's text into the droplet database (LOCALE=frFR)
+	@test -n "$(LOCALE)" || { echo "import-locale: set LOCALE, e.g. LOCALE=frFR"; exit 2; }
+	@$(DB_ENV) bash scripts/db/import-locale.sh $(LOCALE)
 
 migrate-books: require-droplet ## Copy the local books corpus onto the droplet (REPLACES book_line)
 	@echo "local:"
