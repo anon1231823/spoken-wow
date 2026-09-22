@@ -181,9 +181,9 @@ local bg,icon=P.badgeBackground.points[1],P.badge.points[1]
 assert(bg[4]==icon[4] and bg[5]==icon[5])
 P.expanded=false;P:LayoutQueue()
 local top,bottom=P.panel.points[1],P.panel.points[2]
-assert(top[4]==44 and top[5]==-10 and bottom[5]==10)
+assert(top[4]==44 and top[5]==-6 and bottom[5]==10)
 local cx,cy,r=90*35/71,4+90*34/71,90*30.5/71
-for _,y in ipairs({10+4,98-10-4}) do
+for _,y in ipairs({6+4,98-10-4}) do
  assert((44+4-cx)^2+(y-cy)^2<r^2,"panel corner must be under the opaque portrait disc")
 end
 assert(getn(E.Callbacks.errors)==0,table.concat(E.Callbacks.errors,"\\n"))

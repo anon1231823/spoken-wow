@@ -86,8 +86,8 @@ function MinimalPlayer:Initialize(original)
     content.buttons = {}
 
     self.title = CreateFrame("Button", nil, content)
-    self.title:SetPoint("TOPLEFT", 0, -26)
-    self.title:SetPoint("TOPRIGHT", 0, -26)
+    self.title:SetPoint("TOPLEFT", 0, -25)
+    self.title:SetPoint("TOPRIGHT", 0, -25)
     self.title:SetHeight(19)
     self.title:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     self.title.text = Font(self.title, 12, .88, .84, .76)
@@ -110,8 +110,8 @@ function MinimalPlayer:Initialize(original)
     end)
 
     self.bar = CreateFrame("StatusBar", nil, content)
-    self.bar:SetPoint("TOPLEFT", 2, -54)
-    self.bar:SetPoint("TOPRIGHT", -2, -54)
+    self.bar:SetPoint("TOPLEFT", 2, -52)
+    self.bar:SetPoint("TOPRIGHT", -2, -52)
     self.bar:SetHeight(4)
     self.bar:SetStatusBarTexture([[Interface\TargetingFrame\UI-StatusBar]])
     self.bar:SetMinMaxValues(0, 1)
@@ -411,7 +411,8 @@ function MinimalPlayer:LayoutQueue()
     self.panel:ClearAllPoints()
     -- The panel is shorter than the circle and starts behind its centre. Its
     -- left corners sit beneath the opaque portrait rather than outside the rim.
-    self.panel:SetPoint("TOPLEFT", self.frame, "TOPLEFT", Config().HidePortrait and 0 or 44, up and height + 4 or -10)
+    -- Centred on the portrait, so the text block gets even top and bottom margins.
+    self.panel:SetPoint("TOPLEFT", self.frame, "TOPLEFT", Config().HidePortrait and 0 or 44, up and height + 4 or -6)
     self.panel:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", 0, shown > 0 and not up and -height - 4 or 10)
     if self.resizer then self.resizer:SetShown(not Config().LockFrame and shown == 0) end
 end
@@ -469,8 +470,8 @@ function MinimalPlayer:RefreshConfig(original)
     frame:SetResizeBounds(cfg.HidePortrait and 200 or 280, HEIGHT, 1000, HEIGHT)
     frame:SetWidth(Clamp((cfg.MinimalWidth or WIDTH) - (cfg.HidePortrait and 80 or 0), cfg.HidePortrait and 200 or 280, 1000))
     self.content:ClearAllPoints()
-    self.content:SetPoint("TOPLEFT", cfg.HidePortrait and 16 or 96, -18)
-    self.content:SetPoint("TOPRIGHT", -18, -18)
+    self.content:SetPoint("TOPLEFT", cfg.HidePortrait and 16 or 96, -15)
+    self.content:SetPoint("TOPRIGHT", -18, -15)
     self.portrait:SetShown(not cfg.HidePortrait)
     if cfg.LockFrame then frame:StopMovingOrSizing(); self.sizing = false end
     self:Update()
