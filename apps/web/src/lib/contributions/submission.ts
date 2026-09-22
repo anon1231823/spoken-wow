@@ -13,6 +13,8 @@ import { createHash } from "node:crypto";
 
 import { normaliseText } from "@books-tools/lib/text.mjs";
 
+import { clientLang } from "@/lib/lang";
+
 import { checkEnvelope, type Submission } from "./contributions";
 import type { Envelope } from "./envelope";
 
@@ -23,7 +25,11 @@ export function submissionFrom(envelope: Envelope, raw: string, description?: st
   const check = checkEnvelope(envelope);
   if (!check.ok) return null;
 
-  const { locale = "enUS", build = "", ...meta } = envelope.fields;
+  const { locale: sent = "enUS", build = "", ...meta } = envelope.fields;
+  // Stored as the site's language, so an enGB player's line lands on the English page and
+  // dedups against the enUS player who sent the same one.
+  const locale = clientLang(sent);
+  if (!locale) return null;
   // A zones envelope carries no text -- the client has none to give -- so its contribution is
   // the description the player wrote on the page, kept where every other source keeps its text.
   const written = envelope.source === "zones" ? description : envelope.text;

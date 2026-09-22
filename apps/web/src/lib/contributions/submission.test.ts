@@ -86,6 +86,18 @@ describe("submissionFrom", () => {
     expect(submissionFrom(other, "raw")?.dedup).not.toBe(submissionFrom(quests, "raw")?.dedup);
   });
 
+  it("files an EU English client's contribution as English", () => {
+    const gb: Envelope = { ...quests, fields: { ...quests.fields, locale: "enGB" } };
+    const us: Envelope = { ...quests, fields: { ...quests.fields, locale: "enUS" } };
+    expect(submissionFrom(gb, "raw")?.locale).toBe("enUS");
+    expect(submissionFrom(gb, "raw")?.dedup).toBe(submissionFrom(us, "raw")?.dedup);
+  });
+
+  it("refuses a locale the site does not know", () => {
+    const odd: Envelope = { ...quests, fields: { ...quests.fields, locale: "xxXX" } };
+    expect(submissionFrom(odd, "raw")).toBe(null);
+  });
+
   it("keeps the remaining fields as meta and defaults a missing locale", () => {
     const made = submissionFrom({ ...quests, fields: { quest: "1", event: "accept", npc: "7 Y" } }, "raw");
     expect(made?.locale).toBe("enUS");

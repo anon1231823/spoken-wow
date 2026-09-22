@@ -30,7 +30,7 @@ import { normaliseText } from "@books-tools/lib/text.mjs";
 import { db } from "@/lib/db";
 import { observedFrom } from "@/lib/npc/resolve";
 import { getResolution, getResolutionsById, type NpcKind } from "@/lib/npc/store";
-import { BASE_LANG } from "@/lib/lang";
+import { BASE_LANG, isLang } from "@/lib/lang";
 import { corpus } from "@/lib/quests/catalogue";
 import { isVoice } from "@/lib/voices/voices";
 
@@ -350,6 +350,16 @@ export async function resolveContribution(
     if (!contribution) {
       await client.query("rollback");
       return { ok: false, reason: "not-found" };
+    }
+    // Intake stores only the site's languages; a row from before it did must not write text
+    // under a language no page shows.
+    if (status === "accepted" && !isLang(contribution.locale)) {
+      await client.query("rollback");
+      return {
+        ok: false,
+        reason: "malformed",
+        message: `sent from a ${contribution.locale} client, which is not a language here`,
+      };
     }
 
     const written = await contributedSpeakerExists(id, client);

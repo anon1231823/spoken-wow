@@ -41,6 +41,17 @@ export function isLang(value: unknown): value is Lang {
   return typeof value === "string" && (CODES as readonly string[]).includes(value);
 }
 
+/**
+ * The language a WoW client's GetLocale() stands for, or null for one the site does not know.
+ *
+ * enGB is the EU English client: the same text and the same English packs as enUS, so a
+ * contribution from it is an English one. Anything else must already be one of ours.
+ */
+export function clientLang(locale: string): Lang | null {
+  if (locale === "enGB") return BASE_LANG;
+  return isLang(locale) ? locale : null;
+}
+
 export function langName(lang: Lang): string {
   return LOCALES.find((locale) => locale.code === lang)?.name ?? lang;
 }
