@@ -11,7 +11,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help dev build typecheck test bootstrap deploy-scripts releases rollback logs \
-        ssh-check store migrate-books db-pull import-locale
+        ssh-check store migrate-books db-pull import-locale push-npc-lines
 
 APP := @spoken/web
 
@@ -134,6 +134,16 @@ db-pull: require-droplet ## Copy the whole droplet database into a local one (TA
 import-locale: require-droplet ## Load a language's text into the droplet database (LOCALE=frFR)
 	@test -n "$(LOCALE)" || { echo "import-locale: set LOCALE, e.g. LOCALE=frFR"; exit 2; }
 	@$(DB_ENV) bash scripts/db/import-locale.sh $(LOCALE)
+
+# The NPC barks /voices seeds clones from, onto the droplet's shared/npc-lines. Additive: no
+# --delete, so pushing one language never removes another's -- or English, which a checkout
+# may not have. NPC_LINES is the local root, English at its top and frFR/ etc. beside.
+NPC_LINES ?= pipelines/quests/voice/npc-lines
+
+push-npc-lines: require-droplet ## Copy local NPC barks (tools/fetch_npc_lines.py) to shared/npc-lines on the droplet
+	@test -d "$(NPC_LINES)" || { echo "no $(NPC_LINES): run tools/fetch_npc_lines.py first"; exit 1; }
+	$(RSYNC) -a --exclude .DS_Store -e "$(SSH)" "$(NPC_LINES)/" $(DROPLET):$(REMOTE_ROOT)/shared/npc-lines/
+	@echo "==> pushed"
 
 migrate-books: require-droplet ## Copy the local books corpus onto the droplet (REPLACES book_line)
 	@echo "local:"
