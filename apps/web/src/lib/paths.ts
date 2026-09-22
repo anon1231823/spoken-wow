@@ -41,8 +41,8 @@ export const VOICE_SAMPLES_DIR =
  *
  * Written by tools/fetch_npc_lines.py and gitignored. This is the ground truth for what a
  * voice should sound like, and the material every clone is seeded from - which is the only
- * reason the web app can see it. Local only: unlike the clips, it is not synced to the
- * droplet, so seeding is something you do from a checkout.
+ * reason the web app can see it. In production it is shared/npc-lines, pushed from a
+ * checkout with `make web-push-npc-lines`: a release never carries it.
  */
 export const NPC_LINES_DIR =
   process.env.SPOKEN_QUESTS_NPC_LINES ?? path.join(DATA_ROOT, "voice", "npc-lines");

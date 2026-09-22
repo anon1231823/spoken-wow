@@ -36,6 +36,8 @@ install -d -o deploy -g deploy -m 755 \
 #   audio-history/    what both sections replaced, one directory each
 #   voices/           clone clips: an ElevenLabs voice cannot be exported, so these are
 #                     the only way to remake one
+#   npc-lines/        the game's NPC barks those clips are seeded from, per language;
+#                     pushed from a workstation (make web-push-npc-lines)
 #   audio-previews/   rendered pronunciation previews, each one paid for
 #   downloads/        the complete sound pack, served straight off disk by nginx
 #
@@ -49,6 +51,7 @@ install -d -o deploy -g deploy -m 755 \
   "$ROOT/shared/audio-history/quests" \
   "$ROOT/shared/audio-history/zones" \
   "$ROOT/shared/voices" \
+  "$ROOT/shared/npc-lines" \
   "$ROOT/shared/audio-previews" \
   "$ROOT/shared/downloads"
 

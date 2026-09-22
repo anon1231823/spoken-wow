@@ -110,6 +110,12 @@ module.exports = {
         // they land somewhere no Makefile target backs up.
         SPOKEN_QUESTS_VOICE_SAMPLES: `${SHARED}/voices`,
 
+        // Blizzard's NPC barks that /voices seeds a clone's clips from, English's at the top
+        // and each other language's under its code (lib/voices/npcLines.ts). Shared rather
+        // than in a release because nothing builds them into one: they are fetched on a
+        // workstation (tools/fetch_npc_lines.py) and pushed here with `make web-push-npc-lines`.
+        SPOKEN_QUESTS_NPC_LINES: `${SHARED}/npc-lines`,
+
         // Every take of every quest line, the live one included: the only place quests
         // audio lives. Shared for the strongest version of the same reason: some of it
         // predates this project's ability to reproduce it, and a release directory is
