@@ -2,7 +2,7 @@
  * Which languages the site serves: the `language` table, and the only module that knows its
  * columns.
  *
- * What a language IS is code (lib/lang.ts), because the proxy validates a URL prefix without
+ * What a language IS is code (lib/lang.ts), because the URL rewrites validate a URL prefix without
  * a database. Whether one is switched ON is here, because it is an admin's decision taken at
  * runtime -- a language with nothing translated yet should not be one click away in the
  * header, and turning it on should not need a deploy.

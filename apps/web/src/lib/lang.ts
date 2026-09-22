@@ -2,7 +2,7 @@
  * Which language a page, a query or a take is in.
  *
  * CLIENT-SAFE: the header's switcher and every URL builder need the list as a value, and
- * the proxy validates a URL prefix against it without reaching the database. Whether a
+ * the URL rewrites validate a URL prefix against it without reaching the database. Whether a
  * language is switched ON is a different question with a different answer at runtime -- the
  * `language` table -- and is asked on the server.
  *
@@ -69,7 +69,7 @@ export function langTag(lang: Lang): string {
  * A page's address in a language: the bare path for English, `/ptBR/...` for the rest.
  *
  * English keeps the addresses it has always had -- every link already out there, from the
- * addons' Report buttons to a bookmark, is a bare path, and the proxy (src/middleware.ts)
+ * addons' Report buttons to a bookmark, is a bare path, and the rewrites (lib/locale-routes.ts)
  * answers one as English. Only a path on this site gets a prefix: an API route is addressed
  * by `?lang=` instead (see withLang), and an external URL is not ours to rewrite.
  */

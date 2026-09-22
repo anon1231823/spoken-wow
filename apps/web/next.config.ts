@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 import fs from "node:fs";
 import path from "node:path";
 
+import { localeRedirects, localeRewrites } from "./src/lib/locale-routes";
+
 // The monorepo root, two levels up from apps/web/.
 const repoRoot = path.resolve(__dirname, "..", "..");
 
@@ -71,6 +73,15 @@ const config: NextConfig = {
   // exclusion list read as though the whole pipelines tree were out. The Python side is what
   // has to stay out, and for a reason worth repeating: its .env holds the ElevenLabs key and
   // the database password, and a release bundle is rsynced to a droplet.
+  // The language in the URL: a bare path is English. See src/lib/locale-routes.ts, and for
+  // why this is config and not middleware.
+  async redirects() {
+    return localeRedirects;
+  },
+  async rewrites() {
+    return { beforeFiles: localeRewrites, afterFiles: [], fallback: [] };
+  },
+
   outputFileTracingExcludes: {
     "*": [
       // THE ROOT .env. It sits at the tracing root itself, holds every shared credential,
