@@ -1,35 +1,22 @@
 # Minimal Classic player
 
-A compact alternative layout for SpokenPlayer, ported from 2.0.4 onto upstream
-2.1.0, [`master` at `56f910b`](https://github.com/rusty-key/spoken-wow/commit/56f910b).
-This is a community fork, not an official Spoken release.
+The compact layout SpokenPlayer draws by default on the modern clients, shipped
+in the player since 2.2.0. Contributed by
+[shorley-gm](https://github.com/shorley-gm), written against 2.0.4 and ported
+onto 2.1.0 before it was merged.
 
 The player shows a round native still portrait, gold speaker name, narration
 title and narrow cast-style progress bar. There is no permanent button row.
 The dark rock background and metal trim use WoW artwork.
 
-## Install from this branch
+Nothing is installed separately: it is part of the player's zip. Turning
+**Minimal Classic player** off in `/sp options` restores the original layout.
+The 1.12, 2.4.3 and 3.3.5 clients draw the original layout and have no such
+setting.
 
-1. Download this branch using **Code → Download ZIP**, or clone it:
-
-   ```sh
-   git clone --branch minimal-classic-ui --single-branch https://github.com/Gian-MarcoModer/spoken-wow.git
-   ```
-
-2. Back up your existing `Interface/AddOns/SpokenPlayer` folder.
-3. Copy `addons/SpokenPlayer` from this repository into your WoW client's
-   `Interface/AddOns` folder, replacing the existing player. The folder must
-   be named `SpokenPlayer`, with its `.toc` files directly inside it.
-4. Copy `addons/SpokenContributions` alongside it, as required by the upstream
-   2.1.0 packaging. Keep your feature addon (such as SpokenQuests) and audio packs.
-5. Restart the client after adding the files, then try a known voiced quest.
-
-This branch contains the **2.1.0** player plus the layout. In-game validation
-used the 2.0.4-based layout in the modern Classic beta client; the 2.1.0 port
-is checked separately with the offline suites. Other modern flavors have not
-been visually verified. Original
-private-server 1.12/2.4.3/3.3.5 clients continue using the original layout.
-Addon-manager updates can replace this fork with the official player.
+In-game validation used the 2.0.4-based layout in the modern Classic beta
+client; the port onto 2.1.0 is checked with the offline suites. Other modern
+flavors have not been visually verified.
 
 ## Controls
 
@@ -47,9 +34,8 @@ Addon-manager updates can replace this fork with the official player.
 | `/sp reset` | Reset the active layout's position and width |
 | `/sp diagnostics` | Inspect playback, UI state and captured callback errors |
 
-The layout is enabled by default in this fork. Turn off **Minimal Classic
-player** to return to the original layout. Existing hidden-portrait,
-hidden-player and optional-action settings remain effective.
+The hidden-portrait, hidden-player and optional-action settings remain
+effective in this layout.
 
 An empty queue hides the player. Test a quest with available narration when
 checking it. WoW cannot resume a sound partway through: play after pause
@@ -82,7 +68,7 @@ than borrowing an unrelated target's face.
 
 Source-owned action buttons retain their original handlers. The public player
 frame API returns the selected layout. The queue and narration producer are
-the upstream implementations.
+the player's own, unchanged.
 
 ## Verification
 
@@ -93,8 +79,8 @@ pagination/removal, source actions, visibility settings, original-layout
 fallback, portrait identity/cache/fallback and artwork dimensions.
 
 The original-layout regression tests remain in `tests/lua` and run with
-`make test-player` (LuaJIT or Lua 5.1). Their loader includes the new modules
-and explicitly selects the original layout.
+`make test-player` (LuaJIT or Lua 5.1). Their loader includes the layout's
+modules and explicitly selects the original layout.
 
 **In-game status (2026-09-22):** the final native-static-portrait, inset-border
 and opaque-badge revision was confirmed working in the Classic beta client
@@ -104,15 +90,15 @@ right-click menu. The player confirmed all requested checks: appearance,
 portrait identity after dialogue/target changes, playback/queue/menu controls
 and switching back to the original layout.
 
-The same UI implementation is now integrated with upstream 2.1.0, preserving
-its contribution features and scrolling settings panel. The port is verified
-with the offline integration and upstream regression suites; the screenshots
-document the earlier 2.0.4-based runtime. Offline fixtures do not emulate WoW
-rendering.
+The same UI is what 2.2.0 ships, on top of 2.1.0's contribution features and
+scrolling settings panel. The port is verified with the offline integration and
+the regression suites; the screenshots document the earlier 2.0.4-based
+runtime. Offline fixtures do not emulate WoW rendering.
 
 ## Credits
 
-Original addon: [rusty-key/spoken-wow](https://github.com/rusty-key/spoken-wow).
-The upstream MIT license is retained. Game-derived textures remain Blizzard
-Entertainment artwork; see [`THIRD_PARTY.md`](../../THIRD_PARTY.md) and
+The layout was designed and written by
+[shorley-gm](https://github.com/shorley-gm) and contributed in
+[#46](https://github.com/rusty-key/spoken-wow/pull/46). Game-derived textures
+remain Blizzard Entertainment artwork; see [`THIRD_PARTY.md`](../../THIRD_PARTY.md) and
 [`ARTWORK.md`](ARTWORK.md) for sources.

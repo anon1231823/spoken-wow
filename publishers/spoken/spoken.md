@@ -27,6 +27,7 @@ Install one of those and your addon manager brings Spoken Player with it. Instal
 
 - **One queue.** Quest lines, zone narration and the book you are reading wait their turn behind each other; nothing interrupts anything. NPC gossip yields to a queued quest line, and a book queued whole reads on while you walk away from it.
 - **One window.** Who is speaking, what is waiting, pause, and each addon's own buttons — Read and Report for lore, Report and Stop Gossip for quests, Report for a page of a book. Movable, resizable, lockable; or hide the portrait, or the whole window.
+- **Two layouts.** **Minimal Classic** is what it opens in on the modern clients: a compact panel with a round portrait of the speaker drawn from the client's own art, the name, the line's title and a slim cast bar, with the controls and the waiting queue appearing when you click. Turn it off under **Minimal Classic player** for the original window, which is also what the 1.12, 2.4.3 and 3.3.5 clients draw.
 - **One minimap button.** Left-click opens a menu with every installed Spoken addon's entries. Right-click opens settings. All three clicks are rebindable.
 - **Narration waits for combat.** Zone narration held for a fight does not block a quest line queued behind it.
 

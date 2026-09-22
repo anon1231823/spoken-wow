@@ -1,5 +1,27 @@
 # Changelog — Spoken Player
 
+## 2.2.0 — 2026-09-22
+
+- **A second layout, and it is the one the player opens in.** **Minimal Classic** is a
+  compact panel on the modern clients: a round portrait of the speaker taken from the
+  client's own art, the name in gold, the line's title under it and a slim cast bar. There
+  is no permanent row of buttons — click the portrait to pause or start the line again,
+  click the title to skip it, right-click anywhere on the panel for playback and for the
+  source's own actions.
+- **The queue folds away.** A plus button beside the panel counts the lines waiting and
+  opens them; scroll for more than four, click one to drop it, and the whole drawer closes
+  again. A book or a zone line carries its own badge on the portrait, so it is clear which
+  addon is speaking without reading the title.
+- Designed and written by [shorley-gm](https://github.com/shorley-gm), who contributed it
+  in [#46](https://github.com/rusty-key/spoken-wow/pull/46) along with the artwork notes
+  and an offline harness that drives the real queue and UI code.
+- **The original layout is one setting away.** Turn off **Minimal Classic player** under
+  `/sp options` and the player looks exactly as it did in 2.1.0; the hide-portrait,
+  hide-player and per-action settings apply to both. `/sp reset` resets whichever layout
+  is showing.
+- Not on the 1.12, 2.4.3 and 3.3.5 clients, where it is neither offered nor drawn. They
+  keep the original player.
+
 ## 2.1.0 — 2026-09-21
 
 - **Sending the game's text where Spoken has no voice.** When Spoken Quests, Spoken Zones or

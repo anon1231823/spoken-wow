@@ -1,7 +1,7 @@
 ## Interface: 20506
 ## Title: Spoken Player
 ## Notes: The voice player every Spoken addon speaks through: one queue, one window, one minimap button.
-## Version: 2.1.0
+## Version: 2.2.0
 ## IconTexture: Interface\AddOns\SpokenPlayer\icon.tga
 ## SavedVariables: SpokenPlayerDB
 ## OptionalDeps: VoiceOverRedux, ZoneLore

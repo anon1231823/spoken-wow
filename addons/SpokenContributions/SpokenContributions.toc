@@ -1,7 +1,7 @@
 ## Interface: 11509, 20506, 30403, 100007, 16001
 ## Title: |cff888888Spoken Contributions|r
 ## Notes: Where Spoken keeps the lines it gathered for you. Upload SavedVariables/SpokenContributions.lua at spoken.rusty.one/contribute.
-## Version: 2.1.0
+## Version: 2.2.0
 ## SavedVariables: SpokenContributionsDB
 ## X-Part-Of: Spoken
 # No Lua at all, like the tombstones. The client names a SavedVariables file after the addon
