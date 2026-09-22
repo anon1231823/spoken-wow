@@ -273,9 +273,13 @@ export async function stopQueue(): Promise<void> {
  * whether it worked rather than throwing: the caller has already cleared the marks on
  * screen, and the worst case is a row that comes back marked on the next search.
  */
-export async function clearDirty(source: string, files: string[]): Promise<boolean> {
+export async function clearDirty(
+  source: string,
+  files: string[],
+  lang: Lang = BASE_LANG,
+): Promise<boolean> {
   try {
-    const response = await fetch("/api/dirty", {
+    const response = await fetch(withLang(lang, "/api/dirty"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ source, files }),

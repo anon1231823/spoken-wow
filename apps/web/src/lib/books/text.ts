@@ -95,12 +95,27 @@ export async function saveBookText(args: {
     );
     const current = currentRows[0];
 
-    if (!current) {
+    // The first translation of a page has no row of its own to copy the structure from, and
+    // takes it from the English page -- where a page sits is a fact about the world, the
+    // same in every language.
+    let source: { lang: Lang; version: number } | null = current
+      ? { lang, version: current.version }
+      : null;
+    if (!source && lang !== BASE_LANG) {
+      const { rows: english } = await client.query<{ version: number }>(
+        `select "version" from "book_line"
+          where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
+        [args.lineId, BASE_LANG],
+      );
+      if (english[0]) source = { lang: BASE_LANG, version: english[0].version };
+    }
+    if (!source) {
       throw new BookMissing(
         `${args.lineId} is not in book_line -- seed the table with: make books-import`,
       );
     }
     if (
+      current &&
       args.expectedVersion !== undefined &&
       args.expectedVersion !== null &&
       args.expectedVersion !== current.version
@@ -113,7 +128,7 @@ export async function saveBookText(args: {
 
     // A save that changes nothing must not spend a version number: the history is a record
     // of what the page has said, not of who opened the dialog.
-    if (text === current.text) {
+    if (current && text === current.text) {
       await client.query("commit");
       return toVersion(current);
     }
@@ -131,20 +146,24 @@ export async function saveBookText(args: {
       [args.lineId, lang],
     );
 
-    // The structural fields ride along from the row being replaced. They are the extract's
-    // to set, and copying them keeps this one insert rather than an insert plus a lookup.
+    // The structural fields ride along from the row being replaced, or from the English
+    // page for a first translation. They are the extract's to set, and copying them keeps
+    // this one insert rather than an insert plus a lookup.
     const { rows: inserted } = await client.query<Row>(
       `insert into "book_line"
          ("lineId", "lang", "version", "isCurrent", "origin", "pageId", "bookId",
           "pageNumber", "pageCount", "title", "ownerKind", "ownerIds", "material",
           "text", "generatable", "skipReason", "editedBy", "note")
-       select "lineId", "lang", $3, true, 'edited', "pageId", "bookId",
+       select "lineId", $2, $3, true, 'edited', "pageId", "bookId",
               "pageNumber", "pageCount", "title", "ownerKind", "ownerIds", "material",
               $4, "generatable", "skipReason", $5, $6
          from "book_line"
-        where "lineId" = $1 and "lang" = $2 and "version" = $7
+        where "lineId" = $1 and "lang" = $8 and "version" = $7
        returning ${COLUMNS}`,
-      [args.lineId, lang, version, text, args.editedBy, args.note?.trim() || null, current.version],
+      [
+        args.lineId, lang, version, text, args.editedBy, args.note?.trim() || null,
+        source.version, source.lang,
+      ],
     );
 
     await client.query("commit");

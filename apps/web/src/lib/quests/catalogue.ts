@@ -96,6 +96,7 @@ async function stampOf(lang: Lang): Promise<string> {
 
 type Row = {
   lineId: string;
+  variant: number;
   source: string;
   questId: number | null;
   questTitle: string | null;
@@ -125,7 +126,7 @@ type Row = {
 async function build(lang: Lang): Promise<CorpusLine[]> {
   if (lang !== BASE_LANG) return buildTranslated(lang);
   const rows = await query<Row>(
-    `select l."lineId", l."source", l."questId", l."questTitle",
+    `select l."lineId", l."variant", l."source", l."questId", l."questTitle",
             s."npcId", s."npcName", s."npcType", s."race", s."gender", s."flavor", s."voice",
             l."playerGender", l."text", l."originalText", l."fileName",
             l."generatable", l."skipReason", s."contributionId"
@@ -163,9 +164,15 @@ async function build(lang: Lang): Promise<CorpusLine[]> {
  */
 async function buildTranslated(lang: Lang): Promise<CorpusLine[]> {
   const rows = await query<
-    Row & { textMissing: boolean; titleMissing: boolean; nameMissing: boolean }
+    Row & {
+      textMissing: boolean;
+      titleMissing: boolean;
+      nameMissing: boolean;
+      englishTitle: string | null;
+      englishName: string;
+    }
   >(
-    `select l."lineId", l."source", l."questId",
+    `select l."lineId", l."variant", l."source", l."questId",
             coalesce(qn."name", l."questTitle") as "questTitle",
             s."npcId", coalesce(nn."name", s."npcName") as "npcName", s."npcType",
             s."race", s."gender", s."flavor", s."voice",
@@ -176,7 +183,8 @@ async function buildTranslated(lang: Lang): Promise<CorpusLine[]> {
             s."contributionId",
             t."id" is null as "textMissing",
             l."questId" is not null and qn."id" is null as "titleMissing",
-            nn."id" is null as "nameMissing"
+            nn."id" is null as "nameMissing",
+            l."questTitle" as "englishTitle", s."npcName" as "englishName"
        from "quest_line_speaker" s
        join "quest_line" l
          on l."lineId" = s."lineId" and l."variant" = s."variant"
@@ -197,15 +205,19 @@ async function buildTranslated(lang: Lang): Promise<CorpusLine[]> {
 
   if (rows.length === 0) throw new CorpusEmpty();
 
-  return rows.map(({ textMissing, titleMissing, nameMissing, ...row }) => ({
-    ...row,
-    npcType: row.npcType as CorpusLine["npcType"],
-    source: row.source as CorpusLine["source"],
-    playerGender: row.playerGender as CorpusLine["playerGender"],
-    ...(textMissing || titleMissing || nameMissing
-      ? { missing: { text: textMissing, questTitle: titleMissing, npcName: nameMissing } }
-      : {}),
-  }));
+  return rows.map((raw) => {
+    const { textMissing, titleMissing, nameMissing, englishTitle, englishName, ...row } = raw;
+    return {
+      ...row,
+      english: { questTitle: englishTitle, npcName: englishName },
+      npcType: row.npcType as CorpusLine["npcType"],
+      source: row.source as CorpusLine["source"],
+      playerGender: row.playerGender as CorpusLine["playerGender"],
+      ...(textMissing || titleMissing || nameMissing
+        ? { missing: { text: textMissing, questTitle: titleMissing, npcName: nameMissing } }
+        : {}),
+    };
+  });
 }
 
 const cacheKey = Symbol.for("spoken.quests-catalogue");

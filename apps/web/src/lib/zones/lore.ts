@@ -138,13 +138,28 @@ export async function saveLore(args: {
     );
     const current = currentRows[0];
 
-    if (!current) {
+    // What the new version's structure is copied from: the row it replaces, or for the first
+    // translation of a line, the English one -- which subzones exist and what they are keyed
+    // on is the same in every language.
+    let structure = current;
+    if (!structure && lang !== BASE_LANG) {
+      const { rows: english } = await client.query<
+        Row & { mapID: number; kind: string; key: string | null }
+      >(
+        `select ${COLUMNS}, "mapID", "kind", "key" from "lore_line"
+          where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
+        [args.lineId, BASE_LANG],
+      );
+      structure = english[0];
+    }
+    if (!structure) {
       throw new LoreMissing(
         `${args.lineId} is not in lore_line -- seed the table with: make lore-import`,
       );
     }
 
     if (
+      current &&
       args.expectedVersion !== undefined &&
       args.expectedVersion !== null &&
       args.expectedVersion !== current.version
@@ -157,11 +172,11 @@ export async function saveLore(args: {
     const full = args.full.trim();
     if (!full) throw new Error("the text cannot be empty");
     // Nobody types a place name: it is the client's, and the scraper's.
-    const name = current.name;
+    const name = structure.name;
 
     // A save that changes nothing must not spend a version number: the history is a
     // record of what the text has been, not of who opened the dialog.
-    if (full === current.full && (args.short ?? null) === null) {
+    if (current && full === current.full && (args.short ?? null) === null) {
       await client.query("commit");
       return toVersion(current);
     }
@@ -191,9 +206,9 @@ export async function saveLore(args: {
       [
         args.lineId,
         version,
-        current.mapID,
-        current.kind,
-        current.key,
+        structure.mapID,
+        structure.kind,
+        structure.key,
         name,
         full,
         short,
@@ -201,7 +216,7 @@ export async function saveLore(args: {
         // The source rides along unchanged. An edit of wiki text is a derivative of it,
         // so the attribution and the CC BY-SA licence follow the edit; only prose with
         // no wiki ancestor has no source, and that is decided when the row is created.
-        current.source,
+        structure.source,
         args.editedBy,
         args.note?.trim() || null,
         lang,

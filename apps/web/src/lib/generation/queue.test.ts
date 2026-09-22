@@ -105,8 +105,17 @@ describe("the language a job is in", () => {
     expect((await claimJobOfThisRun())?.lang).toBe("enUS");
   });
 
-  // What the worker generates in, and what the snapshot tells a page it may adopt. The same
-  // file in two languages being two jobs waits on the old index being dropped (see 0035).
+  // A Portuguese take of a file is a different recording from the English one.
+  it("keeps the same file in two languages as two jobs", async () => {
+    const english = await newBatch();
+    const portuguese = await createBatch("test batch", null, "quests", "ptBR");
+    batches.push(portuguese);
+    expect(await enqueue(english, [line(1)], "quests")).toEqual({ queued: 1, skipped: 0 });
+    expect(await enqueue(portuguese, [line(1)], "quests", "ptBR")).toEqual({ queued: 1, skipped: 0 });
+    expect(await enqueue(portuguese, [line(1)], "quests", "ptBR")).toEqual({ queued: 0, skipped: 1 });
+  });
+
+  // What the worker generates in, and what the snapshot tells a page it may adopt.
   it("rides from the enqueue to the claim", async () => {
     const id = await createBatch("test batch", null, "quests", "ptBR");
     batches.push(id);

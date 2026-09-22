@@ -12,8 +12,7 @@
  * Behind requireRegenerate, as the quests versions route was: a take history is the shape
  * of somebody's work, and restoring from it is a collaborator's decision.
  */
-import { requireRegenerate } from "@/lib/generation/authz";
-import { langParam } from "@/lib/lang-server";
+import { requireIn } from "@/lib/generation/authz";
 
 import { isAddressableFile } from "@/lib/takes/files";
 import { listTakes } from "@/lib/takes/store";
@@ -22,7 +21,7 @@ import { isSource } from "@/lib/sections";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const { denied } = await requireRegenerate();
+  const { lang, denied } = await requireIn(request, "regenerate");
   if (denied) return denied;
 
   const params = new URL(request.url).searchParams;
@@ -36,8 +35,6 @@ export async function GET(request: Request) {
     return Response.json({ error: "unknown file" }, { status: 404 });
   }
 
-  const { lang, denied: noLang } = await langParam(request);
-  if (noLang) return noLang;
 
   return Response.json({ source, file, takes: await listTakes(source, file, lang) });
 }

@@ -81,7 +81,7 @@ export async function searchContext(
     const english = lang === BASE_LANG;
     const [overrides, ignores, reports, stale, dirt] = await Promise.all([
       english ? readOverrides() : new Map(),
-      readIgnores(),
+      readIgnores(lang),
       openReports(lang),
       outdated && english ? staleFiles() : null,
       dirty && english ? dirtyQuestFiles() : null,

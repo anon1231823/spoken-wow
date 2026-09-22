@@ -55,6 +55,8 @@ export type CorpusEntry = {
   missing?: { text: boolean; name: boolean };
   /** The English prose, for a translator to work from. Absent when reading English. */
   english?: string;
+  /** The English name of the place, likewise. */
+  englishName?: string;
 };
 
 /**
@@ -295,6 +297,7 @@ async function buildTranslated(lang: Lang): Promise<CorpusEntry[]> {
       spoken,
       hash: textHash(spoken),
       english: entry.full,
+      englishName: entry.name,
       ...(textMissing || name === undefined
         ? { missing: { text: textMissing, name: name === undefined } }
         : {}),

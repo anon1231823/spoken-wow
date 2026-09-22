@@ -15,7 +15,7 @@ import { closeDb, db } from "@/lib/db";
 const RESOLVER = "test-contributions-resolve-route";
 
 vi.mock("@/lib/generation/authz", () => ({
-  requireRegenerate: async () => ({ session: { user: { id: RESOLVER } }, denied: null }),
+  requireCapability: async () => ({ session: { user: { id: RESOLVER } }, denied: null }),
 }));
 
 import { POST } from "./route";

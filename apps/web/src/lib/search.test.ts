@@ -455,7 +455,7 @@ describe("ignored lines", () => {
   const ignoring = (lineId: string, reason = "war-effort tally") => ({
     overrides: new Map(),
     ignores: new Map([
-      [lineId, { lineId, reason, createdAt: "2026-08-16T00:00:00.000Z", createdBy: null }],
+      [lineId, { lineId, lang: null, reason, createdAt: "2026-08-16T00:00:00.000Z", createdBy: null }],
     ]),
   });
 

@@ -8,15 +8,14 @@
  * Resolved reports come back too, after the open ones, so a report closed by mistake from
  * the row can be reopened from the same place.
  */
-import { langParam } from "@/lib/lang-server";
-import { requireRegenerate } from "@/lib/generation/authz";
+import { requireIn } from "@/lib/generation/authz";
 import { reportsForLine } from "@/lib/reports/store";
 import { isSource } from "@/lib/sections";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const { denied } = await requireRegenerate();
+  const { lang, denied } = await requireIn(request, "edit");
   if (denied) return denied;
 
   const params = new URL(request.url).searchParams;
@@ -29,8 +28,6 @@ export async function GET(request: Request) {
     return Response.json({ error: "lineId is required" }, { status: 400 });
   }
 
-  const { lang, denied: noLang } = await langParam(request);
-  if (noLang) return noLang;
 
   return Response.json({ reports: await reportsForLine(source, lineId, lang) });
 }

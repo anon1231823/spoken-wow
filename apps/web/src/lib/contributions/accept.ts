@@ -22,6 +22,7 @@
  * spoken form (tokens.ts). Anything else the client substituted -- the one branch of a `$G` it
  * picked -- stays as displayed; an editor has the text-override flow for that.
  */
+import { hasInvalidChars } from "@/lib/text-gate";
 import type { PoolClient } from "pg";
 
 import { normaliseText } from "@books-tools/lib/text.mjs";
@@ -254,6 +255,77 @@ async function insertLine(
 }
 
 /**
+ * A contribution sent from a pack in another language: the translation of a quest line the
+ * English corpus already has, written as that language's version of it.
+ *
+ * Only a quest line can be matched. Its id is the quest and the moment, the same in every
+ * language; a gossip line's id is a hash of its English text, which a Portuguese client never
+ * shows, so there is nothing to match it to. And only a line English has: a translation is
+ * of something, and a line nobody has sent in English is contributed in English first.
+ *
+ * The text keeps its $N, $C and $R. The English accept writes "adventurer" in their place,
+ * which in another language is an English word, so here they stay in and the line waits,
+ * unvoiceable, for a translator to word around them -- as the dump's own translations do.
+ * A line this language already has is left alone: an import or a translator got there first.
+ */
+async function acceptTranslation(
+  client: PoolClient,
+  contribution: Contribution,
+  userId: string,
+): Promise<ResolveRefusal | null> {
+  const { quest, event } = contribution.meta;
+  if (!(quest && event)) {
+    return {
+      ok: false,
+      reason: "malformed",
+      message: "A greeting in another language cannot be matched to the English line it translates.",
+    };
+  }
+  const identity = lineIdentityFor(contribution.meta, contribution.text ?? "", "", "");
+  if (!identity || !contribution.text) {
+    return { ok: false, reason: "malformed", message: `unknown quest event "${event}"` };
+  }
+
+  const english = (await corpus()).lines.filter((line) =>
+    answersQuestMoment(line.lineId, identity.lineId),
+  );
+  if (english.length === 0) {
+    return {
+      ok: false,
+      reason: "needs-speaker",
+      message: "The English line is not in the corpus yet -- it has to be contributed in English first.",
+    };
+  }
+
+  const text = contribution.text;
+  const skipReason =
+    identity.source === "progress" ? "progress" : hasInvalidChars(text) ? "invalid-chars" : null;
+  const seen = new Set<string>();
+  for (const line of english) {
+    const key = `${line.lineId}#${line.variant ?? 0}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    await client.query(
+      `insert into "quest_line"
+         ("lineId", "variant", "lang", "version", "isCurrent", "origin", "source", "questId",
+          "questTitle", "playerGender", "fileName", "text", "originalText", "localeText",
+          "generatable", "skipReason", "editedBy", "note")
+       select e."lineId", e."variant", $3, 1, true, 'contributed', e."source", e."questId",
+              null, e."playerGender", e."fileName", $4, e."originalText", $4, $5, $6, $7, $8
+         from "quest_line" e
+        where e."lineId" = $1 and e."variant" = $2 and e."lang" = $9 and e."isCurrent"
+          and not exists (select 1 from "quest_line" t
+                           where t."lineId" = $1 and t."variant" = $2 and t."lang" = $3)`,
+      [
+        line.lineId, line.variant ?? 0, contribution.locale, text, skipReason === null,
+        skipReason, userId, `contribution #${contribution.id}`, BASE_LANG,
+      ],
+    );
+  }
+  return null;
+}
+
+/**
  * Change a contribution's status, writing its line into the quest tables first when the target
  * is "accepted" for a fresh quests row.
  */
@@ -293,7 +365,17 @@ export async function resolveContribution(
       };
     }
 
-    if (status === "accepted" && contribution.source === "quests" && !written) {
+    if (
+      status === "accepted" &&
+      contribution.source === "quests" &&
+      contribution.locale !== BASE_LANG
+    ) {
+      const refused = await acceptTranslation(client, contribution, userId);
+      if (refused) {
+        await client.query("rollback");
+        return refused;
+      }
+    } else if (status === "accepted" && contribution.source === "quests" && !written) {
       const result = await prepareLine(contribution);
       if (!result.ok) {
         await client.query("rollback");

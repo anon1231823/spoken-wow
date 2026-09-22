@@ -14,9 +14,8 @@
  * same file is in flight would race it to decide which take is live, and whichever wrote
  * last would win without the other's author ever seeing why.
  */
-import { requireRegenerate } from "@/lib/generation/authz";
+import { requireIn } from "@/lib/generation/authz";
 import { BUSY, withTakeLock } from "@/lib/generation/lock";
-import { langParam } from "@/lib/lang-server";
 
 import { isAddressableFile } from "@/lib/takes/files";
 import { restoreTake } from "@/lib/takes/restore";
@@ -25,7 +24,7 @@ import { isSource } from "@/lib/sections";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const { denied } = await requireRegenerate();
+  const { lang, denied } = await requireIn(request, "regenerate");
   if (denied) return denied;
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -48,8 +47,6 @@ export async function POST(request: Request) {
 
   const file = body.file;
   const version = body.version;
-  const { lang, denied: noLang } = await langParam(request);
-  if (noLang) return noLang;
 
   const outcome = await withTakeLock(source, file, async () => {
     try {

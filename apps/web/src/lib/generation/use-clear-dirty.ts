@@ -15,6 +15,7 @@
  */
 import { useCallback, useState } from "react";
 
+import { useLang } from "@/components/LangProvider";
 import type { Source } from "@/lib/sections";
 
 import { clearDirty } from "./client";
@@ -27,12 +28,15 @@ export type DirtyClearing = {
 
 export function useClearDirty(source: Source): DirtyClearing {
   const [cleared, setCleared] = useState<Set<string>>(new Set());
+  // An acknowledgement is per language: clearing the English take says nothing about how
+  // the Portuguese one sounds.
+  const lang = useLang();
 
   const clear = useCallback(
     (files: string[]) => {
       if (!files.length) return;
       setCleared((current) => new Set([...current, ...files]));
-      void clearDirty(source, files).then((ok) => {
+      void clearDirty(source, files, lang).then((ok) => {
         if (ok) return;
         setCleared((current) => {
           const next = new Set(current);
@@ -41,7 +45,7 @@ export function useClearDirty(source: Source): DirtyClearing {
         });
       });
     },
-    [source],
+    [source, lang],
   );
 
   return { cleared, clear };

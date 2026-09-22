@@ -55,6 +55,8 @@ export type BookPage = {
   missing?: { text: boolean; title: boolean };
   /** The English page, for a translator to work from. Absent when reading English. */
   english?: string;
+  /** The owner's English name, likewise. */
+  englishTitle?: string;
 };
 
 /** The live take for a page, as the explorer needs it. Mirrors the zones shape. */
@@ -202,6 +204,7 @@ async function buildTranslated(lang: Lang): Promise<BookPage[]> {
       generatable: text ? text.generatable : false,
       skipReason: text ? text.skipReason : "untranslated",
       english: page.text,
+      englishTitle: page.title,
       ...(!text || title === undefined
         ? { missing: { text: !text, title: title === undefined } }
         : {}),

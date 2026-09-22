@@ -4,8 +4,9 @@
  *
  * Both answer the same two questions the same way. An unknown code is the caller's mistake
  * (400 on an API, 404 on a page); a known language that is switched off is visible only to
- * somebody who may prepare it -- an admin -- and does not exist for anyone else. English
- * needs neither question asked, so no English request pays for a query or a session read.
+ * somebody preparing it -- an admin or a holder of a grant in it -- and does not exist for
+ * anyone else. English needs neither question asked, so no English request pays for a query
+ * or a session read.
  */
 import "server-only";
 
@@ -15,17 +16,21 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { BASE_LANG, isLang, type Lang } from "@/lib/lang";
 import { isEnabled } from "@/lib/languages/store";
-import { isAdmin } from "@/lib/permissions";
+import { viewerOf } from "@/lib/grants/store";
+import { worksIn } from "@/lib/permissions";
 
-/** Whether the person asking may see a language that is switched off. */
-async function mayPreview(): Promise<boolean> {
+/**
+ * Whether the person asking may see a language that is switched off: an admin, or anybody
+ * holding a grant in it -- the translators who are preparing it.
+ */
+async function mayPreview(lang: Lang): Promise<boolean> {
   const session = await auth.api.getSession({ headers: await headers() });
-  return isAdmin(session?.user.role);
+  return worksIn(await viewerOf(session), lang);
 }
 
 async function visible(lang: Lang): Promise<boolean> {
   if (lang === BASE_LANG) return true;
-  return (await isEnabled(lang)) || (await mayPreview());
+  return (await isEnabled(lang)) || (await mayPreview(lang));
 }
 
 /**

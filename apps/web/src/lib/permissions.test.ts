@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  can,
+  canGrant,
+  worksIn,
   canConfigureGeneration,
   canManageVoices,
   canRegenerate,
@@ -8,6 +11,7 @@ import {
   isRole,
   ROLES,
   roles,
+  type Grant,
 } from "./permissions";
 
 describe("canRegenerate", () => {
@@ -109,5 +113,44 @@ describe("access control", () => {
 
   it("declares a role object for every name in ROLES", () => {
     expect(Object.keys(roles).sort()).toEqual([...ROLES].sort());
+  });
+});
+
+describe("per-language permissions", () => {
+  const member = (grants: Grant[]) => ({ role: "member", grants });
+
+  it("gives a global admin everything, everywhere", () => {
+    expect(can({ role: "admin", grants: [] }, "configure", "ptBR")).toBe(true);
+  });
+
+  it("keeps a collaborator exactly where the role always was: English text and takes", () => {
+    const collaborator = { role: "collaborator", grants: [] };
+    expect(can(collaborator, "edit", "enUS")).toBe(true);
+    expect(can(collaborator, "regenerate", "enUS")).toBe(true);
+    expect(can(collaborator, "configure", "enUS")).toBe(false);
+    expect(can(collaborator, "edit", "ptBR")).toBe(false);
+  });
+
+  it("lets a translator write their language and nothing else", () => {
+    const translator = member([{ lang: "ptBR", capability: "edit" }]);
+    expect(can(translator, "edit", "ptBR")).toBe(true);
+    expect(can(translator, "regenerate", "ptBR")).toBe(false);
+    expect(can(translator, "edit", "enUS")).toBe(false);
+    expect(can(translator, "edit", "deDE")).toBe(false);
+  });
+
+  it("makes a language's admin everything in it, and a granter of edit and regenerate only", () => {
+    const lead = member([{ lang: "ptBR", capability: "admin" }]);
+    expect(can(lead, "ignore", "ptBR")).toBe(true);
+    expect(canGrant(lead, "edit", "ptBR")).toBe(true);
+    expect(canGrant(lead, "regenerate", "ptBR")).toBe(true);
+    expect(canGrant(lead, "configure", "ptBR")).toBe(false);
+    expect(canGrant(lead, "admin", "ptBR")).toBe(false);
+    expect(canGrant(lead, "edit", "deDE")).toBe(false);
+  });
+
+  it("lets somebody working in a language see it before it is switched on", () => {
+    expect(worksIn(member([{ lang: "ptBR", capability: "edit" }]), "ptBR")).toBe(true);
+    expect(worksIn(member([]), "ptBR")).toBe(false);
   });
 });

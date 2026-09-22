@@ -46,6 +46,14 @@ export type CorpusLine = {
    * is missing.
    */
   missing?: { text: boolean; questTitle: boolean; npcName: boolean };
+  /**
+   * Which of the lines sharing this id it is (quest_line.variant): 103 ids name two
+   * different texts. What an edit is addressed by, with the id. Optional because tests
+   * build CorpusLines by hand.
+   */
+  variant?: number;
+  /** The English names, for a translator to work from. Absent when reading English. */
+  english?: { questTitle: string | null; npcName: string };
 };
 
 /**

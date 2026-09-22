@@ -19,7 +19,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { corpus } from "@/lib/quests/catalogue";
 import { isSource } from "@/lib/sections";
-import { requireApiKey, requireGenerationLang, requireRegenerate } from "@/lib/generation/authz";
+import {
+  refuseUngeneratable,
+  requireAnyRegenerate,
+  requireApiKey,
+  requireIn,
+} from "@/lib/generation/authz";
 import { createBatch, enqueue, snapshot } from "@/lib/generation/queue";
 import { searchContext } from "@/lib/quests/context";
 import { batchJobs, matchingLines } from "@/lib/search";
@@ -32,10 +37,10 @@ import { catalogue as zoneCatalogue } from "@/lib/zones/catalogue";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const { session, denied } = await requireRegenerate();
+  const { session, lang, denied } = await requireIn(request, "regenerate");
   if (denied) return denied;
-  const { lang, denied: badLang } = await requireGenerationLang(request);
-  if (badLang) return badLang;
+  const refused = refuseUngeneratable(lang);
+  if (refused) return refused;
 
   // Checked at enqueue rather than only in the worker. Every job in the batch is generated
   // with the key of whoever started it, so a batch queued without one is forty thousand rows
@@ -212,7 +217,7 @@ async function queueBooks(
 }
 
 export async function GET(request: NextRequest) {
-  const { denied } = await requireRegenerate();
+  const { denied } = await requireAnyRegenerate();
   if (denied) return denied;
 
   // The poll is what resumes a batch after a deploy: Explorer calls this every fifteen

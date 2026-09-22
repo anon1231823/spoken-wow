@@ -13,16 +13,16 @@
  * `g:{hash}:m`), and round-tripping those through a dynamic segment is encoding risk for no
  * benefit.
  */
-import { requireApiKey, requireGenerationLang, requireRegenerate } from "@/lib/generation/authz";
+import { requireApiKey, refuseUngeneratable, requireIn } from "@/lib/generation/authz";
 import { regenerateLine } from "@/lib/generation/regenerate";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const { session, denied } = await requireRegenerate();
+  const { session, lang, denied } = await requireIn(request, "regenerate");
   if (denied) return denied;
-  const { denied: badLang } = await requireGenerationLang(request);
-  if (badLang) return badLang;
+  const refused = refuseUngeneratable(lang);
+  if (refused) return refused;
 
   // After the role check, never instead of it: a key is a credential, not a permission.
   const { key, denied: noKey } = await requireApiKey(session.user.id);

@@ -15,8 +15,7 @@
  * spoken, so the page reads "audio outdated" and joins the worklist. Coupling a free action
  * to a paid one is how a typo fix ends up costing credits.
  */
-import { requireRegenerate } from "@/lib/generation/authz";
-import { langParam } from "@/lib/lang-server";
+import { requireIn } from "@/lib/generation/authz";
 import { isKnownLine } from "@/lib/books/catalogue";
 import {
   BookConflict,
@@ -36,10 +35,8 @@ function failed(error: unknown): Response {
 }
 
 export async function GET(request: Request) {
-  const { denied } = await requireRegenerate();
+  const { lang, denied } = await requireIn(request, "edit");
   if (denied) return denied;
-  const { lang, denied: noLang } = await langParam(request);
-  if (noLang) return noLang;
 
   const lineId = new URL(request.url).searchParams.get("lineId");
   if (!lineId) return Response.json({ error: "lineId is required" }, { status: 400 });
@@ -48,10 +45,8 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const { session, denied } = await requireRegenerate();
+  const { session, lang, denied } = await requireIn(request, "edit");
   if (denied) return denied;
-  const { lang, denied: noLang } = await langParam(request);
-  if (noLang) return noLang;
 
   const body = (await request.json().catch(() => ({}))) as {
     lineId?: unknown;
@@ -99,10 +94,8 @@ export async function PUT(request: Request) {
 
 /** Puts an earlier version of the text back. */
 export async function POST(request: Request) {
-  const { denied } = await requireRegenerate();
+  const { lang, denied } = await requireIn(request, "edit");
   if (denied) return denied;
-  const { lang, denied: noLang } = await langParam(request);
-  if (noLang) return noLang;
 
   const body = (await request.json().catch(() => ({}))) as {
     lineId?: unknown;

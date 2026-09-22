@@ -15,7 +15,8 @@ import { auth } from "@/lib/auth";
 import { BASE_LANG, type Lang } from "@/lib/lang";
 import { langParam } from "@/lib/lang-server";
 import { NO_API_KEY } from "@/lib/no-api-key";
-import { canConfigureGeneration, canRegenerate } from "@/lib/permissions";
+import { viewerOf } from "@/lib/grants/store";
+import { can, canConfigureGeneration, type Capability } from "@/lib/permissions";
 
 export type Session = Awaited<ReturnType<typeof auth.api.getSession>>;
 
@@ -27,11 +28,29 @@ const FORBIDDEN = () => Response.json({ error: "not allowed" }, { status: 403 })
  * Returns the session rather than just a verdict because every caller needs the user id for
  * provenance, and fetching it twice would mean two session lookups per regenerated line.
  */
-export async function requireRegenerate(): Promise<
+export async function requireRegenerate(
+  lang: Lang = BASE_LANG,
+): Promise<
+  { session: NonNullable<Session>; denied: null } | { session: null; denied: Response }
+> {
+  return requireCapability("regenerate", lang);
+}
+
+/**
+ * The session, or a 403, for one capability in one language.
+ *
+ * English regenerating and editing is what the collaborator role always granted, so for
+ * those this answers exactly as canRegenerate did; everything else is lib/permissions.ts's
+ * `can`, over the grants the viewer holds.
+ */
+export async function requireCapability(
+  capability: Capability,
+  lang: Lang,
+): Promise<
   { session: NonNullable<Session>; denied: null } | { session: null; denied: Response }
 > {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canRegenerate(session.user.role)) {
+  if (!session || !can(await viewerOf(session), capability, lang)) {
     return { session: null, denied: FORBIDDEN() };
   }
   return { session, denied: null };
@@ -93,26 +112,54 @@ export async function requireApiKey(userId: string): Promise<KeyGuard> {
 //------------------------------------------------------------------------------
 
 /**
- * The language a generation request is in, if this build can generate in it.
+ * A refusal for a language this build cannot generate in, or null.
  *
  * English only, for now: the generators read English text and commit English takes, and a
  * request for another language would come back as an English recording filed under the
  * wrong one. The worker refuses the same jobs (worker.ts), so a batch queued some other way
  * still fails whole rather than spending anything.
  */
-export async function requireGenerationLang(
+export function refuseUngeneratable(lang: Lang): Response | null {
+  if (lang === BASE_LANG) return null;
+  return Response.json(
+    { error: `generating in ${lang} is not supported yet`, kind: "bad-request" },
+    { status: 400 },
+  );
+}
+
+/**
+ * A route acting in one language: the language from `?lang=`, and the session if it holds
+ * `capability` there. Parsed in that order because what someone may do depends on where.
+ */
+export async function requireIn(
   request: Request,
-): Promise<{ lang: Lang; denied: null } | { lang: null; denied: Response }> {
+  capability: Capability,
+): Promise<
+  | { lang: Lang; session: NonNullable<Session>; denied: null }
+  | { lang: null; session: null; denied: Response }
+> {
   const { lang, denied } = await langParam(request);
-  if (denied) return { lang: null, denied };
-  if (lang !== BASE_LANG) {
-    return {
-      lang: null,
-      denied: Response.json(
-        { error: `generating in ${lang} is not supported yet`, kind: "bad-request" },
-        { status: 400 },
-      ),
-    };
-  }
-  return { lang, denied: null };
+  if (denied) return { lang: null, session: null, denied };
+  const guard = await requireCapability(capability, lang);
+  if (guard.denied) return { lang: null, session: null, denied: guard.denied };
+  return { lang, session: guard.session, denied: null };
+}
+
+/**
+ * The session, or a 403, for anybody who regenerates in any language.
+ *
+ * For what is shared between them: there is one queue and one ElevenLabs budget behind it,
+ * and somebody queueing Portuguese is watching the same panel as somebody queueing English.
+ */
+export async function requireAnyRegenerate(): Promise<
+  { session: NonNullable<Session>; denied: null } | { session: null; denied: Response }
+> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  const viewer = await viewerOf(session);
+  const allowed =
+    viewer !== null &&
+    (can(viewer, "regenerate", BASE_LANG) ||
+      viewer.grants.some((grant) => can(viewer, "regenerate", grant.lang as Lang)));
+  if (!session || !allowed) return { session: null, denied: FORBIDDEN() };
+  return { session, denied: null };
 }
