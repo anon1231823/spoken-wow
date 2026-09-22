@@ -69,8 +69,8 @@ P.title.scripts.OnEnter(P.title);assert(P.title.cross:IsShown() and P.title.text
 P.title.scripts.OnLeave(P.title);assert(not P.title.cross:IsShown())
 local before=Q:GetQueueSize();P.rows[1]:Click();assert(Q:GetQueueSize()==before-1)
 assert(Q:GetCurrentSound()==first)
-P.fold:Click();local folded=P.rock.texCoord[4];near(folded*256,98-16-14);P.fold:Click()
-near((P.rock.texCoord[4]-folded)*256,P.drawer:GetHeight()+8) -- the rock tiles on, never stretches
+P.panel.scripts.OnSizeChanged(P.panel,300,200) -- the rock tiles on, never stretches
+near(P.rock.texCoord[2]*256,286);near(P.rock.texCoord[4]*256,186)
 P.frame.bottom=2;P:LayoutQueue()
 assert(P.drawer.points[1][1]=="BOTTOMLEFT")
 P.frame.bottom=200

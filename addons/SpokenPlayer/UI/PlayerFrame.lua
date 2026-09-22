@@ -381,7 +381,7 @@ function PlayerFrame:CreateRow(i)
         self.iconWidget:SetTexture(texture)
         self.iconWidget:SetSize(size, size)
         if hovered then
-            local r, g, b = 225 / 255, 20 / 255, 8 / 255
+            local r, g, b = unpack(RemoveColor)
             if pushed then r, g, b = r * 0.75, g * 0.75, b * 0.75 end
             self:SetAlpha(1)
             self.textWidget:SetTextColor(r, g, b)

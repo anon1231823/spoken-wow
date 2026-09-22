@@ -17,6 +17,7 @@ local BADGES = {
 }
 local function Clamp(n, low, high) return math.max(low, math.min(high, n)) end
 local function Config() return Addon.db.profile.Frame end
+local function Waiting() return math.max(0, SoundQueue:GetQueueSize() - 1) end
 local function Label(clip) return clip and (clip.present and clip.present.label or clip.key) or "" end
 local function Font(parent, size, r, g, b)
     local text = parent:CreateFontString(nil, "OVERLAY")
@@ -42,7 +43,7 @@ local function Removable(button, size, r, g, b)
 end
 local function ShowRemove(button, shown)
     if shown then
-        button.text:SetTextColor(225 / 255, 20 / 255, 8 / 255)
+        button.text:SetTextColor(unpack(RemoveColor))
         button.cross:ClearAllPoints()
         button.cross:SetPoint("LEFT", button.text, "LEFT", math.min(button.text:GetStringWidth(), button.text:GetWidth()) + 3, 0)
     else button.text:SetTextColor(unpack(button.color)) end
@@ -95,11 +96,14 @@ function MinimalPlayer:Initialize(original)
         insets = { left = 7, right = 7, top = 7, bottom = 7 },
     })
     -- Tiled by hand: the backdrop's own tiling stretched the rock once the queue
-    -- made the panel taller. LayoutQueue keeps the repeat count in step with the size.
+    -- made the panel taller. One 256px tile per 256 units, inside the 7px inset.
     self.rock = self.panel:CreateTexture(nil, "BACKGROUND")
     self.rock:SetTexture(ART .. "MinimalBackground", "REPEAT", "REPEAT")
     self.rock:SetPoint("TOPLEFT", 7, -7)
     self.rock:SetPoint("BOTTOMRIGHT", -7, 7)
+    self.panel:SetScript("OnSizeChanged", function(_, width, height)
+        self.rock:SetTexCoord(0, (width - 14) / 256, 0, (height - 14) / 256)
+    end)
 
     local content = CreateFrame("Frame", nil, frame)
     self.content, frame.container = content, content
@@ -122,22 +126,24 @@ function MinimalPlayer:Initialize(original)
     self.fold = CreateFrame("Button", nil, content)
     self.fold:SetSize(16, 16)
     self.fold:SetPoint("TOPRIGHT", 0, -22)
-    self.fold.icon = self.fold:CreateTexture(nil, "ARTWORK")
-    self.fold.icon:SetSize(16, 16)
-    self.fold.icon:SetPoint("RIGHT")
+    self.fold:SetNormalTexture([[Interface\Buttons\UI-PlusButton-Up]])
+    self.fold:SetPushedTexture([[Interface\Buttons\UI-PlusButton-Down]])
     self.fold:SetHighlightTexture([[Interface\Buttons\UI-PlusButton-Hilight]], "ADD")
-    self.fold:GetHighlightTexture():ClearAllPoints()
-    self.fold:GetHighlightTexture():SetAllPoints(self.fold.icon)
+    -- The button is as wide as its count; the glyph keeps to a square on the right.
+    self.fold.icon = self.fold:GetNormalTexture()
+    for _, texture in ipairs({ self.fold.icon, self.fold:GetPushedTexture(), self.fold:GetHighlightTexture() }) do
+        texture:ClearAllPoints()
+        texture:SetSize(16, 16)
+        texture:SetPoint("RIGHT")
+    end
     -- Folded, the count is the only sign that more lines are waiting.
     self.fold.count = Font(self.fold, 11, 1, .82, 0)
     self.fold.count:SetPoint("RIGHT", self.fold.icon, "LEFT", -2, 0)
-    self.fold:SetScript("OnMouseDown", function() self.fold.pushed = true; self:LayoutQueue() end)
-    self.fold:SetScript("OnMouseUp", function() self.fold.pushed = false; self:LayoutQueue() end)
     self.fold:SetScript("OnClick", function() self:ToggleQueue() end)
     self.fold:SetScript("OnEnter", function()
         GameTooltip:SetOwner(self.fold, "ANCHOR_RIGHT")
         GameTooltip:SetText(L.QUEUE_TITLE)
-        GameTooltip:AddLine(format(L.MIN_QUEUE_HINT, math.max(0, SoundQueue:GetQueueSize() - 1)), 1, .82, 0, true)
+        GameTooltip:AddLine(format(L.MIN_QUEUE_HINT, Waiting()), 1, .82, 0, true)
         GameTooltip:Show()
     end)
     self.fold:SetScript("OnLeave", function() self:HideTooltip() end)
@@ -190,7 +196,7 @@ function MinimalPlayer:Initialize(original)
     self.drawer = CreateFrame("Frame", nil, frame)
     self.drawer:EnableMouseWheel(true)
     self.drawer:SetScript("OnMouseWheel", function(_, delta)
-        self.offset = Clamp(self.offset - delta, 0, math.max(0, SoundQueue:GetQueueSize() - 1 - MAX_ROWS))
+        self.offset = Clamp(self.offset - delta, 0, math.max(0, Waiting() - MAX_ROWS))
         self:LayoutQueue()
     end)
     self.queueNote = Font(self.drawer, 10, .62, .58, .46)
@@ -385,7 +391,7 @@ function MinimalPlayer:UpdateControls()
     local held = not paused and not playing and SoundQueue:GetHeldReason(self.clip)
     self.title.text:SetText(held and format("%s |cffaaaa88(%s)|r", Label(self.clip), held) or Label(self.clip))
     self.menuPlay.text:SetText(paused and L.MIN_RESTART or L.PAUSE)
-    self.menuQueue.text:SetText(format("%s (%d)", L.QUEUE_TITLE, math.max(0, SoundQueue:GetQueueSize() - 1)))
+    self.menuQueue.text:SetText(format("%s (%d)", L.QUEUE_TITLE, Waiting()))
     for _, button in ipairs({ self.menuPlay, self.menuSkip, self.menuStop }) do
         if SoundQueue:CanBePaused() then button:Enable(); button.text:SetAlpha(1)
         else button:Disable(); button.text:SetAlpha(.35) end
@@ -428,7 +434,7 @@ end
 
 function MinimalPlayer:LayoutQueue()
     if not self.drawer then return end
-    local waiting = math.max(0, SoundQueue:GetQueueSize() - 1)
+    local waiting = Waiting()
     self.offset = Clamp(self.offset, 0, math.max(0, waiting - MAX_ROWS))
     local shown = self.expanded and math.min(MAX_ROWS, waiting - self.offset) or 0
     for index = 1, MAX_ROWS do
@@ -452,8 +458,9 @@ function MinimalPlayer:LayoutQueue()
     if up then self.drawer:SetPoint("BOTTOMLEFT", self.frame, "TOPLEFT", left, -8)
     else self.drawer:SetPoint("TOPLEFT", self.frame, "BOTTOMLEFT", left, 16) end
     self.drawer:SetShown(shown > 0)
-    local glyph = (self.expanded and "Minus" or "Plus") .. (self.fold.pushed and "Button-Down" or "Button-Up")
-    self.fold.icon:SetTexture([[Interface\Buttons\UI-]] .. glyph)
+    local glyph = [[Interface\Buttons\UI-]] .. (self.expanded and "Minus" or "Plus")
+    self.fold.icon:SetTexture(glyph .. "Button-Up")
+    self.fold:GetPushedTexture():SetTexture(glyph .. "Button-Down")
     self.fold.count:SetText(waiting)
     self.fold:SetWidth(18 + self.fold.count:GetStringWidth())
     self.fold:SetShown(waiting > 0)
@@ -462,15 +469,10 @@ function MinimalPlayer:LayoutQueue()
     self.queueNote:SetText(format(L.MIN_SCROLL_QUEUE, self.offset + 1, self.offset + shown, waiting))
     self.queueNote:SetShown(paged)
     self.panel:ClearAllPoints()
-    -- The panel is shorter than the circle and starts behind its centre. Its
-    -- left corners sit beneath the opaque portrait rather than outside the rim.
-    -- Centred on the portrait, so the text block gets even top and bottom margins.
-    local left, top, bottom = Config().HidePortrait and 0 or 44, up and height or -6, shown > 0 and not up and 2 - height or 10
-    self.panel:SetPoint("TOPLEFT", self.frame, "TOPLEFT", left, top)
-    self.panel:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", 0, bottom)
-    -- One 256px tile of rock per 256 units of panel, the backdrop's inset aside.
-    local width, tall = self.frame:GetWidth() - left - 14, HEIGHT + top - bottom - 14
-    self.rock:SetTexCoord(0, width / 256, 0, tall / 256)
+    -- The panel starts behind the portrait's centre and is centred on it vertically,
+    -- so its left corners sit beneath the opaque disc and the text gets even margins.
+    self.panel:SetPoint("TOPLEFT", self.frame, "TOPLEFT", Config().HidePortrait and 0 or 44, up and height or -6)
+    self.panel:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", 0, shown > 0 and not up and 2 - height or 10)
     if self.resizer then self.resizer:SetShown(not Config().LockFrame and shown == 0) end
 end
 
