@@ -5,8 +5,8 @@ setfenv(1, SpokenEnv)
 L = {
     PLAY = "Play",
     OPT_MINIMAL_PLAYER = "Minimal Classic player",
-    OPT_MINIMAL_PLAYER_TIP = "Compact native-style portrait and progress bar. Click the quest title for the queue; right-click for playback and source actions. Turn off to restore the original player.",
-    MIN_QUEUE_HINT = "%d queued. Left-click to show or hide the queue.",
+    OPT_MINIMAL_PLAYER_TIP = "Compact native-style portrait and progress bar. Click the quest title to skip it, or the plus button for the queue; right-click for playback and source actions. Turn off to restore the original player.",
+    MIN_QUEUE_HINT = "%d queued. Click to show or hide the queue.",
     MIN_MENU_HINT = "Right-click for playback options. Drag the speaker name to move.",
     MIN_SKIP = "Skip line",
     MIN_STOP_ALL = "Stop all",

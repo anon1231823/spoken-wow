@@ -58,7 +58,8 @@ Advance(2);near(P.bar:GetValue(),.1)
 print("PASS: real queue -> UI; timer-based progress; pause freezes; restart resets")
 
 for i=1,7 do Q:Add(Clip("Waiting "..i),source) end
-P:ToggleQueue();assert(P.drawer:IsShown() and P.rows[4]:IsShown())
+assert(P.fold:IsShown() and P.fold.normal.texture:find("Plus"))
+P.fold:Click();assert(P.drawer:IsShown() and P.rows[4]:IsShown() and P.fold.normal.texture:find("Minus"))
 P.drawer.scripts.OnMouseWheel(P.drawer,-3)
 assert(P.offset==3 and P.rows[1].clip.key=="Waiting 4")
 local before=Q:GetQueueSize();P.rows[1]:Click();assert(Q:GetQueueSize()==before-1)
@@ -70,7 +71,9 @@ P:ToggleMenu();assert(P.menu:IsShown())
 for _,button in ipairs(P.frame.actions.buttons) do assert(button:GetParent()==P.actionHost);button:Click() end
 assert(clicked==2)
 Q:Skip();assert(not P.menu:IsShown())
-print("PASS: paginated queue, removal, bottom-edge drop-up, original custom/source action handlers, stale-menu closure")
+local head,size=Q:GetCurrentSound(),Q:GetQueueSize()
+P.title:Click();assert(Q:GetCurrentSound()~=head and Q:GetQueueSize()==size-1)
+print("PASS: paginated queue, removal, title click skips the line, bottom-edge drop-up, original custom/source action handlers, stale-menu closure")
 
 A.db.profile.Frame.HidePortrait=true;E.PlayerFrame:RefreshConfig()
 assert(not P.portrait:IsShown());near(P.frame:GetWidth(),300)

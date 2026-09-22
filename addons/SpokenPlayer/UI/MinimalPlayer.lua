@@ -85,22 +85,38 @@ function MinimalPlayer:Initialize(original)
     content.name = self.name -- Actions' original header anchor contract.
     content.buttons = {}
 
+    self.fold = CreateFrame("Button", nil, content)
+    self.fold:SetSize(16, 16)
+    self.fold:SetPoint("TOPRIGHT", 0, -26)
+    self.fold:SetHighlightTexture([[Interface\Buttons\UI-PlusButton-Hilight]], "ADD")
+    self.fold:SetScript("OnClick", function() self:ToggleQueue() end)
+    self.fold:SetScript("OnEnter", function()
+        GameTooltip:SetOwner(self.fold, "ANCHOR_RIGHT")
+        GameTooltip:SetText(L.QUEUE_TITLE)
+        GameTooltip:AddLine(format(L.MIN_QUEUE_HINT, math.max(0, SoundQueue:GetQueueSize() - 1)), 1, .82, 0, true)
+        GameTooltip:Show()
+    end)
+    self.fold:SetScript("OnLeave", function() self:HideTooltip() end)
+    self.fold:Hide()
+
+    -- As in the original player, clicking the playing line takes it out of the queue.
     self.title = CreateFrame("Button", nil, content)
     self.title:SetPoint("TOPLEFT", 0, -25)
-    self.title:SetPoint("TOPRIGHT", 0, -25)
+    self.title:SetPoint("TOPRIGHT", self.fold, "TOPLEFT", -4, 1)
     self.title:SetHeight(19)
     self.title:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     self.title.text = Font(self.title, 12, .88, .84, .76)
     self.title.text:SetAllPoints()
     self.title:SetScript("OnClick", function(_, button)
-        if button == "RightButton" then self:ToggleMenu() else self:ToggleQueue() end
+        if button == "RightButton" then self:ToggleMenu()
+        elseif self:HasClip() then SoundQueue:RemoveSoundFromQueue(self.clip) end
     end)
     self.title:SetScript("OnEnter", function()
-        self.title.text:SetTextColor(1, .94, .7)
+        self.title.text:SetTextColor(225 / 255, 20 / 255, 8 / 255)
         if not self:HasClip() then return end
         GameTooltip:SetOwner(self.title, "ANCHOR_RIGHT")
         GameTooltip:SetText(Label(self.clip))
-        GameTooltip:AddLine(format(L.MIN_QUEUE_HINT, math.max(0, SoundQueue:GetQueueSize() - 1)), 1, .82, 0, true)
+        GameTooltip:AddLine(L.QUEUE_REMOVE_TOOLTIP, 1, .82, 0, true)
         GameTooltip:AddLine(L.MIN_MENU_HINT, 1, 1, 1, true)
         GameTooltip:Show()
     end)
@@ -404,6 +420,10 @@ function MinimalPlayer:LayoutQueue()
     if up then self.drawer:SetPoint("BOTTOMLEFT", self.frame, "TOPLEFT", left, -4)
     else self.drawer:SetPoint("TOPLEFT", self.frame, "BOTTOMLEFT", left, 4) end
     self.drawer:SetShown(shown > 0)
+    local glyph = self.expanded and "Minus" or "Plus"
+    self.fold:SetNormalTexture([[Interface\Buttons\UI-]] .. glyph .. [[Button-Up]])
+    self.fold:SetPushedTexture([[Interface\Buttons\UI-]] .. glyph .. [[Button-Down]])
+    self.fold:SetShown(waiting > 0)
     self.queueNote:ClearAllPoints()
     self.queueNote:SetPoint("BOTTOMLEFT")
     self.queueNote:SetText(format(L.MIN_SCROLL_QUEUE, self.offset + 1, self.offset + shown, waiting))
