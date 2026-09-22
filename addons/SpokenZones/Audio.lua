@@ -453,6 +453,7 @@ local ACTIONS = {
 		-- would be a blank square; `text` is what they draw instead. The addon's own
 		-- CreateReportButton still builds the labelled one the lore window uses.
 		icon = [[Interface\HelpFrame\HelpIcon-Bug]],
+		label = "Report a problem",
 		text = "R",
 		anchor = "topright",
 		tooltip = function(tooltip)

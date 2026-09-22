@@ -307,22 +307,9 @@ function MinimalPlayer:BuildMenu()
     end)
     self.menuButtons = {}
     local function Item(text, fn)
-        local button = CreateFrame("Button", nil, menu)
-        local index = getn(self.menuButtons) + 1
-        self.menuButtons[index] = button
-        button:SetPoint("TOPLEFT", 10, -8 - (index - 1) * 23)
-        button:SetPoint("TOPRIGHT", -10, -8 - (index - 1) * 23)
-        button:SetHeight(23)
-        button.text = Font(button, 12, 1, .82, 0)
-        button.text:SetPoint("LEFT", 4, 0)
+        local button = self:MenuItem(getn(self.menuButtons) + 1, fn)
         button.text:SetText(text)
-        button:SetHighlightTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
-        button:GetHighlightTexture():SetAlpha(.25)
-        button:SetScript("OnClick", function()
-            menu:Hide()
-            self:HideTooltip()
-            if self:HasClip() then fn() end
-        end)
+        table.insert(self.menuButtons, button)
         return button
     end
     self.menuPlay = Item(L.PAUSE, function() if SoundQueue:CanBePaused() then SoundQueue:TogglePauseQueue() end end)
@@ -330,27 +317,77 @@ function MinimalPlayer:BuildMenu()
     self.menuStop = Item(L.MIN_STOP_ALL, function() SoundQueue:RemoveAllSoundsFromQueue() end)
     self.menuQueue = Item(L.QUEUE_TITLE, function() self:ToggleQueue() end)
     Item(L.SETTINGS, function() Options:Open() end)
+    self.actionRows = {}
     self.actionHost = CreateFrame("Frame", nil, menu)
-    self.actionHost:SetPoint("TOPLEFT", 12, -128)
     self.actionHost:SetSize(186, 32)
+end
+
+--- A row of the menu, `index` rows down; `fn(row)` runs on click while a clip plays.
+function MinimalPlayer:MenuItem(index, fn)
+    local button = CreateFrame("Button", nil, self.menu)
+    button:SetPoint("TOPLEFT", 10, -8 - (index - 1) * 23)
+    button:SetPoint("TOPRIGHT", -10, -8 - (index - 1) * 23)
+    button:SetHeight(23)
+    button.text = Font(button, 12, 1, .82, 0)
+    button.text:SetPoint("LEFT", 4, 0)
+    button:SetHighlightTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
+    button:GetHighlightTexture():SetAlpha(.25)
+    button:SetScript("OnClick", function()
+        self.menu:Hide()
+        self:HideTooltip()
+        if self:HasClip() then fn(button) end
+    end)
+    return button
+end
+
+--- An icon action that names itself gets a menu row, "[icon] label", in place of a bare
+--- icon whose meaning only its tooltip gave.
+function MinimalPlayer:ActionRow(index)
+    local row = self.actionRows[index]
+    if row then return row end
+    row = self:MenuItem(getn(self.menuButtons) + index, function(button)
+        if button.action.onClick then button.action.onClick(self.frame.actions.clip) end
+    end)
+    row.icon = row:CreateTexture(nil, "ARTWORK")
+    row.icon:SetSize(16, 16)
+    row.icon:SetPoint("LEFT", 4, 0)
+    row.text:ClearAllPoints()
+    row.text:SetPoint("LEFT", row.icon, "RIGHT", 5, 0)
+    self.actionRows[index] = row
+    return row
 end
 
 function MinimalPlayer:ConfigureActions()
     Actions:Configure(self.frame, self.clip)
-    local x, y, rowHeight, count = 0, 0, 0, 0
+    local x, y, rowHeight, count, rows = 0, 0, 0, 0, 0
     for _, button in ipairs(self.frame.actions.buttons) do
-        local width, height = button:GetWidth(), button:GetHeight()
-        if x > 0 and x + width > 186 then x = 0; y = y + rowHeight + 5; rowHeight = 0 end
-        button:SetParent(self.actionHost)
-        button:SetFrameLevel(self.actionHost:GetFrameLevel() + 1)
-        button:ClearAllPoints()
-        button:SetPoint("TOPLEFT", x, -y)
-        x = x + width + 6
-        rowHeight = math.max(rowHeight, height)
-        count = count + 1
+        local action = button.action
+        if action.icon and action.label then
+            button:Hide()
+            rows = rows + 1
+            local row = self:ActionRow(rows)
+            row.action = action
+            row.icon:SetTexture(action.icon)
+            row.text:SetText(action.label)
+            row:Show()
+        else
+            local width, height = button:GetWidth(), button:GetHeight()
+            if x > 0 and x + width > 186 then x = 0; y = y + rowHeight + 5; rowHeight = 0 end
+            button:SetParent(self.actionHost)
+            button:SetFrameLevel(self.actionHost:GetFrameLevel() + 1)
+            button:ClearAllPoints()
+            button:SetPoint("TOPLEFT", x, -y)
+            x = x + width + 6
+            rowHeight = math.max(rowHeight, height)
+            count = count + 1
+        end
     end
+    for index = rows + 1, getn(self.actionRows) do self.actionRows[index]:Hide() end
+    local listed = 8 + (getn(self.menuButtons) + rows) * 23
+    self.actionHost:ClearAllPoints()
+    self.actionHost:SetPoint("TOPLEFT", 12, -listed - 5)
     self.actionHost:SetHeight(math.max(1, y + rowHeight))
-    self.menu:SetHeight(count > 0 and 140 + y + rowHeight or 132)
+    self.menu:SetHeight(listed + 9 + (count > 0 and 8 + y + rowHeight or 0))
 end
 
 function MinimalPlayer:ToggleMenu()

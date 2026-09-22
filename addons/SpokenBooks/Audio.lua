@@ -46,6 +46,7 @@ local ACTIONS = {
 		-- simply missing and the button would be a blank square; `text` is what those draw
 		-- instead.
 		icon = [[Interface\HelpFrame\HelpIcon-Bug]],
+		label = "Report a problem",
 		text = "R",
 		anchor = "topright",
 		tooltip = function(tooltip)
