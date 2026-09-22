@@ -7,6 +7,7 @@
  * `fetch` and the base URL are both injectable: no test should need an ElevenLabs account,
  * and none should ever spend money.
  */
+import { parseCloneName } from "./clone-name";
 import { isVoiceSlot } from "./slots";
 
 export const DEFAULT_BASE_URL = "https://api.elevenlabs.io";
@@ -43,7 +44,11 @@ async function failure(response: Response, what: string): Promise<Error> {
   return new Error(`${what} failed (${response.status}): ${body.slice(0, 300)}`);
 }
 
-/** Voices in the account that this project can use, as `race-gender` -> voice id. */
+/**
+ * Voices in the account that this project can use, as clone name -> voice id: every
+ * language's, `dwarf-male-grim` and `dwarf-male-grim@deDE` alike (see clone-name.ts).
+ * generationStatus picks one language's out.
+ */
 export async function listVoices(options: ElevenLabsOptions = {}): Promise<Map<string, string>> {
   const { apiKey, baseUrl, fetchImpl } = config(options);
 
@@ -60,7 +65,8 @@ export async function listVoices(options: ElevenLabsOptions = {}): Promise<Map<s
     // Stock voices are skipped rather than reported: their names ("Roger - Laid-Back,
     // Casual, Resonant") cannot express a race-gender mapping, so they are not candidates.
     if (!voice.name || !voice.voice_id) continue;
-    if (await isVoiceSlot(voice.name)) found.set(voice.name, voice.voice_id);
+    const clone = parseCloneName(voice.name);
+    if (clone && (await isVoiceSlot(clone.voice))) found.set(voice.name, voice.voice_id);
   }
   return found;
 }

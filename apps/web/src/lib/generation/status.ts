@@ -15,6 +15,8 @@
  * that is the state the project was in until a plan was bought - and a batch that cannot
  * show a balance should still be able to run.
  */
+import { BASE_LANG, type Lang } from "@/lib/lang";
+import { parseCloneName } from "@/lib/voices/clone-name";
 import {
   getSubscription,
   listModels,
@@ -25,7 +27,10 @@ import {
 } from "@/lib/voices/elevenlabs";
 
 export type GenerationStatus = {
-  /** Voice names in the account that match a race-gender slot. */
+  /**
+   * The slots that have a clone in the language asked about. A slot is the same in every
+   * language; its clone is not (clone-name.ts), so English's clones say nothing about German.
+   */
   voices: string[];
   /**
    * The same voices as name -> id, which is what generating actually needs.
@@ -37,6 +42,8 @@ export type GenerationStatus = {
    * replaces a voice, which closes the window for the path that actually does it.
    */
   voiceIds: Map<string, string>;
+  /** Every clone in the account, by its full name, whatever its language. */
+  clones: Map<string, string>;
   /**
    * Models the account may generate with.
    *
@@ -87,14 +94,15 @@ async function read(options: ElevenLabsOptions): Promise<GenerationStatus> {
   try {
     // Both together: they fail for the same reasons (no key, bad key, ElevenLabs down), so
     // serialising them would only make the failure slower.
-    const [voiceIds, subscription, models] = await Promise.all([
+    const [clones, subscription, models] = await Promise.all([
       listVoices(options),
       getSubscription(options),
       listModels(options),
     ]);
     return {
-      voices: [...voiceIds.keys()].sort(),
-      voiceIds,
+      voices: [],
+      voiceIds: new Map(),
+      clones,
       models,
       subscription,
       error: null,
@@ -104,6 +112,7 @@ async function read(options: ElevenLabsOptions): Promise<GenerationStatus> {
     return {
       voices: [],
       voiceIds: new Map(),
+      clones: new Map(),
       models: [],
       subscription: null,
       error: error instanceof Error ? error.message : String(error),
@@ -122,7 +131,24 @@ async function read(options: ElevenLabsOptions): Promise<GenerationStatus> {
  * that as the reason rather than as an empty roster. This is what a signed-out visitor and
  * a collaborator who has not been to /profile both get.
  */
-export function generationStatus(options: ElevenLabsOptions = {}): Promise<GenerationStatus> {
+export function generationStatus(
+  options: ElevenLabsOptions = {},
+  lang: Lang = BASE_LANG,
+): Promise<GenerationStatus> {
+  return accountStatus(options).then((status) => inLanguage(status, lang));
+}
+
+/** The account read once, for every language: which one is asked about is a filter. */
+function inLanguage(status: GenerationStatus, lang: Lang): GenerationStatus {
+  const voiceIds = new Map<string, string>();
+  for (const [name, id] of status.clones) {
+    const clone = parseCloneName(name);
+    if (clone && clone.lang === lang) voiceIds.set(clone.voice, id);
+  }
+  return { ...status, voices: [...voiceIds.keys()].sort(), voiceIds };
+}
+
+function accountStatus(options: ElevenLabsOptions): Promise<GenerationStatus> {
   if (options.fetchImpl || options.baseUrl) return read(options);
   if (!options.apiKey) return read(options);
 

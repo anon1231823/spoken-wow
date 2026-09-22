@@ -8,6 +8,8 @@
  * Note nginx's client_max_body_size defaults to 1 MiB, which would reject every real clip
  * before it reached here — see deploy/nginx-voiceover.conf.
  */
+import { cloneName } from "@/lib/voices/clone-name";
+import { langParam } from "@/lib/lang-server";
 import { denyVoiceRequest } from "@/lib/voices/authz";
 import { listSamples, rejectUpload, storeSample } from "@/lib/voices/samples";
 
@@ -15,18 +17,26 @@ export const dynamic = "force-dynamic";
 
 type Context = { params: Promise<{ voice: string }> };
 
-export async function GET(_request: Request, context: Context) {
+export async function GET(request: Request, context: Context) {
   const { voice } = await context.params;
   const denied = await denyVoiceRequest(voice);
   if (denied) return denied;
+  // A slot is shared; its clips and its clone are the language\'s own (clone-name.ts).
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
+  const clone = cloneName(voice, lang);
 
-  return Response.json({ voice, samples: await listSamples(voice) });
+  return Response.json({ voice, samples: await listSamples(clone) });
 }
 
 export async function POST(request: Request, context: Context) {
   const { voice } = await context.params;
   const denied = await denyVoiceRequest(voice);
   if (denied) return denied;
+  // A slot is shared; its clips and its clone are the language\'s own (clone-name.ts).
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
+  const clone = cloneName(voice, lang);
 
   let form: FormData;
   try {
@@ -40,13 +50,13 @@ export async function POST(request: Request, context: Context) {
 
   // Validated as a batch before anything is written, so a rejected upload leaves no
   // half-applied state to clean up.
-  const reason = rejectUpload(incoming, await listSamples(voice));
+  const reason = rejectUpload(incoming, await listSamples(clone));
   if (reason) return Response.json({ error: reason }, { status: 400 });
 
   const stored = [];
   for (const file of incoming) {
-    stored.push(await storeSample(voice, file.name, Buffer.from(await file.arrayBuffer())));
+    stored.push(await storeSample(clone, file.name, Buffer.from(await file.arrayBuffer())));
   }
 
-  return Response.json({ voice, stored, samples: await listSamples(voice) }, { status: 201 });
+  return Response.json({ voice, stored, samples: await listSamples(clone) }, { status: 201 });
 }

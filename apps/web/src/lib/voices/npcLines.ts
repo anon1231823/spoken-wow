@@ -6,6 +6,8 @@
  * addresses its own source material by splitting on the last dash - no mapping table, and
  * nothing to keep in sync when a flavor is added.
  */
+import { BASE_LANG } from "@/lib/lang";
+import { parseCloneName } from "./clone-name";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -20,12 +22,19 @@ import { isVoiceSlot } from "./slots";
  * Empty rather than throwing, because "nothing to seed from" is a normal state for those
  * two and the caller has to handle it either way.
  */
-export async function npcLineClips(voice: string): Promise<string[]> {
-  if (!(await isVoiceSlot(voice))) throw new Error(`unknown voice slot ${voice}`);
+/**
+ * `clone` is a clone's name (clone-name.ts). Another language's barks are its own client's,
+ * spoken by its own actors, and sit under <npc lines>/<lang>/ in the same layout; English's
+ * stay where they are.
+ */
+export async function npcLineClips(clone: string): Promise<string[]> {
+  const parsed = parseCloneName(clone);
+  if (!parsed || !(await isVoiceSlot(parsed.voice))) throw new Error(`unknown voice slot ${clone}`);
 
-  const parts = voice.split("-");
+  const parts = parsed.voice.split("-");
   if (parts.length !== 3) return [];
-  const dir = path.join(NPC_LINES_DIR, `${parts[0]}-${parts[1]}`, parts[2]);
+  const root = parsed.lang === BASE_LANG ? NPC_LINES_DIR : path.join(NPC_LINES_DIR, parsed.lang);
+  const dir = path.join(root, `${parts[0]}-${parts[1]}`, parts[2]);
 
   let names: string[];
   try {

@@ -108,14 +108,14 @@ export default function VoiceSlotList({ slots, existing, initialSamples, raceTag
     for (const [index, slot] of targets.entries()) {
       try {
         const json = { "Content-Type": "application/json" };
-        const imported = await fetch(`/api/voices/${slot.name}/samples/import`, {
+        const imported = await fetch(withLang(lang, `/api/voices/${slot.name}/samples/import`), {
           method: "POST",
           headers: json,
           body: JSON.stringify({ replace: true }),
         });
         if (!imported.ok) throw new Error(String(imported.status));
 
-        const cloned = await fetch(`/api/voices/${slot.name}/clone`, {
+        const cloned = await fetch(withLang(lang, `/api/voices/${slot.name}/clone`), {
           method: "POST",
           headers: json,
           body: JSON.stringify({ replace: true }),

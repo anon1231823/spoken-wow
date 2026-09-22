@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { useRef, useState } from "react";
 import { Combine, Download, Loader2, Sparkles, Trash2, Upload } from "lucide-react";
 
@@ -40,6 +42,7 @@ type Props = {
 };
 
 export default function VoiceSamples({ voice, samples, exists, onChange, onCloned }: Props) {
+  const lang = useLang();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<Action | null>(null);
   const [confirmingReplace, setConfirmingReplace] = useState(false);
@@ -72,7 +75,7 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
     for (const file of files) body.append("files", file);
 
     const payload = await request("upload", () =>
-      fetch(`/api/voices/${voice}/samples`, { method: "POST", body }),
+      fetch(withLang(lang, `/api/voices/${voice}/samples`), { method: "POST", body }),
     );
     if (payload) onChange(payload.samples);
     // Clearing the input is what lets the same file be re-picked after a failure.
@@ -81,7 +84,7 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
 
   async function importGameClips() {
     const payload = await request("import", () =>
-      fetch(`/api/voices/${voice}/samples/import`, {
+      fetch(withLang(lang, `/api/voices/${voice}/samples/import`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ replace: samples.length > 0 }),
@@ -92,7 +95,7 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
 
   async function remove(file: string) {
     const payload = await request("delete", () =>
-      fetch(`/api/voices/${voice}/samples/${file}`, { method: "DELETE" }),
+      fetch(withLang(lang, `/api/voices/${voice}/samples/${file}`), { method: "DELETE" }),
     );
     if (!payload) return;
     onChange(samples.filter((sample) => sample.file !== file));
@@ -105,7 +108,7 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
 
   async function merge() {
     const payload = await request("merge", () =>
-      fetch(`/api/voices/${voice}/samples/merge`, {
+      fetch(withLang(lang, `/api/voices/${voice}/samples/merge`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,7 +125,7 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
 
   async function clone() {
     const payload = await request("clone", () =>
-      fetch(`/api/voices/${voice}/clone`, {
+      fetch(withLang(lang, `/api/voices/${voice}/clone`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ replace: exists }),
@@ -191,7 +194,7 @@ export default function VoiceSamples({ voice, samples, exists, onChange, onClone
                 <audio
                   controls
                   preload="metadata"
-                  src={`/api/voices/${voice}/samples/${sample.file}`}
+                  src={withLang(lang, `/api/voices/${voice}/samples/${sample.file}`)}
                   onLoadedMetadata={(event) => {
                     // Read before the state updater, which runs after the handler returns —
                     // React nulls currentTarget once dispatch ends. A stream whose length is

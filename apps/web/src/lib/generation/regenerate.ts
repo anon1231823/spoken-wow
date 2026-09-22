@@ -137,7 +137,9 @@ export async function regenerateLine(
 
   // The account, not the provenance table: a voice created in the ElevenLabs dashboard is
   // just as real to tts_cli/voices.py, and refusing to notice it would block a usable voice.
-  const status = await generationStatus(options);
+  // This language's clones: a slot cloned in English has no German voice until German clips
+  // are cloned into it.
+  const status = await generationStatus(options, lang);
   if (status.error && status.voiceIds.size === 0) {
     return { ok: false, failure: failure("auth", status.error) };
   }

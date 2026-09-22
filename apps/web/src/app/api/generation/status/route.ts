@@ -12,15 +12,16 @@
  * `noApiKey` carries. A 428 here would leave the page unable to say it.
  */
 import { readApiKey } from "@/lib/api-key";
-import { requireRegenerate } from "@/lib/generation/authz";
+import { requireIn } from "@/lib/generation/authz";
 import { observedRate } from "@/lib/generation/calibration";
 import { readSettings } from "@/lib/generation/settings";
 import { generationStatus } from "@/lib/generation/status";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const { session, denied } = await requireRegenerate();
+// In the page's language (?lang=): which slots have a clone, and the settings, are its own.
+export async function GET(request: Request) {
+  const { session, lang, denied } = await requireIn(request, "regenerate");
   if (denied) return denied;
 
   // A row that will not open reads as no key here. The distinction between the two is worth
@@ -29,8 +30,8 @@ export async function GET() {
   const apiKey = await readApiKey(session.user.id).catch(() => null);
 
   const [status, settings] = await Promise.all([
-    generationStatus(apiKey ? { apiKey } : {}),
-    readSettings(),
+    generationStatus(apiKey ? { apiKey } : {}, lang),
+    readSettings(lang),
   ]);
 
   // Calibrated from what this account has actually been charged for this model, because the

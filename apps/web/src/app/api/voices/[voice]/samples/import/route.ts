@@ -10,6 +10,8 @@
  * clone reads whatever is in the folder - so the steady state has to be the one merged file
  * that cloning actually wants.
  */
+import { cloneName } from "@/lib/voices/clone-name";
+import { langParam } from "@/lib/lang-server";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -26,6 +28,10 @@ export async function POST(request: Request, context: Context) {
   const { voice } = await context.params;
   const denied = await denyVoiceRequest(voice);
   if (denied) return denied;
+  // A slot is shared; its clips and its clone are the language\'s own (clone-name.ts).
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
+  const clone = cloneName(voice, lang);
 
   let replace = false;
   try {
@@ -35,7 +41,7 @@ export async function POST(request: Request, context: Context) {
     // A bare POST means "seed it if it is empty", which is the safe default.
   }
 
-  const existing = await listSamples(voice);
+  const existing = await listSamples(clone);
   if (existing.length > 0 && !replace) {
     return Response.json(
       { error: `${voice} already has ${existing.length} clips; pass replace to overwrite` },
@@ -43,7 +49,7 @@ export async function POST(request: Request, context: Context) {
     );
   }
 
-  const clips = await npcLineClips(voice);
+  const clips = await npcLineClips(clone);
   if (clips.length === 0) {
     return Response.json(
       { error: `no game clips for ${voice} in voice/npc-lines` },
@@ -53,11 +59,11 @@ export async function POST(request: Request, context: Context) {
 
   // Clear first, so replacing cannot leave the old merge behind to be cloned alongside the
   // new one.
-  for (const sample of existing) await deleteSample(voice, sample.file);
+  for (const sample of existing) await deleteSample(clone, sample.file);
 
   const stored = [];
   for (const clip of clips) {
-    stored.push(await storeSample(voice, path.basename(clip), await fs.readFile(clip)));
+    stored.push(await storeSample(clone, path.basename(clip), await fs.readFile(clip)));
   }
 
   // A lone clip is already what a merge of it would be, and the filter graph has no
@@ -76,11 +82,11 @@ export async function POST(request: Request, context: Context) {
         { status: 500 },
       );
     }
-    for (const sample of stored) await deleteSample(voice, sample.file);
+    for (const sample of stored) await deleteSample(clone, sample.file);
   }
 
   return Response.json(
-    { voice, imported: stored.length, merged, samples: await listSamples(voice) },
+    { voice, imported: stored.length, merged, samples: await listSamples(clone) },
     { status: 201 },
   );
 }

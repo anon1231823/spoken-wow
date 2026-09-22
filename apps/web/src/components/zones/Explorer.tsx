@@ -289,9 +289,9 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   useEffect(() => {
     if (!canRegenerate) return;
     const controller = new AbortController();
-    void fetchGenerationStatus(controller.signal).then(setStatus);
+    void fetchGenerationStatus(controller.signal, lang).then(setStatus);
     return () => controller.abort();
-  }, [canRegenerate]);
+  }, [canRegenerate, lang]);
 
   /**
    * One line, awaited.

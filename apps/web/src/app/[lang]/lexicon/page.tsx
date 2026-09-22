@@ -39,7 +39,7 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
   const [lexicon, settings, status] = await Promise.all([
     readLexicon(lang),
     readSettings(lang),
-    generationStatus(apiKey ? { apiKey } : {}),
+    generationStatus(apiKey ? { apiKey } : {}, lang),
   ]);
   const config = settings.config;
 

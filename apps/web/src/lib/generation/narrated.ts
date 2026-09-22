@@ -15,7 +15,6 @@
  * THE REQUEST ITSELF IS lib/generation/tts.ts, the same client quests narrates through.
  */
 import { BASE_LANG, elevenLabsCode } from "@/lib/lang";
-import { currentLocator } from "./dictionary";
 import "server-only";
 
 import { commitTake } from "@/lib/takes/commit";
@@ -58,7 +57,7 @@ export async function regenerateNarrated(
 ): Promise<RegenerateResult> {
   let config: VoiceConfig;
   try {
-    config = await narratorConfig(options.apiKey);
+    config = await narratorConfig(options.apiKey, options.lang ?? BASE_LANG);
   } catch (error) {
     return { ok: false, failure: asFailure(error) };
   }
@@ -66,14 +65,11 @@ export async function regenerateNarrated(
   // Held across the ElevenLabs call, not just the write: two requests for one line must not
   // both spend credits, and a restore must not interleave with the commit.
   const lang = options.lang ?? BASE_LANG;
-  // The narrator's dictionary is English's, pinned in its config; another language is
-  // spoken with its own, whatever its latest upload is.
+  // The language's own lexicon, which narratorConfig read for it.
   const dictionary =
-    lang === BASE_LANG
-      ? config.dictionaryId && config.dictionaryVersionId
-        ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
-        : null
-      : await currentLocator(lang);
+    config.dictionaryId && config.dictionaryVersionId
+      ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
+      : null;
 
   const outcome = await withTakeLock(source, line.file, async (): Promise<RegenerateResult> => {
     // No seed: a line is narrated once and re-rolled by hand if it comes out wrong, so

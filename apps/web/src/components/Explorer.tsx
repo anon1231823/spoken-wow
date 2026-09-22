@@ -348,9 +348,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
   useEffect(() => {
     if (!showRegenerate) return;
     const controller = new AbortController();
-    void fetchGenerationStatus(controller.signal).then(setStatus);
+    void fetchGenerationStatus(controller.signal, lang).then(setStatus);
     return () => controller.abort();
-  }, [showRegenerate]);
+  }, [showRegenerate, lang]);
 
   /**
    * Adopt a rewritten line.

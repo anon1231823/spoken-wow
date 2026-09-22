@@ -1,3 +1,4 @@
+import { cloneName } from "@/lib/voices/clone-name";
 import { pageLang } from "@/lib/lang-server";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
@@ -37,7 +38,9 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
   // the roster of whichever account is about to be generated from. A row that will not open
   // reads as none, and the message below covers both.
   const apiKey = await readApiKey(session.user.id).catch(() => null);
-  const account = await generationStatus(apiKey ? { apiKey } : {});
+  // The page's language's clones: a slot filled in English is empty in German until German
+  // clips are cloned into it.
+  const account = await generationStatus(apiKey ? { apiKey } : {}, lang);
   const existing = account.error && account.voiceIds.size === 0 ? null : account.voiceIds;
   const error = apiKey
     ? account.error
@@ -47,7 +50,9 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
   // Twenty readdir calls, so the roster arrives with its clip counts already filled in
   // rather than each row fetching its own once expanded.
   const samples: Record<string, Sample[]> = Object.fromEntries(
-    await Promise.all(all.map(async (slot) => [slot.name, await listSamples(slot.name)] as const)),
+    await Promise.all(
+      all.map(async (slot) => [slot.name, await listSamples(cloneName(slot.name, lang))] as const),
+    ),
   );
 
   const created = existing ? all.filter((slot) => existing.has(slot.name)).length : 0;

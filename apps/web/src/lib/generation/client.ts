@@ -79,9 +79,11 @@ export type GenerationStatusResponse = {
 
 export async function fetchGenerationStatus(
   signal?: AbortSignal,
+  lang: Lang = BASE_LANG,
 ): Promise<GenerationStatusResponse | null> {
   try {
-    const response = await fetch("/api/generation/status", { signal });
+    // Per language: which slots have a clone is the page's language's answer.
+    const response = await fetch(withLang(lang, "/api/generation/status"), { signal });
     if (!response.ok) return null;
     return (await response.json()) as GenerationStatusResponse;
   } catch {

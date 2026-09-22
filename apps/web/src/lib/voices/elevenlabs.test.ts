@@ -29,6 +29,23 @@ describe("listVoices", () => {
     expect(found.get("orc-male-standard")).toBe("orc1");
   });
 
+  // Each language clones a slot from its own actors' clips, under its own name.
+  it("keeps every language's clone, under its own name", async () => {
+    const fetchImpl = respondWith({
+      voices: [
+        { name: "orc-male-standard", voice_id: "en" },
+        { name: "orc-male-standard@deDE", voice_id: "de" },
+        { name: "orc-male-standard@enUS", voice_id: "bogus" },
+        { name: "orc-male-standard@xxYY", voice_id: "bogus" },
+      ],
+    });
+    const found = await listVoices({ apiKey: "k", fetchImpl });
+    expect(Object.fromEntries(found)).toEqual({
+      "orc-male-standard": "en",
+      "orc-male-standard@deDE": "de",
+    });
+  });
+
   // A name that looks right but is not a voice the corpus needs must not be adopted: the
   // Python side would never ask for it, so surfacing it as "created" would be a lie.
   it("ignores a race-gender name the corpus does not use", async () => {
@@ -218,5 +235,32 @@ describe("listModels", () => {
   it("throws with the upstream text when the request fails", async () => {
     const { options } = client({ detail: "bad key" }, 401);
     await expect(listModels(options)).rejects.toThrow(/listing ElevenLabs models.*401.*bad key/s);
+  });
+});
+
+describe("generationStatus, in a language", () => {
+  // The slot is shared and the clone is not: a slot cloned in English is empty in German.
+  it("reports only the language's own clones as its voices", async () => {
+    const { generationStatus } = await import("@/lib/generation/status");
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      const path = String(url);
+      if (path.endsWith("/v1/voices")) {
+        return Response.json({
+          voices: [
+            { name: "orc-male-standard", voice_id: "en" },
+            { name: "narrator-male@deDE", voice_id: "de" },
+          ],
+        });
+      }
+      if (path.endsWith("/v1/models")) return Response.json([]);
+      return Response.json({ tier: "creator", character_count: 0, character_limit: 1 });
+    });
+
+    const english = await generationStatus({ apiKey: "k", fetchImpl }, "enUS");
+    const german = await generationStatus({ apiKey: "k", fetchImpl }, "deDE");
+
+    expect(english.voices).toEqual(["orc-male-standard"]);
+    expect(german.voices).toEqual(["narrator-male"]);
+    expect(german.voiceIds.get("narrator-male")).toBe("de");
   });
 });
