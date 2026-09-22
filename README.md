@@ -1,5 +1,25 @@
 # Spoken
 
+## Minimal Classic UI fork
+
+This branch adds a compact Classic-style layout to **SpokenPlayer 2.0.4**:
+a round native portrait, speaker name, quest title and slim progress bar.
+Playback controls and the queue appear on interaction. The original layout
+remains available in `/sp options`.
+
+Based on [`rusty-key/spoken-wow`](https://github.com/rusty-key/spoken-wow),
+tag `spoken/v2.0.4`. The layout is enabled by default in this fork on modern
+clients; original 1.12/2.4.3/3.3.5 clients keep the existing player.
+
+[Installation, controls and testing notes](docs/minimal-classic/README.md)
+
+![Minimal Classic design preview](docs/minimal-classic/design-preview.png)
+
+*Browser design preview, not an in-game screenshot. The final static-portrait
+revision still needs its in-game visual check.*
+
+## Upstream project
+
 Voiced dialogue, lore and text for World of Warcraft Classic. One platform,
 several addons.
 

@@ -725,12 +725,16 @@ libs["AceDB-3.0"] = {
 --- variables the way ADDON_LOADED would.
 function M.LoadSpoken(addonDirectory)
     for _, file in ipairs({ "Environment", "Version", "Core", "SoundUtils", "Callbacks", "SoundQueue", "Sources",
-        "Strings", "UI/Layout", "UI/Portrait", "UI/Actions", "UI/PlayerFrame", "UI/MinimapButton", "UI/Options",
+        "Strings", "UI/Layout", "UI/Portrait", "UI/StaticPortrait", "UI/Actions", "UI/PlayerFrame",
+        "UI/MinimalPlayer", "UI/MinimapButton", "UI/Options",
         "API", "Compat" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
     local env = _G.SpokenEnv
     env.Addon:InitDB()
+    -- These suites exercise the original layout. The Minimal Classic layout,
+    -- including switching back to this one, has its own UI/timer fixture.
+    env.Addon.db.profile.Frame.MinimalPlayer = false
     return env
 end
 

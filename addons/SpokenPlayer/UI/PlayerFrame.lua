@@ -261,6 +261,12 @@ function PlayerFrame:InitMover()
 end
 
 function PlayerFrame:RefreshConfig()
+    if MinimalPlayer:IsEnabled() then
+        self.frame:Hide()
+        MinimalPlayer:RefreshConfig(self)
+        return
+    end
+    MinimalPlayer:SetVisible(false, true)
     local cfg = Addon.db.profile.Frame
     if cfg.HidePortrait then
         if self.frame.portrait:IsShown() then
@@ -408,6 +414,7 @@ end
 
 function PlayerFrame:Update()
     if not self.frame then return end
+    if MinimalPlayer:IsEnabled() then MinimalPlayer:Update(); return end
     self.frame:SetShown(not Addon.db.profile.Frame.HideFrame and not SoundQueue:IsEmpty())
     if not self.frame:IsShown() then return end
 
@@ -459,6 +466,7 @@ end
 function PlayerFrame:Describe()
     local lines = {}
     local function Say(text) table.insert(lines, text) end
+    Say(MinimalPlayer:Describe())
     if not self.frame then
         Say("no frame built")
         return lines
@@ -492,5 +500,6 @@ end
 --- The client places the frame (SetUserPlaced), so recovering one dragged off-screen
 --- means asking it to lay itself out again rather than clearing a saved coordinate.
 function PlayerFrame:Reset()
+    if MinimalPlayer:IsEnabled() then MinimalPlayer:Reset(); return end
     if self.frame then self.frame:Reset() end
 end

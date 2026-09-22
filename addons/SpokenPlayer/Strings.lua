@@ -4,6 +4,14 @@ setfenv(1, SpokenEnv)
 -- table the way the zones addon's Locale/ files do, once there is a second language.
 L = {
     PLAY = "Play",
+    OPT_MINIMAL_PLAYER = "Minimal Classic player",
+    OPT_MINIMAL_PLAYER_TIP = "Compact native-style portrait and progress bar. Click the quest title for the queue; right-click for playback and source actions. Turn off to restore the original player.",
+    MIN_QUEUE_HINT = "%d queued. Left-click to show or hide the queue.",
+    MIN_MENU_HINT = "Right-click for playback options. Drag the speaker name to move.",
+    MIN_SKIP = "Skip line",
+    MIN_STOP_ALL = "Stop all",
+    MIN_RESTART = "Play from beginning",
+    MIN_SCROLL_QUEUE = "%d-%d of %d  (scroll)",
     PAUSE = "Pause",
     PAUSE_TOOLTIP = "Pause stops the clip; play starts it again from the beginning. The game cannot resume a sound part-way through.",
     STOP = "Stop",

@@ -21,6 +21,8 @@ Defaults = {
             FrameStrata = "HIGH",
             HidePortrait = false,
             HideFrame = false,
+            MinimalPlayer = true,
+            MinimalWidth = 380,
             -- Per action id, for the ones an addon declared optional. Absent means shown.
             HiddenActions = {},
         },
