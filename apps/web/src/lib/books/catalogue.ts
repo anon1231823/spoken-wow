@@ -44,9 +44,17 @@ export type BookPage = {
   hash: string;
   /** Store-relative and extension-less, e.g. '1381'. */
   file: string;
-  /** False for the 88 pages the game has but nothing can voice. */
+  /** False for the 88 pages the game has but nothing can voice, and for a page another
+   *  language has not translated. */
   generatable: boolean;
   skipReason: string | null;
+  /**
+   * What a language other than English has not translated yet; the English stands in on
+   * the page, marked, and is never voiced. Absent in English, and where nothing is missing.
+   */
+  missing?: { text: boolean; title: boolean };
+  /** The English page, for a translator to work from. Absent when reading English. */
+  english?: string;
 };
 
 /** The live take for a page, as the explorer needs it. Mirrors the zones shape. */
@@ -139,10 +147,70 @@ async function stampOf(lang: Lang): Promise<string> {
        from "book_line" where "lang" = $1`,
     [lang],
   );
-  return rows[0]?.stamp ?? "0:0:0";
+  const own = rows[0]?.stamp ?? "0:0:0";
+  if (lang === BASE_LANG) return own;
+
+  // Another language is read over the English pages and names their owners in entity_name,
+  // so its memo moves with either of those as well as with its own text.
+  const names = await query<{ stamp: string }>(
+    `select coalesce(max("id"), 0) || ':' || count(*) || ':'
+             || coalesce(sum("id") filter (where "isCurrent"), 0) as "stamp"
+       from "entity_name" where "lang" = $1 and "kind" in ('item', 'gameobject')`,
+    [lang],
+  );
+  return `${await stampOf(BASE_LANG)}|${own}|${names[0]?.stamp ?? ""}`;
+}
+
+/**
+ * Another language's pages: every English page, with this language's text and titles where
+ * it has them. The English pages are the skeleton because they are what exists -- which
+ * pages there are, in which books, owned by what, voiced into which file -- and none of that
+ * differs by language. Where the language has not written a page, the English stands in,
+ * marked `missing`, and the page is not generatable: a rendering, never a row.
+ *
+ * A title is the owner's name, so it comes from entity_name under the first owner, the one
+ * a page is filed under.
+ */
+async function buildTranslated(lang: Lang): Promise<BookPage[]> {
+  const [english, own, names] = await Promise.all([
+    catalogue(BASE_LANG),
+    query<{ lineId: string; text: string; generatable: boolean; skipReason: string | null }>(
+      `select "lineId", "text", "generatable", "skipReason" from "book_line"
+        where "lang" = $1 and "isCurrent"`,
+      [lang],
+    ),
+    query<{ kind: string; entityId: string; name: string }>(
+      `select "kind", "entityId", "name" from "entity_name"
+        where "lang" = $1 and "kind" in ('item', 'gameobject') and "isCurrent"`,
+      [lang],
+    ),
+  ]);
+  const texts = new Map(own.map((row) => [row.lineId, row]));
+  const titles = new Map(names.map((row) => [`${row.kind}:${row.entityId}`, row.name]));
+
+  return english.map((page) => {
+    const text = texts.get(page.id);
+    const owner = `${page.ownerKind === "object" ? "gameobject" : "item"}:${page.ownerIds[0]}`;
+    const title = titles.get(owner);
+    const spoken = text ? spokenText(text.text) : "";
+    return {
+      ...page,
+      title: title ?? page.title,
+      text: text ? text.text : page.text,
+      spoken,
+      hash: textHash(text ? text.text : ""),
+      generatable: text ? text.generatable : false,
+      skipReason: text ? text.skipReason : "untranslated",
+      english: page.text,
+      ...(!text || title === undefined
+        ? { missing: { text: !text, title: title === undefined } }
+        : {}),
+    };
+  });
 }
 
 async function build(lang: Lang): Promise<BookPage[]> {
+  if (lang !== BASE_LANG) return buildTranslated(lang);
   const rows = await query<{
     lineId: string;
     pageId: number;

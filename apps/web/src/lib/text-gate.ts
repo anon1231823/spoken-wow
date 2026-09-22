@@ -45,11 +45,15 @@ export function hasInvalidChars(text: string): boolean {
  * it is read off the corpus's own skipReason and no override can reach it. `invalid-chars` is
  * a property of the text, so it is re-decided here rather than trusted from the corpus: that
  * is what lets an override rescue the 99 lines the extractor had to give up on.
+ *
+ * `untranslated` is a language with no text for the line: what the row carries is the
+ * English, shown so the explorer has something to show, and voicing it would file an English
+ * recording under another language.
  */
 export function isVoiceable(
   line: { skipReason: string | null },
   effectiveText: string,
 ): boolean {
-  if (line.skipReason === "progress") return false;
+  if (line.skipReason === "progress" || line.skipReason === "untranslated") return false;
   return !hasInvalidChars(effectiveText);
 }

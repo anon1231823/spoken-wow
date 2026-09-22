@@ -60,7 +60,9 @@ export function PageTextDialog({ line, onClose, onSaved }: Props) {
       return;
     }
 
-    setText(line.text);
+    // An untranslated page carries the English only so the explorer has something to show;
+    // the box starts empty, and the English to work from is shown above it instead.
+    setText(line.missing?.text ? "" : line.text);
     setNote("");
     setError(null);
     setVersions(null);
@@ -157,6 +159,13 @@ export function PageTextDialog({ line, onClose, onSaved }: Props) {
         {line.pageCount > 1 ? `page ${line.pageNumber} of ${line.pageCount}` : "one page"} ·{" "}
         {line.file}
       </p>
+
+      {/* The English page, when this is a translation: to read beside the box. */}
+      {line.english !== undefined ? (
+        <p className="text-muted-foreground bg-muted mb-2 max-h-40 overflow-y-auto rounded p-2 text-xs whitespace-pre-wrap">
+          {line.english}
+        </p>
+      ) : null}
 
       <textarea
         autoFocus

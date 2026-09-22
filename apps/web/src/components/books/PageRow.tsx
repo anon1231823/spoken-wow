@@ -1,5 +1,6 @@
 "use client";
 
+import { Untranslated, UntranslatedMark } from "@/components/Untranslated";
 import { ChevronDownIcon, Eraser, FlagIcon, PencilIcon, PlayIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -113,7 +114,7 @@ export function PageRow({
               title={`Show only ${line.title}`}
               onClick={() => onSelectBook(line)}
             >
-              {line.title}
+              <Untranslated missing={line.missing?.title}>{line.title}</Untranslated>
             </button>
           </td>
 
@@ -161,8 +162,13 @@ export function PageRow({
           </button>
 
           <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "clamp-2")}>
-            {line.text}
+            <Untranslated missing={line.missing?.text}>{line.text}</Untranslated>
           </span>
+          {line.missing?.text ? (
+            <span className="mt-0.5 shrink-0 text-xs">
+              <UntranslatedMark />
+            </span>
+          ) : null}
 
           {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle
               needs a real control. It doubles as the only thing saying rows expand. */}

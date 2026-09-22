@@ -1,5 +1,6 @@
 "use client";
 
+import { Untranslated, UntranslatedMark } from "@/components/Untranslated";
 import { useLang } from "@/components/LangProvider";
 import { localeHref } from "@/lib/lang";
 import {
@@ -188,7 +189,7 @@ export default function LineRow({
           title={`Show only ${line.npcName}`}
           onClick={() => onNarrowToNpc(line)}
         >
-          {line.npcName}
+          <Untranslated missing={line.missing?.npcName}>{line.npcName}</Untranslated>
         </button>
         <span className="text-muted-foreground block truncate text-xs">
           {line.npcType} {line.npcId} <WowheadLink href={wowheadEntityUrl(line.npcType, line.npcId)} />
@@ -205,7 +206,9 @@ export default function LineRow({
               title={`Show only quest ${line.questId}`}
               onClick={() => onNarrowToQuest(line)}
             >
-              {line.questTitle ?? `quest ${line.questId}`}
+              <Untranslated missing={line.missing?.questTitle}>
+                {line.questTitle ?? `quest ${line.questId}`}
+              </Untranslated>
             </button>
             <span className="text-muted-foreground block truncate text-xs">
               quest {line.questId} <WowheadLink href={wowheadQuestUrl(line.questId)} />
@@ -250,11 +253,12 @@ export default function LineRow({
           {/* The override, when there is one: this cell shows what the line says out loud,
               and after a rewrite that is no longer what the corpus holds. */}
           <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "line-clamp-2")}>
-            {line.override ?? line.text}
+            <Untranslated missing={line.missing?.text}>{line.override ?? line.text}</Untranslated>
           </span>
           {/* What is true of the TEXT stays beside the text; what is true of the audio
               moved to the Audio column, where it lines up down the page. */}
           <span className="mt-0.5 flex shrink-0 gap-2 text-xs">
+            {line.missing?.text ? <UntranslatedMark /> : null}
             {/* Nothing else about a contributed row differs from a native one -- this is the
                 whole marker, plus a way back to where it came from. */}
             {line.contributionId ? (

@@ -1,5 +1,6 @@
 "use client";
 
+import { Untranslated, UntranslatedMark } from "@/components/Untranslated";
 import {
   ChevronDownIcon,
   Eraser,
@@ -139,18 +140,16 @@ export function LineRow({
             <PlayIcon className="size-3.5" />
           </button>
 
-          {/* An untranslated line is empty, not English: see buildOverlaidCatalogue. The word
-              stands in for the text so the row still says what it is, without putting prose
-              there that nobody wrote in this language. */}
+          {/* An untranslated line shows the English in its place, marked as such, so the
+              reader still sees what the line is about and that it is waiting to be written. */}
+          <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "clamp-2")}>
+            <Untranslated missing={line.translated === false}>{line.text}</Untranslated>
+          </span>
           {line.translated === false ? (
-            <span className={cn("min-w-0 flex-1 text-xs", STATE_STYLE.missing)}>
-              no translation
+            <span className="mt-0.5 shrink-0 text-xs">
+              <UntranslatedMark />
             </span>
-          ) : (
-            <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "clamp-2")}>
-              {line.text}
-            </span>
-          )}
+          ) : null}
 
           {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle needs
               a real control. It doubles as the only thing on screen saying rows expand. */}

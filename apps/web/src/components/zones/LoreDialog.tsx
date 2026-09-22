@@ -52,9 +52,9 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
       return;
     }
 
-    // An untranslated line carries no text at all, so this is empty either way; the
-    // English to work from is shown above the box, not in it.
-    setText(line.text);
+    // An untranslated line carries the English only so the explorer has something to show;
+    // the box starts empty, and the English to work from is shown above it instead.
+    setText(line.translated === false ? "" : line.text);
     setNote("");
     setError(null);
     setVersions(null);
@@ -148,6 +148,14 @@ export function LoreDialog({ line, onClose, onSaved }: Props) {
       <p className="mb-3 text-xs text-muted-foreground">
         {line.zoneName} · {line.file}
       </p>
+
+      {/* What is being translated, when this is a translation: the English, to read beside
+          the box rather than to be edited in it. */}
+      {line.english !== undefined ? (
+        <p className="text-muted-foreground bg-muted mb-2 max-h-40 overflow-y-auto rounded p-2 text-xs whitespace-pre-wrap">
+          {line.english}
+        </p>
+      ) : null}
 
       <textarea
         autoFocus

@@ -47,14 +47,21 @@ export type CorpusEntry = {
   hash: string;
   /** Store-relative and extension-less, e.g. '1411/razor-hill'. */
   file: string;
+  /**
+   * What a language other than English has not written yet; the English stands in on the
+   * page. A line whose text is missing has nothing to narrate, so `spoken` is empty and the
+   * line cannot be queued. Absent in English, and where nothing is missing.
+   */
+  missing?: { text: boolean; name: boolean };
+  /** The English prose, for a translator to work from. Absent when reading English. */
+  english?: string;
 };
 
 /**
  * A line as the explorer shows it.
  *
- * The same thing as a corpus line today. The alias is kept because it is what every
- * caller names, and because the two were different when the corpus could be read in
- * more than one language.
+ * The same thing as a corpus line. The alias is kept because it is what every caller
+ * names.
  */
 export type CatalogueEntry = CorpusEntry;
 
@@ -181,7 +188,18 @@ async function stampOf(lang: Lang = BASE_LANG): Promise<string> {
        from "lore_line" where "lang" = $1`,
     [lang],
   );
-  return rows[0]?.stamp ?? "0:0:0";
+  const own = rows[0]?.stamp ?? "0:0:0";
+  if (lang === BASE_LANG) return own;
+
+  // Another language is read over the English lines and names its places in entity_name,
+  // so its memo moves with either of those as well as with its own prose.
+  const names = await query<{ stamp: string }>(
+    `select coalesce(max("id"), 0) || ':' || count(*) || ':'
+             || coalesce(sum("id") filter (where "isCurrent"), 0) as "stamp"
+       from "entity_name" where "lang" = $1 and "kind" in ('zone', 'subzone')`,
+    [lang],
+  );
+  return `${await stampOf(BASE_LANG)}|${own}|${names[0]?.stamp ?? ""}`;
 }
 
 async function memoised<T>(
@@ -208,6 +226,7 @@ async function memoised<T>(
  * whether the explorer or the CLI worked them out.
  */
 async function buildCorpus(lang: Lang): Promise<CorpusEntry[]> {
+  if (lang !== BASE_LANG) return buildTranslated(lang);
   const [rows, rules] = await Promise.all([corpusRows(lang), loadPronunciation()]);
   if (rows.length === 0) throw new CorpusEmpty(lang);
 
@@ -231,6 +250,54 @@ async function buildCorpus(lang: Lang): Promise<CorpusEntry[]> {
       spoken,
       hash: textHash(spoken),
       file: files.get(row.lineId)!,
+    };
+  });
+}
+
+/**
+ * Another language's lines: every English line, with this language's prose and place
+ * names where it has them.
+ *
+ * The English lines are the skeleton, and not only because they are what exists: a line's
+ * audio path is a slug of its English name (naming.mjs), frozen, and the same file in every
+ * language. So the English is built exactly as it always is, and the language contributes
+ * what it says and what it calls each place. Where it has not, the English stands in and
+ * `missing` says so -- a rendering, never written back, and never voiced.
+ *
+ * Its spoken text goes through the English pronunciation rules for now, the only ones there
+ * are; a language's own lexicon arrives with generating in it.
+ */
+async function buildTranslated(lang: Lang): Promise<CorpusEntry[]> {
+  const [english, own, names, rules] = await Promise.all([
+    catalogue(BASE_LANG),
+    currentLore(lang),
+    query<{ entityId: string; name: string }>(
+      `select "entityId", "name" from "entity_name"
+        where "lang" = $1 and "kind" in ('zone', 'subzone') and "isCurrent"`,
+      [lang],
+    ),
+    loadPronunciation(),
+  ]);
+  const named = new Map(names.map((row) => [row.entityId, row.name]));
+
+  return english.map((entry) => {
+    const text = own.get(entry.id);
+    const name = named.get(entry.id);
+    const textMissing = !text || text.full.trim() === "";
+    const spoken = textMissing ? "" : toSpokenText(text.full, rules);
+    return {
+      ...entry,
+      name: name ?? entry.name,
+      zoneName: named.get(`z:${entry.mapID}`) ?? entry.zoneName,
+      full: text && !textMissing ? text.full : entry.full,
+      short: text && !textMissing ? text.short : entry.short,
+      source: text && !textMissing ? (text.source ?? undefined) : entry.source,
+      spoken,
+      hash: textHash(spoken),
+      english: entry.full,
+      ...(textMissing || name === undefined
+        ? { missing: { text: textMissing, name: name === undefined } }
+        : {}),
     };
   });
 }

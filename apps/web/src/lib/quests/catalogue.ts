@@ -65,6 +65,23 @@ export function isCorpusEmpty(error: unknown): boolean {
 }
 
 async function stampOf(lang: Lang): Promise<string> {
+  // Another language is read over the English lines and speakers, so its memo moves when
+  // they do as well as when its own text or names do.
+  if (lang !== BASE_LANG) {
+    const rows = await query<{ stamp: string }>(
+      `select (select coalesce(max("id"), 0) || ':' || count(*) || ':'
+                      || coalesce(sum("id") filter (where "isCurrent"), 0)
+                 from "quest_line" where "lang" = $1)
+             || '/' ||
+              (select coalesce(max("id"), 0) || ':' || count(*) || ':'
+                      || coalesce(sum("id") filter (where "isCurrent"), 0)
+                 from "entity_name"
+                where "lang" = $1 and "kind" in ('quest', 'creature', 'gameobject', 'item'))
+             as "stamp"`,
+      [lang],
+    );
+    return `${await stampOf(BASE_LANG)}|${rows[0]?.stamp ?? ""}`;
+  }
   const rows = await query<{ stamp: string }>(
     `select (select coalesce(max("id"), 0) || ':' || count(*) || ':'
                     || coalesce(sum("id") filter (where "isCurrent"), 0)
@@ -106,6 +123,7 @@ type Row = {
  * search result is ordered the way it always was, which paging depends on.
  */
 async function build(lang: Lang): Promise<CorpusLine[]> {
+  if (lang !== BASE_LANG) return buildTranslated(lang);
   const rows = await query<Row>(
     `select l."lineId", l."source", l."questId", l."questTitle",
             s."npcId", s."npcName", s."npcType", s."race", s."gender", s."flavor", s."voice",
@@ -127,6 +145,66 @@ async function build(lang: Lang): Promise<CorpusLine[]> {
     npcType: row.npcType as CorpusLine["npcType"],
     source: row.source as CorpusLine["source"],
     playerGender: row.playerGender as CorpusLine["playerGender"],
+  }));
+}
+
+/**
+ * Another language's lines: every English line, with this language's text and names where
+ * it has them.
+ *
+ * THE ENGLISH LINES ARE THE SKELETON because they are what exists: which lines the game
+ * has, who speaks each, what file each is voiced into. None of that differs by language --
+ * line ids and file names are derived from the English text, and the speakers are facts
+ * about the world -- so a language contributes only what it says and what it calls things.
+ *
+ * Where it has not said, the English stands in and `missing` says so. That is a rendering,
+ * never a row: nothing here is written back, exported or voiced. A line whose text is
+ * missing is not generatable, so the English cannot be recorded under the language's name.
+ */
+async function buildTranslated(lang: Lang): Promise<CorpusLine[]> {
+  const rows = await query<
+    Row & { textMissing: boolean; titleMissing: boolean; nameMissing: boolean }
+  >(
+    `select l."lineId", l."source", l."questId",
+            coalesce(qn."name", l."questTitle") as "questTitle",
+            s."npcId", coalesce(nn."name", s."npcName") as "npcName", s."npcType",
+            s."race", s."gender", s."flavor", s."voice",
+            l."playerGender", coalesce(t."text", l."text") as "text",
+            coalesce(t."originalText", l."originalText") as "originalText", l."fileName",
+            coalesce(t."generatable", false) as "generatable",
+            case when t."id" is null then 'untranslated' else t."skipReason" end as "skipReason",
+            s."contributionId",
+            t."id" is null as "textMissing",
+            l."questId" is not null and qn."id" is null as "titleMissing",
+            nn."id" is null as "nameMissing"
+       from "quest_line_speaker" s
+       join "quest_line" l
+         on l."lineId" = s."lineId" and l."variant" = s."variant"
+        and l."lang" = s."lang" and l."isCurrent"
+       left join "quest_line" t
+         on t."lineId" = l."lineId" and t."variant" = l."variant"
+        and t."lang" = $1 and t."isCurrent"
+       left join "entity_name" qn
+         on qn."kind" = 'quest' and qn."entityId" = l."questId"::text
+        and qn."lang" = $1 and qn."isCurrent"
+       left join "entity_name" nn
+         on nn."kind" = s."npcType" and nn."entityId" = s."npcId"::text
+        and nn."lang" = $1 and nn."isCurrent"
+      where s."lang" = '${BASE_LANG}'
+      order by s."ord"`,
+    [lang],
+  );
+
+  if (rows.length === 0) throw new CorpusEmpty();
+
+  return rows.map(({ textMissing, titleMissing, nameMissing, ...row }) => ({
+    ...row,
+    npcType: row.npcType as CorpusLine["npcType"],
+    source: row.source as CorpusLine["source"],
+    playerGender: row.playerGender as CorpusLine["playerGender"],
+    ...(textMissing || titleMissing || nameMissing
+      ? { missing: { text: textMissing, questTitle: titleMissing, npcName: nameMissing } }
+      : {}),
   }));
 }
 

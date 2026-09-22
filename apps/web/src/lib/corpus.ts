@@ -39,6 +39,13 @@ export type CorpusLine = {
    * because many tests build a CorpusLine by hand for questions this has no bearing on.
    */
   contributionId?: number | null;
+  /**
+   * What a language other than English has not translated yet. The row then carries the
+   * English in its place, for the explorer to show and mark -- never to voice: a line whose
+   * text is missing is not generatable. Absent in English, and absent on a row where nothing
+   * is missing.
+   */
+  missing?: { text: boolean; questTitle: boolean; npcName: boolean };
 };
 
 /**
