@@ -36,7 +36,8 @@ alter table "line_ignore" add column "lang" text check ("lang" ~ '^[a-z]{2}[A-Z]
 create unique index "line_ignore_scope_idx" on "line_ignore" ("lineId", (coalesce("lang", '')));
 
 -- The wider indexes 0035 added have been what the code conflicts on for a release now, so the
--- old ones can go -- and must, before the first non-English job or ack, which they would
--- refuse as a duplicate of the English one.
+-- old ones can go -- and must, before the first non-English job, ack or clone, which they
+-- would refuse as a duplicate of the English one.
 drop index "regeneration_job_one_per_file";
 alter table "take_ack" drop constraint "take_ack_pkey";
+alter table "voice_clone" drop constraint "voice_clone_pkey";
