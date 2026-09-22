@@ -658,6 +658,8 @@ function _G.UIDropDownMenu_CreateInfo() return {} end
 function _G.UIDropDownMenu_AddButton(info) if openMenu then table.insert(openMenu, info) end end
 function _G.UIDropDownMenu_SetText(frame, text) frame.dropdownText = text end
 function _G.UIDropDownMenu_SetWidth() end
+function _G.UIDropDownMenu_EnableDropDown(frame) frame.dropdownDisabled = false end
+function _G.UIDropDownMenu_DisableDropDown(frame) frame.dropdownDisabled = true end
 
 -- The context-menu half of the API: a menu is open or it is not, and opening it runs the
 -- initializer the addon registered. ToggleDropDownMenu is what gives a Blizzard menu its

@@ -49,6 +49,7 @@ books-%:
 test-player: ## Run the addons' Lua tests (needs luajit)
 	@[ -n "$(LUA)" ] || { echo "No luajit found: brew install luajit"; exit 1; }
 	@$(LUA) tests/lua/quest_dispatch_test.lua
+	@$(LUA) tests/lua/quest_autoplay_test.lua
 	@$(LUA) tests/lua/quest_overlay_test.lua
 	@$(LUA) tests/lua/easter_egg_test.lua
 	@$(LUA) tests/lua/sound_utils_test.lua

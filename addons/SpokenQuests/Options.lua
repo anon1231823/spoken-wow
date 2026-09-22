@@ -36,10 +36,23 @@ local GeneralTab =
             inline = true,
             name = "Audio",
             args = {
+                ToggleAutoplay = {
+                    type = "toggle",
+                    order = 1,
+                    width = 2,
+                    name = "Read Dialogue When It Opens",
+                    desc = "Quests, greetings and gossip. Off, nothing is read until you press Play on the window or type /spq read.",
+                    get = function(info) return Addon:IsAutoplayOn() end,
+                    set = function(info, value) Addon:SetAutoplay(value) end,
+                },
+                LineBreak1 = { type = "description", name = "", order = 2 },
                 GossipFrequency = {
                     type = "select",
                     width = 1.1,
                     order = 3,
+                    -- It decides which greetings autoplay reads, so with autoplay off it has
+                    -- nothing to decide.
+                    disabled = function(info) return not Addon:IsAutoplayOn() end,
                     name = "NPC Greeting Playback Frequency",
                     desc = "Controls how often Spoken Quests will play NPC greeting dialog. The Once options are remembered for this character across NPC revisits and logins.",
                     values = {
@@ -183,7 +196,7 @@ local SlashCommands = {
             dropdownHidden = true,
             func = function(info)
                 if not Addon:ReadVisibleQuest("/spq read") then
-                    print("|cFFFF4040Spoken Quests: no visible quest detail, progress, reward, or greeting panel was found.|r")
+                    print("|cFFFF4040Spoken Quests: no visible quest detail, progress, reward, greeting, or gossip panel was found.|r")
                 end
             end
         },
