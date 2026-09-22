@@ -1,7 +1,9 @@
 "use client";
 
+import { TranslateDialog, type TranslateSubject } from "@/components/TranslateDialog";
+import { useCan } from "@/components/useCan";
 import { useLang } from "@/components/LangProvider";
-import { withLang } from "@/lib/lang";
+import { BASE_LANG, withLang } from "@/lib/lang";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -17,7 +19,6 @@ import { Player } from "@/components/books/Player";
 import { SearchBar } from "@/components/books/SearchBar";
 import { Loading, Refreshing } from "@/components/Loading";
 import { Button } from "@/components/ui/button";
-import { useSession } from "@/lib/auth-client";
 import type { BookFacet } from "@/lib/books/catalogue";
 import { filterParams, filtersFromParams, PAGE_SIZE, type PageFilters } from "@/lib/books/filters";
 import type { ResultLine, SearchResult } from "@/lib/books/search";
@@ -32,7 +33,6 @@ import {
 } from "@/lib/generation/client";
 import { useClearDirty } from "@/lib/generation/use-clear-dirty";
 import { noApiKeyMessage } from "@/lib/no-api-key";
-import * as permissions from "@/lib/permissions";
 import * as echo from "@/lib/url-echo";
 
 // Long enough to hold a whole typed word: the timer restarts on every keystroke, so this is
@@ -47,8 +47,11 @@ export function Explorer({ books }: { books: BookFacet[] }) {
   // What this visitor may do. Read in the browser for UserMenu's reason: a session read in
   // the layout would put a database round trip in front of every page view. Every one of
   // these is checked again server-side; nothing here is an access control.
-  const { data: session } = useSession();
-  const canRegenerate = permissions.canRegenerate(session?.user.role);
+  const may = useCan();
+  const canRegenerate = may("regenerate");
+  const canEdit = may("edit");
+  // The book owner's name in this language, written as its own version in entity_name.
+  const [naming, setNaming] = useState<TranslateSubject | null>(null);
 
   // FILTERS ARE REBUILT FROM THE URL EVERY RENDER rather than held in state, so the back
   // button is a working undo for a filter change and a link carries the exact view somebody
@@ -436,7 +439,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
         onQuerySubmit={submitQuery}
         onChange={updateFilters}
         onClearAll={() => replaceQuery(new URLSearchParams())}
-        canTriage={canRegenerate}
+        canTriage={canEdit}
       />
 
       {/* A line id has no dropdown to sit in - it arrives by link from /reports - so
@@ -502,6 +505,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
               })}
               current={current}
               canRegenerate={canRegenerate}
+              canEdit={canEdit}
               rowStates={rowStates}
               onPlay={play}
               onClearDirty={(line) => clearDirty([line.file])}
@@ -509,6 +513,24 @@ export function Explorer({ books }: { books: BookFacet[] }) {
               onSelectBook={(line) => updateFilters({ bookId: line.bookId })}
               onReport={setReportFor}
               onEditText={setEditFor}
+              onRename={
+                lang !== BASE_LANG && canEdit
+                  ? (l) =>
+                      setNaming({
+                        title: l.title,
+                        subtitle: `${l.ownerKind} ${l.ownerIds[0]}`,
+                        english: l.englishTitle ?? l.title,
+                        current: l.missing?.title ? null : l.title,
+                        endpoint: "/api/names",
+                        address: {
+                          kind: l.ownerKind === "object" ? "gameobject" : "item",
+                          entityId: String(l.ownerIds[0]),
+                        },
+                        field: "name",
+                        multiline: false,
+                      })
+                  : null
+              }
               onRestored={(line, version) => {
                 // The player's cache buster, so the clip that was just put back is the one
                 // that plays rather than the take it replaced -- the file name does not move.
@@ -541,6 +563,8 @@ export function Explorer({ books }: { books: BookFacet[] }) {
         onClose={() => setEditFor(null)}
         onSaved={(line, text) => setRewritten((current) => ({ ...current, [line.id]: text }))}
       />
+
+      <TranslateDialog subject={naming} onClose={() => setNaming(null)} onSaved={() => refetch()} />
 
       <ReportDialog
         subject={reportFor && { source: "books", line: reportFor }}

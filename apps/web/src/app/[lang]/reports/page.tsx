@@ -5,7 +5,8 @@ import { notFound } from "next/navigation";
 
 import ReportTable from "@/components/ReportTable";
 import { auth } from "@/lib/auth";
-import { canRegenerate } from "@/lib/permissions";
+import { viewerOf } from "@/lib/grants/store";
+import { can } from "@/lib/permissions";
 import { isCategory, isStatus, type Category, type Status } from "@/lib/reports/reports";
 import { listReports } from "@/lib/reports/store";
 import { type Source, isSource } from "@/lib/sections";
@@ -26,8 +27,9 @@ export default async function Page({
   const session = await auth.api.getSession({ headers: await headers() });
 
   // 404 rather than a redirect, matching /issues and /voices: a member has no business
-  // learning the page exists, and these rows hold prose written by strangers.
-  if (!session || !canRegenerate(session.user.role)) notFound();
+  // learning the page exists, and these rows hold prose written by strangers. Per language:
+  // whoever may fix a language's text triages what is reported about it.
+  if (!session || !can(await viewerOf(session), "edit", lang)) notFound();
 
   const { view, source: rawSource, category: rawCategory } = await searchParams;
   const status: Status | "all" = isStatus(view) ? view : view === "all" ? "all" : "open";

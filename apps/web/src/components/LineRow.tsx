@@ -1,5 +1,6 @@
 "use client";
 
+import { RenameButton } from "@/components/RenameButton";
 import { Untranslated, UntranslatedMark } from "@/components/Untranslated";
 import { useLang } from "@/components/LangProvider";
 import { localeHref } from "@/lib/lang";
@@ -80,6 +81,9 @@ type Props = {
   line: ResultLine;
   current: boolean;
   canRegenerate: boolean;
+  /** May write this line's text in the page's language. Apart from regenerating: a
+   *  translator may do this and not spend anything. */
+  canEdit: boolean;
   /** Editor and up: may read the report bodies and resolve them from the row. */
   canTriage: boolean;
   state?: LineState;
@@ -97,6 +101,11 @@ type Props = {
   dirty: boolean;
   onPlay: (line: ResultLine) => void;
   onEditText: (line: ResultLine) => void;
+  /**
+   * Name the speaker or the quest in the page's language. Null on the English site, where
+   * names come from the corpus, and for somebody who may not edit.
+   */
+  onRename: ((line: ResultLine, what: "npc" | "quest") => void) | null;
   /** Open the ignore dialog, or null for anyone not allowed to make that decision. */
   onIgnore: ((line: ResultLine) => void) | null;
   onRegenerate: (line: ResultLine) => void;
@@ -135,6 +144,7 @@ export default function LineRow({
   line,
   current,
   canRegenerate,
+  canEdit,
   canTriage,
   state,
   blocked,
@@ -144,6 +154,7 @@ export default function LineRow({
   dirty,
   onPlay,
   onEditText,
+  onRename,
   onIgnore,
   onRegenerate,
   onReport,
@@ -191,6 +202,9 @@ export default function LineRow({
         >
           <Untranslated missing={line.missing?.npcName}>{line.npcName}</Untranslated>
         </button>
+        {onRename && (
+          <RenameButton label={`Name ${line.npcName}`} onClick={() => onRename(line, "npc")} />
+        )}
         <span className="text-muted-foreground block truncate text-xs">
           {line.npcType} {line.npcId} <WowheadLink href={wowheadEntityUrl(line.npcType, line.npcId)} />
         </span>
@@ -210,6 +224,12 @@ export default function LineRow({
                 {line.questTitle ?? `quest ${line.questId}`}
               </Untranslated>
             </button>
+            {onRename && (
+              <RenameButton
+                label={`Name quest ${line.questId}`}
+                onClick={() => onRename(line, "quest")}
+              />
+            )}
             <span className="text-muted-foreground block truncate text-xs">
               quest {line.questId} <WowheadLink href={wowheadQuestUrl(line.questId)} />
             </span>
@@ -385,8 +405,7 @@ export default function LineRow({
               <FlagIcon className="size-3.5" />
             </Button>
           )}
-          {canRegenerate && (
-            <>
+          {canEdit && (
             <Button
               variant="ghost"
               size="icon"
@@ -396,17 +415,20 @@ export default function LineRow({
             >
               <PencilIcon className={cn("size-3.5", line.override && "text-amber-300")} />
             </Button>
-            {onIgnore && (
-              <Button
-                variant="ghost"
-                size="icon"
-                title={line.ignored ? `Ignored: ${line.ignored}` : "Never voice this line"}
-                aria-label={`Ignore ${line.npcName}'s line`}
-                onClick={() => onIgnore(line)}
-              >
-                <EyeOffIcon className={cn("size-3.5", line.ignored && "text-amber-300")} />
-              </Button>
-            )}
+          )}
+          {onIgnore && (
+            <Button
+              variant="ghost"
+              size="icon"
+              title={line.ignored ? `Ignored: ${line.ignored}` : "Never voice this line"}
+              aria-label={`Ignore ${line.npcName}'s line`}
+              onClick={() => onIgnore(line)}
+            >
+              <EyeOffIcon className={cn("size-3.5", line.ignored && "text-amber-300")} />
+            </Button>
+          )}
+          {canRegenerate && (
+            <>
             {/* Only on a dirty row. The mark is the whole reason this control exists, and a
                 clean row would be offering to clear nothing. */}
             {dirty && (

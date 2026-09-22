@@ -2,7 +2,7 @@
 
 import Link from "@/components/LocaleLink";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +44,23 @@ export default function UserMenu() {
   // Controlled, so choosing a link closes the menu: a Radix popover stays open across a
   // client-side navigation otherwise, hanging over the page it just opened.
   const [open, setOpen] = useState(false);
+  // Whether this person looks after a language, which only their grants say. Asked once a
+  // session exists, so a visitor who is not signed in costs no request.
+  const [leadsLanguage, setLeadsLanguage] = useState(false);
+  const userId = session?.user.id ?? null;
+  useEffect(() => {
+    if (!userId) return;
+    let live = true;
+    fetch("/api/grants/mine")
+      .then((response) => (response.ok ? response.json() : { grants: [] }))
+      .then((body: { grants: { capability: string }[] }) => {
+        if (live) setLeadsLanguage(body.grants.some((grant) => grant.capability === "admin"));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [userId]);
 
   // Rendering nothing until the session resolves avoids a "Sign in" flash for a user who
   // is in fact signed in.
@@ -72,6 +89,7 @@ export default function UserMenu() {
     canRegenerate(role) && { href: "/reports", label: "Reports" },
     canRegenerate(role) && { href: "/contributions", label: "Contributions" },
     isAdmin(role) && { href: "/admin", label: "Users" },
+    (isAdmin(role) || leadsLanguage) && { href: "/translators", label: "Translators" },
     // Everyone signed in has one, and for a collaborator it is where the ElevenLabs key
     // lives - which is the thing standing between them and the Regenerate button.
     { href: "/profile", label: "Profile" },

@@ -1,3 +1,5 @@
+import { pageLang } from "@/lib/lang-server";
+import { viewerOf } from "@/lib/grants/store";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -21,7 +23,7 @@ import {
 import { facets } from "@/lib/facets";
 import { observedFrom, resolveNpc } from "@/lib/npc/resolve";
 import { isProvenance, getResolutions, getResolutionsById, resolutionKey, type NpcKind } from "@/lib/npc/store";
-import { canRegenerate } from "@/lib/permissions";
+import { can } from "@/lib/permissions";
 import { lineByPath } from "@/lib/zones/catalogue";
 
 export const metadata: Metadata = { title: "Contributions · Spoken" };
@@ -150,15 +152,19 @@ async function npcFor(contributions: Contribution[]): Promise<Record<number, Npc
 }
 
 export default async function Page({
+  params,
   searchParams,
 }: {
+  params: Promise<{ lang: string }>;
   searchParams: Promise<{ status?: string; provenance?: string; client?: string }>;
 }) {
+  const lang = await pageLang(params);
   const session = await auth.api.getSession({ headers: await headers() });
 
   // 404, matching /reports: a member has no business learning the page exists, and these
-  // rows hold text and identifying details a stranger pasted in.
-  if (!session || !canRegenerate(session.user.role)) notFound();
+  // rows hold text and identifying details a stranger pasted in. Per language, because
+  // accepting a contribution writes that language's text.
+  if (!session || !can(await viewerOf(session), "edit", lang)) notFound();
 
   const { status: rawStatus, provenance: rawProvenance, client: rawClient } = await searchParams;
   const status: ContributionStatus | "all" = isStatus(rawStatus)
@@ -186,7 +192,7 @@ export default async function Page({
   // unrecognised in the query string falls back to "all", as the other two dimensions do.
   const client: ClientFilter = isClientFamily(rawClient) ? rawClient : "all";
 
-  const contributions = await listContributions(status);
+  const contributions = await listContributions(status, lang);
   const existing = await existingTextFor(contributions);
   const npcs = await npcFor(contributions);
 
