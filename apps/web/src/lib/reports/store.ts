@@ -110,6 +110,14 @@ export async function reportsForLine(
   return rows;
 }
 
+/** The language a report was filed in, or null for an id that does not exist. */
+export async function reportLang(id: number): Promise<Lang | null> {
+  const { rows } = await db().query<{ lang: Lang }>(`select "lang" from "report" where "id" = $1`, [
+    id,
+  ]);
+  return rows[0]?.lang ?? null;
+}
+
 export async function setStatus(
   id: number,
   status: Status,

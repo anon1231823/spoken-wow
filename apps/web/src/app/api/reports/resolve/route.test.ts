@@ -6,12 +6,12 @@
  */
 import { afterAll, describe, expect, it, vi } from "vitest";
 
-import { closeDb } from "@/lib/db";
+import { closeDb, db } from "@/lib/db";
 
-const authorise = vi.fn();
+const { authorise } = vi.hoisted(() => ({ authorise: vi.fn() }));
 
 vi.mock("@/lib/generation/authz", () => ({
-  requireRegenerate: async () => authorise(),
+  requireCapability: async (...args: unknown[]) => authorise(...args),
 }));
 
 import { POST } from "./route";
@@ -36,6 +36,23 @@ describe("POST /api/reports/resolve", () => {
     });
 
     expect((await POST(post({ id: 1, status: "fixed" }))).status).toBe(403);
+  });
+
+  it("asks for edit in the report's own language", async () => {
+    const { rows } = await db().query<{ id: number }>(
+      `insert into "report" ("source", "lang", "lineId", "target", "category", "body")
+       values ('quests', 'ptBR', 'q:1:accept', 'text', 'wrong_text', 'test') returning "id"`,
+    );
+    try {
+      authorise.mockResolvedValueOnce({
+        session: null,
+        denied: Response.json({ error: "not allowed" }, { status: 403 }),
+      });
+      expect((await POST(post({ id: rows[0].id, status: "fixed" }))).status).toBe(403);
+      expect(authorise).toHaveBeenLastCalledWith("edit", "ptBR");
+    } finally {
+      await db().query(`delete from "report" where "id" = $1`, [rows[0].id]);
+    }
   });
 
   it("rejects a status outside the closed set", async () => {
