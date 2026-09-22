@@ -58,8 +58,8 @@ Advance(2);near(P.bar:GetValue(),.1)
 print("PASS: real queue -> UI; timer-based progress; pause freezes; restart resets")
 
 for i=1,7 do Q:Add(Clip("Waiting "..i),source) end
-assert(P.fold:IsShown() and P.fold.normal.texture:find("Plus"))
-P.fold:Click();assert(P.drawer:IsShown() and P.rows[4]:IsShown() and P.fold.normal.texture:find("Minus"))
+assert(P.fold:IsShown() and P.fold.icon.texture:find("Plus") and tostring(P.fold.count:GetText())=="7")
+P.fold:Click();assert(P.drawer:IsShown() and P.rows[4]:IsShown() and P.fold.icon.texture:find("Minus"))
 P.drawer.scripts.OnMouseWheel(P.drawer,-3)
 assert(P.offset==3 and P.rows[1].clip.key=="Waiting 4")
 local before=Q:GetQueueSize();P.rows[1]:Click();assert(Q:GetQueueSize()==before-1)

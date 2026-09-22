@@ -37,7 +37,7 @@ Addon-manager updates can replace this fork with the official player.
 |---|---|
 | Click portrait | Pause, or restart the line from the beginning |
 | Click narration title | Skip the line, as in the original player |
-| Click plus/minus button | Expand/collapse the waiting queue |
+| Click plus/minus button | Expand/collapse the waiting queue; the number beside it counts waiting lines |
 | Scroll expanded queue | Browse more than four waiting lines |
 | Click waiting line | Remove it from the queue |
 | Right-click portrait, speaker, title or panel | Playback menu and source actions, including Report/Stop Gossip |
