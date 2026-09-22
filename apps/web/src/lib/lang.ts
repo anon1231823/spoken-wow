@@ -14,17 +14,17 @@
  * 4939d3f because nothing had been translated. It comes back for all three sections at once.
  */
 export const LOCALES = [
-  { code: "enUS", name: "English", bcp47: "en-US" },
-  { code: "deDE", name: "German", bcp47: "de-DE" },
-  { code: "esES", name: "Spanish (EU)", bcp47: "es-ES" },
-  { code: "esMX", name: "Spanish (AL)", bcp47: "es-MX" },
-  { code: "frFR", name: "French", bcp47: "fr-FR" },
-  { code: "itIT", name: "Italian", bcp47: "it-IT" },
-  { code: "ptBR", name: "Portuguese", bcp47: "pt-BR" },
-  { code: "ruRU", name: "Russian", bcp47: "ru-RU" },
-  { code: "koKR", name: "Korean", bcp47: "ko-KR" },
-  { code: "zhCN", name: "Chinese (S)", bcp47: "zh-CN" },
-  { code: "zhTW", name: "Chinese (T)", bcp47: "zh-TW" },
+  { code: "enUS", name: "English", bcp47: "en-US", elevenLabs: "en" },
+  { code: "deDE", name: "German", bcp47: "de-DE", elevenLabs: "de" },
+  { code: "esES", name: "Spanish (EU)", bcp47: "es-ES", elevenLabs: "es" },
+  { code: "esMX", name: "Spanish (AL)", bcp47: "es-MX", elevenLabs: "es" },
+  { code: "frFR", name: "French", bcp47: "fr-FR", elevenLabs: "fr" },
+  { code: "itIT", name: "Italian", bcp47: "it-IT", elevenLabs: "it" },
+  { code: "ptBR", name: "Portuguese", bcp47: "pt-BR", elevenLabs: "pt" },
+  { code: "ruRU", name: "Russian", bcp47: "ru-RU", elevenLabs: "ru" },
+  { code: "koKR", name: "Korean", bcp47: "ko-KR", elevenLabs: "ko" },
+  { code: "zhCN", name: "Chinese (S)", bcp47: "zh-CN", elevenLabs: "zh" },
+  { code: "zhTW", name: "Chinese (T)", bcp47: "zh-TW", elevenLabs: "zh" },
 ] as const;
 
 export type Lang = (typeof LOCALES)[number]["code"];
@@ -43,6 +43,11 @@ export function isLang(value: unknown): value is Lang {
 
 export function langName(lang: Lang): string {
   return LOCALES.find((locale) => locale.code === lang)?.name ?? lang;
+}
+
+/** The ISO 639-1 code a synthesis request in this language sends as language_code. */
+export function elevenLabsCode(lang: Lang): string {
+  return LOCALES.find((locale) => locale.code === lang)?.elevenLabs ?? "en";
 }
 
 export function langTag(lang: Lang): string {

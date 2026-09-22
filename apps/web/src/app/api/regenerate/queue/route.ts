@@ -20,7 +20,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { corpus } from "@/lib/quests/catalogue";
 import { isSource } from "@/lib/sections";
 import {
-  refuseUngeneratable,
   requireAnyRegenerate,
   requireApiKey,
   requireIn,
@@ -39,8 +38,6 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const { session, lang, denied } = await requireIn(request, "regenerate");
   if (denied) return denied;
-  const refused = refuseUngeneratable(lang);
-  if (refused) return refused;
 
   // Checked at enqueue rather than only in the worker. Every job in the batch is generated
   // with the key of whoever started it, so a batch queued without one is forty thousand rows

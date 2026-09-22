@@ -83,10 +83,9 @@ export async function readIgnores(lang: Lang = BASE_LANG): Promise<Map<string, L
 }
 
 /**
- * The line already carries an ignore at the other level. The table allows one row per line
- * until its old primary key goes (migration 0037), so a language cannot yet add its own
- * ignore to a line ignored everywhere -- which it has no reason to -- or to one another
- * language has ignored.
+ * The write collided with another row for the line. Unreachable since migration 0038 dropped
+ * the one-row-per-line key, and kept for a database still behind it, where the route answers
+ * it as a 409 rather than a 500.
  */
 export class IgnoreConflict extends Error {}
 

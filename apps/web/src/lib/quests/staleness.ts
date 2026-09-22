@@ -13,6 +13,7 @@
  * before the app kept records, and every take from before 0006, has no hash, so calling
  * those stale would mark most of the store on a claim nothing can support.
  */
+import { BASE_LANG, type Lang } from "../lang";
 import { fileIndex } from "../audio";
 import { db } from "../db";
 import { fileDefaults } from "../generation/files";
@@ -31,27 +32,34 @@ import { readOverrides } from "./overrides";
  * worth of answers cannot narrow a search. That costs one query and a sha-256 per take, so it
  * is fetched only for the searches that read it, like the generation dates.
  */
-export async function staleFiles(files?: string[]): Promise<Set<string>> {
+export async function staleFiles(
+  files?: string[],
+  lang: Lang = BASE_LANG,
+): Promise<Set<string>> {
   if (files?.length === 0) return new Set();
 
   const { rows } = files
     ? await db().query<{ file: string; spokenHash: string | null }>(
         `select "file", "spokenHash" from "take"
-          where "source" = 'quests' and "isCurrent" and "file" = any($1::text[])`,
-        [files],
+          where "source" = 'quests' and "lang" = $2 and "isCurrent" and "file" = any($1::text[])`,
+        [files, lang],
       )
     : await db().query<{ file: string; spokenHash: string | null }>(
         `select "file", "spokenHash" from "take"
-          where "source" = 'quests' and "isCurrent"`,
+          where "source" = 'quests' and "lang" = $1 and "isCurrent"`,
+        [lang],
       );
 
-  const overrides = await readOverrides();
-  const lines = await fileIndex();
-  const rules = fileDefaults().rules;
+  // What regenerate.ts would send now, in the same language: English's overrides and file
+  // rules, or neither for another language, which speaks its own text with its own lexicon.
+  const english = lang === BASE_LANG;
+  const overrides = english ? await readOverrides() : new Map<string, { text: string }>();
+  const lines = await fileIndex(lang);
+  const rules = english ? fileDefaults().rules : null;
   // Once for the whole sweep, unlike regenerate.ts which reads it per line: this answers a
   // question about the takes as they stand, and a settings change landing mid-sweep would
   // only make half the answer describe a configuration that was never used to generate.
-  const { raceTags } = await currentConfig();
+  const { raceTags } = await currentConfig(lang);
 
   const stale = new Set<string>();
   for (const row of rows) {
@@ -63,7 +71,8 @@ export async function staleFiles(files?: string[]): Promise<Set<string>> {
     // string that was sent, so a take of "[hic]" must be compared against "[hic]" and not
     // "<hic>", and a dwarf take made with its accent direction against that same direction -
     // otherwise every dwarf line reads as stale forever rather than once.
-    const spoken = accentTagged(audioTags(applyPronunciation(text, rules)), raceTags[line.race]);
+    const pronounced = rules ? applyPronunciation(text, rules) : text;
+    const spoken = accentTagged(audioTags(pronounced), raceTags[line.race]);
     if (spokenHash(spoken) !== row.spokenHash) {
       stale.add(row.file);
     }

@@ -13,7 +13,8 @@
  * preview of an entry the lexicon would refuse to store is a preview of something that can
  * never ship.
  */
-import { requireApiKey, requireConfigure } from "@/lib/generation/authz";
+import { requireApiKey, requireIn } from "@/lib/generation/authz";
+import { BASE_LANG } from "@/lib/lang";
 import { LexiconError, validateEntry } from "@/lib/generation/lexicon";
 import { isPreviewMode, renderPreview, voicePicker } from "@/lib/generation/preview";
 import { currentConfig } from "@/lib/generation/settings";
@@ -22,8 +23,13 @@ import { generationStatus } from "@/lib/generation/status";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const { session, denied } = await requireConfigure();
+  const { session, lang, denied } = await requireIn(request, "configure");
   if (denied) return denied;
+  // The preview sentences and the committed rules they are spoken through are English's.
+  // Another language's entries are heard by regenerating a line that uses them.
+  if (lang !== BASE_LANG) {
+    return Response.json({ error: `previews are English-only for now` }, { status: 400 });
+  }
 
   const { key, denied: noKey } = await requireApiKey(session.user.id);
   if (noKey) return noKey;

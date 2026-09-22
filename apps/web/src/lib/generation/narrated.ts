@@ -14,6 +14,8 @@
  *
  * THE REQUEST ITSELF IS lib/generation/tts.ts, the same client quests narrates through.
  */
+import { BASE_LANG, elevenLabsCode } from "@/lib/lang";
+import { currentLocator } from "./dictionary";
 import "server-only";
 
 import { commitTake } from "@/lib/takes/commit";
@@ -63,6 +65,16 @@ export async function regenerateNarrated(
 
   // Held across the ElevenLabs call, not just the write: two requests for one line must not
   // both spend credits, and a restore must not interleave with the commit.
+  const lang = options.lang ?? BASE_LANG;
+  // The narrator's dictionary is English's, pinned in its config; another language is
+  // spoken with its own, whatever its latest upload is.
+  const dictionary =
+    lang === BASE_LANG
+      ? config.dictionaryId && config.dictionaryVersionId
+        ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
+        : null
+      : await currentLocator(lang);
+
   const outcome = await withTakeLock(source, line.file, async (): Promise<RegenerateResult> => {
     // No seed: a line is narrated once and re-rolled by hand if it comes out wrong, so
     // there is nothing to reproduce bit for bit.
@@ -73,10 +85,8 @@ export async function regenerateNarrated(
         modelId: config.modelId,
         voiceSettings: config.voiceSettings,
         seed: null,
-        dictionary:
-          config.dictionaryId && config.dictionaryVersionId
-            ? { dictionaryId: config.dictionaryId, versionId: config.dictionaryVersionId }
-            : null,
+        dictionary,
+        languageCode: elevenLabsCode(lang),
       },
       { apiKey: options.apiKey },
     );
@@ -100,13 +110,13 @@ export async function regenerateNarrated(
           characters: line.spoken.length,
           credits,
           spokenHash: line.hash,
-          dictionaryId: config.dictionaryId ?? null,
-          dictionaryVersion: config.dictionaryVersionId ?? null,
+          dictionaryId: dictionary?.dictionaryId ?? null,
+          dictionaryVersion: dictionary?.versionId ?? null,
           leadIn: speech.leadIn,
           leadInSec: speech.leadInSec,
           createdBy,
         },
-        { lang: options.lang, measure: durationOf },
+        { lang, measure: durationOf },
       );
 
       return {
@@ -124,7 +134,7 @@ export async function regenerateNarrated(
         voice: config.voiceName,
         // narratorConfig resolves this or throws, so it is set by the time we are here.
         voiceId: config.voiceId!,
-        dictionaryVersion: config.dictionaryVersionId ?? null,
+        dictionaryVersion: dictionary?.versionId ?? null,
         spokenText: line.spoken,
         // Nothing else plays this file: every line has its own, which is the whole
         // difference from a quests gossip file named after its text.
@@ -133,7 +143,7 @@ export async function regenerateNarrated(
     } catch (error) {
       return { ok: false, failure: asFailure(error) };
     }
-  });
+  }, lang);
 
   return outcome === BUSY ? { ok: false, failure: busy(line.file) } : outcome;
 }

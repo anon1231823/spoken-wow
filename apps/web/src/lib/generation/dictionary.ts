@@ -20,6 +20,7 @@
  * below are for. This is the only project that edits the lexicon; wow-lore reads it.
  */
 import { db } from "@/lib/db";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import {
   addDictionaryRules,
   countLexemes,
@@ -86,7 +87,20 @@ type Row = {
   updatedBy: string | null;
 };
 
-async function readRow(): Promise<Row | undefined> {
+/**
+ * Where a language's lexicon row is. English's is the singleton it has always been; every
+ * other language has a row of its own in pronunciation_lexicon_locale (migration 0038), with
+ * the same columns meaning the same things. `$1` is the language in both, unused for English,
+ * so every statement below can be written once.
+ */
+function rowOf(lang: Lang): { table: string; where: string; params: [Lang] } {
+  return lang === BASE_LANG
+    ? { table: `"pronunciation_lexicon"`, where: `"id" and $1::text is not null`, params: [lang] }
+    : { table: `"pronunciation_lexicon_locale"`, where: `"lang" = $1`, params: [lang] };
+}
+
+async function readRow(lang: Lang = BASE_LANG): Promise<Row | undefined> {
+  const at = rowOf(lang);
   const { rows } = await db().query<Row>(
     // The comparison is made in Postgres, against the digest sync() stored, rather than by
     // comparing syncedAt with updatedAt out here. Both timestamps are now(), which is the
@@ -97,18 +111,21 @@ async function readRow(): Promise<Row | undefined> {
     `select "entries", "dictionaryId", "versionId", "rulesSent", "rulesKept",
             ("syncedDigest" is not null and "syncedDigest" = md5("entries"::text)) as "inForce",
             "syncedAt", "updatedAt", "updatedBy"
-       from "pronunciation_lexicon" where "id"`,
+       from ${at.table} where ${at.where}`,
+    at.params,
   );
   return rows[0];
 }
 
-export async function readLexicon(): Promise<EffectiveLexicon> {
-  const row = await readRow();
+export async function readLexicon(lang: Lang = BASE_LANG): Promise<EffectiveLexicon> {
+  const row = await readRow(lang);
 
   if (!row) {
     return {
       entries: [],
-      seeded: false,
+      // Another language starts with no entries at all, which is a lexicon nobody has
+      // written yet rather than a failed seed; only English's missing row is the latter.
+      seeded: lang !== BASE_LANG,
       sync: "never",
       locator: null,
       rulesSent: null,
@@ -147,8 +164,8 @@ export async function readLexicon(): Promise<EffectiveLexicon> {
  * pronunciation quality, and refusing to generate over it would take regeneration down for
  * everyone the first time an upload failed.
  */
-export async function currentLocator(): Promise<DictionaryLocator | null> {
-  const row = await readRow();
+export async function currentLocator(lang: Lang = BASE_LANG): Promise<DictionaryLocator | null> {
+  const row = await readRow(lang);
   if (!row?.dictionaryId || !row.versionId) return null;
   return { dictionaryId: row.dictionaryId, versionId: row.versionId };
 }
@@ -165,32 +182,45 @@ export async function writeLexicon(
   entries: LexiconEntry[],
   updatedBy: string,
   options: ElevenLabsOptions = {},
+  lang: Lang = BASE_LANG,
 ): Promise<{ lexicon: EffectiveLexicon; syncError: string | null }> {
   // Read before writing, because the diff is the only moment the previous rules exist: the
   // row holds one lexicon and the save overwrites it. What the diff is for is audio - a take
   // made before a word's rule moved no longer says what this lexicon would say - and
   // lexicon_change is the record nothing else in the schema keeps. See lib/generation/dirty.
-  const before = (await readRow())?.entries ?? [];
+  const before = (await readRow(lang))?.entries ?? [];
 
   await db().query(
-    `insert into "pronunciation_lexicon" ("id", "entries", "updatedAt", "updatedBy")
-     values (true, $1, now(), $2)
-     on conflict ("id") do update set
-       "entries"   = excluded."entries",
-       "updatedAt" = excluded."updatedAt",
-       "updatedBy" = excluded."updatedBy"`,
-    [JSON.stringify(entries), updatedBy],
+    lang === BASE_LANG
+      ? `insert into "pronunciation_lexicon" ("id", "entries", "updatedAt", "updatedBy")
+         values (true, $1, now(), $2)
+         on conflict ("id") do update set
+           "entries"   = excluded."entries",
+           "updatedAt" = excluded."updatedAt",
+           "updatedBy" = excluded."updatedBy"`
+      : `insert into "pronunciation_lexicon_locale" ("lang", "entries", "updatedAt", "updatedBy")
+         values ($3, $1, now(), $2)
+         on conflict ("lang") do update set
+           "entries"   = excluded."entries",
+           "updatedAt" = excluded."updatedAt",
+           "updatedBy" = excluded."updatedBy"`,
+    lang === BASE_LANG ? [JSON.stringify(entries), updatedBy] : [JSON.stringify(entries), updatedBy, lang],
   );
 
-  const syncError = await sync(entries, options);
-  const lexicon = await readLexicon();
+  const syncError = await sync(entries, options, lang);
+  const lexicon = await readLexicon(lang);
 
   // After the sync, so the row can carry the version that shipped it - and unconditionally,
   // because a change whose upload failed still happened. A logging failure must not turn a
   // save the admin can see into a 500: the entries are in Postgres either way, and the worst
   // case is audio that goes on reading as clean until the next edit to the same word.
   try {
-    await logSoundChanges(soundChanges(before, entries), updatedBy, lexicon.locator?.versionId ?? null);
+    await logSoundChanges(
+      soundChanges(before, entries),
+      updatedBy,
+      lexicon.locator?.versionId ?? null,
+      lang,
+    );
   } catch (error) {
     console.error("lexicon saved but its changes were not logged", error);
   }
@@ -240,10 +270,18 @@ async function updateDictionary(
 async function createDictionary(
   rules: DictionaryRule[],
   options: ElevenLabsOptions,
+  lang: Lang,
 ): Promise<DictionaryLocator> {
   // Dated, because without a configured id a save creates another of these, and the account
   // list would otherwise be a column of identical names with no way to tell which is live.
-  const name = `wow-voiceover ${new Date().toISOString().slice(0, 19).replace("T", " ")}`;
+  const stamp = new Date().toISOString().slice(0, 19).replace("T", " ");
+  if (lang !== BASE_LANG) {
+    // Another language's is created once, on its first save, and its id kept in its row --
+    // there is no environment variable per language, and none is needed: nothing outside
+    // this app names these dictionaries.
+    return createPronunciationDictionary(`spoken ${lang} ${stamp}`, rules, options);
+  }
+  const name = `wow-voiceover ${stamp}`;
   const locator = await createPronunciationDictionary(name, rules, options);
 
   console.warn(
@@ -264,22 +302,28 @@ async function createDictionary(
 export async function sync(
   entries: LexiconEntry[],
   options: ElevenLabsOptions = {},
+  lang: Lang = BASE_LANG,
 ): Promise<string | null> {
   // One rule per spelling the corpus actually uses, because a phoneme rule cannot be
-  // case-insensitive - see toRules.
+  // case-insensitive - see toRules. The language's own text, since that is what is spoken.
   const rules = toRules(
     entries,
-    await graphemeCasings(entries.filter((e) => !e.alias).map((e) => e.grapheme)),
+    await graphemeCasings(entries.filter((e) => !e.alias).map((e) => e.grapheme), lang),
   );
 
-  const pinned = process.env.ELEVENLABS_DICTIONARY_ID?.trim();
+  // English's dictionary is named by the environment, because ../wow-lore pins it too;
+  // another language's is whatever its first save created, held in its row.
+  const pinned =
+    lang === BASE_LANG
+      ? process.env.ELEVENLABS_DICTIONARY_ID?.trim()
+      : ((await readRow(lang))?.dictionaryId ?? undefined);
 
   let locator: DictionaryLocator;
   let kept: number | null = null;
   try {
     locator = pinned
       ? await updateDictionary(pinned, rules, options)
-      : await createDictionary(rules, options);
+      : await createDictionary(rules, options, lang);
 
     // Read it back rather than trusting the 200. This is the check whose absence let 134
     // phoneme rules upload as 2 and look like success from every surface this app had.
@@ -301,13 +345,14 @@ export async function sync(
   // "syncedDigest" is taken from the row's own column rather than hashed here, and the
   // where clause is what makes that exact: the statement only lands while "entries" is still
   // what was uploaded, so md5 of it is the digest of these rules and no others.
+  const at = rowOf(lang);
   const { rowCount } = await db().query(
-    `update "pronunciation_lexicon"
-        set "dictionaryId" = $1, "versionId" = $2, "syncedAt" = now(),
+    `update ${at.table}
+        set "dictionaryId" = $2, "versionId" = $3, "syncedAt" = now(),
             "syncedDigest" = md5("entries"::text),
-            "rulesSent" = $4, "rulesKept" = $5
-      where "id" and "entries" = $3::jsonb`,
-    [locator.dictionaryId, locator.versionId, JSON.stringify(entries), rules.length, kept],
+            "rulesSent" = $5, "rulesKept" = $6
+      where ${at.where} and "entries" = $4::jsonb`,
+    [lang, locator.dictionaryId, locator.versionId, JSON.stringify(entries), rules.length, kept],
   );
   if (rowCount === 0) {
     return "the lexicon changed while this upload was in flight; the newer save is the one to retry";
@@ -320,8 +365,11 @@ export async function sync(
 }
 
 /** Re-upload whatever is stored, for retrying a sync that failed after a successful save. */
-export async function resync(options: ElevenLabsOptions = {}): Promise<string | null> {
-  const row = await readRow();
+export async function resync(
+  options: ElevenLabsOptions = {},
+  lang: Lang = BASE_LANG,
+): Promise<string | null> {
+  const row = await readRow(lang);
   if (!row) return "there is no saved lexicon to upload";
-  return sync(row.entries, options);
+  return sync(row.entries, options, lang);
 }

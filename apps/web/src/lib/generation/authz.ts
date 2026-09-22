@@ -111,21 +111,6 @@ export async function requireApiKey(userId: string): Promise<KeyGuard> {
 // Language
 //------------------------------------------------------------------------------
 
-/**
- * A refusal for a language this build cannot generate in, or null.
- *
- * English only, for now: the generators read English text and commit English takes, and a
- * request for another language would come back as an English recording filed under the
- * wrong one. The worker refuses the same jobs (worker.ts), so a batch queued some other way
- * still fails whole rather than spending anything.
- */
-export function refuseUngeneratable(lang: Lang): Response | null {
-  if (lang === BASE_LANG) return null;
-  return Response.json(
-    { error: `generating in ${lang} is not supported yet`, kind: "bad-request" },
-    { status: 400 },
-  );
-}
 
 /**
  * A route acting in one language: the language from `?lang=`, and the session if it holds

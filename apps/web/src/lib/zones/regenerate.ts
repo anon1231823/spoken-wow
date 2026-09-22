@@ -17,6 +17,7 @@
  * request, which left the repository with two ElevenLabs clients and put one of them in a
  * pipeline that does no generating.
  */
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import "server-only";
 
 import { failure } from "@/lib/generation/errors";
@@ -25,8 +26,8 @@ import type { RegenerateResult } from "@/lib/generation/regenerate";
 
 import { catalogue, type CatalogueEntry } from "./catalogue";
 
-async function entryFor(lineId: string): Promise<CatalogueEntry | undefined> {
-  return (await catalogue()).find((candidate) => candidate.id === lineId);
+async function entryFor(lineId: string, lang: Lang): Promise<CatalogueEntry | undefined> {
+  return (await catalogue(lang)).find((candidate) => candidate.id === lineId);
 }
 
 /**
@@ -37,9 +38,9 @@ async function entryFor(lineId: string): Promise<CatalogueEntry | undefined> {
 export async function regenerateZoneLine(
   lineId: string,
   createdBy: string,
-  options: { apiKey: string },
+  options: { apiKey: string; lang?: Lang },
 ): Promise<RegenerateResult> {
-  const entry = await entryFor(lineId);
+  const entry = await entryFor(lineId, options.lang ?? BASE_LANG);
   if (!entry) {
     return { ok: false, failure: { ...failure("bad-request", `no line ${lineId}`), status: 404 } };
   }

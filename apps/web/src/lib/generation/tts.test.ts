@@ -63,6 +63,13 @@ describe("buildPayload", () => {
     expect(buildPayload({ ...REQUEST, modelId: "eleven_flash_v2_5" }).language_code).toBe("en");
   });
 
+  it("says the take's language, and English when none is named", () => {
+    expect(buildPayload({ ...REQUEST, modelId: "eleven_v3", languageCode: "pt" }).language_code).toBe(
+      "pt",
+    );
+    expect(buildPayload({ ...REQUEST, modelId: "eleven_v3" }).language_code).toBe("en");
+  });
+
   // Omitting is exactly today's behaviour, so a model absent from the list loses nothing -
   // whereas sending the field to one that rejects it would fail a request that used to work.
   it("omits it for a model that does not accept one", () => {

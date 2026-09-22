@@ -9,7 +9,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 const { closeDb, db, query } = await import("@/lib/db");
 const { questTextHistory, restoreQuestText, saveQuestText, QuestTextConflict } = await import("./text");
 const { saveName, nameHistory } = await import("@/lib/names/store");
-const { clearIgnore, readIgnores, writeIgnore, IgnoreConflict } = await import("./ignores");
+const { clearIgnore, readIgnores, writeIgnore } = await import("./ignores");
 
 const LANG = "itIT";
 let english: { lineId: string; variant: number; questId: number; fileName: string; source: string };
@@ -132,11 +132,12 @@ describe("ignores at two levels", () => {
     expect((await readIgnores("enUS")).has("q:0:ignore-test")).toBe(true);
   });
 
-  // Until 0037's successor drops line_ignore's old primary key, one row per line.
-  it("says so when the line is already ignored at the other level", async () => {
+  // Both levels at once since 0038: the broader decision is the one a language reads.
+  it("keeps a language's own ignore beside one for every language", async () => {
     await writeIgnore("q:0:ignore-test", "nobody voices this", userId);
-    await expect(writeIgnore("q:0:ignore-test", "nor Italian", userId, LANG)).rejects.toBeInstanceOf(
-      IgnoreConflict,
-    );
+    await writeIgnore("q:0:ignore-test", "nor the Italian", userId, LANG);
+    expect((await readIgnores(LANG)).get("q:0:ignore-test")?.reason).toBe("nobody voices this");
+    expect(await clearIgnore("q:0:ignore-test")).toBe(true);
+    expect((await readIgnores(LANG)).get("q:0:ignore-test")?.reason).toBe("nor the Italian");
   });
 });

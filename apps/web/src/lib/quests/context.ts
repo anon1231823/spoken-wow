@@ -75,16 +75,15 @@ export async function searchContext(
   const generatedAt = new Map(live.map((row) => [row.file, row.createdAt.getTime()]));
 
   try {
-    // Overrides, staleness and dirt are English's alone for now: an override rewrites the
-    // English corpus, and the other two compare a take with that text and that lexicon.
-    // Another language gets its own when it gets its own text and its own lexicon.
+    // Overrides are English's alone -- they rewrite the English corpus. Staleness and dirt
+    // are per language: a take is compared with its own language's text and lexicon.
     const english = lang === BASE_LANG;
     const [overrides, ignores, reports, stale, dirt] = await Promise.all([
       english ? readOverrides() : new Map(),
       readIgnores(lang),
       openReports(lang),
-      outdated && english ? staleFiles() : null,
-      dirty && english ? dirtyQuestFiles() : null,
+      outdated ? staleFiles(undefined, lang) : null,
+      dirty ? dirtyQuestFiles(undefined, lang) : null,
     ]);
     return {
       voiced,

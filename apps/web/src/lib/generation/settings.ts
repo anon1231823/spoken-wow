@@ -11,6 +11,7 @@
  * refusing to read it would take the settings page down exactly when it is needed to fix it.
  */
 import { db } from "@/lib/db";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 
 import {
   isSeedStrategy,
@@ -22,8 +23,11 @@ import { fileDefaults } from "./files";
 
 export type EffectiveSettings = {
   config: GenerationConfig;
-  /** Whether the row exists, i.e. whether anyone has overridden the committed defaults. */
-  source: "file" | "database";
+  /**
+   * Where the settings in force come from: the committed file, a saved row, or -- for a
+   * language nobody has configured yet -- English's, without its accent tags.
+   */
+  source: "file" | "database" | "english";
   /** The committed values, so the page can offer "reset to defaults" and show the delta. */
   defaults: GenerationConfig;
   updatedAt: string | null;
@@ -39,7 +43,8 @@ type Row = {
   updatedBy: string | null;
 };
 
-export async function readSettings(): Promise<EffectiveSettings> {
+export async function readSettings(lang: Lang = BASE_LANG): Promise<EffectiveSettings> {
+  if (lang !== BASE_LANG) return readLanguageSettings(lang);
   const defaults = fileDefaults().config;
 
   const { rows } = await db().query<Row>(
@@ -71,9 +76,47 @@ export async function readSettings(): Promise<EffectiveSettings> {
   };
 }
 
+/**
+ * Another language's settings: its own row, or English's until somebody saves one.
+ *
+ * English's without the accent tags, though. A tag like "[Scottish accent]" is a direction
+ * about how English is spoken, and a language that has not chosen its own should not start
+ * with someone else's.
+ */
+async function readLanguageSettings(lang: Lang): Promise<EffectiveSettings> {
+  const english = await readSettings(BASE_LANG);
+  const { rows } = await db().query<Row>(
+    `select "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy"
+       from "generation_setting_locale" where "lang" = $1`,
+    [lang],
+  );
+  const row = rows[0];
+  if (!row) {
+    return {
+      config: { ...english.config, raceTags: {} },
+      source: "english",
+      defaults: english.defaults,
+      updatedAt: null,
+      updatedBy: null,
+    };
+  }
+  return {
+    config: {
+      modelId: row.modelId,
+      voiceSettings: row.voiceSettings,
+      seedStrategy: isSeedStrategy(row.seedStrategy) ? row.seedStrategy : english.config.seedStrategy,
+      raceTags: row.raceTags ?? {},
+    },
+    source: "database",
+    defaults: english.defaults,
+    updatedAt: row.updatedAt,
+    updatedBy: row.updatedBy,
+  };
+}
+
 /** The settings actually used to generate. Convenience over readSettings for the hot path. */
-export async function currentConfig(): Promise<GenerationConfig> {
-  return (await readSettings()).config;
+export async function currentConfig(lang: Lang = BASE_LANG): Promise<GenerationConfig> {
+  return (await readSettings(lang)).config;
 }
 
 export class SettingsError extends Error {}
@@ -156,7 +199,34 @@ export function validateRaceTags(raw: unknown): Record<string, string> {
   return tags;
 }
 
-export async function writeSettings(config: GenerationConfig, updatedBy: string): Promise<void> {
+export async function writeSettings(
+  config: GenerationConfig,
+  updatedBy: string,
+  lang: Lang = BASE_LANG,
+): Promise<void> {
+  if (lang !== BASE_LANG) {
+    // The tags ride along only on the insert, for the reason the English upsert below gives.
+    await db().query(
+      `insert into "generation_setting_locale"
+         ("lang", "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy")
+       values ($1, $2, $3, $4, $5, now(), $6)
+       on conflict ("lang") do update set
+         "modelId"       = excluded."modelId",
+         "voiceSettings" = excluded."voiceSettings",
+         "seedStrategy"  = excluded."seedStrategy",
+         "updatedAt"     = excluded."updatedAt",
+         "updatedBy"     = excluded."updatedBy"`,
+      [
+        lang,
+        config.modelId,
+        JSON.stringify(config.voiceSettings),
+        config.seedStrategy,
+        JSON.stringify(config.raceTags),
+        updatedBy,
+      ],
+    );
+    return;
+  }
   await db().query(
     `insert into "generation_setting"
        ("id", "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy")
@@ -202,7 +272,31 @@ export async function writeSettings(config: GenerationConfig, updatedBy: string)
 export async function writeRaceTags(
   tags: Record<string, string>,
   updatedBy: string | null,
+  lang: Lang = BASE_LANG,
 ): Promise<void> {
+  if (lang !== BASE_LANG) {
+    // As for English: the row has to exist to hold a tag, and is created from the settings
+    // in force -- English's, for a language nobody has configured.
+    const current = (await readSettings(lang)).config;
+    await db().query(
+      `insert into "generation_setting_locale"
+         ("lang", "modelId", "voiceSettings", "seedStrategy", "raceTags", "updatedAt", "updatedBy")
+       values ($1, $2, $3, $4, $5, now(), $6)
+       on conflict ("lang") do update set
+         "raceTags"  = excluded."raceTags",
+         "updatedAt" = excluded."updatedAt",
+         "updatedBy" = excluded."updatedBy"`,
+      [
+        lang,
+        current.modelId,
+        JSON.stringify(current.voiceSettings),
+        current.seedStrategy,
+        JSON.stringify(tags),
+        updatedBy,
+      ],
+    );
+    return;
+  }
   const defaults = fileDefaults().config;
   await db().query(
     `insert into "generation_setting"
@@ -222,7 +316,14 @@ export async function writeRaceTags(
   );
 }
 
-/** Drop the override, so the committed defaults are in force again. */
-export async function resetSettings(): Promise<void> {
+/**
+ * Drop the override, so the committed defaults are in force again -- or, for another
+ * language, so it follows English again.
+ */
+export async function resetSettings(lang: Lang = BASE_LANG): Promise<void> {
+  if (lang !== BASE_LANG) {
+    await db().query(`delete from "generation_setting_locale" where "lang" = $1`, [lang]);
+    return;
+  }
   await db().query(`delete from "generation_setting" where "id"`);
 }

@@ -9,8 +9,10 @@ describe("the site's language list", () => {
   // pipeline and not here would be a language packs could be built in and the site could not
   // show; one added here and not there, a URL prefix with nothing behind it.
   it("is the pipeline's list, in the pipeline's order", () => {
-    expect(LOCALES.map(({ code, name, bcp47 }) => ({ code, name, bcp47 }))).toEqual(
-      PIPELINE_LOCALES.map(({ code, name, bcp47 }) => ({ code, name, bcp47 })),
+    expect(
+      LOCALES.map(({ code, name, bcp47, elevenLabs }) => ({ code, name, bcp47, elevenLabs })),
+    ).toEqual(
+      PIPELINE_LOCALES.map(({ code, name, bcp47, elevenLabs }) => ({ code, name, bcp47, elevenLabs })),
     );
   });
 

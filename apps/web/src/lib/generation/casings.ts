@@ -11,6 +11,7 @@
  * be several hundred rules for pronunciations no line will ever need, and a dictionary is
  * easier to reason about when every rule in it can fire.
  */
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import type { CorpusLine } from "@/lib/corpus";
 import { corpus } from "@/lib/quests/catalogue";
 
@@ -78,8 +79,11 @@ type Holder = { [key]?: Memo };
  * it was built from. That tie used to be about tests; it is load-bearing now, because the
  * corpus is a table and an edit rebuilds the array under a running process.
  */
-export async function graphemeCasings(graphemes: string[]): Promise<Record<string, string[]>> {
-  const lines = (await corpus()).lines;
+export async function graphemeCasings(
+  graphemes: string[],
+  lang: Lang = BASE_LANG,
+): Promise<Record<string, string[]>> {
+  const lines = (await corpus(lang)).lines;
   const holder = globalThis as Holder;
 
   let memo = holder[key];

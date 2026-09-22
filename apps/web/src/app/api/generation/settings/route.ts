@@ -9,7 +9,7 @@
  * is gone and voice/generation.json is in force again - a state the page can then report
  * honestly instead of showing values that merely happen to match.
  */
-import { requireConfigure, requireRegenerate } from "@/lib/generation/authz";
+import { requireIn } from "@/lib/generation/authz";
 import {
   readSettings,
   resetSettings,
@@ -20,14 +20,17 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const { denied } = await requireRegenerate();
+// Per language (?lang=, English when absent): read by whoever regenerates in it, changed by
+// whoever configures it. A language nobody has configured reads as English's without its
+// accent tags; see readSettings.
+export async function GET(request: Request) {
+  const { lang, denied } = await requireIn(request, "regenerate");
   if (denied) return denied;
-  return Response.json(await readSettings());
+  return Response.json(await readSettings(lang));
 }
 
 export async function PUT(request: Request) {
-  const { session, denied } = await requireConfigure();
+  const { session, lang, denied } = await requireIn(request, "configure");
   if (denied) return denied;
 
   let config;
@@ -40,14 +43,14 @@ export async function PUT(request: Request) {
     return Response.json({ error: message }, { status: 400 });
   }
 
-  await writeSettings(config, session.user.id);
-  return Response.json(await readSettings());
+  await writeSettings(config, session.user.id, lang);
+  return Response.json(await readSettings(lang));
 }
 
-export async function DELETE() {
-  const { denied } = await requireConfigure();
+export async function DELETE(request: Request) {
+  const { lang, denied } = await requireIn(request, "configure");
   if (denied) return denied;
 
-  await resetSettings();
-  return Response.json(await readSettings());
+  await resetSettings(lang);
+  return Response.json(await readSettings(lang));
 }

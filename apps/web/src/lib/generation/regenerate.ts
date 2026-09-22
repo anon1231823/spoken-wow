@@ -14,6 +14,7 @@
  * a property of the text that will be sent. The corpus's `generatable` flag cannot answer it,
  * having been computed in Python from text that nobody could edit yet.
  */
+import { BASE_LANG, elevenLabsCode, type Lang } from "@/lib/lang";
 import { audioRelPath } from "@/lib/audio";
 import type { CorpusLine } from "@/lib/corpus";
 import { lineIndex } from "@/lib/quests/catalogue";
@@ -63,17 +64,24 @@ export type RegenerateResult = RegenerateSuccess | { ok: false; failure: Failure
  * A gossip lineId is g:{md5(text + race + gender)}, so it can name many NPCs at once - they
  * share the text, the voice and the mp3, and differ only in who says it.
  */
-async function resolve(lineId: string): Promise<CorpusLine[] | null> {
-  const group = (await lineIndex()).get(lineId);
+async function resolve(lineId: string, lang: Lang): Promise<CorpusLine[] | null> {
+  const group = (await lineIndex(lang)).get(lineId);
   return group && group.length > 0 ? group : null;
 }
 
+/**
+ * `options.lang` is the language to speak the line in: its text (lib/quests/catalogue.ts reads
+ * a language over the English lines), its settings, its lexicon, and a take filed under it.
+ * English when absent, which is every caller that predates languages.
+ */
 export async function regenerateLine(
   lineId: string,
   createdBy: string,
-  options: ElevenLabsOptions = {},
+  options: ElevenLabsOptions & { lang?: Lang } = {},
 ): Promise<RegenerateResult> {
-  const group = await resolve(lineId);
+  const lang = options.lang ?? BASE_LANG;
+  const english = lang === BASE_LANG;
+  const group = await resolve(lineId, lang);
   if (!group) {
     return { ok: false, failure: { ...failure("bad-request", `no line ${lineId}`), status: 404 } };
   }
@@ -85,7 +93,7 @@ export async function regenerateLine(
   // decision, not a defect, so no override can rescue it and there is nothing to weigh up.
   // A queued job can outlive the decision, which is exactly why this is checked here rather
   // than only where the queue is filled.
-  const ignore = (await readIgnores()).get(lineId);
+  const ignore = (await readIgnores(lang)).get(lineId);
   if (ignore) {
     return {
       ok: false,
@@ -101,14 +109,19 @@ export async function regenerateLine(
   // read inside the lock below: someone rewriting a line mid-batch should affect the lines
   // after the save. Read *before* the gate because an override is what decides whether this
   // line is voiceable at all - the corpus's own flag was computed from text nobody could edit.
-  const overrides = await readOverrides();
+  //
+  // English only: an override rewrites the English corpus. Another language's rewrites are
+  // versions of its own text, which `line` already is.
+  const overrides = english ? await readOverrides() : new Map();
   const source = overrides.get(file)?.text ?? line.text;
 
   if (!isVoiceable(line, source)) {
     const why =
       line.skipReason === "progress"
         ? "progress text is deliberately skipped"
-        : `its text still holds one of ${INVALID_CHARS} - rewrite it to voice it`;
+        : line.skipReason === "untranslated"
+          ? `it has no ${lang} text yet`
+          : `its text still holds one of ${INVALID_CHARS} - rewrite it to voice it`;
     return {
       ok: false,
       failure: {
@@ -141,19 +154,23 @@ export async function regenerateLine(
   }
 
   const outcome = await withTakeLock("quests", file, async (): Promise<RegenerateResult> => {
-    const config = await currentConfig();
+    const config = await currentConfig(lang);
     // The accent direction goes on last, so it sits in front of the words rather than in
     // front of a `<hic>` audioTags has yet to rewrite. Inside spokenText and not bolted on at
     // the request, because these are characters ElevenLabs bills and the staleness check
     // hashes: a take that under-reported them would be mispriced and permanently stale.
+    //
+    // The committed pronunciation rules are English's spellings of English words; another
+    // language is spoken with its own lexicon, through the dictionary below, and nothing else.
     const spokenText = accentTagged(
-      audioTags(applyPronunciation(source, fileDefaults().rules)),
+      audioTags(english ? applyPronunciation(source, fileDefaults().rules) : source),
       config.raceTags[line.race],
     );
     // Read inside the lock and per line, not hoisted: an admin saving the lexicon mid-batch
     // should affect the lines after the save, and pinning one locator for a whole batch
     // would record a version that some of those takes were not made with.
-    const dictionary = await currentLocator();
+    const dictionary = await currentLocator(lang);
+    const languageCode = elevenLabsCode(lang);
     // Lowest npcId in the group, so a file shared by many NPCs regenerates the same way
     // whichever row the button was pressed on. See canonicalNpcId.
     const seed = seedFor(canonicalNpcId(group), config.seedStrategy);
@@ -188,6 +205,7 @@ export async function regenerateLine(
             stability: config.voiceSettings.stability,
             seed,
             dictionary,
+            languageCode,
           },
           options,
         )
@@ -199,6 +217,7 @@ export async function regenerateLine(
             voiceSettings: config.voiceSettings,
             seed,
             dictionary,
+            languageCode,
           },
           options,
         );
@@ -206,26 +225,32 @@ export async function regenerateLine(
 
     // Already trimmed of its lead-in by tts.ts, so the archived file and `bytes` both
     // describe the audio the addon will play.
-    const committed = await commitTake("quests", file, speech.audio, {
-      lineId,
-      voice: line.voice,
-      narratorVoice: narrated ? NARRATOR_VOICE : null,
-      voiceId,
-      modelId: config.modelId,
-      seed,
-      characters: spokenText.length,
-      credits: speech.credits,
-      // What was actually sent: the dialogue endpoint takes only stability, and a row
-      // claiming the other three would describe a take that never had them.
-      settings: narrated
-        ? { stability: config.voiceSettings.stability }
-        : config.voiceSettings,
-      spokenHash: spokenHash(spokenText),
-      dictionaryVersion: dictionary?.versionId ?? null,
-      leadIn: speech.leadIn,
-      leadInSec: speech.leadInSec,
-      createdBy,
-    });
+    const committed = await commitTake(
+      "quests",
+      file,
+      speech.audio,
+      {
+        lineId,
+        voice: line.voice,
+        narratorVoice: narrated ? NARRATOR_VOICE : null,
+        voiceId,
+        modelId: config.modelId,
+        seed,
+        characters: spokenText.length,
+        credits: speech.credits,
+        // What was actually sent: the dialogue endpoint takes only stability, and a row
+        // claiming the other three would describe a take that never had them.
+        settings: narrated
+          ? { stability: config.voiceSettings.stability }
+          : config.voiceSettings,
+        spokenHash: spokenHash(spokenText),
+        dictionaryVersion: dictionary?.versionId ?? null,
+        leadIn: speech.leadIn,
+        leadInSec: speech.leadInSec,
+        createdBy,
+      },
+      { lang },
+    );
 
     return {
       ok: true,
@@ -242,7 +267,7 @@ export async function regenerateLine(
       dictionaryVersion: dictionary?.versionId ?? null,
       sharedWith: new Set(group.map((l) => `${l.npcType}:${l.npcId}`)).size - 1,
     };
-  });
+  }, lang);
 
   if (outcome === BUSY) return { ok: false, failure: busy(file) };
   return outcome;

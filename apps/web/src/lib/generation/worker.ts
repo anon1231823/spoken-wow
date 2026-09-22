@@ -19,7 +19,7 @@ import { regenerateBookLine } from "@/lib/books/regenerate";
 import { regenerateZoneLine } from "@/lib/zones/regenerate";
 import { readSettings } from "./settings";
 import { generationStatus } from "./status";
-import { BASE_LANG } from "@/lib/lang";
+import type { Lang } from "@/lib/lang";
 import type { Source } from "@/lib/sections";
 
 /**
@@ -68,12 +68,13 @@ export async function currentBudget(apiKey: string | null = null): Promise<numbe
  *
  * A function per source rather than one that switches inside, so adding a section is adding
  * an entry here and the loop below stays the loop. Every one takes the same three arguments
- * because that is all a job carries: which line, whose credits, and the key to spend them.
+ * because that is all a job carries: which line, whose credits, the key to spend them, and
+ * the language to speak it in.
  */
 export type Generator = (
   lineId: string,
   userId: string,
-  options: { apiKey: string },
+  options: { apiKey: string; lang: Lang },
 ) => Promise<RegenerateResult>;
 
 export type WorkerOptions = {
@@ -168,23 +169,12 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
       return;
     }
 
-    // Nothing can generate another language yet: the generators read English text and
-    // commit English takes. A job in one is refused whole, like a source with no generator,
-    // rather than handed on to come back as an English take filed under the wrong language.
-    if (job.lang !== BASE_LANG) {
-      const message = `generating in ${job.lang} is not supported in this build`;
-      try {
-        await failJob(job.id, { kind: "bad-request", message });
-        await cancelPending(`Stopped: ${message}`, job.batchId);
-      } catch (error) {
-        console.error(`regeneration queue: job ${job.id} could not be failed`, error);
-      }
-      return;
-    }
-
     // A batch whose owner's account was deleted still has takes to attribute, and
     // take."createdBy" is nullable for exactly that case.
-    const result = await generate(job.lineId, job.createdBy ?? "", { apiKey }).catch(
+    const result = await generate(job.lineId, job.createdBy ?? "", {
+      apiKey,
+      lang: job.lang,
+    }).catch(
       (error: unknown): RegenerateResult => ({
         ok: false,
         failure: {

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { BASE_LANG } from "@/lib/lang";
 import { langParam } from "@/lib/lang-server";
 import { corpus, isCorpusEmpty } from "@/lib/quests/catalogue";
 import { searchContext } from "@/lib/quests/context";
@@ -23,7 +22,6 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const { lang, denied } = await langParam(request);
   if (denied) return denied;
-  const english = lang === BASE_LANG;
   const limit = Number(params.get("limit")) || PAGE_SIZE;
   // The page number is what the URL carries, so a link stays meaningful if the page size
   // ever changes; the offset is arithmetic and belongs on this side of it.
@@ -48,7 +46,7 @@ export async function GET(request: NextRequest) {
     // The whole dirty set, intersected here, rather than the match set sent to Postgres as a
     // parameter: unfiltered, that is eleven thousand paths in an `= any($1)`, and several
     // times slower than asking for every dirty file.
-    const dirty = context.dirty ?? (english ? await dirtyQuestFiles() : new Set<string>());
+    const dirty = context.dirty ?? (await dirtyQuestFiles(undefined, lang));
     const files = new Set(all.lines.map((line) => line.audioPath));
     return NextResponse.json({ dirtyFiles: [...dirty].filter((file) => files.has(file)) });
   }
@@ -59,8 +57,8 @@ export async function GET(request: NextRequest) {
   // cost a query each over the files asked about, and fifty is what a page holds.
   const files = [...new Set(result.lines.map((line) => line.audioPath))];
   const [stale, dirty] = await Promise.all([
-    context.stale ?? (english ? staleFiles(files) : new Set<string>()),
-    context.dirty ?? (english ? dirtyQuestFiles(files) : new Set<string>()),
+    context.stale ?? staleFiles(files, lang),
+    context.dirty ?? dirtyQuestFiles(files, lang),
   ]);
   for (const line of result.lines) {
     line.stale = stale.has(line.audioPath);

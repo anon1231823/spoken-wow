@@ -266,11 +266,9 @@ async function buildCorpus(lang: Lang): Promise<CorpusEntry[]> {
  * what it says and what it calls each place. Where it has not, the English stands in and
  * `missing` says so -- a rendering, never written back, and never voiced.
  *
- * Its spoken text goes through the English pronunciation rules for now, the only ones there
- * are; a language's own lexicon arrives with generating in it.
  */
 async function buildTranslated(lang: Lang): Promise<CorpusEntry[]> {
-  const [english, own, names, rules] = await Promise.all([
+  const [english, own, names] = await Promise.all([
     catalogue(BASE_LANG),
     currentLore(lang),
     query<{ entityId: string; name: string }>(
@@ -278,7 +276,6 @@ async function buildTranslated(lang: Lang): Promise<CorpusEntry[]> {
         where "lang" = $1 and "kind" in ('zone', 'subzone') and "isCurrent"`,
       [lang],
     ),
-    loadPronunciation(),
   ]);
   const named = new Map(names.map((row) => [row.entityId, row.name]));
 
@@ -286,7 +283,9 @@ async function buildTranslated(lang: Lang): Promise<CorpusEntry[]> {
     const text = own.get(entry.id);
     const name = named.get(entry.id);
     const textMissing = !text || text.full.trim() === "";
-    const spoken = textMissing ? "" : toSpokenText(text.full, rules);
+    // No pronunciation rules: the committed ones are English spellings of English words, and
+    // a language is spoken with its own lexicon, through the dictionary at generation.
+    const spoken = textMissing ? "" : toSpokenText(text.full, {});
     return {
       ...entry,
       name: name ?? entry.name,
