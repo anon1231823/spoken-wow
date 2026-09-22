@@ -27,6 +27,8 @@ import { db, query } from "@/lib/db";
 
 import { BASE_LANG, type Lang } from "@/lib/lang";
 
+import { isGeneratable } from "./tools";
+
 export type BookVersion = {
   lineId: string;
   version: number;
@@ -148,6 +150,12 @@ export async function saveBookText(args: {
     // The structural fields ride along from the row being replaced, or from the English
     // page for a first translation. They are the extract's to set, and copying them keeps
     // this one insert rather than an insert plus a lookup.
+    //
+    // Whether the page can be voiced is not structure: it is a property of this language's
+    // text, judged again on every save. A $N the English carries blocks the English; a
+    // translation that writes the name out is voiceable, and one that keeps the token is not,
+    // whatever the other languages say.
+    const { generatable, skipReason } = isGeneratable(text);
     const { rows: inserted } = await client.query<Row>(
       `insert into "book_line"
          ("lineId", "lang", "version", "isCurrent", "origin", "pageId", "bookId",
@@ -155,13 +163,13 @@ export async function saveBookText(args: {
           "text", "generatable", "skipReason", "editedBy", "note")
        select "lineId", $2, $3, true, 'edited', "pageId", "bookId",
               "pageNumber", "pageCount", "title", "ownerKind", "ownerIds", "material",
-              $4, "generatable", "skipReason", $5, $6
+              $4, $9, $10, $5, $6
          from "book_line"
         where "lineId" = $1 and "lang" = $8 and "version" = $7
        returning ${COLUMNS}`,
       [
         args.lineId, lang, version, text, args.editedBy, args.note?.trim() || null,
-        source.version, source.lang,
+        source.version, source.lang, generatable, skipReason,
       ],
     );
 

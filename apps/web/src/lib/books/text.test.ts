@@ -15,15 +15,25 @@ const { BookConflict, bookHistory, restoreBookText, saveBookText } = await impor
 /** A page id no other run will collide with, so this can share a database. */
 let lineId: string;
 
-async function seed(text: string) {
+async function seed(text: string, skipReason: string | null = null) {
   await db().query(
     `insert into "book_line"
        ("lineId", "lang", "version", "isCurrent", "origin", "pageId", "bookId",
-        "pageNumber", "pageCount", "title", "ownerKind", "ownerIds", "material", "text")
+        "pageNumber", "pageCount", "title", "ownerKind", "ownerIds", "material", "text",
+        "generatable", "skipReason")
      values ($1, 'enUS', 1, true, 'extracted', 1, 1, 1, 1, 'A Test Tome', 'item',
-             '{1}'::integer[], 0, $2)`,
-    [lineId, text],
+             '{1}'::integer[], 0, $2, $3::text is null, $3)`,
+    [lineId, text, skipReason],
   );
+}
+
+async function voiceable(lang: string) {
+  const { rows } = await db().query<{ generatable: boolean; skipReason: string | null }>(
+    `select "generatable", "skipReason" from "book_line"
+      where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
+    [lineId, lang],
+  );
+  return rows[0];
 }
 
 beforeEach(() => {
@@ -92,6 +102,28 @@ describe("rewriting a page", () => {
   it("refuses empty text rather than shipping a silent page", async () => {
     await seed("Something.");
     await expect(saveBookText({ lineId, text: "   ", editedBy: "a" })).rejects.toThrow(/empty/);
+  });
+});
+
+describe("whether a page can be voiced", () => {
+  it("is decided per language, from that language's own text", async () => {
+    await seed("Greetings, $N.", "substitution");
+
+    await saveBookText({ lineId, text: "Saudações, viajante.", editedBy: "a", lang: "ptBR" });
+    expect(await voiceable("ptBR")).toEqual({ generatable: true, skipReason: null });
+    // The English keeps its token, and stays blocked.
+    expect(await voiceable("enUS")).toEqual({ generatable: false, skipReason: "substitution" });
+
+    await saveBookText({ lineId, text: "Saudações, $N.", editedBy: "a", lang: "ptBR" });
+    expect(await voiceable("ptBR")).toEqual({ generatable: false, skipReason: "substitution" });
+  });
+
+  it("unblocks an English page once its edit removes the token", async () => {
+    await seed("Greetings, $N.", "substitution");
+
+    await saveBookText({ lineId, text: "Greetings, traveller.", editedBy: "a" });
+
+    expect(await voiceable("enUS")).toEqual({ generatable: true, skipReason: null });
   });
 });
 
