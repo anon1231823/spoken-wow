@@ -7,19 +7,21 @@
  * answers.
  *
  * It stops everything rather than one batch by default, because that is what a person
- * pressing Stop means: there is one account and one budget, and "stop, but keep spending on
- * the other batch" is not a thing anyone wants from that button.
+ * pressing Stop means: "stop, but keep spending on the other batch" is not a thing anyone
+ * wants from that button. Everything is every language the caller regenerates in, though,
+ * not the whole queue: a Portuguese translator's Stop halts the Portuguese work and leaves
+ * the English queue running, as a global admin's halts all of it.
  */
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireRegenerate } from "@/lib/generation/authz";
+import { requireAnyRegenerate } from "@/lib/generation/authz";
 import { ensureQueueRunning } from "@/lib/generation/boot";
 import { cancelPending } from "@/lib/generation/queue";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const { session, denied } = await requireRegenerate();
+  const { session, langs, denied } = await requireAnyRegenerate();
   if (denied) return denied;
 
   // cancelPending is plain SQL and does not itself need a worker, but a process whose only
@@ -31,6 +33,9 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as { batchId?: unknown };
   const batchId = typeof body.batchId === "string" ? body.batchId : undefined;
 
-  const cancelled = await cancelPending(`Stopped by ${session.user.name ?? "an admin"}`, batchId);
+  const cancelled = await cancelPending(`Stopped by ${session.user.name ?? "an admin"}`, {
+    batchId,
+    langs,
+  });
   return NextResponse.json({ cancelled });
 }

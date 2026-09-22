@@ -238,16 +238,27 @@ export async function retryJob(id: string, delayMs: number): Promise<void> {
 }
 
 /**
- * Cancel everything still waiting, optionally within one batch.
+ * Cancel everything still waiting, optionally within one batch or some languages.
  *
  * Running jobs are untouched: the characters are already at ElevenLabs and will be billed,
  * so discarding the audio would pay for nothing. Returns how many were cancelled.
+ *
+ * `langs` is what the person pressing Stop may regenerate in: a Portuguese translator stops
+ * the Portuguese queue and cannot stop anybody's English. Absent means every language,
+ * which is the worker stopping a batch of its own.
  */
-export async function cancelPending(because: string, batchId?: string): Promise<number> {
+export async function cancelPending(
+  because: string,
+  scope: { batchId?: string; langs?: readonly Lang[] } = {},
+): Promise<number> {
+  const batchId = scope.batchId ?? null;
+  const langs = scope.langs ?? null;
   const { rowCount } = await db().query(
     `update "regeneration_job" set "state" = 'cancelled', "finishedAt" = now()
-      where "state" = 'pending' and ($1::uuid is null or "batchId" = $1)`,
-    [batchId ?? null],
+      where "state" = 'pending'
+        and ($1::uuid is null or "batchId" = $1)
+        and ($2::text[] is null or "lang" = any($2))`,
+    [batchId, langs],
   );
 
   // Only batches that actually lost work are stamped. Stamping every unstopped batch would
@@ -258,9 +269,10 @@ export async function cancelPending(because: string, batchId?: string): Promise<
         set "stoppedAt" = now(), "stoppedBecause" = $1
       where b."stoppedAt" is null
         and ($2::uuid is null or b."id" = $2)
+        and ($3::text[] is null or b."lang" = any($3))
         and exists (select 1 from "regeneration_job" j
                      where j."batchId" = b."id" and j."state" = 'cancelled')`,
-    [because, batchId ?? null],
+    [because, batchId, langs],
   );
 
   return rowCount ?? 0;

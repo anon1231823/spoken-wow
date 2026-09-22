@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { CODES } from "./lang";
 import {
   can,
   canGrant,
+  langsWhere,
   worksIn,
   canConfigureGeneration,
   canManageVoices,
@@ -147,6 +149,16 @@ describe("per-language permissions", () => {
     expect(canGrant(lead, "configure", "ptBR")).toBe(false);
     expect(canGrant(lead, "admin", "ptBR")).toBe(false);
     expect(canGrant(lead, "edit", "deDE")).toBe(false);
+  });
+
+  it("lists the languages somebody may act in", () => {
+    expect(langsWhere({ role: "admin", grants: [] }, "regenerate")).toHaveLength(CODES.length);
+    expect(langsWhere({ role: "collaborator", grants: [] }, "regenerate")).toEqual(["enUS"]);
+    expect(langsWhere(member([{ lang: "ptBR", capability: "admin" }]), "regenerate")).toEqual([
+      "ptBR",
+    ]);
+    expect(langsWhere(member([{ lang: "ptBR", capability: "edit" }]), "regenerate")).toEqual([]);
+    expect(langsWhere(null, "regenerate")).toEqual([]);
   });
 
   it("lets somebody working in a language see it before it is switched on", () => {

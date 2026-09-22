@@ -8,16 +8,19 @@
  *
  * It never touches pending or running work. Stopping a queue is /stop's job, and a button
  * labelled with a cross must not be able to cancel anything.
+ *
+ * Anybody who regenerates in any language may press it, since everybody watches the one
+ * panel: it hides news, it never stops or undoes work, so there is nothing to scope.
  */
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireRegenerate } from "@/lib/generation/authz";
+import { requireAnyRegenerate } from "@/lib/generation/authz";
 import { dismissThrough } from "@/lib/generation/queue";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const { session, denied } = await requireRegenerate();
+  const { session, denied } = await requireAnyRegenerate();
   if (denied) return denied;
 
   const body = (await request.json().catch(() => ({}))) as { through?: unknown };

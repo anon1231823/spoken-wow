@@ -17,7 +17,7 @@ import { langParam } from "@/lib/lang-server";
 import { NO_API_KEY } from "@/lib/no-api-key";
 import { currentSession } from "@/lib/session";
 import { viewerOf } from "@/lib/grants/store";
-import { can, canConfigureGeneration, type Capability } from "@/lib/permissions";
+import { can, canConfigureGeneration, langsWhere, type Capability } from "@/lib/permissions";
 
 export type Session = Awaited<ReturnType<typeof auth.api.getSession>>;
 
@@ -130,21 +130,18 @@ export async function requireIn(
 }
 
 /**
- * The session, or a 403, for anybody who regenerates in any language.
+ * The session, or a 403, for anybody who regenerates in any language, with those languages.
  *
- * For what is shared between them: there is one queue and one ElevenLabs budget behind it,
- * and somebody queueing Portuguese is watching the same panel as somebody queueing English.
+ * For what is shared between them: there is one queue, and somebody queueing Portuguese is
+ * watching the same panel as somebody queueing English. The languages are what the caller
+ * may act on in it -- Stop cancels those and no others.
  */
 export async function requireAnyRegenerate(): Promise<
-  { session: NonNullable<Session>; denied: null } | { session: null; denied: Response }
+  | { session: NonNullable<Session>; langs: Lang[]; denied: null }
+  | { session: null; langs: null; denied: Response }
 > {
-  const session = await auth.api.getSession({ headers: await headers() });
-  const viewer = await viewerOf(session);
-  const allowed =
-    viewer !== null &&
-    [BASE_LANG, ...viewer.grants.map((grant) => grant.lang as Lang)].some((lang) =>
-      can(viewer, "regenerate", lang),
-    );
-  if (!session || !allowed) return { session: null, denied: FORBIDDEN() };
-  return { session, denied: null };
+  const session = await currentSession();
+  const langs = langsWhere(await viewerOf(session), "regenerate");
+  if (!session || langs.length === 0) return { session: null, langs: null, denied: FORBIDDEN() };
+  return { session, langs, denied: null };
 }

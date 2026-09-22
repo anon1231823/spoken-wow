@@ -149,7 +149,7 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
         " profile and start it again";
       try {
         await failJob(job.id, { kind: "auth", message });
-        await cancelPending(`Stopped after auth: ${message}`, job.batchId);
+        await cancelPending(`Stopped after auth: ${message}`, { batchId: job.batchId });
       } catch (error) {
         console.error(`regeneration queue: job ${job.id} could not be failed`, error);
       }
@@ -162,7 +162,7 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
       const message = `no generator for ${job.source} jobs in this build`;
       try {
         await failJob(job.id, { kind: "bad-request", message });
-        await cancelPending(`Stopped: ${message}`, job.batchId);
+        await cancelPending(`Stopped: ${message}`, { batchId: job.batchId });
       } catch (error) {
         console.error(`regeneration queue: job ${job.id} could not be failed`, error);
       }
@@ -216,7 +216,7 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
       // way. Grinding through the rest of the batch to learn that once per line is exactly
       // what the fatal flag exists to prevent - the reasoning is written out in errors.ts.
       if (fatal) {
-        await cancelPending(`Stopped after ${kind}: ${message}`, job.batchId);
+        await cancelPending(`Stopped after ${kind}: ${message}`, { batchId: job.batchId });
       }
     } catch (error) {
       console.error(

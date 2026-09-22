@@ -9,7 +9,7 @@
 import { createAccessControl } from "better-auth/plugins/access";
 import { adminAc, defaultStatements } from "better-auth/plugins/admin/access";
 
-import { BASE_LANG, type Lang } from "@/lib/lang";
+import { BASE_LANG, CODES, type Lang } from "@/lib/lang";
 
 const statement = {
   ...defaultStatements,
@@ -112,6 +112,14 @@ export function can(viewer: Viewer | null, capability: Capability, lang: Lang): 
     (grant) =>
       grant.lang === lang && (grant.capability === capability || grant.capability === "admin"),
   );
+}
+
+/**
+ * Every language in which somebody may do something: all of them for a global admin, none
+ * for somebody signed out.
+ */
+export function langsWhere(viewer: Viewer | null, capability: Capability): Lang[] {
+  return CODES.filter((lang) => can(viewer, capability, lang));
 }
 
 /** Whether somebody may hand out `capability` in `lang`. */
