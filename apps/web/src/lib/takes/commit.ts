@@ -27,6 +27,8 @@ import path from "node:path";
 import { db, query } from "@/lib/db";
 import type { Source } from "@/lib/sections";
 
+import { BASE_LANG, type Lang } from "@/lib/lang";
+
 import { historyDirOf } from "./adapters";
 import { archiveName, writeAtomic } from "./bytes";
 
@@ -74,9 +76,9 @@ export async function commitTake(
   file: string,
   data: Buffer,
   fields: TakeFields,
-  options: { lang?: string; measure?: (clip: string) => Promise<number | null> } = {},
+  options: { lang?: Lang; measure?: (clip: string) => Promise<number | null> } = {},
 ): Promise<Committed> {
-  const lang = options.lang ?? "enUS";
+  const lang = options.lang ?? BASE_LANG;
 
   const [{ next }] = await query<{ next: number }>(
     `select coalesce(max("version"), 0) + 1 as "next" from "take"
@@ -85,7 +87,7 @@ export async function commitTake(
   );
 
   const archiveFile = archiveName(next, data);
-  const archived = path.join(historyDirOf(source, file), archiveFile);
+  const archived = path.join(historyDirOf(source, file, lang), archiveFile);
   await writeAtomic(archived, data);
   const durationSec = options.measure ? await options.measure(archived) : null;
 

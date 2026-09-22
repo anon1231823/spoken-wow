@@ -11,15 +11,15 @@
 import "server-only";
 
 import { query } from "@/lib/db";
+import { memoByLang } from "@/lib/memo";
+import { nameStamp, versionStamp } from "@/lib/stamp";
 import { loadDirtyContext, NO_DIRT, type DirtyContext } from "@/lib/generation/dirty";
 
-import type { OwnerKind } from "./filters";
+import { ownerEntityKind, type OwnerKind } from "./filters";
 import { spokenText, textHash, fileFor } from "./tools";
 import { liveTakes } from "@/lib/takes/store";
 
-/** The language the corpus is read in. One for now; the table carries the column at full
- *  strength because vmangos has eight more translations on these same ids. */
-export const BASE_LANG = "enUS";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 
 /** One voiceable page of one book. */
 export type BookPage = {
@@ -43,9 +43,19 @@ export type BookPage = {
   hash: string;
   /** Store-relative and extension-less, e.g. '1381'. */
   file: string;
-  /** False for the 88 pages the game has but nothing can voice. */
+  /** False for the 88 pages the game has but nothing can voice, and for a page another
+   *  language has not translated. */
   generatable: boolean;
   skipReason: string | null;
+  /**
+   * What a language other than English has not translated yet; the English stands in on
+   * the page, marked, and is never voiced. Absent in English, and where nothing is missing.
+   */
+  missing?: { text: boolean; title: boolean };
+  /** The English page, for a translator to work from. Absent when reading English. */
+  english?: string;
+  /** The owner's English name, likewise. */
+  englishTitle?: string;
 };
 
 /** The live take for a page, as the explorer needs it. Mirrors the zones shape. */
@@ -95,10 +105,12 @@ export const EMPTY_CONTEXT: SearchContext = {
  * answer than one that looks like the game has no books in it.
  */
 export class CorpusEmpty extends Error {
-  constructor() {
+  constructor(lang: Lang = BASE_LANG) {
     super(
-      "book_line holds no English pages -- seed it with: make books-extract && make books-import " +
-        "(and check DATABASE_URL points at the database you mean)",
+      lang === BASE_LANG
+        ? "book_line holds no English pages -- seed it with: make books-extract && " +
+            "make books-import (and check DATABASE_URL points at the database you mean)"
+        : `book_line holds no ${lang} pages yet`,
     );
     this.name = "CorpusEmpty";
   }
@@ -115,30 +127,84 @@ export function isCorpusEmpty(error: unknown): boolean {
   return error instanceof Error && error.name === "CorpusEmpty";
 }
 
-type Memo = { stamp: string; value: Promise<BookPage[]> };
-
-const globalForBooks = globalThis as unknown as { booksCatalogue?: Memo };
+/** One memo per language (lib/memo.ts), so switching between two does not rebuild each time. */
+const cacheKey = Symbol.for("spoken.books-catalogue.by-lang");
 
 /**
- * What the corpus's rows are, as one comparable value.
+ * What the corpus's rows are, as one comparable value (lib/stamp.ts).
  *
  * Validated rather than invalidated, exactly as the zones catalogue is and for the same
  * reason: this app runs two pm2 workers, so a memo one worker drops after a save is a memo
- * the other keeps serving. The three terms catch the three ways the table moves -- an edit
- * inserts a version so the highest id moves, an import can delete so the count moves, and a
- * restore moves the live flag between existing rows, which only the sum of current ids sees.
+ * the other keeps serving.
  */
-async function stampOf(lang: string): Promise<string> {
+async function stampOf(lang: Lang): Promise<string> {
+  const english = versionStamp("book_line", `"lang" = '${BASE_LANG}'`);
+  // Another language is read over the English pages and names their owners in entity_name,
+  // so its memo moves with either of those as well as with its own text: one statement.
   const rows = await query<{ stamp: string }>(
-    `select coalesce(max("id"), 0) || ':' || count(*) || ':'
-             || coalesce(sum("id") filter (where "isCurrent"), 0) as "stamp"
-       from "book_line" where "lang" = $1`,
-    [lang],
+    lang === BASE_LANG
+      ? `select ${english} as "stamp"`
+      : `select ${english} || '|' || ${versionStamp("book_line", `"lang" = $1`)} || '|' ||
+                ${nameStamp(["item", "gameobject"])} as "stamp"`,
+    lang === BASE_LANG ? [] : [lang],
   );
-  return rows[0]?.stamp ?? "0:0:0";
+  return rows[0]?.stamp ?? "";
 }
 
-async function build(lang: string): Promise<BookPage[]> {
+/**
+ * Another language's pages: every English page, with this language's text and titles where
+ * it has them. The English pages are the skeleton because they are what exists -- which
+ * pages there are, in which books, owned by what, voiced into which file -- and none of that
+ * differs by language. Where the language has not written a page, the English stands in,
+ * marked `missing`, and the page is not generatable: a rendering, never a row.
+ *
+ * A title is the owner's name, so it comes from entity_name under the first owner, the one
+ * a page is filed under.
+ */
+async function buildTranslated(lang: Lang): Promise<BookPage[]> {
+  const [english, own, names] = await Promise.all([
+    catalogue(BASE_LANG),
+    query<{ lineId: string; text: string; generatable: boolean; skipReason: string | null }>(
+      `select "lineId", "text", "generatable", "skipReason" from "book_line"
+        where "lang" = $1 and "isCurrent"`,
+      [lang],
+    ),
+    query<{ kind: string; entityId: string; name: string }>(
+      `select "kind", "entityId", "name" from "entity_name"
+        where "lang" = $1 and "kind" in ('item', 'gameobject') and "isCurrent"`,
+      [lang],
+    ),
+  ]);
+  const texts = new Map(own.map((row) => [row.lineId, row]));
+  const titles = new Map(names.map((row) => [`${row.kind}:${row.entityId}`, row.name]));
+
+  return english.map((page) => {
+    const text = texts.get(page.id);
+    const owner = `${ownerEntityKind(page.ownerKind)}:${page.ownerIds[0]}`;
+    const title = titles.get(owner);
+    return {
+      ...page,
+      ...(text
+        ? {
+            text: text.text,
+            spoken: spokenText(text.text),
+            hash: textHash(text.text),
+            generatable: text.generatable,
+            skipReason: text.skipReason,
+          }
+        : { spoken: "", hash: textHash(""), generatable: false, skipReason: "untranslated" }),
+      title: title ?? page.title,
+      english: page.text,
+      englishTitle: page.title,
+      ...(!text || title === undefined
+        ? { missing: { text: !text, title: title === undefined } }
+        : {}),
+    };
+  });
+}
+
+async function build(lang: Lang): Promise<BookPage[]> {
+  if (lang !== BASE_LANG) return buildTranslated(lang);
   const rows = await query<{
     lineId: string;
     pageId: number;
@@ -160,7 +226,7 @@ async function build(lang: string): Promise<BookPage[]> {
       order by "bookId", "pageNumber"`,
     [lang],
   );
-  if (rows.length === 0) throw new CorpusEmpty();
+  if (rows.length === 0) throw new CorpusEmpty(lang);
 
   return rows.map((row) => {
     const spoken = spokenText(row.text);
@@ -184,17 +250,11 @@ async function build(lang: string): Promise<BookPage[]> {
   });
 }
 
-export async function catalogue(lang: string = BASE_LANG): Promise<BookPage[]> {
-  const stamp = await stampOf(lang);
-  const existing = globalForBooks.booksCatalogue;
-  if (existing && existing.stamp === stamp) return existing.value;
-
-  const value = build(lang);
-  globalForBooks.booksCatalogue = { stamp, value };
-  return value;
+export async function catalogue(lang: Lang = BASE_LANG): Promise<BookPage[]> {
+  return memoByLang(cacheKey, lang, await stampOf(lang), () => build(lang));
 }
 
-export async function loadContext(lang: string = BASE_LANG): Promise<SearchContext> {
+export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext> {
   const [takeRows, reportRows, dirt] = await Promise.all([
     liveTakes("books", lang),
     // Grouped in the database rather than counted here: resolved rows are the ones that
@@ -208,7 +268,7 @@ export async function loadContext(lang: string = BASE_LANG): Promise<SearchConte
         group by "lineId"`,
       [lang],
     ),
-    loadDirtyContext("books"),
+    loadDirtyContext("books", lang),
   ]);
 
   return {
@@ -241,7 +301,7 @@ export async function loadContext(lang: string = BASE_LANG): Promise<SearchConte
  * `report` has no foreign key onto `book_line`, so this is what stands between a typo and a
  * row nothing will ever show or clean up. Every route accepting a lineId from outside calls it.
  */
-export async function isKnownLine(lineId: string, lang: string = BASE_LANG): Promise<boolean> {
+export async function isKnownLine(lineId: string, lang: Lang = BASE_LANG): Promise<boolean> {
   return (await catalogue(lang)).some((page) => page.id === lineId);
 }
 
@@ -258,7 +318,7 @@ export async function isKnownLine(lineId: string, lang: string = BASE_LANG): Pro
  */
 export async function pageById(
   pageId: number,
-  lang: string = BASE_LANG,
+  lang: Lang = BASE_LANG,
 ): Promise<BookPage | undefined> {
   if (!Number.isInteger(pageId)) return undefined;
   return (await catalogue(lang)).find((page) => page.pageId === pageId);
@@ -267,7 +327,7 @@ export async function pageById(
 /** The book dropdown's options, derived from the corpus rather than hardcoded. */
 export type BookFacet = { bookId: number; title: string; pages: number; ownerKind: OwnerKind };
 
-export async function bookFacets(lang: string = BASE_LANG): Promise<BookFacet[]> {
+export async function bookFacets(lang: Lang = BASE_LANG): Promise<BookFacet[]> {
   const pages = await catalogue(lang);
   const books = new Map<number, BookFacet>();
 

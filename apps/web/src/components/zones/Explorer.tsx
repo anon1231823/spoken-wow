@@ -1,5 +1,9 @@
 "use client";
 
+import { nameSubject, TranslateDialog, type TranslateSubject } from "@/components/TranslateDialog";
+import { useCan } from "@/components/useCan";
+import { useLang } from "@/components/LangProvider";
+import { BASE_LANG, withLang } from "@/lib/lang";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -15,7 +19,6 @@ import { LoreDialog } from "@/components/zones/LoreDialog";
 import { Player } from "@/components/zones/Player";
 import ReportDialog from "@/components/ReportDialog";
 import { SearchBar } from "@/components/zones/SearchBar";
-import { useSession } from "@/lib/auth-client";
 import { totals as estimateTotals, LIST_RATE, type Estimate } from "@/lib/generation/billing";
 import {
   dismissQueue,
@@ -27,7 +30,6 @@ import {
   type QueueSnapshot,
 } from "@/lib/generation/client";
 import { noApiKeyMessage } from "@/lib/no-api-key";
-import * as permissions from "@/lib/permissions";
 import type { ZoneFacet } from "@/lib/zones/catalogue";
 import { filterParams, filtersFromParams, PAGE_SIZE, type LineFilters } from "@/lib/zones/filters";
 import type { ResultLine, SearchResult } from "@/lib/zones/search";
@@ -40,6 +42,7 @@ import * as echo from "@/lib/url-echo";
 const DEBOUNCE_MS = 500;
 
 export function Explorer({ zones }: { zones: ZoneFacet[] }) {
+  const lang = useLang();
   const pathname = usePathname();
   const params = useSearchParams();
 
@@ -52,14 +55,16 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   //
   // Every one of these is checked again in src/lib/authz.ts. Nothing below is an access
   // control; it decides what is worth drawing.
-  const { data: session } = useSession();
-  const role = session?.user.role;
-  // One role does all three here. The zones site had `editor` for reviewing and
-  // regenerating and a separate triage permission; this app's `collaborator` is the same
-  // person, and splitting a role that nobody had split by hand would be inventing a
-  // distinction to maintain.
-  const canRegenerate = permissions.canRegenerate(role);
-  const canTriage = permissions.canRegenerate(role);
+  //
+  // In the page's language: a translator may write this language's lore without being able
+  // to regenerate it, so editing and regenerating are asked separately. Triage goes with
+  // editing -- reading a report and fixing the text it is about are one job.
+  const may = useCan();
+  const canRegenerate = may("regenerate");
+  const canEdit = may("edit");
+  const canTriage = canEdit;
+  // A place's name in this language, written as its own version in entity_name.
+  const [naming, setNaming] = useState<TranslateSubject | null>(null);
 
   // FILTERS ARE REBUILT FROM THE URL EVERY RENDER rather than held in state, so the
   // back button is a working undo for a filter change and a link carries the exact
@@ -212,7 +217,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     const search = new URLSearchParams(filterQuery);
     if (page > 1) search.set("page", String(page));
 
-    fetch(`/api/zones/search?${search}`, { signal: controller.signal })
+    fetch(withLang(lang, `/api/zones/search?${search}`), { signal: controller.signal })
       .then((response) => response.json())
       .then((data: SearchResult) => {
         setResult(data);
@@ -223,7 +228,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       });
 
     return () => controller.abort();
-  }, [filterQuery, page]);
+  }, [filterQuery, page, lang]);
 
   //----------------------------------------------------------------------------
   // Pronunciation marks
@@ -238,11 +243,11 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   // -- so the state moves with the text rather than waiting for a refetch.
   /** Every dirty line the current filter matches, not just this page's. */
   const clearAllDirty = useCallback(() => {
-    fetch(`/api/zones/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
+    fetch(withLang(lang, `/api/zones/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`))
       .then((response) => response.json())
       .then(({ dirtyFiles }: { dirtyFiles?: string[] }) => clearDirty(dirtyFiles ?? []))
       .catch(() => {});
-  }, [clearDirty]);
+  }, [clearDirty, lang]);
 
   const withEdits = useCallback(
     (line: ResultLine): ResultLine => {
@@ -273,20 +278,20 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const refetch = useCallback(() => {
     const search = new URLSearchParams(filterQueryRef.current);
     if (pageRef.current > 1) search.set("page", String(pageRef.current));
-    fetch(`/api/zones/search?${search}`)
+    fetch(withLang(lang, `/api/zones/search?${search}`))
       .then((response) => response.json())
       .then((data: SearchResult) => setResult(data))
       .catch(() => {});
-  }, []);
+  }, [lang]);
 
   // What the plan allows and what is left of it, for the confirmation dialog. Shared with
   // the quests section because it is one account and one budget.
   useEffect(() => {
     if (!canRegenerate) return;
     const controller = new AbortController();
-    void fetchGenerationStatus(controller.signal).then(setStatus);
+    void fetchGenerationStatus(controller.signal, lang).then(setStatus);
     return () => controller.abort();
-  }, [canRegenerate]);
+  }, [canRegenerate, lang]);
 
   /**
    * One line, awaited.
@@ -298,7 +303,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     (line: ResultLine) => {
       setRowStates((current) => ({ ...current, [line.id]: { phase: "busy" } }));
 
-      fetch("/api/zones/regenerate", {
+      fetch(withLang(lang, "/api/zones/regenerate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ lineId: line.id }),
@@ -345,7 +350,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
           }));
         });
     },
-    [refetch],
+    [refetch, lang],
   );
 
   /**
@@ -360,7 +365,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
   const askToRegenerateAll = useCallback(() => {
     if (!result || result.total === 0) return;
 
-    fetch(`/api/zones/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
+    fetch(withLang(lang, `/api/zones/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`))
       .then((response) => response.json())
       .then(({ ids, totalChars }: { ids: string[]; totalChars: number }) => {
         if (ids.length === 0) return;
@@ -378,7 +383,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         });
       })
       .catch(() => {});
-  }, [result, status]);
+  }, [result, status, lang]);
 
   /**
    * Hand the batch to the queue.
@@ -394,7 +399,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
     setDismissed(false);
     setQueueNote(null);
 
-    const queued = await queueBatch({ source: "zones", lineIds }, pendingBatch.label);
+    const queued = await queueBatch({ source: "zones", lineIds }, pendingBatch.label, lang);
 
     if (!queued) {
       // No reason offered because none was given: the route refused for a cause this
@@ -411,7 +416,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       cursor.current = snapshot.cursor;
       setQueue(snapshot);
     }
-  }, [pendingBatch]);
+  }, [pendingBatch, lang]);
 
   /**
    * The queue, polled.
@@ -444,7 +449,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
 
         // Only this section's finished jobs. The queue carries both, and a zones page told
         // that a quests file is now at version 3 would look for a line it does not have.
-        const mine = snapshot.finished.filter((job) => job.source === "zones");
+        const mine = snapshot.finished.filter((job) => job.source === "zones" && job.lang === lang);
         if (mine.length > 0) {
           setVersions((current) => {
             const next = { ...current };
@@ -465,7 +470,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [canRegenerate, refetch]);
+  }, [canRegenerate, refetch, lang]);
 
   //----------------------------------------------------------------------------
   // Playback
@@ -651,6 +656,7 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
               line={withEdits(line)}
               current={line.id === current?.id}
               canRegenerate={canRegenerate}
+              canEdit={canEdit}
               canTriage={canTriage}
               onPlay={play}
               onNarrowToZone={(l) => updateFilters({ mapID: l.mapID })}
@@ -664,6 +670,21 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
               }}
               onReport={setReportFor}
               onEditText={(l) => setEditFor(withEdits(l))}
+              onRename={
+                lang !== BASE_LANG && canEdit
+                  ? (l) =>
+                      setNaming(
+                        nameSubject({
+                          kind: l.kind,
+                          entityId: l.id,
+                          title: l.name,
+                          subtitle: l.id,
+                          english: l.englishName ?? l.name,
+                          current: l.nameMissing ? null : l.name,
+                        }),
+                      )
+                  : null
+              }
               onRegenerate={regenerateOne}
             />
           ))}
@@ -686,6 +707,8 @@ export function Explorer({ zones }: { zones: ZoneFacet[] }) {
         onClose={() => setEditFor(null)}
         onSaved={(line, full) => setRewritten((current) => ({ ...current, [line.id]: full }))}
       />
+
+      <TranslateDialog subject={naming} onClose={() => setNaming(null)} onSaved={() => refetch()} />
 
       <ReportDialog
         subject={reportFor && { source: "zones", line: reportFor }}

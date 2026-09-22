@@ -12,8 +12,12 @@ import { headers } from "next/headers";
 
 import { readApiKey } from "@/lib/api-key";
 import { auth } from "@/lib/auth";
+import { BASE_LANG, type Lang } from "@/lib/lang";
+import { langParam } from "@/lib/lang-server";
 import { NO_API_KEY } from "@/lib/no-api-key";
-import { canConfigureGeneration, canRegenerate } from "@/lib/permissions";
+import { currentSession } from "@/lib/session";
+import { viewerOf } from "@/lib/grants/store";
+import { can, canConfigureGeneration, langsWhere, type Capability } from "@/lib/permissions";
 
 export type Session = Awaited<ReturnType<typeof auth.api.getSession>>;
 
@@ -28,8 +32,24 @@ const FORBIDDEN = () => Response.json({ error: "not allowed" }, { status: 403 })
 export async function requireRegenerate(): Promise<
   { session: NonNullable<Session>; denied: null } | { session: null; denied: Response }
 > {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session || !canRegenerate(session.user.role)) {
+  return requireCapability("regenerate", BASE_LANG);
+}
+
+/**
+ * The session, or a 403, for one capability in one language.
+ *
+ * English regenerating and editing is what the collaborator role always granted, so for
+ * those this answers exactly as canRegenerate did; everything else is lib/permissions.ts's
+ * `can`, over the grants the viewer holds.
+ */
+export async function requireCapability(
+  capability: Capability,
+  lang: Lang,
+): Promise<
+  { session: NonNullable<Session>; denied: null } | { session: null; denied: Response }
+> {
+  const session = await currentSession();
+  if (!session || !can(await viewerOf(session), capability, lang)) {
     return { session: null, denied: FORBIDDEN() };
   }
   return { session, denied: null };
@@ -84,4 +104,44 @@ export async function requireApiKey(userId: string): Promise<KeyGuard> {
   }
 
   return { key, denied: null };
+}
+
+//------------------------------------------------------------------------------
+// Language
+//------------------------------------------------------------------------------
+
+
+/**
+ * A route acting in one language: the language from `?lang=`, and the session if it holds
+ * `capability` there. Parsed in that order because what someone may do depends on where.
+ */
+export async function requireIn(
+  request: Request,
+  capability: Capability,
+): Promise<
+  | { lang: Lang; session: NonNullable<Session>; denied: null }
+  | { lang: null; session: null; denied: Response }
+> {
+  const { lang, denied } = await langParam(request);
+  if (denied) return { lang: null, session: null, denied };
+  const guard = await requireCapability(capability, lang);
+  if (guard.denied) return { lang: null, session: null, denied: guard.denied };
+  return { lang, session: guard.session, denied: null };
+}
+
+/**
+ * The session, or a 403, for anybody who regenerates in any language, with those languages.
+ *
+ * For what is shared between them: there is one queue, and somebody queueing Portuguese is
+ * watching the same panel as somebody queueing English. The languages are what the caller
+ * may act on in it -- Stop cancels those and no others.
+ */
+export async function requireAnyRegenerate(): Promise<
+  | { session: NonNullable<Session>; langs: Lang[]; denied: null }
+  | { session: null; langs: null; denied: Response }
+> {
+  const session = await currentSession();
+  const langs = langsWhere(await viewerOf(session), "regenerate");
+  if (!session || langs.length === 0) return { session: null, langs: null, denied: FORBIDDEN() };
+  return { session, langs, denied: null };
 }

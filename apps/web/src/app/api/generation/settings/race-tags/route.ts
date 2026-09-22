@@ -9,13 +9,13 @@
  * `admin`, matching PUT beside it and for the same reason: a direction applies to every line
  * of that race anyone generates afterwards.
  */
-import { requireConfigure } from "@/lib/generation/authz";
+import { requireIn } from "@/lib/generation/authz";
 import { readSettings, SettingsError, validateRaceTags, writeRaceTags } from "@/lib/generation/settings";
 
 export const dynamic = "force-dynamic";
 
 export async function PATCH(request: Request) {
-  const { session, denied } = await requireConfigure();
+  const { session, lang, denied } = await requireIn(request, "configure");
   if (denied) return denied;
 
   let tags;
@@ -29,6 +29,6 @@ export async function PATCH(request: Request) {
     return Response.json({ error: message }, { status: 400 });
   }
 
-  await writeRaceTags(tags, session.user.id);
-  return Response.json(await readSettings());
+  await writeRaceTags(tags, session.user.id, lang);
+  return Response.json(await readSettings(lang));
 }

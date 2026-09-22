@@ -17,7 +17,7 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help db extract import export lookup deploy deploy-copy status remove \
-        pull-history pull-live sounds sync check-synced package package-audio release-dry release release-wago release-curse icon test \
+        import-locale pull-history pull-live sounds sync check-synced package package-audio release-dry release release-wago release-curse icon test \
         full-release
 
 PIPELINE := pipelines/books
@@ -35,6 +35,12 @@ extract: ## vmangos -> pipelines/books/corpus/extract.json
 
 import: ## corpus/extract.json -> book_line (needs DATABASE_URL)
 	@node $(PIPELINE)/tools/import.mjs
+
+# A translation goes from the world DB straight into Postgres: nothing is exported from one
+# yet, and the site is where it is edited. LOCALE and not LANG, which every shell sets.
+import-locale: ## locales_page_text -> book_line + entity_name (LOCALE=deDE; needs DATABASE_URL)
+	@test -n "$(LOCALE)" || { echo "import-locale: set LOCALE, e.g. LOCALE=deDE"; exit 2; }
+	@node $(PIPELINE)/tools/import-locale.mjs --lang $(LOCALE)
 
 export: ## book_line -> addons/SpokenBooks/Data/Books.lua (needs DATABASE_URL)
 	@node $(PIPELINE)/tools/export.mjs

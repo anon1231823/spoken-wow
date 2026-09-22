@@ -121,14 +121,19 @@ export async function countRecentContributions(ip: string, withinMs: number): Pr
   return Number(rows[0]?.count ?? 0);
 }
 
+/**
+ * `locale`, when given, is one language's: the contributions page lists the ones sent in
+ * the language it is shown in, since accepting one writes that language's text.
+ */
 export async function listContributions(
   status: ContributionStatus | "all",
+  locale?: string,
 ): Promise<Contribution[]> {
   const { rows } = await db().query<Contribution>(
     `select ${COLUMNS} from "contribution"
-      where ($1 = 'all' or "status" = $1)
+      where ($1 = 'all' or "status" = $1) and ($2::text is null or "locale" = $2)
       order by "count" desc, "createdAt" desc`,
-    [status],
+    [status, locale ?? null],
   );
   return rows;
 }
@@ -155,4 +160,17 @@ export async function acceptedContributions(): Promise<Contribution[]> {
       order by "source", "key"`,
   );
   return rows;
+}
+
+/**
+ * The language a contribution was sent in -- the pack the player was using -- or null for
+ * one that does not exist. Asked before resolving it, since who may resolve it is whoever
+ * may edit that language.
+ */
+export async function contributionLocale(id: number): Promise<string | null> {
+  const { rows } = await db().query<{ locale: string }>(
+    `select "locale" from "contribution" where "id" = $1`,
+    [id],
+  );
+  return rows[0]?.locale ?? null;
 }

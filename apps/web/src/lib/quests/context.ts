@@ -26,6 +26,7 @@ import { NO_CONTEXT } from "../search";
 import { query } from "../db";
 import { readIgnores } from "./ignores";
 import { readOverrides } from "./overrides";
+import { BASE_LANG, type Lang } from "../lang";
 
 /**
  * lineId -> how many reports about it are still open.
@@ -35,12 +36,14 @@ import { readOverrides } from "./overrides";
  * catalogues run; the count is public while the bodies are not, so a row can say "somebody
  * has already reported this one" without showing what they said.
  */
-async function openReports(): Promise<Map<string, number>> {
+async function openReports(lang: Lang): Promise<Map<string, number>> {
   const rows = await query<{ lineId: string; open: number }>(
     `select "lineId", count(*)::int as "open"
        from "report"
       where "source" = 'quests' and "status" = 'open' and "lineId" is not null
+        and "lang" = $1
       group by "lineId"`,
+    [lang],
   );
   return new Map(rows.map((row) => [row.lineId, row.open]));
 }
@@ -64,19 +67,22 @@ async function openReports(): Promise<Map<string, number>> {
 export async function searchContext(
   outdated = false,
   dirty = false,
+  lang: Lang = BASE_LANG,
 ): Promise<{ voiced: Set<string>; context: SearchContext }> {
-  const live = await liveTakes("quests");
+  const live = await liveTakes("quests", lang);
   const voiced = new Set(live.map((row) => row.file));
   const takes = new Map(live.map((row) => [row.file, { version: row.version, takes: row.takes }]));
   const generatedAt = new Map(live.map((row) => [row.file, row.createdAt.getTime()]));
 
   try {
+    // Overrides are English's alone -- they rewrite the English corpus. Staleness and dirt
+    // are per language: a take is compared with its own language's text and lexicon.
     const [overrides, ignores, reports, stale, dirt] = await Promise.all([
-      readOverrides(),
-      readIgnores(),
-      openReports(),
-      outdated ? staleFiles() : null,
-      dirty ? dirtyQuestFiles() : null,
+      readOverrides(lang),
+      readIgnores(lang),
+      openReports(lang),
+      outdated ? staleFiles(undefined, lang) : null,
+      dirty ? dirtyQuestFiles(undefined, lang) : null,
     ]);
     return {
       voiced,

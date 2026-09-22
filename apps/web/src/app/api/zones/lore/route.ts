@@ -17,7 +17,7 @@
  * is the half the zones site could not have, running one worker with an in-process
  * invalidation. See the note on the memo in lib/zones/catalogue.ts.
  */
-import { requireRegenerate } from "@/lib/generation/authz";
+import { requireIn } from "@/lib/generation/authz";
 import { isKnownLine } from "@/lib/zones/catalogue";
 import { LoreConflict, LoreMissing, loreHistory, restoreLore, saveLore } from "@/lib/zones/lore";
 
@@ -34,17 +34,17 @@ function failed(error: unknown): Response {
 }
 
 export async function GET(request: Request) {
-  const { denied } = await requireRegenerate();
+  const { lang, denied } = await requireIn(request, "edit");
   if (denied) return denied;
 
   const lineId = new URL(request.url).searchParams.get("lineId");
   if (!lineId) return Response.json({ error: "lineId is required" }, { status: 400 });
 
-  return Response.json({ lineId, versions: await loreHistory(lineId) });
+  return Response.json({ lineId, versions: await loreHistory(lineId, lang) });
 }
 
 export async function PUT(request: Request) {
-  const { session, denied } = await requireRegenerate();
+  const { session, lang, denied } = await requireIn(request, "edit");
   if (denied) return denied;
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -82,6 +82,7 @@ export async function PUT(request: Request) {
 
   try {
     const version = await saveLore({
+      lang,
       lineId: body.lineId,
       full: body.full,
       short: (body.short as string | null | undefined) ?? null,
@@ -97,7 +98,7 @@ export async function PUT(request: Request) {
 
 /** Puts an earlier version of the text back. */
 export async function POST(request: Request) {
-  const { denied } = await requireRegenerate();
+  const { lang, denied } = await requireIn(request, "edit");
   if (denied) return denied;
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const version = await restoreLore(body.lineId, body.version as number);
+    const version = await restoreLore(body.lineId, body.version as number, lang);
     return Response.json({ lineId: body.lineId, version });
   } catch (error) {
     return failed(error);

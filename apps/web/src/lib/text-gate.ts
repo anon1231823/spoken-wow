@@ -45,11 +45,25 @@ export function hasInvalidChars(text: string): boolean {
  * it is read off the corpus's own skipReason and no override can reach it. `invalid-chars` is
  * a property of the text, so it is re-decided here rather than trusted from the corpus: that
  * is what lets an override rescue the 99 lines the extractor had to give up on.
+ *
+ * `untranslated` is a language with no text for the line: what the row carries is the
+ * English, shown so the explorer has something to show, and voicing it would file an English
+ * recording under another language.
  */
 export function isVoiceable(
   line: { skipReason: string | null },
   effectiveText: string,
 ): boolean {
-  if (line.skipReason === "progress") return false;
+  if (line.skipReason === "progress" || line.skipReason === "untranslated") return false;
   return !hasInvalidChars(effectiveText);
+}
+
+/**
+ * Why a quest line written here would not be voiced, or null: the extract's own rule
+ * (tts_cli/corpus.py _skip_reason), for text the extract never saw -- a translation typed on
+ * the site or accepted from a player.
+ */
+export function skipReasonFor(source: string, text: string): "progress" | "invalid-chars" | null {
+  if (source === "progress") return "progress";
+  return hasInvalidChars(text) ? "invalid-chars" : null;
 }

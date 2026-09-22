@@ -12,7 +12,7 @@
  * addressed by several lines apiece -- see migration 0029.
  */
 import { acknowledge } from "@/lib/generation/dirty";
-import { requireRegenerate } from "@/lib/generation/authz";
+import { requireIn } from "@/lib/generation/authz";
 import { isSource } from "@/lib/sections";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ type Body = { source?: unknown; files?: unknown };
 const MAX_FILES = 20_000;
 
 export async function POST(request: Request) {
-  const { session, denied } = await requireRegenerate();
+  const { session, lang, denied } = await requireIn(request, "regenerate");
   if (denied) return denied;
 
   const { source, files } = (await request.json().catch(() => ({}))) as Body;
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   // path has been judged"; a path with no take is inert -- nothing reads an ack except the
   // sweep, which starts from takes -- so validating would cost a query per call to prevent
   // a row that does nothing.
-  await acknowledge(source, unique, session.user.id);
+  await acknowledge(source, unique, session.user.id, lang);
 
   return Response.json({ source, cleared: unique.length });
 }

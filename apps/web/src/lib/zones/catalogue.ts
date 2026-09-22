@@ -13,7 +13,10 @@
 import "server-only";
 
 import { query } from "@/lib/db";
+import { memoByLang } from "@/lib/memo";
+import { nameStamp, versionStamp } from "@/lib/stamp";
 import { loadDirtyContext, NO_DIRT, type DirtyContext } from "@/lib/generation/dirty";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 
 import { corpusRows, currentLore } from "./lore";
 import { liveTakes } from "@/lib/takes/store";
@@ -46,14 +49,23 @@ export type CorpusEntry = {
   hash: string;
   /** Store-relative and extension-less, e.g. '1411/razor-hill'. */
   file: string;
+  /**
+   * What a language other than English has not written yet; the English stands in on the
+   * page. A line whose text is missing has nothing to narrate, so `spoken` is empty and the
+   * line cannot be queued. Absent in English, and where nothing is missing.
+   */
+  missing?: { text: boolean; name: boolean };
+  /** The English prose, for a translator to work from. Absent when reading English. */
+  english?: string;
+  /** The English name of the place, likewise. */
+  englishName?: string;
 };
 
 /**
  * A line as the explorer shows it.
  *
- * The same thing as a corpus line today. The alias is kept because it is what every
- * caller names, and because the two were different when the corpus could be read in
- * more than one language.
+ * The same thing as a corpus line. The alias is kept because it is what every caller
+ * names.
  */
 export type CatalogueEntry = CorpusEntry;
 
@@ -113,10 +125,12 @@ export const EMPTY_CONTEXT: SearchContext = {
  * it, and reported that only when somebody pressed save.
  */
 export class CorpusEmpty extends Error {
-  constructor() {
+  constructor(lang: Lang = BASE_LANG) {
     super(
-      "lore_line holds no English lines -- seed it with: make zones-lore-import " +
-        "(and check DATABASE_URL points at the database you mean)",
+      lang === BASE_LANG
+        ? "lore_line holds no English lines -- seed it with: make zones-lore-import " +
+            "(and check DATABASE_URL points at the database you mean)"
+        : `lore_line holds no ${lang} lines yet`,
     );
     this.name = "CorpusEmpty";
   }
@@ -162,36 +176,22 @@ export function isCorpusEmpty(error: unknown): boolean {
  * and a deploy restarts the process.
  *
  */
-type Memo<T> = { stamp: string; value: Promise<T> };
+const catalogueKey = Symbol.for("spoken.zones-catalogue.by-lang");
+const byPathKey = Symbol.for("spoken.zones-by-path.by-lang");
 
-const globalForCatalogue = globalThis as unknown as {
-  zonesCatalogue?: Memo<CatalogueEntry[]>;
-  zonesByPath?: Memo<Map<string, CatalogueEntry>>;
-};
-
-/** What the lore rows are, as one comparable value. See the note above. */
-async function stampOf(): Promise<string> {
+/** What one language's lore rows are, as one comparable value. See the note above. */
+async function stampOf(lang: Lang = BASE_LANG): Promise<string> {
+  const english = versionStamp("lore_line", `"lang" = '${BASE_LANG}'`);
+  // Another language is read over the English lines and names its places in entity_name, so
+  // its memo moves with either of those as well as with its own prose: one statement.
   const rows = await query<{ stamp: string }>(
-    `select coalesce(max("id"), 0) || ':' || count(*) || ':'
-             || coalesce(sum("id") filter (where "isCurrent"), 0) as "stamp"
-       from "lore_line"`,
+    lang === BASE_LANG
+      ? `select ${english} as "stamp"`
+      : `select ${english} || '|' || ${versionStamp("lore_line", `"lang" = $1`)} || '|' ||
+                ${nameStamp(["zone", "subzone"])} as "stamp"`,
+    lang === BASE_LANG ? [] : [lang],
   );
-  return rows[0]?.stamp ?? "0:0:0";
-}
-
-async function memoised<T>(
-  read: () => Memo<T> | undefined,
-  write: (memo: Memo<T>) => void,
-  build: () => Promise<T>,
-): Promise<T> {
-  const stamp = await stampOf();
-
-  const existing = read();
-  if (existing && existing.stamp === stamp) return existing.value;
-
-  const value = build();
-  write({ stamp, value });
-  return value;
+  return rows[0]?.stamp ?? "";
 }
 
 /**
@@ -201,9 +201,10 @@ async function memoised<T>(
  * tools/voice/generate.mjs derives it, so a line's id, audio path and hash are the same
  * whether the explorer or the CLI worked them out.
  */
-async function buildEnglishCorpus(): Promise<CorpusEntry[]> {
-  const [rows, rules] = await Promise.all([corpusRows(), loadPronunciation()]);
-  if (rows.length === 0) throw new CorpusEmpty();
+async function buildCorpus(lang: Lang): Promise<CorpusEntry[]> {
+  if (lang !== BASE_LANG) return buildTranslated(lang);
+  const [rows, rules] = await Promise.all([corpusRows(lang), loadPronunciation()]);
+  if (rows.length === 0) throw new CorpusEmpty(lang);
 
   const files = assignFiles(rows);
   const zoneNames = new Map(
@@ -229,12 +230,54 @@ async function buildEnglishCorpus(): Promise<CorpusEntry[]> {
   });
 }
 
-export function catalogue(): Promise<CatalogueEntry[]> {
-  return memoised(
-    () => globalForCatalogue.zonesCatalogue,
-    (memo) => { globalForCatalogue.zonesCatalogue = memo; },
-    buildEnglishCorpus,
-  );
+/**
+ * Another language's lines: every English line, with this language's prose and place
+ * names where it has them.
+ *
+ * The English lines are the skeleton, and not only because they are what exists: a line's
+ * audio path is a slug of its English name (naming.mjs), frozen, and the same file in every
+ * language. So the English is built exactly as it always is, and the language contributes
+ * what it says and what it calls each place. Where it has not, the English stands in and
+ * `missing` says so -- a rendering, never written back, and never voiced.
+ *
+ */
+async function buildTranslated(lang: Lang): Promise<CorpusEntry[]> {
+  const [english, own, names] = await Promise.all([
+    catalogue(BASE_LANG),
+    currentLore(lang),
+    query<{ entityId: string; name: string }>(
+      `select "entityId", "name" from "entity_name"
+        where "lang" = $1 and "kind" in ('zone', 'subzone') and "isCurrent"`,
+      [lang],
+    ),
+  ]);
+  const named = new Map(names.map((row) => [row.entityId, row.name]));
+
+  return english.map((entry) => {
+    const found = own.get(entry.id);
+    const text = found && found.full.trim() !== "" ? found : undefined;
+    const name = named.get(entry.id);
+    // No pronunciation rules: the committed ones are English spellings of English words, and
+    // a language is spoken with its own lexicon, through the dictionary at generation.
+    const spoken = text ? toSpokenText(text.full, {}) : "";
+    return {
+      ...entry,
+      ...(text ? { full: text.full, short: text.short, source: text.source ?? undefined } : {}),
+      name: name ?? entry.name,
+      zoneName: named.get(`z:${entry.mapID}`) ?? entry.zoneName,
+      spoken,
+      hash: textHash(spoken),
+      english: entry.full,
+      englishName: entry.name,
+      ...(!text || name === undefined
+        ? { missing: { text: !text, name: name === undefined } }
+        : {}),
+    };
+  });
+}
+
+export async function catalogue(lang: Lang = BASE_LANG): Promise<CatalogueEntry[]> {
+  return memoByLang(catalogueKey, lang, await stampOf(lang), () => buildCorpus(lang));
 }
 
 /**
@@ -258,25 +301,25 @@ export { stampOf as catalogueStamp };
  *
  * Memoised like catalogue() and addressableFiles(), and for the same reason.
  */
-function linesByPath(): Promise<Map<string, CatalogueEntry>> {
-  return memoised(
-    () => globalForCatalogue.zonesByPath,
-    (memo) => { globalForCatalogue.zonesByPath = memo; },
-    async () => new Map((await catalogue()).map((entry) => [entry.file, entry])),
-  );
+async function linesByPath(lang: Lang): Promise<Map<string, CatalogueEntry>> {
+  // Keyed on the catalogue it was built from, so it rebuilds exactly when that does and
+  // asks the database nothing of its own.
+  const entries = await catalogue(lang);
+  return memoByLang(byPathKey, lang, entries, () => new Map(entries.map((e) => [e.file, e])));
 }
 
 export async function lineByPath(
   mapID: number,
   slug: string,
+  lang: Lang = BASE_LANG,
 ): Promise<CatalogueEntry | undefined> {
   if (!Number.isInteger(mapID)) return undefined;
-  return (await linesByPath()).get(`${mapID}/${slug}`);
+  return (await linesByPath(lang)).get(`${mapID}/${slug}`);
 }
 
-export async function loadContext(): Promise<SearchContext> {
+export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext> {
   const [takeRows, reportRows, dirt] = await Promise.all([
-    liveTakes("zones"),
+    liveTakes("zones", lang),
     // Grouped in the database rather than counted here: the resolved rows are the ones
     // that accumulate, and there is no reason to carry them across the wire to drop them.
     // `lineId is not null` excludes a report about the project, which belongs to no line.
@@ -284,9 +327,11 @@ export async function loadContext(): Promise<SearchContext> {
       `select "lineId", count(*)::int as "open"
          from "report"
         where "source" = 'zones' and "status" = 'open' and "lineId" is not null
+          and "lang" = $1
         group by "lineId"`,
+      [lang],
     ),
-    loadDirtyContext("zones"),
+    loadDirtyContext("zones", lang),
   ]);
 
   return {
@@ -328,8 +373,8 @@ export async function isKnownLine(lineId: string): Promise<boolean> {
 /** The zone dropdown's options, derived from the catalogue rather than hardcoded. */
 export type ZoneFacet = { mapID: number; name: string; lines: number };
 
-export async function zoneFacets(): Promise<ZoneFacet[]> {
-  const entries = await catalogue();
+export async function zoneFacets(lang: Lang = BASE_LANG): Promise<ZoneFacet[]> {
+  const entries = await catalogue(lang);
   const counts = new Map<number, ZoneFacet>();
 
   for (const entry of entries) {

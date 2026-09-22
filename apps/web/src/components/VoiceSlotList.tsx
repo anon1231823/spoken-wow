@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Loader2, Sparkles } from "lucide-react";
 
@@ -64,6 +66,7 @@ type Props = {
 };
 
 export default function VoiceSlotList({ slots, existing, initialSamples, raceTags }: Props) {
+  const lang = useLang();
   const [open, setOpen] = useState<string | null>(null);
   const [openRace, setOpenRace] = useState<string | null>(null);
   const [tags, setTags] = useState(raceTags);
@@ -105,14 +108,14 @@ export default function VoiceSlotList({ slots, existing, initialSamples, raceTag
     for (const [index, slot] of targets.entries()) {
       try {
         const json = { "Content-Type": "application/json" };
-        const imported = await fetch(`/api/voices/${slot.name}/samples/import`, {
+        const imported = await fetch(withLang(lang, `/api/voices/${slot.name}/samples/import`), {
           method: "POST",
           headers: json,
           body: JSON.stringify({ replace: true }),
         });
         if (!imported.ok) throw new Error(String(imported.status));
 
-        const cloned = await fetch(`/api/voices/${slot.name}/clone`, {
+        const cloned = await fetch(withLang(lang, `/api/voices/${slot.name}/clone`), {
           method: "POST",
           headers: json,
           body: JSON.stringify({ replace: true }),
@@ -148,7 +151,7 @@ export default function VoiceSlotList({ slots, existing, initialSamples, raceTag
     setSavingRace(race);
     setTagError(null);
     try {
-      const response = await fetch("/api/generation/settings/race-tags", {
+      const response = await fetch(withLang(lang, "/api/generation/settings/race-tags"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ raceTags: next }),

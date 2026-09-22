@@ -5,6 +5,8 @@
  * this side is which subdirectory a line lives in, and it lives here alone - it is the
  * TypeScript twin of subfolder_from_line_id in tts_cli/naming.py.
  */
+import { BASE_LANG, type Lang } from "@/lib/lang";
+import { memoByLang } from "@/lib/memo";
 import type { CorpusLine } from "./corpus";
 import { corpus } from "./quests/catalogue";
 
@@ -35,20 +37,17 @@ export function audioRelPath(line: Pick<CorpusLine, "source" | "fileName">): str
  * Memoised on the corpus's identity: 17,507 entries built once rather than per request, and
  * rebuilt exactly when the catalogue is.
  */
-const fileIndexKey = Symbol.for("wow-voiceover.file-index");
-type FileIndexHolder = { [fileIndexKey]?: { lines: CorpusLine[]; index: Map<string, CorpusLine> } };
+const fileIndexKey = Symbol.for("wow-voiceover.file-index.by-lang");
 
-export async function fileIndex(): Promise<Map<string, CorpusLine>> {
-  const lines = (await corpus()).lines;
-  const holder = globalThis as FileIndexHolder;
-
-  if (!holder[fileIndexKey] || holder[fileIndexKey].lines !== lines) {
+/** Per language, since a file is the same in every one but the line's text is not. */
+export async function fileIndex(lang: Lang = BASE_LANG): Promise<Map<string, CorpusLine>> {
+  const lines = (await corpus(lang)).lines;
+  return memoByLang(fileIndexKey, lang, lines, () => {
     const index = new Map<string, CorpusLine>();
     for (const line of lines) {
       const file = audioRelPath(line);
       if (!index.has(file)) index.set(file, line);
     }
-    holder[fileIndexKey] = { lines, index };
-  }
-  return holder[fileIndexKey].index;
+    return index;
+  });
 }

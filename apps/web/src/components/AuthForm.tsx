@@ -1,8 +1,10 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { localeHref } from "@/lib/lang";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +32,7 @@ const COPY = {
 
 export default function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
+  const lang = useLang();
   const copy = COPY[mode];
 
   const [name, setName] = useState("");
@@ -56,7 +59,7 @@ export default function AuthForm({ mode }: { mode: Mode }) {
 
     // refresh() re-runs the server components, so a page guarded on the server (/admin)
     // sees the new session immediately rather than on the next full load.
-    router.push("/");
+    router.push(localeHref(lang, "/"));
     router.refresh();
   }
 

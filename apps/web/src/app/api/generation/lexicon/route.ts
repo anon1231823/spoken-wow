@@ -11,20 +11,22 @@
  * invite an admin to retype an edit that is already safely in Postgres. `syncError` and the
  * `pending` state carry the bad news instead, and POST retries just the upload.
  */
-import { requireApiKey, requireConfigure, requireRegenerate } from "@/lib/generation/authz";
+import { requireApiKey, requireIn } from "@/lib/generation/authz";
 import { readLexicon, resync, writeLexicon } from "@/lib/generation/dictionary";
 import { LexiconError, validateLexicon } from "@/lib/generation/lexicon";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  const { denied } = await requireRegenerate();
+// Each language has a lexicon of its own (?lang=, English when absent): read by whoever
+// regenerates in it, changed by whoever configures it.
+export async function GET(request: Request) {
+  const { lang, denied } = await requireIn(request, "regenerate");
   if (denied) return denied;
-  return Response.json(await readLexicon());
+  return Response.json(await readLexicon(lang));
 }
 
 export async function PUT(request: Request) {
-  const { session, denied } = await requireConfigure();
+  const { session, lang, denied } = await requireIn(request, "configure");
   if (denied) return denied;
 
   // The upload spends nothing, but it is a write to the admin's own ElevenLabs account and
@@ -44,18 +46,23 @@ export async function PUT(request: Request) {
     return Response.json({ error: message }, { status: 400 });
   }
 
-  const { lexicon, syncError } = await writeLexicon(entries, session.user.id, { apiKey: key });
+  const { lexicon, syncError } = await writeLexicon(
+    entries,
+    session.user.id,
+    { apiKey: key },
+    lang,
+  );
   return Response.json({ ...lexicon, syncError });
 }
 
 /** Retry the upload for a lexicon already saved. */
-export async function POST() {
-  const { session, denied } = await requireConfigure();
+export async function POST(request: Request) {
+  const { session, lang, denied } = await requireIn(request, "configure");
   if (denied) return denied;
 
   const { key, denied: noKey } = await requireApiKey(session.user.id);
   if (noKey) return noKey;
 
-  const syncError = await resync({ apiKey: key });
-  return Response.json({ ...(await readLexicon()), syncError });
+  const syncError = await resync({ apiKey: key }, lang);
+  return Response.json({ ...(await readLexicon(lang)), syncError });
 }

@@ -6,6 +6,8 @@
  * response works in Chrome and silently fails in Safari. Same reasoning, and the same
  * parseRange, as the take audio.
  */
+import { cloneName } from "@/lib/voices/clone-name";
+import { langParam } from "@/lib/lang-server";
 import fs from "node:fs";
 
 import { parseRange } from "@/lib/range";
@@ -31,9 +33,13 @@ export async function GET(request: Request, context: Context) {
   const { voice, file } = await context.params;
   const denied = await denyVoiceRequest(voice);
   if (denied) return denied;
+  // A slot is shared; its clips and its clone are the language\'s own (clone-name.ts).
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
+  const clone = cloneName(voice, lang);
   if (!isStoredSampleName(file)) return new Response("bad clip name", { status: 400 });
 
-  const target = await samplePath(voice, file);
+  const target = await samplePath(clone, file);
   let size: number;
   let etag: string;
   try {
@@ -79,13 +85,17 @@ export async function GET(request: Request, context: Context) {
   return new Response(streamOf(target, range.start, range.end), { status: 206, headers });
 }
 
-export async function DELETE(_request: Request, context: Context) {
+export async function DELETE(request: Request, context: Context) {
   const { voice, file } = await context.params;
   const denied = await denyVoiceRequest(voice);
   if (denied) return denied;
+  // A slot is shared; its clips and its clone are the language\'s own (clone-name.ts).
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
+  const clone = cloneName(voice, lang);
   if (!isStoredSampleName(file)) return Response.json({ error: "bad clip name" }, { status: 400 });
 
-  if (!(await deleteSample(voice, file))) {
+  if (!(await deleteSample(clone, file))) {
     return Response.json({ error: "no such clip" }, { status: 404 });
   }
   return Response.json({ voice, deleted: file });

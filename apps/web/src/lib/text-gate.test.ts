@@ -70,3 +70,9 @@ describe("isVoiceable", () => {
     expect(isVoiceable({ skipReason: null }, "Meet me in Ironforge.")).toBe(true);
   });
 });
+
+describe("a line another language has not translated", () => {
+  it("is never voiceable, whatever English it is carrying", () => {
+    expect(isVoiceable({ skipReason: "untranslated" }, "Well met, traveller.")).toBe(false);
+  });
+});

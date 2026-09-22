@@ -11,8 +11,10 @@
  * Never renders `ip`: it is the rate limiter's key and nothing else, and a triager reading a
  * stranger's address serves no purpose that reading their report does not.
  */
+import { useLang } from "@/components/LangProvider";
+import { localeHref } from "@/lib/lang";
 import { Play } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/LocaleLink";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -87,6 +89,7 @@ export default function ReportTable({
    * shape exists to make impossible. See lib/reports/rows.ts.
    */
   const router = useRouter();
+  const lang = useLang();
   const [resolved, setResolved] = useState<Record<number, Report>>({});
   const [busy, setBusy] = useState<number | null>(null);
   const [open, setOpen] = useState<number | null>(null);
@@ -131,7 +134,7 @@ export default function ReportTable({
       });
       if (cached !== undefined) return cached;
 
-      const response = await fetch(searchPath(reportSource, lineId)).catch(() => null);
+      const response = await fetch(searchPath(reportSource, lineId, lang)).catch(() => null);
       const body = response?.ok
         ? ((await response.json().catch(() => null)) as { lines?: SourceLine[] } | null)
         : null;
@@ -191,7 +194,7 @@ export default function ReportTable({
       source: next.source ?? (("source" in next) ? "all" : source),
       category: next.category ?? (("category" in next) ? "all" : category),
     });
-    router.push(`/reports?${params}`);
+    router.push(localeHref(lang, `/reports?${params}`));
   }
 
   const reports = applyResolutions(initial, resolved);

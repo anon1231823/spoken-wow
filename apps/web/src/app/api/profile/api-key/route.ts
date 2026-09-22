@@ -6,35 +6,37 @@
  * characters, when it was verified, and the plan -- which is enough to show that a key is
  * set and useless for spending with.
  *
- * Gated on canRegenerate rather than on being signed in: a member has no action a key would
- * unblock, so storing a credential for them would be collecting a secret this app has no
- * use for.
+ * Gated on spending credits somewhere rather than on being signed in: a member has no action
+ * a key would unblock, so storing a credential for them would be collecting a secret this
+ * app has no use for. Somewhere includes a language grant -- a translator who may regenerate
+ * Portuguese pays for it with their own key like anybody else.
  */
-import { headers } from "next/headers";
-
 import { apiKeyStatus, deleteApiKey, storeApiKey } from "@/lib/api-key";
-import { auth } from "@/lib/auth";
-import { canRegenerate, isAdmin } from "@/lib/permissions";
+import { viewerOf } from "@/lib/grants/store";
+import { isAdmin, spendsCredits } from "@/lib/permissions";
+import { currentSession } from "@/lib/session";
 import { getSubscription } from "@/lib/voices/elevenlabs";
 
 export const dynamic = "force-dynamic";
 
 const FORBIDDEN = () => Response.json({ error: "not allowed" }, { status: 403 });
 
-async function currentSession() {
-  return auth.api.getSession({ headers: await headers() });
+/** The session of somebody who may hold a key, or null. */
+async function spender() {
+  const session = await currentSession();
+  return session && spendsCredits(await viewerOf(session)) ? session : null;
 }
 
 export async function GET() {
-  const session = await currentSession();
-  if (!session || !canRegenerate(session.user.role)) return FORBIDDEN();
+  const session = await spender();
+  if (!session) return FORBIDDEN();
 
   return Response.json({ status: await apiKeyStatus(session.user.id) });
 }
 
 export async function POST(request: Request) {
-  const session = await currentSession();
-  if (!session || !canRegenerate(session.user.role)) return FORBIDDEN();
+  const session = await spender();
+  if (!session) return FORBIDDEN();
 
   const body = (await request.json().catch(() => ({}))) as { key?: unknown };
   const key = typeof body.key === "string" ? body.key.trim() : "";

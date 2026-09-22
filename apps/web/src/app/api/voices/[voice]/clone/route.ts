@@ -6,6 +6,8 @@
  * "re-train this voice" call and two voices sharing a name would make fetch_voice_map
  * ambiguous — the Python side resolves by name, and would pick whichever came back first.
  */
+import { cloneName } from "@/lib/voices/clone-name";
+import { langParam } from "@/lib/lang-server";
 import fs from "node:fs/promises";
 
 import { auth } from "@/lib/auth";
@@ -26,6 +28,10 @@ export async function POST(request: Request, context: Context) {
   const { voice } = await context.params;
   const denied = await denyVoiceRequest(voice);
   if (denied) return denied;
+  // A slot is shared; its clips and its clone are the language\'s own (clone-name.ts).
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
+  const clone = cloneName(voice, lang);
 
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return Response.json({ error: "not allowed" }, { status: 403 });
@@ -40,7 +46,7 @@ export async function POST(request: Request, context: Context) {
   const body = await request.json().catch(() => ({}) as Record<string, unknown>);
   const replace = body.replace === true;
 
-  const samples = await listSamples(voice);
+  const samples = await listSamples(clone);
   if (samples.length === 0) {
     return Response.json({ error: "upload at least one clip first" }, { status: 400 });
   }
@@ -55,10 +61,10 @@ export async function POST(request: Request, context: Context) {
     return Response.json({ error: message(error) }, { status: 502 });
   }
 
-  const current = existing.get(voice);
+  const current = existing.get(clone);
   if (current && !replace) {
     return Response.json(
-      { error: `"${voice}" already exists; replacing it deletes the current voice` },
+      { error: `"${clone}" already exists; replacing it deletes the current voice` },
       { status: 409 },
     );
   }
@@ -66,7 +72,7 @@ export async function POST(request: Request, context: Context) {
   const clips = await Promise.all(
     samples.map(async (sample) => ({
       name: sample.file,
-      data: await fs.readFile(await samplePath(voice, sample.file)),
+      data: await fs.readFile(await samplePath(clone, sample.file)),
     })),
   );
 
@@ -82,7 +88,7 @@ export async function POST(request: Request, context: Context) {
 
   let voiceId: string;
   try {
-    voiceId = await addVoice(voice, clips, { apiKey: key });
+    voiceId = await addVoice(clone, clips, { apiKey: key });
   } catch (error) {
     // The window that matters: the old voice is gone and the new one failed, so the slot is
     // empty. The clips are all still on disk, so retrying is the fix - say so.
@@ -106,10 +112,11 @@ export async function POST(request: Request, context: Context) {
       clonedBy: session.user.id,
       sampleCount: samples.length,
       sampleBytes: samples.reduce((sum, sample) => sum + sample.bytes, 0),
+      lang,
     });
   } catch (error) {
     warning = `the voice was created but its provenance was not recorded: ${message(error)}`;
-    console.error(`voice_clone insert failed for ${voice}:`, error);
+    console.error(`voice_clone insert failed for ${clone}:`, error);
   }
 
   return Response.json({ voice, voiceId, replaced: Boolean(current), warning }, { status: 201 });

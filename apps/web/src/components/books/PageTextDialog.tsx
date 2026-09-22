@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, RotateCcw } from "lucide-react";
 
@@ -41,6 +43,7 @@ type Props = {
 };
 
 export function PageTextDialog({ line, onClose, onSaved }: Props) {
+  const lang = useLang();
   const dialog = useRef<HTMLDialogElement | null>(null);
   const [text, setText] = useState("");
   const [note, setNote] = useState("");
@@ -57,7 +60,9 @@ export function PageTextDialog({ line, onClose, onSaved }: Props) {
       return;
     }
 
-    setText(line.text);
+    // An untranslated page carries the English only so the explorer has something to show;
+    // the box starts empty, and the English to work from is shown above it instead.
+    setText(line.missing?.text ? "" : line.text);
     setNote("");
     setError(null);
     setVersions(null);
@@ -67,7 +72,7 @@ export function PageTextDialog({ line, onClose, onSaved }: Props) {
     let cancelled = false;
     const params = new URLSearchParams({ lineId: line.id });
 
-    fetch(`/api/books/text?${params}`)
+    fetch(withLang(lang, `/api/books/text?${params}`))
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error("could not load history"))))
       .then((data: { versions: Version[] }) => {
         if (cancelled) return;
@@ -81,14 +86,14 @@ export function PageTextDialog({ line, onClose, onSaved }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [line]);
+  }, [line, lang]);
 
   const save = useCallback(async () => {
     if (!line) return;
     setBusy(true);
     setError(null);
 
-    const res = await fetch("/api/books/text", {
+    const res = await fetch(withLang(lang, "/api/books/text"), {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -119,7 +124,7 @@ export function PageTextDialog({ line, onClose, onSaved }: Props) {
       setBusy(true);
       setError(null);
 
-      const res = await fetch("/api/books/text", {
+      const res = await fetch(withLang(lang, "/api/books/text"), {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ lineId: line.id, version }),
@@ -154,6 +159,13 @@ export function PageTextDialog({ line, onClose, onSaved }: Props) {
         {line.pageCount > 1 ? `page ${line.pageNumber} of ${line.pageCount}` : "one page"} ·{" "}
         {line.file}
       </p>
+
+      {/* The English page, when this is a translation: to read beside the box. */}
+      {line.english !== undefined ? (
+        <p className="text-muted-foreground bg-muted mb-2 max-h-40 overflow-y-auto rounded p-2 text-xs whitespace-pre-wrap">
+          {line.english}
+        </p>
+      ) : null}
 
       <textarea
         autoFocus

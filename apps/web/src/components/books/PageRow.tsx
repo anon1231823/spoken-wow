@@ -1,5 +1,7 @@
 "use client";
 
+import { RenameButton } from "@/components/RenameButton";
+import { Untranslated, UntranslatedMark } from "@/components/Untranslated";
 import { ChevronDownIcon, Eraser, FlagIcon, PencilIcon, PlayIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -21,6 +23,8 @@ type Props = {
   current: boolean;
   /** Editor and up: the regenerate control, and reading and resolving the row's reports. */
   canRegenerate: boolean;
+  /** May write this page's text in the page's language, apart from regenerating it. */
+  canEdit: boolean;
   /**
    * How many rows this book occupies here, or 0 when this is not its first row.
    *
@@ -40,6 +44,8 @@ type Props = {
   onRestored: (line: ResultLine, version: number) => void;
   /** Rewrite what this page says. Editor and up. */
   onEditText: (line: ResultLine) => void;
+  /** Name the book's owner in the page's language; null on the English site or without `edit`. */
+  onRename: ((line: ResultLine) => void) | null;
   /** Say this take is fine as it stands, despite a pronunciation having moved under it. */
   onClearDirty: (line: ResultLine) => void;
 };
@@ -62,6 +68,7 @@ export function PageRow({
   line,
   current,
   canRegenerate,
+  canEdit,
   groupRows,
   state,
   onPlay,
@@ -71,6 +78,7 @@ export function PageRow({
   onReport,
   onRestored,
   onEditText,
+  onRename,
 }: Props) {
   const playable = line.state !== "missing";
   const [expanded, setExpanded] = useState(false);
@@ -113,8 +121,11 @@ export function PageRow({
               title={`Show only ${line.title}`}
               onClick={() => onSelectBook(line)}
             >
-              {line.title}
+              <Untranslated missing={line.missing?.title}>{line.title}</Untranslated>
             </button>
+            {onRename && (
+              <RenameButton label={`Name ${line.title}`} onClick={() => onRename(line)} />
+            )}
           </td>
 
           <td
@@ -161,8 +172,13 @@ export function PageRow({
           </button>
 
           <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "clamp-2")}>
-            {line.text}
+            <Untranslated missing={line.missing?.text}>{line.text}</Untranslated>
           </span>
+          {line.missing?.text ? (
+            <span className="mt-0.5 shrink-0 text-xs">
+              <UntranslatedMark />
+            </span>
+          ) : null}
 
           {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle
               needs a real control. It doubles as the only thing saying rows expand. */}
@@ -234,7 +250,7 @@ export function PageRow({
           source="books"
           lineId={line.id}
           count={line.reportsOpen}
-          canTriage={canRegenerate}
+          canTriage={canEdit}
         />
         {/* Outside the canRegenerate gate, deliberately: reporting is what a reader who
             cannot sign in has, and /api/reports is unauthenticated for the same reason.
@@ -252,7 +268,7 @@ export function PageRow({
         {/* Rewriting the text is not an audio action and it is free, but it is gated the
             same way the other two sections gate theirs: the edit is what a later
             regeneration would speak. */}
-        {canRegenerate && (
+        {canEdit && (
           <Button
             variant="ghost"
             size="icon"

@@ -10,6 +10,7 @@
  * books have `id`, `file` and a `state` - so the reading is done once, here, rather than in
  * a row that would silently render an empty panel if it reached for the wrong pair.
  */
+import { BASE_LANG, withLang, type Lang } from "@/lib/lang";
 import type { ResultLine as BookLine } from "@/lib/books/search";
 import type { ResultLine as QuestLine } from "@/lib/search";
 import type { ResultLine as ZoneLine } from "@/lib/zones/search";
@@ -59,12 +60,12 @@ export function reportTargetOf(source: Source, line: SourceLine): string | null 
 }
 
 /** The section's search, narrowed to the one line a report is about. */
-export function searchPath(source: Source, lineId: string): string {
-  return `/api/${source}/search?${new URLSearchParams({ line: lineId, limit: "1" })}`;
+export function searchPath(source: Source, lineId: string, lang: Lang = BASE_LANG): string {
+  return withLang(lang, `/api/${source}/search?${new URLSearchParams({ line: lineId, limit: "1" })}`);
 }
 
-export function regeneratePath(source: Source): string {
-  return `/api/${source}/regenerate`;
+export function regeneratePath(source: Source, lang: Lang = BASE_LANG): string {
+  return withLang(lang, `/api/${source}/regenerate`);
 }
 
 /**
@@ -72,17 +73,22 @@ export function regeneratePath(source: Source): string {
  * A regenerated line keeps its path - the addon resolves sounds by filename, so it cannot
  * change - and without this the browser replays the take that was just overwritten.
  */
-export function detailOf(source: Source, line: SourceLine, version?: number): LineDetail {
-  if (source === "quests") return questDetail(line as QuestLine, version);
-  if (source === "zones") return zoneDetail(line as ZoneLine, version);
-  return bookDetail(line as BookLine, version);
+export function detailOf(
+  source: Source,
+  line: SourceLine,
+  version?: number,
+  lang: Lang = BASE_LANG,
+): LineDetail {
+  if (source === "quests") return questDetail(line as QuestLine, version, lang);
+  if (source === "zones") return zoneDetail(line as ZoneLine, version, lang);
+  return bookDetail(line as BookLine, version, lang);
 }
 
-function audio(source: Source, path: string, version: number | undefined): string {
-  return `/api/${source}/audio/${path}${version === undefined ? "" : `?v=${version}`}`;
+function audio(source: Source, path: string, version: number | undefined, lang: Lang): string {
+  return withLang(lang, `/api/${source}/audio/${path}${version === undefined ? "" : `?v=${version}`}`);
 }
 
-function questDetail(line: QuestLine, version?: number): LineDetail {
+function questDetail(line: QuestLine, version: number | undefined, lang: Lang): LineDetail {
   // Race, gender and flavor rather than the voice alone: "wrong voice for this character"
   // is a complaint about that triple, and the voice is what it currently resolves to.
   const who = [line.race, line.gender, line.flavor].filter(Boolean).join(" ");
@@ -93,27 +99,27 @@ function questDetail(line: QuestLine, version?: number): LineDetail {
     // The override when there is one: it is what the next take will say, and a panel that
     // showed the corpus text would report a rewrite as having changed nothing.
     text: line.override ?? line.text,
-    audioSrc: line.hasAudio ? audio("quests", line.audioPath, version) : null,
+    audioSrc: line.hasAudio ? audio("quests", line.audioPath, version, lang) : null,
     lineId: line.lineId,
   };
 }
 
-function zoneDetail(line: ZoneLine, version?: number): LineDetail {
+function zoneDetail(line: ZoneLine, version: number | undefined, lang: Lang): LineDetail {
   return {
     heading: line.name,
     context: line.zoneName,
     text: line.text,
-    audioSrc: line.state === "missing" ? null : audio("zones", `${line.file}.mp3`, version),
+    audioSrc: line.state === "missing" ? null : audio("zones", `${line.file}.mp3`, version, lang),
     lineId: line.id,
   };
 }
 
-function bookDetail(line: BookLine, version?: number): LineDetail {
+function bookDetail(line: BookLine, version: number | undefined, lang: Lang): LineDetail {
   return {
     heading: line.title,
     context: `page ${line.pageNumber} of ${line.pageCount}`,
     text: line.text,
-    audioSrc: line.state === "missing" ? null : audio("books", `${line.file}.mp3`, version),
+    audioSrc: line.state === "missing" ? null : audio("books", `${line.file}.mp3`, version, lang),
     lineId: line.id,
   };
 }

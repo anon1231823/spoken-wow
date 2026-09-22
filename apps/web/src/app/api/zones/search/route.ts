@@ -4,6 +4,7 @@
  * The URL carries `page`, not `offset`, so a shared link survives a change to PAGE_SIZE.
  * The arithmetic stays here.
  */
+import { langParam } from "@/lib/lang-server";
 import { catalogue, isCorpusEmpty, loadContext } from "@/lib/zones/catalogue";
 import { filtersFromParams, PAGE_SIZE } from "@/lib/zones/filters";
 import { search } from "@/lib/zones/search";
@@ -29,6 +30,8 @@ function corpusEmpty(error: unknown): Response {
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
+  const { lang, denied } = await langParam(request);
+  if (denied) return denied;
   const filters = filtersFromParams(params);
   // English, until the site has a language selector again. The library below takes a
   const page = Math.max(1, Number(params.get("page")) || 1);
@@ -36,7 +39,7 @@ export async function GET(request: Request) {
   let entries;
   let context;
   try {
-    [entries, context] = await Promise.all([catalogue(), loadContext()]);
+    [entries, context] = await Promise.all([catalogue(lang), loadContext(lang)]);
   } catch (error) {
     if (isCorpusEmpty(error)) return corpusEmpty(error);
     throw error;

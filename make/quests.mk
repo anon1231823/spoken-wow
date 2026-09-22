@@ -59,7 +59,7 @@ endef
         package-audio-complete package-meta push-complete icon \
         downloads-status \
         factions release release-audio release-wago release-curse \
-        release-dry import-corpus export-corpus export-ignores \
+        release-dry import-corpus import-locale export-corpus export-ignores \
         sync check-synced full-release
 
 help: ## Show this help
@@ -312,6 +312,15 @@ QUESTS_CLI = cd $(QUESTS_DIR) && DATABASE_URL="$(or $(DATABASE_URL),$(LOCAL_DB))
 
 import-corpus: ## corpus/corpus.json.gz -> quest_line (needs DATABASE_URL and psycopg2)
 	@$(QUESTS_CLI) import-corpus
+
+# A translation goes from the world database straight into Postgres: it has no committed file
+# and gets none, because nothing builds a pack from one yet and the site is where it is
+# edited. LOCALE is required rather than defaulted -- run without it, this would have had to
+# guess which language to write over, and every guess is a language somebody is editing.
+# LOCALE and not LANG, which every shell already sets to something like en_US.UTF-8.
+import-locale: ## vmangos *_locN -> quest_line + entity_name (LOCALE=deDE; needs MySQL and DATABASE_URL)
+	@test -n "$(LOCALE)" || { echo "import-locale: set LOCALE, e.g. LOCALE=deDE"; exit 2; }
+	@$(QUESTS_CLI) import-locale --lang $(LOCALE)
 
 export-corpus: check-synced ## quest_line -> corpus/corpus.json.gz (ARGS=--check to compare instead)
 	@$(QUESTS_CLI) export-corpus $(ARGS)

@@ -18,6 +18,7 @@
  */
 import "server-only";
 
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import type { Source } from "@/lib/sections";
 
 import { setLiveTake, takePath } from "./store";
@@ -26,11 +27,12 @@ export async function restoreTake(
   source: Source,
   file: string,
   version: number,
+  lang: Lang = BASE_LANG,
 ): Promise<void> {
-  const bytes = await takePath(source, file, version);
+  const bytes = await takePath(source, file, version, lang);
   if (bytes.kind === "none") throw new Error(`no version ${version} of ${file} in ${source}`);
   if (bytes.kind === "gone") {
     throw new Error(`the audio of version ${version} of ${file} was not kept, so it cannot be restored`);
   }
-  await setLiveTake(source, file, version);
+  await setLiveTake(source, file, version, lang);
 }

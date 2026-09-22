@@ -11,6 +11,8 @@
  * clone worse, not better. Duration is measured in the browser, so nothing on this side
  * needs to decode audio.
  */
+import { BASE_LANG } from "@/lib/lang";
+import { parseCloneName } from "./clone-name";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -31,9 +33,18 @@ export const MAX_TOTAL_BYTES = 50 * 1024 * 1024;
 
 export type Sample = { file: string; bytes: number; uploadedAt: string };
 
-export async function voiceDir(voice: string): Promise<string> {
-  if (!(await isVoiceSlot(voice))) throw new Error(`unknown voice slot ${voice}`);
-  return path.join(VOICE_SAMPLES_DIR, voice);
+/**
+ * Where one clone's clips are. `clone` is a clone's name (clone-name.ts): the slot for
+ * English, whose clips stay exactly where they are, and `slot@lang` for another language,
+ * whose clips -- its own actors' -- sit in a directory of their own, <samples>/<lang>/<slot>.
+ * No slot is named like a language code, so the two can never meet.
+ */
+export async function voiceDir(clone: string): Promise<string> {
+  const parsed = parseCloneName(clone);
+  if (!parsed || !(await isVoiceSlot(parsed.voice))) throw new Error(`unknown voice slot ${clone}`);
+  return parsed.lang === BASE_LANG
+    ? path.join(VOICE_SAMPLES_DIR, parsed.voice)
+    : path.join(VOICE_SAMPLES_DIR, parsed.lang, parsed.voice);
 }
 
 export async function samplePath(voice: string, file: string): Promise<string> {

@@ -37,6 +37,10 @@ subparsers.add_parser(
     "import-corpus",
     help="corpus.json.gz -> Postgres. Needed by a maintainer, not to produce audio.") \
     .add_argument("--corpus", default=DEFAULT_CORPUS_PATH)
+loc = subparsers.add_parser(
+    "import-locale",
+    help="The world DB's *_locN text for one language -> Postgres. Needs MySQL and DATABASE_URL.")
+loc.add_argument("--lang", required=True, help="e.g. deDE; one the dump carries columns for")
 ign = subparsers.add_parser(
     "export-ignores",
     help="line_ignore -> corpus/ignored.json, which build reads.")
@@ -95,6 +99,14 @@ elif args.mode == "import-corpus":
     # client at all.
     from tts_cli.corpus_db import import_corpus
     import_corpus(args.corpus)
+
+elif args.mode == "import-locale":
+    # Imported here, the way import-corpus is: it needs PyMySQL, pandas and psycopg2, none
+    # of which the everyday path installs.
+    from tts_cli.locale_import import extract_and_import
+    counts = extract_and_import(args.lang)
+    for what, n in sorted(counts.items()):
+        print(f"  {what:<32} {n:>6}")
 
 elif args.mode == "export-ignores":
     from tts_cli.corpus_db import export_ignores

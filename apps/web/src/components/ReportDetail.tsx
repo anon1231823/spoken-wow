@@ -11,6 +11,7 @@
  * Presentational: the row is fetched by ReportTable, because the play button needs the
  * same line without this panel being open.
  */
+import { useLang } from "@/components/LangProvider";
 import { useState } from "react";
 
 import OverrideDialog from "@/components/OverrideDialog";
@@ -42,6 +43,7 @@ export default function ReportDetail({
   onRegenerated,
   onOverridden,
 }: Props) {
+  const lang = useLang();
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [done, setDone] = useState(false);
@@ -52,7 +54,7 @@ export default function ReportDetail({
     setError(null);
     setDone(false);
 
-    const response = await fetch(regeneratePath(source), {
+    const response = await fetch(regeneratePath(source, lang), {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ lineId }),
@@ -96,7 +98,7 @@ export default function ReportDetail({
     );
   }
 
-  const detail = detailOf(source, line);
+  const detail = detailOf(source, line, undefined, lang);
 
   return (
     <div className="flex flex-col gap-2 px-3 py-3">

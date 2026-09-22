@@ -171,7 +171,15 @@ def query_spawns():
     return rows
 
 
-def query_dataframe_for_all_quests_and_gossip(lang: int = 0):
+def query_dataframe_for_all_quests_and_gossip(lang: int = 0, raw: bool = False):
+    """Every quest and gossip line, in English or in the dump's locale column `lang`.
+
+    `raw` is for loading a translation (tts_cli.locale_import): the English columns exactly
+    as lang 0 gives them -- which is what line ids and file names are derived from -- plus
+    the locale's own title, text and name beside them as loc_title, loc_text and loc_name,
+    NULL where the dump has none. The non-raw branch instead falls back to English inside
+    the query, which reads an untranslated line as a translation of itself.
+    """
     db = make_connection()
     sql_query = '''
 WITH RECURSIVE
@@ -482,7 +490,54 @@ FROM gameobject_data
 )
     '''
 
-    if lang == 0:
+    localized_text = f'''CASE source
+        WHEN 'gossip' THEN (CASE
+            WHEN broadcast_text_id = 0 THEN qg.content_loc{lang}
+            WHEN ALL_DATA.type = 'creature' THEN IF(DisplaySexID = 0, lbt.male_text_loc{lang}, lbt.female_text_loc{lang})
+            ELSE IFNULL(NULLIF(lbt.male_text_loc{lang}, ''), lbt.female_text_loc{lang})
+        END)
+        WHEN 'accept'   THEN lq.Details_loc{lang}
+        WHEN 'progress' THEN lq.RequestItemsText_loc{lang}
+        WHEN 'complete' THEN lq.OfferRewardText_loc{lang}
+        ELSE NULL
+    END'''
+    localized_name = f'''CASE ALL_DATA.type
+        WHEN 'creature'   THEN lc.name_loc{lang}
+        WHEN 'gameobject' THEN lg.name_loc{lang}
+        WHEN 'item'       THEN li.name_loc{lang}
+        ELSE NULL
+    END'''
+    localized_joins = f'''
+    LEFT JOIN mangos.locales_quest          lq  ON lq .entry = quest
+    LEFT JOIN mangos.locales_broadcast_text lbt ON lbt.entry = broadcast_text_id
+    LEFT JOIN mangos.locales_creature       lc  ON lc .entry = id AND type = 'creature'
+    LEFT JOIN mangos.locales_gameobject     lg  ON lg .entry = id AND type = 'gameobject'
+    LEFT JOIN mangos.locales_item           li  ON li .entry = id AND type = 'item'
+    LEFT JOIN mangos.quest_greeting         qg  ON qg .entry = id AND qg.type = (CASE ALL_DATA.type WHEN 'creature' THEN 0 WHEN 'gameobject' THEN 1 ELSE -1 END)
+        '''
+
+    if raw:
+        if lang == 0:
+            raise ValueError("raw is for a locale column; English has no loc_ columns")
+        sql_query += f'''
+SELECT
+    source,
+    quest,
+    quest_title,
+    text,
+    DisplayRaceID,
+    DisplaySexID,
+    npc_sound_name,
+    name,
+    ALL_DATA.type,
+    id,
+    text as original_text,
+    NULLIF(lq.title_loc{lang}, '') as loc_title,
+    NULLIF({localized_text}, '') as loc_text,
+    NULLIF({localized_name}, '') as loc_name
+FROM ALL_DATA
+{localized_joins}'''
+    elif lang == 0:
         sql_query += '''
 SELECT
     source,
@@ -504,37 +559,16 @@ SELECT
     source,
     quest,
     IFNULL(NULLIF(lq.title_loc{lang}, ''), quest_title) as quest_title,
-    IFNULL(NULLIF(CASE source
-        WHEN 'gossip' THEN (CASE
-            WHEN broadcast_text_id = 0 THEN qg.content_loc{lang}
-            WHEN ALL_DATA.type = 'creature' THEN IF(DisplaySexID = 0, lbt.male_text_loc{lang}, lbt.female_text_loc{lang})
-            ELSE IFNULL(NULLIF(lbt.male_text_loc{lang}, ''), lbt.female_text_loc{lang})
-        END)
-        WHEN 'accept'   THEN lq.Details_loc{lang}
-        WHEN 'progress' THEN lq.RequestItemsText_loc{lang}
-        WHEN 'complete' THEN lq.OfferRewardText_loc{lang}
-        ELSE NULL
-    END, ''), text) as text,
+    IFNULL(NULLIF({localized_text}, ''), text) as text,
     DisplayRaceID,
     DisplaySexID,
     npc_sound_name,
-    IFNULL(NULLIF(CASE ALL_DATA.type
-        WHEN 'creature'   THEN lc.name_loc{lang}
-        WHEN 'gameobject' THEN lg.name_loc{lang}
-        WHEN 'item'       THEN li.name_loc{lang}
-        ELSE NULL
-    END, ''), name) as name,
+    IFNULL(NULLIF({localized_name}, ''), name) as name,
     ALL_DATA.type,
     id,
     text as original_text
 FROM ALL_DATA
-    LEFT JOIN mangos.locales_quest          lq  ON lq .entry = quest
-    LEFT JOIN mangos.locales_broadcast_text lbt ON lbt.entry = broadcast_text_id
-    LEFT JOIN mangos.locales_creature       lc  ON lc .entry = id AND type = 'creature'
-    LEFT JOIN mangos.locales_gameobject     lg  ON lg .entry = id AND type = 'gameobject'
-    LEFT JOIN mangos.locales_item           li  ON li .entry = id AND type = 'item'
-    LEFT JOIN mangos.quest_greeting         qg  ON qg .entry = id AND qg.type = (CASE ALL_DATA.type WHEN 'creature' THEN 0 WHEN 'gameobject' THEN 1 ELSE -1 END)
-        '''
+{localized_joins}'''
 
     with db.cursor() as cursor:
         cursor.execute(sql_query)

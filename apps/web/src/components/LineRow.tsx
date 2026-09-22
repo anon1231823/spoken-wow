@@ -1,5 +1,9 @@
 "use client";
 
+import { RenameButton } from "@/components/RenameButton";
+import { Untranslated, UntranslatedMark } from "@/components/Untranslated";
+import { useLang } from "@/components/LangProvider";
+import { localeHref } from "@/lib/lang";
 import {
   ChevronDownIcon,
   Eraser,
@@ -77,6 +81,9 @@ type Props = {
   line: ResultLine;
   current: boolean;
   canRegenerate: boolean;
+  /** May write this line's text in the page's language. Apart from regenerating: a
+   *  translator may do this and not spend anything. */
+  canEdit: boolean;
   /** Editor and up: may read the report bodies and resolve them from the row. */
   canTriage: boolean;
   state?: LineState;
@@ -94,6 +101,11 @@ type Props = {
   dirty: boolean;
   onPlay: (line: ResultLine) => void;
   onEditText: (line: ResultLine) => void;
+  /**
+   * Name the speaker or the quest in the page's language. Null on the English site, where
+   * names come from the corpus, and for somebody who may not edit.
+   */
+  onRename: ((line: ResultLine, what: "npc" | "quest") => void) | null;
   /** Open the ignore dialog, or null for anyone not allowed to make that decision. */
   onIgnore: ((line: ResultLine) => void) | null;
   onRegenerate: (line: ResultLine) => void;
@@ -132,6 +144,7 @@ export default function LineRow({
   line,
   current,
   canRegenerate,
+  canEdit,
   canTriage,
   state,
   blocked,
@@ -141,6 +154,7 @@ export default function LineRow({
   dirty,
   onPlay,
   onEditText,
+  onRename,
   onIgnore,
   onRegenerate,
   onReport,
@@ -151,6 +165,7 @@ export default function LineRow({
 }: Props) {
   const missing = absence(line);
   const [expanded, setExpanded] = useState(false);
+  const lang = useLang();
 
   /**
    * Clicking the row shows the whole line, but only when the click meant that.
@@ -185,8 +200,11 @@ export default function LineRow({
           title={`Show only ${line.npcName}`}
           onClick={() => onNarrowToNpc(line)}
         >
-          {line.npcName}
+          <Untranslated missing={line.missing?.npcName}>{line.npcName}</Untranslated>
         </button>
+        {onRename && (
+          <RenameButton label={`Name ${line.npcName}`} onClick={() => onRename(line, "npc")} />
+        )}
         <span className="text-muted-foreground block truncate text-xs">
           {line.npcType} {line.npcId} <WowheadLink href={wowheadEntityUrl(line.npcType, line.npcId)} />
         </span>
@@ -202,8 +220,16 @@ export default function LineRow({
               title={`Show only quest ${line.questId}`}
               onClick={() => onNarrowToQuest(line)}
             >
-              {line.questTitle ?? `quest ${line.questId}`}
+              <Untranslated missing={line.missing?.questTitle}>
+                {line.questTitle ?? `quest ${line.questId}`}
+              </Untranslated>
             </button>
+            {onRename && (
+              <RenameButton
+                label={`Name quest ${line.questId}`}
+                onClick={() => onRename(line, "quest")}
+              />
+            )}
             <span className="text-muted-foreground block truncate text-xs">
               quest {line.questId} <WowheadLink href={wowheadQuestUrl(line.questId)} />
             </span>
@@ -247,11 +273,12 @@ export default function LineRow({
           {/* The override, when there is one: this cell shows what the line says out loud,
               and after a rewrite that is no longer what the corpus holds. */}
           <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "line-clamp-2")}>
-            {line.override ?? line.text}
+            <Untranslated missing={line.missing?.text}>{line.override ?? line.text}</Untranslated>
           </span>
           {/* What is true of the TEXT stays beside the text; what is true of the audio
               moved to the Audio column, where it lines up down the page. */}
           <span className="mt-0.5 flex shrink-0 gap-2 text-xs">
+            {line.missing?.text ? <UntranslatedMark /> : null}
             {/* Nothing else about a contributed row differs from a native one -- this is the
                 whole marker, plus a way back to where it came from. */}
             {line.contributionId ? (
@@ -259,7 +286,7 @@ export default function LineRow({
                 // ?status=accepted -- page.tsx defaults to status=new, and a contributed
                 // line's own contribution is by definition accepted, so a bare /contributions
                 // link would land on a queue that never shows the row it points at.
-                href={`/contributions?status=accepted#contribution-${line.contributionId}`}
+                href={localeHref(lang, `/contributions?status=accepted#contribution-${line.contributionId}`)}
                 onClick={(event) => event.stopPropagation()}
                 title="Accepted from a player's contribution"
                 className="text-muted-foreground hover:text-foreground underline underline-offset-2"
@@ -378,8 +405,7 @@ export default function LineRow({
               <FlagIcon className="size-3.5" />
             </Button>
           )}
-          {canRegenerate && (
-            <>
+          {canEdit && (
             <Button
               variant="ghost"
               size="icon"
@@ -389,17 +415,20 @@ export default function LineRow({
             >
               <PencilIcon className={cn("size-3.5", line.override && "text-amber-300")} />
             </Button>
-            {onIgnore && (
-              <Button
-                variant="ghost"
-                size="icon"
-                title={line.ignored ? `Ignored: ${line.ignored}` : "Never voice this line"}
-                aria-label={`Ignore ${line.npcName}'s line`}
-                onClick={() => onIgnore(line)}
-              >
-                <EyeOffIcon className={cn("size-3.5", line.ignored && "text-amber-300")} />
-              </Button>
-            )}
+          )}
+          {onIgnore && (
+            <Button
+              variant="ghost"
+              size="icon"
+              title={line.ignored ? `Ignored: ${line.ignored}` : "Never voice this line"}
+              aria-label={`Ignore ${line.npcName}'s line`}
+              onClick={() => onIgnore(line)}
+            >
+              <EyeOffIcon className={cn("size-3.5", line.ignored && "text-amber-300")} />
+            </Button>
+          )}
+          {canRegenerate && (
+            <>
             {/* Only on a dirty row. The mark is the whole reason this control exists, and a
                 clean row would be offering to clear nothing. */}
             {dirty && (

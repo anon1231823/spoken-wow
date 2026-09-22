@@ -218,6 +218,28 @@ describe("startWorker", () => {
     expect(rows[0].stoppedBecause).toContain("ElevenLabs key");
   });
 
+  // The job's language is what the generator is asked to speak: a Portuguese job handed on
+  // as English would come back as an English take filed under the wrong language.
+  it("hands the generator the job's language", async () => {
+    const batch = await createBatch("test", null as unknown as string, "quests", "ptBR");
+    batches.push(batch);
+    await enqueue(batch, [line(1)], "quests", "ptBR");
+    const seen: string[] = [];
+    const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
+      budget: async () => 1,
+      regenerate: { quests: async (_lineId, _userId, options) => {
+        seen.push(options.lang);
+        return OK;
+      } },
+    });
+
+    await until(async () => (await statesOf(batch)).done === 1);
+    await worker.stop();
+
+    expect(seen).toEqual(["ptBR"]);
+  });
+
   /**
    * The dispatch, which is what the source column is for. Handing a zones job to the quests
    * generator would ask that corpus for a line id it has never heard of, and it would

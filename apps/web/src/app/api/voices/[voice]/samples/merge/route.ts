@@ -9,6 +9,8 @@
  * API keeps them unless asked, so a caller that has not thought about it does not lose the
  * only copies.
  */
+import { cloneName } from "@/lib/voices/clone-name";
+import { langParam } from "@/lib/lang-server";
 import { denyVoiceRequest } from "@/lib/voices/authz";
 import { DEFAULT_PAUSE_SECONDS, mergeSamples, rejectMerge } from "@/lib/voices/merge";
 import { deleteSample, isStoredSampleName, listSamples } from "@/lib/voices/samples";
@@ -21,6 +23,10 @@ export async function POST(request: Request, context: Context) {
   const { voice } = await context.params;
   const denied = await denyVoiceRequest(voice);
   if (denied) return denied;
+  // A slot is shared; its clips and its clone are the language\'s own (clone-name.ts).
+  const { lang, denied: noLang } = await langParam(request);
+  if (noLang) return noLang;
+  const clone = cloneName(voice, lang);
 
   let body: { files?: unknown; pauseSeconds?: unknown; deleteSources?: unknown };
   try {
@@ -42,7 +48,7 @@ export async function POST(request: Request, context: Context) {
 
   let merged;
   try {
-    merged = await mergeSamples(voice, files, pauseSeconds);
+    merged = await mergeSamples(clone, files, pauseSeconds);
   } catch (error) {
     // ffmpeg's own message is the only clue to a bad input, so it is passed through.
     return Response.json(
@@ -52,8 +58,8 @@ export async function POST(request: Request, context: Context) {
   }
 
   if (body.deleteSources === true) {
-    for (const file of files) await deleteSample(voice, file);
+    for (const file of files) await deleteSample(clone, file);
   }
 
-  return Response.json({ voice, merged, samples: await listSamples(voice) }, { status: 201 });
+  return Response.json({ voice, merged, samples: await listSamples(clone) }, { status: 201 });
 }

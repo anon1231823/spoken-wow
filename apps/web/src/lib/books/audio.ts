@@ -4,7 +4,10 @@ import "server-only";
 
 import path from "node:path";
 
-import { catalogue, BASE_LANG } from "./catalogue";
+import { BASE_LANG } from "@/lib/lang";
+
+import { catalogue } from "./catalogue";
+import type { Lang } from "@/lib/lang";
 
 /**
  * The books audio archive: every take of every page, one directory per file.
@@ -33,10 +36,10 @@ export function audioRelPath(file: string): string {
 // than string inspection: a path either names a file some page owns or it does not exist,
 // and no amount of "../" produces a member of this set. lib/zones/audio.ts makes the same
 // argument for the zones store.
-export async function addressableFiles(lang: string = BASE_LANG): Promise<Set<string>> {
+export async function addressableFiles(lang: Lang = BASE_LANG): Promise<Set<string>> {
   return new Set((await catalogue(lang)).map((page) => audioRelPath(page.file)));
 }
 
-export async function isAddressable(relPath: string, lang: string = BASE_LANG): Promise<boolean> {
+export async function isAddressable(relPath: string, lang: Lang = BASE_LANG): Promise<boolean> {
   return (await addressableFiles(lang)).has(relPath);
 }

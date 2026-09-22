@@ -43,9 +43,14 @@ export type ResultLine = {
   dirty: boolean;
   /** The English prose this line would be translated from. Absent when reading English. */
   english?: string;
-  /** False when this language has no row for the line yet, so `text` is the English
-   *  showing through. Absent when reading English, where the question is meaningless. */
+  /** False when this language has no text for the line yet, so `text` is the English
+   *  standing in for it, shown and marked but never voiced. Absent when reading English,
+   *  where the question is meaningless. */
   translated?: boolean;
+  /** This language has no name for the place yet, so `name` is the English. */
+  nameMissing?: boolean;
+  /** The English name, for a translator. Absent when reading English. */
+  englishName?: string;
 };
 
 export type SearchResult = {
@@ -82,6 +87,14 @@ export function decorate(entry: CatalogueEntry, context: SearchContext): ResultL
     state: stateOf(entry, take),
     take: take ?? null,
     reportsOpen: context.reports.get(entry.id) ?? 0,
+    ...(entry.english === undefined
+      ? {}
+      : {
+          english: entry.english,
+          translated: !entry.missing?.text,
+          nameMissing: entry.missing?.name ?? false,
+          englishName: entry.englishName,
+        }),
     // The spoken text, not the full one: the lexicon is applied to what is sent.
     dirty: take
       ? isDirty(

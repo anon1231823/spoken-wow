@@ -11,11 +11,11 @@
  * matters is the text that would be SENT, overrides and regex rules applied, because that is
  * the string the dictionary is applied to.
  */
+import { BASE_LANG, type Lang } from "../lang";
 import { fileIndex } from "../audio";
 import { db } from "../db";
 import { dirtyFiles, loadDirtyContext } from "../generation/dirty";
-import { fileDefaults } from "../generation/files";
-import { applyPronunciation } from "../generation/pronunciation";
+import { committedPronunciation } from "../generation/files";
 import { readOverrides } from "./overrides";
 
 /**
@@ -26,30 +26,35 @@ import { readOverrides } from "./overrides";
  * needs it. Unlike staleness this costs no hashing - a take older than no change at all is
  * answered without its text being read - so the wide call is the cheap one of the pair.
  */
-export async function dirtyQuestFiles(files?: string[]): Promise<Set<string>> {
+export async function dirtyQuestFiles(
+  files?: string[],
+  lang: Lang = BASE_LANG,
+): Promise<Set<string>> {
   if (files?.length === 0) return new Set();
 
   const [{ rows }, context, overrides] = await Promise.all([
     files
       ? db().query<{ file: string; generatedAt: Date | null }>(
           `select "file", "createdAt" as "generatedAt" from "take"
-            where "source" = 'quests' and "isCurrent" and "file" = any($1::text[])`,
-          [files],
+            where "source" = 'quests' and "lang" = $2 and "isCurrent"
+              and "file" = any($1::text[])`,
+          [files, lang],
         )
       : db().query<{ file: string; generatedAt: Date | null }>(
           `select "file", "createdAt" as "generatedAt" from "take"
-            where "source" = 'quests' and "isCurrent"`,
+            where "source" = 'quests' and "lang" = $1 and "isCurrent"`,
+          [lang],
         ),
-    loadDirtyContext("quests"),
+    loadDirtyContext("quests", lang),
     // In the same round as the rest: memoised behind a stamp, so this is a timestamp check
     // rather than a table read, but it is still a round trip to sit behind the others.
-    readOverrides(),
+    // English's alone: overrides rewrite the English corpus.
+    readOverrides(lang),
   ]);
 
   if (!context.changes.length) return new Set();
 
-  const lines = await fileIndex();
-  const rules = fileDefaults().rules;
+  const lines = await fileIndex(lang);
 
   const takes = [];
   for (const row of rows) {
@@ -60,7 +65,7 @@ export async function dirtyQuestFiles(files?: string[]): Promise<Set<string>> {
       file: row.file,
       // The regex rules, as regenerate.ts applies them: a rule that rewrites a name before
       // the request is sent changes which lexicon entries the text can still match.
-      text: applyPronunciation(text, rules),
+      text: committedPronunciation(text, lang),
       generatedAt: row.generatedAt?.getTime() ?? null,
     });
   }

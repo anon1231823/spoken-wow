@@ -19,19 +19,24 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { corpus } from "@/lib/quests/catalogue";
 import { isSource } from "@/lib/sections";
-import { requireApiKey, requireRegenerate } from "@/lib/generation/authz";
+import {
+  requireAnyRegenerate,
+  requireApiKey,
+  requireIn,
+} from "@/lib/generation/authz";
 import { createBatch, enqueue, snapshot } from "@/lib/generation/queue";
 import { searchContext } from "@/lib/quests/context";
 import { batchJobs, matchingLines } from "@/lib/search";
 import { filtersFromParams, needsStale } from "@/lib/search-request";
 import { ensureQueueRunning, queueWorker } from "@/lib/generation/boot";
-import { catalogue as bookCatalogue, BASE_LANG as BOOKS_LANG } from "@/lib/books/catalogue";
+import { catalogue as bookCatalogue } from "@/lib/books/catalogue";
+import type { Lang } from "@/lib/lang";
 import { catalogue as zoneCatalogue } from "@/lib/zones/catalogue";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
-  const { session, denied } = await requireRegenerate();
+  const { session, lang, denied } = await requireIn(request, "regenerate");
   if (denied) return denied;
 
   // Checked at enqueue rather than only in the worker. Every job in the batch is generated
@@ -62,8 +67,8 @@ export async function POST(request: NextRequest) {
 
   const label = typeof body.label === "string" && body.label ? body.label : "a search";
 
-  if (source === "zones") return queueZones(body.lineIds, label, session.user.id);
-  if (source === "books") return queueBooks(body.lineIds, label, session.user.id);
+  if (source === "zones") return queueZones(body.lineIds, label, session.user.id, lang);
+  if (source === "books") return queueBooks(body.lineIds, label, session.user.id, lang);
 
   if (typeof body.filters !== "string") {
     return NextResponse.json(
@@ -74,8 +79,8 @@ export async function POST(request: NextRequest) {
 
   const filters = await filtersFromParams(new URLSearchParams(body.filters));
   const [catalogue, { voiced, context }] = await Promise.all([
-    corpus(),
-    searchContext(needsStale(filters)),
+    corpus(lang),
+    searchContext(needsStale(filters), false, lang),
   ]);
   const lines = matchingLines(catalogue, voiced, filters, context);
   // The same overrides the estimate was built from, so what is queued is what was quoted.
@@ -85,7 +90,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "nothing to regenerate", kind: "bad-request" }, { status: 400 });
   }
 
-  const batchId = await createBatch(label, session.user.id, "quests");
+  const batchId = await createBatch(label, session.user.id, "quests", lang);
   // BatchLine calls it audioPath and the queue calls it file, because a job is one mp3 on
   // either side and only the quests corpus thinks of it as a line's audio.
   const { queued, skipped } = await enqueue(
@@ -98,6 +103,7 @@ export async function POST(request: NextRequest) {
       characters: job.characters,
     })),
     "quests",
+    lang,
   );
 
   // The loop is on a two-second idle tick, and waiting that out before the first take would
@@ -120,6 +126,7 @@ async function queueZones(
   lineIds: unknown,
   label: string,
   userId: string,
+  lang: Lang,
 ): Promise<NextResponse> {
   if (!Array.isArray(lineIds) || lineIds.some((id) => typeof id !== "string")) {
     return NextResponse.json(
@@ -129,7 +136,7 @@ async function queueZones(
   }
 
   const wanted = new Set(lineIds as string[]);
-  const jobs = (await zoneCatalogue())
+  const jobs = (await zoneCatalogue(lang))
     .filter((entry) => wanted.has(entry.id) && entry.spoken.trim() !== "")
     .map((entry) => ({
       lineId: entry.id,
@@ -148,8 +155,8 @@ async function queueZones(
     );
   }
 
-  const batchId = await createBatch(label, userId, "zones");
-  const { queued, skipped } = await enqueue(batchId, jobs, "zones");
+  const batchId = await createBatch(label, userId, "zones", lang);
+  const { queued, skipped } = await enqueue(batchId, jobs, "zones", lang);
 
   queueWorker()?.nudge();
 
@@ -169,6 +176,7 @@ async function queueBooks(
   lineIds: unknown,
   label: string,
   userId: string,
+  lang: Lang,
 ): Promise<NextResponse> {
   if (!Array.isArray(lineIds) || lineIds.some((id) => typeof id !== "string")) {
     return NextResponse.json(
@@ -178,7 +186,7 @@ async function queueBooks(
   }
 
   const wanted = new Set(lineIds as string[]);
-  const jobs = (await bookCatalogue(BOOKS_LANG))
+  const jobs = (await bookCatalogue(lang))
     .filter((page) => wanted.has(page.id) && page.generatable && page.spoken.trim() !== "")
     .map((page) => ({
       lineId: page.id,
@@ -197,8 +205,8 @@ async function queueBooks(
     );
   }
 
-  const batchId = await createBatch(label, userId, "books");
-  const { queued, skipped } = await enqueue(batchId, jobs, "books");
+  const batchId = await createBatch(label, userId, "books", lang);
+  const { queued, skipped } = await enqueue(batchId, jobs, "books", lang);
 
   queueWorker()?.nudge();
 
@@ -206,7 +214,7 @@ async function queueBooks(
 }
 
 export async function GET(request: NextRequest) {
-  const { denied } = await requireRegenerate();
+  const { denied } = await requireAnyRegenerate();
   if (denied) return denied;
 
   // The poll is what resumes a batch after a deploy: Explorer calls this every fifteen

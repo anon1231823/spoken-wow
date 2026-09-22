@@ -7,6 +7,7 @@
  * always, and the production build is the only thing that catches the difference.
  */
 
+import { BASE_LANG, withLang, type Lang } from "@/lib/lang";
 import { noApiKeyMessage } from "@/lib/no-api-key";
 import type { Source } from "@/lib/sections";
 
@@ -78,9 +79,11 @@ export type GenerationStatusResponse = {
 
 export async function fetchGenerationStatus(
   signal?: AbortSignal,
+  lang: Lang = BASE_LANG,
 ): Promise<GenerationStatusResponse | null> {
   try {
-    const response = await fetch("/api/generation/status", { signal });
+    // Per language: which slots have a clone is the page's language's answer.
+    const response = await fetch(withLang(lang, "/api/generation/status"), { signal });
     if (!response.ok) return null;
     return (await response.json()) as GenerationStatusResponse;
   } catch {
@@ -108,9 +111,10 @@ export type BatchJob = {
 export async function fetchBatchJobs(
   params: URLSearchParams,
   signal?: AbortSignal,
+  lang: Lang = BASE_LANG,
 ): Promise<BatchJob[] | null> {
   try {
-    const response = await fetch(`/api/quests/search/lines?${params}`, { signal });
+    const response = await fetch(withLang(lang, `/api/quests/search/lines?${params}`), { signal });
     if (!response.ok) return null;
     return ((await response.json()) as { jobs: BatchJob[] }).jobs;
   } catch {
@@ -121,10 +125,11 @@ export async function fetchBatchJobs(
 export async function regenerate(
   lineId: string,
   signal?: AbortSignal,
+  lang: Lang = BASE_LANG,
 ): Promise<RegenerateResponse> {
   let response: Response;
   try {
-    response = await fetch("/api/quests/regenerate", {
+    response = await fetch(withLang(lang, "/api/quests/regenerate"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ lineId }),
@@ -171,15 +176,16 @@ export type QueueSnapshot = {
   counts: Record<"pending" | "running" | "done" | "failed" | "cancelled", number>;
   credits: number;
   unpriced: number;
-  running: { source: Source; lineId: string; npcName: string; preview: string }[];
-  failures: { source: Source; lineId: string; message: string }[];
+  running: { source: Source; lang: Lang; lineId: string; npcName: string; preview: string }[];
+  failures: { source: Source; lang: Lang; lineId: string; message: string }[];
   latestBatch: { cancelled: number; stoppedBecause: string | null } | null;
   /**
    * Carries the source because two explorers poll one queue, and each may only adopt its
    * own: a quests page told that a zones file is now at version 3 would look for a line it
-   * does not have.
+   * does not have. The language for the same reason: an English page must not adopt a
+   * Portuguese version number.
    */
-  finished: { id: string; source: Source; lineId: string; file: string; version: number }[];
+  finished: { id: string; source: Source; lang: Lang; lineId: string; file: string; version: number }[];
   cursor: string;
 };
 
@@ -205,9 +211,10 @@ export async function queueBatch(
     // failure the quote exists to prevent.
     | { source: "zones" | "books"; lineIds: string[] },
   label: string,
+  lang: Lang = BASE_LANG,
 ): Promise<QueuedBatch | { error: string } | null> {
   try {
-    const response = await fetch("/api/regenerate/queue", {
+    const response = await fetch(withLang(lang, "/api/regenerate/queue"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(
@@ -268,9 +275,13 @@ export async function stopQueue(): Promise<void> {
  * whether it worked rather than throwing: the caller has already cleared the marks on
  * screen, and the worst case is a row that comes back marked on the next search.
  */
-export async function clearDirty(source: string, files: string[]): Promise<boolean> {
+export async function clearDirty(
+  source: string,
+  files: string[],
+  lang: Lang = BASE_LANG,
+): Promise<boolean> {
   try {
-    const response = await fetch("/api/dirty", {
+    const response = await fetch(withLang(lang, "/api/dirty"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ source, files }),

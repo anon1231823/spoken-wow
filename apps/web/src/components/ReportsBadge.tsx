@@ -13,6 +13,8 @@
  * Fetched on open rather than shipped with the search: a page of rows carries a count each,
  * and the bodies are wanted for the one row somebody clicks.
  */
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { MessageSquareIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -47,6 +49,7 @@ type Props = {
 };
 
 export default function ReportsBadge({ source, lineId, count, canTriage }: Props) {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   /** Undefined until fetched; the reports, open first, once they are. */
   const [reports, setReports] = useState<Report[] | undefined>(undefined);
@@ -73,7 +76,7 @@ export default function ReportsBadge({ source, lineId, count, canTriage }: Props
   async function load() {
     setError(null);
     const params = new URLSearchParams({ source, lineId });
-    const response = await fetch(`/api/reports/line?${params}`).catch(() => null);
+    const response = await fetch(withLang(lang, `/api/reports/line?${params}`)).catch(() => null);
     if (!response?.ok) return setError("could not load the reports");
     const body = (await response.json()) as { reports: Report[] };
     setReports(body.reports);

@@ -15,7 +15,10 @@ import path from "node:path";
 
 import { VOICE_CONFIG_DIR } from "@/lib/paths";
 
+import { BASE_LANG, type Lang } from "@/lib/lang";
+
 import { FALLBACK, fromFileShape, type GenerationConfig } from "./config";
+import { applyPronunciation } from "./pronunciation";
 
 export function generationPath(dir: string = VOICE_CONFIG_DIR): string {
   return path.join(dir, "generation.json");
@@ -73,4 +76,16 @@ export function fileDefaults(): FileDefaults {
     };
   }
   return holder[defaultsKey]!;
+}
+
+/**
+ * The committed pronunciation rules applied to a line, in the language it is spoken in.
+ *
+ * English only: the rules are English spellings of English words. Another language is
+ * spoken with its own lexicon, through its dictionary, and nothing is rewritten before the
+ * request. One function so that regenerating, and the staleness and dirt checks that must
+ * reproduce exactly what regenerating sent, cannot disagree about it.
+ */
+export function committedPronunciation(text: string, lang: Lang): string {
+  return lang === BASE_LANG ? applyPronunciation(text, fileDefaults().rules) : text;
 }

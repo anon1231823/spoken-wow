@@ -98,6 +98,32 @@ describe("enqueue", () => {
   });
 });
 
+describe("the language a job is in", () => {
+  it("is English unless the batch says otherwise", async () => {
+    const batch = await newBatch();
+    await enqueue(batch, [line(1)], "quests");
+    expect((await claimJobOfThisRun())?.lang).toBe("enUS");
+  });
+
+  // A Portuguese take of a file is a different recording from the English one.
+  it("keeps the same file in two languages as two jobs", async () => {
+    const english = await newBatch();
+    const portuguese = await createBatch("test batch", null, "quests", "ptBR");
+    batches.push(portuguese);
+    expect(await enqueue(english, [line(1)], "quests")).toEqual({ queued: 1, skipped: 0 });
+    expect(await enqueue(portuguese, [line(1)], "quests", "ptBR")).toEqual({ queued: 1, skipped: 0 });
+    expect(await enqueue(portuguese, [line(1)], "quests", "ptBR")).toEqual({ queued: 0, skipped: 1 });
+  });
+
+  // What the worker generates in, and what the snapshot tells a page it may adopt.
+  it("rides from the enqueue to the claim", async () => {
+    const id = await createBatch("test batch", null, "quests", "ptBR");
+    batches.push(id);
+    await enqueue(id, [line(1)], "quests", "ptBR");
+    expect((await claimJobOfThisRun())?.lang).toBe("ptBR");
+  });
+});
+
 describe("claimNext", () => {
   it("hands two concurrent callers different jobs", async () => {
     const batch = await newBatch();
@@ -145,7 +171,7 @@ describe("cancelPending", () => {
     await enqueue(batch, [line(1), line(2), line(3)], "quests");
     const running = await claimNext();
 
-    expect(await cancelPending("stopped by hand", batch)).toEqual(2);
+    expect(await cancelPending("stopped by hand", { batchId: batch })).toEqual(2);
 
     const states = await stateCounts(batch);
     expect(states).toEqual({ running: 1, cancelled: 2 });
@@ -158,9 +184,31 @@ describe("cancelPending", () => {
     const theirs = await newBatch();
     await enqueue(theirs, [line(2)], "quests");
 
-    await cancelPending("stopped", mine);
+    await cancelPending("stopped", { batchId: mine });
 
     expect(await stateCounts(theirs)).toEqual({ pending: 1 });
+  });
+
+  it("stops only the languages it is given, and stamps only their batches", async () => {
+    const english = await newBatch();
+    await enqueue(english, [line(1)], "quests");
+    const portuguese = await createBatch("test batch", null, "quests", "ptBR");
+    batches.push(portuguese);
+    await enqueue(portuguese, [line(1)], "quests", "ptBR");
+
+    expect(await cancelPending("Stopped by a translator", { langs: ["ptBR"] })).toBeGreaterThanOrEqual(1);
+
+    expect(await stateCounts(english)).toEqual({ pending: 1 });
+    expect(await stateCounts(portuguese)).toEqual({ cancelled: 1 });
+    const { rows } = await db().query<{ id: string; stopped: boolean }>(
+      `select "id", "stoppedAt" is not null as stopped from "regeneration_batch"
+        where "id" = any($1)`,
+      [[english, portuguese]],
+    );
+    expect(Object.fromEntries(rows.map((row) => [row.id, row.stopped]))).toEqual({
+      [english]: false,
+      [portuguese]: true,
+    });
   });
 });
 
@@ -220,7 +268,7 @@ describe("snapshot", () => {
   it("does not hang a stopped batch's reason on the next batch to run cleanly", async () => {
     const stoppedBatch = await newBatch();
     await enqueue(stoppedBatch, [line(1)], "quests");
-    await cancelPending("Stopped by an admin", stoppedBatch);
+    await cancelPending("Stopped by an admin", { batchId: stoppedBatch });
     expect((await snapshot(null)).latestBatch).toMatchObject({
       cancelled: 1,
       stoppedBecause: "Stopped by an admin",
@@ -275,6 +323,7 @@ describe("snapshot", () => {
     const seen = await snapshot(null);
     expect(seen.failures).toContainEqual({
       source: "quests",
+      lang: "enUS",
       lineId: "q:1:accept",
       message: "no line q:1:accept",
     });

@@ -13,18 +13,19 @@ import { failure } from "@/lib/generation/errors";
 import { regenerateNarrated } from "@/lib/generation/narrated";
 import type { RegenerateResult } from "@/lib/generation/regenerate";
 
-import { catalogue, BASE_LANG, type BookPage } from "./catalogue";
+import { catalogue, type BookPage } from "./catalogue";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 
-async function pageFor(lineId: string, lang: string): Promise<BookPage | undefined> {
+async function pageFor(lineId: string, lang: Lang): Promise<BookPage | undefined> {
   return (await catalogue(lang)).find((candidate) => candidate.id === lineId);
 }
 
 export async function regenerateBookLine(
   lineId: string,
   createdBy: string,
-  options: { apiKey: string },
+  options: { apiKey: string; lang?: Lang },
 ): Promise<RegenerateResult> {
-  const lang = BASE_LANG;
+  const lang = options.lang ?? BASE_LANG;
 
   const page = await pageFor(lineId, lang);
   if (!page) {

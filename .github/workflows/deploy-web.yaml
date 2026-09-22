@@ -22,6 +22,9 @@ on:
       # The books half is the same arrangement: lib/books/tools.ts imports its text and
       # naming modules, so what normalises a page and what hashes it ship in the bundle.
       - "pipelines/books/**"
+      # What both halves above import from: the .env reader and the language list, which
+      # lib/lang.ts is also checked against. Bundled the same way.
+      - "pipelines/lib/**"
       # The lore corpus lives in the database, but the Lua the addon ships is exported from
       # it and the deploy seeds CI's throwaway database from those files.
       - "addons/SpokenZones/Data/**"

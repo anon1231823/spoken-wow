@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { BASE_LANG, withLang } from "@/lib/lang";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -38,6 +40,7 @@ export default function IgnoreDialog({ line, onSaved, onCancel }: Props) {
   // as OverrideDialog: an effect keyed on the line would fight the user's own typing.
   const [seeded, setSeeded] = useState<string | null>(null);
 
+  const lang = useLang();
   if (!line) return null;
 
   if (seeded !== line.key) {
@@ -53,10 +56,16 @@ export default function IgnoreDialog({ line, onSaved, onCancel }: Props) {
     setError(null);
 
     try {
-      const url =
+      const base =
         method === "PUT"
           ? "/api/quests/lines/ignore"
           : `/api/quests/lines/ignore?lineId=${encodeURIComponent(line.lineId)}`;
+      // On the English site an ignore means what it always has, every language; on another
+      // language's, it is that language's own decision.
+      const url =
+        lang === BASE_LANG
+          ? `${base}${base.includes("?") ? "&" : "?"}scope=all`
+          : withLang(lang, base);
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },

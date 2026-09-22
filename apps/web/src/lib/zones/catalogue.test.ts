@@ -16,18 +16,24 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { closeDb, db } from "@/lib/db";
 
 import { catalogueStamp } from "./catalogue";
+import { currentLore, loreHistory } from "./lore";
 
 /** A line id no other run shares, so tests can write rows without colliding. */
 let lineId: string;
 
-async function insert(version: number, isCurrent: boolean, full: string): Promise<number> {
+async function insert(
+  version: number,
+  isCurrent: boolean,
+  full: string,
+  lang = "enUS",
+): Promise<number> {
   const { rows } = await db().query<{ id: string }>(
     `insert into "lore_line"
        ("lineId", "lang", "version", "isCurrent", "origin", "mapID", "kind", "key",
         "name", "full", "short")
-     values ($1, 'enUS', $2, $3, 'scraped', 1411, 'zone', null, 'Durotar', $4, 'short')
+     values ($1, $5, $2, $3, 'scraped', 1411, 'zone', null, 'Durotar', $4, 'short')
      returning "id"`,
-    [lineId, version, isCurrent, full],
+    [lineId, version, isCurrent, full, lang],
   );
   return Number(rows[0].id);
 }
@@ -87,5 +93,18 @@ describe("the catalogue stamp", () => {
   it("does not move when nothing changed", async () => {
     await insert(1, true, "the first text");
     expect(await catalogueStamp()).toBe(await catalogueStamp());
+  });
+});
+
+describe("the language a line is read in", () => {
+  // lore_line is unique per (lineId, lang), so a translated row is a second live version of
+  // the same line as far as any query that does not name its language is concerned.
+  it("keeps a translation out of the English reads", async () => {
+    await insert(1, true, "the English text");
+    await insert(1, true, "o texto em portugues", "ptBR");
+
+    expect((await currentLore()).get(lineId)?.full).toBe("the English text");
+    expect((await currentLore("ptBR")).get(lineId)?.full).toBe("o texto em portugues");
+    expect((await loreHistory(lineId)).map((v) => v.full)).toEqual(["the English text"]);
   });
 });

@@ -10,17 +10,41 @@
  * lines the corpus has or it does not exist. Nothing here touches a path, so there is no
  * traversal to defend against - only a table that should not fill with ids nobody can resolve.
  */
+import { requireConfigure, requireIn } from "@/lib/generation/authz";
+import type { Lang } from "@/lib/lang";
 import { lineIndex } from "@/lib/quests/catalogue";
-import { requireConfigure } from "@/lib/generation/authz";
 import { clearIgnore, writeIgnore } from "@/lib/quests/ignores";
 
 export const dynamic = "force-dynamic";
 
-/** Long enough for a sentence and a link, short enough not to be an essay in a table cell. */
 const MAX_REASON = 300;
 
+/**
+ * Which level an ignore is at, and whether the caller may act there.
+ *
+ * `?scope=all` is every language, the global admin's decision alone: nobody will voice
+ * the line anywhere. Otherwise it is the page's language (`?lang=`, English when absent),
+ * and whoever holds `ignore` in it decides. The English site has always meant "everywhere"
+ * by an ignore, so its dialog sends scope=all.
+ */
+async function guard(
+  request: Request,
+): Promise<
+  | { lang: Lang | null; userId: string; denied: null }
+  | { lang: null; userId: null; denied: Response }
+> {
+  if (new URL(request.url).searchParams.get("scope") === "all") {
+    const { session, denied } = await requireConfigure();
+    if (denied) return { lang: null, userId: null, denied };
+    return { lang: null, userId: session.user.id, denied: null };
+  }
+  const { session, lang, denied } = await requireIn(request, "ignore");
+  if (denied) return { lang: null, userId: null, denied };
+  return { lang, userId: session.user.id, denied: null };
+}
+
 export async function PUT(request: Request) {
-  const { session, denied } = await requireConfigure();
+  const { lang, userId, denied } = await guard(request);
   if (denied) return denied;
 
   let body: unknown;
@@ -43,12 +67,11 @@ export async function PUT(request: Request) {
     return Response.json({ error: `reason must be ${MAX_REASON} characters or fewer` }, { status: 400 });
   }
 
-  const ignore = await writeIgnore(lineId, reason, session.user.id);
-  return Response.json({ ignore });
+  return Response.json({ ignore: await writeIgnore(lineId, reason, userId, lang) });
 }
 
 export async function DELETE(request: Request) {
-  const { denied } = await requireConfigure();
+  const { lang, denied } = await guard(request);
   if (denied) return denied;
 
   const lineId = new URL(request.url).searchParams.get("lineId");
@@ -58,5 +81,5 @@ export async function DELETE(request: Request) {
 
   // 200 for a line that was not ignored, as the override route does: the caller asked for it
   // to be gone and it is gone, and a 404 would make a second click look like a failure.
-  return Response.json({ removed: await clearIgnore(lineId) });
+  return Response.json({ removed: await clearIgnore(lineId, lang) });
 }

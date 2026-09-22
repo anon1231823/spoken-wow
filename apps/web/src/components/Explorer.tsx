@@ -1,5 +1,8 @@
 "use client";
 
+import { nameSubject, TranslateDialog, type TranslateSubject } from "@/components/TranslateDialog";
+import { useLang } from "@/components/LangProvider";
+import { BASE_LANG, withLang } from "@/lib/lang";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -32,7 +35,8 @@ import {
 } from "@/lib/generation/client";
 import { estimate as estimateBatch, LIST_RATE, type Estimate } from "@/lib/generation/billing";
 import { useClearDirty } from "@/lib/generation/use-clear-dirty";
-import { canConfigureGeneration, canRegenerate } from "@/lib/permissions";
+import { useCan } from "@/components/useCan";
+import { canConfigureGeneration } from "@/lib/permissions";
 import { isVoiceable } from "@/lib/text-gate";
 import type { Filter, LineFilters, ResultLine, SearchResult } from "@/lib/search";
 import { type Pending, receive, target, write } from "@/lib/url-echo";
@@ -76,16 +80,20 @@ function filterParams(filters: LineFilters): URLSearchParams {
 
 export default function Explorer({ facets }: { facets: Facets }) {
   const router = useRouter();
+  const lang = useLang();
   const params = useSearchParams();
   const pathname = usePathname();
   const { data: session } = useSession();
 
   // Read once here and drilled down, rather than a hook per row: a page renders fifty
   // LineRows and the answer is the same for all of them.
-  const showRegenerate = canRegenerate(session?.user.role);
+  const may = useCan();
+  const showRegenerate = may("regenerate");
+  const canEdit = may("edit");
   // Ignoring hides a line from everyone and takes it out of the module, which is the reach
   // the generation settings have rather than the reach a rewrite has. Same gate as the API.
   const canConfigure = canConfigureGeneration(session?.user.role);
+  const canIgnore = may("ignore");
 
   // The URL is the source of truth for a search, so a result is linkable and survives a
   // reload; `query` is the uncommitted keystroke state in front of it.
@@ -143,6 +151,49 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const { cleared, clear: clearDirty } = useClearDirty("quests");
   // The line whose spoken text is being rewritten, or null.
   const [editing, setEditing] = useState<ResultLine | null>(null);
+  // Another language's text or names, which are written as versions rather than as
+  // English's overrides. See TranslateDialog.
+  const [translating, setTranslating] = useState<TranslateSubject | null>(null);
+  const editText = useCallback(
+    (line: ResultLine) => {
+      if (lang === BASE_LANG) {
+        setEditing(line);
+        return;
+      }
+      setTranslating({
+        title: line.npcName,
+        subtitle: line.lineId,
+        english: line.originalText,
+        current: line.missing?.text ? null : line.text,
+        endpoint: "/api/quests/lines/text",
+        address: { lineId: line.lineId, variant: line.variant ?? 0 },
+        field: "text",
+        multiline: true,
+      });
+    },
+    [lang],
+  );
+  const rename = useCallback((line: ResultLine, what: "npc" | "quest") => {
+    setTranslating(
+      what === "npc"
+        ? nameSubject({
+            kind: line.npcType,
+            entityId: String(line.npcId),
+            title: line.npcName,
+            subtitle: `${line.npcType} ${line.npcId}`,
+            english: line.english?.npcName ?? "",
+            current: line.missing?.npcName ? null : line.npcName,
+          })
+        : nameSubject({
+            kind: "quest",
+            entityId: String(line.questId),
+            title: line.questTitle ?? `quest ${line.questId}`,
+            subtitle: `quest ${line.questId}`,
+            english: line.english?.questTitle ?? "",
+            current: line.missing?.questTitle ? null : line.questTitle,
+          }),
+    );
+  }, []);
   const [ignoring, setIgnoring] = useState<ResultLine | null>(null);
   // Anyone can open this one, signed in or not - see ReportDialog.
   const [reporting, setReporting] = useState<ResultLine | null>(null);
@@ -281,7 +332,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
     if (page > 1) search.set("page", String(page));
 
     setLoading(true);
-    fetch(`/api/quests/search?${search}`, { signal: controller.signal })
+    fetch(withLang(lang, `/api/quests/search?${search}`), { signal: controller.signal })
       .then((r) => r.json())
       .then((data: SearchResult) => {
         setResult(data);
@@ -292,14 +343,14 @@ export default function Explorer({ facets }: { facets: Facets }) {
       });
 
     return () => controller.abort();
-  }, [filterQuery, page, refreshKey]);
+  }, [filterQuery, page, refreshKey, lang]);
 
   useEffect(() => {
     if (!showRegenerate) return;
     const controller = new AbortController();
-    void fetchGenerationStatus(controller.signal).then(setStatus);
+    void fetchGenerationStatus(controller.signal, lang).then(setStatus);
     return () => controller.abort();
-  }, [showRegenerate]);
+  }, [showRegenerate, lang]);
 
   /**
    * Adopt a rewritten line.
@@ -456,7 +507,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
         setQueue(snapshot);
         // Every line that landed since the last poll, adopted the same way a click's result
         // is - which is what makes another admin's work show up on this page.
+        // Only this section's, in this page's language: the queue carries all of them.
         for (const job of snapshot.finished) {
+          if (job.source !== "quests" || job.lang !== lang) continue;
           applySuccess(job.file, job.version, job.lineId);
         }
         if (snapshot.active) setDismissed(false);
@@ -471,7 +524,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [showRegenerate, applySuccess]);
+  }, [showRegenerate, applySuccess, lang]);
 
   /**
    * Regenerate one line.
@@ -484,7 +537,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const regenerateLine = useCallback(async (line: ResultLine) => {
     setLineStates((current) => ({ ...current, [line.lineId]: { phase: "busy" } }));
 
-    const response = await regenerate(line.lineId);
+    const response = await regenerate(line.lineId, undefined, lang);
 
     if (!response.ok) {
       setLineStates((current) => ({
@@ -495,7 +548,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
     }
 
     applySuccess(response.file, response.version, line.lineId);
-  }, [applySuccess]);
+  }, [applySuccess, lang]);
 
   /**
    * Clear every dirty file the current search matches, not just this page's.
@@ -507,11 +560,11 @@ export default function Explorer({ facets }: { facets: Facets }) {
   const clearAllDirty = useCallback(async () => {
     const params = new URLSearchParams(filterQuery);
     params.set("ids", "1");
-    const response = await fetch(`/api/quests/search?${params}`).catch(() => null);
+    const response = await fetch(withLang(lang, `/api/quests/search?${params}`)).catch(() => null);
     if (!response?.ok) return;
     const { dirtyFiles } = (await response.json()) as { dirtyFiles?: string[] };
     clearDirty(dirtyFiles ?? []);
-  }, [filterQuery, clearDirty]);
+  }, [filterQuery, clearDirty, lang]);
 
   /**
    * Ask to regenerate everything the current search matches.
@@ -523,7 +576,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
    */
   const requestBatch = useCallback(async () => {
     const quoted = filterQuery;
-    const jobs = await fetchBatchJobs(new URLSearchParams(quoted));
+    const jobs = await fetchBatchJobs(new URLSearchParams(quoted), undefined, lang);
     if (!jobs || jobs.length === 0) return;
 
     // The same arithmetic the server would do, from the rate it reported. Falls back to
@@ -539,7 +592,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
         rate,
       ),
     });
-  }, [filterQuery, status]);
+  }, [filterQuery, status, lang]);
 
   /**
    * Hand the confirmed batch to the server.
@@ -558,6 +611,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
     const result = await queueBatch(
       { source: "quests", filters: new URLSearchParams(pendingBatch.filters) },
       pendingBatch.label,
+      lang,
     );
     if (!result) {
       // No reason offered because none was given: the route refused for a cause this
@@ -578,7 +632,7 @@ export default function Explorer({ facets }: { facets: Facets }) {
       cursor.current = snapshot.cursor;
       setQueue(snapshot);
     }
-  }, [pendingBatch]);
+  }, [pendingBatch, lang]);
 
   const play = useCallback((line: ResultLine) => {
     setCurrent(line);
@@ -784,7 +838,8 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 line={line}
                 current={line.key === current?.key}
                 canRegenerate={showRegenerate}
-                canTriage={showRegenerate}
+                canEdit={canEdit}
+                canTriage={canEdit}
                 state={lineStates[line.lineId]}
                 blocked={blockedReason(line)}
                 takes={line.take?.takes ?? 0}
@@ -793,8 +848,9 @@ export default function Explorer({ facets }: { facets: Facets }) {
                 dirty={line.dirty && !cleared.has(line.audioPath)}
                 onClearDirty={(l) => clearDirty([l.audioPath])}
                 onPlay={play}
-                onEditText={setEditing}
-                onIgnore={canConfigure ? setIgnoring : null}
+                onEditText={editText}
+                onRename={lang !== BASE_LANG && canEdit ? rename : null}
+                onIgnore={canIgnore ? setIgnoring : null}
                 onReport={setReporting}
                 onRegenerate={regenerateLine}
                 onRestored={handleRestored}
@@ -825,6 +881,14 @@ export default function Explorer({ facets }: { facets: Facets }) {
         line={editing}
         onSaved={handleOverrideSaved}
         onCancel={() => setEditing(null)}
+      />
+
+      <TranslateDialog
+        subject={translating}
+        onClose={() => setTranslating(null)}
+        // A name is on many rows and a line's text changes whether it can be voiced, so the
+        // page is fetched again rather than patched.
+        onSaved={() => refetch()}
       />
 
       <IgnoreDialog

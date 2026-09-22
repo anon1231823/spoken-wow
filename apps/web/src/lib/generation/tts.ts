@@ -25,7 +25,8 @@ import { classifyUpstream, failure, type Failure } from "./errors";
 import { trimLeadIn, withLeadIn } from "./leadin";
 
 /**
- * The corpus is English, so every request says so.
+ * The language a request says it is in, when the caller names none: English, the corpus
+ * every line was written in first.
  *
  * ElevenLabs describes language_code as enforcing a language "for the model and text
  * normalization". Without it a multilingual model infers the language from the text, and a
@@ -65,6 +66,11 @@ export type SpeechRequest = {
    * locator is recorded against every take.
    */
   dictionary?: DictionaryLocator | null;
+  /**
+   * ISO 639-1, as the API takes it: "pt" for ptBR (lib/lang's elevenLabs code). English when
+   * absent, so every caller that predates languages sends what it always sent.
+   */
+  languageCode?: string;
 };
 
 /**
@@ -82,6 +88,11 @@ export type DialogueRequest = {
   stability: number;
   seed: number | null;
   dictionary?: DictionaryLocator | null;
+  /**
+   * ISO 639-1, as the API takes it: "pt" for ptBR (lib/lang's elevenLabs code). English when
+   * absent, so every caller that predates languages sends what it always sent.
+   */
+  languageCode?: string;
 };
 
 export type SpeechResult =
@@ -129,11 +140,11 @@ export function buildPayload(request: SpeechRequest): Record<string, unknown> {
   // Omitted rather than sent as null when the strategy is "none": Python omits the key, and
   // a null seed is a value ElevenLabs would have to interpret.
   if (request.seed !== null) payload.seed = request.seed;
-  // Not recorded on the version row, unlike the model and the settings, because it is a
-  // constant derived from the model - which IS recorded. Given a take's modelId you can say
-  // whether it carried a language, so long as this stays a constant. If it ever becomes a
-  // setting, it needs a column.
-  if (acceptsLanguage(request.modelId)) payload.language_code = CORPUS_LANGUAGE;
+  // Not recorded on the take as a field of its own: it is the take's language (take.lang)
+  // spelled the way the API wants, sent whenever the model -- which IS recorded -- takes it.
+  if (acceptsLanguage(request.modelId)) {
+    payload.language_code = request.languageCode ?? CORPUS_LANGUAGE;
+  }
   // Same reasoning for the dictionary, and the version id is not optional: naming the
   // dictionary without a version would let a later upload change how an already-recorded
   // take would sound, which is the thing dictionaryVersion exists to pin down.
@@ -167,7 +178,9 @@ export function buildDialoguePayload(request: DialogueRequest): Record<string, u
     settings: { stability: request.stability },
   };
   if (request.seed !== null) payload.seed = request.seed;
-  if (acceptsLanguage(request.modelId)) payload.language_code = CORPUS_LANGUAGE;
+  if (acceptsLanguage(request.modelId)) {
+    payload.language_code = request.languageCode ?? CORPUS_LANGUAGE;
+  }
   if (request.dictionary) {
     payload.pronunciation_dictionary_locators = [
       {

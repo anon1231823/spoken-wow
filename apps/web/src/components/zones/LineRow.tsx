@@ -1,5 +1,7 @@
 "use client";
 
+import { RenameButton } from "@/components/RenameButton";
+import { Untranslated, UntranslatedMark } from "@/components/Untranslated";
 import {
   ChevronDownIcon,
   Eraser,
@@ -26,6 +28,9 @@ type Props = {
   current: boolean;
   /** Editor and up: the rewrite and regenerate controls. */
   canRegenerate: boolean;
+  /** May write this line's text in the page's language, which a translator may do without
+   *  being able to regenerate. */
+  canEdit: boolean;
   /** Editor and up: may read the report bodies and resolve them from the row. */
   canTriage: boolean;
   state?: RowState;
@@ -35,6 +40,8 @@ type Props = {
   /** An earlier take is live again, so the row and the player can catch up. */
   onRestored: (line: ResultLine, version: number) => void;
   onEditText: (line: ResultLine) => void;
+  /** Name the place in the page's language; null on the English site or without `edit`. */
+  onRename: ((line: ResultLine) => void) | null;
   onRegenerate: (line: ResultLine) => void;
   /** Say this take is fine as it stands, despite a pronunciation having moved under it. */
   onClearDirty: (line: ResultLine) => void;
@@ -58,6 +65,7 @@ export function LineRow({
   line,
   current,
   canRegenerate,
+  canEdit,
   canTriage,
   state,
   onPlay,
@@ -65,6 +73,7 @@ export function LineRow({
   onReport,
   onRestored,
   onEditText,
+  onRename,
   onRegenerate,
   onClearDirty,
 }: Props) {
@@ -112,8 +121,11 @@ export function LineRow({
         {line.kind === "zone" ? (
           <span className="text-muted-foreground italic">zone line</span>
         ) : (
-          <span className="block truncate">{line.name}</span>
+          <span className="block truncate">
+            <Untranslated missing={line.nameMissing}>{line.name}</Untranslated>
+          </span>
         )}
+        {onRename && <RenameButton label={`Name ${line.name}`} onClick={() => onRename(line)} />}
       </td>
 
       {/* The prose is plain markup rather than the label of a button, which is what makes it
@@ -139,18 +151,16 @@ export function LineRow({
             <PlayIcon className="size-3.5" />
           </button>
 
-          {/* An untranslated line is empty, not English: see buildOverlaidCatalogue. The word
-              stands in for the text so the row still says what it is, without putting prose
-              there that nobody wrote in this language. */}
+          {/* An untranslated line shows the English in its place, marked as such, so the
+              reader still sees what the line is about and that it is waiting to be written. */}
+          <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "clamp-2")}>
+            <Untranslated missing={line.translated === false}>{line.text}</Untranslated>
+          </span>
           {line.translated === false ? (
-            <span className={cn("min-w-0 flex-1 text-xs", STATE_STYLE.missing)}>
-              no translation
+            <span className="mt-0.5 shrink-0 text-xs">
+              <UntranslatedMark />
             </span>
-          ) : (
-            <span className={cn("min-w-0 flex-1 whitespace-pre-wrap", !expanded && "clamp-2")}>
-              {line.text}
-            </span>
-          )}
+          ) : null}
 
           {/* A row click is a mouse gesture and reaches no keyboard, so the same toggle needs
               a real control. It doubles as the only thing on screen saying rows expand. */}
@@ -228,19 +238,22 @@ export function LineRow({
             <FlagIcon className="size-3.5" />
           </Button>
 
+          {/* Rewriting the prose is not an audio action and it is free, so it has its own
+              gate: a translator writes a language they may not regenerate. */}
+          {canEdit && (
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Rewrite this line's text"
+              aria-label={`Edit the text of ${line.name}`}
+              onClick={() => onEditText(line)}
+            >
+              <PencilIcon className="size-3.5" />
+            </Button>
+          )}
+
           {canRegenerate && (
             <>
-              {/* Rewriting the prose is not an audio action and it is free, but it is gated
-                  the same way: the edit is what a later regeneration would speak. */}
-              <Button
-                variant="ghost"
-                size="icon"
-                title="Rewrite this line's text"
-                aria-label={`Edit the text of ${line.name}`}
-                onClick={() => onEditText(line)}
-              >
-                <PencilIcon className="size-3.5" />
-              </Button>
 
               {/* Only on a dirty row. A clean one keeps the control it would do nothing to,
                   and the mark is the whole reason this button exists. */}

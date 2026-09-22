@@ -5,24 +5,35 @@
  * whole internet and this one must never be. Collaborator rather than admin, as on the reports
  * side -- these are the people who already act on lines.
  */
-import { requireRegenerate } from "@/lib/generation/authz";
+import { requireCapability } from "@/lib/generation/authz";
+import { contributionLocale } from "@/lib/contributions/store";
+import { BASE_LANG, isLang } from "@/lib/lang";
 import { isStatus } from "@/lib/contributions/contributions";
 import { resolveContribution } from "@/lib/contributions/accept";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const { session, denied } = await requireRegenerate();
-  if (denied) return denied;
-
   const body = (await request.json().catch(() => ({}))) as { id?: unknown; status?: unknown };
 
   const id = Number(body.id);
   if (!Number.isInteger(id) || id <= 0) {
     return Response.json({ error: "unknown contribution" }, { status: 404 });
   }
+
   if (!isStatus(body.status)) {
     return Response.json({ error: "unknown status" }, { status: 400 });
+  }
+
+  // Whoever may edit the language the player sent it in: accepting writes that language's
+  // text. English is the collaborator role's, as it always was. The id is checked for
+  // existence only after the permission, so a member learns nothing about which ids exist.
+  const locale = await contributionLocale(id);
+  const lang = isLang(locale) ? locale : BASE_LANG;
+  const { session, denied } = await requireCapability("edit", lang);
+  if (denied) return denied;
+  if (locale === null) {
+    return Response.json({ error: "unknown contribution" }, { status: 404 });
   }
 
   const outcome = await resolveContribution(id, body.status, session.user.id);

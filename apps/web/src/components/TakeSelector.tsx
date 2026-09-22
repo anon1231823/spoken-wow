@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, Loader2, Pause, Play, RotateCcw } from "lucide-react";
 
@@ -66,6 +68,7 @@ export default function TakeSelector({
   /** Called with the version now live, so the row and the player can catch up. */
   onRestored: (version: number) => void;
 }) {
+  const lang = useLang();
   const [open, setOpen] = useState(false);
   const [list, setList] = useState<Take[] | null>(null);
   const [busy, setBusy] = useState<number | null>(null);
@@ -83,7 +86,7 @@ export default function TakeSelector({
     setError(null);
     try {
       const params = new URLSearchParams({ source, file });
-      const response = await fetch(`/api/takes?${params}`);
+      const response = await fetch(withLang(lang, `/api/takes?${params}`));
       const body = await response.json();
       if (!response.ok) {
         setError(body.error ?? `could not read the takes (${response.status})`);
@@ -93,7 +96,7 @@ export default function TakeSelector({
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     }
-  }, [source, file]);
+  }, [source, file, lang]);
 
   useEffect(() => {
     if (open) void load();
@@ -136,11 +139,11 @@ export default function TakeSelector({
       setPlaying(null);
       return;
     }
-    element.src = `/api/takes/audio?${new URLSearchParams({
+    element.src = withLang(lang, `/api/takes/audio?${new URLSearchParams({
       source,
       file,
       version: String(take),
-    })}`;
+    })}`);
     // Where a missing clip is found out about, rather than predicted: the route answers
     // 404 and the panel says which take could not be heard, instead of greying every old
     // take out in advance by listing a directory while the page renders.
@@ -166,7 +169,7 @@ export default function TakeSelector({
     setBusy(take);
     setError(null);
     try {
-      const response = await fetch("/api/takes/restore", {
+      const response = await fetch(withLang(lang, "/api/takes/restore"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ source, file, version: take }),

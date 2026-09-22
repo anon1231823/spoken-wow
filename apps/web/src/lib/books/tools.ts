@@ -19,6 +19,16 @@ import * as namingModule from "@books-tools/lib/naming.mjs";
 /** What would be sent to a narrator: markup gone, paragraphs flattened. */
 export const spokenText = textModule.spokenText as (text: string) => string;
 
+/**
+ * Whether a page's text can be voiced, and if not why: empty, a placeholder, or a `$N`-style
+ * token the game fills in at runtime and a recording cannot. The extract's own rule, so a
+ * page written on the site is judged exactly as one read out of vmangos.
+ */
+export const isGeneratable = textModule.isGeneratable as (text: string) => {
+  generatable: boolean;
+  skipReason: string | null;
+};
+
 /** sha1 of the spoken text. Compared against a take's hash to spot stale audio. */
 export const textHash = namingModule.textHash as (text: string) => string;
 

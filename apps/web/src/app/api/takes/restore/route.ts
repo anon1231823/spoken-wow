@@ -14,7 +14,7 @@
  * same file is in flight would race it to decide which take is live, and whichever wrote
  * last would win without the other's author ever seeing why.
  */
-import { requireRegenerate } from "@/lib/generation/authz";
+import { requireIn } from "@/lib/generation/authz";
 import { BUSY, withTakeLock } from "@/lib/generation/lock";
 
 import { isAddressableFile } from "@/lib/takes/files";
@@ -24,7 +24,7 @@ import { isSource } from "@/lib/sections";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const { denied } = await requireRegenerate();
+  const { lang, denied } = await requireIn(request, "regenerate");
   if (denied) return denied;
 
   const body = (await request.json().catch(() => ({}))) as {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
 
   const outcome = await withTakeLock(source, file, async () => {
     try {
-      await restoreTake(source, file, version);
+      await restoreTake(source, file, version, lang);
       return { ok: true as const };
     } catch (error) {
       // restoreTake refuses a version that was never recorded, and one whose clip was not
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       // the live take where it was.
       return { ok: false as const, error: error instanceof Error ? error.message : String(error) };
     }
-  });
+  }, lang);
 
   if (outcome === BUSY) {
     return Response.json(

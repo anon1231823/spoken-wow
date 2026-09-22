@@ -15,9 +15,10 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { clientIp } from "@/lib/reports/client-ip";
 import { validateSubmission } from "@/lib/reports/reports";
+import { langParam } from "@/lib/lang-server";
 import { countRecent, createReport } from "@/lib/reports/store";
 import { formatTarget, parseTarget, resolveTarget } from "@/lib/reports/target";
-import { BASE_LANG as BOOKS_LANG, pageById } from "@/lib/books/catalogue";
+import { pageById } from "@/lib/books/catalogue";
 import { lineByPath } from "@/lib/zones/catalogue";
 import { type Source, isSource } from "@/lib/sections";
 
@@ -35,6 +36,12 @@ export async function POST(request: Request) {
   if (typeof body.website === "string" && body.website.trim()) {
     return Response.json({ ok: true });
   }
+
+  // Which language's line is being reported. Absent is English, which is every report an
+  // addon has ever filed; the target is resolved the same way in any language, since a
+  // quest, a zone and a page are the same thing whatever it is read in.
+  const { lang, denied } = await langParam(request);
+  if (denied) return denied;
 
   // Absent means quests, so a client that predates the second section keeps working.
   const source: Source = isSource(body.source) ? body.source : "quests";
@@ -85,6 +92,7 @@ export async function POST(request: Request) {
 
   await createReport({
     source,
+    lang,
     lineId: addressed.lineId,
     target: addressed.target,
     category: validated.value.category,
@@ -128,7 +136,7 @@ async function booksTarget(
 ): Promise<{ lineId: string | null; target: string } | null> {
   if (!raw) return null;
 
-  const page = await pageById(Number(raw), BOOKS_LANG);
+  const page = await pageById(Number(raw));
   if (!page) return null;
 
   return { lineId: page.id, target: page.file };

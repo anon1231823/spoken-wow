@@ -5,6 +5,7 @@
  * is spoken by up to many NPCs, so a rewrite necessarily changes what all of them say. See
  * the header of migration 0012 for why rewriting the spoken text cannot rename that file.
  */
+import { BASE_LANG, type Lang } from "../lang";
 import { db } from "../db";
 import type { LineOverride } from "./override";
 
@@ -47,7 +48,12 @@ type CacheHolder = { [cacheKey]?: { map: Map<string, LineOverride>; stamp: strin
  * Whole-table because there are tens of these, not thousands: an override is a line someone
  * sat down and rewrote.
  */
-export async function readOverrides(): Promise<Map<string, LineOverride>> {
+/**
+ * `lang` other than English reads as no overrides at all: an override rewrites the English
+ * corpus, and another language's rewrites are versions of its own text.
+ */
+export async function readOverrides(lang: Lang = BASE_LANG): Promise<Map<string, LineOverride>> {
+  if (lang !== BASE_LANG) return new Map();
   const holder = globalThis as CacheHolder;
   const current = await stamp();
   if (holder[cacheKey]?.stamp === current) return holder[cacheKey].map;

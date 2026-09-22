@@ -400,7 +400,14 @@ def export_ignores(path, check=False, verbose=True):
     conn = connect()
     try:
         with conn, conn.cursor() as cur:
-            cur.execute('select "lineId", "reason" from "line_ignore" order by "lineId"')
+            # The English pack's list: ignored everywhere, or in English. Another language's
+            # decision is its own and does not reach this pack. A line ignored at both levels
+            # is listed once, with the global reason.
+            cur.execute(
+                """select distinct on ("lineId") "lineId", "reason" from "line_ignore"
+                    where "lang" is null or "lang" = 'enUS'
+                    order by "lineId", "lang" nulls first"""
+            )
             ignored = [{"lineId": line_id, "reason": reason} for line_id, reason in cur.fetchall()]
     finally:
         conn.close()

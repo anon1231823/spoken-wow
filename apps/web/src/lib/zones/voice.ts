@@ -24,6 +24,7 @@
  * config.json does not go away: the CLI still reads it, and a clone with no database must
  * still be able to generate. It becomes an export of these rows rather than their source.
  */
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import "server-only";
 
 import { currentLocator } from "@/lib/generation/dictionary";
@@ -87,11 +88,18 @@ export class NarratorMissing extends Error {
  * resolving the narrator against somebody else's would hand ElevenLabs an id that account
  * does not own.
  */
-export async function narratorConfig(apiKey: string): Promise<VoiceConfig> {
+/**
+ * `lang` picks the narrator's clone -- each language has its own narrator, like every other
+ * voice -- and the settings and lexicon it is spoken with.
+ */
+export async function narratorConfig(
+  apiKey: string,
+  lang: Lang = BASE_LANG,
+): Promise<VoiceConfig> {
   const [status, config, dictionary] = await Promise.all([
-    generationStatus({ apiKey }),
-    currentConfig(),
-    currentLocator(),
+    generationStatus({ apiKey }, lang),
+    currentConfig(lang),
+    currentLocator(lang),
   ]);
 
   const voiceId = status.voiceIds.get(NARRATOR_VOICE);

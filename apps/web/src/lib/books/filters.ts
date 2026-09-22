@@ -14,6 +14,11 @@ export const REPORTS = ["open"] as const;
 export type Field = (typeof FIELDS)[number];
 /** What opens the book: a GameObject in the world, or an item in a bag. */
 export type OwnerKind = (typeof OWNER_KINDS)[number];
+
+/** What entity_name calls an owner's kind: book_line says 'object' for a gameobject. */
+export function ownerEntityKind(kind: OwnerKind): "gameobject" | "item" {
+  return kind === "object" ? "gameobject" : "item";
+}
 /** missing = no audio; stale = audio predates a text change; current = neither. */
 export type State = (typeof STATES)[number];
 export type Reports = (typeof REPORTS)[number];

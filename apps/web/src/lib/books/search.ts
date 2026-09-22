@@ -42,6 +42,12 @@ export type ResultLine = {
    * current and dirty at once. Cleared by hand only -- see lib/generation/dirty.ts.
    */
   dirty: boolean;
+  /** See BookPage.missing. Absent when reading English, and where nothing is missing. */
+  missing?: { text: boolean; title: boolean };
+  /** The English page, for a translator to work from. Absent when reading English. */
+  english?: string;
+  /** The owner's English name, for a translator. Absent when reading English. */
+  englishTitle?: string;
 };
 
 export type SearchResult = {
@@ -83,6 +89,10 @@ export function decorate(page: BookPage, context: SearchContext): ResultLine {
     state: stateOf(page, take),
     take: take ?? null,
     reportsOpen: context.reports.get(page.id) ?? 0,
+    ...(page.missing ? { missing: page.missing } : {}),
+    ...(page.english === undefined
+      ? {}
+      : { english: page.english, englishTitle: page.englishTitle }),
     // The spoken text, not the printed one: the lexicon is applied to what is sent.
     dirty: take
       ? isDirty(
