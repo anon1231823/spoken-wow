@@ -33,6 +33,7 @@ local source={key="test",gates={},interClipGap=.25,GetChannel=function() return 
 local clicked=0
 local actions={
  {id="report",text="Report",onClick=function(clip) assert(clip==Q:GetCurrentSound());clicked=clicked+1 end},
+ {id="gossip",anchor="header",onClick=function() error("header actions stay out of the menu") end},
  {id="bug",icon="bug-icon",label="Report a problem",onClick=function(clip) assert(clip==Q:GetCurrentSound());clicked=clicked+1 end},
  {id="custom",create=function(parent)
     local b=CreateFrame("Button",nil,parent);b:SetSize(32,32)
@@ -77,7 +78,7 @@ assert(P.drawer.points[1][1]=="BOTTOMLEFT")
 P.frame.bottom=200
 P:ToggleMenu();assert(P.menu:IsShown())
 for _,button in ipairs(P.frame.actions.buttons) do
- if button.action.label then assert(not button:IsShown()) else assert(button:GetParent()==P.actionHost);button:Click() end
+ if button.action.label or button.action.anchor=="header" then assert(not button:IsShown()) else assert(button:GetParent()==P.actionHost);button:Click() end
 end
 local row=P.actionRows[1]
 assert(row:IsShown() and row.icon.texture=="bug-icon" and row.text:GetText()=="Report a problem" and not P.actionRows[2])

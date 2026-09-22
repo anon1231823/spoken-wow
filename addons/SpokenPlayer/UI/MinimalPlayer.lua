@@ -362,7 +362,11 @@ function MinimalPlayer:ConfigureActions()
     local x, y, rowHeight, count, rows = 0, 0, 0, 0, 0
     for _, button in ipairs(self.frame.actions.buttons) do
         local action = button.action
-        if action.icon and action.label then
+        -- Header actions (Stop Gossip) belong beside the original player's speaker name.
+        -- The menu has no header, and skipping or removing lines covers what they do.
+        if action.anchor == "header" then
+            button:Hide()
+        elseif action.icon and action.label then
             button:Hide()
             rows = rows + 1
             local row = self:ActionRow(rows)
