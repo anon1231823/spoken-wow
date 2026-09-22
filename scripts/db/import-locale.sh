@@ -70,14 +70,16 @@ if [ -n "$INTO" ]; then
 else
   : "${DROPLET:?no droplet configured: export SPOKEN_DROPLET=deploy@<host>}"
   # shellcheck disable=SC2086 -- SSH carries its own flags
-  $SSH -N -o ExitOnForwardFailure=yes -L "$TUNNEL_PORT:127.0.0.1:5432" "$DROPLET" &
+  # Neither ssh may read this terminal: the prompt below does. A backgrounded ssh with a
+  # terminal on stdin takes keystrokes -- it was eating the "y", and the run stopped at random.
+  $SSH -n -N -o ExitOnForwardFailure=yes -L "$TUNNEL_PORT:127.0.0.1:5432" "$DROPLET" &
   tunnel=$!
   for _ in $(seq 1 50); do
     nc -z 127.0.0.1 "$TUNNEL_PORT" 2>/dev/null && break
     kill -0 "$tunnel" 2>/dev/null || { echo "error: the tunnel did not come up" >&2; exit 1; }
     sleep 0.2
   done
-  remote=$(upstream 'printf %s "$DATABASE_URL"')
+  remote=$(upstream 'printf %s "$DATABASE_URL"' </dev/null)
   # The droplet's own address for its database, re-aimed at this end of the tunnel.
   DATABASE_URL=$(printf %s "$remote" | sed -E "s#@[^/]+/#@127.0.0.1:$TUNNEL_PORT/#")
   target="production ($DROPLET)"
