@@ -7,6 +7,7 @@
  * audio, and on whose consent.
  */
 import { db } from "@/lib/db";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 
 export type VoiceClone = {
   voice: string;
@@ -18,11 +19,13 @@ export type VoiceClone = {
   contributor: string | null;
 };
 
-export async function listClones(): Promise<Map<string, VoiceClone>> {
+/** One language's clones, by slot. A slot's clone is per language: see migration 0035. */
+export async function listClones(lang: Lang = BASE_LANG): Promise<Map<string, VoiceClone>> {
   const { rows } = await db().query<VoiceClone>(
     `select "voice", "voiceId", "clonedAt", "clonedBy",
             "sampleCount", "sampleBytes"::int, "contributor"
-       from "voice_clone"`,
+       from "voice_clone" where "lang" = $1`,
+    [lang],
   );
   return new Map(rows.map((row) => [row.voice, row]));
 }
@@ -43,15 +46,17 @@ export async function recordClone(clone: {
   contributor?: string | null;
   contributorUrl?: string | null;
   consentNote?: string | null;
+  lang?: Lang;
 }): Promise<void> {
   await db().query(
     `insert into "voice_clone"
        ("voice", "voiceId", "clonedBy", "sampleCount", "sampleBytes",
-        "contributor", "contributorUrl", "consentAt", "consentNote")
+        "contributor", "contributorUrl", "consentAt", "consentNote", "lang")
      -- $6 is cast because Postgres cannot infer a parameter's type from "is null" alone,
      -- and rejects the statement with "could not determine data type of parameter".
-     values ($1, $2, $3, $4, $5, $6, $7, case when $6::text is null then null else now() end, $8)
-     on conflict ("voice") do update set
+     values ($1, $2, $3, $4, $5, $6, $7, case when $6::text is null then null else now() end, $8,
+             $9)
+     on conflict ("voice", "lang") do update set
        "voiceId"        = excluded."voiceId",
        "clonedAt"       = now(),
        "clonedBy"       = excluded."clonedBy",
@@ -70,6 +75,7 @@ export async function recordClone(clone: {
       clone.contributor ?? null,
       clone.contributorUrl ?? null,
       clone.consentNote ?? null,
+      clone.lang ?? BASE_LANG,
     ],
   );
 }

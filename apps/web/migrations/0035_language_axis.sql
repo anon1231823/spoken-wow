@@ -4,9 +4,9 @@
 -- URL. Most of what a language owns already carries `lang` -- take, report, lore_line,
 -- book_line, quest_line, quest_line_speaker, line_flag -- and every read pins it to enUS. What
 -- does not carry it is the machinery around a take: the queue that produces one, the ack
--- that clears one, the lexicon log that dirties one, and the issue scan that reads the
--- text. Each of those would let a Portuguese take and an English take of the same file
--- block, clear or dirty each other.
+-- that clears one, the lexicon log that dirties one, the issue scan that reads the text,
+-- and the record of the voice clone that speaks it. Each of those would let a Portuguese
+-- take and an English take of the same file block, clear or dirty each other.
 --
 -- Default 'enUS' everywhere, so every existing row is correct without a backfill: nothing
 -- but English has ever been queued, acked, logged or scanned.
@@ -44,6 +44,12 @@ create unique index "regeneration_job_one_per_lang_file"
 -- Clearing an English take says nothing about the Portuguese one.
 alter table "take_ack" add column "lang" text not null default 'enUS';
 create unique index "take_ack_lang_idx" on "take_ack" ("source", "lang", "file");
+
+-- A voice slot -- dwarf-male-grim -- is the same slot in every language, but the clone
+-- behind it is not: each locale's client was voiced by its own actors, so a language's
+-- clones are made from that language's clips and are that language's alone.
+alter table "voice_clone" add column "lang" text not null default 'enUS';
+create unique index "voice_clone_lang_idx" on "voice_clone" ("voice", "lang");
 
 -- A lexicon edit dirties takes in the lexicon's own language only.
 alter table "lexicon_change" add column "lang" text not null default 'enUS';
