@@ -13,6 +13,8 @@ See the repository's [third-party notice](../../THIRD_PARTY.md).
   health/mana-bar remnants removed, desaturated and darkened.
 - `MinimalBullet*.tga` uses the existing quest/gossip glyphs, alpha-trimmed
   and centered; the cast trim/background/mask complete the circular framing.
+- Book and zone badges use the client's own `GossipFrame\TrainerGossipIcon`
+  and `WorldMap\UI-World-Icon`; nothing is bundled for them.
 - Runtime textures are power-of-two RGBA TGA files. Fonts and remaining
   native interface textures are referenced from the client at runtime.
 

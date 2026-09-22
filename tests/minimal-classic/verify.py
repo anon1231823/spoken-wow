@@ -194,8 +194,15 @@ local cx,cy,r=90*35/71,4+90*34/71,90*30.5/71
 for _,y in ipairs({6+4,98-10-4}) do
  assert((44+4-cx)^2+(y-cy)^2<r^2,"panel corner must be under the opaque portrait disc")
 end
+local badges={["quest-accept"]="MinimalBulletAccept",gossip="MinimalBulletGossip",book="TrainerGossipIcon",zone="UI%-World%-Icon"}
+for id,texture in pairs(badges) do
+ P.clip.present.bullet=id;P:ConfigurePortrait()
+ assert(P.badge:IsShown() and P.badge.texture:find(texture),id)
+end
+P.clip.present.bullet=nil;P:ConfigurePortrait()
+assert(not P.badge:IsShown() and P.badgeBackground:IsShown())
 assert(getn(E.Callbacks.errors)==0,table.concat(E.Callbacks.errors,"\\n"))
-print("PASS: bounded portrait cache, opaque centred badge, panel corners concealed inside portrait")
+print("PASS: quest, gossip, book and zone badges, bounded portrait cache, opaque centred badge, panel corners concealed inside portrait")
 ''')
 for path in (addon/'Textures').glob('Minimal*.tga'):
     image=Image.open(path)

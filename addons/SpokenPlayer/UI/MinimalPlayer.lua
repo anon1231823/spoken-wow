@@ -5,6 +5,16 @@ setfenv(1, SpokenEnv)
 MinimalPlayer = { rows = {}, offset = 0, expanded = false }
 local ART = [[Interface\AddOns\SpokenPlayer\Textures\]]
 local HEIGHT, WIDTH, MAX_ROWS = 98, 380, 4
+-- Portrait badges by bullet id. Quests use trimmed copies of their own glyphs; books
+-- and zones take native ones, since their registered bullet (or none) is not a badge.
+local BADGES = {
+    ["quest-accept"] = ART .. "MinimalBulletAccept",
+    ["quest-progress"] = ART .. "MinimalBulletProgress",
+    ["quest-complete"] = ART .. "MinimalBulletComplete",
+    gossip = ART .. "MinimalBulletGossip",
+    book = [[Interface\GossipFrame\TrainerGossipIcon]],
+    zone = [[Interface\WorldMap\UI-World-Icon]],
+}
 local function Clamp(n, low, high) return math.max(low, math.min(high, n)) end
 local function Config() return Addon.db.profile.Frame end
 local function Label(clip) return clip and (clip.present and clip.present.label or clip.key) or "" end
@@ -354,18 +364,10 @@ function MinimalPlayer:ConfigurePortrait()
     if not StaticPortrait:Configure(self.viewport, self.clip) then Portrait:Configure(self.viewport, self.clip) end
     local viewport = self.viewport
     if viewport.active == "texture" and viewport.texture then StaticPortrait:Mask(viewport, viewport.texture) end
-    local bullet = self.clip.present and Bullets[self.clip.present.bullet]
-    if bullet then
-        local texture = bullet.texture
-        for _, kind in ipairs({ "Accept", "Progress", "Complete", "Gossip" }) do
-            if type(texture) == "string" and string.find(texture, "SoundQueueBullet" .. kind, 1, true) then
-                texture = ART .. "MinimalBullet" .. kind
-                break
-            end
-        end
-        self.badge:SetTexture(texture)
-        self.badge:Show()
-    else self.badge:Hide() end
+    local id = self.clip.present and self.clip.present.bullet
+    local texture = BADGES[id] or Bullets[id] and Bullets[id].texture
+    self.badge:SetTexture(texture)
+    self.badge:SetShown(texture ~= nil)
 end
 
 function MinimalPlayer:UpdateControls()
