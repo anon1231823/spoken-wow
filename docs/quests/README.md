@@ -90,8 +90,14 @@ The whole set is listed on `/voices`, which is also the easiest way to build it 
 "Managing voices". The clips to build them from are Blizzard's own NPC greeting barks:
 
 ```bash
-python tools/fetch_npc_lines.py          # into voice/npc-lines/<race-gender>/<flavor>/
+python tools/fetch_npc_lines.py              # into voice/npc-lines/<race-gender>/<flavor>/
+python tools/fetch_npc_lines.py --lang frFR  # the French client's, into voice/npc-lines/frFR/...
 ```
+
+Every language's clones come from its own client's barks, recorded by its own actors, so a
+language other than English has its own set under `voice/npc-lines/<lang>/`, the layout
+`/<lang>/voices` seeds from. Wowhead has no Skybourne elves in any language: their English
+clips were extracted by hand, and another language's have to be too.
 
 That directory is gitignored and local-only. It is Blizzard's audio, and it is input to a
 pipeline rather than something to redistribute.
