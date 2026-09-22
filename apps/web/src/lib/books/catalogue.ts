@@ -17,9 +17,10 @@ import type { OwnerKind } from "./filters";
 import { spokenText, textHash, fileFor } from "./tools";
 import { liveTakes } from "@/lib/takes/store";
 
-/** The language the corpus is read in. One for now; the table carries the column at full
- *  strength because vmangos has eight more translations on these same ids. */
-export const BASE_LANG = "enUS";
+/** Re-exported from lib/lang.ts, the one definition, so the routes importing it here keep
+ *  their import. */
+export { BASE_LANG } from "@/lib/lang";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 
 /** One voiceable page of one book. */
 export type BookPage = {
@@ -117,7 +118,8 @@ export function isCorpusEmpty(error: unknown): boolean {
 
 type Memo = { stamp: string; value: Promise<BookPage[]> };
 
-const globalForBooks = globalThis as unknown as { booksCatalogue?: Memo };
+/** One memo per language, so a site switching between two does not rebuild on every request. */
+const globalForBooks = globalThis as unknown as { booksCatalogue?: Map<string, Memo> };
 
 /**
  * What the corpus's rows are, as one comparable value.
@@ -128,7 +130,7 @@ const globalForBooks = globalThis as unknown as { booksCatalogue?: Memo };
  * inserts a version so the highest id moves, an import can delete so the count moves, and a
  * restore moves the live flag between existing rows, which only the sum of current ids sees.
  */
-async function stampOf(lang: string): Promise<string> {
+async function stampOf(lang: Lang): Promise<string> {
   const rows = await query<{ stamp: string }>(
     `select coalesce(max("id"), 0) || ':' || count(*) || ':'
              || coalesce(sum("id") filter (where "isCurrent"), 0) as "stamp"
@@ -138,7 +140,7 @@ async function stampOf(lang: string): Promise<string> {
   return rows[0]?.stamp ?? "0:0:0";
 }
 
-async function build(lang: string): Promise<BookPage[]> {
+async function build(lang: Lang): Promise<BookPage[]> {
   const rows = await query<{
     lineId: string;
     pageId: number;
@@ -184,17 +186,18 @@ async function build(lang: string): Promise<BookPage[]> {
   });
 }
 
-export async function catalogue(lang: string = BASE_LANG): Promise<BookPage[]> {
+export async function catalogue(lang: Lang = BASE_LANG): Promise<BookPage[]> {
   const stamp = await stampOf(lang);
-  const existing = globalForBooks.booksCatalogue;
+  const memo = (globalForBooks.booksCatalogue ??= new Map());
+  const existing = memo.get(lang);
   if (existing && existing.stamp === stamp) return existing.value;
 
   const value = build(lang);
-  globalForBooks.booksCatalogue = { stamp, value };
+  memo.set(lang, { stamp, value });
   return value;
 }
 
-export async function loadContext(lang: string = BASE_LANG): Promise<SearchContext> {
+export async function loadContext(lang: Lang = BASE_LANG): Promise<SearchContext> {
   const [takeRows, reportRows, dirt] = await Promise.all([
     liveTakes("books", lang),
     // Grouped in the database rather than counted here: resolved rows are the ones that
@@ -208,7 +211,7 @@ export async function loadContext(lang: string = BASE_LANG): Promise<SearchConte
         group by "lineId"`,
       [lang],
     ),
-    loadDirtyContext("books"),
+    loadDirtyContext("books", lang),
   ]);
 
   return {
@@ -241,7 +244,7 @@ export async function loadContext(lang: string = BASE_LANG): Promise<SearchConte
  * `report` has no foreign key onto `book_line`, so this is what stands between a typo and a
  * row nothing will ever show or clean up. Every route accepting a lineId from outside calls it.
  */
-export async function isKnownLine(lineId: string, lang: string = BASE_LANG): Promise<boolean> {
+export async function isKnownLine(lineId: string, lang: Lang = BASE_LANG): Promise<boolean> {
   return (await catalogue(lang)).some((page) => page.id === lineId);
 }
 
@@ -258,7 +261,7 @@ export async function isKnownLine(lineId: string, lang: string = BASE_LANG): Pro
  */
 export async function pageById(
   pageId: number,
-  lang: string = BASE_LANG,
+  lang: Lang = BASE_LANG,
 ): Promise<BookPage | undefined> {
   if (!Number.isInteger(pageId)) return undefined;
   return (await catalogue(lang)).find((page) => page.pageId === pageId);
@@ -267,7 +270,7 @@ export async function pageById(
 /** The book dropdown's options, derived from the corpus rather than hardcoded. */
 export type BookFacet = { bookId: number; title: string; pages: number; ownerKind: OwnerKind };
 
-export async function bookFacets(lang: string = BASE_LANG): Promise<BookFacet[]> {
+export async function bookFacets(lang: Lang = BASE_LANG): Promise<BookFacet[]> {
   const pages = await catalogue(lang);
   const books = new Map<number, BookFacet>();
 

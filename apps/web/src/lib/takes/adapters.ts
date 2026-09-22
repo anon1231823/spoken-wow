@@ -16,20 +16,30 @@
  * A total Record rather than a switch, for the reason lib/generation/worker.ts gives:
  * adding a section and forgetting one of these is then a type error rather than a route
  * that resolves to the wrong directory.
+ *
+ * ANOTHER LANGUAGE'S TAKES LIVE ONE LEVEL DOWN, under a directory named for the language:
+ * audio-history/ptBR/gossip/31ab…/. Version numbers count per language, so without it the
+ * English v1 and the Portuguese v1 of a file would share a directory and be told apart only
+ * by a content hash. English stays exactly where it is -- the archive is irreplaceable and a
+ * path it is already at is not moved -- and no English path can begin with a language code:
+ * quests paths begin quests/ or gossip/, zones paths a map id, books paths a page id.
  */
 import "server-only";
 
 import path from "node:path";
 
 import { historyDir as booksHistory } from "@/lib/books/audio";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import { AUDIO_HISTORY_DIR } from "@/lib/paths";
 import { isSafeAudioPath } from "@/lib/range";
 import type { Source } from "@/lib/sections";
 import { historyDir as zonesHistory } from "@/lib/zones/tools";
 
 type StoreAdapter = {
-  /** Where one line's archived takes live. */
-  historyDir: (file: string) => string;
+  /** The section's archive, which a deployment points at its own directory. */
+  root: () => string;
+  /** Where one line's archived takes live, relative to the root. */
+  relative: (file: string) => string;
 };
 
 /**
@@ -43,17 +53,23 @@ function questsFile(file: string): string {
 
 const ADAPTERS: Record<Source, StoreAdapter> = {
   quests: {
-    historyDir: (file) =>
-      path.join(AUDIO_HISTORY_DIR, path.dirname(questsFile(file)), path.basename(file, ".mp3")),
+    root: () => AUDIO_HISTORY_DIR,
+    relative: (file) => path.join(path.dirname(questsFile(file)), path.basename(file, ".mp3")),
   },
   zones: {
-    historyDir: (file) => path.join(zonesHistory(), file),
+    root: zonesHistory,
+    relative: (file) => file,
   },
   books: {
-    historyDir: (file) => path.join(booksHistory(), file),
+    root: booksHistory,
+    relative: (file) => file,
   },
 };
 
-export function historyDirOf(source: Source, file: string): string {
-  return ADAPTERS[source].historyDir(file);
+export function historyDirOf(source: Source, file: string, lang: Lang = BASE_LANG): string {
+  const adapter = ADAPTERS[source];
+  const relative = adapter.relative(file);
+  return lang === BASE_LANG
+    ? path.join(adapter.root(), relative)
+    : path.join(adapter.root(), lang, relative);
 }

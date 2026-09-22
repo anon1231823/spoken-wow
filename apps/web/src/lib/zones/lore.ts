@@ -8,6 +8,7 @@
 import "server-only";
 
 import { db, query } from "@/lib/db";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import { makeShort } from "./tools";
 
 /** The live text of one line. */
@@ -37,9 +38,10 @@ function toVersion(row: Row): LoreVersion {
 const COLUMNS = `"lineId", "version", "isCurrent", "origin", "name", "full", "short",
                  "shortIsManual", "source", "editedBy", "note", "createdAt"`;
 
-// The lore is English. The "lang" column stays on lore_line -- it defaults to 'enUS',
-// and migrations here are forward-only and never drop one -- but nothing below selects
-// on it, so `where "isCurrent"` means what it says again.
+// Every read and write names its language. The lore is English today, and while it was the
+// only language nothing selected on the column; the partial unique index is on
+// (lineId, lang), so the first translated row would otherwise have made every query below
+// return two live versions of a line.
 
 /** A line's structure alongside its text: what the catalogue is built from. */
 export type CorpusRow = {
@@ -63,21 +65,23 @@ export type CorpusRow = {
  * key in code-unit order, is what tools/lore/lua.mjs emits; `collate "C"` is what makes
  * Postgres agree with JavaScript's `<` on the keys.
  */
-export async function corpusRows(): Promise<CorpusRow[]> {
+export async function corpusRows(lang: Lang = BASE_LANG): Promise<CorpusRow[]> {
   return query<CorpusRow>(
     `select "lineId", "mapID", "kind", "key", "name", "full", "short", "source"
        from "lore_line"
-      where "isCurrent"
+      where "isCurrent" and "lang" = $1
       order by ("kind" = 'subzone'), "mapID", "key" collate "C"`,
+    [lang],
   );
 }
 
 /**
  * The live version of every line, keyed by lineId.
  */
-export async function currentLore(): Promise<Map<string, LoreLine>> {
+export async function currentLore(lang: Lang = BASE_LANG): Promise<Map<string, LoreLine>> {
   const rows = await query<Row>(
-    `select ${COLUMNS} from "lore_line" where "isCurrent"`,
+    `select ${COLUMNS} from "lore_line" where "isCurrent" and "lang" = $1`,
+    [lang],
   );
   return new Map(rows.map((row) => [row.lineId, toVersion(row)]));
 }
@@ -85,12 +89,13 @@ export async function currentLore(): Promise<Map<string, LoreLine>> {
 /** Every version of one line, newest first. */
 export async function loreHistory(
   lineId: string,
+  lang: Lang = BASE_LANG,
 ): Promise<LoreVersion[]> {
   const rows = await query<Row>(
     `select ${COLUMNS} from "lore_line"
-      where "lineId" = $1
+      where "lineId" = $1 and "lang" = $2
       order by "version" desc`,
-    [lineId],
+    [lineId, lang],
   );
   return rows.map(toVersion);
 }
@@ -119,15 +124,17 @@ export async function saveLore(args: {
   note?: string | null;
   editedBy: string;
   expectedVersion?: number | null;
+  lang?: Lang;
 }): Promise<LoreVersion> {
+  const lang = args.lang ?? BASE_LANG;
   const client = await db().connect();
   try {
     await client.query("begin");
 
     const { rows: currentRows } = await client.query<Row & { mapID: number; kind: string; key: string | null }>(
       `select ${COLUMNS}, "mapID", "kind", "key" from "lore_line"
-        where "lineId" = $1 and "isCurrent" for update`,
-      [args.lineId],
+        where "lineId" = $1 and "lang" = $2 and "isCurrent" for update`,
+      [args.lineId, lang],
     );
     const current = currentRows[0];
 
@@ -164,22 +171,22 @@ export async function saveLore(args: {
 
     const { rows: maxRows } = await client.query<{ version: string }>(
       `select coalesce(max("version"), 0) as "version"
-         from "lore_line" where "lineId" = $1`,
-      [args.lineId],
+         from "lore_line" where "lineId" = $1 and "lang" = $2`,
+      [args.lineId, lang],
     );
     const version = Number(maxRows[0].version) + 1;
 
     await client.query(
       `update "lore_line" set "isCurrent" = false
-        where "lineId" = $1 and "isCurrent"`,
-      [args.lineId],
+        where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
+      [args.lineId, lang],
     );
 
     const { rows: inserted } = await client.query<Row>(
       `insert into "lore_line"
          ("lineId", "version", "isCurrent", "origin", "mapID", "kind", "key",
-          "name", "full", "short", "shortIsManual", "source", "editedBy", "note")
-       values ($1, $2, true, 'edited', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          "name", "full", "short", "shortIsManual", "source", "editedBy", "note", "lang")
+       values ($1, $2, true, 'edited', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        returning ${COLUMNS}`,
       [
         args.lineId,
@@ -197,6 +204,7 @@ export async function saveLore(args: {
         current.source,
         args.editedBy,
         args.note?.trim() || null,
+        lang,
       ],
     );
 
@@ -224,6 +232,7 @@ export async function saveLore(args: {
 export async function restoreLore(
   lineId: string,
   version: number,
+  lang: Lang = BASE_LANG,
 ): Promise<LoreVersion> {
   const client = await db().connect();
   try {
@@ -231,21 +240,21 @@ export async function restoreLore(
 
     const { rows } = await client.query<Row>(
       `select ${COLUMNS} from "lore_line"
-        where "lineId" = $1 and "version" = $2 for update`,
-      [lineId, version],
+        where "lineId" = $1 and "lang" = $3 and "version" = $2 for update`,
+      [lineId, version, lang],
     );
     if (!rows[0]) throw new LoreMissing(`${lineId} has no version ${version}`);
 
     await client.query(
       `update "lore_line" set "isCurrent" = false
-        where "lineId" = $1 and "isCurrent"`,
-      [lineId],
+        where "lineId" = $1 and "lang" = $2 and "isCurrent"`,
+      [lineId, lang],
     );
     const { rows: restored } = await client.query<Row>(
       `update "lore_line" set "isCurrent" = true
-        where "lineId" = $1 and "version" = $2
+        where "lineId" = $1 and "lang" = $3 and "version" = $2
         returning ${COLUMNS}`,
-      [lineId, version],
+      [lineId, version, lang],
     );
 
     await client.query("commit");

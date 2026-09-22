@@ -17,6 +17,7 @@
  * lock would block that file until the process restarts.
  */
 import { db } from "@/lib/db";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import type { Source } from "@/lib/sections";
 
 /**
@@ -71,12 +72,18 @@ export async function withFileLock<T>(
  * never excluded each other at all.
  *
  * Namespaced by section, because the sections name files by different frozen rules and
- * nothing guarantees the namespaces stay disjoint.
+ * nothing guarantees the namespaces stay disjoint. And by language, because a Portuguese
+ * take of a file is its own recording with its own version numbers.
+ *
+ * English keeps the key it always had. Two releases overlap for the length of a pm2 reload,
+ * and an English regeneration under the new release must still exclude one under the old.
  */
 export function withTakeLock<T>(
   source: Source,
   file: string,
   work: () => Promise<T>,
+  lang: Lang = BASE_LANG,
 ): Promise<T | typeof BUSY> {
-  return withFileLock(`${source}:${file}`, work);
+  const key = lang === BASE_LANG ? `${source}:${file}` : `${source}:${lang}:${file}`;
+  return withFileLock(key, work);
 }

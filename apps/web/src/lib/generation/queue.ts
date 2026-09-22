@@ -13,8 +13,13 @@
  * hands it to; it is also half the credit guard's key, because the two sides name files by
  * their own frozen rules and a collision would mean one section's job silently blocking the
  * other's - which reads as "nothing happened when I pressed Regenerate".
+ *
+ * THE LANGUAGE RIDES ON EACH JOB TOO, and is the guard's third term for the same reason: a
+ * Portuguese take of a file is a different recording from the English one, and queueing both
+ * is two jobs rather than a duplicate. It is what the generator is asked to speak in.
  */
 import { db } from "@/lib/db";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import type { Source } from "@/lib/sections";
 
 export type JobState = "pending" | "running" | "done" | "failed" | "cancelled";
@@ -41,6 +46,7 @@ export type QueueJob = {
   id: string;
   batchId: string;
   source: Source;
+  lang: Lang;
   lineId: string;
   file: string;
   npcName: string;
@@ -58,8 +64,8 @@ export type QueueSnapshot = {
   credits: number;
   /** Takes ElevenLabs did not price, counted rather than assumed to be free. */
   unpriced: number;
-  running: { source: Source; lineId: string; npcName: string; preview: string }[];
-  failures: { source: Source; lineId: string; message: string }[];
+  running: { source: Source; lang: Lang; lineId: string; npcName: string; preview: string }[];
+  failures: { source: Source; lang: Lang; lineId: string; message: string }[];
   /**
    * The newest batch's own stop, or null when there is no batch at all.
    *
@@ -73,9 +79,10 @@ export type QueueSnapshot = {
    *
    * Carries the source because two explorers poll the same queue, and each may only adopt
    * its own: a quests page told that '1411/razor-hill' is now at version 3 would look for a
-   * line it does not have.
+   * line it does not have. The language for the same reason one level down: an English page
+   * adopting a Portuguese version number would point its player at a take it cannot play.
    */
-  finished: { id: string; source: Source; lineId: string; file: string; version: number }[];
+  finished: { id: string; source: Source; lang: Lang; lineId: string; file: string; version: number }[];
   /** Pass back as `since` on the next poll. */
   cursor: string;
 };
@@ -106,11 +113,12 @@ export async function createBatch(
   label: string,
   createdBy: string | null,
   source: Source,
+  lang: Lang = BASE_LANG,
 ): Promise<string> {
   const { rows } = await db().query<{ id: string }>(
-    `insert into "regeneration_batch" ("label", "createdBy", "source")
-     values ($1, $2, $3) returning "id"`,
-    [label, createdBy, source],
+    `insert into "regeneration_batch" ("label", "createdBy", "source", "lang")
+     values ($1, $2, $3, $4) returning "id"`,
+    [label, createdBy, source, lang],
   );
   return rows[0].id;
 }
@@ -118,8 +126,8 @@ export async function createBatch(
 /**
  * Add jobs, refusing any file already queued.
  *
- * ON CONFLICT against regeneration_job_one_per_file, so two overlapping searches cannot pay
- * for the same mp3 twice. The count of refusals is returned rather than swallowed: "4,000
+ * ON CONFLICT against regeneration_job_one_per_lang_file, so two overlapping searches cannot
+ * pay for the same mp3 in the same language twice. The count of refusals is returned rather than swallowed: "4,000
  * queued, 900 already queued" is the honest answer, and hiding it would make the panel's
  * totals disagree with what was asked for.
  */
@@ -127,6 +135,7 @@ export async function enqueue(
   batchId: string,
   jobs: QueueEntry[],
   source: Source,
+  lang: Lang = BASE_LANG,
 ): Promise<{ queued: number; skipped: number }> {
   if (jobs.length === 0) return { queued: 0, skipped: 0 };
 
@@ -138,9 +147,9 @@ export async function enqueue(
 
   const { rowCount } = await db().query(
     `insert into "regeneration_job"
-       ("batchId", "source", "lineId", "file", "npcName", "preview", "characters")
-     select $1, $2, * from unnest($3::text[], $4::text[], $5::text[], $6::text[], $7::int[])
-     on conflict ("source", "file") where "state" in ('pending', 'running') do nothing`,
+       ("batchId", "source", "lang", "lineId", "file", "npcName", "preview", "characters")
+     select $1, $2, $8, * from unnest($3::text[], $4::text[], $5::text[], $6::text[], $7::int[])
+     on conflict ("source", "lang", "file") where "state" in ('pending', 'running') do nothing`,
     [
       batchId,
       source,
@@ -149,6 +158,7 @@ export async function enqueue(
       jobs.map((job) => job.npcName),
       jobs.map((job) => job.preview),
       jobs.map((job) => job.characters),
+      lang,
     ],
   );
 
@@ -181,7 +191,7 @@ export async function claimNext(leaseMs: number = DEFAULT_LEASE_MS): Promise<Que
          for update skip locked
          limit 1
       )
-      returning j."id"::text, j."batchId", j."source", j."lineId", j."file", j."npcName",
+      returning j."id"::text, j."batchId", j."source", j."lang", j."lineId", j."file", j."npcName",
                 j."preview", j."characters", j."attempts",
                 (select b."createdBy" from "regeneration_batch" b where b."id" = j."batchId")
                   as "createdBy"`,
@@ -279,9 +289,9 @@ type JobAggregateRow = {
   cancelled: string;
   credits: string;
   unpriced: string;
-  running: { source: Source; lineId: string; npcName: string; preview: string }[];
-  failures: { source: Source; lineId: string; message: string }[];
-  finished: { id: string; source: Source; lineId: string; file: string; version: number }[];
+  running: { source: Source; lang: Lang; lineId: string; npcName: string; preview: string }[];
+  failures: { source: Source; lang: Lang; lineId: string; message: string }[];
+  finished: { id: string; source: Source; lang: Lang; lineId: string; file: string; version: number }[];
   cursor: string | null;
 };
 
@@ -347,15 +357,15 @@ export async function snapshot(since: string | null): Promise<QueueSnapshot> {
          where ${window}
        ),
        running_jobs as (
-         select "source", "lineId", "npcName", "preview" from "regeneration_job"
+         select "source", "lang", "lineId", "npcName", "preview" from "regeneration_job"
           where "state" = 'running' order by "id" limit 20
        ),
        recent_failures as (
-         select "source", "lineId", "error" as message from "regeneration_job"
+         select "source", "lang", "lineId", "error" as message from "regeneration_job"
           where "state" = 'failed' and ${window} order by "id" desc limit 20
        ),
        finished_page as (
-         select "id"::text as "id", "source", "lineId", "file", "version" from "regeneration_job"
+         select "id"::text as "id", "source", "lang", "lineId", "file", "version" from "regeneration_job"
           where "state" = 'done' and "version" is not null
             and "id" > greatest(coalesce($1::bigint, 0), (select through from dismissal))
           order by "id" limit ${FINISHED_PAGE}

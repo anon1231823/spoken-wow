@@ -218,6 +218,31 @@ describe("startWorker", () => {
     expect(rows[0].stoppedBecause).toContain("ElevenLabs key");
   });
 
+  // Nothing generates another language yet, and a generator handed one would read English
+  // text and commit it as a take in the wrong language. Refused whole, like a missing key.
+  it("refuses a batch in a language it cannot generate, without generating", async () => {
+    const batch = await createBatch("test", null as unknown as string, "quests", "ptBR");
+    batches.push(batch);
+    await enqueue(batch, [line(1), line(2)], "quests", "ptBR");
+    let generated = 0;
+    const worker = startWorker(() => true, {
+      apiKeyFor: KEYED,
+      budget: async () => 1,
+      regenerate: { quests: async () => {
+        generated += 1;
+        return OK;
+      } },
+    });
+
+    await until(async () => {
+      const states = await statesOf(batch);
+      return (states.cancelled ?? 0) === 1 && (states.failed ?? 0) === 1;
+    });
+    await worker.stop();
+
+    expect(generated).toBe(0);
+  });
+
   /**
    * The dispatch, which is what the source column is for. Handing a zones job to the quests
    * generator would ask that corpus for a line id it has never heard of, and it would

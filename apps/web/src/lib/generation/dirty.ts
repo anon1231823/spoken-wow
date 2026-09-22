@@ -20,6 +20,7 @@
  * fine, because deciding that is the whole content of the mark.
  */
 import { db } from "@/lib/db";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 
 import { kindOf, type LexiconEntry } from "./lexicon";
 import type { Source } from "@/lib/sections";
@@ -122,15 +123,26 @@ export function isDirty(take: SpokenTake, context: DirtyContext): boolean {
   return false;
 }
 
-/** The changes and the acknowledgements, for one section. Two selects, both small. */
-export async function loadDirtyContext(source: Source): Promise<DirtyContext> {
+/**
+ * The changes and the acknowledgements, for one section in one language. Two selects, both
+ * small.
+ *
+ * Both halves are per language: a German lexicon edit says nothing about how an English take
+ * sounds, and clearing the English take of a file does not clear the German one.
+ */
+export async function loadDirtyContext(
+  source: Source,
+  lang: Lang = BASE_LANG,
+): Promise<DirtyContext> {
   const [changes, acks] = await Promise.all([
     db().query<{ grapheme: string; changedAt: Date }>(
-      `select "grapheme", "changedAt" from "lexicon_change" order by "changedAt" desc`,
+      `select "grapheme", "changedAt" from "lexicon_change" where "lang" = $1
+        order by "changedAt" desc`,
+      [lang],
     ),
     db().query<{ file: string; ackedAt: Date }>(
-      `select "file", "ackedAt" from "take_ack" where "source" = $1`,
-      [source],
+      `select "file", "ackedAt" from "take_ack" where "source" = $1 and "lang" = $2`,
+      [source, lang],
     ),
   ]);
 
@@ -144,15 +156,20 @@ export async function loadDirtyContext(source: Source): Promise<DirtyContext> {
 }
 
 /** Say that these takes are fine as they stand. Idempotent; a second clear moves the date. */
-export async function acknowledge(source: Source, files: string[], userId: string): Promise<void> {
+export async function acknowledge(
+  source: Source,
+  files: string[],
+  userId: string,
+  lang: Lang = BASE_LANG,
+): Promise<void> {
   if (!files.length) return;
   await db().query(
-    `insert into "take_ack" ("source", "file", "ackedAt", "ackedBy")
-     select $1, unnest($2::text[]), now(), $3
-     on conflict ("source", "file") do update set
+    `insert into "take_ack" ("source", "lang", "file", "ackedAt", "ackedBy")
+     select $1, $4, unnest($2::text[]), now(), $3
+     on conflict ("source", "lang", "file") do update set
        "ackedAt" = excluded."ackedAt",
        "ackedBy" = excluded."ackedBy"`,
-    [source, files, userId],
+    [source, files, userId, lang],
   );
 }
 
@@ -206,12 +223,13 @@ export async function logSoundChanges(
   changes: SoundChange[],
   changedBy: string,
   versionId: string | null,
+  lang: Lang = BASE_LANG,
 ): Promise<void> {
   if (!changes.length) return;
   await db().query(
-    `insert into "lexicon_change" ("grapheme", "kind", "versionId", "changedBy")
-     select "grapheme", "kind", $3, $4
+    `insert into "lexicon_change" ("grapheme", "kind", "versionId", "changedBy", "lang")
+     select "grapheme", "kind", $3, $4, $5
        from unnest($1::text[], $2::text[]) as c("grapheme", "kind")`,
-    [changes.map((c) => c.grapheme), changes.map((c) => c.kind), versionId, changedBy],
+    [changes.map((c) => c.grapheme), changes.map((c) => c.kind), versionId, changedBy, lang],
   );
 }

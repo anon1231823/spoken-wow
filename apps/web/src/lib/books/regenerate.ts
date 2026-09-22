@@ -14,8 +14,9 @@ import { regenerateNarrated } from "@/lib/generation/narrated";
 import type { RegenerateResult } from "@/lib/generation/regenerate";
 
 import { catalogue, BASE_LANG, type BookPage } from "./catalogue";
+import type { Lang } from "@/lib/lang";
 
-async function pageFor(lineId: string, lang: string): Promise<BookPage | undefined> {
+async function pageFor(lineId: string, lang: Lang): Promise<BookPage | undefined> {
   return (await catalogue(lang)).find((candidate) => candidate.id === lineId);
 }
 

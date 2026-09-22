@@ -98,6 +98,23 @@ describe("enqueue", () => {
   });
 });
 
+describe("the language a job is in", () => {
+  it("is English unless the batch says otherwise", async () => {
+    const batch = await newBatch();
+    await enqueue(batch, [line(1)], "quests");
+    expect((await claimJobOfThisRun())?.lang).toBe("enUS");
+  });
+
+  // What the worker generates in, and what the snapshot tells a page it may adopt. The same
+  // file in two languages being two jobs waits on the old index being dropped (see 0035).
+  it("rides from the enqueue to the claim", async () => {
+    const id = await createBatch("test batch", null, "quests", "ptBR");
+    batches.push(id);
+    await enqueue(id, [line(1)], "quests", "ptBR");
+    expect((await claimJobOfThisRun())?.lang).toBe("ptBR");
+  });
+});
+
 describe("claimNext", () => {
   it("hands two concurrent callers different jobs", async () => {
     const batch = await newBatch();
@@ -275,6 +292,7 @@ describe("snapshot", () => {
     const seen = await snapshot(null);
     expect(seen.failures).toContainEqual({
       source: "quests",
+      lang: "enUS",
       lineId: "q:1:accept",
       message: "no line q:1:accept",
     });

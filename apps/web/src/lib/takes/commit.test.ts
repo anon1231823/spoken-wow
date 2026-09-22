@@ -23,7 +23,7 @@ process.env.SPOKEN_QUESTS_AUDIO_HISTORY = path.join(root, "audio-history");
 const { closeDb, db } = await import("@/lib/db");
 const { commitTake } = await import("./commit");
 const { archiveName } = await import("./bytes");
-const { listTakes } = await import("./store");
+const { listTakes, livePath } = await import("./store");
 
 /** A file no other run will collide with, so this can share a database with anything else. */
 let file: string;
@@ -143,5 +143,45 @@ describe("files already written", () => {
     const after = fs.statSync(first);
     expect(fs.readFileSync(first, "utf8")).toBe("one");
     expect([after.ino, after.mtimeMs]).toEqual([before.ino, before.mtimeMs]);
+  });
+});
+
+describe("a take in another language", () => {
+  // Version numbers count per language, so an English v1 and a Portuguese v1 of one file are
+  // both real. What keeps them apart on disk is the language directory; English stays where
+  // it has always been, since the archive is irreplaceable and nothing moves a path in it.
+  it("is archived under its language, beside the English take and not over it", async () => {
+    const english = await take("english");
+    const portuguese = await commitTake("quests", file, Buffer.from("portugues"), {
+      lineId: "g:commit-test",
+    }, { lang: "ptBR" });
+
+    expect(english.version).toBe(1);
+    expect(portuguese.version).toBe(1);
+
+    const ptHistory = path.join(
+      root, "audio-history", "ptBR", path.dirname(file), path.basename(file, ".mp3"),
+    );
+    expect(archived()).toEqual([english.archiveFile]);
+    expect(fs.readdirSync(ptHistory)).toEqual([portuguese.archiveFile]);
+
+    const enLive = await livePath("quests", file);
+    const ptLive = await livePath("quests", file, "ptBR");
+    expect(enLive).toEqual({ kind: "file", path: path.join(history(), english.archiveFile) });
+    expect(ptLive).toEqual({ kind: "file", path: path.join(ptHistory, portuguese.archiveFile) });
+  });
+
+  it("does not take the live flag from the English take", async () => {
+    await take("english");
+    await commitTake("quests", file, Buffer.from("portugues"), { lineId: "g:commit-test" }, {
+      lang: "ptBR",
+    });
+
+    expect((await listTakes("quests", file)).map((t) => [t.version, t.isCurrent])).toEqual([
+      [1, true],
+    ]);
+    expect((await listTakes("quests", file, "ptBR")).map((t) => [t.version, t.isCurrent])).toEqual([
+      [1, true],
+    ]);
   });
 });

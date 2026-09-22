@@ -19,6 +19,7 @@ import { regenerateBookLine } from "@/lib/books/regenerate";
 import { regenerateZoneLine } from "@/lib/zones/regenerate";
 import { readSettings } from "./settings";
 import { generationStatus } from "./status";
+import { BASE_LANG } from "@/lib/lang";
 import type { Source } from "@/lib/sections";
 
 /**
@@ -158,6 +159,20 @@ export function startWorker(isLeader: () => boolean, options: WorkerOptions = {}
     const generate = generators[job.source];
     if (!generate) {
       const message = `no generator for ${job.source} jobs in this build`;
+      try {
+        await failJob(job.id, { kind: "bad-request", message });
+        await cancelPending(`Stopped: ${message}`, job.batchId);
+      } catch (error) {
+        console.error(`regeneration queue: job ${job.id} could not be failed`, error);
+      }
+      return;
+    }
+
+    // Nothing can generate another language yet: the generators read English text and
+    // commit English takes. A job in one is refused whole, like a source with no generator,
+    // rather than handed on to come back as an English take filed under the wrong language.
+    if (job.lang !== BASE_LANG) {
+      const message = `generating in ${job.lang} is not supported in this build`;
       try {
         await failJob(job.id, { kind: "bad-request", message });
         await cancelPending(`Stopped: ${message}`, job.batchId);

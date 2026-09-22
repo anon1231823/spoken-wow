@@ -26,9 +26,12 @@ import "server-only";
 
 import { query } from "@/lib/db";
 import { npcKey, type Corpus, type CorpusLine } from "@/lib/corpus";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 import { flavorsOf } from "@/lib/voices/voices";
 
-export const BASE_LANG = "enUS";
+/** Re-exported from lib/lang.ts, the one definition, so the routes importing it here keep
+ *  their import. */
+export { BASE_LANG } from "@/lib/lang";
 
 /**
  * The corpus holds no lines at all, which is a different thing from a search matching none.
@@ -59,7 +62,7 @@ export function isCorpusEmpty(error: unknown): boolean {
   return error instanceof Error && error.name === "CorpusEmpty";
 }
 
-async function stampOf(lang: string): Promise<string> {
+async function stampOf(lang: Lang): Promise<string> {
   const rows = await query<{ stamp: string }>(
     `select (select coalesce(max("id"), 0) || ':' || count(*) || ':'
                     || coalesce(sum("id") filter (where "isCurrent"), 0)
@@ -100,7 +103,7 @@ type Row = {
  * has to give the addon build back the same list. Reading in the same order here means a
  * search result is ordered the way it always was, which paging depends on.
  */
-async function build(lang: string): Promise<CorpusLine[]> {
+async function build(lang: Lang): Promise<CorpusLine[]> {
   const rows = await query<Row>(
     `select l."lineId", l."source", l."questId", l."questTitle",
             s."npcId", s."npcName", s."npcType", s."race", s."gender", s."flavor", s."voice",
@@ -126,24 +129,34 @@ async function build(lang: string): Promise<CorpusLine[]> {
 }
 
 const cacheKey = Symbol.for("spoken.quests-catalogue");
-type Holder = { [cacheKey]?: { stamp: string; corpus: Corpus } };
+/**
+ * One memo per language. A single slot would be rebuilt on every request that asked for a
+ * different language from the last one, which on a site switching between two is every
+ * other request -- seventeen thousand rows re-read and search.ts's row keys rebuilt with them.
+ */
+type Holder = { [cacheKey]?: Map<string, { stamp: string; corpus: Corpus }> };
 
 /** Every line, rebuilt only when the tables have moved. */
-export async function corpus(lang: string = BASE_LANG): Promise<Corpus> {
+export async function corpus(lang: Lang = BASE_LANG): Promise<Corpus> {
   const holder = globalThis as Holder;
+  const memo = (holder[cacheKey] ??= new Map());
   const stamp = await stampOf(lang);
 
   // The same object every time until the stamp moves, not a fresh wrapper: search.ts keys
   // its row keys on the corpus's identity, and a new wrapper per call rebuilt them all on
   // every request.
-  if (!holder[cacheKey] || holder[cacheKey].stamp !== stamp) {
-    holder[cacheKey] = { stamp, corpus: { lines: await build(lang) } };
+  let entry = memo.get(lang);
+  if (!entry || entry.stamp !== stamp) {
+    entry = { stamp, corpus: { lines: await build(lang) } };
+    memo.set(lang, entry);
   }
-  return holder[cacheKey].corpus;
+  return entry.corpus;
 }
 
 const indexKey = Symbol.for("spoken.quests-line-index");
-type IndexHolder = { [indexKey]?: { lines: CorpusLine[]; index: Map<string, CorpusLine[]> } };
+type IndexHolder = {
+  [indexKey]?: Map<string, { lines: CorpusLine[]; index: Map<string, CorpusLine[]> }>;
+};
 
 /**
  * lineId -> every row carrying it, which is not one row: a gossip line is a hash of its
@@ -153,20 +166,23 @@ type IndexHolder = { [indexKey]?: { lines: CorpusLine[]; index: Map<string, Corp
  * rebuilds exactly when the catalogue does and a test passing its own lines is never
  * answered from another's.
  */
-export async function lineIndex(lang: string = BASE_LANG): Promise<Map<string, CorpusLine[]>> {
+export async function lineIndex(lang: Lang = BASE_LANG): Promise<Map<string, CorpusLine[]>> {
   const lines = (await corpus(lang)).lines;
   const holder = globalThis as IndexHolder;
+  const memo = (holder[indexKey] ??= new Map());
 
-  if (!holder[indexKey] || holder[indexKey].lines !== lines) {
+  let entry = memo.get(lang);
+  if (!entry || entry.lines !== lines) {
     const index = new Map<string, CorpusLine[]>();
     for (const line of lines) {
       const group = index.get(line.lineId);
       if (group) group.push(line);
       else index.set(line.lineId, [line]);
     }
-    holder[indexKey] = { lines, index };
+    entry = { lines, index };
+    memo.set(lang, entry);
   }
-  return holder[indexKey].index;
+  return entry.index;
 }
 
 /**

@@ -26,6 +26,7 @@ import "server-only";
 import { db, query } from "@/lib/db";
 
 import { BASE_LANG } from "./catalogue";
+import type { Lang } from "@/lib/lang";
 
 export type BookVersion = {
   lineId: string;
@@ -55,7 +56,7 @@ export class BookMissing extends Error {}
 /** Every version of one page, newest first. */
 export async function bookHistory(
   lineId: string,
-  lang: string = BASE_LANG,
+  lang: Lang = BASE_LANG,
 ): Promise<BookVersion[]> {
   const rows = await query<Row>(
     `select ${COLUMNS} from "book_line"
@@ -80,7 +81,7 @@ export async function saveBookText(args: {
   note?: string | null;
   editedBy: string;
   expectedVersion?: number | null;
-  lang?: string;
+  lang?: Lang;
 }): Promise<BookVersion> {
   const lang = args.lang ?? BASE_LANG;
   const client = await db().connect();
@@ -166,7 +167,7 @@ export async function saveBookText(args: {
 export async function restoreBookText(
   lineId: string,
   version: number,
-  lang: string = BASE_LANG,
+  lang: Lang = BASE_LANG,
 ): Promise<BookVersion> {
   const client = await db().connect();
   try {

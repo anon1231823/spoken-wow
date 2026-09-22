@@ -24,6 +24,7 @@ import { busy, failure } from "./errors";
 import { BUSY, withTakeLock } from "./lock";
 import type { RegenerateResult } from "./regenerate";
 import { textToSpeech } from "./tts";
+import type { Lang } from "@/lib/lang";
 
 /** What a section hands over once it has found a line and decided it can be voiced. */
 export type NarratedLine = {
@@ -51,7 +52,7 @@ export async function regenerateNarrated(
   source: "zones" | "books",
   line: NarratedLine,
   createdBy: string,
-  options: { apiKey: string; lang?: string },
+  options: { apiKey: string; lang?: Lang },
 ): Promise<RegenerateResult> {
   let config: VoiceConfig;
   try {

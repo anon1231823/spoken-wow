@@ -19,6 +19,7 @@ import "server-only";
 import path from "node:path";
 
 import { db, query } from "@/lib/db";
+import { BASE_LANG, type Lang } from "@/lib/lang";
 
 import { historyDirOf } from "./adapters";
 import type { Source } from "@/lib/sections";
@@ -45,7 +46,7 @@ const COLUMNS = `t."version", t."isCurrent", t."origin", t."archiveFile", t."cha
 export async function listTakes(
   source: Source,
   file: string,
-  lang = "enUS",
+  lang: Lang = BASE_LANG,
 ): Promise<Take[]> {
   const rows = await query<Row>(
     `select ${COLUMNS}
@@ -87,7 +88,7 @@ export type LiveTake = {
  * Counted by file, which is what take_current_idx is on. For zones and books a file and a
  * line are the same thing; a quests file is shared by every NPC who speaks it.
  */
-export async function liveTakes(source: Source, lang = "enUS"): Promise<LiveTake[]> {
+export async function liveTakes(source: Source, lang: Lang = BASE_LANG): Promise<LiveTake[]> {
   return query<LiveTake>(
     `select t."lineId", t."file", t."version", c."takes", t."spokenHash", t."characters",
             t."credits", t."durationSec"::float8 as "durationSec", t."bytes"::float8 as "bytes",
@@ -104,7 +105,7 @@ export async function liveTakes(source: Source, lang = "enUS"): Promise<LiveTake
 export async function liveVersion(
   source: Source,
   file: string,
-  lang = "enUS",
+  lang: Lang = BASE_LANG,
 ): Promise<number | null> {
   const rows = await query<{ version: number }>(
     `select "version" from "take"
@@ -127,7 +128,7 @@ export async function setLiveTake(
   source: Source,
   file: string,
   version: number,
-  lang = "enUS",
+  lang: Lang = BASE_LANG,
 ): Promise<void> {
   const client = await db().connect();
   try {
@@ -177,32 +178,33 @@ export async function takePath(
   source: Source,
   file: string,
   version: number,
-  lang = "enUS",
+  lang: Lang = BASE_LANG,
 ): Promise<TakeBytes> {
   const rows = await query<Pick<Take, "archiveFile">>(
     `select "archiveFile" from "take"
       where "source" = $1 and "file" = $2 and "lang" = $3 and "version" = $4`,
     [source, file, lang, version],
   );
-  return located(source, file, rows[0]);
+  return located(source, file, lang, rows[0]);
 }
 
 /** The live take's bytes, the way takePath finds any take's. What the live audio routes play. */
-export async function livePath(source: Source, file: string, lang = "enUS"): Promise<TakeBytes> {
+export async function livePath(source: Source, file: string, lang: Lang = BASE_LANG): Promise<TakeBytes> {
   const rows = await query<Pick<Take, "archiveFile">>(
     `select "archiveFile" from "take"
       where "source" = $1 and "file" = $2 and "lang" = $3 and "isCurrent"`,
     [source, file, lang],
   );
-  return located(source, file, rows[0]);
+  return located(source, file, lang, rows[0]);
 }
 
 function located(
   source: Source,
   file: string,
+  lang: Lang,
   take: Pick<Take, "archiveFile"> | undefined,
 ): TakeBytes {
   if (!take) return { kind: "none" };
   if (!take.archiveFile) return { kind: "gone" };
-  return { kind: "file", path: path.join(historyDirOf(source, file), take.archiveFile) };
+  return { kind: "file", path: path.join(historyDirOf(source, file, lang), take.archiveFile) };
 }
