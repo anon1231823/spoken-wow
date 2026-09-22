@@ -1,7 +1,7 @@
 "use client";
 
-import { useGrants } from "@/components/GrantsProvider";
 import Link from "@/components/LocaleLink";
+import { useCan } from "@/components/useCan";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { signOut, useSession } from "@/lib/auth-client";
-import { canConfigureGeneration, canManageVoices, canRegenerate, isAdmin } from "@/lib/permissions";
+import { canManageVoices, isAdmin } from "@/lib/permissions";
 
 /**
  * What every visitor gets, signed in or not: the three sections, and the page an addon's
@@ -45,8 +45,9 @@ export default function UserMenu() {
   // Controlled, so choosing a link closes the menu: a Radix popover stays open across a
   // client-side navigation otherwise, hanging over the page it just opened.
   const [open, setOpen] = useState(false);
-  // What this person holds in each language, which only their grants say.
-  const grants = useGrants();
+  // What this person may do in the page's language. Only that one: a Portuguese translator
+  // on an English page is a member there, and is offered what a member is.
+  const may = useCan();
 
   // Rendering nothing until the session resolves avoids a "Sign in" flash for a user who
   // is in fact signed in.
@@ -71,19 +72,13 @@ export default function UserMenu() {
   // grew a button per role until it wrapped.
   const links = [
     canManageVoices(role) && { href: "/voices", label: "Voices" },
-    // A language's own lexicon is its configurers': they reach it on that language's pages.
-    (canConfigureGeneration(role) ||
-      grants.some((grant) => grant.capability === "configure" || grant.capability === "admin")) && {
-      href: "/lexicon",
-      label: "Pronunciation",
-    },
-    canRegenerate(role) && { href: "/reports", label: "Reports" },
-    canRegenerate(role) && { href: "/contributions", label: "Contributions" },
+    // Each of these is the page's language's own, and gated on the same capability there as
+    // the page it opens -- so a link is never offered to a page that would answer 404.
+    may("configure") && { href: "/lexicon", label: "Pronunciation" },
+    may("edit") && { href: "/reports", label: "Reports" },
+    may("edit") && { href: "/contributions", label: "Contributions" },
     isAdmin(role) && { href: "/admin", label: "Users" },
-    (isAdmin(role) || grants.some((grant) => grant.capability === "admin")) && {
-      href: "/translators",
-      label: "Translators",
-    },
+    may("admin") && { href: "/translators", label: "Translators" },
     // Everyone signed in has one, and for a collaborator it is where the ElevenLabs key
     // lives - which is the thing standing between them and the Regenerate button.
     { href: "/profile", label: "Profile" },

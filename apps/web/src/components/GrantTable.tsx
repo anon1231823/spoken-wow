@@ -47,7 +47,9 @@ export default function GrantTable({
       setError(data?.error ?? "that did not work");
       return false;
     }
-    setRows(data.grants);
+    // The route answers with every language the viewer administers; this table is the ones
+    // it was opened for.
+    setRows(languages ? data.grants.filter((row) => languages.includes(row.lang)) : data.grants);
     return true;
   }
 

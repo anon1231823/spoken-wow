@@ -29,7 +29,8 @@ export default async function Page({
   // 404 rather than a redirect, matching /issues and /voices: a member has no business
   // learning the page exists, and these rows hold prose written by strangers. Per language:
   // whoever may fix a language's text triages what is reported about it.
-  if (!session || !can(await viewerOf(session), "edit", lang)) notFound();
+  const viewer = await viewerOf(session);
+  if (!session || !can(viewer, "edit", lang)) notFound();
 
   const { view, source: rawSource, category: rawCategory } = await searchParams;
   const status: Status | "all" = isStatus(view) ? view : view === "all" ? "all" : "open";
@@ -55,7 +56,7 @@ export default async function Page({
         view={status}
         source={source}
         category={category}
-        canRegenerate
+        canRegenerate={can(viewer, "regenerate", lang)}
       />
     </main>
   );
