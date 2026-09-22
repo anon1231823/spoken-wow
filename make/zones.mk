@@ -5,7 +5,7 @@
 .PHONY: help package package-audio check validate validate-audio lint deploy deploy-copy \
         status remove clean voice voice-zones lookup export \
         pull-history pull-live history-status sounds ssh-check sync check-synced full-release \
-        icon lore-import lore-export lore-check lore-rewrite aliases languages locale-check \
+        icon lore-import lore-import-names lore-export lore-check lore-rewrite aliases languages locale-check \
         release release-dry release-wago release-curse
 
 # The \# escapes are required: an unescaped # starts a make comment, even
@@ -116,6 +116,13 @@ export: ## Write pipelines/zones/tools/voice/manifest.json from the database
 
 lore-import: ## Seed lore_line from the committed Lua data files (idempotent)
 	@node pipelines/zones/tools/lore/import.mjs
+
+# A language's place names, from the alias table the addon ships (built from the game's
+# AreaTable). The prose has no such source and is written on the site. LOCALE and not LANG,
+# which every shell sets.
+lore-import-names: ## Name zones and subzones in a language from Data/<LOCALE>/Aliases.lua (LOCALE=deDE)
+	@test -n "$(LOCALE)" || { echo "lore-import-names: set LOCALE, e.g. LOCALE=deDE"; exit 2; }
+	@node pipelines/zones/tools/lore/import-names.mjs --lang $(LOCALE)
 
 lore-export: ## Write addons/SpokenZones/Data/enUS/*.lua from the database
 	@node pipelines/zones/tools/lore/export.mjs
