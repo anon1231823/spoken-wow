@@ -91,11 +91,15 @@ function MinimalPlayer:Initialize(original)
 
     self.panel = CreateFrame("Frame", nil, frame, "BackdropTemplate")
     self.panel:SetBackdrop({
-        bgFile = ART .. "MinimalBackground",
-        edgeFile = [[Interface\DialogFrame\UI-DialogBox-Border]],
-        tile = true, tileSize = 256, edgeSize = 24,
+        edgeFile = [[Interface\DialogFrame\UI-DialogBox-Border]], edgeSize = 24,
         insets = { left = 7, right = 7, top = 7, bottom = 7 },
     })
+    -- Tiled by hand: the backdrop's own tiling stretched the rock once the queue
+    -- made the panel taller. LayoutQueue keeps the repeat count in step with the size.
+    self.rock = self.panel:CreateTexture(nil, "BACKGROUND")
+    self.rock:SetTexture(ART .. "MinimalBackground", "REPEAT", "REPEAT")
+    self.rock:SetPoint("TOPLEFT", 7, -7)
+    self.rock:SetPoint("BOTTOMRIGHT", -7, 7)
 
     local content = CreateFrame("Frame", nil, frame)
     self.content, frame.container = content, content
@@ -461,8 +465,12 @@ function MinimalPlayer:LayoutQueue()
     -- The panel is shorter than the circle and starts behind its centre. Its
     -- left corners sit beneath the opaque portrait rather than outside the rim.
     -- Centred on the portrait, so the text block gets even top and bottom margins.
-    self.panel:SetPoint("TOPLEFT", self.frame, "TOPLEFT", Config().HidePortrait and 0 or 44, up and height or -6)
-    self.panel:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", 0, shown > 0 and not up and 8 - height or 10)
+    local left, top, bottom = Config().HidePortrait and 0 or 44, up and height or -6, shown > 0 and not up and 8 - height or 10
+    self.panel:SetPoint("TOPLEFT", self.frame, "TOPLEFT", left, top)
+    self.panel:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", 0, bottom)
+    -- One 256px tile of rock per 256 units of panel, the backdrop's inset aside.
+    local width, tall = self.frame:GetWidth() - left - 14, HEIGHT + top - bottom - 14
+    self.rock:SetTexCoord(0, width / 256, 0, tall / 256)
     if self.resizer then self.resizer:SetShown(not Config().LockFrame and shown == 0) end
 end
 
