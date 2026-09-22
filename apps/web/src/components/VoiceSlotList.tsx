@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Loader2, Sparkles } from "lucide-react";
 
@@ -64,6 +66,7 @@ type Props = {
 };
 
 export default function VoiceSlotList({ slots, existing, initialSamples, raceTags }: Props) {
+  const lang = useLang();
   const [open, setOpen] = useState<string | null>(null);
   const [openRace, setOpenRace] = useState<string | null>(null);
   const [tags, setTags] = useState(raceTags);
@@ -148,7 +151,7 @@ export default function VoiceSlotList({ slots, existing, initialSamples, raceTag
     setSavingRace(race);
     setTagError(null);
     try {
-      const response = await fetch("/api/generation/settings/race-tags", {
+      const response = await fetch(withLang(lang, "/api/generation/settings/race-tags"), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ raceTags: next }),

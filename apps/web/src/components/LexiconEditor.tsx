@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { withLang } from "@/lib/lang";
 import { Check, Pencil, RefreshCw, Search, Trash2, Undo2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -233,6 +235,7 @@ function Editor({
   /** Which previews already exist, resolved on the server. See previewCache. */
   initialCache: Record<string, CacheState>;
 }) {
+  const lang = useLang();
   const [saved, setSaved] = useState<Saved>(initial);
   const [draft, setDraft] = useState<LexiconEntry[]>(initial.entries);
   // Identified by position, not by grapheme. A grapheme is editable, so keying the open row
@@ -399,7 +402,7 @@ function Editor({
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch("/api/generation/lexicon", {
+      const response = await fetch(withLang(lang, "/api/generation/lexicon"), {
         method,
         headers: method === "PUT" ? { "Content-Type": "application/json" } : undefined,
         body: method === "PUT" ? JSON.stringify(draft) : undefined,

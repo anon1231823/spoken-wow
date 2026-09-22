@@ -1,3 +1,4 @@
+import { pageLang } from "@/lib/lang-server";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -18,7 +19,8 @@ export const metadata: Metadata = { title: "Voices · Spoken" };
 // rather than here should still show up, since tts_cli/voices.py would find it either way.
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
+export default async function Page({ params }: { params: Promise<{ lang: string }> }) {
+  const lang = await pageLang(params);
   const session = await auth.api.getSession({ headers: await headers() });
 
   // 404 rather than a redirect, matching /admin: a member has no business learning that
@@ -50,7 +52,9 @@ export default async function Page() {
 
   const created = existing ? all.filter((slot) => existing.has(slot.name)).length : 0;
 
-  const settings = await readSettings();
+  // The page's language's settings and accent tags: the voices are everyone's, but how each
+  // language generates with them is its own.
+  const settings = await readSettings(lang);
 
   return (
     <main className="mx-auto max-w-4xl px-5 pt-6 pb-36">

@@ -1,5 +1,7 @@
 "use client";
 
+import { useLang } from "@/components/LangProvider";
+import { BASE_LANG, withLang } from "@/lib/lang";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -85,6 +87,7 @@ export default function GenerationSettings({
   /** Read from the account. Empty when ElevenLabs could not be reached. */
   models: Model[];
 }) {
+  const lang = useLang();
   const [saved, setSaved] = useState(initial);
   const [draft, setDraft] = useState<GenerationConfig>(initial.config);
   const [busy, setBusy] = useState(false);
@@ -104,7 +107,7 @@ export default function GenerationSettings({
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch("/api/generation/settings", {
+      const response = await fetch(withLang(lang, "/api/generation/settings"), {
         method,
         headers: method === "PUT" ? { "Content-Type": "application/json" } : undefined,
         body: method === "PUT" ? JSON.stringify(draft) : undefined,
@@ -135,9 +138,11 @@ export default function GenerationSettings({
       <CardHeader className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b py-3">
         <CardTitle className="text-base">Generation settings</CardTitle>
         <span className="text-muted-foreground text-xs">
-          {overridden
-            ? `overriding voice/generation.json${saved.updatedAt ? ` · changed ${new Date(saved.updatedAt).toLocaleDateString()}` : ""}`
-            : "the committed defaults from voice/generation.json"}
+          {saved.source === "english"
+            ? "English's settings, without its accent tags, until this language saves its own"
+            : overridden
+              ? `${lang === BASE_LANG ? "overriding voice/generation.json" : "this language's own"}${saved.updatedAt ? ` · changed ${new Date(saved.updatedAt).toLocaleDateString()}` : ""}`
+              : "the committed defaults from voice/generation.json"}
         </span>
       </CardHeader>
 
@@ -272,7 +277,7 @@ export default function GenerationSettings({
               disabled={busy}
               onClick={() => void send("DELETE")}
             >
-              Reset to committed defaults
+              {lang === BASE_LANG ? "Reset to committed defaults" : "Follow English again"}
             </Button>
           )}
         </div>
