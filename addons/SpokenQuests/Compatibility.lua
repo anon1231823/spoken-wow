@@ -176,13 +176,12 @@ end
 
 if not GetQuestID then
     local source, text
-    local old_QUEST_DETAIL = Addon.QUEST_DETAIL
-    local old_QUEST_PROGRESS = Addon.QUEST_PROGRESS
-    local old_QUEST_COMPLETE = Addon.QUEST_COMPLETE
     local GetTitleText = GetTitleText -- Store original function before EQL3 (Extended Quest Log 3) overrides it and starts prepending quest level
-    function Addon:QUEST_DETAIL()   source = "accept"   text = GetQuestText()    old_QUEST_DETAIL(self) end
-    function Addon:QUEST_PROGRESS() source = "progress" text = GetProgressText() old_QUEST_PROGRESS(self) end
-    function Addon:QUEST_COMPLETE() source = "complete" text = GetRewardText()   old_QUEST_COMPLETE(self) end
+    -- Told by VoiceOver.lua's QuestIDFor, just before it asks which quest this is.
+    function Addon:NoteLegacyQuestEvent(eventSource, eventText)
+        source = eventSource
+        text = eventText
+    end
     function GetQuestID()
         local npcName = Utils:GetNPCName()
         if Utils:IsNPCPlayer() then

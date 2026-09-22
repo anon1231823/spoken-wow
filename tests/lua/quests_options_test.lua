@@ -93,6 +93,25 @@ Expect("the greeting frequency is a dropdown", greetings ~= nil, true)
 greetings:GetScript("OnShow")(greetings)
 Expect("...showing the setting when the panel opens", greetings.dropdownText, "Always")
 
+-- Autoplay is what reads greetings, so the frequency sits under it and goes grey without it.
+local autoplay
+for _, child in ipairs(SettingsPanel.panel.content.children) do
+    if type(child.text) == "table" and child.text.text == "Read dialogue when it opens" then
+        autoplay = child
+    end
+end
+Expect("autoplay is a checkbox on the panel", autoplay ~= nil, true)
+Expect("...with the greeting frequency indented under it",
+    greetings.anchor.x > autoplay.anchor.x, true)
+Expect("...live while autoplay is on", greetings.dropdownDisabled or false, false)
+autoplay:SetChecked(false)
+autoplay:GetScript("OnClick")(autoplay)
+Expect("unticking autoplay turns it off", db.Audio.Autoplay, false)
+Expect("...and greys the greeting frequency out", greetings.dropdownDisabled, true)
+autoplay:SetChecked(true)
+autoplay:GetScript("OnClick")(autoplay)
+Expect("ticking it again brings the frequency back", greetings.dropdownDisabled, false)
+
 local entries = stub.OpenDropdown(greetings)
 local offered = {}
 for _, entry in ipairs(entries) do table.insert(offered, entry.text) end

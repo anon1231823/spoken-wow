@@ -55,7 +55,33 @@ function SettingsPanel:Setup()
         .. "window are Spoken Player's settings, since they cover every Spoken addon.", 460, 32)
 
     layout:Section("Dialogue")
-    layout:Dropdown("NPC greetings", "How often an NPC's greeting is read. The Once "
+    local greetings
+    -- Greyed out with autoplay off: the frequency only decides which greetings autoplay
+    -- reads, and a live control that does nothing reads as broken.
+    local function SyncGreetings()
+        if not greetings then
+            return
+        end
+        local on = Addon:IsAutoplayOn()
+        if greetings:GetObjectType() == "Frame" and UIDropDownMenu_EnableDropDown then
+            (on and UIDropDownMenu_EnableDropDown or UIDropDownMenu_DisableDropDown)(greetings)
+        elseif greetings.Enable then
+            -- The Cycle button Layout:Dropdown falls back to where there is no dropdown API.
+            if on then greetings:Enable() else greetings:Disable() end
+        end
+        local shade = on and 1 or 0.5
+        if greetings.layoutLabel then
+            greetings.layoutLabel:SetTextColor(shade, shade, shade)
+        end
+    end
+    layout:Checkbox("Read dialogue when it opens",
+        "Quests, NPC greetings and gossip. Off, nothing starts by itself: press Play on the "
+            .. "window, or type /spq read.",
+        function() return Addon:IsAutoplayOn() end,
+        function(value) Addon:SetAutoplay(value) end,
+        SyncGreetings)
+    layout:Indent()
+    greetings = layout:Dropdown("NPC greetings", "How often an NPC's greeting is read. The Once "
         .. "options are remembered for this character across revisits and logins.",
         GOSSIP_ORDER,
         GossipName,
@@ -64,6 +90,11 @@ function SettingsPanel:Setup()
         end,
         nil,
         function(name) return GOSSIP_LABELS[name] or name end)
+    layout:Outdent()
+    SyncGreetings()
+    if greetings.HookScript then
+        greetings:HookScript("OnShow", SyncGreetings)
+    end
     layout:Checkbox("Stop when the quest window closes",
         "Narration stops as soon as you close the gossip or quest window.",
         function() return audio().StopAudioOnDisengage end,
