@@ -18,6 +18,26 @@ local function Font(parent, size, r, g, b)
     text:SetTextColor(r, g, b)
     return text
 end
+-- The playing line and the waiting ones share one remove affordance: the line turns
+-- red and a cross follows its text.
+local function Removable(button, size, r, g, b)
+    button.text = Font(button, size, r, g, b)
+    button.text:SetPoint("TOPLEFT")
+    button.text:SetPoint("BOTTOMRIGHT", -16, 0)
+    button.color = { r, g, b }
+    button.cross = button:CreateTexture(nil, "OVERLAY")
+    button.cross:SetTexture(ART .. "SoundQueueBulletDelete")
+    button.cross:SetSize(12, 12)
+    button.cross:Hide()
+end
+local function ShowRemove(button, shown)
+    if shown then
+        button.text:SetTextColor(225 / 255, 20 / 255, 8 / 255)
+        button.cross:ClearAllPoints()
+        button.cross:SetPoint("LEFT", button.text, "LEFT", math.min(button.text:GetStringWidth(), button.text:GetWidth()) + 3, 0)
+    else button.text:SetTextColor(unpack(button.color)) end
+    button.cross:SetShown(shown)
+end
 local function BelongsTo(frame, root)
     while frame do
         if frame == root then return true end
@@ -115,15 +135,14 @@ function MinimalPlayer:Initialize(original)
     self.title:SetPoint("TOPRIGHT", self.fold, "TOPLEFT", -4, 1)
     self.title:SetHeight(19)
     self.title:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    self.title.text = Font(self.title, 12, .88, .84, .76)
-    self.title.text:SetAllPoints()
+    Removable(self.title, 12, .88, .84, .76)
     self.title:SetScript("OnClick", function(_, button)
         if button == "RightButton" then self:ToggleMenu()
         elseif self:HasClip() then SoundQueue:RemoveSoundFromQueue(self.clip) end
     end)
     self.title:SetScript("OnEnter", function()
-        self.title.text:SetTextColor(225 / 255, 20 / 255, 8 / 255)
         if not self:HasClip() then return end
+        ShowRemove(self.title, true)
         GameTooltip:SetOwner(self.title, "ANCHOR_RIGHT")
         GameTooltip:SetText(Label(self.clip))
         GameTooltip:AddLine(L.QUEUE_REMOVE_TOOLTIP, 1, .82, 0, true)
@@ -131,7 +150,7 @@ function MinimalPlayer:Initialize(original)
         GameTooltip:Show()
     end)
     self.title:SetScript("OnLeave", function()
-        self.title.text:SetTextColor(.88, .84, .76)
+        ShowRemove(self.title, false)
         self:HideTooltip()
     end)
 
@@ -386,21 +405,15 @@ function MinimalPlayer:CreateQueueRow(index)
     button:SetPoint("TOPLEFT", 0, -(index - 1) * 22)
     button:SetPoint("TOPRIGHT", 0, -(index - 1) * 22)
     button:SetHeight(22)
-    button.text = Font(button, 11, .84, .78, .65)
-    button.text:SetPoint("LEFT")
-    button.text:SetPoint("RIGHT", -16, 0)
-    button.remove = Font(button, 13, 1, .35, .25)
-    button.remove:SetPoint("RIGHT")
-    button.remove:SetText("x")
-    button.remove:Hide()
+    Removable(button, 11, .84, .78, .65)
     button:SetScript("OnEnter", function()
-        button.remove:Show()
+        ShowRemove(button, true)
         GameTooltip:SetOwner(button, "ANCHOR_RIGHT")
         GameTooltip:SetText(Label(button.clip))
         GameTooltip:AddLine(L.QUEUE_REMOVE_TOOLTIP, 1, .82, 0, true)
         GameTooltip:Show()
     end)
-    button:SetScript("OnLeave", function() button.remove:Hide(); self:HideTooltip() end)
+    button:SetScript("OnLeave", function() ShowRemove(button, false); self:HideTooltip() end)
     button:SetScript("OnClick", function()
         if self:HasClip() then SoundQueue:RemoveSoundFromQueue(button.clip) end
     end)
@@ -419,7 +432,7 @@ function MinimalPlayer:LayoutQueue()
             button.clip = SoundQueue.sounds[index + self.offset + 1]
             local held = SoundQueue:GetHeldReason(button.clip)
             button.text:SetText(held and format("%s (%s)", Label(button.clip), held) or Label(button.clip))
-            button.remove:Hide()
+            ShowRemove(button, false)
             button:Show()
         elseif button then button:Hide(); button.clip = nil end
     end
