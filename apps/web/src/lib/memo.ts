@@ -5,6 +5,10 @@
  * start empty; per language because a site switching between two would rebuild on every
  * other request if there were one slot. `version` is compared with ===: a stamp string, or
  * the identity of the array a derived index was built from.
+ *
+ * A build that returns a promise is cached as the promise, so concurrent callers share one
+ * build -- and dropped again if it rejects. Otherwise one timeout would be the answer for
+ * that language until the tables next moved.
  */
 export function memoByLang<T>(key: symbol, lang: string, version: unknown, build: () => T): T {
   const holder = globalThis as unknown as Record<symbol, Map<string, { version: unknown; value: T }>>;
@@ -13,5 +17,10 @@ export function memoByLang<T>(key: symbol, lang: string, version: unknown, build
   if (existing && existing.version === version) return existing.value;
   const value = build();
   memo.set(lang, { version, value });
+  if (value instanceof Promise) {
+    value.catch(() => {
+      if (memo.get(lang)?.value === value) memo.delete(lang);
+    });
+  }
   return value;
 }
