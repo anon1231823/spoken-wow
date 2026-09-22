@@ -429,8 +429,9 @@ function MinimalPlayer:LayoutQueue()
     self.drawer:SetSize(math.max(1, self.frame:GetWidth() - (Config().HidePortrait and 34 or 114)), math.max(1, height))
     local up = shown > 0 and (self.frame:GetBottom() or 200) < height + 12
     local left = Config().HidePortrait and 16 or 96
-    if up then self.drawer:SetPoint("BOTTOMLEFT", self.frame, "TOPLEFT", left, -4)
-    else self.drawer:SetPoint("TOPLEFT", self.frame, "BOTTOMLEFT", left, 4) end
+    -- Tucked into the frame's bottom margin, so the rows start just under the bar.
+    if up then self.drawer:SetPoint("BOTTOMLEFT", self.frame, "TOPLEFT", left, -8)
+    else self.drawer:SetPoint("TOPLEFT", self.frame, "BOTTOMLEFT", left, 16) end
     self.drawer:SetShown(shown > 0)
     local glyph = (self.expanded and "Minus" or "Plus") .. (self.fold.pushed and "Button-Down" or "Button-Up")
     self.fold.icon:SetTexture([[Interface\Buttons\UI-]] .. glyph)
@@ -445,8 +446,8 @@ function MinimalPlayer:LayoutQueue()
     -- The panel is shorter than the circle and starts behind its centre. Its
     -- left corners sit beneath the opaque portrait rather than outside the rim.
     -- Centred on the portrait, so the text block gets even top and bottom margins.
-    self.panel:SetPoint("TOPLEFT", self.frame, "TOPLEFT", Config().HidePortrait and 0 or 44, up and height + 4 or -6)
-    self.panel:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", 0, shown > 0 and not up and -height - 4 or 10)
+    self.panel:SetPoint("TOPLEFT", self.frame, "TOPLEFT", Config().HidePortrait and 0 or 44, up and height or -6)
+    self.panel:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", 0, shown > 0 and not up and 8 - height or 10)
     if self.resizer then self.resizer:SetShown(not Config().LockFrame and shown == 0) end
 end
 
