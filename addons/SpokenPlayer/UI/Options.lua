@@ -53,6 +53,10 @@ local function Build(canvas)
     panel.layout = layout
 
     layout:Section(L.OPT_WINDOW_TITLE)
+    if not Version.IsAnyLegacy then
+        layout:Checkbox(L.OPT_MINIMAL_PLAYER, L.OPT_MINIMAL_PLAYER_TIP,
+            function() return cfg().MinimalPlayer end, function(v) cfg().MinimalPlayer = v end, refresh)
+    end
     layout:Checkbox(L.OPT_LOCK_FRAME, L.OPT_LOCK_FRAME_TIP,
         function() return cfg().LockFrame end, function(v) cfg().LockFrame = v end, refresh)
     layout:Checkbox(L.OPT_HIDE_PORTRAIT, L.OPT_HIDE_PORTRAIT_TIP,

@@ -5,6 +5,7 @@ setfenv(1, SpokenEnv)
 -- header. The player lays them out and knows nothing about what they do.
 --
 --   action = { id, text = "Read" | fun():string, tooltip = fun(GameTooltip),
+--              label = "Report a problem"?, -- an icon action's name, where a menu lists it
 --              visible = fun():boolean, onClick = fun(clip), anchor = "header"?,
 --              create = fun(parent):Button?, onClipChanged = fun(clip, button)? }
 --

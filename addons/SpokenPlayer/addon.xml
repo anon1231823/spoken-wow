@@ -9,8 +9,10 @@
     <Include file="Strings.lua"/>
     <Include file="UI\Layout.lua"/>
     <Include file="UI\Portrait.lua"/>
+    <Include file="UI\StaticPortrait.lua"/>
     <Include file="UI\Actions.lua"/>
     <Include file="UI\PlayerFrame.lua"/>
+    <Include file="UI\MinimalPlayer.lua"/>
     <Include file="UI\MinimapButton.lua"/>
     <Include file="UI\Options.lua"/>
     <Include file="API.lua"/>

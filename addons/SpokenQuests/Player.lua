@@ -153,6 +153,7 @@ local REPORT = {
     -- icon postdates the three private-server clients, where the texture is missing and
     -- the button would be a blank square; `text` is what they draw instead.
     icon = [[Interface\HelpFrame\HelpIcon-Bug]],
+    label = "Report a problem",
     text = "R",
     anchor = "topright",
     tooltip = function(tooltip)

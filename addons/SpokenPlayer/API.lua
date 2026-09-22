@@ -118,6 +118,7 @@ end
 
 --- The player window, for a feature addon that must anchor something to it.
 function Spoken:GetPlayerFrame()
+    if MinimalPlayer:IsEnabled() then return MinimalPlayer.frame end
     return PlayerFrame.frame
 end
 
