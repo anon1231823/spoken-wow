@@ -1,7 +1,8 @@
 "use client";
 
 import { useLang } from "@/components/LangProvider";
-import { withLang } from "@/lib/lang";
+import { BASE_LANG, langName, withLang } from "@/lib/lang";
+import { cloneName } from "@/lib/voices/clone-name";
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Loader2, Sparkles } from "lucide-react";
 
@@ -200,9 +201,11 @@ export default function VoiceSlotList({ slots, existing, initialSamples, raceTag
           {confirmingSweep && (
             <>
               <span className="text-xs text-amber-400">
-                This replaces the clips and the ElevenLabs voice for all {seedable.length} flavored
-                voices. Existing voices are deleted and re-created, so they will not sound the same
-                afterwards.
+                This replaces the clips and the ElevenLabs voice for all {seedable.length} flavored{" "}
+                {langName(lang)} voices ({cloneName(seedable[0]?.name ?? "dwarf-male-grim", lang)}
+                {" "}and the rest). Existing {langName(lang)} voices are deleted and re-created, so
+                they will not sound the same afterwards.
+                {lang !== BASE_LANG && " Other languages' voices are separate clones and are not touched."}
               </span>
               <Button variant="ghost" size="xs" onClick={() => setConfirmingSweep(false)}>
                 Cancel
