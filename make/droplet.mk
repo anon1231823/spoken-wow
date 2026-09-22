@@ -17,7 +17,7 @@
 # Override per invocation when it is a one-off, which is what the IP is for when the
 # name is ever pointed at something that will not proxy SSH:
 #
-#     make zones-push DROPLET=deploy@203.0.113.10
+#     make zones-pull-history DROPLET=deploy@203.0.113.10
 
 DROPLET ?= $(SPOKEN_DROPLET)
 
@@ -44,3 +44,9 @@ require-droplet:
 	  echo "       export SPOKEN_DROPLET=deploy@<host>, or pass DROPLET=deploy@<host>." >&2; \
 	  echo "       See make/droplet.mk." >&2; \
 	  exit 1; }
+
+# The database a pack is built from, and what the sync and freshness scripts need to reach
+# production. One definition for every section: scripts/db/sync-section.sh and
+# scripts/db/check-synced.sh are the same recipe for quests, zones and books.
+LOCAL_DB ?= postgres://localhost/spoken_quests_dev
+DB_ENV    = DROPLET="$(DROPLET)" SSH="$(SSH)" REMOTE_ROOT="$(REMOTE_ROOT)" LOCAL_DB="$(LOCAL_DB)"

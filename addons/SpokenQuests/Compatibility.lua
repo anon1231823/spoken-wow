@@ -628,3 +628,198 @@ if Version.IsRetailMainline then
     GetNumGossipAvailableQuests = C_GossipInfo.GetNumAvailableQuests
 
 end
+
+-- The Forever client (1.60.1, interface 16001) reports itself as mainline and draws the
+-- modern map-attached quest log. `QuestLogFrame`, `QuestLog_Update`, `GetQuestLogTitle` and
+-- `QUESTS_DISPLAYED` do not exist there, and the rows are pooled frames with no names, so
+-- QuestOverlayUI's walk over `QuestLogTitle1..QUESTS_DISPLAYED` had nothing to walk and no
+-- hook to run from: the play button was simply absent from the quest log on that client.
+--
+-- Feature-detected rather than keyed to the client, since this is the quest log every
+-- mainline-flavoured client draws, and the one the Era client will draw if it ever adopts it.
+if QuestLogQuests_Update and QuestScrollFrame and QuestScrollFrame.titleFramePool and
+    QuestScrollFrame.titleFramePool.EnumerateActive then
+
+    local POI_BUTTON_SIZE = 20
+
+    function QuestOverlayUI:GetPlayButtonParent()
+        return QuestScrollFrame
+    end
+
+    --- The client's own objective icon for this quest, drawn when "Quest objectives" is on: a
+    --- small square button carrying the quest's ID, anchored to the row's top left corner and
+    --- pooled beside the rows rather than parented to them. The play button is the one frame
+    --- of that size and shape that is not it.
+    local function QuestPOIButton(row)
+        local questID = row.questID
+        for _, child in ipairs({ row:GetParent():GetChildren() }) do
+            if child ~= QuestOverlayUI.questPlayButtons[questID] and child.questID == questID and
+                child:IsShown() and child.GetObjectType and child:GetObjectType() == "Button" and
+                math.abs(child:GetWidth() - POI_BUTTON_SIZE) < 1 then
+                return child
+            end
+        end
+    end
+
+    -- Left of the title, in the inset the row leaves at its left - unless "Quest objectives"
+    -- is on, when that inset is the client's own icon and the button goes to the other end of
+    -- the row instead, beside the tracking checkbox. Not the blank prefix the old quest log's
+    -- buttons indent a title with, either: this title wraps into a height the layout has
+    -- already decided, and a prefix re-wraps it inside a row too short to hold the extra line.
+    function QuestOverlayUI:UpdateQuestTitle(questLogTitleFrame, playButton)
+        playButton:ClearAllPoints()
+        local poiButton = QuestPOIButton(questLogTitleFrame)
+        if poiButton and questLogTitleFrame.Checkbox then
+            playButton:SetPoint("RIGHT", questLogTitleFrame.Checkbox, "LEFT", -2, 0)
+        elseif poiButton then
+            playButton:SetPoint("TOPRIGHT", questLogTitleFrame, "TOPRIGHT", -4, -2)
+        else
+            playButton:SetPoint("TOPLEFT", questLogTitleFrame, "TOPLEFT", 6, -4)
+        end
+    end
+
+    function QuestOverlayUI:Update()
+        -- Every button, not only the ones on screen: a row released back to the pool keeps
+        -- the button parented to it, and a stale button on a reused row marks the wrong quest.
+        for _, button in pairs(self.displayedButtons) do
+            button:Hide()
+        end
+        table.wipe(self.displayedButtons)
+
+        for row in QuestScrollFrame.titleFramePool:EnumerateActive() do
+            local questID = row.questID
+            if questID then
+                if not self.questPlayButtons[questID] then
+                    self:CreatePlayButton(questID)
+                end
+                local playButton = self.questPlayButtons[questID]
+                local shown = playButton
+
+                if DataModules:PrepareSound({ event = Enums.SoundEvent.QuestAccept, questID = questID }) then
+                    self:UpdatePlayButton(QuestOverlayUI:GetQuestTitle(questID, row), questID, row, row.Text,
+                        row.Checkbox)
+                    playButton:Enable()
+                else
+                    -- No sound: Contribute where Play would be, or Play greyed out where this
+                    -- client cannot contribute.
+                    local contribute = self:ContributeButtonFor(questID, QuestOverlayUI:GetQuestTitle(questID, row))
+                    if contribute then
+                        playButton:Hide()
+                        shown = contribute
+                    else
+                        playButton:Disable()
+                    end
+                    shown:SetParent(row:GetParent())
+                    if contribute then
+                        contribute:SetFrameLevel(row:GetFrameLevel() + 2)
+                    end
+                    self:UpdateQuestTitle(row, shown)
+                end
+
+                shown:Show()
+                if shown == playButton then
+                    self:UpdatePlayButtonTexture(questID)
+                end
+                table.insert(self.displayedButtons, shown)
+            end
+        end
+    end
+
+    --- The row draws its title with the quest's level in front of it; the sound data
+    --- everywhere else is keyed by the title the client reports.
+    function QuestOverlayUI:GetQuestTitle(questID, row)
+        local title = C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(questID)
+        return title or (row and row.Text and row.Text:GetText()) or ""
+    end
+
+    -- The modern log redraws through this one function, which is what `QuestLog_Update` was
+    -- on the old one. VoiceOver.lua hooks that name and finds nothing here.
+    hooksecurefunc("QuestLogQuests_Update", function()
+        QuestOverlayUI:Update()
+    end)
+
+    -- The details view is a second place a quest is read from, and the list's buttons cannot
+    -- follow it there: a frame has one parent. One button, rebound to whichever quest the
+    -- panel is showing, in the corner opposite its Back button.
+    if QuestMapFrame and QuestMapFrame.DetailsFrame and QuestMapFrame_ShowQuestDetails then
+        function QuestOverlayUI:UpdateDetailsPlayButton()
+            local details = QuestMapFrame.DetailsFrame
+            local questID = details.questID or
+                (C_QuestLog and C_QuestLog.GetSelectedQuest and C_QuestLog.GetSelectedQuest())
+            if not questID or questID == 0 then
+                return
+            end
+
+            if not self.detailsPlayButton then
+                -- A button that says what it does, rather than the list's small icon: there is
+                -- room for words here, and nothing beside it to read them off.
+                --
+                -- Under the panel's own header strip, which is what the Back button hangs
+                -- off: a button parented to the details frame itself draws its artwork
+                -- beneath the border art and arrives as a floating label with no button
+                -- behind it. Named too, since UIPanelButtonTemplate names its pieces after
+                -- its parent and an unnamed one leaves those substitutions unresolved.
+                local header = details.BackFrame or details
+                local playButton = CreateFrame("Button", "SpokenQuestsDetailsPlayButton", header,
+                    "UIPanelButtonTemplate")
+                playButton:SetFrameLevel(header:GetFrameLevel() + 2)
+
+                -- Mirrored off the Back button rather than measured against the corner: it is
+                -- anchored to the same strip, and taking its size and its vertical offset from
+                -- it is what keeps the two on one line whatever the client sizes them to.
+                local backButton = header.BackButton
+                playButton:SetSize(backButton and backButton:GetWidth() or 90,
+                    backButton and backButton:GetHeight() or 22)
+                local _, _, _, backInset, backOffset = backButton and backButton:GetPoint(1)
+                playButton:SetPoint("RIGHT", header, "RIGHT", -(backInset or 11), backOffset or 4)
+                playButton.setPlayState = function(button, isPlaying)
+                    if button.contributing then
+                        button:SetText("Contribute")
+                    else
+                        button:SetText(isPlaying and "Stop" or "Play")
+                    end
+                end
+                self.detailsPlayButton = playButton
+            end
+            local playButton = self.detailsPlayButton
+
+            -- Rebound rather than kept: this button stood for a different quest a moment ago.
+            playButton.soundData = nil
+            self:BindPlayButton(playButton, questID, self:GetQuestTitle(questID))
+
+            -- No sound: the same button offers Contribute instead of greying out, where this
+            -- client can contribute at all (Contribute:CanOfferFromLog).
+            local contribute = rawget(VoiceOver, "Contribute")
+            playButton.contributing = nil
+            playButton:SetScript("OnEnter", nil)
+            playButton:SetScript("OnLeave", nil)
+            if DataModules:PrepareSound({ event = Enums.SoundEvent.QuestAccept, questID = questID }) then
+                playButton:Enable()
+            elseif contribute and contribute.CanOfferFromLog and contribute:CanOfferFromLog() then
+                local title = self:GetQuestTitle(questID)
+                playButton.contributing = true
+                playButton:SetScript("OnClick", function()
+                    contribute:ShowFromLog(questID, title)
+                end)
+                playButton:SetScript("OnEnter", function(button)
+                    contribute:ShowTooltip(button)
+                end)
+                playButton:SetScript("OnLeave", function()
+                    if GameTooltip then
+                        GameTooltip:Hide()
+                    end
+                end)
+                playButton:Enable()
+            else
+                playButton:Disable()
+            end
+            self:SetPlayButtonState(playButton)
+            playButton:Show()
+        end
+
+        hooksecurefunc("QuestMapFrame_ShowQuestDetails", function()
+            QuestOverlayUI:UpdateDetailsPlayButton()
+        end)
+    end
+
+end

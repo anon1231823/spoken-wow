@@ -77,18 +77,19 @@ describe("formatTarget", () => {
 });
 
 describe("resolveTarget", () => {
-  it("finds the line for a quest address", () => {
-    const found = resolveTarget({ kind: "quest", questId: 1, event: "complete" }, corpus);
+  it("finds the line for a quest address", async () => {
+    const found = await resolveTarget({ kind: "quest", questId: 1, event: "complete" }, corpus);
     expect(found.map((found) => found.lineId)).toEqual(["q:1:complete"]);
   });
 
-  it("finds every line for an npc address", () => {
-    expect(resolveTarget({ kind: "npc", npcId: 9 }, corpus).map((l) => l.lineId)).toEqual([
-      "g:abc",
-    ]);
+  it("finds every line for an npc address", async () => {
+    const found = await resolveTarget({ kind: "npc", npcId: 9 }, corpus);
+    expect(found.map((l) => l.lineId)).toEqual(["g:abc"]);
   });
 
-  it("returns an empty array when nothing matches, rather than throwing", () => {
-    expect(resolveTarget({ kind: "quest", questId: 999, event: "accept" }, corpus)).toEqual([]);
+  it("returns an empty array when nothing matches, rather than throwing", async () => {
+    expect(await resolveTarget({ kind: "quest", questId: 999, event: "accept" }, corpus)).toEqual(
+      [],
+    );
   });
 });

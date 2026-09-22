@@ -6,6 +6,8 @@
  * bundle. Same reasoning as the note atop lib/line-fields.ts.
  */
 
+import type { Source } from "@/lib/sections";
+
 export const CATEGORIES = [
   "pronunciation",
   "wrong_voice",
@@ -17,19 +19,9 @@ export const CATEGORIES = [
 
 export const STATUSES = ["open", "fixed", "not_an_issue"] as const;
 
-/**
- * Which side of the site a report came from.
- *
- * One table holds all three (migration 0021, widened for books by 0028), so the triage page
- * needs to say which corpus a row is about: "read text that is not what the NPC says", the
- * same complaint about a zone's lore, and a misread page of a book go to different places
- * and different fixes.
- */
-export const SOURCES = ["quests", "zones", "books"] as const;
 
 export type Category = (typeof CATEGORIES)[number];
 export type Status = (typeof STATUSES)[number];
-export type Source = (typeof SOURCES)[number];
 
 export const SOURCE_LABELS: Record<Source, string> = {
   quests: "Quests",
@@ -98,10 +90,6 @@ export function isCategory(value: unknown): value is Category {
 
 export function isStatus(value: unknown): value is Status {
   return typeof value === "string" && (STATUSES as readonly string[]).includes(value);
-}
-
-export function isSource(value: unknown): value is Source {
-  return typeof value === "string" && (SOURCES as readonly string[]).includes(value);
 }
 
 /** Truncated rather than rejected: losing the tail of a long name beats losing the report. */

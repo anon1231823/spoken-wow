@@ -23,25 +23,15 @@ import { Player as BooksPlayer } from "@/components/books/Player";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Player as ZonesPlayer } from "@/components/zones/Player";
-import { explorerHref, reportHref } from "@/lib/links";
+import { explorerHref, reportHref, targetExplorerHref } from "@/lib/links";
 import type { ResultLine as BookLine } from "@/lib/books/search";
 import { searchPath, type SourceLine } from "@/lib/reports/detail";
-import {
-  CATEGORIES,
-  SOURCES,
-  STATUSES,
-  CATEGORY_COLUMN,
-  SOURCE_LABELS,
-  STATUS_LABELS,
-  type Category,
-  type Report,
-  type Source,
-  type Status,
-} from "@/lib/reports/reports";
+import { CATEGORIES, STATUSES, CATEGORY_COLUMN, SOURCE_LABELS, STATUS_LABELS, type Category, type Report, type Status } from "@/lib/reports/reports";
 import { applyResolutions } from "@/lib/reports/rows";
 import type { ResultLine as QuestLine } from "@/lib/search";
 import { cn } from "@/lib/utils";
 import type { ResultLine as ZoneLine } from "@/lib/zones/search";
+import { SOURCES, type Source } from "@/lib/sections";
 
 const STATUS_OPTIONS = STATUSES.map((status) => ({
   value: status,
@@ -270,10 +260,11 @@ export default function ReportTable({
                       <Badge variant="outline" className="shrink-0 py-0 leading-5">
                         {SOURCE_LABELS[report.source]}
                       </Badge>
-                      {/* The explorer, narrowed to this line: where a triager works. The
-                          `/r/` page the reporter saw is the fallback for a report whose
-                          address resolved to no line, because there is nothing to filter
-                          on and the raw address is still worth opening. */}
+                      {/* The explorer, narrowed to this line: where a triager works. A
+                          report with no line id - a gossip NPC whose reporter never picked
+                          one of the takes - narrows the explorer by its address instead.
+                          The `/r/` page the reporter saw is the last fallback, for an
+                          address no filter addresses. */}
                       {report.lineId ? (
                         <Link
                           href={explorerHref(report.source, report.lineId)}
@@ -284,7 +275,10 @@ export default function ReportTable({
                         </Link>
                       ) : report.target ? (
                         <Link
-                          href={reportHref(report.source, report.target)}
+                          href={
+                            targetExplorerHref(report.source, report.target) ??
+                            reportHref(report.source, report.target)
+                          }
                           title={report.target}
                           className="text-muted-foreground truncate font-mono underline-offset-2 hover:underline"
                         >
@@ -382,6 +376,13 @@ export default function ReportTable({
                         canRegenerate={canRegenerate}
                         onRegenerated={(version) =>
                           setVersions((current) => ({ ...current, [key]: version }))
+                        }
+                        onOverridden={(text) =>
+                          setLines((current) => {
+                            const known = current[key];
+                            if (!known) return current;
+                            return { ...current, [key]: { ...known, override: text } };
+                          })
                         }
                       />
                     </td>

@@ -15,11 +15,10 @@
  * other's - which reads as "nothing happened when I pressed Regenerate".
  */
 import { db } from "@/lib/db";
+import type { Source } from "@/lib/sections";
 
 export type JobState = "pending" | "running" | "done" | "failed" | "cancelled";
 
-/** Which corpus a batch is against, and so which generator its jobs go to. */
-export type Source = "quests" | "zones" | "books";
 
 /**
  * One unit of work, in terms both sections can express.

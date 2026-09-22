@@ -9,7 +9,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Facets } from "@/lib/facets";
-import { ISSUE_GROUPS, ISSUE_GROUP_LABELS } from "@/lib/issues/issues";
 import { NPC_TYPES, SOURCES } from "@/lib/line-fields";
 import { activeFilterCount } from "@/lib/active-filters";
 import type { Filter, LineFilters } from "@/lib/search";
@@ -21,6 +20,8 @@ type Props = {
   onQuery: (value: string) => void;
   onFilters: (next: Partial<LineFilters>) => void;
   onClearAll: () => void;
+  /** Editor and up: the ones who act on reports, so the ones who filter by them. */
+  canTriage: boolean;
 };
 
 /** Corpus values, which label themselves. */
@@ -35,14 +36,8 @@ const SCOPE_OPTIONS: ChipOption[] = [
   { value: "text", label: "Line text only" },
 ];
 
-const ISSUE_OPTIONS: ChipOption[] = [
-  { value: "1", label: "will break" },
-  { value: "2", label: "likely wrong or worse" },
-  { value: "3", label: "has any issue" },
-];
-
 const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
-  { query, filters, facets, onQuery, onFilters, onClearAll },
+  { query, filters, facets, onQuery, onFilters, onClearAll, canTriage },
   ref,
 ) {
   const active = activeFilterCount({ ...filters, q: query });
@@ -136,27 +131,6 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
           options={plainOptions(NPC_TYPES)}
           onChange={(npcType) => onFilters({ npcType: npcType as LineFilters["npcType"] })}
         />
-
-        {/* Severity as one dropdown rather than a checkbox plus a level, because "has an
-            issue" and "has a bad one" are the same question asked at different strengths. */}
-        <FilterChip
-          label="issues"
-          value={filters.issues === undefined ? undefined : String(filters.issues)}
-          options={ISSUE_OPTIONS}
-          onChange={(value) =>
-            onFilters({ issues: value === undefined ? undefined : (Number(value) as 1 | 2 | 3) })
-          }
-        />
-
-        <FilterChip
-          label="kind"
-          value={filters.issueCategory}
-          options={ISSUE_GROUPS.map((group) => ({
-            value: group,
-            label: ISSUE_GROUP_LABELS[group],
-          }))}
-          onChange={(issueCategory) => onFilters({ issueCategory })}
-        />
         {/* Read as one range: "generated after X" and "generated before Y". A file the app
             has never written has no date, and counts as generated long ago - so it sits in
             every "before" and no "after". */}
@@ -201,6 +175,18 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
             audio outdated
           </Label>
         </div>
+        {/* Its own box beside "audio outdated", not a narrowing of it: a lexicon edit moves
+            no text, so the two select different faults in the same file. */}
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Checkbox
+            id="dirty-only"
+            checked={filters.dirty ?? false}
+            onCheckedChange={(value) => onFilters({ dirty: value === true })}
+          />
+          <Label htmlFor="dirty-only" className="text-muted-foreground text-sm">
+            pronunciation moved
+          </Label>
+        </div>
         <div className="flex items-center gap-2 whitespace-nowrap">
           <Checkbox
             id="narration-only"
@@ -224,6 +210,20 @@ const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
             ignored only
           </Label>
         </div>
+        {/* Triagers only, as in the zones and books bars: the count on a row is public, but
+            a list of what people have complained about is a worklist. */}
+        {canTriage && (
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <Checkbox
+              id="reported-only"
+              checked={filters.reports === "open"}
+              onCheckedChange={(value) => onFilters({ reports: value === true ? "open" : undefined })}
+            />
+            <Label htmlFor="reported-only" className="text-muted-foreground text-sm">
+              reported only
+            </Label>
+          </div>
+        )}
         {/* Phrased as showing rather than hiding: the box is unticked by default, and an
             unticked "hide progress text" would claim the opposite of what is happening. */}
         <div className="flex items-center gap-2 whitespace-nowrap">

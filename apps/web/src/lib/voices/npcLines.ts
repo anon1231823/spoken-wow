@@ -21,7 +21,7 @@ import { isVoiceSlot } from "./slots";
  * two and the caller has to handle it either way.
  */
 export async function npcLineClips(voice: string): Promise<string[]> {
-  if (!isVoiceSlot(voice)) throw new Error(`unknown voice slot ${voice}`);
+  if (!(await isVoiceSlot(voice))) throw new Error(`unknown voice slot ${voice}`);
 
   const parts = voice.split("-");
   if (parts.length !== 3) return [];

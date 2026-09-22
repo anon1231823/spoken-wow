@@ -59,10 +59,13 @@ What ships is the committed one. Before cutting a sound pack, bring the takes an
 narration home and regenerate it here:
 
 ```bash
-make books-db-pull     # the droplet's takes -> local database
+make books-sync        # the droplet's page text and takes -> local database
 make books-lookup      # -> addons/SpokenBooksAudio/Data/Sounds.lua (committed)
-make books-pull        # the mp3s -> pipelines/books/audio
-make books-sounds      # -> addons/SpokenBooksAudio/Sounds (not committed)
+make books-pull-live   # the live takes -> pipelines/books/audio-history (pull-history: every take)
+make books-sounds      # the live takes -> addons/SpokenBooksAudio/Sounds (not committed)
 ```
+
+`make books-full-release` runs the same chain through package-audio, then asks once before
+uploading the pack to CurseForge and GitHub.
 
 The zones side has the same arrangement for the same reason.

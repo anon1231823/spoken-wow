@@ -6,6 +6,48 @@ The player and the sound pack are versioned independently — the pack moves whe
 rebuilt, the player when its Lua changes — so a section belongs to whichever of the two
 carries that version. The heading says which.
 
+## 2.1.0 — player
+
+- **A Contribute button, where a quest or an NPC has no voice.** Content newer than vanilla,
+  a language the corpus does not carry, a line an NPC says that nobody has recorded: the quest
+  frame and the gossip frame show a **Contribute** button in their top right, under the close
+  button, and pressing it hands you a link to send the text your client is showing. It also
+  carries what the client can see about who is speaking -- the model, the sex, the creature
+  type -- which is how a new NPC gets the right voice.
+- **The quest log offers it too**, where a quest's Play would be: a plus icon in the list, and
+  **Contribute** on the details view's button.
+- **Or gather as you play**: with gathering on (see Spoken Player 2.1.0), every quest and NPC
+  line Spoken has no voice for is kept for you to send in one go, including the NPC's model
+  once the client has loaded it.
+- **Your name, class and race are not sent.** The game writes them into quest text for
+  whoever is reading; they are put back as placeholders before a line leaves your client, so
+  it can be voiced for everyone. A name with a surname counts part by part.
+- The button goes away when you walk away from an NPC, rather than staying on screen after
+  the conversation has closed.
+- Hide it with **Hide the Contribute buttons** in the Spoken Player settings.
+- Not on the 1.12, 2.4.3 and 3.3.5 clients, where contributing is off for now.
+
+## 2.0.4 — player
+
+- **Quests accepted and turned in by another addon are read again.** Leatrix Plus and the
+  auto-turn-in addons beside it answer `QUEST_DETAIL` by calling `AcceptQuest` in the same
+  frame, so the quest dialog was gone before the 10 Hz watcher could see a quest ID to
+  stabilize and nothing was ever read — the audio only played for a player who clicked
+  through the dialog themselves. The globals are now recorded when the client fires the
+  event, and the watcher reads that record when the dialog closes with nothing dispatched
+  for it.
+- **The play button is back in the quest log on the Forever client.** That client reports
+  itself as mainline and draws the modern map-attached quest log, which has no
+  `QuestLogFrame`, no `QuestLog_Update` and no named title rows — everything the overlay
+  walked to find a quest to put a button beside, so it drew nothing and said nothing. It
+  walks the rows that log pools instead. The button sits left of the quest's title, and
+  moves to the other end of the row, beside the tracking checkbox, when "Quest objectives"
+  is on and the client's own icon has that corner.
+- **A quest's details have a Play button too**, on the Forever client's quest log: a button
+  beside Back that reads the quest aloud and says Stop while it is reading. The buttons in
+  the list cannot follow a quest into its details view — a frame has one parent — so this
+  is one button, rebound to whichever quest the panel is showing.
+
 ## 2.0.3 — player
 
 - **Greetings are remembered at every NPC, not only the ones with quests.** The default was

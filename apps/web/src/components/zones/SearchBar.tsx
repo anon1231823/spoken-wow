@@ -10,7 +10,6 @@ import type { ZoneFacet } from "@/lib/zones/catalogue";
 import {
   activeFilterCount,
   FIELDS,
-  FLAGS,
   KINDS,
   STATES,
   type LineFilters,
@@ -46,7 +45,8 @@ type Props = {
    * travel with the search results anyway. Drawing the control for a guest would be
    * offering a worklist to somebody with no work to do.
    */
-  canReview: boolean;
+  /** Triager and up: only they can read the report bodies the filter points at. */
+  canTriage: boolean;
   query: string;
   inputRef: React.RefObject<HTMLInputElement | null>;
   onQueryChange: (value: string) => void;
@@ -59,7 +59,7 @@ type Props = {
 export function SearchBar({
   zones,
   filters,
-  canReview,
+  canTriage,
   query,
   inputRef,
   onQueryChange,
@@ -119,13 +119,6 @@ export function SearchBar({
           options={plainOptions(STATES)}
           onChange={(state) => onChange({ state: state as LineFilters["state"] })}
         />
-        <FilterChip
-          label="review"
-          value={filters.flag}
-          options={plainOptions(FLAGS)}
-          onChange={(flag) => onChange({ flag: flag as LineFilters["flag"] })}
-        />
-
         {/* Read as one range: "generated after X" and "generated before Y". */}
         <DateChip
           label="generated after"
@@ -138,6 +131,19 @@ export function SearchBar({
           onChange={(generatedBefore) => onChange({ generatedBefore })}
         />
 
+        {/* A checkbox rather than a value of `state`, because a line can be current and
+            carry this at once: as a state it would hide whichever answer came second. */}
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Checkbox
+            id="dirty-only"
+            checked={filters.dirty ?? false}
+            onCheckedChange={(value) => onChange({ dirty: value === true || undefined })}
+          />
+          <Label htmlFor="dirty-only" className="text-muted-foreground text-sm">
+            pronunciation moved
+          </Label>
+        </div>
+
         <div className="flex items-center gap-2 whitespace-nowrap">
           <Checkbox
             id="short-only"
@@ -149,7 +155,7 @@ export function SearchBar({
           </Label>
         </div>
 
-        {canReview && (
+        {canTriage && (
           <div className="flex items-center gap-2 whitespace-nowrap">
             <Checkbox
               id="reported-only"

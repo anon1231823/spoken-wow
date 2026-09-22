@@ -50,9 +50,9 @@ DIST="$REPO/dist"
 #
 # CONTENT-ADDRESSED: the file name is the checksum of the master it came from, so
 # a cache hit cannot be stale -- a re-cut voiceline hashes differently and misses.
-# Keying on mtime would be cheaper and wrong: `make pull` copies the droplet's
-# timestamps, so a freshly pulled clip can be older than the cache entry it should
-# be replacing. Checksumming all 1353 masters costs ~2s against ~5min of ffmpeg.
+# Keying on mtime would be cheaper and wrong: Sounds/ is assembled afresh from the
+# archive before every build, so an mtime says when it was assembled, not what the
+# clip holds. Checksumming all 1353 masters costs ~2s against ~5min of ffmpeg.
 CACHE_ROOT="$REPO/pipelines/zones/audio-transcoded"
 
 checksum() {
@@ -126,7 +126,7 @@ fi
 count="$(find "$SOUNDS" -name '*.mp3' 2>/dev/null | wc -l | tr -d ' ')"
 if [[ "$count" -eq 0 ]]; then
   echo "error: no mp3 files in $SOUNDS" >&2
-  echo "       Generate some first, on the site, then:  make zones-pull" >&2
+  echo "       Generate some first, on the site, then:  make zones-pull-history zones-sounds" >&2
   exit 1
 fi
 

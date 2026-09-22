@@ -8,9 +8,8 @@
  */
 
 import { noApiKeyMessage } from "@/lib/no-api-key";
+import type { Source } from "@/lib/sections";
 
-/** Which section a job belongs to. Mirrors Source in lib/generation/queue.ts. */
-export type Source = "quests" | "zones" | "books";
 
 export type FailureKind =
   | "quota"
@@ -33,7 +32,6 @@ export type RegenerateOk = {
   voice: string;
   spokenText: string;
   sharedWith: number;
-  archivedInherited: boolean;
 };
 
 export type RegenerateFailed = {
@@ -87,35 +85,6 @@ export async function fetchGenerationStatus(
     return (await response.json()) as GenerationStatusResponse;
   } catch {
     // The page works without it: the balance goes unshown and no button is pre-disabled.
-    return null;
-  }
-}
-
-/**
- * How many takes each of these files has, and which of them are of text that has since moved.
- *
- * POST rather than GET because a search can name a few thousand files, and a query string
- * long enough to carry them would be refused before it arrived. Both answers in one trip
- * because it is the same page asking about the same files.
- */
-export type TakeInfo = { counts: Record<string, number>; stale: string[] };
-
-export async function fetchTakeCounts(
-  files: string[],
-  signal?: AbortSignal,
-): Promise<TakeInfo | null> {
-  try {
-    const response = await fetch("/api/quests/lines/versions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ files }),
-      signal,
-    });
-    if (!response.ok) return null;
-    return (await response.json()) as TakeInfo;
-  } catch {
-    // The page works without it: no line offers history, nothing is marked stale, and
-    // nothing else changes.
     return null;
   }
 }
@@ -289,4 +258,25 @@ export async function stopQueue(): Promise<void> {
     headers: { "Content-Type": "application/json" },
     body: "{}",
   }).catch(() => {});
+}
+
+/**
+ * Say that these takes are fine as they stand, despite a pronunciation having moved under
+ * them.
+ *
+ * One endpoint for all three sections, because the tables it writes are shared. Returns
+ * whether it worked rather than throwing: the caller has already cleared the marks on
+ * screen, and the worst case is a row that comes back marked on the next search.
+ */
+export async function clearDirty(source: string, files: string[]): Promise<boolean> {
+  try {
+    const response = await fetch("/api/dirty", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ source, files }),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }

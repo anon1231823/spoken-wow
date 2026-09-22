@@ -17,13 +17,13 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 
-import { storeIndex } from "@/lib/audio";
-import { loadCorpus } from "@/lib/corpus";
+import { corpus } from "@/lib/quests/catalogue";
+import { isSource } from "@/lib/sections";
 import { requireApiKey, requireRegenerate } from "@/lib/generation/authz";
 import { createBatch, enqueue, snapshot } from "@/lib/generation/queue";
-import { searchContext } from "@/lib/issues/context";
+import { searchContext } from "@/lib/quests/context";
 import { batchJobs, matchingLines } from "@/lib/search";
-import { filtersFromParams, needsDates, needsStale } from "@/lib/search-request";
+import { filtersFromParams, needsStale } from "@/lib/search-request";
 import { ensureQueueRunning, queueWorker } from "@/lib/generation/boot";
 import { catalogue as bookCatalogue, BASE_LANG as BOOKS_LANG } from "@/lib/books/catalogue";
 import { catalogue as zoneCatalogue } from "@/lib/zones/catalogue";
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
   // Absent means quests, so a client that predates the second section keeps working.
   const source = body.source === undefined ? "quests" : body.source;
-  if (source !== "quests" && source !== "zones" && source !== "books") {
+  if (!isSource(source)) {
     return NextResponse.json(
       { error: "source must be 'quests', 'zones' or 'books'", kind: "bad-request" },
       { status: 400 },
@@ -72,9 +72,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const filters = filtersFromParams(new URLSearchParams(body.filters));
-  const context = await searchContext(filters.finding, needsDates(filters), needsStale(filters));
-  const lines = matchingLines(loadCorpus(), storeIndex(), filters, context);
+  const filters = await filtersFromParams(new URLSearchParams(body.filters));
+  const [catalogue, { voiced, context }] = await Promise.all([
+    corpus(),
+    searchContext(needsStale(filters)),
+  ]);
+  const lines = matchingLines(catalogue, voiced, filters, context);
   // The same overrides the estimate was built from, so what is queued is what was quoted.
   const jobs = batchJobs(lines, context.overrides);
 

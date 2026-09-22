@@ -1,17 +1,16 @@
 /**
  * The values the filter dropdowns can offer.
  *
- * Derived from the corpus rather than listed here, for the same reason voiceSlots is
- * (lib/voices/slots.ts): races and voices are decided upstream in tts_cli/consts.py, and a
- * hardcoded list would quietly stop offering one the day it is added.
+ * The roster in lib/voices/voices.ts, so a voice added there is filterable before any line
+ * uses it, and the filters, /voices and the triage selects always offer the same set.
  *
- * Being a closed set derived from data also makes it a whitelist, which is what lets
- * /api/search take these straight from a query string.
+ * Being closed sets also makes them a whitelist, which is what lets /api/search take these
+ * straight from a query string.
  *
  * `source` and `npcType` are absent on purpose: they are closed unions on CorpusLine, so
  * their lists live next to the type in lib/search.ts.
  */
-import { loadCorpus } from "./corpus";
+import { flavorScopes, GENDERS, RACES, VOICE_NAMES, VOICES } from "./voices/voices";
 
 export type Facets = {
   races: string[];
@@ -19,7 +18,7 @@ export type Facets = {
   flavors: string[];
   voices: string[];
   /**
-   * Every race/gender/flavor the corpus actually pairs.
+   * Every race/gender/flavor the roster pairs.
    *
    * A flavor belongs to a race-gender - only tauren, troll and orc have a shaman voice, and
    * only night elves a priestess - so offering all fifty against a chosen race would mostly
@@ -29,44 +28,22 @@ export type Facets = {
   flavorScopes: { race: string; gender: string; flavor: string }[];
 };
 
-export function buildFacets(): Facets {
-  const races = new Set<string>();
-  const genders = new Set<string>();
-  const flavors = new Set<string>();
-  const voices = new Set<string>();
-  const scopes = new Map<string, { race: string; gender: string; flavor: string }>();
+const sorted = (values: Iterable<string>) => [...new Set(values)].sort((a, b) => a.localeCompare(b));
 
-  for (const line of loadCorpus().lines) {
-    races.add(line.race);
-    genders.add(line.gender);
-    voices.add(line.voice);
-    // Null for narrator-male and the odd model from a later expansion, which have no NPC
-    // voice sets to choose between. Nothing to offer, so nothing is added.
-    if (!line.flavor) continue;
-    flavors.add(line.flavor);
-    scopes.set(line.voice, { race: line.race, gender: line.gender, flavor: line.flavor });
-  }
+const FACETS: Facets = {
+  races: [...RACES],
+  genders: [...GENDERS],
+  flavors: sorted(VOICES.flatMap((voice) => (voice.flavor ? [voice.flavor] : []))),
+  voices: sorted(VOICE_NAMES),
+  flavorScopes: flavorScopes().sort(
+    (a, b) =>
+      a.race.localeCompare(b.race) ||
+      a.gender.localeCompare(b.gender) ||
+      a.flavor.localeCompare(b.flavor),
+  ),
+};
 
-  const sorted = (values: Set<string>) => [...values].sort((a, b) => a.localeCompare(b));
-  return {
-    races: sorted(races),
-    genders: sorted(genders),
-    flavors: sorted(flavors),
-    voices: sorted(voices),
-    flavorScopes: [...scopes.values()].sort(
-      (a, b) =>
-        a.race.localeCompare(b.race) ||
-        a.gender.localeCompare(b.gender) ||
-        a.flavor.localeCompare(b.flavor),
-    ),
-  };
-}
-
-const cacheKey = Symbol.for("wow-voiceover.facets");
-type CacheHolder = { [cacheKey]?: Facets };
-
-export function facets(): Facets {
-  const holder = globalThis as CacheHolder;
-  if (!holder[cacheKey]) holder[cacheKey] = buildFacets();
-  return holder[cacheKey]!;
+/** Async because it used to be read off the corpus; kept so no caller has to change. */
+export async function facets(): Promise<Facets> {
+  return FACETS;
 }

@@ -8,7 +8,6 @@
 export const FIELDS = ["any", "name", "zone", "text"] as const;
 export const KINDS = ["zone", "subzone"] as const;
 export const STATES = ["missing", "stale", "current"] as const;
-export const FLAGS = ["bad", "ok", "unreviewed"] as const;
 // One value rather than a boolean, so "resolved" or "any" can be added without changing
 // the shape of the URL that is already out there in shared links.
 export const REPORTS = ["open"] as const;
@@ -17,7 +16,6 @@ export type Field = (typeof FIELDS)[number];
 export type Kind = (typeof KINDS)[number];
 /** missing = no audio; stale = audio predates a text change; current = neither. */
 export type State = (typeof STATES)[number];
-export type Flag = (typeof FLAGS)[number];
 export type Reports = (typeof REPORTS)[number];
 
 export type LineFilters = {
@@ -28,10 +26,16 @@ export type LineFilters = {
   /** uiMapID. Selects a zone's own line and all of its subzones. */
   mapID?: number;
   state?: State;
+  /**
+   * Audio cut before a pronunciation it speaks was changed, and not since judged.
+   *
+   * Not a value of `state`, which is about text: a take whose text has not moved is
+   * `current` and can be dirty at the same time, and folding the two would make each
+   * answer hide the other.
+   */
+  dirty?: boolean;
   /** Under 250 spoken characters, where eleven_v3 is documented as least reliable. */
   short?: boolean;
-  /** 'unreviewed' means no flag row at all -- what is left to listen to. */
-  flag?: Flag;
   /** 'open' selects lines carrying at least one unresolved report. */
   reports?: Reports;
   /** One catalogue id, which is how a report on /reports links into this explorer. */
@@ -58,8 +62,8 @@ export function filterParams(filters: LineFilters): URLSearchParams {
   if (filters.kind) params.set("kind", filters.kind);
   if (filters.mapID !== undefined) params.set("zone", String(filters.mapID));
   if (filters.state) params.set("state", filters.state);
+  if (filters.dirty) params.set("dirty", "1");
   if (filters.short) params.set("short", "1");
-  if (filters.flag) params.set("flag", filters.flag);
   if (filters.reports) params.set("fb", filters.reports);
   if (filters.line) params.set("line", filters.line);
   if (filters.generatedBefore) params.set("before", filters.generatedBefore);
@@ -88,8 +92,8 @@ export function filtersFromParams(params: URLSearchParams): LineFilters {
     kind: oneOf(params.get("kind"), KINDS),
     mapID: Number.isFinite(mapID) && mapID > 0 ? mapID : undefined,
     state: oneOf(params.get("state"), STATES),
+    dirty: params.get("dirty") === "1" || undefined,
     short: params.get("short") === "1" || undefined,
-    flag: oneOf(params.get("flag"), FLAGS),
     reports: oneOf(params.get("fb"), REPORTS),
     line: params.get("line") || undefined,
     generatedBefore: before && DATE.test(before) ? before : undefined,
@@ -109,8 +113,8 @@ export function activeFilterCount(filters: LineFilters): number {
     filters.kind,
     filters.mapID,
     filters.state,
+    filters.dirty,
     filters.short,
-    filters.flag,
     filters.reports,
     filters.line,
     filters.generatedBefore,

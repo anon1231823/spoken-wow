@@ -8,10 +8,10 @@
  * Keyed on the file, so the same whitelist that makes the audio routes traversal-proof decides
  * what may be written: a path either names a file some corpus line owns, or it does not exist.
  */
-import { corpusFiles } from "@/lib/audio";
+import { fileIndex } from "@/lib/audio";
 import { requireRegenerate } from "@/lib/generation/authz";
-import { OverrideError, validateOverride } from "@/lib/issues/override";
-import { clearOverride, writeOverride } from "@/lib/issues/overrides";
+import { OverrideError, validateOverride } from "@/lib/quests/override";
+import { clearOverride, writeOverride } from "@/lib/quests/overrides";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export async function PUT(request: Request) {
     return Response.json({ error: message }, { status: 400 });
   }
 
-  if (!corpusFiles().has(draft.file)) {
+  if (!(await fileIndex()).has(draft.file)) {
     return Response.json({ error: "unknown file" }, { status: 404 });
   }
 
@@ -42,7 +42,7 @@ export async function DELETE(request: Request) {
   if (denied) return denied;
 
   const file = new URL(request.url).searchParams.get("file");
-  if (!file || !corpusFiles().has(file)) {
+  if (!file || !(await fileIndex()).has(file)) {
     return Response.json({ error: "unknown file" }, { status: 404 });
   }
 

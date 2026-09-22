@@ -13,6 +13,7 @@ local ADDON_NAME, SpokenZones = ...
 
 local BUTTON_WIDTH = 58
 local BUTTON_HEIGHT = 20
+local CONTRIBUTE_WIDTH = 100
 
 local ReportButton = {}
 
@@ -67,6 +68,47 @@ function SpokenZones:CreateReportButton(parent)
 	button:SetScript("OnLeave", function()
 		GameTooltip:Hide()
 	end)
+
+	return button
+end
+
+--------------------------------------------------------------------------------
+-- The "no lore here" button
+--------------------------------------------------------------------------------
+
+-- The Contribute button, in the panel's body under "nobody has written its lore yet" rather
+-- than on the footer: every place is already known, and what is missing is the lore itself,
+-- so the offer belongs beside the words that say so. Pointed at a place with SetTarget; hidden
+-- with no target, or where this client cannot contribute (SpokenZones:CanContribute).
+function SpokenZones:CreateContributeButton(parent)
+	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+	button:SetSize(CONTRIBUTE_WIDTH, BUTTON_HEIGHT + 2)
+	button:SetText("Contribute")
+	button:Hide()
+
+	button:SetScript("OnClick", function(self)
+		SpokenZones:ShowContribution(self.mapID, self.subzone)
+	end)
+
+	button:SetScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+		GameTooltip:SetText("Spoken Zones has no lore for this place")
+		GameTooltip:AddLine("Contribute by describing it: what it is, who lives there, what happened there.", 1, 0.8, 0.2, true)
+		GameTooltip:Show()
+	end)
+
+	button:SetScript("OnLeave", function()
+		GameTooltip:Hide()
+	end)
+
+	function button:SetTarget(mapID, subzone)
+		self.mapID, self.subzone = mapID, subzone
+		if mapID and SpokenZones:CanContribute() then
+			self:Show()
+		else
+			self:Hide()
+		end
+	end
 
 	return button
 end

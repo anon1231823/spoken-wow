@@ -1,15 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  BODY_MAX,
-  isCategory,
-  isSource,
-  isStatus,
-  optionalText,
-  SOURCE_LABELS,
-  SOURCES,
-  validateSubmission,
-} from "./reports";
+import { BODY_MAX, isCategory, isStatus, optionalText, SOURCE_LABELS, validateSubmission } from "./reports";
+import { SOURCES, isSource } from "@/lib/sections";
 
 describe("isSource", () => {
   it("accepts every section that can file a report", () => {

@@ -107,8 +107,8 @@ jobs:
       # a hand-run psql fails here instead of mid-deploy.
       #
       # Before the tests, not after: history.test.ts exercises the take table against a
-      # real Postgres, because the ordering it protects -- archive the current take before
-      # anything overwrites it -- is exactly what a mocked database would stop testing.
+      # real Postgres, because what it protects -- one live take per file, files never
+      # rewritten -- is exactly what a mocked database would stop testing.
       - name: Migrate
         run: deploy/web/bin/migrate.sh "$PWD/apps/web"
 
@@ -117,8 +117,19 @@ jobs:
       - name: Seed the zones corpus
         run: node pipelines/zones/tools/lore/import.mjs
 
-      # The gate. audio.test.ts asserts every file in the quests store is addressed by some
-      # corpus line, range.test.ts covers Safari's bytes=0-1 probe, and the zones catalogue
+      # The quests catalogue is built from quest_line, the same way. Seeded from the
+      # committed export, exactly as `make quests-import-corpus` does it and as ci.yaml does.
+      - uses: actions/setup-python@v5
+        with:
+          # requirements-extract pins pandas 1.5.3, whose last wheels are cp311.
+          python-version: "3.11"
+      - name: Seed the quests corpus
+        working-directory: pipelines/quests
+        run: |
+          pip install -r requirements-extract.txt
+          python cli-main.py import-corpus
+
+      # The gate. range.test.ts covers Safari's bytes=0-1 probe, and the zones catalogue
       # tests cover the stamp that keeps two workers agreeing; none should reach the
       # droplet red.
       - name: Test

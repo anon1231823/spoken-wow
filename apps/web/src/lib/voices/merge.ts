@@ -84,7 +84,7 @@ export async function mergeSamples(
   files: string[],
   pauseSeconds: number,
 ): Promise<Sample> {
-  const inputs = files.map((file) => samplePath(voice, file));
+  const inputs = await Promise.all(files.map((file) => samplePath(voice, file)));
   // Fails before ffmpeg runs if a selected clip has been deleted meanwhile, so the error
   // names the file rather than being an ffmpeg exit code.
   for (const input of inputs) await fs.access(input);
@@ -105,7 +105,7 @@ export async function mergeSamples(
     "-y",
   );
 
-  const dir = voiceDir(voice);
+  const dir = await voiceDir(voice);
   await fs.mkdir(dir, { recursive: true });
 
   // Named after the first clip in the selection, so the merge is recognisable against the

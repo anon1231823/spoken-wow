@@ -19,6 +19,10 @@ Open the map and the lore of the zone you're looking at appears beside it. Click
 - **Works on non-English clients** — subzone lore is found by the name your client reports, so a German, French, Spanish, Portuguese, Russian, Korean or Chinese client reaches it too. The lore text itself is English for now.
 - **Report a problem** — a Report button on every entry and on the playback controls. The game can't open a browser, so it hands you a short link to that exact line; the page at the other end has the text, the audio and a form.
 
+## When there is no lore at all
+
+Every place in the game is on the panel, but some of them nobody has written about yet. Open one and the panel says so, with a **Contribute** button right under it. Press it and it gives you a link naming the place; open it in your browser, describe the place in your own words -- what it is, who lives there, what happened there -- and press Send. Rather not see the button? **Hide the Contribute buttons** in the Spoken Player settings turns it off.
+
 ## Narration needs a sound pack
 
 The voice audio is a large download, so it ships separately. **Spoken Zones works fine without one** — you read rather than listen. Without a pack the Play button simply doesn't appear, and nothing is narrated.

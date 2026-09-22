@@ -1,7 +1,7 @@
 ## Interface: 11509, 20506, 16001
 ## Title: Spoken Books Audio
 ## Notes: Narrated books, letters and notes for Spoken Books. Install alongside Spoken Books.
-## Version: 2.0.0
+## Version: 2.1.0
 ## Author: rusty
 ## IconTexture: Interface\AddOns\SpokenBooksAudio\Textures\AddonIcon.tga
 ## X-License: Audio generated with ElevenLabs from book text extracted from the game.

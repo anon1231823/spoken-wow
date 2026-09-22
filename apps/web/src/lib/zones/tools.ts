@@ -40,25 +40,7 @@ import "server-only";
 import * as storeModule from "@tools/voice/store.mjs";
 import * as normaliseModule from "@tools/voice/normalise.mjs";
 import * as namingModule from "@tools/voice/naming.mjs";
-import * as exportModule from "@tools/voice/export-manifest.mjs";
-import * as lookupModule from "@tools/voice/build-lookup.mjs";
 import * as wikiModule from "@tools/lib/wiki.mjs";
-
-/** What generation recorded for a line. Mirrors a manifest record, and so a current take. */
-export type TakeRecord = {
-  file: string;
-  textHash: string;
-  chars: number;
-  credits: number | null;
-  durationSec: number | null;
-  bytes: number;
-  voiceId: string | null;
-  modelId: string | null;
-  outputFormat: string | null;
-  dictionaryId: string | null;
-  dictionaryVersionId: string | null;
-  generatedAt: string;
-};
 
 // buildCatalogue() is deliberately NOT re-exported. It reads the committed Lua, which is an
 // export of lore_line and therefore at best as fresh as the table; the app builds its
@@ -71,9 +53,20 @@ export const assignFiles = namingModule.assignFiles as (
 
 export const textHash = namingModule.textHash as (spoken: string) => string;
 
+/** The file-safe form of a canonical subzone key. Round-trips with `normaliseKey` below. */
+export const slugFor = namingModule.slugFor as (key: string) => string;
+
+/**
+ * A display name reduced to the canonical key the corpus stores -- lower-cased, apostrophes
+ * stripped, a leading "the" dropped (WoW subzones are full of "The Underbog"-style names).
+ * The scraper runs this on the wiki's name before ever writing a "key" column, so anything
+ * that needs to line up with that column, such as a contribution's raw subzone text, has to
+ * run it too rather than approximate it.
+ */
+export const normaliseKey = wikiModule.normaliseKey as (name: string) => string;
+
 // Functions rather than constants: each reads an environment override the droplet sets,
 // and a path resolved at import would be fixed before the process had one.
-export const soundsDir = storeModule.soundsDir as () => string;
 export const historyDir = storeModule.historyDir as () => string;
 
 export const toSpokenText = normaliseModule.toSpokenText as (
@@ -89,32 +82,5 @@ export const loadPronunciation = normaliseModule.loadPronunciation as () => Prom
 // the wiki get the same summary from the same prose.
 export const makeShort = wikiModule.makeShort as (full: string, limit?: number) => string;
 
-/** Archives the take being replaced, then writes. Returns the absolute path. */
-export const writeAudio = storeModule.writeAudio as (
-  file: string,
-  buffer: Buffer,
-) => Promise<string>;
 export const durationOf = storeModule.durationOf as (path: string) => Promise<number>;
-export const insertTake = storeModule.insertTake as (
-  lineId: string,
-  record: TakeRecord,
-  origin: "imported" | "generated",
-  settings?: Record<string, unknown> | null,
-) => Promise<number>;
-export const restoreTake = storeModule.restoreTake as (
-  file: string,
-  archiveVersion: number,
-) => Promise<string>;
 
-// What the addon actually ships, rebuilt after a batch drains rather than after every line:
-// buildLookup rewrites the whole table, and doing that 1,353 times would be the slowest part
-// of a run that is otherwise waiting on ElevenLabs.
-export const exportManifest = exportModule.exportManifest as (options?: {
-  check?: boolean;
-}) => Promise<{ skipped: boolean; changed: boolean; count: number }>;
-export const buildLookup = lookupModule.buildLookup as () => Promise<{
-  zones: number;
-  subzones: number;
-  missingFiles: number;
-  path: string;
-}>;

@@ -95,6 +95,24 @@ function Spoken:GetPortraitRenderer(kind)
 end
 
 --------------------------------------------------------------------------------
+-- Contributions: sending text the corpus does not have
+--------------------------------------------------------------------------------
+--
+-- Additive, so API_VERSION does not move. A feature addon guards on the field rather than the
+-- version: `if Spoken.Contribute and Spoken.ShowContribution then`. A legacy-client zip may
+-- bundle a player older than the addon beside it, and that player should mean no contribute
+-- button, not an error.
+--
+-- The same goes for the setting that hides those buttons: guard on the method, and an older
+-- player without it simply means the buttons are shown.
+
+--- Whether the player turned every Contribute button off in the Spoken Player settings.
+--- A feature addon asks this in its gap check, and re-asks on CONTRIBUTE_SETTINGS_CHANGED.
+function Spoken:AreContributeButtonsHidden()
+    return Addon.db and Addon.db.profile.Contribute.HideButtons and true or false
+end
+
+--------------------------------------------------------------------------------
 -- The frame, the minimap button, the settings
 --------------------------------------------------------------------------------
 
@@ -223,6 +241,7 @@ end
 --   CLIP_DROPPED       (clip, reason)      queue-limit | outranked | missing | an admit reason
 --   QUEUE_EMPTY        ()
 --   SOURCE_REGISTERED  (source)
+--   CONTRIBUTE_SETTINGS_CHANGED ()          the hide-Contribute-buttons setting was toggled
 
 function Spoken:RegisterCallback(event, fn)
     return Callbacks:Register(event, fn)

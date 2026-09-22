@@ -22,6 +22,14 @@ type Props = {
   onRegenerate: (line: ResultLine) => void;
   /** Narrowing to one book, from its name. */
   onSelectBook: (line: ResultLine) => void;
+  /** Open the report dialog. Everyone gets this, signed in or not. */
+  onReport: (line: ResultLine) => void;
+  /** An earlier take is live again. */
+  onRestored: (line: ResultLine, version: number) => void;
+  /** Rewrite what a page says. Editor and up. */
+  onEditText: (line: ResultLine) => void;
+  /** Say a take is fine as it stands, despite a pronunciation having moved under it. */
+  onClearDirty: (line: ResultLine) => void;
 };
 
 /**
@@ -56,6 +64,10 @@ export function BookList({
   onPlay,
   onRegenerate,
   onSelectBook,
+  onClearDirty,
+  onReport,
+  onRestored,
+  onEditText,
 }: Props) {
   const groupRows = useMemo(() => bookRuns(lines), [lines]);
 
@@ -72,10 +84,13 @@ export function BookList({
         <col />
         <col className="w-28" />
         <col className="w-16" />
-        {/* Wide enough for the icon button it holds, and w-10 for anyone who cannot
-            regenerate -- never w-0, because the column still has to exist for the rowspans
+        {/* Wide enough for what the cell actually holds, now that the controls sit on one
+            line: icon buttons are 32px and an editor can have three side by side -- report,
+            clear the pronunciation mark, regenerate. Anything narrower and they overflow
+            left across the character count. w-10 for everyone else, who has the report
+            button alone; never w-0, because the column still has to exist for the rowspans
             above it to count against. */}
-        <col className={canRegenerate ? "w-12" : "w-10"} />
+        <col className={canRegenerate ? "w-36" : "w-10"} />
       </colgroup>
       <thead>
         <tr className="text-muted-foreground border-border border-b text-left text-xs">
@@ -100,6 +115,10 @@ export function BookList({
             onPlay={onPlay}
             onRegenerate={onRegenerate}
             onSelectBook={onSelectBook}
+            onClearDirty={onClearDirty}
+            onReport={onReport}
+            onRestored={onRestored}
+            onEditText={onEditText}
           />
         ))}
       </tbody>

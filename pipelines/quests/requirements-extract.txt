@@ -1,8 +1,18 @@
-# Corpus extraction only: vmangos MySQL -> corpus/corpus.json.gz.
-# Needed by a maintainer refreshing the corpus, and by nobody else - the corpus is
-# committed, so producing audio never touches a database.
+# The two database paths, and neither is the everyday one: vmangos MySQL -> the corpus,
+# and the corpus <-> Postgres round trip that makes the table its source of truth.
+#
+# Needed by a maintainer refreshing or exporting the corpus, and by nobody else. The corpus
+# is committed, so producing audio and building a pack still touch no database at all --
+# which is the promise requirements.txt makes and this file exists to keep.
+#
+# psycopg2 rather than a Node exporter, because the check that proves the table carries
+# everything is that an import followed by an export leaves corpus.json.gz BYTE-identical.
+# Python and Node do not produce identical gzip streams for identical input (different
+# header flags, different deflate output), so the exporter has to be the same write_corpus
+# that writes the file today. See tts_cli/corpus_db.py.
 -r requirements.txt
 pandas==1.5.3
 numpy==1.24.2
 PyMySQL==1.0.2
 cryptography
+psycopg2-binary==2.9.12

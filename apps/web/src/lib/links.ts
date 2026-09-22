@@ -1,3 +1,4 @@
+import type { Source } from "@/lib/sections";
 /**
  * Where one page sends you to another.
  *
@@ -8,10 +9,12 @@
  * 200 is the kind a build cannot catch, so the addresses live in one tested module.
  */
 
-import type { Source } from "@/lib/reports/reports";
-
 /** Which field a free-text query is matched against. Mirrors LineFilters["filter"]. */
 type Scope = "any" | "npc" | "quest" | "text";
+
+/** Mirrors zones' PageFilters["field"], and books' - two different sets under one name. */
+type ZoneScope = "any" | "name" | "zone" | "text";
+type BookScope = "any" | "title" | "text";
 
 /**
  * The quests explorer, narrowed.
@@ -29,12 +32,27 @@ export function questsHref(options: { q?: string; filter?: Scope; finding?: numb
   return params.size ? `/quests?${params}` : "/quests";
 }
 
-/** The zones explorer, narrowed to one zone. */
-export function zonesHref(options: { q?: string; mapID?: number } = {}): string {
+/**
+ * The zones explorer, narrowed to one zone or to a search.
+ *
+ * `field` is this section's name for what quests calls `filter`: three filter vocabularies,
+ * three modules, and a link that used the other section's param name would render the whole
+ * corpus and report no error at all.
+ */
+export function zonesHref(options: { q?: string; mapID?: number; field?: ZoneScope } = {}): string {
   const params = new URLSearchParams();
   if (options.mapID !== undefined) params.set("zone", String(options.mapID));
   if (options.q !== undefined) params.set("q", options.q);
+  if (options.field !== undefined) params.set("field", options.field);
   return params.size ? `/zones?${params}` : "/zones";
+}
+
+/** The books explorer, narrowed. `field` as in zonesHref: books says `field` too. */
+export function booksHref(options: { q?: string; field?: BookScope } = {}): string {
+  const params = new URLSearchParams();
+  if (options.q !== undefined) params.set("q", options.q);
+  if (options.field !== undefined) params.set("field", options.field);
+  return params.size ? `/books?${params}` : "/books";
 }
 
 /**
@@ -73,4 +91,44 @@ export function lexiconHref(grapheme: string): string {
  */
 export function explorerHref(source: Source, lineId: string): string {
   return `/${source}?${new URLSearchParams({ line: lineId })}`;
+}
+
+/**
+ * An explorer, narrowed to everything a report's address covers.
+ *
+ * The middle case between explorerHref and reportHref. A report carries no lineId when the
+ * address resolved to more than one line and the reporter never picked one - a gossip NPC
+ * with a dozen takes is the common shape - and linking such a report to the `/r/` page sent
+ * the triager to the player's form rather than to the lines. The address still says which
+ * lines it means, so the explorer can be narrowed by it even with no id to filter on.
+ *
+ * Null when the address names nothing an explorer can filter by, and the caller falls back
+ * to reportHref: a books target is a bare page id, and neither books search field matches
+ * ids.
+ */
+export function targetExplorerHref(source: Source, target: string): string | null {
+  const segments = target.split("/");
+
+  if (source === "quests") {
+    // The two shapes lib/reports/target.ts parses. A bare number is an id lookup in quests
+    // search, so the id goes in `q` with the filter that says which id it is.
+    if (segments[0] === "npc" && segments.length === 2 && /^\d+$/.test(segments[1])) {
+      return questsHref({ q: segments[1], filter: "npc" });
+    }
+    if (segments[0] === "quest" && segments.length === 3 && /^\d+$/.test(segments[1])) {
+      return questsHref({ q: segments[1], filter: "quest" });
+    }
+    return null;
+  }
+
+  if (source === "zones") {
+    // '<mapID>/<slug>': the zone filter takes the id, and the slug is the page within it,
+    // which no filter addresses.
+    if (segments.length === 2 && /^\d+$/.test(segments[0])) {
+      return zonesHref({ mapID: Number(segments[0]) });
+    }
+    return null;
+  }
+
+  return null;
 }

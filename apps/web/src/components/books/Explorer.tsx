@@ -8,9 +8,12 @@ import Pagination from "@/components/Pagination";
 import RegenerateDialog from "@/components/RegenerateDialog";
 import RegenerationPanel from "@/components/RegenerationPanel";
 import { BookList } from "@/components/books/BookList";
+import ReportDialog from "@/components/ReportDialog";
+import { PageTextDialog } from "@/components/books/PageTextDialog";
 import type { RowState } from "@/components/books/PageRow";
 import { Player } from "@/components/books/Player";
 import { SearchBar } from "@/components/books/SearchBar";
+import { Loading, Refreshing } from "@/components/Loading";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/lib/auth-client";
 import type { BookFacet } from "@/lib/books/catalogue";
@@ -25,6 +28,7 @@ import {
   type GenerationStatusResponse,
   type QueueSnapshot,
 } from "@/lib/generation/client";
+import { useClearDirty } from "@/lib/generation/use-clear-dirty";
 import { noApiKeyMessage } from "@/lib/no-api-key";
 import * as permissions from "@/lib/permissions";
 import * as echo from "@/lib/url-echo";
@@ -57,6 +61,13 @@ export function Explorer({ books }: { books: BookFacet[] }) {
   const [loading, setLoading] = useState(true);
   const [current, setCurrent] = useState<ResultLine | null>(null);
   const [rowStates, setRowStates] = useState<Record<string, RowState>>({});
+  // Anyone can open this one, signed in or not -- see ReportDialog.
+  const [reportFor, setReportFor] = useState<ResultLine | null>(null);
+  // The page whose text is being rewritten, and the rewrites made since the last search:
+  // re-running it would reorder the table under the cursor, and with ?state=stale the page
+  // just edited would vanish as it was saved.
+  const [editFor, setEditFor] = useState<ResultLine | null>(null);
+  const [rewritten, setRewritten] = useState<Record<string, string>>({});
   // Bumped per page after a regeneration, to bust the browser's audio cache: the filename
   // does not change, so without this the take that was replaced keeps playing.
   const [versions, setVersions] = useState<Record<string, number>>({});
@@ -161,6 +172,10 @@ export function Explorer({ books }: { books: BookFacet[] }) {
   // Held in refs so refetch() -- called from a poll and from a completed regeneration --
   // reads the current view without being rebuilt on every filter change, which would
   // restart the poll timer each time.
+  // Held so a cleared row stays cleared without a refetch that would rebuild a hundred rows
+  // to unset one boolean.
+  const { cleared, clear: clearDirty } = useClearDirty("books");
+
   const filterQueryRef = useRef(filterQuery);
   filterQueryRef.current = filterQuery;
   const pageRef = useRef(page);
@@ -285,6 +300,14 @@ export function Explorer({ books }: { books: BookFacet[] }) {
    * the route drops -- fetched at click time, and the estimate is computed from them here
    * rather than asked for.
    */
+  /** Every dirty page the current filter matches, not just this screen's. */
+  const clearAllDirty = useCallback(() => {
+    fetch(`/api/books/search?${new URLSearchParams(filterQueryRef.current)}&ids=1`)
+      .then((response) => response.json())
+      .then(({ dirtyFiles }: { dirtyFiles?: string[] }) => clearDirty(dirtyFiles ?? []))
+      .catch(() => {});
+  }, [clearDirty]);
+
   const askToRegenerateAll = useCallback(() => {
     if (!result || result.total === 0) return;
 
@@ -374,6 +397,18 @@ export function Explorer({ books }: { books: BookFacet[] }) {
   }, [canRegenerate, refetch]);
 
   //----------------------------------------------------------------------------
+  // Playback
+  //----------------------------------------------------------------------------
+
+  const play = useCallback((line: ResultLine) => {
+    setCurrent(line);
+    // The <audio> src follows `current`, so play only once React has committed it. React
+    // queues its own flush as a microtask when setCurrent is called, which is before this
+    // one, so by the time this runs the element is pointing at the new clip.
+    queueMicrotask(() => void audio.current?.play().catch(() => {}));
+  }, []);
+
+  //----------------------------------------------------------------------------
   // Render
   //----------------------------------------------------------------------------
 
@@ -398,6 +433,7 @@ export function Explorer({ books }: { books: BookFacet[] }) {
         onQuerySubmit={submitQuery}
         onChange={updateFilters}
         onClearAll={() => replaceQuery(new URLSearchParams())}
+        canTriage={canRegenerate}
       />
 
       {/* A line id has no dropdown to sit in - it arrives by link from /reports - so
@@ -414,11 +450,19 @@ export function Explorer({ books }: { books: BookFacet[] }) {
       )}
 
       <div className="text-muted-foreground mb-2 flex items-center gap-3 text-xs">
+        {loading && result && <Refreshing />}
         <span>
           {result ? result.total.toLocaleString() : "…"} pages
           {result && ` · ${result.counts.missing.toLocaleString()} without audio`}
           {result && result.counts.stale > 0 && ` · ${result.counts.stale.toLocaleString()} outdated`}
+          {result && result.dirty > 0 && ` · ${result.dirty.toLocaleString()} pronunciation`}
         </span>
+        {/* Beside the counts, and only for someone who could act on it. */}
+        {canRegenerate && result && result.dirty > 0 && (
+          <Button size="sm" variant="ghost" onClick={clearAllDirty}>
+            Clear {result.dirty.toLocaleString()} marks
+          </Button>
+        )}
         {canRegenerate && result && result.total > 0 && (
           <Button size="sm" variant="secondary" onClick={askToRegenerateAll}>
             Regenerate these
@@ -427,20 +471,49 @@ export function Explorer({ books }: { books: BookFacet[] }) {
       </div>
 
       {loading && !result ? (
-        <p className="text-muted-foreground text-sm">Loading…</p>
+        <Loading label="Loading pages…" />
       ) : result && result.lines.length === 0 ? (
         <p className="text-muted-foreground text-sm">Nothing matches these filters.</p>
       ) : (
         result && (
-          <BookList
-            lines={result.lines}
-            current={current}
-            canRegenerate={canRegenerate}
-            rowStates={rowStates}
-            onPlay={setCurrent}
-            onRegenerate={regenerateOne}
-            onSelectBook={(line) => updateFilters({ bookId: line.bookId })}
-          />
+          <div aria-busy={loading} className={`transition-opacity ${loading ? "opacity-60" : ""}`}>
+            <BookList
+              // Cleared in this session laid over the fetched rows, the way the zones
+              // explorer lays a rewrite over its own: the search said what was true when it
+              // ran.
+              lines={result.lines.map((line) => {
+                let row = cleared.has(line.file) ? { ...line, dirty: false } : line;
+                // A rewritten page is stale by definition -- its text no longer hashes to
+                // what was spoken -- so the state moves with the text rather than waiting
+                // for a refetch.
+                if (line.id in rewritten) {
+                  const text = rewritten[line.id];
+                  row = {
+                    ...row,
+                    text,
+                    chars: text.length,
+                    state: row.state === "missing" ? "missing" : "stale",
+                  };
+                }
+                return row;
+              })}
+              current={current}
+              canRegenerate={canRegenerate}
+              rowStates={rowStates}
+              onPlay={play}
+              onClearDirty={(line) => clearDirty([line.file])}
+              onRegenerate={regenerateOne}
+              onSelectBook={(line) => updateFilters({ bookId: line.bookId })}
+              onReport={setReportFor}
+              onEditText={setEditFor}
+              onRestored={(line, version) => {
+                // The player's cache buster, so the clip that was just put back is the one
+                // that plays rather than the take it replaced -- the file name does not move.
+                setVersions((state) => ({ ...state, [line.id]: version }));
+                refetch();
+              }}
+            />
+          </div>
         )
       )}
 
@@ -459,6 +532,17 @@ export function Explorer({ books }: { books: BookFacet[] }) {
           audioRef={audio}
         />
       </div>
+
+      <PageTextDialog
+        line={editFor}
+        onClose={() => setEditFor(null)}
+        onSaved={(line, text) => setRewritten((current) => ({ ...current, [line.id]: text }))}
+      />
+
+      <ReportDialog
+        subject={reportFor && { source: "books", line: reportFor }}
+        onClose={() => setReportFor(null)}
+      />
 
       <RegenerateDialog
         pending={pendingBatch}

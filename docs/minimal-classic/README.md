@@ -1,7 +1,7 @@
 # Minimal Classic player
 
-A compact alternative layout for SpokenPlayer, based on upstream
-[`spoken/v2.0.4`](https://github.com/rusty-key/spoken-wow/tree/spoken/v2.0.4).
+A compact alternative layout for SpokenPlayer, ported from 2.0.4 onto upstream
+2.1.0, [`master` at `56f910b`](https://github.com/rusty-key/spoken-wow/commit/56f910b).
 This is a community fork, not an official Spoken release.
 
 The player shows a round native still portrait, gold speaker name, narration
@@ -20,12 +20,14 @@ The dark rock background and metal trim use WoW artwork.
 3. Copy `addons/SpokenPlayer` from this repository into your WoW client's
    `Interface/AddOns` folder, replacing the existing player. The folder must
    be named `SpokenPlayer`, with its `.toc` files directly inside it.
-4. Keep your existing feature addon (such as SpokenQuests) and audio packs.
+4. Copy `addons/SpokenContributions` alongside it, as required by the upstream
+   2.1.0 packaging. Keep your feature addon (such as SpokenQuests) and audio packs.
 5. Restart the client after adding the files, then try a known voiced quest.
 
-This branch contains the **2.0.4** player plus the layout. It is not a patch
-for newer upstream releases. Local validation used the modern Classic beta
-client; other modern flavors have not been visually verified. Original
+This branch contains the **2.1.0** player plus the layout. In-game validation
+used the 2.0.4-based layout in the modern Classic beta client; the 2.1.0 port
+is checked separately with the offline suites. Other modern flavors have not
+been visually verified. Original
 private-server 1.12/2.4.3/3.3.5 clients continue using the original layout.
 Addon-manager updates can replace this fork with the official player.
 
@@ -93,15 +95,19 @@ The original-layout regression tests remain in `tests/lua` and run with
 `make test-player` (LuaJIT or Lua 5.1). Their loader includes the new modules
 and explicitly selects the original layout.
 
-**In-game status:** the initial Minimal Classic implementation was confirmed
-working in the Classic beta client. The subsequent native-static-portrait,
-inset-border and opaque-badge revision passes offline checks, but its final
-in-game visual review is pending. Offline fixtures do not emulate WoW rendering.
+**In-game status (2026-09-22):** the final native-static-portrait, inset-border
+and opaque-badge revision was confirmed working in the Classic beta client
+on the 2.0.4-based installation. Two player-supplied screenshots show Gryan
+Stoutmantle's greeting and The People's Militia narration, including the
+right-click menu. The player confirmed all requested checks: appearance,
+portrait identity after dialogue/target changes, playback/queue/menu controls
+and switching back to the original layout.
 
-Before proposing an upstream merge, verify portrait capture after closing
-dialogue/changing target, queued speakers, the border/badge appearance,
-pause/restart, the menu and switching layouts in the client. The change will
-also need to be brought forward onto the then-current upstream branch.
+The same UI implementation is now integrated with upstream 2.1.0, preserving
+its contribution features and scrolling settings panel. The port is verified
+with the offline integration and upstream regression suites; the screenshots
+document the earlier 2.0.4-based runtime. Offline fixtures do not emulate WoW
+rendering.
 
 ## Credits
 

@@ -1,14 +1,11 @@
 /**
  * Talking to ElevenLabs about voices.
  *
- * listVoices is the TypeScript twin of fetch_voice_map in tts_cli/voices.py, and the two
- * must agree: the Python pipeline resolves a voice by name at synthesis time, so a voice
- * this app creates is only usable if that function finds it. The name filter is the whole
- * contract, which is why it lives in one place on each side and is tested against the same
- * expectations.
+ * listVoices resolves the roster by name, and the name filter is the whole contract: a
+ * voice this app creates is only usable if it passes.
  *
- * `fetch` and the base URL are both injectable, for the reason synthesize.py injects
- * http_post: no test should need an ElevenLabs account, and none should ever spend money.
+ * `fetch` and the base URL are both injectable: no test should need an ElevenLabs account,
+ * and none should ever spend money.
  */
 import { isVoiceSlot } from "./slots";
 
@@ -63,7 +60,7 @@ export async function listVoices(options: ElevenLabsOptions = {}): Promise<Map<s
     // Stock voices are skipped rather than reported: their names ("Roger - Laid-Back,
     // Casual, Resonant") cannot express a race-gender mapping, so they are not candidates.
     if (!voice.name || !voice.voice_id) continue;
-    if (isVoiceSlot(voice.name)) found.set(voice.name, voice.voice_id);
+    if (await isVoiceSlot(voice.name)) found.set(voice.name, voice.voice_id);
   }
   return found;
 }

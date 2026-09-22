@@ -19,8 +19,9 @@
 
 LUA ?= $(shell command -v luajit || command -v lua5.1)
 
-.PHONY: help test test-player lint package-all \
+.PHONY: help test test-player contribute-fixtures lint package-all \
         descriptions descriptions-check descriptions-published \
+        character-models \
         audio-release audio-release-dry
 
 help: ## Show this help
@@ -48,11 +49,16 @@ books-%:
 test-player: ## Run the addons' Lua tests (needs luajit)
 	@[ -n "$(LUA)" ] || { echo "No luajit found: brew install luajit"; exit 1; }
 	@$(LUA) tests/lua/quest_dispatch_test.lua
+	@$(LUA) tests/lua/quest_overlay_test.lua
 	@$(LUA) tests/lua/easter_egg_test.lua
 	@$(LUA) tests/lua/sound_utils_test.lua
 	@$(LUA) tests/lua/queue_test.lua
 	@$(LUA) tests/lua/sources_test.lua
 	@$(LUA) tests/lua/api_contract_test.lua
+	@$(LUA) tests/lua/contribute_envelope_test.lua
+	@$(LUA) tests/lua/contribute_toc_test.lua
+	@$(LUA) tests/lua/contribute_box_test.lua
+	@$(LUA) tests/lua/quests_contribute_test.lua
 	@$(LUA) tests/lua/player_frame_test.lua
 	@$(LUA) tests/lua/zones_source_test.lua
 	@$(LUA) tests/lua/zones_pending_test.lua
@@ -67,7 +73,15 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@$(LUA) tests/lua/books_reader_test.lua
 	@$(LUA) tests/lua/books_playlist_test.lua
 	@$(LUA) tests/lua/books_events_test.lua
+	@$(LUA) tests/lua/books_contribute_test.lua
+	@$(LUA) tests/lua/gather_test.lua
+	@$(LUA) tests/lua/zones_contribute_test.lua
 	@$(LUA) tests/lua/migration_test.lua
+
+# Rewrite the envelope fixtures the TypeScript reader is tested against. A diff here is the
+# wire format changing, and that is a change the reader's tests must be part of.
+contribute-fixtures:
+	SPOKEN_WRITE_FIXTURES=1 $(LUA) tests/lua/contribute_envelope_test.lua
 
 # The Python half needs its own venv:
 #
@@ -86,6 +100,7 @@ test: test-player ## Everything: both webs, the Python pipeline, the addons
 
 lint: ## The checks CI gates on
 	@pnpm -r typecheck
+	@node scripts/check-addon-xml.mjs
 	@node pipelines/zones/tools/validate.mjs
 	@node scripts/descriptions.mjs --check
 	@node pipelines/zones/tools/locale/check-strings.mjs
@@ -105,6 +120,12 @@ descriptions-check: ## Confirm the addon READMEs match publishers/
 
 descriptions-published: ## Record the current descriptions as pasted into the site
 	@node scripts/descriptions.mjs --published
+
+# Not a target that runs itself -- scripts/character-models.mjs takes the listfile on stdin
+# so this step never pulls 152 MB on its own. Run it by hand when a new race ships.
+
+character-models: ## Print how to regenerate apps/web/src/lib/npc/character-models.json
+	@sed -n '2,10p' scripts/character-models.mjs | sed -e 's/^\/\/ //' -e 's/^\/\/$$//'
 
 # The sound packs' third channel. CurseForge takes them and Wago does not -- 280-452 MB a
 # pack, and that upload endpoint answers 413 -- so a player who installed an addon from Wago

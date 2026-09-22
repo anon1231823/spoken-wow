@@ -10,20 +10,22 @@ data module are build outputs of this project.
 
 Every line the project knows about is browsable, playable and — for signed-in collaborators —
 re-voiceable at [voiceover.rusty.one](https://voiceover.rusty.one), which is the `web/`
-directory of this repo running against the same corpus and audio store the CLI produces.
+directory of this repo; it is also the only place audio is made.
 
-Five stages, and only the first needs a database:
+**Audio is made on the site and nowhere else.** Every take is cut there, archived as a file
+of its own that is never changed, and recorded as a row; which take is live is a flag on
+that row. This pipeline turns the world database into a corpus and turns the live takes
+into a pack:
 
 | Stage | Input | Output | Who runs it |
 | --- | --- | --- | --- |
 | `extract` | vmangos world DB | `corpus/corpus.json.gz` | a maintainer, when vmangos ships a new dump |
-| `import-audio` | an existing sound pack | `audio/` | once, to adopt audio you already have |
-| `synthesize` | corpus + voice config | mp3s in `audio/` | anyone producing lines |
+| `make quests-sounds` | live takes + `audio-history/` | `audio/` | before every build |
 | `build` | corpus + `audio/` | `dist/SpokenQuestsAudio/` | anyone cutting a release |
 | `install` | the built module | WoW AddOns folder | to try it in game |
 
-The corpus is **committed** — 17,507 lines, 2 MB gzipped — so producing audio needs no
-database, no dump, and no Docker.
+The corpus is **committed** — 17,507 lines, 2 MB gzipped — so building a pack from a given
+`audio/` needs no dump and no Docker.
 
 ## Below is for developers only. Go to [releases](https://github.com/mrthinger/wow-voiceover/releases) if youre looking to install the addon.
 
@@ -115,12 +117,16 @@ elwynn = lines_in_area(corpus, map_id=0, x_range=(-9900, -9000), y_range=(-600, 
 ### Producing a data module
 
 ```bash
-python cli-main.py import-audio                       # adopt an existing pack, once
-python cli-main.py synthesize --npc 240 --dry-run     # what would be made, and its cost
-python cli-main.py synthesize --npc 240               # make it
+make quests-sync                                      # production's corpus and take rows
+make quests-pull-live                                 # the live takes those rows name, and no others
+make quests-sounds                                    # audio/ from the live takes
 python cli-main.py build                              # dist/SpokenQuestsAudio/
 python cli-main.py install --force                    # into the AddOns folder
 ```
+
+Sync first: `pull-live` reads its list from the local database, so a stale one fetches takes
+production has already replaced. `make quests-full-release VERSION=x.y.z` runs sync, pull-live,
+the pack build and, after one confirmation, the CurseForge and GitHub uploads.
 
 `build` emits the sounds, every lookup table and a `sound_length_table.lua` computed from
 the mp3s it just copied. The addon resolves sounds through that table rather than the
@@ -209,10 +215,10 @@ would be no smaller and audibly worse.
 
 Transcodes are cached in `audio-transcoded/<profile>/`, keyed on the **md5 of the master**, so
 a re-generated line misses the cache and everything else is reused, and the two profiles never
-read each other's entries. Keying on mtime would be wrong: `make pull` copies the droplet's
-timestamps, so a freshly pulled take can be older than the entry it should replace. The
-masters in `audio/` are never touched — they stay 128 kbps mp3 — which is what makes raising
-the shipped quality later a re-run rather than a second purchase.
+read each other's entries. Keying on mtime would be wrong: `audio/` is assembled afresh from
+the archive before every build, so an mtime says when, not what. The archived masters are
+never touched — they stay 128 kbps mp3 — which is what makes raising the shipped quality
+later a re-run rather than a second purchase.
 
 Durations stay honest for free: `build` computes the length table from the files it just
 copied, and mutagen reads a VBR mp3's Xing header and an Ogg page's granule position alike.
@@ -341,11 +347,10 @@ Apply migrations with that script rather than by hand: it is what the droplet an
 a migration that only works under an improvised `psql` fails here instead of mid-deploy. It
 reads `DATABASE_URL` from the environment, which `.env.local` does not export.
 
-Search by NPC name or id, or quest title or id, and play any line in the browser. The corpus
-and the audio store are read straight off disk; the corpus is never written. Postgres holds
-what the corpus cannot: accounts and roles, the take history behind each regeneration, the
-pronunciation lexicon, hand-written line overrides, the scan's findings and the regeneration
-queue. Run `import-audio` first, or every line shows as a gap.
+Search by NPC name or id, or quest title or id, and play any line in the browser. Postgres
+holds the corpus, accounts and roles, every take and which one is live, the pronunciation
+lexicon, hand-written line overrides and the regeneration queue; the only thing on disk is
+each take's audio, in `audio-history/`. A line with no live take shows as a gap.
 
 **Progress text is hidden by default.** Those 3,093 lines — 17.7% of the corpus — are never
 voiced by any code path, so leaving them in every result padded the list with rows nobody can
@@ -543,11 +548,15 @@ Like the lexicon, overrides live only in the database, and the Python CLI does n
 
 #### Managing voices
 
-`/voices` is admin-only. It lists the 54 `race-gender-flavor` voices the corpus needs —
-alphabetically, so a race-gender's flavors sit together — with the lines and NPCs each one
-carries, and marks which exist in the ElevenLabs account. The list is derived from the corpus
-rather than written down, so a race added upstream cannot leave the page quietly missing a
-voice.
+`/voices` is admin-only. It lists every voice on the roster — alphabetically, so a
+race-gender's flavors sit together — with the lines and NPCs each one carries, and marks which
+exist in the ElevenLabs account. The roster is `apps/web/src/lib/voices/voices.ts`: every
+race-gender and its flavors, written down by hand, and read by the triage selects and the
+explorer filters too. A voice listed there has a slot before any line uses it, so it can be
+cloned before its first line is accepted. The corpus only supplies the counts; a test fails on
+a corpus line whose voice is not on the roster, and accepting a contribution refuses one. The
+Skybourne elves have the game's two voice sets per gender, named by their NPCSounds id
+(`skybourneelf-male-3776`) until they have better names.
 
 Expanding one shows the clips it would be cloned from: upload, play back, delete, and
 **merge** a selection into one take with an adjustable pause. A slot finds its own source
@@ -584,33 +593,20 @@ UPDATE "user" SET role = 'admin' WHERE email = 'you@example.com';
 The explorer runs at [voiceover.rusty.one](https://voiceover.rusty.one), on a DigitalOcean
 droplet behind nginx. Pushing to `master` builds and ships it automatically — the workflow
 typechecks, applies the migrations with the droplet's own script, runs the tests against a
-throwaway Postgres, and only then builds and swaps the release. The audio store moves
-separately, by hand, because it is 1.1 GB and belongs in neither git nor CI.
+throwaway Postgres, and only then builds and swaps the release. The audio does not travel
+with it: takes are cut on the droplet, and come home one way, by hand.
 
 ```bash
-make push            # local audio/ -> droplet, then reload (dry-run + confirm first)
-make pull            # droplet -> local audio/  (--delete: removes local extras)
-make audio-status    # file count and size on both sides
-make releases        # what is deployed, and what you can roll back to
-make rollback        # back one release; RELEASE=<name> to pick one
-```
-
-**The droplet is usually the newer side now**, because regeneration happens there through
-the web UI. `make push` runs two rsync dry runs to find files the droplet has changed since
-you last pulled, and refuses rather than let `--delete` take them; `make pull` first, or
-`FORCE=1` to overwrite anyway. It no longer needs a pm2 reload — `storeIndex()` re-reads
-whenever the store's mtime moves, which is also what lets a line generated by one pm2 worker
-be visible to the other.
-
-```bash
-make pull-history    # previous takes; v0 of each is unreproducible, so back this up
-make history-status
-make pull-ignores    # the ignore list, database -> corpus/ignored.json (commit the result)
+make quests-pull-history     # every take; some are unreproducible, so back this up
+make quests-history-status   # take count and size on both sides
+make quests-export-ignores   # the ignore list, database -> corpus/ignored.json (commit it)
+make web-releases            # what is deployed, and what you can roll back to
+make web-rollback            # back one release; RELEASE=<name> to pick one
 ```
 
 Deploys are versioned as directories under `/srv/voiceover/releases/`, with `current` a
 symlink that pm2 follows, so a rollback is a symlink swap needing neither CI nor network.
-The audio store lives outside every release in `shared/`: it is never copied on deploy and
+The take archive lives outside every release in `shared/`: it is never copied on deploy and
 survives a rollback untouched. Migrations run before the swap and are forward-only — a
 rollback restores code, never schema, so every release must run against the schema of the
 release after it.
@@ -622,40 +618,14 @@ it, which is what `kill_timeout` in `deploy/ecosystem.config.js` is for.
 First-time droplet setup, the nginx vhost, and the GitHub secrets the workflow needs are in
 [`deploy/README.md`](deploy/README.md).
 
-### Language Client Selection
-Currently there are no voice translations available for languages other than english. However, if you want to use the addon with a non English client, you can still do so by creating the lookup tables in the client's respective language.
-
-To create the lookup tables, you can use the following command, with `LANGUAGE_CODE` representing the required language for the client:
-```bash
-python cli-main.py gen_lookup_tables --lang=LANGUAGE_CODE
-```
-The default selection, when no language code is provided, is English. Please be aware that the quality of text completion for translations in languages other than English can vary significantly.
-
-Unlike `build`, this reads the world database directly, so it needs the Docker MySQL and the
-extraction dependencies — the committed corpus is English only.
-
-The following language codes are supported:
-| Language Code | Language |
-| ------------- | ------- |
-| enUS          | English |
-| enGB          | English |
-| koKR          | Korean |
-| frFR          | French |
-| deDE          | German |
-| zhCN          | Simplified Chinese |
-| zhTW          | Traditional Chinese |
-| esES          | European Spanish |
-| esMX          | Mexican Spanish |
-| ruRU          | Russian |
-
 ## Output
 
-`synthesize` writes into the audio store at `audio/{quests,gossip}/`, which is gitignored and
-is the project's most expensive asset — it moves between machines with `make push` / `make
-pull` and never through git or CI. `build` copies from there into
+`make quests-sounds` fills `audio/{quests,gossip}/` from the live takes in `audio-history/`,
+and is run again before every build rather than kept. `build` copies from there into
 `dist/SpokenQuestsAudio/generated/sounds/`, alongside every lookup table and the
 `sound_length_table.lua` computed from exactly those files. A pack for players goes through
-`make package-audio`, which stages an ogg copy of the store first — see *Packaging*.
+`make quests-package-audio`, which runs `quests-sounds` and stages an ogg copy first — see
+*Packaging*.
 
 ### Stage directions and the narrator
 
@@ -669,7 +639,7 @@ The same brackets also hold sounds the NPC makes: `<hic>`, `<cough>`, `<sigh>`, 
 corpus with no exceptions — a direction names someone, a sound is a bare lowercase word. Do not
 also require a closing full stop; that misclassifies `Motega shrugs his shoulder`. A sound is
 not narrated: `audioTags` rewrites it into ElevenLabs' own syntax — `<hic>` becomes `[hic]` —
-and the NPC performs it in their own voice, which `eleven_v3` (the model the database selects)
+and the NPC performs it in their own voice, which `eleven_v3` (the default everywhere)
 understands and `eleven_multilingual_v2` does not. The rewrite runs on the whole line before it
 is split, so a line whose only bracket is a sound never touches the dialogue endpoint.
 
@@ -677,9 +647,6 @@ Because voiceability is recomputed from the effective text rather than read from
 this unblocked 62 previously silent lines without regenerating the corpus. **Nothing is
 generated in bulk.** Tick **has narration** in the explorer to find these lines, listen, and
 regenerate the ones worth fixing through the usual controls.
-
-This is the second place the two generators diverge: `tts_cli` knows none of it and still
-refuses every one of those lines, exactly as it sends no pronunciation dictionary.
 
 ### Lines nobody will ever voice
 
@@ -695,17 +662,14 @@ An ignored line disappears from searches unless **ignored only** is ticked, is r
 regeneration before a request is spent, and is left out of the addon's lookup tables so no
 entry resolves to a sound that will never exist.
 
-The Python CLI and the rsync targets have no database, so the list is exported:
+The pack build reads no database, so the list is exported:
 
 ```bash
-make pull-ignores    # database -> corpus/ignored.json; commit it
+make quests-export-ignores    # database -> corpus/ignored.json; commit it
 ```
 
-That file is what `tts_cli/ignores.py` reads. `push`, `pull` and their dry runs derive
-`.rsync-ignored` from it before every transfer and pass it to `--exclude-from`, which also
-stops `--delete` removing what it excludes — audio made before the decision is left where it
-is rather than destroyed. `make build` leaves both the audio and the lookup entries out of the
-module. **A file is only excluded when every line addressing it is ignored**, so ignoring one
+That file is what `tts_cli/ignores.py` reads. `build` leaves both the audio and the lookup
+entries out of the module; the takes themselves stay in the archive. **A file is only excluded when every line addressing it is ignored**, so ignoring one
 gendered variant of a shared gossip line strands nothing.
 
 Seeded with the 35 war-effort lines and quest 1 by migration `0017`.
@@ -785,6 +749,145 @@ Collaborators and admins triage at `/reports`, marking each report fixed, not a 
 reopening it. **A report never becomes a regeneration job.** Regenerating spends ElevenLabs
 credits, so nothing public can start one; someone reads the report, listens, and queues the
 file through the normal flow.
+
+### When there is no line at all
+
+A report presumes a line exists and is wrong. Some of the time there is no line to be wrong —
+the corpus is built from a 1.12 world database, so it has nothing for content that postdates
+vanilla, for a locale that database does not carry, or for whatever a private server invented
+on top of it. In those three cases the client in front of the player is holding the only copy
+of the text, and `Contribute:HasGap()` puts a button reading **"Contribute"** — the same word
+the books addon's button carries — in the top right corner of the Blizzard quest or gossip
+frame, just left of its close button, exactly when there is text on screen and nothing queued
+to play. The quest log offers the same thing where a quest's Play would be: a small plus icon
+in the list, and the details view's Play reading **Contribute**. A contribution from the log
+carries the quest's own description as its accept text and `from=log`, but no NPC — the log
+does not say who gave the quest. It exists on the Blizzard clients only: the 1.12, 2.4.3 and 3.3.5 clients are private
+servers, where contributing is off for now, and their `.toc` files leave out the `Contribute.xml`
+that loads it (the 1.12 client's Lua 5.0 could not parse it anyway). A player who does not want it turns it off with **Hide the Contribute buttons** in the
+Spoken Player settings, one switch for the quests, books and zones buttons alike; each addon
+asks `Spoken:AreContributeButtonsHidden()` in its gap check and refreshes on the player's
+`CONTRIBUTE_SETTINGS_CHANGED` callback, since toggling it fires no game event.
+
+Clicking it opens the same copy box `ReportButton.lua` uses, holding a plain-text envelope
+instead of an address: the addon, the build, the locale, the quest or NPC, and the text
+itself. The client still cannot open a browser or post anywhere, so the player copies it,
+opens `spoken.rusty.one/contribute`, pastes, sees a field-by-field preview of exactly what is
+about to be sent, and submits.
+
+The same text pasted again — by the same player or a different one — bumps a count on the
+existing row rather than filing a second one; different text under the same key stays its own
+row. That count is the triage priority at `/contributions`, the contribution queue's own
+`/reports`: a collaborator accepts or rejects, and **accepting never starts generation** — a
+contribution becomes corpus text and a regeneration job the same deliberate way a report
+becomes a fix, by a person reading it first.
+
+Accepting a quest row writes it into the quest tables, the same ones the extract fills
+(`lib/contributions/accept.ts`): a `quest_line` with origin `contributed`, named by the same
+rules `tts_cli/naming.py` uses, and a `quest_line_speaker` row carrying the contribution's id.
+From there it is an ordinary line — the explorer lists it under missing audio with a
+*contributed* badge linking back, an editor fixes anything the player's client substituted
+that the addon could not put back (the branch of a `$G` it picked) through the usual text
+override, generates a take, and the next export carries it into the pack. The addon does put
+back the reader's own name, class and race as `$N`, `$C` and `$R` before sending — only the
+client knows which words those were — so a contributed line is a template like an extracted
+one: stored as `originalText`, spoken as `Adventurer`/`Traveler` by the extract's own table,
+and hashed on the template when it is gossip. Class and race are swapped wherever they occur as
+whole words, so a warrior's "a warrior's discipline" arrives as "a `$c`'s discipline"; that
+false positive is accepted over voicing one player's class at everyone. The speaker row is the mark, not the line's origin, because an edit puts an `edited`
+version on top; it is also what `corpus_db.py`'s import leaves alone when it replaces every
+extracted speaker, and it numbers from 1,000,000 so a re-import never meets it. The corpus
+wins where it already has the line: a quest moment is matched by quest id and moment alone
+(the tables carry some only as `:m`/`:f` variants), and a gossip line it already has gains the
+contributing NPC as one more speaker instead of a copy. Progress lines are kept, marked
+`progress` and never voiced, as the extract marks its own. Once written, a contribution cannot
+be moved back to new or rejected; ignoring the line in the explorer is how to back out.
+
+#### Who is speaking
+
+A line still needs a voice, and a voice name is `race-gender-flavor`. The corpus answers that
+for every NPC it carries. For one it has never seen, the answer has to come from somewhere, and
+the client can supply two thirds of it.
+
+The addon reports what it can see and nothing more: `kind` (creature or gameobject), `model` —
+the model file id a `PlayerModel` frame answers for the unit — `sex` from `UnitSex`, and
+`creature` from `UnitCreatureType`. It carries no race table. `apps/web/src/lib/npc/models.ts`
+holds that instead, 81 character models across 32 races, and maps `122055` to
+`{race: "tauren", gender: "male"}`. The path a race and gender resolve to on disk —
+`character/tauren/male/taurenmale.m2` — lives in the community listfile, not in this repo; the
+model table only ever needs the race and the gender an id names, never the path itself. The
+table lives on the site deliberately: a race added upstream, or an id that turns out to mean
+something else, is corrected in one deploy, while a table shipped inside the addon waits for
+every player to take an update, and the legacy-client players install their zips by hand.
+
+`resolveNpc` then answers in order, stopping at the first that knows:
+
+1. **A moderator's answer.** Somebody looked, and they may know something no data source does.
+2. **The corpus**, for an NPC it already carries. Exact, and the only one of the three that
+   supplies a real flavor.
+3. **The client's model id**, mapped to a race and a gender, with the flavor defaulted and the
+   row left **unconfirmed**. The default is not a constant: `lib/corpus.ts:defaultFlavorFor`
+   mirrors `tts_cli/flavors.py`'s own `fallback_flavors` — "standard" where that race-gender has
+   it, otherwise its busiest flavor, from the corpus rather than a hardcoded name. Four
+   race-genders (dwarf-female, goblin-female, goblin-male, tauren-male) have no standard voice
+   in the game at all, so a constant would leave them pointing at nothing; tauren-male defaults
+   to `warrior`, its busiest, not `standard`. A race-gender the corpus has never carried a
+   flavored line for at all defaults to no flavor rather than a guess.
+4. **Nothing.** A murloc, a dragon or an elemental is drawn with a creature model rather than a
+   character one, and resolves to no race at all. That is a normal outcome, not a failure:
+   `narrator-male` has always been the pseudo-race for things that do not have one.
+
+**The flavor cannot be detected in game, and it is worth knowing why before going looking.**
+`tts_cli/flavors.py` recovers it by reading SoundEntries names like
+`DwarfFemaleMaternalNPCGreetings`. No client API exposes a creature's `NPCSoundID`, nor the
+sound the game chose to play when the gossip frame opened, and the modern client's data has no
+`SoundKitName` table at all. So for a new NPC the flavor is defaulted and flagged, and a
+moderator is the only thing that can improve it.
+
+An envelope carrying no `kind` resolves to nothing rather than being assumed a creature.
+`ReportButton:TargetForGUID` accepts any GUID `Enums.GUID:CanHaveID` allows, which includes
+`GameObject` — the sound packs ship `object_name_lookups.lua` for exactly those quest givers —
+and such an envelope carries no `model` either, so the best row it could produce is a name we
+already have. Filing a gameobject under a creature id would merge two id spaces that overlap:
+creature 68 is a Stormwind City Guard, gameobject 68 is a Wanted Poster.
+
+Reading such a contribution is different from writing it. The triage page, accept and the
+export all look its id up under both kinds (`triage.ts:idOnlyResolution`): when the answers on
+file agree, that answer is used, a moderator's first. When a creature and a gameobject sharing
+the id disagree, nothing is used and the row shows the conflict; the moderator picks which one
+the contribution meant, and that pick is stored on the contribution (`contribution.npcKind`,
+migration 0033), never in `meta`, which stays what the client sent. From then on every reader
+treats the row as if its envelope had carried the kind.
+
+The answer is stored once per NPC, keyed on the kind *and* the id for that same reason, so one
+correction fixes every line that NPC speaks. `npc_resolution` also keeps what the client
+reported even when a moderator overrules it — evidence about the NPC is worth more than the
+guess it produced — along with the client build, since model ids are per-build data.
+
+Precedence is enforced in the SQL rather than by whoever calls it: `moderator` outranks
+`corpus`, which outranks `client`, which outranks `none`, and a write only lands when it ranks
+at least as high as what is already there. A submission carrying less information can never
+erase one carrying more — the case that matters is a player on an older addon, whose envelope
+has no model at all, submitting for an NPC somebody else already resolved.
+
+`/contributions` shows the result with its provenance and says plainly which rows are guesses;
+the override there writes `moderator` and is collaborator-only, like everything else that
+changes a row. A new race or voice set is added to the roster in
+`apps/web/src/lib/voices/voices.ts`: that puts it in the triage selects and gives it a slot on
+`/voices`, marked as not existing in the account until it is cloned.
+
+`/contributions/game-data`, unlinked and collaborator-only, resolves NPCs from a game client
+instead of by hand. It lists chat commands that make the client ask its server about every
+unresolved NPC. The answers land in the client's `creaturecache.wdb`, which the page reads in
+the browser for each NPC's appearance ids. The server turns those into voices with
+`apps/web/src/lib/npc/display-voices.json`, and **Apply** writes them as moderator answers.
+The voice set decides over the model, because it is what the player hears.
+`display-voices.json` comes from a local install, so regenerate it when the client updates:
+
+```bash
+curl -sL https://github.com/wowdev/wow-listfile/releases/latest/download/community-listfile.csv -o /tmp/listfile.csv
+python tools/export_display_voices.py --listfile /tmp/listfile.csv
+```
 
 ## Addon Install
 
@@ -875,6 +978,43 @@ leaves every Blizzard quest panel hidden, and the player used to read such an in
 offer, so turning a quest in replayed its accept line and the completion line never played at
 all. Panels still classify an interaction when they are visible; when none is, the last quest
 event the client fired decides, and `QUEST_FINISHED` clears it.
+
+The second class is the opposite problem: an addon that answers the quest event itself. Leatrix
+Plus calls `AcceptQuest` from its own `QUEST_DETAIL` handler, and the auto-turn-in addons do
+the same with `CompleteQuest` and `GetQuestReward`, so the dialog is over in the frame it
+opened in — `GetQuestID` is back to 0 before the watcher's first poll, and the interaction was
+never read at all. The quest globals are therefore snapshotted when the client fires the event,
+which is the last moment they still describe it, and the watcher replays that snapshot when the
+quest ID drops to 0 with nothing dispatched for the dialog. It is a fallback, not a second
+dispatcher: a dialog the player clicks through is dispatched by the watcher as before and its
+snapshot is discarded.
+
+`tests/lua/quest_overlay_test.lua` covers the other thing the quest UI owes a player: the play
+button beside each quest in the quest log. There are two quest logs to draw it in. The old one
+is a named frame with numbered title rows (`QuestLogTitle1`…), redrawn through `QuestLog_Update`
+— what Classic Era and the private-server clients have, and what `QuestOverlayUI` was written
+against. The Forever client reports itself as mainline and draws the modern map-attached log
+instead: no `QuestLogFrame`, no `QuestLog_Update`, no `GetQuestLogTitle`, and rows that come
+out of `QuestScrollFrame.titleFramePool` with no names at all. `Compatibility.lua` therefore
+replaces `QuestOverlayUI:Update` where that pool exists — feature-detected, not keyed to a
+client — walking the pooled rows and hooking `QuestLogQuests_Update`, which is that log's
+`QuestLog_Update`. The blank prefix the old log's buttons indent a title with is not available
+there: that title wraps into a height the layout has already decided, and a prefix re-wraps it
+inside a row too short to hold the extra line. So the button is anchored instead — left of the
+title, in the inset the row leaves at its left, and beside the tracking checkbox at the other
+end of the row when "Quest objectives" is on and the client is drawing its own icon in that
+inset. The objective icons are how that is detected: they are pooled beside the rows rather
+than parented to them, so the row's own icon is the 20-pixel button carrying the row's quest ID
+that is not the play button.
+
+That log's details view gets a button of its own, beside Back, which says `Play` and says
+`Stop` while it is reading. The list's buttons cannot follow a quest into it — a frame has one
+parent — so it is a single button rebound to whichever quest the panel shows, hung off the same
+header strip the Back button is on (a button parented to the details frame itself draws its
+artwork under the border art and arrives as a floating label) and mirrored off that button for
+its size and its line. `QuestOverlayUI:BindPlayButton` is what both kinds of button share; a
+button that says what it does in words rather than in a texture carries a `setPlayState` of its
+own, which is what `SetPlayButtonState` calls instead of swapping the icon.
 
 The web suite runs against a **real Postgres**, because the invariants it protects — archive
 the current take before anything overwrites it, never hand the same file to two jobs — live in

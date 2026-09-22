@@ -18,6 +18,7 @@ the client loads what is in the folder. They are unmodified copies, and are foun
 | Ace3 (AceAddon, AceConsole, AceDB, AceDBOptions, AceEvent, AceTimer, AceGUI-3.0, AceConfig-3.0, AceCore-3.0) | SpokenQuests, SpokenPlayer | [Ace3 license](https://www.wowace.com/projects/ace3) |
 | LibDataBroker-1.1 | SpokenPlayer, SpokenZones | Public domain / CC0, per its project page |
 | LibDBIcon-1.0 | SpokenPlayer, SpokenZones | Public domain, by Rabbit |
+| [LibDeflate](https://github.com/SafeteeWoW/LibDeflate) 1.0.2-release | SpokenPlayer | zlib License (`Libs/LibDeflate/LICENSE.txt`) |
 
 If you are vendoring a new library, put its upstream license text beside it rather than
 only adding a row here.
@@ -50,6 +51,9 @@ None of this is the project's to license, and the MIT grant does not reach it.
   which article each line came from.
 - **Book, letter and in-world text** for SpokenBooks comes from the same vmangos
   extraction as the quest corpus, and is likewise Blizzard's.
+- Text submitted through `/contribute` is game text as well: a player's client is showing it and
+  they are sending a copy. It sits on the same footing as the corpus above, and the same terms
+  apply to it.
 - **Map images, portrait frames and icons** derived from game assets
   (`PortraitFrameAtlas`, the continent maps) are Blizzard's.
 - **Minimal Classic player textures** (`addons/SpokenPlayer/Textures/Minimal*.tga`)

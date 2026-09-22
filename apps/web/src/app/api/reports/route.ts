@@ -14,11 +14,12 @@ import { headers } from "next/headers";
 
 import { auth } from "@/lib/auth";
 import { clientIp } from "@/lib/reports/client-ip";
-import { isSource, validateSubmission, type Source } from "@/lib/reports/reports";
+import { validateSubmission } from "@/lib/reports/reports";
 import { countRecent, createReport } from "@/lib/reports/store";
 import { formatTarget, parseTarget, resolveTarget } from "@/lib/reports/target";
 import { BASE_LANG as BOOKS_LANG, pageById } from "@/lib/books/catalogue";
 import { lineByPath } from "@/lib/zones/catalogue";
+import { type Source, isSource } from "@/lib/sections";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
       ? await zonesTarget(raw)
       : source === "books"
         ? await booksTarget(raw)
-        : questsTarget(raw, body.lineId);
+        : await questsTarget(raw, body.lineId);
 
   if (!addressed) {
     return Response.json({ error: "unknown target" }, { status: 400 });
@@ -103,15 +104,16 @@ export async function POST(request: Request) {
  * Only a lineId the address actually resolves to is stored, so the browser cannot attach a
  * report to a line the reporter never saw.
  */
-function questsTarget(
+async function questsTarget(
   raw: string | null,
   claimed: unknown,
-): { lineId: string | null; target: string } | null {
+): Promise<{ lineId: string | null; target: string } | null> {
   const target = raw ? parseTarget(raw.split("/")) : null;
   if (!target) return null;
 
   const wanted = typeof claimed === "string" ? claimed : null;
-  const lineId = resolveTarget(target).find((line) => line.lineId === wanted)?.lineId ?? null;
+  const lines = await resolveTarget(target);
+  const lineId = lines.find((line) => line.lineId === wanted)?.lineId ?? null;
   return { lineId, target: formatTarget(target) };
 }
 

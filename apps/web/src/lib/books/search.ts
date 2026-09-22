@@ -10,6 +10,8 @@
 // regeneration pass picks up. If these two ever disagree, the explorer is lying about what
 // needs regenerating.
 
+import { isDirty } from "@/lib/generation/dirty";
+
 import type { BookPage, SearchContext, Take } from "./catalogue";
 import { PAGE_SIZE, type Field, type PageFilters, type OwnerKind, type State } from "./filters";
 
@@ -34,6 +36,12 @@ export type ResultLine = {
   take: Take | null;
   /** How many reports on this page are still open. The count is public; the bodies are not. */
   reportsOpen: number;
+  /**
+   * This take was cut before a pronunciation it speaks was changed, and nobody has said it
+   * is fine since. Orthogonal to `state`: a lexicon edit moves no text, so a take can be
+   * current and dirty at once. Cleared by hand only -- see lib/generation/dirty.ts.
+   */
+  dirty: boolean;
 };
 
 export type SearchResult = {
@@ -43,6 +51,8 @@ export type SearchResult = {
   /** What the current filter selects, for the header and the regenerate quote. */
   totalChars: number;
   counts: Record<State, number>;
+  /** How many of the matched pages are dirty. Not a fourth state; see ResultLine.dirty. */
+  dirty: number;
   offset: number;
   limit: number;
 };
@@ -73,6 +83,13 @@ export function decorate(page: BookPage, context: SearchContext): ResultLine {
     state: stateOf(page, take),
     take: take ?? null,
     reportsOpen: context.reports.get(page.id) ?? 0,
+    // The spoken text, not the printed one: the lexicon is applied to what is sent.
+    dirty: take
+      ? isDirty(
+          { file: page.file, text: page.spoken, generatedAt: Date.parse(take.generatedAt) },
+          context.dirt,
+        )
+      : false,
   };
 }
 
@@ -98,6 +115,8 @@ export function matching(lines: ResultLine[], filters: PageFilters = {}): Result
   if (filters.ownerKind) out = out.filter((l) => l.ownerKind === filters.ownerKind);
   if (filters.bookId !== undefined) out = out.filter((l) => l.bookId === filters.bookId);
   if (filters.state) out = out.filter((l) => l.state === filters.state);
+  // Its own filter rather than a fourth state, because a current take can be dirty.
+  if (filters.dirty) out = out.filter((l) => l.dirty);
   if (filters.voiceable) out = out.filter((l) => l.generatable);
   if (filters.reports === "open") out = out.filter((l) => l.reportsOpen > 0);
   // An id the corpus no longer carries matches nothing rather than everything: a report
@@ -132,8 +151,10 @@ export function search(
 
   const counts: Record<State, number> = { missing: 0, stale: 0, current: 0 };
   let totalChars = 0;
+  let dirty = 0;
   for (const line of matched) {
     counts[line.state]++;
+    if (line.dirty) dirty++;
     totalChars += line.chars;
   }
 
@@ -142,6 +163,7 @@ export function search(
     total: matched.length,
     totalChars,
     counts,
+    dirty,
     offset,
     limit,
   };

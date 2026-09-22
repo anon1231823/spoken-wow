@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { OverrideError, validateOverride } from "@/lib/issues/override";
+import { OverrideError, validateOverride } from "@/lib/quests/override";
 import { hasInvalidChars, INVALID_CHARS } from "@/lib/text-gate";
 import type { ResultLine } from "@/lib/search";
 

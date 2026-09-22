@@ -16,6 +16,11 @@ NAME="SpokenPlayer"
 SRC="$REPO/addons/$NAME"
 TOC="$SRC/$NAME.toc"
 DIST="${DIST:-$REPO/dist}"
+# Shipped beside the player in the same zip: a folder with one .toc and no Lua, which exists so
+# the gathered lines a player uploads are in a file named SpokenContributions.lua rather than
+# inside the player's own settings file. See its .toc.
+STORE="SpokenContributions"
+STORE_SRC="$REPO/addons/$STORE"
 LEGACY_CLIENTS=(1.12 2.4.3 3.3.5)
 
 [ -f "$TOC" ] || { echo "error: $TOC not found" >&2; exit 1; }
@@ -23,7 +28,7 @@ version="$(sed -n 's/^## Version:[[:space:]]*//p' "$TOC" | head -1 | tr -d '\r')
 [ -n "$version" ] || { echo "error: no '## Version:' line in $TOC" >&2; exit 1; }
 
 if [ -z "${ALLOW_DIRTY:-}" ] && git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then
-  if [ -n "$(git -C "$REPO" status --porcelain -- "addons/$NAME")" ]; then
+  if [ -n "$(git -C "$REPO" status --porcelain -- "addons/$NAME" "addons/$STORE")" ]; then
     echo "error: addons/$NAME/ has uncommitted changes." >&2
     echo "       Commit them, or re-run with ALLOW_DIRTY=1 to package anyway." >&2
     exit 1
@@ -54,10 +59,14 @@ staging="$(mktemp -d)"
 trap 'rm -rf "$staging"' EXIT
 mkdir -p "$staging/$NAME"
 (cd "$SRC" && tar -cf - --exclude '.DS_Store' --exclude '*.bak' --exclude '*.orig' .) | (cd "$staging/$NAME" && tar -xf -)
+mkdir -p "$staging/$STORE"
+cp "$STORE_SRC/$STORE.toc" "$staging/$STORE/"
+store_version="$(sed -n 's/^## Version:[[:space:]]*//p' "$STORE_SRC/$STORE.toc" | head -1 | tr -d '\r')"
+[ "$store_version" = "$version" ] || { echo "error: $STORE.toc says $store_version, $NAME.toc says $version" >&2; exit 1; }
 
 excludes=()
 for client in "${LEGACY_CLIENTS[@]}"; do
   excludes+=("$NAME/$client/*" "$NAME/${NAME}_$client.toc")
 done
-(cd "$staging" && zip -r -q -X "$zip_path" "$NAME" -x '*.DS_Store' '*/.git/*' '*.bak' '*.orig' "${excludes[@]}")
+(cd "$staging" && zip -r -q -X "$zip_path" "$NAME" "$STORE" -x '*.DS_Store' '*/.git/*' '*.bak' '*.orig' "${excludes[@]}")
 echo "built $(basename "$zip_path")   files: $(unzip -Z1 "$zip_path" | grep -cv '/$')   size: $(du -h "$zip_path" | cut -f1)"

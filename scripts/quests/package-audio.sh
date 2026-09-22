@@ -95,9 +95,9 @@ THRESHOLD="${THRESHOLD:-80}"
 #
 # CONTENT-ADDRESSED, so a cache hit cannot be stale: the entry is named for the
 # md5 of the master it came from, and a regenerated line hashes differently and
-# misses. Keying on mtime would be cheaper and wrong - `make pull` copies the
-# droplet's timestamps, so a freshly pulled take can be older than the entry it
-# ought to replace.
+# misses. Keying on mtime would be cheaper and wrong - audio/ is assembled afresh
+# from the archive before every build, so an mtime says when it was assembled, not
+# what the clip holds.
 CACHE_ROOT="${CACHE_ROOT:-$QUESTS/audio-transcoded}"
 
 PYTHON="${PYTHON:-$([ -x "$QUESTS/.venv/bin/python" ] && echo "$QUESTS/.venv/bin/python" || command -v python3)}"
@@ -237,13 +237,14 @@ else
 
   # Entries for masters since re-cut or deleted. Without this the cache keeps every
   # superseded encode forever, which is what audio-history/ is for and this is not.
+  # sed rather than -exec basename: a process per cached file took minutes on macOS.
   pruned=0
   while IFS= read -r stale; do
     [ -n "$stale" ] || continue
     rm -f "$cache/$stale"
     pruned=$((pruned + 1))
   done < <(comm -23 \
-    <(find "$cache" -name "*.$FORMAT" -exec basename {} \; | sort) \
+    <(find "$cache" -name "*.$FORMAT" | sed 's#.*/##' | sort) \
     <(awk -F'\t' -v ext=".$FORMAT" '$3 == "encode" {print $1 ext}' "$plan" | sort -u) || true)
 
   echo "  $hits reused, $encoded encoded, $kept masters kept as smaller, $pruned superseded entries dropped"

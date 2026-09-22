@@ -126,6 +126,31 @@ stub.Advance(3)
 Expect("replacement dialog UI: turn-in reads complete, not accept",
     string.format("%d-accept, %d-complete", quest, quest))
 
+-- An auto-accept addon (Leatrix Plus, and the auto-turn-in addons besides it) calls
+-- AcceptQuest from its own QUEST_DETAIL handler, so the quest dialog is gone in the same
+-- frame the offer arrived in. The 10 Hz watcher never sees a quest ID to stabilize, so the
+-- event snapshot is the only record that the interaction happened.
+quest = quests[1]
+StartScenario()
+world.questID = quest
+stub.FireEvent("QUEST_DETAIL")
+world.questID = 0
+stub.FireEvent("QUEST_FINISHED")
+stub.Advance(3)
+Expect("auto-accepted quest still reads accept", string.format("%d-accept", quest))
+
+-- The turn-in half of the same addon: it answers QUEST_PROGRESS with CompleteQuest and
+-- QUEST_COMPLETE with GetQuestReward, so both arrive and close within one frame.
+quest = quests[2]
+StartScenario()
+world.questID = quest
+stub.FireEvent("QUEST_PROGRESS")
+stub.FireEvent("QUEST_COMPLETE")
+world.questID = 0
+stub.FireEvent("QUEST_FINISHED")
+stub.Advance(3)
+Expect("auto-turned-in quest still reads complete", string.format("%d-complete", quest))
+
 if failures > 0 then
     print(string.format("\n%d scenario(s) failed", failures))
     os.exit(1)

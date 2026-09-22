@@ -48,6 +48,11 @@ Defaults = {
             -- durations are looked up in.
             LegacyHDModels = (Version.IsLegacyWrath or Version.IsLegacyBurningCrusade or nil) and false,
         },
+        Contribute = {
+            -- One switch for every feature addon's Contribute button, since they all hand
+            -- the player the same box and a player who does not want one wants none.
+            HideButtons = false,
+        },
         Minimap = {
             LibDBIcon = {}, -- LibDBIcon's own: minimapPos, lock, hide
             -- What each mouse button does. "Menu" opens the list; any other value is a
@@ -190,6 +195,8 @@ function Addon:Enable()
             SoundQueue:Skip()
         elseif command == "options" or command == "settings" then
             Options:Open()
+        elseif command == "share" and Gather then
+            Spoken:ShowGatherInstructions()
         elseif command == "reset" then
             PlayerFrame:Reset()
         elseif command == "diagnostics" then

@@ -17,7 +17,8 @@
 
 .DEFAULT_GOAL := help
 .PHONY: help db extract import export lookup deploy deploy-copy status remove \
-        pull pull-dry sounds db-pull package package-audio release-dry release release-wago release-curse icon test
+        pull-history pull-live sounds sync check-synced package package-audio release-dry release release-wago release-curse icon test \
+        full-release
 
 PIPELINE := pipelines/books
 QUESTS   := pipelines/quests
@@ -45,13 +46,15 @@ lookup: ## take -> addons/SpokenBooksAudio/Data/Sounds.lua (needs DATABASE_URL)
 # The narration
 #
 # Generation happens on the droplet -- that is where the site runs and where the queue
-# spends the credits -- so the masters live there and come here to be packaged and to be
-# listened to in a client. Audio is not in git; see the root .gitignore.
+# spends the credits -- so the take archive lives there and comes here to be packaged and to
+# be listened to in a client. Audio is not in git; see the root .gitignore.
 #-------------------------------------------------------------------------------
 
 include make/droplet.mk
-REMOTE_BOOKS := /srv/spoken/shared/books/
-LOCAL_BOOKS  := pipelines/books/audio/
+# Books' own archive under the shared audio-history, the directory
+# SPOKEN_BOOKS_AUDIO_HISTORY names in deploy/web/ecosystem.config.js.
+REMOTE_HISTORY := $(REMOTE_ROOT)/shared/audio-history/books/
+LOCAL_HISTORY  := pipelines/books/audio-history/
 
 # macOS ships openrsync as /usr/bin/rsync, which reports itself as "2.6.9 compatible" and
 # rejects --info. Prefer a real rsync 3.x anywhere on PATH.
@@ -59,54 +62,33 @@ RSYNC ?= $(shell for r in /opt/homebrew/bin/rsync /usr/local/bin/rsync $$(comman
 	[ -x "$$r" ] && "$$r" --version 2>/dev/null | head -1 | grep -q 'version 3' && { echo "$$r"; exit 0; }; \
 	done)
 
-# No --delete, unlike the zones targets. Nothing here is irreplaceable in the way a hand
-# imported store is -- every clip can be cut again -- but a mirror that silently removes
-# local files is still the wrong default for a directory somebody may have pulled a subset
-# into. Stale files cost disk; deleted ones cost credits.
-RSYNC_OPTS := -az --info=stats1,progress2 --human-readable
+# No -z: mp3 is already compressed. Never --delete: archived audio is only ever added to.
+RSYNC_OPTS := -a --partial --info=stats1,progress2 --human-readable
 
-LOCAL_DB ?= postgres://localhost/spoken_quests_dev
-
-# pg_dump 16.10 and later wrap their output in \restrict / \unrestrict, psql meta-commands
-# an older psql fails on. Both clusters are ours, so strip them. Same as make/zones.mk.
-UNRESTRICT := sed -e '/^\\restrict/d' -e '/^\\unrestrict/d'
-
-db-pull: require-droplet ## Copy the droplet's books takes into the local database (REPLACES them)
-	@printf 'Replace the LOCAL books takes with the droplet ones? [y/N] ' && read a && [ "$$a" = y ] || { echo aborted; exit 1; }
-	@( echo 'begin;'; \
-	   echo 'delete from "take" where "source" = '"'"'books'"'"';'; \
-	   $(SSH) $(DROPLET) 'set -a; . /srv/spoken/shared/app.env; set +a; pg_dump "$$DATABASE_URL" --data-only --table=take --inserts' \
-	     | grep -E "VALUES \([0-9]+, .books.," | $(UNRESTRICT); \
-	   echo 'commit;' ) \
-	  | psql "$(LOCAL_DB)" -v ON_ERROR_STOP=1 -q
-	@psql "$(LOCAL_DB)" -tAc "select count(*) || ' books takes locally' from take where source = 'books'"
+# One direction only: production is upstream for every edit and every take. The recipe is
+# shared with quests and zones -- see scripts/db/sync-section.sh. This used to fetch the
+# takes but not book_line, so a page fixed on the site shipped with its old words.
+sync: require-droplet ## Replace the local book text and takes with the droplet's (DESTRUCTIVE)
+	@$(DB_ENV) scripts/db/sync-section.sh books book_line
 	@echo "==> rebuild the pack's table with:  make books-lookup"
 
-# Filtered with grep rather than a WHERE clause because pg_dump has no such option. --inserts
-# puts each row on a line of its own, so the section's rows can be selected out of the dump
-# without parsing SQL; --rows-per-insert would batch them across lines and cut statements in
-# half, and a COPY-format dump could not be filtered at all.
-#
-# The pattern matches the source column by position -- id, then source -- rather than the
-# word appearing anywhere in a row, and spells the quotes as `.` so that no single quote has
-# to survive make's expansion and two levels of shell. Written with real quotes it silently
-# matched nothing, which looks exactly like a droplet with no takes on it.
+check-synced: ## Compare the local books data with the droplet's, and prompt if they differ
+	@$(DB_ENV) scripts/db/check-synced.sh books
 
-pull-dry: require-droplet ## Preview what `make books-pull` would fetch
-	@$(RSYNC) $(RSYNC_OPTS) --dry-run -e "$(SSH)" $(DROPLET):$(REMOTE_BOOKS) $(LOCAL_BOOKS)
+pull-history: require-droplet ## Fetch the droplet's archived takes (non-destructive)
+	@mkdir -p $(LOCAL_HISTORY)
+	@$(RSYNC) $(RSYNC_OPTS) -e "$(SSH)" $(DROPLET):$(REMOTE_HISTORY) $(LOCAL_HISTORY)
+	@echo "==> pulled. Build the pack's Sounds/ with:  make books-sounds"
 
-pull: require-droplet ## Fetch the narration from the droplet into pipelines/books/audio
-	@mkdir -p $(LOCAL_BOOKS)
-	@$(RSYNC) $(RSYNC_OPTS) -e "$(SSH)" $(DROPLET):$(REMOTE_BOOKS) $(LOCAL_BOOKS)
-	@echo "==> pulled. Put it where the addon reads it with:  make books-sounds"
+# Only the takes the pack is built from: the live ones, as the local database has them, so run
+# `make books-sync` first. pull-history is the whole archive, for listening to old takes.
+pull-live: require-droplet ## Fetch only the live takes the local database names (after sync)
+	@$(DB_ENV) RSYNC="$(RSYNC)" scripts/audio/pull-live.sh books
 
-# The pack folder the client loads, filled from the store. A copy rather than a symlink to
-# the store directory, because the client follows neither into a folder it does not own --
-# and the pack is what gets zipped for release.
-sounds: ## Copy the narration into addons/SpokenBooksAudio/Sounds
-	@mkdir -p addons/SpokenBooksAudio/Sounds
-	@$(RSYNC) -a $(LOCAL_BOOKS) addons/SpokenBooksAudio/Sounds/
-	@echo "==> $$(find addons/SpokenBooksAudio/Sounds -name '*.mp3' | wc -l | tr -d ' ') mp3 in addons/SpokenBooksAudio/Sounds"
+# The pack folder the client loads and the release zips: not kept, but assembled from the
+# live takes and the archive before every build. See scripts/audio/sounds.mjs.
+sounds: ## Assemble addons/SpokenBooksAudio/Sounds from the live takes and the archive
+	@$(DB_ENV) node scripts/audio/sounds.mjs books
 
 package: ## Zip the addon into dist/ (for a release)
 	@./scripts/books/package.sh
@@ -122,8 +104,9 @@ package: ## Zip the addon into dist/ (for a release)
 # unpacks straight into a client's AddOns directory. Zipped from the repo root instead it
 # carries an addons/ prefix, and unzipping lands it at AddOns/addons/SpokenBooksAudio,
 # where the client will never look.
-package-audio: ## Zip the sound pack into dist/ (for another machine, or a release)
-	@test -d addons/SpokenBooksAudio/Sounds || { echo "no Sounds/ -- run: make books-pull && make books-sounds"; exit 1; }
+# From the database, against production's data: the lookup table is rebuilt here rather than
+# on the droplet after every generation, which is what the site used to do.
+package-audio: check-synced sounds lookup ## Zip the sound pack into dist/ (for another machine, or a release)
 	@mkdir -p dist
 	@version=$$(sed -n 's/^## Version: //p' addons/SpokenBooksAudio/SpokenBooksAudio.toc); \
 	 zip_path="$$PWD/dist/SpokenBooksAudio-$$version.zip"; \
@@ -185,3 +168,21 @@ release-wago: ## Upload the built zips to Wago only (needs WAGO_TOKEN)
 
 release-curse: ## Upload the built zips to CurseForge only (needs CURSEFORGE_TOKEN)
 	@./scripts/books/release.sh --store=curseforge
+
+# The whole pack release, from production's data to the stores, with one question before
+# anything is uploaded. Each step is its own target and still runs alone; this is their order.
+#
+# The version is SpokenBooksAudio.toc's, so bump it and add its `## <version>` section to
+# docs/books/CHANGELOG.md first; both uploads quote that section. The pack goes to CurseForge
+# only -- Wago answers 413 to a file this size (scripts/lib/wago.sh) -- and to GitHub, which
+# is where a Wago player gets it.
+full-release: require-droplet ## Sync, pull live takes, build and upload the sound pack
+	@$(MAKE) --no-print-directory -f make/books.mk sync
+	@$(MAKE) --no-print-directory -f make/books.mk pull-live
+	@$(MAKE) --no-print-directory -f make/books.mk package-audio
+	@./scripts/books/release.sh --dry-run --store=curseforge audio
+	@./scripts/audio-github-release.sh --dry-run books-audio
+	@printf 'Upload the books pack to CurseForge and GitHub? [y/N] '; \
+	  read -r answer; [ "$$answer" = y ] || { echo aborted; exit 1; }
+	@./scripts/books/release.sh --store=curseforge audio
+	@./scripts/audio-github-release.sh books-audio

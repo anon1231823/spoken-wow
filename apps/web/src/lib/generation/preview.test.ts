@@ -395,8 +395,8 @@ describe("renderPreview", () => {
     const config = CONFIG;
     const voices = new Map([["human-male-standard", "v-human"]]);
 
-    it("reports nothing cached before anything is rendered", () => {
-      expect(previewCache([IPA], voicePicker(voices), config, scratch())).toEqual({
+    it("reports nothing cached before anything is rendered", async () => {
+      expect(await previewCache([IPA], voicePicker(voices), config, scratch())).toEqual({
         Gnomeregan: { word: false, sentence: false },
       });
     });
@@ -410,18 +410,18 @@ describe("renderPreview", () => {
       const dir = scratch();
       await renderPreview(IPA, "word", () => "v-human", config, elevenlabs().options, dir);
 
-      expect(previewCache([IPA], voicePicker(voices), config, dir)).toEqual({
+      expect(await previewCache([IPA], voicePicker(voices), config, dir)).toEqual({
         Gnomeregan: { word: true, sentence: false },
       });
     });
 
-    it("skips an entry with no pronunciation yet", () => {
+    it("skips an entry with no pronunciation yet", async () => {
       const blank = { ...IPA, grapheme: "", ipa: undefined, alias: undefined };
-      expect(previewCache([blank], voicePicker(voices), config, scratch())).toEqual({});
+      expect(await previewCache([blank], voicePicker(voices), config, scratch())).toEqual({});
     });
 
-    it("reports nothing cached when the account has no voice", () => {
-      expect(previewCache([IPA], voicePicker(new Map()), config, scratch())).toEqual({
+    it("reports nothing cached when the account has no voice", async () => {
+      expect(await previewCache([IPA], voicePicker(new Map()), config, scratch())).toEqual({
         Gnomeregan: { word: false, sentence: false },
       });
     });

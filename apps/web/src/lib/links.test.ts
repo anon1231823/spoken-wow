@@ -9,7 +9,15 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { explorerHref, lexiconHref, questsHref, reportHref, zonesHref } from "./links";
+import {
+  booksHref,
+  explorerHref,
+  lexiconHref,
+  questsHref,
+  reportHref,
+  targetExplorerHref,
+  zonesHref,
+} from "./links";
 
 describe("reportHref", () => {
   it("sends a triager to the landing page each section serves", () => {
@@ -56,6 +64,25 @@ describe("zonesHref", () => {
     expect(zonesHref({ mapID: 1411 })).toBe("/zones?zone=1411");
     expect(zonesHref()).toBe("/zones");
   });
+
+  it("scopes a search with `field`, which is what this section reads", () => {
+    // NOT `filter`: that is the quests name, and zones would ignore it and search
+    // everything - an unnarrowed list that reports no error.
+    const href = zonesHref({ q: "Gnomeregan", field: "text" });
+    const params = new URLSearchParams(href.slice(href.indexOf("?")));
+    expect(params.get("q")).toBe("Gnomeregan");
+    expect(params.get("field")).toBe("text");
+  });
+});
+
+describe("booksHref", () => {
+  it("addresses the section, scoped the way books reads it", () => {
+    expect(booksHref()).toBe("/books");
+    const href = booksHref({ q: "R&D #2", field: "text" });
+    const params = new URLSearchParams(href.slice(href.indexOf("?")));
+    expect(params.get("q")).toBe("R&D #2");
+    expect(params.get("field")).toBe("text");
+  });
 });
 
 describe("lexiconHref", () => {
@@ -78,5 +105,26 @@ describe("explorerHref", () => {
       const href = explorerHref(source, "x:1");
       expect(new URLSearchParams(href.slice(href.indexOf("?"))).get("line")).toBe("x:1");
     }
+  });
+});
+
+describe("targetExplorerHref", () => {
+  it("narrows quests by the id its address names", () => {
+    // The gossip case: a report with no line id, whose address is the whole NPC. A bare
+    // number is an id lookup in quests search, so this lands on that creature's lines.
+    expect(targetExplorerHref("quests", "npc/10136")).toBe("/quests?q=10136&filter=npc");
+    expect(targetExplorerHref("quests", "quest/84/accept")).toBe("/quests?q=84&filter=quest");
+  });
+
+  it("narrows zones by the map its address names", () => {
+    expect(targetExplorerHref("zones", "1411/razor-hill")).toBe("/zones?zone=1411");
+  });
+
+  it("is null for an address no filter addresses, so the caller keeps the /r/ page", () => {
+    // A books target is a bare page id, and neither books field matches ids.
+    expect(targetExplorerHref("books", "261")).toBe(null);
+    expect(targetExplorerHref("quests", "npc/not-a-number")).toBe(null);
+    expect(targetExplorerHref("quests", "npc")).toBe(null);
+    expect(targetExplorerHref("zones", "razor-hill")).toBe(null);
   });
 });

@@ -1,7 +1,7 @@
 ## Interface: 11509, 20506, 16001
 ## Title: Spoken Zones
 ## Notes: Zone and subzone lore on the world map, read aloud through the Spoken player. Formerly ZoneLore.
-## Version: 2.0.3
+## Version: 2.1.0
 ## Author: rusty
 ## SavedVariables: SpokenZonesDB
 ## SavedVariablesPerCharacter: SpokenZonesCharDB
@@ -48,6 +48,7 @@ Locale/zhCN.lua
 Locale/zhTW.lua
 Core.lua
 Audio.lua
+Contribute.lua
 Autoplay.lua
 Data/enUS/Zones.lua
 Data/enUS/Subzones.lua

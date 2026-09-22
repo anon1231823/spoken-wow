@@ -84,7 +84,7 @@ pipelines/zones/tools/
   lib/loredata.mjs       reads the generated Lua data back into JS
   lib/env.mjs            binds pipelines/lib/env.mjs to this pipeline: the root .env,
                          then pipelines/zones/.env over it
-  voice/generate.mjs     select and synthesize voicelines (ElevenLabs)
+  voice/generate.mjs     report on voicelines: missing, stale, cost (makes no audio)
   voice/build-lookup.mjs manifest -> ZoneLoreAudio/Data/Sounds.lua
   voice/validate-audio.mjs  manifest, files and lookup table agree
   voice/naming.mjs       line ids and file paths, derived in one place
@@ -972,9 +972,10 @@ way, so nothing is saved by going straight to a full run, and the short entries 
 the ones to hear first: v3 is documented as unreliable below 250 characters and
 **305 of the 1353 entries are shorter**.
 
-After a batch the site publishes it: `exportManifest()` then `buildLookup()`, so
-`manifest.json` and the addon's lookup table are already in step by the time you
-pull the audio down with `make zones-pull`.
+The takes stay on the droplet. To build a pack from them, bring them home with
+`make zones-sync` and then `make zones-pull-live`, which fetches only the takes the synced
+rows mark live; `make zones-package-audio` assembles `Sounds/` from them and rebuilds the
+lookup table. `make zones-full-release` does all of it and, after asking, uploads the pack.
 
 ### How long a full run takes
 
@@ -1162,7 +1163,7 @@ which in practice means it never gets started.
 ```sh
 cp ../../.env.example ../../.env   # DATABASE_URL is already filled in; add your API key
 make zones-db-up                # Postgres on 5433, then migrations
-make zones-import               # seed from tools/voice/manifest.json (idempotent)
+make web-db-pull                # production's rows, since the database is the record
 make zones-web                  # http://localhost:3000
 ```
 
@@ -1189,19 +1190,16 @@ that comes out worse can be undone — the superseded mp3s go to `audio-history/
 `pipelines/zones/tools/voice/manifest.json` is still committed and is still what `build-lookup.mjs`
 turns into the addon's lookup table. It stopped being hand-maintained and became an
 export: `make zones-lookup` runs `export-manifest.mjs` before `build-lookup.mjs`. **The
-addon build never learns the database exists** — with `DATABASE_URL` unset every tool
-falls back to the file and a clone with no Postgres can still generate audio and ship
-the addon.
+addon build never learns the database exists** — with `DATABASE_URL` unset the build
+tools read the committed file, so a clone with no Postgres can still build the addon.
+It cannot generate audio: takes are cut only by the site.
 
-The seam is `pipelines/zones/tools/voice/store.mjs`, which already owned `loadManifest`/`saveManifest`
-and is the only way the other tools reach that state. Putting Postgres behind those
-two functions is what keeps the CLI and the web app writing the same rows.
-`../wow-voiceover/web/migrations/0012` records the alternative: *"the Python CLI reads
-the corpus and will not see these rows… The web app is the generation path. This is
-recorded rather than solved."*
+`pipelines/zones/tools/voice/store.mjs` is read-only. Takes are written by
+`apps/web/src/lib/takes/commit.ts`, which all three sections share; this module used to
+hold the zones copy of that, and the web app borrowed it.
 
-The check that proves it: `make import && make export` must leave `manifest.json`
-byte-identical, and `validate-audio.mjs` must still pass.
+The check that proves the committed file is current: `export-manifest.mjs --check` must
+report no change, and `validate-audio.mjs` must still pass.
 
 ### Regenerating costs money, so it says so first
 
@@ -1235,7 +1233,7 @@ that is why it is hosted at all. Everything else needs an account *and* a role:
 |---|---|
 | *(nobody)* | browse, filter, search, play, download a clip, **file feedback** |
 | `member` | exactly the same. Registering grants nothing |
-| `editor` | flag lines and write notes; Regenerate, which spends credits; Restore; read and resolve feedback |
+| `editor` | Regenerate, which spends credits; Restore; rewrite a line's text; read and resolve feedback |
 | `admin` | also edit the pronunciation rules, and grant these roles at `/admin` |
 
 `member` doing nothing is the point: the site is reachable from the internet, so anything
@@ -1293,12 +1291,17 @@ claim, not a verdict, so "not an issue" is a normal outcome. Reopening is always
 The same reports also expand inline in the explorer, and `?fb=open` narrows the table to
 lines carrying an unresolved one.
 
-**`feedback` is a separate table from `line_flag`, not a status on it.** They look alike
-and are not the same thing: a flag is one editor's verdict and is the regeneration
-worklist, whereas a report is one visitor's claim and there can be several per line.
-Folding them together would mean either letting a passer-by write the worklist or
-throwing away what the passer-by had to say, and it could not hold "three people
-independently reported this line", which is the most useful signal here.
+**The editor's review flags are gone; feedback is the one worklist.** `line_flag` held
+one editor's verdict per line -- `bad`, `ok`, or a note -- beside the reports a visitor
+files, and the explorer carried a Review column for it. Two worklists over the same lines
+meant two places to look and two things to keep clear, and only one of them was fed by the
+people actually listening. So the verdicts, the note dialog and the column were removed,
+and a problem with a line is now said in exactly one way: a report.
+
+The `line_flag` table is left in place, unread. It is forward-only like every other table
+here, and it still holds the era attributions the full-corpus review wrote --
+`tools/fix-flagged.mjs` was built to spend model credits on those notes and is retired
+with them. Reviving that pass means pointing it at `report` first.
 
 **Open counts are public; report bodies are not.** The badge on a row and the `?fb=open`
 filter travel with the search results, because "someone has already reported this one" is
@@ -1313,32 +1316,44 @@ Postgres rather than in memory so it survives a pm2 restart. Resolving lives at
 two verbs on one path with opposite access rules is an arrangement a later edit quietly
 breaks.
 
-### Moving the audio between machines
+### A gap has no text to send, only a place
 
-1353 mp3s, ~795MB, gitignored and never in CI. The droplet is named by the environment
-and not by the repo — `export SPOKEN_DROPLET=deploy@<host>`, or pass
+Every zone and subzone the client can name is already in the corpus; what is missing for some
+of them is the lore itself. So a gap is not reported, it is written. Where the map panel says a
+place "is on the map, but nobody has written its lore yet" (or that there is no lore for it at
+all), a **Contribute** button sits right under that sentence, in the panel's body -- and the
+same in the lore window, for whichever zone or subzone is selected in its list. It sends the
+place the panel is showing -- the map, the zone's name, the subzone -- not where the player
+stands, since a place can be described from anywhere. The client has no text to hand over, so
+the envelope carries none.
+
+The contribute page asks for the missing part: for a zones paste it replaces the optional
+"Anything to add?" with a required **Describe this place** (at least 20 characters), and that
+description is stored as the contribution's text, where every other source keeps what it sent.
+
+The envelope travels the same plain-text format and the same `spoken.rusty.one/contribute` page
+as the quests and books ones, for one reason: one triage queue for three addons. What
+differs is only what is in it. Two players describing the same place in different words are two
+rows under one key, and the same description sent twice bumps a count instead.
+
+### Bringing the audio home
+
+Every take is one file in the droplet's archive, `shared/audio-history/zones/`, written
+once by the site and never changed; which take is live is a flag on its row. Takes are cut
+there and nowhere else, so audio only ever comes home. The droplet is named by the
+environment and not by the repo — `export SPOKEN_DROPLET=deploy@<host>`, or pass
 `DROPLET=deploy@<host>` for one invocation. See `make/droplet.mk`.
 
 ```sh
-make zones-audio-status     # local and droplet, side by side
-make zones-pull-dry         # what `make zones-pull` would change
-make zones-pull             # the audio the droplet regenerated
-make zones-db-pull          # the takes and flags behind it
-make zones-lookup           # rebuild Sounds.lua from the manifest
+make zones-history-status   # archived takes, local and droplet, side by side
+make zones-pull-history     # every take the droplet has (never deletes)
+make zones-sync             # the lore and take rows
+make zones-sounds           # addons/SpokenZonesAudio/Sounds from the live takes
+make zones-lookup           # rebuild Sounds.lua from the database
 ```
 
-One language per transfer: every target above takes `LOCALE=deDE` and defaults to
-English. English keeps the droplet paths it always had (`shared/Sounds`,
-`shared/manifest.json`); another language lives beside them under its pack folder
-(`shared/ZoneLoreAudio_deDE`) and a suffixed manifest, which is what `store.mjs`
-derives on the droplet, so `make pull LOCALE=deDE` lands the masters in
-`addons/SpokenZonesAudio_deDE/Sounds/` — where `make lookup LOCALE=deDE` and
-`make package-audio LOCALE=deDE` expect them. `audio-history/` holds every language
-under one tree and moves whole.
-
-Both `push` and `pull` use `--delete` and both show a dry run and ask first: the
-droplet is a second copy, not a backup, and since regeneration happens through the web
-UI it is usually the *newer* side.
+`Sounds/` is not kept: it is thrown away and assembled again from the live takes before
+every build, so nothing in it is ever the only copy of anything.
 
 No `-z`: mp3 is already compressed, so it is pure CPU for nothing. The rsync-3.x
 preflight is load-bearing — macOS ships openrsync as `/usr/bin/rsync`, which reports

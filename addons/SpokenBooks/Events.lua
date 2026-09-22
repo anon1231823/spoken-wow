@@ -85,6 +85,10 @@ frame:SetScript("OnEvent", function(_, event, arg1)
 	local payload = arg1 or _G.arg1
 	if name == "ITEM_TEXT_READY" then
 		SpokenBooks:OnTextReady()
+		-- Guarded: Contribute.lua is absent where contributing is off.
+		if SpokenBooks.GatherContribution then
+			SpokenBooks:GatherContribution()
+		end
 		-- After, not before: the button's label is "Stop" only once the page has queued, and
 		-- built here as well as at login so a client that makes ItemTextFrame late still
 		-- gets one. The button needs no hiding on ITEM_TEXT_CLOSED -- it is the frame's

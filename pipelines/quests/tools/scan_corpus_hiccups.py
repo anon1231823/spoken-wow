@@ -1,5 +1,15 @@
 """Scan the corpus for text a TTS engine is likely to mangle.
 
+RETIRED AS IT STANDS. Nothing reads corpus/hiccups.json.gz any more: the `line_issue`
+table it fed, the /issues review queue and the Issue column on the explorer were all
+removed in favour of feedback, which is now the only way a problem with a line is
+recorded. The scan itself is still the useful half -- it finds what nobody has complained
+about yet -- so the plan is to point it at `report` instead, filing what it finds the way
+a listener would. Until then it writes two files nothing loads.
+
+The table and its rows are still there; migrations here are forward-only and drop
+nothing.
+
 Two outputs, same findings:
 
   docs/corpus-hiccups.csv    one row per finding, for reading offline. Gitignored.

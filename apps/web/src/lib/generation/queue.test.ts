@@ -13,19 +13,8 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 
 import { closeDb, db } from "@/lib/db";
 
-import {
-  cancelPending,
-  dismissThrough,
-  claimNext,
-  createBatch,
-  enqueue,
-  failJob,
-  finishJob,
-  retryJob,
-  snapshot,
-  type QueueEntry,
-  type Source,
-} from "./queue";
+import { cancelPending, dismissThrough, claimNext, createBatch, enqueue, failJob, finishJob, retryJob, snapshot, type QueueEntry } from "./queue";
+import type { Source } from "@/lib/sections";
 
 /** A file prefix no other run collides with, so tests share one database safely. */
 let prefix: string;

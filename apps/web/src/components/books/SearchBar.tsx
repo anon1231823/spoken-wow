@@ -45,6 +45,8 @@ type Props = {
   onQuerySubmit: () => void;
   onChange: (next: Partial<PageFilters>) => void;
   onClearAll: () => void;
+  /** Editor and up: the ones who act on reports, so the ones who filter by them. */
+  canTriage: boolean;
 };
 
 export function SearchBar({
@@ -56,6 +58,7 @@ export function SearchBar({
   onQuerySubmit,
   onChange,
   onClearAll,
+  canTriage,
 }: Props) {
   const active = activeFilterCount(filters);
 
@@ -114,6 +117,28 @@ export function SearchBar({
         />
         voiceable only
       </Label>
+
+      {/* A checkbox rather than a value of `state`, because a page can be current and carry
+          this at once: as a state it would hide whichever answer came second. */}
+      <Label className="flex items-center gap-1.5 text-xs">
+        <Checkbox
+          checked={filters.dirty ?? false}
+          onCheckedChange={(checked) => onChange({ dirty: checked === true ? true : undefined })}
+        />
+        pronunciation moved
+      </Label>
+
+      {/* Behind the triage role, as in the zones and quests bars: the count is public, but
+          a list of what people have complained about is a worklist, and only triagers work it. */}
+      {canTriage && (
+        <Label className="flex items-center gap-1.5 text-xs">
+          <Checkbox
+            checked={filters.reports === "open"}
+            onCheckedChange={(checked) => onChange({ reports: checked === true ? "open" : undefined })}
+          />
+          reported only
+        </Label>
+      )}
 
       {active > 0 && (
         <Button variant="ghost" size="sm" onClick={onClearAll}>

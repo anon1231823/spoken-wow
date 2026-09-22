@@ -32,6 +32,7 @@ import {
 } from "@/lib/voices/elevenlabs";
 
 import { graphemeCasings } from "./casings";
+import { logSoundChanges, soundChanges } from "./dirty";
 import { toRules, type DictionaryRule, type LexiconEntry } from "./lexicon";
 
 export type LexiconSync = "synced" | "pending" | "never";
@@ -165,6 +166,12 @@ export async function writeLexicon(
   updatedBy: string,
   options: ElevenLabsOptions = {},
 ): Promise<{ lexicon: EffectiveLexicon; syncError: string | null }> {
+  // Read before writing, because the diff is the only moment the previous rules exist: the
+  // row holds one lexicon and the save overwrites it. What the diff is for is audio - a take
+  // made before a word's rule moved no longer says what this lexicon would say - and
+  // lexicon_change is the record nothing else in the schema keeps. See lib/generation/dirty.
+  const before = (await readRow())?.entries ?? [];
+
   await db().query(
     `insert into "pronunciation_lexicon" ("id", "entries", "updatedAt", "updatedBy")
      values (true, $1, now(), $2)
@@ -176,7 +183,19 @@ export async function writeLexicon(
   );
 
   const syncError = await sync(entries, options);
-  return { lexicon: await readLexicon(), syncError };
+  const lexicon = await readLexicon();
+
+  // After the sync, so the row can carry the version that shipped it - and unconditionally,
+  // because a change whose upload failed still happened. A logging failure must not turn a
+  // save the admin can see into a 500: the entries are in Postgres either way, and the worst
+  // case is audio that goes on reading as clean until the next edit to the same word.
+  try {
+    await logSoundChanges(soundChanges(before, entries), updatedBy, lexicon.locator?.versionId ?? null);
+  } catch (error) {
+    console.error("lexicon saved but its changes were not logged", error);
+  }
+
+  return { lexicon, syncError };
 }
 
 /**
@@ -250,7 +269,7 @@ export async function sync(
   // case-insensitive - see toRules.
   const rules = toRules(
     entries,
-    graphemeCasings(entries.filter((e) => !e.alias).map((e) => e.grapheme)),
+    await graphemeCasings(entries.filter((e) => !e.alias).map((e) => e.grapheme)),
   );
 
   const pinned = process.env.ELEVENLABS_DICTIONARY_ID?.trim();

@@ -13,7 +13,8 @@
  */
 import { db } from "@/lib/db";
 
-import type { Category, Report, Source, Status } from "./reports";
+import { type Category, type Report, type Status } from "./reports";
+import type { Source } from "@/lib/sections";
 
 // Timestamps are cast to text so a Report is the same shape in Postgres, over JSON and in the
 // browser. `pg` hands back Date objects for timestamptz, which survive neither the wire nor a

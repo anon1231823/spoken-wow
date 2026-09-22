@@ -39,7 +39,7 @@ export default async function Page() {
   // knowing which corpus sentence it would use, which is a pass over 17,507 lines. Doing it
   // once on the server beats 268 round trips, and it is what lets each button say up front
   // whether pressing it costs money.
-  const cached = previewCache(lexicon.entries, voicePicker(status.voiceIds), config);
+  const cached = await previewCache(lexicon.entries, voicePicker(status.voiceIds), config);
 
   return (
     <main className="mx-auto max-w-5xl px-5 pt-6 pb-36">

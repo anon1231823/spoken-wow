@@ -15,7 +15,7 @@ import { Pool, type QueryResultRow } from "pg";
  *
  * Sized rather than left at node-postgres' default of 10, because the regeneration queue
  * holds two clients per job in flight - the per-file advisory lock in lock.ts across the
- * whole ElevenLabs call, and a second one for setCurrentVersion's transaction inside it -
+ * whole ElevenLabs call, and a second one for commitTake's transaction inside it -
  * plus one the leader never returns. At the default, a batch wide enough fills the pool with
  * its own held clients and then waits forever for the commits that would free them.
  *

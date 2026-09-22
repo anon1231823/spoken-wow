@@ -13,8 +13,10 @@
 import "server-only";
 
 import { query } from "@/lib/db";
+import { loadDirtyContext, NO_DIRT, type DirtyContext } from "@/lib/generation/dirty";
 
 import { corpusRows, currentLore } from "./lore";
+import { liveTakes } from "@/lib/takes/store";
 import {
   assignFiles,
   loadPronunciation,
@@ -71,12 +73,6 @@ export type Take = {
   takes: number;
 };
 
-export type LineFlag = {
-  status: "bad" | "ok";
-  note: string | null;
-  updatedAt: string;
-};
-
 /**
  * Everything database-backed, passed into the pure search rather than fetched by it.
  * This is the split ../wow-voiceover/web/src/lib/search.ts:82 makes, and the reason
@@ -84,7 +80,14 @@ export type LineFlag = {
  */
 export type SearchContext = {
   takes: Map<string, Take>;
-  flags: Map<string, LineFlag>;
+  /**
+   * What the lexicon has changed lately, and what somebody has already judged fine.
+   *
+   * Carried rather than resolved into a set of ids, because the rule needs the line's text
+   * as well as its take - and the text is the catalogue's, which this map is built beside.
+   * See lib/generation/dirty.ts.
+   */
+  dirt: DirtyContext;
   /**
    * lineId -> how many reports are still open. The COUNT only; the bodies are behind the
    * triage role on /reports. A visitor already sees the `bad` badge on a line -- "someone
@@ -96,7 +99,7 @@ export type SearchContext = {
 
 export const EMPTY_CONTEXT: SearchContext = {
   takes: new Map(),
-  flags: new Map(),
+  dirt: NO_DIRT,
   reports: new Map(),
 };
 
@@ -272,41 +275,8 @@ export async function lineByPath(
 }
 
 export async function loadContext(): Promise<SearchContext> {
-  const [takeRows, flagRows, reportRows] = await Promise.all([
-    query<{
-      lineId: string;
-      version: number;
-      file: string;
-      textHash: string;
-      chars: number;
-      credits: number | null;
-      durationSec: number | null;
-      bytes: number;
-      modelId: string | null;
-      voiceId: string | null;
-      generatedAt: Date;
-      takes: string;
-    }>(
-      // Scoped by source, because the take table holds all three sections and each
-      // names files by its own frozen rules. The "lang" column stays on that shared
-      // table and every zones row carries 'enUS'; nothing here selects on it.
-      //
-      // The column names are the merged table's; the manifest's spelling of them lives in
-      // store.mjs, which is the seam the CLI shares. See migration 0020.
-      `select t."lineId", t."version", t."file", t."spokenHash" as "textHash",
-              t."characters" as "chars", t."credits", t."durationSec", t."bytes",
-              t."modelId", t."voiceId", t."createdAt" as "generatedAt",
-              (select count(*) from "take" a
-                where a."source" = 'zones' and a."lineId" = t."lineId"
-                ) as "takes"
-         from "take" t
-        where t."source" = 'zones' and t."isCurrent"`,
-    ),
-    // No source column: line_flag is a zones table, and a lineId in it is always 'z:'
-    // or 's:'. See migration 0023.
-    query<{ lineId: string; status: "bad" | "ok"; note: string | null; updatedAt: Date }>(
-      `select "lineId", "status", "note", "updatedAt" from "line_flag"`,
-    ),
+  const [takeRows, reportRows, dirt] = await Promise.all([
+    liveTakes("zones"),
     // Grouped in the database rather than counted here: the resolved rows are the ones
     // that accumulate, and there is no reason to carry them across the wire to drop them.
     // `lineId is not null` excludes a report about the project, which belongs to no line.
@@ -316,6 +286,7 @@ export async function loadContext(): Promise<SearchContext> {
         where "source" = 'zones' and "status" = 'open' and "lineId" is not null
         group by "lineId"`,
     ),
+    loadDirtyContext("zones"),
   ]);
 
   return {
@@ -325,36 +296,29 @@ export async function loadContext(): Promise<SearchContext> {
         {
           version: row.version,
           file: row.file,
-          textHash: row.textHash,
-          chars: row.chars,
+          textHash: row.spokenHash ?? "",
+          chars: row.characters ?? 0,
           credits: row.credits,
           durationSec: row.durationSec,
           bytes: row.bytes,
           modelId: row.modelId,
           voiceId: row.voiceId,
-          generatedAt: row.generatedAt.toISOString(),
-          // count(*) is bigint; the int8 parser in db.ts turns it into a number, but
-          // Number() here keeps this honest if that parser is ever removed.
-          takes: Number(row.takes),
+          generatedAt: row.createdAt.toISOString(),
+          takes: row.takes,
         },
       ]),
     ),
-    flags: new Map(
-      flagRows.map((row) => [
-        row.lineId,
-        { status: row.status, note: row.note, updatedAt: row.updatedAt.toISOString() },
-      ]),
-    ),
     reports: new Map(reportRows.map((row) => [row.lineId, row.open])),
+    dirt,
   };
 }
 
 /**
  * Whether a lineId names something that exists.
  *
- * Neither `line_flag` nor `feedback` has a foreign key onto `lore_line`, so this is the
- * only thing standing between a typo and a row nothing will ever show or clean up. Every
- * route that accepts a lineId from outside calls it.
+ * `report` has no foreign key onto `lore_line`, so this is the only thing standing between
+ * a typo and a row nothing will ever show or clean up. Every route that accepts a lineId
+ * from outside calls it.
  */
 export async function isKnownLine(lineId: string): Promise<boolean> {
   const entries = await catalogue();
