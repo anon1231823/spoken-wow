@@ -465,7 +465,7 @@ function MinimalPlayer:LayoutQueue()
     -- The panel is shorter than the circle and starts behind its centre. Its
     -- left corners sit beneath the opaque portrait rather than outside the rim.
     -- Centred on the portrait, so the text block gets even top and bottom margins.
-    local left, top, bottom = Config().HidePortrait and 0 or 44, up and height or -6, shown > 0 and not up and 8 - height or 10
+    local left, top, bottom = Config().HidePortrait and 0 or 44, up and height or -6, shown > 0 and not up and 2 - height or 10
     self.panel:SetPoint("TOPLEFT", self.frame, "TOPLEFT", left, top)
     self.panel:SetPoint("BOTTOMRIGHT", self.frame, "BOTTOMRIGHT", 0, bottom)
     -- One 256px tile of rock per 256 units of panel, the backdrop's inset aside.
