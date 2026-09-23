@@ -4,9 +4,9 @@
 //   node tools/lore/import-names.mjs --lang deDE
 //
 // From tools/seed/area-names.json, which `make zones-aliases` builds from the game's
-// AreaTable: the names a client in that language actually shows, zones included. The lore
-// prose has no such source -- nothing in the dump or the client carries it translated --
-// so it is written on the site, and this only names the places.
+// UiMap and AreaTable: the names a client in that language actually shows, zones included.
+// The lore prose has no such source -- nothing in the dump or the client carries it
+// translated -- so it is written on the site, and this only names the places.
 //
 // The rule is every import's: an unchanged name is skipped, a changed one replaces an
 // extracted name but never one somebody edited here.
@@ -43,7 +43,7 @@ try {
   const names = seed.names[lang];
   if (!names) throw new Error(`area-names.json has no ${lang}; run make zones-aliases`);
   const { rows: lines } = await query(
-    `select "lineId", "kind", "key", "name" from "lore_line"
+    `select "lineId", "kind", "mapID", "key" from "lore_line"
       where "lang" = $1 and "isCurrent"`,
     [BASE_LOCALE],
   );
