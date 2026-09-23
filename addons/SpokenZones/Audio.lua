@@ -432,8 +432,23 @@ function SpokenZones:GetAudioClip(mapID, areaKey)
 		return nil, nil
 	end
 
-	local pack = self:GetActiveAudioPack()
-	if pack then
+	local active = self:GetActiveAudioPack()
+	if not active then
+		return nil, nil
+	end
+
+	-- The active pack, then English, entry by entry: a German pack that has not narrated an
+	-- area yet leaves it to the English one rather than to silence, the way a quest line falls
+	-- back. The entry keys are the same in every language, so any pack names the area alike.
+	-- No other language is tried: a player reading German does not want French.
+	local candidates = { active }
+	if (active.language or "enUS") ~= "enUS" then
+		for _, pack in ipairs(self:GetAudioPacks("enUS")) do
+			table.insert(candidates, pack)
+		end
+	end
+
+	for _, pack in ipairs(candidates) do
 		local clip
 		if areaKey then
 			local zoneClips = pack.subzones and pack.subzones[mapID]
@@ -448,6 +463,13 @@ function SpokenZones:GetAudioClip(mapID, areaKey)
 	end
 
 	return nil, nil
+end
+
+--- The language narration plays in: the active pack's, or the one being read when there is
+--- no pack. What a contribution says the player was hearing.
+function SpokenZones:GetPackLanguage()
+	local pack = self:GetActiveAudioPack()
+	return pack and (pack.language or "enUS") or self:GetLanguage()
 end
 
 -- The button the player shows under a lore clip: this addon's own Report, told which
@@ -473,7 +495,10 @@ local ACTIONS = {
 			if not clip then
 				return
 			end
-			local url = SpokenZones:ReportURL(clip.mapID, clip.areaKey)
+			-- Filed under the language the clip was narrated in, which for an entry the
+			-- active pack lacks is the English pack's, whatever is being read.
+			local url = SpokenZones:ReportURL(clip.mapID, clip.areaKey,
+				clip.pack and (clip.pack.language or "enUS"))
 			if url then
 				SpokenZones:ShowCopyLink(url, L.OPT_REPORT_LINE_ADDRESS)
 			end

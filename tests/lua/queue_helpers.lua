@@ -67,10 +67,11 @@ end
 --- The zones addon loaded for real, Core.lua included -- unlike wow_client_stub.LoadZones,
 --- which loads only Audio/ReportButton/Autoplay against a hand-built fake table for playback
 --- tests. Contribute.lua needs the real GetPlayerMapID, GetLoreWithFallback, GetSubzoneLore,
---- GetLore and IsPending, all of which live in Core.lua, so this loads that too.
+--- GetLore and IsPending, all of which live in Core.lua, so this loads that too, and the
+--- language and pack answers it sends, from Language.lua and Audio.lua.
 function M.LoadZones(addonDirectory)
     local SpokenZones = {}
-    for _, file in ipairs({ "Core", "Contribute" }) do
+    for _, file in ipairs({ "Language", "Core", "Audio", "Contribute" }) do
         local chunk = assert(loadfile(addonDirectory .. file .. ".lua"))
         chunk("SpokenZones", SpokenZones)
     end

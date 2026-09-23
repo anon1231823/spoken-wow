@@ -279,7 +279,9 @@ end
 
 SpokenZones.SITE_URL = "https://lore.rusty.one"
 
-function SpokenZones:ReportURL(mapID, areaKey)
+-- `language` names the narration being reported, for a report made from the player about a
+-- clip; the lore window's report is about the text on screen and passes none.
+function SpokenZones:ReportURL(mapID, areaKey, language)
 	if not mapID then
 		return nil
 	end
@@ -291,7 +293,7 @@ function SpokenZones:ReportURL(mapID, areaKey)
 			slug = "zone"
 		end
 	end
-	return ("%s/%s/r/%d/%s"):format(self.SITE_URL, self:GetLanguage(), mapID, slug)
+	return ("%s/%s/r/%d/%s"):format(self.SITE_URL, language or self:GetLanguage(), mapID, slug)
 end
 
 -- Returns the lore entry and the key that was looked up. The key is returned
