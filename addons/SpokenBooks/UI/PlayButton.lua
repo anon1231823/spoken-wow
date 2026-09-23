@@ -40,9 +40,26 @@
 -- stacked on space that does not exist.
 
 local ADDON_NAME, SpokenBooks = ...
+local L = SpokenBooks.L
 
 local BUTTON_WIDTH = 58
 local BUTTON_HEIGHT = 22
+-- Room the button's end caps take either side of its label.
+local LABEL_PADDING = 24
+
+--- Widen the button to fit the widest label it will ever show, never below BUTTON_WIDTH.
+--- Measured once over every label rather than on each SetText, so flipping between Play,
+--- Stop and Contribute keeps one width. BUTTON_WIDTH was sized to the English labels; a
+--- translated one can be twice as long. The button is pinned by its right edge, so it
+--- grows into the page, not off it.
+local function FitToLabels(button, labels)
+	local widest = 0
+	for _, label in ipairs(labels) do
+		button:SetText(label)
+		widest = math.max(widest, button:GetTextWidth())
+	end
+	button:SetWidth(math.max(BUTTON_WIDTH, widest + LABEL_PADDING))
+end
 
 --- Show, hide and re-label the button for whatever is on screen now.
 ---
@@ -62,9 +79,9 @@ function SpokenBooks:RefreshPlayButton()
 
 		local book = self:PlaceOf(pageId)
 		if self:IsNarrating(book) then
-			button:SetText("Stop")
+			button:SetText(L.STOP)
 		else
-			button:SetText("Play")
+			button:SetText(L.PLAY)
 		end
 		return
 	end
@@ -76,7 +93,7 @@ function SpokenBooks:RefreshPlayButton()
 	-- asked to load.
 	if self.HasContributionGap and self:HasContributionGap() then
 		button:Show()
-		button:SetText("Contribute")
+		button:SetText(L.CONTRIBUTE)
 		self.playButtonMode = "contribute"
 		return
 	end
@@ -100,9 +117,9 @@ function SpokenBooks:SetupPlayButton()
 	end
 
 	local button = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-	button:SetWidth(BUTTON_WIDTH)
 	button:SetHeight(BUTTON_HEIGHT)
-	button:SetText("Play")
+	FitToLabels(button, { L.PLAY, L.STOP, L.CONTRIBUTE })
+	button:SetText(L.PLAY)
 	button:Hide()
 
 	local page = _G.ItemTextScrollFrame
@@ -144,12 +161,12 @@ function SpokenBooks:SetupPlayButton()
 		end
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
 		if SpokenBooks.playButtonMode == "contribute" then
-			GameTooltip:SetText("No line for this page")
-			GameTooltip:AddLine("Send your own client's text so it can be added.", 1, 0.8, 0.2, true)
-		elseif self:GetText() == "Stop" then
-			GameTooltip:SetText("Stop reading this book")
+			GameTooltip:SetText(L.NO_LINE)
+			GameTooltip:AddLine(L.NO_LINE_TIP, 1, 0.8, 0.2, true)
+		elseif self:GetText() == L.STOP then
+			GameTooltip:SetText(L.STOP_TIP)
 		else
-			GameTooltip:SetText("Read this book aloud")
+			GameTooltip:SetText(L.PLAY_TIP)
 		end
 		GameTooltip:Show()
 	end)

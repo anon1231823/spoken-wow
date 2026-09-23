@@ -16,6 +16,8 @@
 --
 --   UI/SoundQueueUI.lua  every label and tooltip
 --   UI/MapPanel.lua      the two sentences that were built by concatenation
+--   UI/Options.lua       the settings panel rows
+--   Audio.lua            the player menu entries and settings link
 --   Core.lua             the /spz command list
 
 local _, SpokenZones = ...
@@ -84,5 +86,97 @@ L.CMD_MINIMAP = "  /spz minimap    -- show or hide the minimap button"
 L.CMD_DEBUG = "  /spz debug      -- report area names on map click"
 L.CMD_VERIFY = "  /spz verify     -- check data against this client"
 L.CMD_DUMP = "  /spz dump       -- enumerate the map tree (dev)"
+
+--------------------------------------------------------------------------------
+-- Options panel
+--------------------------------------------------------------------------------
+
+L.OPT_NOTE = "Lore for zones and subzones on the world map and minimap. Text from warcraft.wiki.gg, CC BY-SA 4.0."
+L.OPT_SECTION_MAP = "World map"
+L.OPT_MAP_PANEL = "Show the lore panel beside the map"
+L.OPT_MAP_PANEL_TIP = "The panel is hidden while the map is maximised, since it would sit off-screen."
+L.OPT_HOVER = "Show a lore tooltip on hover"
+L.OPT_HOVER_TIP = "Hover a zone on a continent map, or a subzone on a zone map. Suppressed while the cursor is over a map pin."
+L.OPT_PANEL_LEFT = "Put the panel on the left of the map"
+L.OPT_PANEL_WIDTH = "Panel width"
+L.OPT_FONT_SIZE = "Font size"
+L.OPT_SECTION_MINIMAP = "Minimap"
+L.OPT_MINIMAP_BUTTON = "Show the minimap button"
+L.OPT_MINIMAP_BUTTON_TIP = "Left-click opens the lore window, right-click opens these settings."
+L.OPT_SECTION_NARRATION = "Narration"
+L.OPT_PLAY_BUTTON = "Show the Play button on lore descriptions"
+L.OPT_PLAY_BUTTON_TIP = "Reads the lore aloud. Needs a Spoken Zones Audio companion addon; without one the button does not appear."
+L.OPT_AUTOPLAY = "Narrate a zone when you discover it"
+L.OPT_AUTOPLAY_TIP = "Triggered by the game's own discovery -- the moment it prints \"Discovered Durotar\". Fires once per character, because that is when the game fires it."
+L.OPT_AUTOPLAY_SUB = "Also narrate subzones you discover"
+L.OPT_AUTOPLAY_SUB_TIP = "Most discoveries are subzones -- a walk across Elwynn sets off several. They queue rather than interrupt, so untick this only if the narration feels constant."
+L.OPT_AUTOPLAY_EXPLORED = "Also narrate areas you explored before installing"
+L.OPT_AUTOPLAY_EXPLORED_TIP = "The game announces a discovery once per character, ever -- so a character who already explored Azeroth is never narrated anything. Tick this and Spoken Zones keeps its own record instead, still one clip per area per character. /spz forget clears it."
+L.OPT_PACK_NONE = "Nothing is narrated. Install Spoken Zones Audio to hear the lore read aloud."
+L.OPT_PACK_MULTI_FMT = "%1$s. %2$d installed; the higher quality one is used unless you choose otherwise."
+L.OPT_PACK_SINGLE_FMT = "%1$s. Install another pack to switch quality."
+L.OPT_SOUND_PACK = "Sound pack"
+L.OPT_SOUND_PACK_TIP = "Which installed pack narrates the lore."
+L.OPT_SECTION_LANGUAGE = "Language"
+L.OPT_LANG_ONLY_ENGLISH = "The lore is only written in English so far."
+L.OPT_LANG_RELOAD = "Reload to start reading it: type /reload."
+L.OPT_LANG_COUNT_FMT = "%1$d languages available. Switching takes effect after /reload."
+L.OPT_LANGUAGE = "Language"
+L.OPT_LANGUAGE_TIP = "Which language the lore is read and shown in."
+L.OPT_LANG_SET_FMT = "language set to %1$s -- |cffffcc00/reload to apply|r"
+L.OPT_SECTION_TROUBLE = "Troubleshooting"
+L.OPT_DEBUG_MAP_CLICK = "Report area names when clicking the map"
+L.OPT_DEBUG_MAP_CLICK_TIP = "Prints the raw area name the client reports, the key it normalises to, and whether lore was found. Use this to spot a subzone needing an alias."
+L.OPT_SECTION_FEEDBACK = "Feedback"
+L.OPT_REPORT_PROBLEM = "Report a problem"
+L.OPT_REPORT_ADDRESS = "Copy this address and open it in your browser to send feedback about Spoken Zones."
+L.OPT_REPORT_NOTE = "There is a Report button on each lore entry for problems with that entry. This one is for everything else. The game cannot open a link, so both give you an address to copy."
+L.OPT_REPORT_LINE_TIP = "Wrong lore, a bad reading, a mispronounced name -- this gives you a link to say so."
+L.OPT_REPORT_LINE_ADDRESS = "Copy this address and open it in your browser to report a problem with this entry."
+
+--------------------------------------------------------------------------------
+-- Player menu entries
+--------------------------------------------------------------------------------
+
+L.MENU_LORE_WINDOW = "Open lore window"
+L.MENU_ZONE_SETTINGS = "Spoken Zones settings"
+
+--------------------------------------------------------------------------------
+-- Lore window buttons
+--------------------------------------------------------------------------------
+
+L.STOP = "Stop"
+L.AUDIO_STOP_TIP = "Stop the narration"
+L.AUDIO_READ_TIP = "Read this lore aloud"
+L.REPORT_BUTTON = "Report"
+L.CONTRIBUTE_BUTTON = "Contribute"
+L.CONTRIBUTE_BUTTON_TIP_TITLE = "Spoken Zones has no lore for this place"
+L.CONTRIBUTE_BUTTON_TIP = "Contribute by describing it: what it is, who lives there, what happened there."
+L.IN_ZONE_FMT = "in %1$s"
+L.LORE_WINDOW_EMPTY = "Pick a zone on the left. Zones with subzones show a count; click one to expand it."
+L.MAP_LORE_FOR_FMT = "lore for %1$s"
+L.MAP_SUBZONE_MORE = "click a subzone on the map for more"
+
+--------------------------------------------------------------------------------
+-- Language names
+--
+-- How each content language is named in lists: the options dropdown, /spz lang,
+-- pack labels. A picker lists every language at once, so these are exonyms in
+-- the interface language rather than each language's own endonym.
+--------------------------------------------------------------------------------
+
+L.LANG_enUS = "English"
+L.LANG_deDE = "German"
+L.LANG_esES = "Spanish (Spain)"
+L.LANG_esMX = "Spanish (Latin America)"
+L.LANG_frFR = "French"
+L.LANG_ptBR = "Portuguese"
+L.LANG_ruRU = "Russian"
+L.LANG_koKR = "Korean"
+L.LANG_zhCN = "Chinese (Simplified)"
+L.LANG_zhTW = "Chinese (Traditional)"
+L.PACK_QUALITY_HIGH = "High"
+L.PACK_QUALITY_STANDARD = "Standard"
+L.OPT_PACK_NONE_INSTALLED = "none installed"
 
 SpokenZones:RegisterStrings("enUS", L)

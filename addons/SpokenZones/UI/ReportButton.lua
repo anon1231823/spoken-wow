@@ -11,6 +11,8 @@
 
 local ADDON_NAME, SpokenZones = ...
 
+local L = SpokenZones.L
+
 local BUTTON_WIDTH = 58
 local BUTTON_HEIGHT = 20
 local CONTRIBUTE_WIDTH = 100
@@ -43,8 +45,8 @@ end
 
 function SpokenZones:CreateReportButton(parent)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-	button:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
-	button:SetText("Report")
+	button:SetHeight(BUTTON_HEIGHT)
+	SpokenZones:FitButtonToLabels(button, BUTTON_WIDTH, { L.REPORT_BUTTON })
 	button:Hide()
 
 	button.SetTarget = ReportButton.SetTarget
@@ -55,13 +57,13 @@ function SpokenZones:CreateReportButton(parent)
 		if not url then
 			return
 		end
-		SpokenZones:ShowCopyLink(url, "Copy this address and open it in your browser to report a problem with this entry.")
+		SpokenZones:ShowCopyLink(url, L.OPT_REPORT_LINE_ADDRESS)
 	end)
 
 	button:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-		GameTooltip:SetText("Report a problem")
-		GameTooltip:AddLine("Wrong lore, a bad reading, a mispronounced name -- this gives you a link to say so.", 1, 0.8, 0.2, true)
+		GameTooltip:SetText(L.OPT_REPORT_PROBLEM)
+		GameTooltip:AddLine(L.OPT_REPORT_LINE_TIP, 1, 0.8, 0.2, true)
 		GameTooltip:Show()
 	end)
 
@@ -83,7 +85,7 @@ end
 function SpokenZones:CreateContributeButton(parent)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
 	button:SetSize(CONTRIBUTE_WIDTH, BUTTON_HEIGHT + 2)
-	button:SetText("Contribute")
+	button:SetText(L.CONTRIBUTE_BUTTON)
 	button:Hide()
 
 	button:SetScript("OnClick", function(self)
@@ -92,8 +94,8 @@ function SpokenZones:CreateContributeButton(parent)
 
 	button:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-		GameTooltip:SetText("Spoken Zones has no lore for this place")
-		GameTooltip:AddLine("Contribute by describing it: what it is, who lives there, what happened there.", 1, 0.8, 0.2, true)
+		GameTooltip:SetText(L.CONTRIBUTE_BUTTON_TIP_TITLE)
+		GameTooltip:AddLine(L.CONTRIBUTE_BUTTON_TIP, 1, 0.8, 0.2, true)
 		GameTooltip:Show()
 	end)
 

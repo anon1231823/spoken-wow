@@ -26,7 +26,7 @@ local FRAME_STRATAS =
 ---@type AceConfigOptionsTable
 local GeneralTab =
 {
-    name = "General",
+    name = L.OPT_GROUP_GENERAL,
     type = "group",
     order = 10,
     args = {
@@ -34,14 +34,14 @@ local GeneralTab =
             type = "group",
             order = 4,
             inline = true,
-            name = "Audio",
+            name = L.OPT_GROUP_AUDIO,
             args = {
                 ToggleAutoplay = {
                     type = "toggle",
                     order = 1,
                     width = 2,
-                    name = "Read Dialogue When It Opens",
-                    desc = "Quests, greetings and gossip. Off, nothing is read until you press Play on the window or type /spq read.",
+                    name = L.OPT_AUTOPLAY,
+                    desc = L.OPT_AUTOPLAY_TIP,
                     get = function(info) return Addon:IsAutoplayOn() end,
                     set = function(info, value) Addon:SetAutoplay(value) end,
                 },
@@ -53,13 +53,13 @@ local GeneralTab =
                     -- It decides which greetings autoplay reads, so with autoplay off it has
                     -- nothing to decide.
                     disabled = function(info) return not Addon:IsAutoplayOn() end,
-                    name = "NPC Greeting Playback Frequency",
-                    desc = "Controls how often Spoken Quests will play NPC greeting dialog. The Once options are remembered for this character across NPC revisits and logins.",
+                    name = L.OPT_GREETING_FREQ,
+                    desc = L.OPT_GREETING_FREQ_TIP,
                     values = {
-                        [Enums.GossipFrequency.Always] = "Always",
-                        [Enums.GossipFrequency.OncePerQuestNPC] = "Once per Quest NPC (per character)",
-                        [Enums.GossipFrequency.OncePerNPC] = "Once per NPC (per character)",
-                        [Enums.GossipFrequency.Never] = "Never",
+                        [Enums.GossipFrequency.Always] = L.OPT_GREETING_ALWAYS,
+                        [Enums.GossipFrequency.OncePerQuestNPC] = L.OPT_GREETING_ONCE_QUEST,
+                        [Enums.GossipFrequency.OncePerNPC] = L.OPT_GREETING_ONCE_NPC,
+                        [Enums.GossipFrequency.Never] = L.OPT_GREETING_NEVER,
                     },
                     get = function(info) return Addon.db.profile.Audio.GossipFrequency end,
                     set = function(info, value)
@@ -72,8 +72,8 @@ local GeneralTab =
                     type = "toggle",
                     order = 6,
                     width = 2,
-                    name = "Sync Dialog to Window State",
-                    desc = "Narration will automatically stop when the gossip/quest window is closed.",
+                    name = L.OPT_SYNC_WINDOW,
+                    desc = L.OPT_SYNC_WINDOW_TIP,
                     get = function(info) return Addon.db.profile.Audio.StopAudioOnDisengage end,
                     set = function(info, value)
                         Addon.db.profile.Audio.StopAudioOnDisengage = value
@@ -84,8 +84,8 @@ local GeneralTab =
                     type = "toggle",
                     order = 8,
                     width = 2,
-                    name = "OG Thrall",
-                    desc = "Plays the original AI VoiceOver recording of Thrall's \"All members of the Horde are equal in my eyes\" speech instead of this addon's.",
+                    name = L.OPT_OG_THRALL,
+                    desc = L.OPT_OG_THRALL_TIP,
                     get = function(info) return Addon.db.profile.Audio.OGThrall end,
                     set = function(info, value)
                         Addon.db.profile.Audio.OGThrall = value
@@ -97,14 +97,14 @@ local GeneralTab =
             type = "group",
             order = 5,
             inline = true,
-            name = "Debugging Tools",
+            name = L.OPT_GROUP_DEBUG,
             args = {
                 DebugEnabled = {
                     type = "toggle",
                     order = 1,
                     width = 1.25,
-                    name = "Enable Debug Messages",
-                    desc = "Enables printing of some \"useful\" debug messages to the chat window.",
+                    name = L.OPT_DEBUG,
+                    desc = L.OPT_DEBUG_TIP,
                     get = function(info) return Addon.db.profile.DebugEnabled end,
                     set = function(info, value) Addon.db.profile.DebugEnabled = value end,
                 },
@@ -119,14 +119,14 @@ local LegacyWrathTab = nil
 ---@type AceConfigOptionsTable
 local DataModulesTab =
 {
-    name = function() return format("Data Modules%s", next(Options.table.args.DataModules.args.Available.args) and "|cFF00CCFF (NEW)|r" or "") end,
+    name = function() return format(L.OPT_TAB_DATA_MODULES .. "%s", next(Options.table.args.DataModules.args.Available.args) and "|cFF00CCFF (NEW)|r" or "") end,
     type = "group",
     childGroups = "tree",
     order = 20,
     args = {
         Available = {
             type = "group",
-            name = "|cFF00CCFFAvailable|r",
+            name = L.OPT_AVAILABLE_GROUP,
             order = 100000,
             hidden = function(info) return not next(Options.table.args.DataModules.args.Available.args) end,
             args = {}
@@ -137,7 +137,7 @@ local DataModulesTab =
 ---@type AceConfigOptionsTable
 local SlashCommands = {
     type = "group",
-    name = "Commands",
+    name = L.OPT_CMD_GROUP,
     order = 110,
     inline = true,
     dialogHidden = true,
@@ -145,8 +145,8 @@ local SlashCommands = {
         PlayPause = {
             type = "execute",
             order = 1,
-            name = "Play/Pause Audio",
-            desc = "Play/Pause voiceovers",
+            name = L.OPT_CMD_PLAYPAUSE,
+            desc = L.OPT_CMD_PLAYPAUSE_DESC,
             hidden = true,
             func = function(info)
                 if Spoken then Spoken:TogglePause() end
@@ -155,8 +155,8 @@ local SlashCommands = {
         Play = {
             type = "execute",
             order = 2,
-            name = "Play Audio",
-            desc = "Resume the playback of voiceovers",
+            name = L.OPT_CMD_PLAY,
+            desc = L.OPT_CMD_PLAY_DESC,
             func = function(info)
                 if Spoken then Spoken:Resume() end
             end
@@ -164,8 +164,8 @@ local SlashCommands = {
         Pause = {
             type = "execute",
             order = 3,
-            name = "Pause Audio",
-            desc = "Pause the playback of voiceovers",
+            name = L.OPT_CMD_PAUSE,
+            desc = L.OPT_CMD_PAUSE_DESC,
             func = function(info)
                 if Spoken then Spoken:Pause() end
             end
@@ -173,8 +173,8 @@ local SlashCommands = {
         Skip = {
             type = "execute",
             order = 4,
-            name = "Skip Line",
-            desc = "Skip the currently played voiceover",
+            name = L.OPT_CMD_SKIP,
+            desc = L.OPT_CMD_SKIP_DESC,
             func = function(info)
                 if Spoken then Spoken:Skip() end
             end
@@ -182,8 +182,8 @@ local SlashCommands = {
         Clear = {
             type = "execute",
             order = 5,
-            name = "Clear Queue",
-            desc = "Stop the playback and clears the voiceovers queue",
+            name = L.OPT_CMD_CLEAR,
+            desc = L.OPT_CMD_CLEAR_DESC,
             func = function(info)
                 if Spoken then Spoken:StopAll() end
             end
@@ -191,8 +191,8 @@ local SlashCommands = {
         Read = {
             type = "execute",
             order = 70,
-            name = "Read Visible Quest",
-            desc = "Narrate the quest panel that is currently visible",
+            name = L.OPT_CMD_READ,
+            desc = L.OPT_CMD_READ_DESC,
             dropdownHidden = true,
             func = function(info)
                 if not Addon:ReadVisibleQuest("/spq read") then
@@ -203,24 +203,24 @@ local SlashCommands = {
         Test = {
             type = "execute",
             order = 80,
-            name = "Test Audio",
-            desc = "Play a short known file from the Vanilla Data module",
+            name = L.OPT_CMD_TEST,
+            desc = L.OPT_CMD_TEST_DESC,
             dropdownHidden = true,
             func = function() Options:RunSelfTest() end
         },
         Diagnostics = {
             type = "execute",
             order = 90,
-            name = "Diagnostics",
-            desc = "Print client, API, and sound-pack loading status",
+            name = L.OPT_CMD_DIAG,
+            desc = L.OPT_CMD_DIAG_DESC,
             dropdownHidden = true,
             func = function() Options:PrintDiagnostics() end
         },
         Options = {
             type = "execute",
             order = 100,
-            name = "Open Options",
-            desc = "Open the options panel",
+            name = L.OPT_CMD_OPTIONS,
+            desc = L.OPT_CMD_OPTIONS_DESC,
             func = function(info)
                 Options:OpenConfigWindow()
             end
@@ -267,28 +267,28 @@ function Options:AddDataModule(module, order)
                 order,
                 reason and RED_FONT_COLOR_CODE or isLoaded and HIGHLIGHT_FONT_COLOR_CODE or GRAY_FONT_COLOR_CODE,
                 string.gsub(module.Title, "VoiceOver Data %- ", ""),
-                isLoaded and "" or " (not loaded)")
+                isLoaded and "" or L.OPT_NOT_LOADED_SUFFIX)
         end,
         type = "group",
         order = order,
         args = {
-            AddonName = MakeDescription("Addon Name", module.AddonName),
-            Title = MakeDescription("Title", module.Title),
-            ModuleVersion = MakeDescription("Module Data Format Version", module.ModuleVersion),
-            ModulePriority = MakeDescription("Module Priority", module.ModulePriority),
-            ContentVersion = MakeDescription("Content Version", module.ContentVersion),
-            LoadOnDemand = MakeDescription("Load on Demand", module.LoadOnDemand and "Yes" or "No"),
-            Loaded = MakeDescription("Is Loaded", function() return DataModules:GetModule(module.AddonName) and "Yes" or "No" end),
+            AddonName = MakeDescription(L.OPT_ROW_ADDON_NAME, module.AddonName),
+            Title = MakeDescription(L.OPT_ROW_TITLE, module.Title),
+            ModuleVersion = MakeDescription(L.OPT_ROW_FORMAT_VERSION, module.ModuleVersion),
+            ModulePriority = MakeDescription(L.OPT_ROW_PRIORITY, module.ModulePriority),
+            ContentVersion = MakeDescription(L.OPT_ROW_CONTENT_VERSION, module.ContentVersion),
+            LoadOnDemand = MakeDescription(L.OPT_ROW_LOAD_ON_DEMAND, module.LoadOnDemand and YES or NO),
+            Loaded = MakeDescription(L.OPT_ROW_LOADED, function() return DataModules:GetModule(module.AddonName) and YES or NO end),
             NotLoadableReason = {
                 type = "description",
                 order = GetNextOrder(),
-                name = format("%sReason: |r%s%s|r", NORMAL_FONT_COLOR_CODE, RED_FONT_COLOR_CODE, reason and _G["ADDON_"..reason] or ""),
+                name = format(L.OPT_ROW_REASON_FMT, NORMAL_FONT_COLOR_CODE, RED_FONT_COLOR_CODE, reason and _G["ADDON_"..reason] or ""),
                 hidden = not reason,
             },
             Load = {
                 type = "execute",
                 order = GetNextOrder(),
-                name = "Load",
+                name = L.OPT_LOAD_BUTTON,
                 hidden = function() return reason or not module.LoadOnDemand or DataModules:GetModule(module.AddonName) end,
                 func = function()
                     local loaded, reason = DataModules:LoadModule(module)
@@ -315,18 +315,18 @@ function Options:AddAvailableDataModule(module, order, update)
     end
 
     DataModulesTab.args.Available.args[module.AddonName] = {
-        name = Utils:ColorizeText(format(update and "%s (Update)" or "%s", string.gsub(module.Title, "VoiceOver Data %- ", "")), "|cFF00CCFF"),
+        name = Utils:ColorizeText(format(update and "%s" .. L.OPT_UPDATE_SUFFIX or "%s", DataModules:GetPackLabel(module)), "|cFF00CCFF"),
         type = "group",
         order = order,
         args = {
-            AddonName = MakeDescription("Addon Name", module.AddonName),
-            Title = MakeDescription("Title", module.Title),
-            ContentVersion = MakeDescription("Content Version", format(update and "%2$s -> |cFF00CCFF%1$s|r" or "%s", module.ContentVersion, update and DataModules:GetPresentModule(module.AddonName).ContentVersion)),
+            AddonName = MakeDescription(L.OPT_ROW_ADDON_NAME, module.AddonName),
+            Title = MakeDescription(L.OPT_ROW_TITLE, module.Title),
+            ContentVersion = MakeDescription(L.OPT_ROW_CONTENT_VERSION, format(update and L.OPT_CONTENT_VERSION_UPDATE_FMT or L.OPT_CONTENT_VERSION_FMT, module.ContentVersion, update and DataModules:GetPresentModule(module.AddonName).ContentVersion)),
             URL = {
                 type = "input",
                 order = GetNextOrder(),
                 width = "full",
-                name = "Download URL",
+                name = L.OPT_DOWNLOAD_URL,
                 get = function(info) return module.URL end,
                 set = function(info) end,
             },

@@ -654,8 +654,8 @@ function Contribute:ShowTooltip(owner, gossip)
         return
     end
     GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
-    GameTooltip:SetText(gossip and "Spoken Quests doesn't have this line" or "Spoken Quests doesn't have this quest")
-    GameTooltip:AddLine("Contribute your data by sharing data from your client", 1, 0.8, 0.2, true)
+    GameTooltip:SetText(gossip and L.OPT_CONTRIBUTE_TIP_LINE or L.OPT_CONTRIBUTE_TIP_QUEST)
+    GameTooltip:AddLine(L.OPT_CONTRIBUTE_TIP_SHARE, 1, 0.8, 0.2, true)
     GameTooltip:Show()
 end
 

@@ -295,7 +295,7 @@ function Player:Setup()
     -- Switchable from the player's settings, named there by this addon. The zones addon
     -- declares the same id, so one setting covers whichever is speaking.
     if Spoken.RegisterOptionalAction then
-        Spoken:RegisterOptionalAction("report", "Report")
+        Spoken:RegisterOptionalAction("report", L.OPT_REPORT)
     end
 
     Spoken:RegisterBullet("quest-accept",   TEXTURES .. "SoundQueueBulletAccept", 14)
@@ -303,12 +303,12 @@ function Player:Setup()
     Spoken:RegisterBullet("quest-complete", TEXTURES .. "SoundQueueBulletComplete", 14)
     Spoken:RegisterBullet("gossip",         TEXTURES .. "SoundQueueBulletGossip", 14)
 
-    Spoken.Minimap:AddEntry("quests", { id = "Read", text = "Read visible quest", order = 1,
+    Spoken.Minimap:AddEntry("quests", { id = "Read", text = L.OPT_MINIMAP_READ, order = 1,
         onClick = function() Addon:ReadVisibleQuest("minimap") end })
-    Spoken.Minimap:AddEntry("quests", { id = "Options", text = "Spoken Quests settings", order = 2,
+    Spoken.Minimap:AddEntry("quests", { id = "Options", text = L.OPT_MINIMAP_SETTINGS, order = 2,
         onClick = function() Options:OpenSettings() end })
     if Spoken.AddSettingsLink then
-        Spoken:AddSettingsLink("Spoken Quests settings", function() Options:OpenSettings() end)
+        Spoken:AddSettingsLink(L.OPT_MINIMAP_SETTINGS, function() Options:OpenSettings() end)
     end
     return true
 end

@@ -11,6 +11,8 @@
 
 local ADDON_NAME, SpokenBooks = ...
 
+local L = SpokenBooks.L
+
 local INDENT = 20
 
 local panel, category
@@ -54,8 +56,7 @@ function SpokenBooks:SetupOptions()
 	heading:SetText("Spoken Books")
 
 	local layout = SpokenLayout.New(content, INDENT, -42)
-	layout:Note("Books, letters and notes read aloud through the Spoken player. "
-		.. "Narration needs the Spoken Books Audio pack.")
+	layout:Note(L.OPT_NOTE)
 
 	local function Get(key)
 		return function() return SpokenBooksDB and SpokenBooksDB[key] end
@@ -64,27 +65,22 @@ function SpokenBooks:SetupOptions()
 		return function(value) if SpokenBooksDB then SpokenBooksDB[key] = value end end
 	end
 
-	layout:Section("Reading")
-	layout:Checkbox("Read a book when it is opened",
-		"Off, nothing starts by itself and a book is read only when you press Play or type "
-			.. "/spb read.",
+	layout:Section(L.OPT_SECTION_READING)
+	layout:Checkbox(L.OPT_AUTOPLAY,
+		L.OPT_AUTOPLAY_TIP,
 		Get("autoplay"), Set("autoplay"))
-	layout:Checkbox("Read the whole book, not just the page on screen",
-		"Opening the first page queues the rest, so a journal reads on while you turn its "
-			.. "pages.",
+	layout:Checkbox(L.OPT_WHOLE_BOOK,
+		L.OPT_WHOLE_BOOK_TIP,
 		Get("readWholeBook"), Set("readWholeBook"))
-	layout:Checkbox("Read each book only once",
-		"A book you have already heard on this character is not read again when you open "
-			.. "it. Play still works, and what has been read is remembered per character.",
+	layout:Checkbox(L.OPT_READ_ONCE,
+		L.OPT_READ_ONCE_TIP,
 		Get("readOnce"), Set("readOnce"))
 
-	layout:Section("What this character has read")
-	layout:Button("Forget what has been read", 200, function()
+	layout:Section(L.OPT_SECTION_READ)
+	layout:Button(L.OPT_FORGET, 200, function()
 		local count = SpokenBooks:ForgetRead()
-		SpokenBooks:Print("forgot %d book%s; they will be read again",
-			count, count == 1 and "" or "s")
-	end, "Clears this character's record, so every book is new again. Only matters while "
-		.. "\"Read each book only once\" is on.")
+		SpokenBooks:Print(L.OPT_FORGET_DONE_FMT:format(count, count == 1 and "" or "s"))
+	end, L.OPT_FORGET_TIP)
 
 	-- Derived rather than written as a number: a hardcoded height is a number nobody updates
 	-- when a row is added, and what that produces is a section you cannot scroll to.

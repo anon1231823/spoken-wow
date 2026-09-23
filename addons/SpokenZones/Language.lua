@@ -5,11 +5,16 @@
 --   client locale   GetLocale(). Decides what GetSubZoneText and
 --                   MapUtil.FindBestAreaNameAtMouse hand back, and therefore
 --                   which alias table turns those names into corpus keys. Also
---                   decides which glyphs the client's fonts can draw.
+--                   decides which glyphs the client's fonts can draw -- and,
+--                   for that same reason, which interface strings load: a client
+--                   only ever loads its own locale's file, so its UI is always
+--                   renderable.
 --
 --   content language  What the player chose to read and hear. Decides which
---                   lore table is primary, which UI strings are used, and which
---                   sound pack plays.
+--                   lore table is primary and which sound pack plays. Deliberately
+--                   NOT which UI strings are used: those follow the client, so a
+--                   translation shows the moment it exists instead of waiting for
+--                   the whole lore corpus to be finished.
 --
 -- A German client reading English lore still needs German aliases. Getting that
 -- backwards is the failure that presents as "the addon just does not work in
@@ -178,6 +183,25 @@ function SpokenZones:GetLocaleInfo(code)
 	return byCode[code]
 end
 
+-- Display name of a language code in the interface language, for everywhere a
+-- language is listed: the options dropdown, /spz lang, pack labels. Falls back
+-- to the built-in English name, then the code itself, so an unknown code reads
+-- as something rather than nothing.
+function SpokenZones:GetLanguageName(code)
+	if code then
+		local entry = self.L["LANG_" .. code]
+		if entry then
+			return entry
+		end
+		local locale = byCode[code]
+		if locale then
+			return locale.name
+		end
+		return code
+	end
+	return self.L.LANG_enUS or "English"
+end
+
 -- Stores the preference. Returns false when the language is not selectable, so
 -- the caller can say why rather than storing a choice that resolves to English.
 --
@@ -216,7 +240,10 @@ local warnedMissing = {}
 
 SpokenZones.L = setmetatable({}, {
 	__index = function(_, key)
-		local active = SpokenZones.Strings[SpokenZones.language]
+		-- Interface strings follow the client, not the content language: the
+		-- locale file for any other code never loads on this client, so there
+		-- is nothing else it could fall back to before English.
+		local active = SpokenZones.Strings[SpokenZones.clientLocale]
 		local value = active and active[key]
 		if value ~= nil then
 			return value
@@ -238,8 +265,9 @@ SpokenZones.L = setmetatable({}, {
 	end,
 })
 
--- Called by Locale/<code>.lua, which guards itself with ShouldLoadLanguage in the
--- same way the generated data files do.
+-- Called by Locale/<code>.lua, which guards itself on the client locale in
+-- the same way every WoW addon does: interface strings are useful the moment
+-- one of them exists, unlike lore, which is only offered whole.
 --
 -- STRINGS DO FALL BACK TO ENGLISH, unlike the lore. A missing string is an unlabelled
 -- button, and an English label is a strictly better answer than an empty one; a

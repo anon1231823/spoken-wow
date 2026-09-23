@@ -20,10 +20,10 @@ local ROW_HEIGHT = 16
 local PADDING = 14
 local SCROLL_STEP = ROW_HEIGHT * 3
 
--- Horizontal room kept clear at the right of the credit line for the report
--- button, the same trade UI/MapPanel.lua makes: the credit is short and the
--- button is a rare click, so they share the footer row.
-local REPORT_RESERVE = 64
+-- Gap kept clear between the credit line and the report button, the same trade
+-- UI/MapPanel.lua makes: the credit is short and the button is a rare click, so
+-- they share the footer row. The button's own width follows its label.
+local REPORT_GAP = 6
 
 local window, listScroll, listChild, header, subheader, body, footer, audioButton, reportButton, contributeButton
 local rows = {}
@@ -106,7 +106,7 @@ local function ShowEntry()
 	if not selection then
 		header:SetText("Spoken Zones")
 		subheader:SetText("")
-		body:SetText("|cff888888Pick a zone on the left. Zones with subzones show a count; click one to expand it.|r")
+		body:SetText("|cff888888" .. L.LORE_WINDOW_EMPTY .. "|r")
 		audioButton:SetTarget(nil, nil)
 		reportButton:SetTarget(nil, nil)
 		return
@@ -118,7 +118,7 @@ local function ShowEntry()
 		local entry = SpokenZones.Subzones[mapID] and SpokenZones.Subzones[mapID][key]
 		if entry then
 			header:SetText(entry.name or key)
-			subheader:SetText("in " .. (SpokenZones:GetMapName(mapID) or ""))
+			subheader:SetText(string.format(L.IN_ZONE_FMT, SpokenZones:GetMapName(mapID) or ""))
 			if SpokenZones:IsPending(entry) then
 				body:SetText("|cff888888" .. L.LORE_NOT_WRITTEN:format(entry.name or key) .. "|r")
 				audioButton:SetTarget(nil, nil)
@@ -374,14 +374,16 @@ local function BuildWindow()
 	subheader:SetPoint("RIGHT", window, "RIGHT", -PADDING, 0)
 	subheader:SetJustifyH("LEFT")
 
+	-- Built before the credit line so the line can leave room for its width.
+	reportButton = SpokenZones:CreateReportButton(window)
+
 	footer = window:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
 	footer:SetPoint("BOTTOMLEFT", listScroll, "BOTTOMRIGHT", PADDING, 0)
-	footer:SetPoint("RIGHT", window, "RIGHT", -(PADDING + REPORT_RESERVE), 0)
+	footer:SetPoint("RIGHT", window, "RIGHT", -(PADDING + reportButton:GetWidth() + REPORT_GAP), 0)
 	footer:SetJustifyH("LEFT")
 	footer:SetText("Lore: warcraft.wiki.gg (CC BY-SA 4.0)")
 
-	reportButton = SpokenZones:CreateReportButton(window)
-	reportButton:SetPoint("LEFT", footer, "RIGHT", 6, -4)
+	reportButton:SetPoint("LEFT", footer, "RIGHT", REPORT_GAP, -4)
 
 	body = SpokenZones:CreateTextView(window)
 	body.frame:SetPoint("TOPLEFT", subheader, "BOTTOMLEFT", 0, -8)

@@ -10,6 +10,8 @@
 
 local ADDON_NAME, SpokenZones = ...
 
+local L = SpokenZones.L
+
 local INDENT = 20
 
 local panel, category
@@ -70,36 +72,34 @@ function SpokenZones:SetupOptions()
 
 	MakeHeading(content, "Spoken Zones", INDENT, -16)
 	local layout = SpokenLayout.New(content, INDENT, -42)
-	layout:Note("Lore for zones and subzones on the world map and minimap. Text from "
-		.. "warcraft.wiki.gg, CC BY-SA 4.0.")
+	layout:Note(L.OPT_NOTE)
 
 	-- Every row's position, and the spacing between them, comes from UI/Layout.lua -- the
 	-- file every Spoken addon carries a copy of, so the three panels read alike.
 	local function Get(key) return function() return SpokenZones:Get(key) end end
 	local function Set(key) return function(value) SpokenZones:Set(key, value) end end
 
-	layout:Section("World map")
-	layout:Checkbox("Show the lore panel beside the map",
-		"The panel is hidden while the map is maximised, since it would sit off-screen.",
+	layout:Section(L.OPT_SECTION_MAP)
+	layout:Checkbox(L.OPT_MAP_PANEL,
+		L.OPT_MAP_PANEL_TIP,
 		Get("showMapPanel"), Set("showMapPanel"), RedrawPanel)
-	layout:Checkbox("Show a lore tooltip on hover",
-		"Hover a zone on a continent map, or a subzone on a zone map. Suppressed while "
-			.. "the cursor is over a map pin.",
+	layout:Checkbox(L.OPT_HOVER,
+		L.OPT_HOVER_TIP,
 		Get("showHoverPreview"), Set("showHoverPreview"))
 	-- Stored as a string ("LEFT"/"RIGHT") rather than a boolean, so it reads and writes
 	-- its own way rather than through Get/Set above.
-	layout:Checkbox("Put the panel on the left of the map", nil,
+	layout:Checkbox(L.OPT_PANEL_LEFT, nil,
 		function() return SpokenZones:Get("panelSide") == "LEFT" end,
 		function(value) SpokenZones:Set("panelSide", value and "LEFT" or "RIGHT") end,
 		RedrawPanel)
-	layout:Slider("Panel width", 220, 520, 10,
+	layout:Slider(L.OPT_PANEL_WIDTH, 220, 520, 10,
 		Get("panelWidth"), Set("panelWidth"), RedrawPanel, SpokenLayout.Number)
-	layout:Slider("Font size", 9, 20, 1,
+	layout:Slider(L.OPT_FONT_SIZE, 9, 20, 1,
 		Get("fontSize"), Set("fontSize"), RedrawEverything, SpokenLayout.Number)
 
-	layout:Section("Minimap")
-	layout:Checkbox("Show the minimap button",
-		"Left-click opens the lore window, right-click opens these settings.",
+	layout:Section(L.OPT_SECTION_MINIMAP)
+	layout:Checkbox(L.OPT_MINIMAP_BUTTON,
+		L.OPT_MINIMAP_BUTTON_TIP,
 		Get("showMinimapButton"), Set("showMinimapButton"), function()
 			-- The checkbox has already written the option, so sync rather than
 			-- toggle; ApplyMinimapButton also keeps `hide` in step for LibDBIcon.
@@ -108,34 +108,26 @@ function SpokenZones:SetupOptions()
 			end
 		end)
 
-	layout:Section("Narration")
-	layout:Checkbox("Show the Play button on lore descriptions",
-		"Reads the lore aloud. Needs a Spoken Zones Audio companion addon; without one "
-			.. "the button does not appear.",
+	layout:Section(L.OPT_SECTION_NARRATION)
+	layout:Checkbox(L.OPT_PLAY_BUTTON,
+		L.OPT_PLAY_BUTTON_TIP,
 		Get("voiceEnabled"), Set("voiceEnabled"), function()
 			SpokenZones:StopLore()
 			SpokenZones:NotifyAudioChanged()
 		end)
-	layout:Checkbox("Narrate a zone when you discover it",
-		"Triggered by the game's own discovery -- the moment it prints "
-			.. "\"Discovered Durotar\". Fires once per character, because that is "
-			.. "when the game fires it.",
+	layout:Checkbox(L.OPT_AUTOPLAY,
+		L.OPT_AUTOPLAY_TIP,
 		Get("autoplay"), Set("autoplay"), function()
 			if not SpokenZones:Get("autoplay") then
 				SpokenZones:StopLore()
 			end
 		end)
 	layout:Indent()
-	layout:Checkbox("Also narrate subzones you discover",
-		"Most discoveries are subzones -- a walk across Elwynn sets off several. "
-			.. "They queue rather than interrupt, so untick this only if the "
-			.. "narration feels constant.",
+	layout:Checkbox(L.OPT_AUTOPLAY_SUB,
+		L.OPT_AUTOPLAY_SUB_TIP,
 		Get("autoplaySubzones"), Set("autoplaySubzones"))
-	layout:Checkbox("Also narrate areas you explored before installing",
-		"The game announces a discovery once per character, ever -- so a character "
-			.. "who already explored Azeroth is never narrated anything. Tick this "
-			.. "and Spoken Zones keeps its own record instead, still one clip per area "
-			.. "per character. /spz forget clears it.",
+	layout:Checkbox(L.OPT_AUTOPLAY_EXPLORED,
+		L.OPT_AUTOPLAY_EXPLORED_TIP,
 		Get("autoplayExplored"), Set("autoplayExplored"))
 	layout:Outdent()
 	-- The list is read when the menu opens rather than captured here: packs cannot be
@@ -143,22 +135,20 @@ function SpokenZones:SetupOptions()
 	-- should not find this offering it.
 	local packNote
 	local function PackLabel(pack)
-		return pack and SpokenZones:GetAudioPackLabel(pack) or "none installed"
+		return pack and SpokenZones:GetAudioPackLabel(pack) or L.OPT_PACK_NONE_INSTALLED
 	end
 	local function DescribePacks()
 		local packs = SpokenZones:GetAudioPacks()
 		local active = SpokenZones:GetActiveAudioPack()
 		if #packs == 0 then
-			packNote:SetText("Nothing is narrated. Install Spoken Zones Audio to hear the "
-				.. "lore read aloud.")
+			packNote:SetText(L.OPT_PACK_NONE)
 		elseif #packs > 1 then
-			packNote:SetText(string.format("%s. %d installed; the higher quality one is "
-				.. "used unless you choose otherwise.", active.addon, #packs))
+			packNote:SetText(string.format(L.OPT_PACK_MULTI_FMT, active.addon, #packs))
 		else
-			packNote:SetText(active.addon .. ". Install another pack to switch quality.")
+			packNote:SetText(string.format(L.OPT_PACK_SINGLE_FMT, active.addon))
 		end
 	end
-	layout:Dropdown("Sound pack", "Which installed pack narrates the lore.",
+	layout:Dropdown(L.OPT_SOUND_PACK, L.OPT_SOUND_PACK_TIP,
 		function() return SpokenZones:GetAudioPacks() end,
 		function() return SpokenZones:GetActiveAudioPack() end,
 		function(pack) SpokenZones:SetActiveAudioPack(pack.addon) end,
@@ -167,7 +157,7 @@ function SpokenZones:SetupOptions()
 	packNote = layout:Note("", 460, 32)
 	DescribePacks()
 
-	layout:Section("Language")
+	layout:Section(L.OPT_SECTION_LANGUAGE)
 	-- Only finished languages are offered. A player choosing from a list has no way to
 	-- know that half a translation is missing, and would report the English that shows
 	-- through as a bug; /spz lang <code> force is how an unfinished one gets looked at.
@@ -178,15 +168,14 @@ function SpokenZones:SetupOptions()
 		-- effect on the next load.
 		local chosen = SpokenZones:GetLanguagePreference() or SpokenZones:GetLanguage()
 		if #available < 2 then
-			langNote:SetText("The lore is only written in English so far.")
+			langNote:SetText(L.OPT_LANG_ONLY_ENGLISH)
 		elseif chosen ~= SpokenZones:GetLanguage() then
-			langNote:SetText("Reload to start reading it: type /reload.")
+			langNote:SetText(L.OPT_LANG_RELOAD)
 		else
-			langNote:SetText(string.format(
-				"%d languages available. Switching takes effect after /reload.", #available))
+			langNote:SetText(string.format(L.OPT_LANG_COUNT_FMT, #available))
 		end
 	end
-	layout:Dropdown("Language", "Which language the lore is read and shown in.",
+	layout:Dropdown(L.OPT_LANGUAGE, L.OPT_LANGUAGE_TIP,
 		function() return SpokenZones:GetSelectableLanguages() end,
 		function()
 			local chosen = SpokenZones:GetLanguagePreference() or SpokenZones:GetLanguage()
@@ -200,32 +189,29 @@ function SpokenZones:SetupOptions()
 			if SpokenZones:SetLanguage(locale.code) then
 				-- Said before the reload rather than after: the failure to avoid is a
 				-- player switching, seeing English, and concluding it did not work.
-				SpokenZones:Print("language set to %s -- |cffffcc00/reload to apply|r", locale.name)
+				SpokenZones:Print(string.format(L.OPT_LANG_SET_FMT, SpokenZones:GetLanguageName(locale.code)))
 			end
 		end,
 		function() DescribeLanguage() end,
-		function(locale) return locale and locale.name or "English" end)
+		function(locale) return locale and SpokenZones:GetLanguageName(locale.code) or SpokenZones:GetLanguageName(nil) end)
 	langNote = layout:Note("", 460, 32)
 	DescribeLanguage()
 
-	layout:Section("Troubleshooting")
-	layout:Checkbox("Report area names when clicking the map",
-		"Prints the raw area name the client reports, the key it normalises to, and "
-			.. "whether lore was found. Use this to spot a subzone needing an alias.",
+	layout:Section(L.OPT_SECTION_TROUBLE)
+	layout:Checkbox(L.OPT_DEBUG_MAP_CLICK,
+		L.OPT_DEBUG_MAP_CLICK_TIP,
 		Get("debug"), Set("debug"))
 
 	-- Its own section rather than part of Troubleshooting, and not only because the
 	-- checkbox above already uses the word "report": the per-line Report buttons
 	-- cover a bad line, and this covers everything that belongs to no line at all --
 	-- the addon erroring, the voice being wrong throughout, the site itself.
-	layout:Section("Feedback")
-	layout:Button("Report a problem", 220, function()
+	layout:Section(L.OPT_SECTION_FEEDBACK)
+	layout:Button(L.OPT_REPORT_PROBLEM, 220, function()
 		SpokenZones:ShowCopyLink(SpokenZones.SITE_URL,
-			"Copy this address and open it in your browser to send feedback about Spoken Zones.")
+			L.OPT_REPORT_ADDRESS)
 	end)
-	layout:Note("There is a Report button on each lore entry for problems with that "
-		.. "entry. This one is for everything else. The game cannot open a link, so both "
-		.. "give you an address to copy.", 460, 40)
+	layout:Note(L.OPT_REPORT_NOTE, 460, 40)
 
 	-- Derived rather than written as a number: a hardcoded height is a number nobody
 	-- updates when a row is added, and the failure it produces is the one this scroller

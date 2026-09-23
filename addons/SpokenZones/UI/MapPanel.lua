@@ -14,14 +14,15 @@ local L = SpokenZones.L
 local PADDING = 16
 local INFO_LINE_HEIGHT = 16
 
--- Horizontal room kept clear on the header row for the play button, which sits in
--- the top-right corner. Wider than the button so a long zone name never crowds it.
-local AUDIO_RESERVE = 66
+-- Horizontal room kept clear on the header row beside the play button, which sits
+-- in the top-right corner, so a long zone name never crowds it. Added to the
+-- button's own width, which follows its label (SpokenZones:FitButtonToLabels).
+local AUDIO_GAP = 8
 
 -- The same idea on the footer row, for the report button. The credit line is short
 -- and the button is a rare click, so they share a row rather than costing the body
 -- another one.
-local REPORT_RESERVE = 64
+local REPORT_GAP = 6
 
 local panel, header, infoLine, body, footer, audioButton, reportButton, contributeButton
 
@@ -45,14 +46,14 @@ local function BuildPanel()
 		insets = { left = 11, right = 12, top = 12, bottom = 11 },
 	})
 
-	header = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-	header:SetPoint("TOPLEFT", panel, "TOPLEFT", PADDING, -PADDING)
-	header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -(PADDING + AUDIO_RESERVE), -PADDING)
-	header:SetJustifyH("LEFT")
-	header:SetWordWrap(true)
-
 	audioButton = SpokenZones:CreateAudioButton(panel)
 	audioButton:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -PADDING, -(PADDING - 2))
+
+	header = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+	header:SetPoint("TOPLEFT", panel, "TOPLEFT", PADDING, -PADDING)
+	header:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -(PADDING + audioButton:GetWidth() + AUDIO_GAP), -PADDING)
+	header:SetJustifyH("LEFT")
+	header:SetWordWrap(true)
 
 	-- One fixed-height slot under the header, used either as a caption or as the
 	-- "back to zone" link. Keeping it always present means the scroll frame below
@@ -83,7 +84,7 @@ local function BuildPanel()
 
 	footer = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
 	footer:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", PADDING, PADDING - 4)
-	footer:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -(PADDING + REPORT_RESERVE), PADDING - 4)
+	footer:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -(PADDING + reportButton:GetWidth() + REPORT_GAP), PADDING - 4)
 	footer:SetJustifyH("LEFT")
 	footer:SetText("Lore: warcraft.wiki.gg (CC BY-SA 4.0)")
 
@@ -213,11 +214,11 @@ local function Refresh(mapID)
 		-- Fallback hit an ancestor (a dungeon or micro-map inheriting its zone's
 		-- lore); say so rather than silently mislabelling the text.
 		if foundOn ~= mapID then
-			SetCaption("lore for " .. (SpokenZones:GetMapName(foundOn) or "parent zone"))
+			SetCaption(string.format(L.MAP_LORE_FOR_FMT, SpokenZones:GetMapName(foundOn) or "parent zone"))
 		else
 			local subzones = SpokenZones.Subzones[mapID]
 			if subzones and next(subzones) then
-				SetCaption("click a subzone on the map for more")
+				SetCaption(L.MAP_SUBZONE_MORE)
 			else
 				SetCaption("")
 			end
