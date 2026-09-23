@@ -1,5 +1,7 @@
 # Spoken
 
+Discord: https://discord.gg/HEGUgn6Yf
+
 Voiced dialogue, lore and text for World of Warcraft Classic. One platform,
 several addons.
 
