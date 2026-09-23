@@ -656,11 +656,11 @@ function DataModules:PrepareSound(soundData)
     local languages = Language:ResolutionOrder()
 
     local wantedFileName = soundData.fileName
+    local playerGenderedFileName = DataModules:AddPlayerGenderToFilename(wantedFileName)
     for _, language in ipairs(languages) do
         for _, module in self:GetModules() do
             local data = module.SoundLengthLookupByFileName
             if data and module.METADATA.Language == language then
-                local playerGenderedFileName = DataModules:AddPlayerGenderToFilename(wantedFileName)
                 local fileName = wantedFileName
                 local length = data[playerGenderedFileName]
                 if length then

@@ -279,13 +279,9 @@ Expect("a language this addon does not know reads as English",
 ---------------------------------------------------------------- in step with SpokenZones
 -- The two addons sit side by side; a language one offers and the other does not is a
 -- setting the player makes once and finds half-honoured.
-local zonesCodes = {}
-local zonesFile = assert(io.open(here .. "/../../addons/SpokenZones/Language.lua"))
-for code in zonesFile:read("*a"):gmatch('{ code = "(%a+)"') do table.insert(zonesCodes, code) end
-zonesFile:close()
 local questsCodes = {}
 for _, locale in ipairs(VO.Language.LOCALES) do table.insert(questsCodes, locale.code) end
-Expect("the language list matches SpokenZones'", table.concat(questsCodes, " "), table.concat(zonesCodes, " "))
+Expect("the language list matches SpokenZones'", table.concat(questsCodes, " "), H.ZonesLocaleCodes(here))
 
 stub.SetLocale("enUS")
 stub.ResetAddOns()

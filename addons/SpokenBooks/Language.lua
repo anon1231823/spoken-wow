@@ -103,7 +103,7 @@ end
 --- under when there is no clip to ask, and what a contribution says the player was hearing.
 function SpokenBooks:GetPackLanguage()
 	local order = self:LanguageOrder()
-	local packs = self.GetAudioPacks and self:GetAudioPacks() or {}
+	local packs = self:GetAudioPacks()
 	for _, language in ipairs(order) do
 		for _, pack in ipairs(packs) do
 			if self:PackLanguage(pack) == language then

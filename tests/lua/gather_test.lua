@@ -145,7 +145,7 @@ Expect("...counting what is kept", box.body:GetText():match("1 line") ~= nil, tr
 
 ------------------------------------------------------------------------------- books
 local SpokenBooks = {}
-for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Language", "Reader", "Contribute" }) do
+for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Language", "Reader", "Audio", "Contribute" }) do
     assert(loadfile(BOOKS .. file .. ".lua"))("SpokenBooks", SpokenBooks)
 end
 SpokenBooks:InitDB()

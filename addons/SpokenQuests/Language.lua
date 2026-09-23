@@ -39,16 +39,16 @@ Language = {}
 -- the two addons are installed side by side and a player who sets Portuguese in one and
 -- finds no such option in the other has found a bug.
 Language.LOCALES = {
-    { code = "enUS", name = "English",      native = "English" },
-    { code = "deDE", name = "German",       native = "Deutsch" },
-    { code = "esES", name = "Spanish (EU)", native = "Espanol" },
-    { code = "esMX", name = "Spanish (AL)", native = "Espanol (AL)" },
-    { code = "frFR", name = "French",       native = "Francais" },
-    { code = "ptBR", name = "Portuguese",   native = "Portugues" },
-    { code = "ruRU", name = "Russian",      native = "Russkiy" },
-    { code = "koKR", name = "Korean",       native = "Hangugeo" },
-    { code = "zhCN", name = "Chinese (S)",  native = "Zhongwen" },
-    { code = "zhTW", name = "Chinese (T)",  native = "Zhongwen" },
+    { code = "enUS", name = "English" },
+    { code = "deDE", name = "German" },
+    { code = "esES", name = "Spanish (EU)" },
+    { code = "esMX", name = "Spanish (AL)" },
+    { code = "frFR", name = "French" },
+    { code = "ptBR", name = "Portuguese" },
+    { code = "ruRU", name = "Russian" },
+    { code = "koKR", name = "Korean" },
+    { code = "zhCN", name = "Chinese (S)" },
+    { code = "zhTW", name = "Chinese (T)" },
 }
 
 -- What an undeclared pack is, what a client in an unknown locale gets, and what the
@@ -64,12 +64,6 @@ Language.AUTO = "auto"
 local byCode = {}
 for _, locale in ipairs(Language.LOCALES) do
     byCode[locale.code] = locale
-end
-
----@param code string|nil
----@return boolean isKnown Whether the code names a language this addon can speak of
-function Language:IsKnown(code)
-    return code ~= nil and byCode[code] ~= nil
 end
 
 ---@param code string|nil
@@ -91,7 +85,7 @@ end
 ---@param declared string|nil The raw TOC value
 ---@return string code
 function Language:Normalize(declared)
-    if declared and declared ~= "" and byCode[declared] then
+    if declared and byCode[declared] then
         return declared
     end
     return self.BASE

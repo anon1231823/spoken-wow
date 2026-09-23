@@ -166,7 +166,7 @@ local REPORT = {
         if target then
             -- The language the clip was spoken in, which PrepareSound recorded: a fallback line
             -- is an English take even under a German selection, and its report is about that.
-            ReportButton:ShowLink(target, clip and clip.language or DataModules:GetPackLanguage())
+            ReportButton:ShowLink(target, clip.language)
         else
             StaticPopup_Show("VOICEOVER_ERROR",
                 "This client cannot tell which line that was, so there is no address to report.")

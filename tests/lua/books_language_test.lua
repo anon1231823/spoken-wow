@@ -91,12 +91,9 @@ Expect("E. a German report goes to the German page", B:ReportURL(PAGE, "deDE"),
     "https://spoken.rusty.one/deDE/books/r/15")
 
 ---------------------------------------------------------------- in step with SpokenZones
-local zonesCodes, booksCodes = {}, {}
-local zonesFile = assert(io.open(here .. "/../../addons/SpokenZones/Language.lua"))
-for code in zonesFile:read("*a"):gmatch('{ code = "(%a+)"') do table.insert(zonesCodes, code) end
-zonesFile:close()
+local booksCodes = {}
 for _, locale in ipairs(B.LOCALES) do table.insert(booksCodes, locale.code) end
-Expect("the language list matches SpokenZones'", table.concat(booksCodes, " "), table.concat(zonesCodes, " "))
+Expect("the language list matches SpokenZones'", table.concat(booksCodes, " "), H.ZonesLocaleCodes(here))
 
 stub.SetLocale("enUS")
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end

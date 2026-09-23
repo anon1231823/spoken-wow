@@ -22,6 +22,15 @@ local FRAME_STRATAS =
     "DIALOG",
 }
 
+--- The language dropdowns' choices: every language, after one entry of the dropdown's own.
+local function LanguageValues(firstKey, firstLabel)
+    local values = { [firstKey] = firstLabel }
+    for _, locale in ipairs(Language.LOCALES) do
+        values[locale.code] = locale.name
+    end
+    return values
+end
+
 -- General Tab
 ---@type AceConfigOptionsTable
 local GeneralTab =
@@ -90,11 +99,8 @@ local GeneralTab =
                     name = "Voice Language",
                     desc = "Which language's sound pack to speak in. Follow Client uses the language your game client runs in. A language is only heard if a sound pack recorded in it is installed.",
                     values = function()
-                        local values = { [Language.AUTO] = format("Follow Client (%s)", Language:GetName(Language:GetClientLanguage())) }
-                        for _, locale in ipairs(Language.LOCALES) do
-                            values[locale.code] = locale.name
-                        end
-                        return values
+                        return LanguageValues(Language.AUTO,
+                            format("Follow Client (%s)", Language:GetName(Language:GetClientLanguage())))
                     end,
                     get = function(info) return Addon.db.profile.Audio.VoiceLanguage end,
                     set = function(info, value)
@@ -107,13 +113,7 @@ local GeneralTab =
                     order = 10,
                     name = "Fallback Language",
                     desc = "What to play when no pack in your chosen language holds a line. None leaves that line silent rather than speaking it in a language you did not ask for.",
-                    values = function()
-                        local values = { none = "None (stay silent)" }
-                        for _, locale in ipairs(Language.LOCALES) do
-                            values[locale.code] = locale.name
-                        end
-                        return values
-                    end,
+                    values = function() return LanguageValues("none", "None (stay silent)") end,
                     get = function(info) return Addon.db.profile.Audio.FallbackLanguage end,
                     set = function(info, value)
                         Addon.db.profile.Audio.FallbackLanguage = value
