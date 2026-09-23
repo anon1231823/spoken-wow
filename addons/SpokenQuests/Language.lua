@@ -44,7 +44,6 @@ Language.LOCALES = {
     { code = "esES", name = "Spanish (EU)", native = "Espanol" },
     { code = "esMX", name = "Spanish (AL)", native = "Espanol (AL)" },
     { code = "frFR", name = "French",       native = "Francais" },
-    { code = "itIT", name = "Italian",      native = "Italiano" },
     { code = "ptBR", name = "Portuguese",   native = "Portugues" },
     { code = "ruRU", name = "Russian",      native = "Russkiy" },
     { code = "koKR", name = "Korean",       native = "Hangugeo" },
