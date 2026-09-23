@@ -12,7 +12,7 @@
 --
 -- Lua 5.0 rules, because this loads on 1.12: no `#`, no literal-string method calls.
 
-local VERSION = 1
+local VERSION = 2
 
 -- LibStub's contract, for LibStub's reason: three addons load this file and the newest
 -- copy must win, whichever of them the client happens to load last.
@@ -42,12 +42,21 @@ local SLIDER_HEIGHT = 16
 local CONTROL_HEIGHT = 26     -- a labelled control's row: label left, control right
 local LABEL_COLUMN = 190      -- where the control starts, so every one of them lines up
 local INDENT_STEP = 20        -- for an option that qualifies the one above it
+local LABEL_PADDING = 24      -- room a button's end caps take either side of its label
 
 -- A heading belongs to the section under it. The space above it is what separates two
 -- sections; the space below it must stay smaller, or the heading reads as floating
 -- between the two rather than introducing one.
 local Layout = { VERSION = VERSION }
 Layout.__index = Layout
+
+--- Widen a button to its label, never below `width`. The widths the panels ask for were
+--- sized to the English labels, and a translation can run half as long again; a button
+--- only ever grows rightward from its row's left edge, into the panel's empty side.
+local function FitToLabel(button, width)
+    local textWidth = button:GetTextWidth() or 0
+    button:SetWidth(math.max(width, textWidth + LABEL_PADDING))
+end
 
 --- Render a slider's value. Passed to Slider; the default reads it as a percentage.
 function Layout.Percent(value) return format("%d%%", value * 100) end
@@ -235,6 +244,7 @@ function Layout:Cycle(label, tooltip, values, read, write, apply, describe)
     button:SetPoint("TOPLEFT", self.x, top)
     local function Sync()
         button:SetText(format(label, describe(read())))
+        FitToLabel(button, 240)
     end
     button:SetScript("OnClick", function()
         local list = Resolve(values)
@@ -322,9 +332,10 @@ end
 function Layout:Button(label, width, onClick, tooltip)
     local top = self:Take(BUTTON_HEIGHT)
     local button = CreateFrame("Button", nil, self.parent, "UIPanelButtonTemplate")
-    button:SetSize(width, BUTTON_HEIGHT)
+    button:SetHeight(BUTTON_HEIGHT)
     button:SetPoint("TOPLEFT", self.x, top)
     button:SetText(label)
+    FitToLabel(button, width)
     button:SetScript("OnClick", onClick)
     Tooltip(button, nil, tooltip)
     return self:Row(button, top, BUTTON_HEIGHT)
