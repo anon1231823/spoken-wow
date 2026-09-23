@@ -120,7 +120,7 @@ lore-import: ## Seed lore_line from the committed Lua data files (idempotent)
 # A language's place names, from the alias table the addon ships (built from the game's
 # AreaTable). The prose has no such source and is written on the site. LOCALE and not LANG,
 # which every shell sets.
-lore-import-names: ## Name zones and subzones in a language from Data/<LOCALE>/Aliases.lua (LOCALE=deDE)
+lore-import-names: ## Name zones and subzones in a language from tools/seed/area-names.json (LOCALE=deDE)
 	@test -n "$(LOCALE)" || { echo "lore-import-names: set LOCALE, e.g. LOCALE=deDE"; exit 2; }
 	@node pipelines/zones/tools/lore/import-names.mjs --lang $(LOCALE)
 
@@ -148,7 +148,7 @@ lore-rewrite: ## Rewrite one zone's lore from the full wiki article (ZONE=1420, 
 # when the pinned client build in pipelines/zones/tools/lib/db2.mjs moves.
 #-------------------------------------------------------------------------------
 
-aliases: ## Rebuild Data/<locale>/Aliases.lua from the client's AreaTable
+aliases: ## Rebuild Data/<locale>/Aliases.lua and seed/area-names.json from the client's AreaTable
 	@node pipelines/zones/tools/locale/build-aliases.mjs
 	@node pipelines/zones/tools/locale/build-languages.mjs
 

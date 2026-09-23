@@ -19,14 +19,22 @@
 //
 // Some locales have no Era translation and their table comes out empty. That is
 // a real answer -- Italian Classic runs on English area names -- not a failure.
+//
+// It also writes tools/seed/area-names.json: every corpus zone and subzone's name in
+// each language, same-as-English ones included, which is what the site names places
+// with (tools/lore/import-names.mjs). The alias tables cannot serve for that; see
+// lib/area-names.mjs.
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { areaNames } from "../lib/area-names.mjs";
 import { fetchTable, PINNED_BUILD } from "../lib/db2.mjs";
-import { BASE_LOCALE, CLIENT_LOCALES } from "../lib/locales.mjs";
-import { readSubzones } from "../lib/loredata.mjs";
+import { BASE_LOCALE, LOCALES } from "../lib/locales.mjs";
+import { readSubzones, readZones } from "../lib/loredata.mjs";
 import { luaString, normaliseKey, ROOT } from "../lib/wiki.mjs";
+
+const SEED = join(ROOT, "pipelines/zones/tools/seed/area-names.json");
 
 const argv = process.argv.slice(2);
 const build = argv.includes("--build") ? argv[argv.indexOf("--build") + 1] : PINNED_BUILD;
@@ -68,12 +76,18 @@ async function main() {
 
   console.log(`fetching AreaTable for ${build}`);
   const english = await fetchTable("AreaTable", { build });
+  const zones = await readZones();
+  const named = new Set([...wanted, ...zones.map((z) => normaliseKey(z.name))]);
+  const seed = {};
   const englishById = new Map(english.map((row) => [row.ID, (row.AreaName_lang || "").trim()]));
 
-  for (const locale of CLIENT_LOCALES) {
+  for (const locale of LOCALES) {
     if (locale.code === BASE_LOCALE) continue;
 
     const rows = await fetchTable("AreaTable", { build, locale: locale.code });
+    seed[locale.code] = Object.fromEntries(
+      [...areaNames(english, rows, named)].sort(([a], [b]) => (a < b ? -1 : 1)),
+    );
 
     const aliases = new Map();
     // A localized name that stands for two different English keys cannot be
@@ -120,6 +134,19 @@ async function main() {
       `${locale.code}: ${covered} of ${wanted.size} subzone keys (${pct}%) via ${aliases.size} names${note}`,
     );
   }
+
+  const out = {
+    _comment: [
+      "What each corpus zone and subzone is called in each client language, from the",
+      "client's own AreaTable via wago.tools, keyed by English key. Names the same as",
+      "English are kept: they are that language's name too. Read by",
+      "tools/lore/import-names.mjs. Regenerate with:  make zones-aliases",
+    ],
+    build,
+    names: seed,
+  };
+  await writeFile(SEED, JSON.stringify(out, null, 2) + "\n");
+  console.log(`wrote ${SEED}`);
 
 }
 

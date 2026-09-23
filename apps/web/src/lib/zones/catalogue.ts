@@ -54,7 +54,7 @@ export type CorpusEntry = {
    * page. A line whose text is missing has nothing to narrate, so `spoken` is empty and the
    * line cannot be queued. Absent in English, and where nothing is missing.
    */
-  missing?: { text: boolean; name: boolean };
+  missing?: { text: boolean; name: boolean; zone: boolean };
   /** The English prose, for a translator to work from. Absent when reading English. */
   english?: string;
   /** The English name of the place, likewise. */
@@ -257,6 +257,7 @@ async function buildTranslated(lang: Lang): Promise<CorpusEntry[]> {
     const found = own.get(entry.id);
     const text = found && found.full.trim() !== "" ? found : undefined;
     const name = named.get(entry.id);
+    const zoneName = named.get(`z:${entry.mapID}`);
     // No pronunciation rules: the committed ones are English spellings of English words, and
     // a language is spoken with its own lexicon, through the dictionary at generation.
     const spoken = text ? toSpokenText(text.full, {}) : "";
@@ -264,13 +265,13 @@ async function buildTranslated(lang: Lang): Promise<CorpusEntry[]> {
       ...entry,
       ...(text ? { full: text.full, short: text.short, source: text.source ?? undefined } : {}),
       name: name ?? entry.name,
-      zoneName: named.get(`z:${entry.mapID}`) ?? entry.zoneName,
+      zoneName: zoneName ?? entry.zoneName,
       spoken,
       hash: textHash(spoken),
       english: entry.full,
       englishName: entry.name,
-      ...(!text || name === undefined
-        ? { missing: { text: !text, name: name === undefined } }
+      ...(!text || name === undefined || zoneName === undefined
+        ? { missing: { text: !text, name: name === undefined, zone: zoneName === undefined } }
         : {}),
     };
   });

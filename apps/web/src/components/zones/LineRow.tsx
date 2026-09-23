@@ -113,7 +113,7 @@ export function LineRow({
           title={`Show only ${line.zoneName}`}
           onClick={() => onNarrowToZone(line)}
         >
-          {line.zoneName}
+          <Untranslated missing={line.zoneNameMissing}>{line.zoneName}</Untranslated>
         </button>
       </td>
 

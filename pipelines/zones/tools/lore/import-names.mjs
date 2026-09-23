@@ -3,10 +3,10 @@
 //
 //   node tools/lore/import-names.mjs --lang deDE
 //
-// From the addon's own alias table, Data/<lang>/Aliases.lua, which is built from the game's
-// AreaTable: the names a client in that language actually shows. The lore prose has no
-// such source -- nothing in the dump or the client carries it translated -- so it is
-// written on the site, and this only names the places.
+// From tools/seed/area-names.json, which `make zones-aliases` builds from the game's
+// AreaTable: the names a client in that language actually shows, zones included. The lore
+// prose has no such source -- nothing in the dump or the client carries it translated --
+// so it is written on the site, and this only names the places.
 //
 // The rule is every import's: an unchanged name is skipped, a changed one replaces an
 // extracted name but never one somebody edited here.
@@ -17,7 +17,7 @@ import { join } from "node:path";
 import { BASE_LOCALE, isLocale } from "../../../lib/locales.mjs";
 import { loadEnvFile } from "../lib/env.mjs";
 import { decideImport } from "../../../lib/promote.mjs";
-import { namesFromAliases, parseAliases } from "../lib/aliases.mjs";
+import { namesForLines } from "../lib/area-names.mjs";
 import { ROOT } from "../lib/loredata.mjs";
 import { writeNames } from "../../../lib/bulk.mjs";
 
@@ -37,7 +37,11 @@ if (!isEnabled()) {
 const counts = { promote: 0, record: 0, skip: 0 };
 
 try {
-  const lua = await readFile(join(ROOT, "addons/SpokenZones/Data", lang, "Aliases.lua"), "utf8");
+  const seed = JSON.parse(
+    await readFile(join(ROOT, "pipelines/zones/tools/seed/area-names.json"), "utf8"),
+  );
+  const names = seed.names[lang];
+  if (!names) throw new Error(`area-names.json has no ${lang}; run make zones-aliases`);
   const { rows: lines } = await query(
     `select "lineId", "kind", "key", "name" from "lore_line"
       where "lang" = $1 and "isCurrent"`,
@@ -55,7 +59,7 @@ try {
   const current = new Map(live.map((row) => [`${row.kind}:${row.entityId}`, row]));
 
   const writes = [];
-  for (const name of namesFromAliases(lines, parseAliases(lua))) {
+  for (const name of namesForLines(lines, names)) {
     const { action } = decideImport(current.get(`${name.kind}:${name.entityId}`) ?? null, {
       text: name.name,
     });

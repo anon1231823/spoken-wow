@@ -49,6 +49,8 @@ export type ResultLine = {
   translated?: boolean;
   /** This language has no name for the place yet, so `name` is the English. */
   nameMissing?: boolean;
+  /** Likewise for the zone the place is in, and `zoneName`. */
+  zoneNameMissing?: boolean;
   /** The English name, for a translator. Absent when reading English. */
   englishName?: string;
 };
@@ -93,6 +95,7 @@ export function decorate(entry: CatalogueEntry, context: SearchContext): ResultL
           english: entry.english,
           translated: !entry.missing?.text,
           nameMissing: entry.missing?.name ?? false,
+          zoneNameMissing: entry.missing?.zone ?? false,
           englishName: entry.englishName,
         }),
     // The spoken text, not the full one: the lexicon is applied to what is sent.
