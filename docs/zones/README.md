@@ -100,13 +100,15 @@ pipelines/zones/tools/
   seed/zones.json        uiMapID -> wiki page title
   seed/subzones.json     which parent zones to scrape subzones for
   seed/overrides.json    hand-written zone lore that beats the scraped text
+  seed/area-names.json   every corpus place's name per client language, from AreaTable
   lore/import.mjs        seed the lore_line table from the committed Lua
   lore/export.mjs        write the addon's Lua data files from lore_line
+  lore/import-names.mjs  seed/area-names.json -> entity_name, the site's place names
   lore/rewrite.mjs       the rewrite prompt, its response cache and its checks
   lore/store.mjs         the seam between the lore table and the Lua files
   lib/locales.mjs        the languages, and the pack folder each ships in
   lib/db2.mjs            client database tables from wago.tools, per locale
-  locale/build-aliases.mjs   AreaTable -> Data/<locale>/Aliases.lua
+  locale/build-aliases.mjs   AreaTable -> Data/<locale>/Aliases.lua and seed/area-names.json
   locale/build-languages.mjs coverage -> Data/Languages.lua, the readiness gate
   locale/check-strings.mjs   per-language interface string coverage
 scripts/zones/deploy.sh        install both addons into the Classic Era AddOns folder
