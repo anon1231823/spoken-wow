@@ -41,6 +41,8 @@ local function Install(packs, locale)
         VO.DataModules:Register(pack.folder, {
             SoundLengthLookupByFileName = pack.lines,
             GossipLookupByNPCID = pack.gossip,
+            LookupLocale = pack.lookupLocale,
+            ClientLocaleLookups = pack.clientGossip and { GossipLookupByNPCID = pack.clientGossip },
             GetSoundPath = function(_, fileName) return fileName end,
         })
     end
@@ -176,6 +178,53 @@ Expect("G. a gossip line the voice language lacks falls back", ResolveGossip(VO,
 -- ...and like any other line, not when the fallback is off.
 VO.Addon.db.profile.Audio.FallbackLanguage = "none"
 Expect("G. ...and is silent with no fallback", ResolveGossip(VO, GOSSIP_TEXT_PT), nil)
+
+---------------------------------------------------------------- I. which tables speak the client's language
+-- A pack built here writes its plain tables from the English corpus whatever it is recorded
+-- in, and says so (LookupLocale); it may also carry the client's own locale's text
+-- (ClientLocaleLookups). A pack built from somebody's own client says neither, and its
+-- tables are in its language.
+local SECOND_TEXT = "The rooms upstairs are clean enough."
+local SECOND_HASH = "inn-rooms"
+local TWO_LINES = { [INNKEEPER] = { [GOSSIP_TEXT] = GOSSIP_HASH, [SECOND_TEXT] = SECOND_HASH } }
+
+-- An English client with only a German pack of ours, beside somebody's Portuguese pack that
+-- outranks it and keys the NPC on words that happen to be the English ones. Only the German
+-- pack's tables are English, so only they are asked.
+VO = Install({
+    { folder = "GermanPack", language = "deDE", lookupLocale = "enUS",
+      lines = { [GOSSIP_HASH] = 4.0, [SECOND_HASH] = 4.0 }, gossip = TWO_LINES },
+    { folder = "TheirPack", language = "ptBR", priority = 200,
+      lines = { ["pt-guess"] = 4.0 }, gossip = { [INNKEEPER] = { [SECOND_TEXT] = "pt-guess" } } },
+}, "enUS")
+VO.Addon.db.profile.Audio.VoiceLanguage = "deDE"
+local _, second = ResolveGossip(VO, SECOND_TEXT)
+Expect("I. an English client reads a German pack's English tables", second.fileName, SECOND_HASH)
+Expect("I. ...and plays it from the German pack", second.module.METADATA.AddonName, "GermanPack")
+
+-- A German client: the German copy is asked before any English table, even one in a pack
+-- that outranks it and would otherwise be the only thing to guess from.
+local DE_SECOND = "Die Zimmer oben sind sauber genug."
+VO = Install({
+    { folder = "EnglishPack", priority = 200, lines = { ["en-guess"] = 4.0 },
+      gossip = { [INNKEEPER] = { [GOSSIP_TEXT] = "en-guess" } } },
+    { folder = "GermanPack", language = "deDE", lookupLocale = "enUS",
+      lines = { [GOSSIP_HASH] = 4.0, [SECOND_HASH] = 4.0 },
+      clientGossip = { [INNKEEPER] = { ["Willkommen im Gasthaus, Reisender."] = GOSSIP_HASH,
+                                        [DE_SECOND] = SECOND_HASH } } },
+}, "deDE")
+local _, german = ResolveGossip(VO, DE_SECOND)
+Expect("I. a German client matches on the German copy", german.fileName, SECOND_HASH)
+Expect("I. ...and hears the German pack", german.module.METADATA.AddonName, "GermanPack")
+
+-- Somebody's pack with no LookupLocale: its tables are in its own language.
+VO = Install({
+    { folder = "EnglishPack", priority = 200, lines = { ["en-guess"] = 4.0 },
+      gossip = { [INNKEEPER] = { [GOSSIP_TEXT_PT] = "en-guess" } } },
+    { folder = "TheirPack", language = "ptBR", lines = { [GOSSIP_HASH] = 4.0 }, gossip = PT_GOSSIP },
+}, "ptBR")
+local _, theirs = ResolveGossip(VO, GOSSIP_TEXT_PT)
+Expect("I. a pack that says nothing is keyed in its own language", theirs.fileName, GOSSIP_HASH)
 
 ---------------------------------------------------------------- H. the language contributions are filed under
 -- The language the packs speak to the player, not the client's: the site files a

@@ -47,6 +47,8 @@ local LOAD_ALL_MODULES = true
 
 ---@class DataModule
 ---@field METADATA DataModuleMetadata
+---@field LookupLocale? string The client locale the module's text-keyed tables are written in (absent means the pack's own language)
+---@field ClientLocaleLookups? table Text-keyed tables in this client's locale, loaded only on a client in it
 ---@field GetSoundPath fun(self: DataModule, fileName: string, event: SoundEvent): string Function implemented in the module that returns the sound path for the desired voiceover
 ---@field GossipLookupByNPCID table<number, table<string, string>> Maps Creature ID and fuzzy-searchable gossip text to gossip text hash
 ---@field GossipLookupByNPCName table<string, table<string, string>> Maps Creature name and fuzzy-searchable gossip text to gossip text hash
@@ -411,6 +413,26 @@ local function replaceDoubleQuotes(text)
     return string.gsub(text, '"', "'")
 end
 
+--- One of a module's text-keyed tables, and the client locale its keys are written in.
+---
+--- A pack can carry a copy for the client's own locale (ClientLocaleLookups, which the pack
+--- loads only on a client in that locale), and that copy is preferred. Otherwise the plain
+--- table is in LookupLocale, which a pack sets when its tables are not in its own language --
+--- this project builds them from the English corpus whatever the audio is -- or else in the
+--- pack's own language: a pack somebody built from their own client holds the text that
+--- client showed.
+---@param module DataModule
+---@param name string
+---@return table|nil data
+---@return string locale
+local function TextLookup(module, name)
+    local localized = module.ClientLocaleLookups and module.ClientLocaleLookups[name]
+    if localized then
+        return localized, Language:GetClientLanguage()
+    end
+    return module[name], module.LookupLocale or module.METADATA.Language
+end
+
 ---@param soundData SoundData
 ---@return string|nil hash
 function DataModules:GetNPCGossipTextHash(soundData)
@@ -445,8 +467,8 @@ function DataModules:GetNPCGossipTextHash(soundData)
     local client = Language:GetClientLanguage()
     local function collect(inClientLocale)
         for _, module in self:GetModules() do
-            local data = module[table]
-            if data and (module.METADATA.Language == client) == inClientLocale then
+            local data, locale = TextLookup(module, table)
+            if data and (locale == client) == inClientLocale then
                 local npc_gossip_table = data[npc]
                 if npc_gossip_table then
                     for text, hash in pairs(npc_gossip_table) do
