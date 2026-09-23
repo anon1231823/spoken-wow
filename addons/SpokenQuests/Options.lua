@@ -96,11 +96,11 @@ local GeneralTab =
                     type = "select",
                     width = 1.1,
                     order = 9,
-                    name = "Voice Language",
-                    desc = "Which language's sound pack to speak in. Follow Client uses the language your game client runs in. A language is only heard if a sound pack recorded in it is installed.",
+                    name = L.OPT_VOICE_LANGUAGE,
+                    desc = L.OPT_VOICE_LANGUAGE_TIP,
                     values = function()
                         return LanguageValues(Language.AUTO,
-                            format("Follow Client (%s)", Language:GetName(Language:GetClientLanguage())))
+                            format(L.OPT_FOLLOW_CLIENT_FMT, Language:GetName(Language:GetClientLanguage())))
                     end,
                     get = function(info) return Addon.db.profile.Audio.VoiceLanguage end,
                     set = function(info, value)
@@ -111,9 +111,9 @@ local GeneralTab =
                     type = "select",
                     width = 1.1,
                     order = 10,
-                    name = "Fallback Language",
-                    desc = "What to play when no pack in your chosen language holds a line. None leaves that line silent rather than speaking it in a language you did not ask for.",
-                    values = function() return LanguageValues("none", "None (stay silent)") end,
+                    name = L.OPT_FALLBACK_LANGUAGE,
+                    desc = L.OPT_FALLBACK_LANGUAGE_TIP,
+                    values = function() return LanguageValues("none", L.OPT_FALLBACK_NONE) end,
                     get = function(info) return Addon.db.profile.Audio.FallbackLanguage end,
                     set = function(info, value)
                         Addon.db.profile.Audio.FallbackLanguage = value
