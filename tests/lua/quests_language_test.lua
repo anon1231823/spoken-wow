@@ -226,22 +226,48 @@ VO = Install({
 local _, theirs = ResolveGossip(VO, GOSSIP_TEXT_PT)
 Expect("I. a pack that says nothing is keyed in its own language", theirs.fileName, GOSSIP_HASH)
 
----------------------------------------------------------------- H. the language contributions are filed under
--- The language the packs speak to the player, not the client's: the site files a
--- contribution with the lines of the pack that was missing it.
+---------------------------------------------------------------- H. the language the packs speak
+-- What a report is filed under when there is no clip to ask, and what a contribution says
+-- the player was listening to. The packs', not the client's.
 VO = Install({ { folder = "EnglishPack", lines = EN_LINES } }, "deDE")
-Expect("H. a German client hearing English packs contributes to English", VO.DataModules:GetPackLanguage(), "enUS")
+Expect("H. a German client with only English packs hears English", VO.DataModules:GetPackLanguage(), "enUS")
 VO = Install({
     { folder = "EnglishPack", lines = EN_LINES },
     { folder = "GermanPack", language = "deDE", lines = { ["1-accept"] = 5.5 } },
 }, "deDE")
-Expect("H. ...and to German once a German pack is installed", VO.DataModules:GetPackLanguage(), "deDE")
+Expect("H. ...and German once a German pack is installed", VO.DataModules:GetPackLanguage(), "deDE")
 VO = Install(PACKS, "enUS")
 VO.Addon.db.profile.Audio.VoiceLanguage = "ptBR"
-Expect("H. an English client listening in Portuguese contributes to Portuguese",
+Expect("H. an English client can listen in Portuguese",
     VO.DataModules:GetPackLanguage(), "ptBR")
 VO = Install({}, "deDE")
 Expect("H. with no pack at all, the chosen language", VO.DataModules:GetPackLanguage(), "deDE")
+
+---------------------------------------------------------------- J. a report is filed in the clip's language
+VO = Install({ { folder = "EnglishPack", lines = EN_LINES } })
+Expect("J. an English report keeps the address it always had",
+    VO.ReportButton:Link("quest/1/accept", "enUS"), "https://voiceover.rusty.one/r/quest/1/accept")
+Expect("J. ...and so does one with no language",
+    VO.ReportButton:Link("quest/1/accept"), "https://voiceover.rusty.one/r/quest/1/accept")
+Expect("J. another language's report goes to that language's page",
+    VO.ReportButton:Link("quest/1/accept", "deDE"), "https://spoken.rusty.one/deDE/quests/r/quest/1/accept")
+
+-- The Report action hands over the language the clip was answered in: line 2 is English
+-- fallback under a Portuguese selection, and its report is about the English take.
+local function ReportFor(VO, questID)
+    local _, clip = Resolve(VO, questID)
+    VO.Player:Prepare(clip)
+    local target, language
+    VO.ReportButton.CurrentTarget = function() return "quest/" .. questID .. "/accept" end
+    VO.ReportButton.ShowLink = function(_, t, l) target, language = t, l end
+    for _, action in ipairs(clip.present.actions) do
+        if action.id == "report" then action.onClick(clip) end
+    end
+    return language
+end
+VO = Install(PACKS, "ptBR")
+Expect("J. reporting a Portuguese clip files it in Portuguese", ReportFor(VO, 1), "ptBR")
+Expect("J. reporting a fallback clip files it in English", ReportFor(VO, 2), "enUS")
 
 ---------------------------------------------------------------- the metadata itself
 VO = Install({ { folder = "Pack", language = "ptBR", lines = EN_LINES } })

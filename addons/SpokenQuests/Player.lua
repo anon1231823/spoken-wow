@@ -161,10 +161,12 @@ local REPORT = {
         tooltip:AddLine("A wrong reading, a mispronounced name -- this gives you a link to say so.",
             1, 0.8, 0.2, true)
     end,
-    onClick = function()
+    onClick = function(clip)
         local target = ReportButton:CurrentTarget()
         if target then
-            ReportButton:ShowLink(target)
+            -- The language the clip was spoken in, which PrepareSound recorded: a fallback line
+            -- is an English take even under a German selection, and its report is about that.
+            ReportButton:ShowLink(target, clip and clip.language or DataModules:GetPackLanguage())
         else
             StaticPopup_Show("VOICEOVER_ERROR",
                 "This client cannot tell which line that was, so there is no address to report.")

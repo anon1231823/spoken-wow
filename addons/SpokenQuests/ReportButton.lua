@@ -12,6 +12,11 @@ setfenv(1, VoiceOver)
 
 local SITE_URL = "https://voiceover.rusty.one"
 
+-- Where a report on another language's line goes. The old host redirects /r/ to the English
+-- page and nothing else, and its links must keep working as they are, so a language's report
+-- goes straight to the merged site, whose /{lang}/ prefix files it with that language's lines.
+local LANGUAGE_REPORT_URL = "https://spoken.rusty.one/%s/quests/r/%s"
+
 local COPY_DIALOG = "VOICEOVER_COPY_REPORT_LINK"
 
 ReportButton =
@@ -93,8 +98,20 @@ end
 -- the private-server clients: there the popup would open with an empty box.
 local shownLink
 
-function ReportButton:ShowLink(target)
-    shownLink = format("%s/r/%s", SITE_URL, target)
+--- The report address for `target`, filed under `language` -- the language of the clip being
+--- reported, which is not necessarily the client's. English keeps the address it always had.
+---@param target string
+---@param language? string
+---@return string url
+function ReportButton:Link(target, language)
+    if language and language ~= Language.BASE then
+        return format(LANGUAGE_REPORT_URL, language, target)
+    end
+    return format("%s/r/%s", SITE_URL, target)
+end
+
+function ReportButton:ShowLink(target, language)
+    shownLink = self:Link(target, language)
     StaticPopup_Show(COPY_DIALOG)
 end
 

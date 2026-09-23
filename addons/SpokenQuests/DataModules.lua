@@ -233,8 +233,8 @@ end
 --- The language the player's packs speak to them: the first language in the resolution
 --- order that an installed pack is recorded in. With none installed, the chosen language.
 ---
---- What a contribution is filed under. A German client with only English packs is being
---- spoken to in English, and what it sends belongs with the English lines.
+--- What a report is filed under when there is no clip to ask, and what a contribution says
+--- the player was listening to.
 ---@return string code
 function DataModules:GetPackLanguage()
     local order = Language:ResolutionOrder()
