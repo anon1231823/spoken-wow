@@ -14,6 +14,12 @@ setfenv(1, SpokenEnv)
 
 local WIDTH, HEIGHT = 500, 340
 
+-- The choice's two buttons, side by side along the bottom edge.
+local CHOICE_WIDTH = 200      -- the least either is, sized to the English labels
+local CHOICE_INSET = 30       -- from the frame's side edges
+local CHOICE_GAP = 20         -- the least room kept between the two
+local LABEL_PADDING = 24      -- room a button's end caps take either side of its label
+
 local box
 
 local function Build()
@@ -103,18 +109,29 @@ local function Build()
     body:Hide()
 
     local justThis = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    justThis:SetWidth(200)
     justThis:SetHeight(24)
-    justThis:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 30, 20)
+    justThis:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", CHOICE_INSET, 20)
     justThis:SetText(L.CONTRIBUTE_JUST_THIS)
     justThis:Hide()
 
     local gather = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-    gather:SetWidth(200)
     gather:SetHeight(24)
-    gather:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 20)
+    gather:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -CHOICE_INSET, 20)
     gather:SetText(L.CONTRIBUTE_GATHER)
     gather:Hide()
+
+    -- One width for both, fitted to the longer label, so the pair stays a matched set in
+    -- every language. A translation long enough that the two would meet widens the frame
+    -- rather than letting them overlap, and the box and the prose widen with it.
+    local choiceWidth = math.max(CHOICE_WIDTH,
+        (justThis:GetTextWidth() or 0) + LABEL_PADDING,
+        (gather:GetTextWidth() or 0) + LABEL_PADDING)
+    justThis:SetWidth(choiceWidth)
+    gather:SetWidth(choiceWidth)
+    local frameWidth = math.max(WIDTH, 2 * (choiceWidth + CHOICE_INSET) + CHOICE_GAP)
+    frame:SetWidth(frameWidth)
+    editBox:SetWidth(frameWidth - 60)
+    body:SetWidth(frameWidth - 40)
 
     return { frame = frame, editBox = editBox, address = address, title = title, hint = hint,
         scroll = scroll, body = body, justThis = justThis, gather = gather }
