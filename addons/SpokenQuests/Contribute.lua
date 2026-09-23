@@ -428,7 +428,11 @@ local function BaseFields()
         { "addon", format("SpokenQuests/%s", (GetAddOnMetadata and GetAddOnMetadata(AddonFolder, "Version")) or "dev") },
         { "build", format("%s/%s", (GetBuildInfo and select(1, GetBuildInfo())) or "?",
                                    (GetBuildInfo and select(2, GetBuildInfo())) or "?") },
-        { "locale", (GetLocale and GetLocale()) or "enUS" },
+        -- The language of the packs the player hears, which is where the site files the
+        -- contribution. The client's own locale travels beside it: the text is as the client
+        -- shows it, and triage needs to see when the two differ.
+        { "locale", DataModules:GetPackLanguage() },
+        { "client", (GetLocale and GetLocale()) or "enUS" },
     }
 end
 

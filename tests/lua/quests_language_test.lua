@@ -177,6 +177,23 @@ Expect("G. a gossip line the voice language lacks falls back", ResolveGossip(VO,
 VO.Addon.db.profile.Audio.FallbackLanguage = "none"
 Expect("G. ...and is silent with no fallback", ResolveGossip(VO, GOSSIP_TEXT_PT), nil)
 
+---------------------------------------------------------------- H. the language contributions are filed under
+-- The language the packs speak to the player, not the client's: the site files a
+-- contribution with the lines of the pack that was missing it.
+VO = Install({ { folder = "EnglishPack", lines = EN_LINES } }, "deDE")
+Expect("H. a German client hearing English packs contributes to English", VO.DataModules:GetPackLanguage(), "enUS")
+VO = Install({
+    { folder = "EnglishPack", lines = EN_LINES },
+    { folder = "GermanPack", language = "deDE", lines = { ["1-accept"] = 5.5 } },
+}, "deDE")
+Expect("H. ...and to German once a German pack is installed", VO.DataModules:GetPackLanguage(), "deDE")
+VO = Install(PACKS, "enUS")
+VO.Addon.db.profile.Audio.VoiceLanguage = "ptBR"
+Expect("H. an English client listening in Portuguese contributes to Portuguese",
+    VO.DataModules:GetPackLanguage(), "ptBR")
+VO = Install({}, "deDE")
+Expect("H. with no pack at all, the chosen language", VO.DataModules:GetPackLanguage(), "deDE")
+
 ---------------------------------------------------------------- the metadata itself
 VO = Install({ { folder = "Pack", language = "ptBR", lines = EN_LINES } })
 Expect("a declared language is read off the TOC", VO.DataModules:GetPresentModule("Pack").Language, "ptBR")

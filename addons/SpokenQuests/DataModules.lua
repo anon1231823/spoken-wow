@@ -228,6 +228,24 @@ function DataModules:GetPackLabel(module)
     return (string.gsub(title, "VoiceOver Data %- ", ""))
 end
 
+--- The language the player's packs speak to them: the first language in the resolution
+--- order that an installed pack is recorded in. With none installed, the chosen language.
+---
+--- What a contribution is filed under. A German client with only English packs is being
+--- spoken to in English, and what it sends belongs with the English lines.
+---@return string code
+function DataModules:GetPackLanguage()
+    local order = Language:ResolutionOrder()
+    for _, language in ipairs(order) do
+        for _, module in self:GetPresentModules() do
+            if module.Language == language then
+                return language
+            end
+        end
+    end
+    return order[1]
+end
+
 ---@param loadModules? boolean Whether LoadOnDemand data modules should be loaded during enumeration
 function DataModules:EnumerateAddons(loadModules)
     assert(GetNumAddOns and GetAddOnMetadata and GetAddOnInfo,
