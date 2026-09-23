@@ -29,6 +29,7 @@ Locale/koKR.lua
 Locale/zhCN.lua
 Locale/zhTW.lua
 Core.lua
+Language.lua
 Reader.lua
 Contribute.lua
 Audio.lua

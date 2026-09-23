@@ -10,6 +10,11 @@ local CURRENT_MODULE_VERSION = 1
 -- transition carries both, so that it also loads under the addon's previous release.
 local MODULE_KEY_PREFIXES = { "X-SpokenQuests-DataModule-", "X-VoiceOver-DataModule-" }
 
+-- The language a pack was recorded in, read off the pack's own TOC. Deliberately not a
+-- DataModule- key: it describes the recording rather than the data format, and a pack
+-- built for upstream AI_VoiceOver never carries it. Absent is English -- see Language.lua.
+local LANGUAGE_KEY = "X-SpokenQuests-Language"
+
 --- One of a pack's module keys, whichever generation it declares.
 ---@param addon string|number Addon folder name, or its index in the addon list
 ---@param suffix string "Version" | "Priority" | "Maps"
@@ -38,9 +43,12 @@ local LOAD_ALL_MODULES = true
 ---@field ContentVersion? string Module's content version (TOC ##Version)
 ---@field Title string Module's title (TOC ##Title or addon name if missing)
 ---@field Maps number[] Map IDs in which the module should load (TOC ##X-SpokenQuests-DataModule-Maps or ##X-VoiceOver-DataModule-Maps)
+---@field Language string The language the pack was recorded in (TOC ##X-SpokenQuests-Language; absent means enUS)
 
 ---@class DataModule
 ---@field METADATA DataModuleMetadata
+---@field LookupLocale? string The client locale the module's text-keyed tables are written in (absent means the pack's own language)
+---@field ClientLocaleLookups? table Text-keyed tables in this client's locale, loaded only on a client in it
 ---@field GetSoundPath fun(self: DataModule, fileName: string, event: SoundEvent): string Function implemented in the module that returns the sound path for the desired voiceover
 ---@field GossipLookupByNPCID table<number, table<string, string>> Maps Creature ID and fuzzy-searchable gossip text to gossip text hash
 ---@field GossipLookupByNPCName table<string, table<string, string>> Maps Creature name and fuzzy-searchable gossip text to gossip text hash
@@ -222,6 +230,24 @@ function DataModules:GetPackLabel(module)
     return (string.gsub(title, "VoiceOver Data %- ", ""))
 end
 
+--- The language the player's packs speak to them: the first language in the resolution
+--- order that an installed pack is recorded in. With none installed, the chosen language.
+---
+--- What a report is filed under when there is no clip to ask, and what a contribution says
+--- the player was listening to.
+---@return string code
+function DataModules:GetPackLanguage()
+    local order = Language:ResolutionOrder()
+    for _, language in ipairs(order) do
+        for _, module in self:GetPresentModules() do
+            if module.Language == language then
+                return language
+            end
+        end
+    end
+    return order[1]
+end
+
 ---@param loadModules? boolean Whether LoadOnDemand data modules should be loaded during enumeration
 function DataModules:EnumerateAddons(loadModules)
     assert(GetNumAddOns and GetAddOnMetadata and GetAddOnInfo,
@@ -252,6 +278,7 @@ function DataModules:EnumerateAddons(loadModules)
                 ContentVersion = GetAddOnMetadata(name, "Version"),
                 Title = GetAddOnMetadata(name, "Title") or name,
                 Maps = maps,
+                Language = Language:Normalize(GetAddOnMetadata(i, LANGUAGE_KEY)),
             }
             self.presentModules[name] = module
             table.insert(self.presentModulesOrdered, module)
@@ -386,6 +413,26 @@ local function replaceDoubleQuotes(text)
     return string.gsub(text, '"', "'")
 end
 
+--- One of a module's text-keyed tables, and the client locale its keys are written in.
+---
+--- A pack can carry a copy for the client's own locale (ClientLocaleLookups, which the pack
+--- loads only on a client in that locale), and that copy is preferred. Otherwise the plain
+--- table is in LookupLocale, which a pack sets when its tables are not in its own language --
+--- this project builds them from the English corpus whatever the audio is -- or else in the
+--- pack's own language: a pack somebody built from their own client holds the text that
+--- client showed.
+---@param module DataModule
+---@param name string
+---@return table|nil data
+---@return string locale
+local function TextLookup(module, name)
+    local localized = module.ClientLocaleLookups and module.ClientLocaleLookups[name]
+    if localized then
+        return localized, Language:GetClientLanguage()
+    end
+    return module[name], module.LookupLocale or module.METADATA.Language
+end
+
 ---@param soundData SoundData
 ---@return string|nil hash
 function DataModules:GetNPCGossipTextHash(soundData)
@@ -408,17 +455,33 @@ function DataModules:GetNPCGossipTextHash(soundData)
 
     local text_entries = {}
 
-    for _, module in self:GetModules() do
-        local data = module[table]
-        if data then
-            local npc_gossip_table = data[npc]
-            if npc_gossip_table then
-                for text, hash in pairs(npc_gossip_table) do
-                    text_entries[text] = text_entries[text] or
-                        hash -- Respect module priority, don't overwrite the entry if there is already one
+    -- A gossip table maps the NPC's text *as a client shows it* to the line's hash, so the
+    -- tables that can match exactly are the ones written in the client's own locale --
+    -- which is not the language the player chose to hear: an English client playing a
+    -- Portuguese pack still shows English text. The hash is the line's, not the recording's,
+    -- so whichever table found it, PrepareSound looks for the clip in the voice language.
+    --
+    -- Only when no pack in the client's locale knows this NPC are the rest searched. That is
+    -- what every non-English client has always done with English packs, and it mostly works:
+    -- most NPCs have a single line, and the fuzzy match lands on it whatever it is shown in.
+    local client = Language:GetClientLanguage()
+    local function collect(inClientLocale)
+        for _, module in self:GetModules() do
+            local data, locale = TextLookup(module, table)
+            if data and (locale == client) == inClientLocale then
+                local npc_gossip_table = data[npc]
+                if npc_gossip_table then
+                    for text, hash in pairs(npc_gossip_table) do
+                        text_entries[text] = text_entries[text] or
+                            hash -- Respect module priority, don't overwrite the entry if there is already one
+                    end
                 end
             end
         end
+    end
+    collect(true)
+    if next(text_entries) == nil then
+        collect(false)
     end
 
     local best_result = FuzzySearchBestKeys(text, text_entries)
@@ -581,24 +644,41 @@ function DataModules:PrepareSound(soundData)
         return false
     end
 
-    for _, module in self:GetModules() do
-        local data = module.SoundLengthLookupByFileName
-        if data then
-            local playerGenderedFileName = DataModules:AddPlayerGenderToFilename(soundData.fileName)
-            local length = data[playerGenderedFileName]
-            if length then
-                soundData.fileName = playerGenderedFileName
-            else
-                length = data[soundData.fileName]
-            end
-            if length then
-                soundData.filePath = format([[Interface\AddOns\%s\%s]], module.METADATA.AddonName,
-                    module.GetSoundPath and module:GetSoundPath(soundData.fileName, soundData.event) or
-                    soundData.fileName)
-                soundData.length = length
-                soundData.module = module
-                EasterEggs:Apply(soundData)
-                return true
+    -- Language before priority. A pack that holds the line in the language the player
+    -- asked for answers it even if a higher-priority pack holds the same line in another
+    -- language; only when no pack in the selected language has it does the fallback
+    -- language get a turn, and the packs within each language keep their own priority
+    -- order. With only English packs installed -- every install that exists today -- the
+    -- English pass is the only one that finds anything, so the result is what it always was.
+    --
+    -- Gossip falls back like any other line. Its file is named for a hash of the English
+    -- text in every language a pack is built in, so the fallback pack holds the same name.
+    local languages = Language:ResolutionOrder()
+
+    local wantedFileName = soundData.fileName
+    local playerGenderedFileName = DataModules:AddPlayerGenderToFilename(wantedFileName)
+    for _, language in ipairs(languages) do
+        for _, module in self:GetModules() do
+            local data = module.SoundLengthLookupByFileName
+            if data and module.METADATA.Language == language then
+                local fileName = wantedFileName
+                local length = data[playerGenderedFileName]
+                if length then
+                    fileName = playerGenderedFileName
+                else
+                    length = data[wantedFileName]
+                end
+                if length then
+                    soundData.fileName = fileName
+                    soundData.filePath = format([[Interface\AddOns\%s\%s]], module.METADATA.AddonName,
+                        module.GetSoundPath and module:GetSoundPath(fileName, soundData.event) or
+                        fileName)
+                    soundData.length = length
+                    soundData.module = module
+                    soundData.language = language
+                    EasterEggs:Apply(soundData)
+                    return true
+                end
             end
         end
     end

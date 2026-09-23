@@ -11,7 +11,7 @@ local Expect, Failures = H.Expecter(print)
 
 local function LoadBooks()
     local SpokenBooks = {}
-    for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Reader", "Contribute" }) do
+    for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Language", "Reader", "Audio", "Contribute" }) do
         local chunk = assert(loadfile(BOOKS .. file .. ".lua"))
         chunk("SpokenBooks", SpokenBooks)
     end
@@ -38,6 +38,8 @@ Expect("the key is the client-side checksum",
 Expect("the book title is carried", envelope:match("\nbook=Ledger of Nothing\n") ~= nil, true)
 Expect("the page number is carried", envelope:match("\nnumber=2\n") ~= nil, true)
 Expect("the text is carried", envelope:match("\nA page no corpus has ever held%.\n") ~= nil, true)
+Expect("the locale is the client's", envelope:match("\nlocale=enUS\n") ~= nil, true)
+Expect("...and the packs' language goes beside it", envelope:match("\npack=enUS\n") ~= nil, true)
 
 -- A page the corpus already has is not a gap: the complaint there is a report, not a payload.
 local REGISTRY_1 = "Hillsbrad Town Registry\n\nWe the people of Hillsbrad do solemny swear our faith and devotion to the Alliance maintained by the great monarchs, King Magni Bronzebeard of Ironforge and King Anduin Wrynn of Stormwind.\n\nHerein lies the town registry for purposes of governing this fair city in the foothills of the great Alterac Mountains as well as serving as a record of those who have paid their taxes to their Kings and to the great almighty Alliance."

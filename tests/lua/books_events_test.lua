@@ -25,7 +25,7 @@ local REGISTRY_2 = "Magistrate Rutherford Burnside\nAll debts settled.\n\nBlacks
 
 local function LoadBooks()
     local SpokenBooks = {}
-    for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Reader", "Audio", "Playlist",
+    for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Language", "Reader", "Audio", "Playlist",
         "UI/PlayButton", "Events", "Commands" }) do
         local chunk = assert(loadfile(BOOKS .. file .. ".lua"))
         chunk("SpokenBooks", SpokenBooks)

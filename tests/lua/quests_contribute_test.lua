@@ -39,7 +39,8 @@ Expect("the event is the panel on screen", envelope:match("\nevent=accept\n") ~=
 Expect("the npc is carried", envelope:match("\nnpc=12345 Deathguard Linnea\n") ~= nil, true)
 Expect("the title is carried", envelope:match("\ntitle=A Rough Start\n") ~= nil, true)
 Expect("the text is the client's", envelope:match("\nKill six of them%.\nThen come back%.\n") ~= nil, true)
-Expect("the locale is carried", envelope:match("\nlocale=%a+\n") ~= nil, true)
+Expect("the locale is carried", envelope:match("\nlocale=enUS\n") ~= nil, true)
+Expect("the pack language is carried beside it", envelope:match("\npack=enUS\n") ~= nil, true)
 Expect("the build is carried", envelope:match("\nbuild=") ~= nil, true)
 Expect("no character name is carried", envelope:match(world.playerName or "Tester") == nil, true)
 Expect("the addon field carries the real .toc version, not the \"dev\" fallback",

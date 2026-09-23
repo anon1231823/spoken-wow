@@ -48,6 +48,9 @@ function SpokenZones:CaptureContribution(mapID, subzone)
         { "build", format("%s/%s", (GetBuildInfo and select(1, GetBuildInfo())) or "?",
                                    (GetBuildInfo and select(2, GetBuildInfo())) or "?") },
         { "locale", (GetLocale and GetLocale()) or "enUS" },
+        -- The language narration plays in, said outright so triage can see what the player
+        -- was hearing beside what their client shows.
+        { "pack", self:GetPackLanguage() },
         { "map", mapID },
     }
     local zone = self:GetMapName(mapID)

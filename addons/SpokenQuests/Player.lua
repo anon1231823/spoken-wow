@@ -161,10 +161,12 @@ local REPORT = {
         tooltip:AddLine("A wrong reading, a mispronounced name -- this gives you a link to say so.",
             1, 0.8, 0.2, true)
     end,
-    onClick = function()
+    onClick = function(clip)
         local target = ReportButton:CurrentTarget()
         if target then
-            ReportButton:ShowLink(target)
+            -- The language the clip was spoken in, which PrepareSound recorded: a fallback line
+            -- is an English take even under a German selection, and its report is about that.
+            ReportButton:ShowLink(target, clip.language)
         else
             StaticPopup_Show("VOICEOVER_ERROR",
                 "This client cannot tell which line that was, so there is no address to report.")
@@ -212,9 +214,10 @@ function Player:Enqueue(soundData)
     end
 
     if not DataModules:PrepareSound(soundData) then
-        Debug:Record("data-lookup-failed", format("No sound entry for event %s, quest ID %s, title %q",
+        Debug:Record("data-lookup-failed", format("No sound entry for event %s, quest ID %s, title %q, language %s",
             Enums.SoundEvent:GetName(soundData.event) or tostring(soundData.event),
-            tostring(soundData.questID or "none"), soundData.title or soundData.name or ""))
+            tostring(soundData.questID or "none"), soundData.title or soundData.name or "",
+            table.concat(Language:ResolutionOrder(), " then ")))
         return false
     end
 

@@ -22,6 +22,15 @@ local FRAME_STRATAS =
     "DIALOG",
 }
 
+--- The language dropdowns' choices: every language, after one entry of the dropdown's own.
+local function LanguageValues(firstKey, firstLabel)
+    local values = { [firstKey] = firstLabel }
+    for _, locale in ipairs(Language.LOCALES) do
+        values[locale.code] = locale.name
+    end
+    return values
+end
+
 -- General Tab
 ---@type AceConfigOptionsTable
 local GeneralTab =
@@ -80,6 +89,36 @@ local GeneralTab =
                     end,
                 },
                 LineBreak3 = { type = "description", name = "", order = 7 },
+                -- Its own row: the two selects are one decision, and beside OGThrall they wrap
+                -- unevenly on a narrow options frame.
+                LineBreak4 = { type = "description", name = "", order = 8.5 },
+                VoiceLanguage = {
+                    type = "select",
+                    width = 1.1,
+                    order = 9,
+                    name = L.OPT_VOICE_LANGUAGE,
+                    desc = L.OPT_VOICE_LANGUAGE_TIP,
+                    values = function()
+                        return LanguageValues(Language.AUTO,
+                            format(L.OPT_FOLLOW_CLIENT_FMT, Language:GetName(Language:GetClientLanguage())))
+                    end,
+                    get = function(info) return Addon.db.profile.Audio.VoiceLanguage end,
+                    set = function(info, value)
+                        Addon.db.profile.Audio.VoiceLanguage = value
+                    end,
+                },
+                FallbackLanguage = {
+                    type = "select",
+                    width = 1.1,
+                    order = 10,
+                    name = L.OPT_FALLBACK_LANGUAGE,
+                    desc = L.OPT_FALLBACK_LANGUAGE_TIP,
+                    values = function() return LanguageValues("none", L.OPT_FALLBACK_NONE) end,
+                    get = function(info) return Addon.db.profile.Audio.FallbackLanguage end,
+                    set = function(info, value)
+                        Addon.db.profile.Audio.FallbackLanguage = value
+                    end,
+                },
                 OGThrall = {
                     type = "toggle",
                     order = 8,
@@ -276,6 +315,7 @@ function Options:AddDataModule(module, order)
             Title = MakeDescription(L.OPT_ROW_TITLE, module.Title),
             ModuleVersion = MakeDescription(L.OPT_ROW_FORMAT_VERSION, module.ModuleVersion),
             ModulePriority = MakeDescription(L.OPT_ROW_PRIORITY, module.ModulePriority),
+            Language = MakeDescription(L.OPT_ROW_LANGUAGE, function() return Language:GetName(module.Language) end),
             ContentVersion = MakeDescription(L.OPT_ROW_CONTENT_VERSION, module.ContentVersion),
             LoadOnDemand = MakeDescription(L.OPT_ROW_LOAD_ON_DEMAND, module.LoadOnDemand and YES or NO),
             Loaded = MakeDescription(L.OPT_ROW_LOADED, function() return DataModules:GetModule(module.AddonName) and YES or NO end),
