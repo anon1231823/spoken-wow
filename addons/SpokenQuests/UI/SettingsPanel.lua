@@ -21,10 +21,10 @@ local panel, category
 -- steps through them in the order the list is written.
 local GOSSIP_ORDER = { "Always", "OncePerQuestNPC", "OncePerNPC", "Never" }
 local GOSSIP_LABELS = {
-    Always = "Always",
-    OncePerQuestNPC = "Once per quest NPC",
-    OncePerNPC = "Once per NPC",
-    Never = "Never",
+    Always = L.OPT_GREETING_LABEL_ALWAYS,
+    OncePerQuestNPC = L.OPT_GREETING_LABEL_ONCE_QUEST,
+    OncePerNPC = L.OPT_GREETING_LABEL_ONCE_NPC,
+    Never = L.OPT_GREETING_LABEL_NEVER,
 }
 
 local function GossipName()
@@ -51,10 +51,9 @@ function SettingsPanel:Setup()
     panel.layout = layout
     local audio = function() return Addon.db.profile.Audio end
 
-    layout:Note("Quest and gossip dialogue read aloud. The sound channel and the player "
-        .. "window are Spoken Player's settings, since they cover every Spoken addon.", 460, 32)
+    layout:Note(L.OPT_PANEL_NOTE, 460, 32)
 
-    layout:Section("Dialogue")
+    layout:Section(L.OPT_SECTION_DIALOGUE)
     local greetings
     -- Greyed out with autoplay off: the frequency only decides which greetings autoplay
     -- reads, and a live control that does nothing reads as broken.
@@ -74,15 +73,13 @@ function SettingsPanel:Setup()
             greetings.layoutLabel:SetTextColor(shade, shade, shade)
         end
     end
-    layout:Checkbox("Read dialogue when it opens",
-        "Quests, NPC greetings and gossip. Off, nothing starts by itself: press Play on the "
-            .. "window, or type /spq read.",
+    layout:Checkbox(L.OPT_PANEL_AUTOPLAY,
+        L.OPT_PANEL_AUTOPLAY_TIP,
         function() return Addon:IsAutoplayOn() end,
         function(value) Addon:SetAutoplay(value) end,
         SyncGreetings)
     layout:Indent()
-    greetings = layout:Dropdown("NPC greetings", "How often an NPC's greeting is read. The Once "
-        .. "options are remembered for this character across revisits and logins.",
+    greetings = layout:Dropdown(L.OPT_PANEL_GREETINGS, L.OPT_PANEL_GREETINGS_TIP,
         GOSSIP_ORDER,
         GossipName,
         function(name)
@@ -95,19 +92,18 @@ function SettingsPanel:Setup()
     if greetings.HookScript then
         greetings:HookScript("OnShow", SyncGreetings)
     end
-    layout:Checkbox("Stop when the quest window closes",
-        "Narration stops as soon as you close the gossip or quest window.",
+    layout:Checkbox(L.OPT_PANEL_STOP_ON_CLOSE,
+        L.OPT_PANEL_STOP_ON_CLOSE_TIP,
         function() return audio().StopAudioOnDisengage end,
         function(value) audio().StopAudioOnDisengage = value end)
-    layout:Checkbox("OG Thrall",
-        "Plays the original AI VoiceOver recording of Thrall's \"All members of the Horde "
-            .. "are equal in my eyes\" speech instead of this addon's.",
+    layout:Checkbox(L.OPT_OG_THRALL,
+        L.OPT_OG_THRALL_TIP,
         function() return audio().OGThrall end,
         function(value) audio().OGThrall = value end)
 
     -- The packs, inline. This used to be a branch of the options tree behind a button,
     -- which is two clicks and a second window to answer "is my audio installed".
-    layout:Section("Sound packs")
+    layout:Section(L.OPT_SECTION_PACKS)
     local packRows = {}
     local function DescribePacks()
         local present = 0
@@ -127,8 +123,7 @@ function SettingsPanel:Setup()
             packRows[index].note:Hide()
         end
         if present == 0 and packRows[1] then
-            packRows[1].note:SetText("|cffff8080No sound pack installed.|r Nothing is read "
-                .. "aloud without one.")
+            packRows[1].note:SetText(L.OPT_NO_PACK)
             packRows[1].note:Show()
         end
     end
@@ -151,29 +146,29 @@ function SettingsPanel:Setup()
         if not DataModules.presentModules[module.AddonName] then
             offered = offered + 1
             if offered == 1 then
-                layout:Note("Not installed:", 460, 16)
+                layout:Note(L.OPT_NOT_INSTALLED, 460, 16)
             end
-            layout:Button((string.gsub(module.Title, "Spoken Quests Audio: ", "")), 220,
+            layout:Button(DataModules:GetPackLabel(module), 220,
                 function() ReportButton:ShowAddress(module.URL) end,
-                "Hands you the address to copy: " .. module.URL)
+                format(L.OPT_COPY_ADDRESS_FMT, module.URL))
         end
     end
 
-    layout:Section("Troubleshooting")
-    layout:Checkbox("Print debug messages",
-        "Prints what the addon decided, and why, to the chat window.",
+    layout:Section(L.OPT_SECTION_TROUBLE)
+    layout:Checkbox(L.OPT_PANEL_DEBUG,
+        L.OPT_PANEL_DEBUG_TIP,
         function() return Addon.db.profile.DebugEnabled end,
         function(value) Addon.db.profile.DebugEnabled = value end)
-    layout:Button("Play a test line", 200, function() Options:RunSelfTest() end,
-        "Plays a known line through the player, the way a real one goes.")
-    layout:Button("Print diagnostics", 200, function() Options:PrintDiagnostics() end,
-        "Prints the client, the sound settings and what the addon has loaded.")
+    layout:Button(L.OPT_TEST_LINE, 200, function() Options:RunSelfTest() end,
+        L.OPT_TEST_LINE_TIP)
+    layout:Button(L.OPT_PRINT_DIAG, 200, function() Options:PrintDiagnostics() end,
+        L.OPT_PRINT_DIAG_TIP)
 
     -- Profiles, inline. AceDB owns them; this is the whole of what its own options screen
     -- offered, minus the second window to reach it.
     local db = Addon.db
     if db.GetProfiles then
-        layout:Section("Profile")
+        layout:Section(L.OPT_SECTION_PROFILE)
         local function Others()
             local others, current = {}, db:GetCurrentProfile()
             for _, name in ipairs(db:GetProfiles()) do
@@ -183,29 +178,28 @@ function SettingsPanel:Setup()
             end
             return others
         end
-        layout:Dropdown("Settings profile",
-            "Profiles keep a separate set of these settings. Characters can share one or "
-                .. "have their own.",
+        layout:Dropdown(L.OPT_PROFILE,
+            L.OPT_PROFILE_TIP,
             function() return db:GetProfiles() end,
             function() return db:GetCurrentProfile() end,
             function(name) db:SetProfile(name) end)
-        layout:Button("Reset this profile", 200, function() db:ResetProfile() end,
-            "Puts every setting in this profile back to its default.")
+        layout:Button(L.OPT_RESET_PROFILE, 200, function() db:ResetProfile() end,
+            L.OPT_RESET_PROFILE_TIP)
         if db.CopyProfile then
-            layout:Dropdown("Copy settings from", "Overwrites this profile with another's.",
+            layout:Dropdown(L.OPT_COPY_PROFILE, L.OPT_COPY_PROFILE_TIP,
                 Others,
                 function() return nil end,
                 function(name) db:CopyProfile(name) end,
                 nil,
-                function(name) return name or "pick one" end)
+                function(name) return name or L.OPT_COPY_PICK end)
         end
         if db.DeleteProfile then
-            layout:Dropdown("Delete a profile", "Deletes a profile you are not using.",
+            layout:Dropdown(L.OPT_DELETE_PROFILE, L.OPT_DELETE_PROFILE_TIP,
                 Others,
                 function() return nil end,
                 function(name) db:DeleteProfile(name) end,
                 nil,
-                function(name) return name or "pick one" end)
+                function(name) return name or L.OPT_COPY_PICK end)
         end
     end
 

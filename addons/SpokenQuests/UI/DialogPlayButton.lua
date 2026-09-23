@@ -140,7 +140,7 @@ end
 --- Play or Stop, for the line already found. All a clip starting or stopping can change.
 function DialogPlayButton:Relabel()
     if self.line then
-        self.button:SetText(QueuedClipFor(self.line) and "Stop" or "Play")
+        self.button:SetText(QueuedClipFor(self.line) and L.OPT_STOP or L.OPT_PLAY)
     end
 end
 
@@ -168,7 +168,7 @@ function DialogPlayButton:Setup()
     local button = CreateFrame("Button", nil, UIParent, "UIPanelButtonTemplate")
     button:SetWidth(BUTTON_WIDTH)
     button:SetHeight(BUTTON_HEIGHT)
-    button:SetText("Play")
+    button:SetText(L.OPT_PLAY)
     if button.SetFrameStrata then
         button:SetFrameStrata("DIALOG")
     end
@@ -182,11 +182,11 @@ function DialogPlayButton:Setup()
             return
         end
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        if self:GetText() == "Stop" then
-            GameTooltip:SetText("Stop reading")
+        if self:GetText() == L.OPT_STOP then
+            GameTooltip:SetText(L.OPT_STOP_TIP)
         else
-            GameTooltip:SetText("Read this aloud")
-            GameTooltip:AddLine("Autoplay is off in the Spoken Quests settings.", 1, 0.8, 0.2, true)
+            GameTooltip:SetText(L.OPT_READ_TIP)
+            GameTooltip:AddLine(L.OPT_AUTOPLAY_OFF_TIP, 1, 0.8, 0.2, true)
         end
         GameTooltip:Show()
     end)

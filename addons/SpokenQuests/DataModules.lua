@@ -198,6 +198,30 @@ function DataModules:GetAvailableModules()
     return ipairs(self.availableModules)
 end
 
+-- Short display names for the known sound packs, shown on the download buttons.
+-- Keyed by folder name, which is the stable identifier; the titles themselves come
+-- from the packs and cannot be translated. Anything unknown falls back to the
+-- title with the shared prefix stripped, exactly what the buttons showed before.
+local PACK_LABELS = {
+    SpokenQuestsAudioAll = "OPT_PACK_ALL",
+    SpokenQuestsAudioAlliance = "OPT_PACK_ALLIANCE",
+    SpokenQuestsAudioHorde = "OPT_PACK_HORDE",
+    SpokenQuestsAudioShared = "OPT_PACK_SHARED",
+    SpokenQuestsAudioGossip = "OPT_PACK_GOSSIP",
+}
+
+---@param module DataModuleMetadata
+function DataModules:GetPackLabel(module)
+    local key = module and PACK_LABELS[module.AddonName]
+    local label = key and L[key]
+    if label then
+        return label
+    end
+    local title = module and module.Title or ""
+    title = string.gsub(title, "Spoken Quests Audio: ", "")
+    return (string.gsub(title, "VoiceOver Data %- ", ""))
+end
+
 ---@param loadModules? boolean Whether LoadOnDemand data modules should be loaded during enumeration
 function DataModules:EnumerateAddons(loadModules)
     assert(GetNumAddOns and GetAddOnMetadata and GetAddOnInfo,

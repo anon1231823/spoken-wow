@@ -163,7 +163,7 @@ function ContributeButton:Setup()
     -- "Contribute", not "No voice -- contribute": the long form was the first thing a player
     -- said was wrong about this button, and it has to share a row with Blizzard's own controls.
     -- The books addon's button already says exactly this word, so the two now match.
-    button:SetText("Contribute")
+    button:SetText(L.OPT_CONTRIBUTE)
     if button.SetFrameStrata then
         -- DIALOG rather than a verified match for QuestFrame's or GossipFrame's own strata --
         -- this file did not check what either actually is (neither Vanilla/QuestFrame.xml,

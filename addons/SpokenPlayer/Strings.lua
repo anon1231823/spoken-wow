@@ -1,17 +1,17 @@
 setfenv(1, SpokenEnv)
 
--- Interface strings. English only for now; a locale file per language can overlay this
--- table the way the zones addon's Locale/ files do, once there is a second language.
+-- Interface strings, keyed for the locale overlays in Locale/.
+-- English is the fallback: a locale file assigns only the keys it translates.
 L = {
     PLAY = "Play",
     OPT_MINIMAL_PLAYER = "Minimal Classic player",
     OPT_MINIMAL_PLAYER_TIP = "Compact native-style portrait and progress bar. Click the quest title to skip it, or the plus button for the queue; right-click for playback and source actions. Turn off to restore the original player.",
-    MIN_QUEUE_HINT = "%d queued. Click to show or hide the queue.",
+    MIN_QUEUE_HINT = "%1$d queued. Click to show or hide the queue.",
     MIN_MENU_HINT = "Right-click for playback options. Drag the speaker name to move.",
     MIN_SKIP = "Skip line",
     MIN_STOP_ALL = "Stop all",
     MIN_RESTART = "Play from beginning",
-    MIN_SCROLL_QUEUE = "%d-%d of %d  (scroll)",
+    MIN_SCROLL_QUEUE = "%1$d-%2$d of %3$d  (scroll)",
     PAUSE = "Pause",
     PAUSE_TOOLTIP = "Pause stops the clip; play starts it again from the beginning. The game cannot resume a sound part-way through.",
     STOP = "Stop",
@@ -32,7 +32,7 @@ L = {
     OPT_HIDE_PORTRAIT_TIP = "Show the queue without the speaker's portrait. Useful alongside addons that replace the dialog window.",
     OPT_HIDE_FRAME = "Hide the player entirely",
     OPT_HIDE_FRAME_TIP = "Play everything without ever showing the window.",
-    OPT_HIDE_ACTION = "Hide the %s button",
+    OPT_HIDE_ACTION = "Hide the %1$s button",
     OPT_HIDE_ACTION_TIP = "Takes it off the player. What it does is reachable elsewhere.",
     OPT_SCALE = "Player scale",
     OPT_CONTRIBUTE_TITLE = "Contributions",
@@ -46,11 +46,16 @@ L = {
     CONTRIBUTE_INTRO = "Spoken has no voice for this yet, and the game's own text is how it gets one.\n\nYou can send just this line now, or let Spoken quietly keep every line it is missing while you play, and send them all at once whenever you like.\n\nNothing leaves your game until you upload it yourself, and you can stop gathering at any time in the Spoken Player settings.",
     CONTRIBUTE_JUST_THIS = "Send just this line",
     CONTRIBUTE_GATHER = "Gather as I play",
-    GATHER_INSTRUCTIONS = "Gathering is on: %d line(s) kept so far. Play as usual.\n\nTo send them:\n1. Log out, or type /reload, so the game writes its files.\n2. Open spoken.rusty.one/contribute and choose Upload a file.\n3. Pick this file:\nWorld of Warcraft\\%s\\WTF\\Account\\<your account>\\SavedVariables\\SpokenContributions.lua\n\nThen clear the gathered lines in the Spoken Player settings. /spoken share shows this again.",
+    GATHER_INSTRUCTIONS = "Gathering is on: %1$d line(s) kept so far. Play as usual.\n\nTo send them:\n1. Log out, or type /reload, so the game writes its files.\n2. Open spoken.rusty.one/contribute and choose Upload a file.\n3. Pick this file:\nWorld of Warcraft\\%2$s\\WTF\\Account\\<your account>\\SavedVariables\\SpokenContributions.lua\n\nThen clear the gathered lines in the Spoken Player settings. /spoken share shows this again.",
     OPT_RESET = "Reset position",
     OPT_AUDIO_TITLE = "Audio",
     OPT_CHANNEL = "Sound channel",
     OPT_CHANNEL_TIP = "Which of the game's sound channels every Spoken addon speaks on. Each follows its own volume slider in the game's sound options.",
+    OPT_CHANNEL_MASTER = "Master",
+    OPT_CHANNEL_SFX = "SFX",
+    OPT_CHANNEL_MUSIC = "Music",
+    OPT_CHANNEL_AMBIENCE = "Ambience",
+    OPT_CHANNEL_DIALOG = "Dialog",
     OPT_MUTE_DIALOGUE = "Silence the game's own dialogue while speaking",
     OPT_MUTE_DIALOGUE_TIP = "Mute the Dialog channel while a line is being read, so an NPC's own voice does not talk over it. Restored when the queue empties.",
     OPT_MUTE_DIALOGUE_TIP_VANILLA = "Cut off an NPC's greeting voiceline when a line starts being read.",

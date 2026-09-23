@@ -29,6 +29,16 @@ end
 
 local CHANNELS = { "Master", "SFX", "Music", "Ambience", "Dialog" }
 
+-- Display labels for the values above, which stay English internally: the stored
+-- channel name is what playback passes to the sound API.
+local CHANNEL_LABELS = {
+    Master = L.OPT_CHANNEL_MASTER,
+    SFX = L.OPT_CHANNEL_SFX,
+    Music = L.OPT_CHANNEL_MUSIC,
+    Ambience = L.OPT_CHANNEL_AMBIENCE,
+    Dialog = L.OPT_CHANNEL_DIALOG,
+}
+
 local function Build(canvas)
     panel = CreateFrame("Frame", "SpokenOptionsPanel", UIParent)
     panel.name = "Spoken Player"
@@ -84,7 +94,8 @@ local function Build(canvas)
         function() return audio().SoundChannel end,
         function(v) audio().SoundChannel = v end,
         -- The handle belongs to the old channel, so a line already speaking cannot move.
-        function() SoundQueue:RemoveAllSoundsFromQueue() end)
+        function() SoundQueue:RemoveAllSoundsFromQueue() end,
+        function(channel) return CHANNEL_LABELS[channel] or channel end)
     if audio().AutoToggleDialog ~= nil then
         layout:Checkbox(L.OPT_MUTE_DIALOGUE,
             Version.IsLegacyVanilla and L.OPT_MUTE_DIALOGUE_TIP_VANILLA or L.OPT_MUTE_DIALOGUE_TIP,
