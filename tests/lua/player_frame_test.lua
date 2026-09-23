@@ -533,5 +533,19 @@ Expect("...the row and its width", string.find(report, 'text="Cutting Teeth"', 1
 Expect("...which portrait renderer is in use", string.find(report, "portrait kind=none", 1, true) ~= nil, true)
 Expect("...and how much is queued", string.find(report, "queue=1", 1, true) ~= nil, true)
 
+---------------------------------------------------------------- after PLAYER_LOGOUT
+-- AceDB strips a subtable that holds only defaults when the player logs out, and the frame
+-- goes on resizing while the UI is torn down. Its layout used to index the missing table.
+env, quests = Boot()
+quests:Enqueue(H.Clip({ present = { header = "Gornek", label = "Cutting Teeth", bullet = "b",
+    portrait = { kind = "none" } } }))
+env.PlayerFrame:Update()
+env.Addon.db.profile.Frame = nil
+local ok, err = pcall(function()
+    env.MinimalPlayer:LayoutQueue()
+    env.PlayerFrame:Update()
+end)
+Expect("the layout survives the logout's stripped settings", ok and "no error" or tostring(err), "no error")
+
 if Failures() > 0 then print(string.format("\n%d failure(s)", Failures())); os.exit(1) end
 print("\nAll player frame tests passed")

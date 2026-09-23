@@ -125,7 +125,7 @@ function Actions:Configure(frame, clip)
     -- A button an addon built keeps its own click handler, so that is not a label problem.
     local owner = clip and clip.source and clip.source.key or "?"
 
-    local hidden = Addon.db.profile.Frame.HiddenActions or {}
+    local hidden = (Addon.db.profile.Frame or Defaults.profile.Frame).HiddenActions or {}
     for _, action in ipairs(list) do
         if not hidden[action.id] and (not action.visible or action.visible()) then
             local id = owner .. ":" .. action.id
