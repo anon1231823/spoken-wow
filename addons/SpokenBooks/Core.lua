@@ -36,6 +36,10 @@ local defaults = {
 	-- Off, because a reader who has not asked for it should hear a book whenever they open
 	-- it. On, a book is narrated the first time it is opened and stays quiet after that.
 	readOnce = false,
+	-- Follow the client, and fall back on English: every pack that exists today is English,
+	-- so a player with the pack they already have hears what they heard before.
+	voiceLanguage = "auto",
+	fallbackLanguage = "enUS",
 }
 
 function SpokenBooks:InitDB()
@@ -183,9 +187,14 @@ SpokenBooks.SITE_URL = "https://spoken.rusty.one"
 --- the id is frozen -- `b:{pageTextID}` per docs/books/AGENTS.md -- so the addon can build
 --- the link from what it already has, with no per-page table to ship and nothing to escape.
 --- The zones landing page makes the same trade with its {mapID}/{slug} path.
-function SpokenBooks:ReportURL(pageId)
+function SpokenBooks:ReportURL(pageId, language)
 	if type(pageId) ~= "number" then
 		return nil
+	end
+	-- Filed under the language of the clip being reported, which the site reads off its
+	-- /{lang}/ prefix. English keeps the address it always had.
+	if language and language ~= "enUS" then
+		return format("%s/%s/books/r/%d", self.SITE_URL, language, pageId)
 	end
 	return format("%s/books/r/%d", self.SITE_URL, pageId)
 end

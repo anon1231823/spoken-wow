@@ -33,7 +33,10 @@ function SpokenBooks:CaptureContribution()
 		{ "addon", format("SpokenBooks/%s", self.version or "dev") },
 		{ "build", format("%s/%s", (GetBuildInfo and select(1, GetBuildInfo())) or "?",
 		                           (GetBuildInfo and select(2, GetBuildInfo())) or "?") },
+		-- The client's, because the page is as the client shows it. The packs' language goes
+		-- beside it, so triage can see what the player was hearing.
 		{ "locale", (GetLocale and GetLocale()) or "enUS" },
+		{ "pack", self:GetPackLanguage() },
 		{ "page", sum },
 		{ "book", (ItemTextGetItem and ItemTextGetItem()) or "" },
 		{ "number", (ItemTextGetPage and ItemTextGetPage()) or 1 },

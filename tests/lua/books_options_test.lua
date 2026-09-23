@@ -1,7 +1,7 @@
--- The books addon's settings panel: three switches and the button that undoes the third,
--- laid out by the same UI/Layout.lua every Spoken addon carries. The panel is this addon's
--- own canvas rather than a section of the player's, because its settings are about books and
--- must be reachable with the player absent. Run with `make test-player`.
+-- The books addon's settings panel: three switches, the language choices and the button that
+-- undoes the third, laid out by the same UI/Layout.lua every Spoken addon carries. The panel is
+-- this addon's own canvas rather than a section of the player's, because its settings are about
+-- books and must be reachable with the player absent. Run with `make test-player`.
 local here = arg[0]:match("^(.*)/[^/]*$") or "."
 package.path = here .. "/?.lua;" .. package.path
 local stub = require("wow_client_stub")
@@ -15,7 +15,7 @@ _G.SpokenBooksDB = nil
 _G.SpokenBooksCharDB = nil
 
 local B = {}
-for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Reader", "Audio", "Playlist",
+for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Language", "Reader", "Audio", "Playlist",
     "UI/Layout", "UI/Options", "Events", "Commands" }) do
     assert(loadfile(BOOKS .. file .. ".lua"))("SpokenBooks", B)
 end
@@ -45,8 +45,8 @@ for _, child in ipairs(content.children) do
     end
 end
 
-Expect("both sections are there", table.concat(headings, "|"),
-    "Reading|What this character has read")
+Expect("every section is there", table.concat(headings, "|"),
+    "Reading|Language|What this character has read")
 Expect("every switch has a row", table.getn(checkboxes), 3)
 Expect("...and the record has its button", table.getn(buttons), 1)
 

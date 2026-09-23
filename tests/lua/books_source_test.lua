@@ -12,7 +12,7 @@ local Expect, Failures = H.Expecter(print)
 
 local function LoadBooks()
     local SpokenBooks = {}
-    for _, file in ipairs({ "Locale/enUS", "Checksum", "Core" }) do
+    for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Language" }) do
         local chunk = assert(loadfile(BOOKS .. file .. ".lua"))
         chunk("SpokenBooks", SpokenBooks)
     end
@@ -45,7 +45,7 @@ _G.SpokenBooksDB = nil
 local bootEnv = stub.LoadSpoken(SPOKEN)
 bootEnv.Addon:Enable()
 local B0 = {}
-for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Reader", "Audio", "Playlist", "Events", "Commands" }) do
+for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Language", "Reader", "Audio", "Playlist", "Events", "Commands" }) do
     assert(loadfile(BOOKS .. file .. ".lua"))("SpokenBooks", B0)
 end
 

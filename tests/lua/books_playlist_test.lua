@@ -29,7 +29,7 @@ _G.SpokenBooksAudioPacks = {
 
 local function LoadBooks()
     local SpokenBooks = {}
-    for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Reader", "Audio", "Playlist", "UI/CopyLink" }) do
+    for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Language", "Reader", "Audio", "Playlist", "UI/CopyLink" }) do
         local chunk = assert(loadfile(BOOKS .. file .. ".lua"))
         chunk("SpokenBooks", SpokenBooks)
     end

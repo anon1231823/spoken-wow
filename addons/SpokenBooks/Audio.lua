@@ -58,7 +58,7 @@ local ACTIONS = {
 			if not clip then
 				return
 			end
-			local url = SpokenBooks:ReportURL(clip.pageId)
+			local url = SpokenBooks:ReportURL(clip.pageId, clip.language)
 			if url and SpokenBooks.ShowCopyLink then
 				SpokenBooks:ShowCopyLink(url,
 					"Copy this address and open it in your browser to report a problem with "
@@ -69,36 +69,46 @@ local ACTIONS = {
 }
 
 --- The clip for a page, as the player's queue wants it, or nil when no pack carries it.
+---
+--- Language before pack order: a pack in the voice language answers before any other, and a
+--- page it lacks falls back to the fallback language's packs -- page by page, so a partial
+--- translation still reads what it has.
 function SpokenBooks:ClipFor(pageId)
 	local place = self:Data() and self:Data().pages[pageId]
 	if not place then
 		return nil
 	end
 
-	for _, pack in ipairs(self:GetAudioPacks()) do
-		local entry = pack.pages[pageId]
-		if entry then
-			local book = self:Data().books[place.book]
-			return {
-				key = "b:" .. pageId,
-				path = [[Interface\AddOns\]] .. pack.addon .. [[\Sounds\]] .. entry.file .. ".mp3",
-				-- 0 means the pack recorded no duration -- an imported take rather than one
-				-- this project cut. The player falls back to its own timer; a wrong number
-				-- here would reset the Play button mid-sentence.
-				length = (entry.len and entry.len > 0) and entry.len or nil,
-				pageId = pageId,
-				present = {
-					header = book and book.title or "",
-					-- Only where there is more than one page: "page 1 of 1" is noise on a
-					-- letter, which is most of this corpus.
-					label = (book and #book.pages > 1)
-						and format("Page %d of %d", place.number, #book.pages)
-						or nil,
-					bullet = "book",
-					portrait = { kind = "texture", texture = BOOK_TEXTURE },
-					actions = ACTIONS,
-				},
-			}
+	local packs = self:GetAudioPacks()
+	for _, language in ipairs(self:LanguageOrder()) do
+		for _, pack in ipairs(packs) do
+			local entry = self:PackLanguage(pack) == language and pack.pages[pageId]
+			if entry then
+				local book = self:Data().books[place.book]
+				return {
+					key = "b:" .. pageId,
+					path = [[Interface\AddOns\]] .. pack.addon .. [[\Sounds\]] .. entry.file .. ".mp3",
+					-- 0 means the pack recorded no duration -- an imported take rather than one
+					-- this project cut. The player falls back to its own timer; a wrong number
+					-- here would reset the Play button mid-sentence.
+					length = (entry.len and entry.len > 0) and entry.len or nil,
+					pageId = pageId,
+					-- What the report is filed under: a fallback page is an English take even
+					-- under a German selection, and its report is about that.
+					language = language,
+					present = {
+						header = book and book.title or "",
+						-- Only where there is more than one page: "page 1 of 1" is noise on a
+						-- letter, which is most of this corpus.
+						label = (book and #book.pages > 1)
+							and format("Page %d of %d", place.number, #book.pages)
+							or nil,
+						bullet = "book",
+						portrait = { kind = "texture", texture = BOOK_TEXTURE },
+						actions = ACTIONS,
+					},
+				}
+			end
 		end
 	end
 

@@ -34,6 +34,20 @@ function SpokenBooks:IsMail()
 	return false
 end
 
+--- A page id from one language's index, or nil.
+local function Find(index, title, number, checksum)
+	local byTitle = title and index.index and index.index[title]
+	local byNumber = byTitle and byTitle[number]
+	local found = byNumber and byNumber[checksum]
+	if found then
+		return found
+	end
+
+	-- The fallback. `loose` holds only checksums no other page shares, so a hit here is
+	-- the page, not a guess between candidates.
+	return index.loose and index.loose[checksum]
+end
+
 --- The page id the client is showing, or nil.
 function SpokenBooks:PageOnScreen()
 	local data = self:Data()
@@ -47,19 +61,15 @@ function SpokenBooks:PageOnScreen()
 	end
 
 	local checksum = self:ChecksumOf(text)
-
 	local title = ItemTextGetItem and ItemTextGetItem()
 	local number = (ItemTextGetPage and ItemTextGetPage()) or 1
-	local byTitle = title and data.index[title]
-	local byNumber = byTitle and byTitle[number]
-	local found = byNumber and byNumber[checksum]
-	if found then
-		return found
-	end
 
-	-- The fallback. `loose` holds only checksums no other page shares, so a hit here is
-	-- the page, not a guess between candidates.
-	return data.loose[checksum]
+	-- The client's own locale first: the title and the words are what this client shows, and
+	-- a German client's are German. `locales` holds an index per language in the shape of the
+	-- English one; a build without it leaves every client on the English index, as before.
+	local localized = data.locales and data.locales[self:GetClientLanguage()]
+	return (localized and Find(localized, title, number, checksum))
+		or Find(data, title, number, checksum)
 end
 
 --- Where a page sits: its book and its number. Nil for a page the lookup does not carry.

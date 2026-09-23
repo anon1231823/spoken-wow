@@ -76,6 +76,26 @@ function SpokenBooks:SetupOptions()
 		L.OPT_READ_ONCE_TIP,
 		Get("readOnce"), Set("readOnce"))
 
+	layout:Section(L.OPT_SECTION_LANGUAGE)
+	local voices = { SpokenBooks.AUTO_LANGUAGE }
+	local fallbacks = { "none" }
+	for _, locale in ipairs(SpokenBooks.LOCALES) do
+		table.insert(voices, locale.code)
+		table.insert(fallbacks, locale.code)
+	end
+	layout:Dropdown(L.OPT_VOICE_LANGUAGE, L.OPT_VOICE_LANGUAGE_TIP,
+		voices, Get("voiceLanguage"), Set("voiceLanguage"), nil, function(code)
+			if code == SpokenBooks.AUTO_LANGUAGE then
+				return L.OPT_FOLLOW_CLIENT_FMT:format(
+					SpokenBooks:GetLanguageName(SpokenBooks:GetClientLanguage()))
+			end
+			return SpokenBooks:GetLanguageName(code)
+		end)
+	layout:Dropdown(L.OPT_FALLBACK_LANGUAGE, L.OPT_FALLBACK_LANGUAGE_TIP,
+		fallbacks, Get("fallbackLanguage"), Set("fallbackLanguage"), nil, function(code)
+			return code == "none" and L.OPT_FALLBACK_NONE or SpokenBooks:GetLanguageName(code)
+		end)
+
 	layout:Section(L.OPT_SECTION_READ)
 	layout:Button(L.OPT_FORGET, 200, function()
 		local count = SpokenBooks:ForgetRead()

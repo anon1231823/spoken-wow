@@ -76,6 +76,7 @@ test-player: ## Run the addons' Lua tests (needs luajit)
 	@$(LUA) tests/lua/books_playlist_test.lua
 	@$(LUA) tests/lua/books_events_test.lua
 	@$(LUA) tests/lua/books_contribute_test.lua
+	@$(LUA) tests/lua/books_language_test.lua
 	@$(LUA) tests/lua/gather_test.lua
 	@$(LUA) tests/lua/zones_contribute_test.lua
 	@$(LUA) tests/lua/migration_test.lua
