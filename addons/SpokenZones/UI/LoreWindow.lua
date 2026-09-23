@@ -106,7 +106,7 @@ local function ShowEntry()
 	if not selection then
 		header:SetText("Spoken Zones")
 		subheader:SetText("")
-		body:SetText("|cff888888Pick a zone on the left. Zones with subzones show a count; click one to expand it.|r")
+		body:SetText("|cff888888" .. L.LORE_WINDOW_EMPTY .. "|r")
 		audioButton:SetTarget(nil, nil)
 		reportButton:SetTarget(nil, nil)
 		return
@@ -118,7 +118,7 @@ local function ShowEntry()
 		local entry = SpokenZones.Subzones[mapID] and SpokenZones.Subzones[mapID][key]
 		if entry then
 			header:SetText(entry.name or key)
-			subheader:SetText("in " .. (SpokenZones:GetMapName(mapID) or ""))
+			subheader:SetText(string.format(L.IN_ZONE_FMT, SpokenZones:GetMapName(mapID) or ""))
 			if SpokenZones:IsPending(entry) then
 				body:SetText("|cff888888" .. L.LORE_NOT_WRITTEN:format(entry.name or key) .. "|r")
 				audioButton:SetTarget(nil, nil)

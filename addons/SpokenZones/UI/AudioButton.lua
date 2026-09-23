@@ -10,6 +10,8 @@
 
 local ADDON_NAME, SpokenZones = ...
 
+local L = SpokenZones.L
+
 local BUTTON_WIDTH = 58
 local BUTTON_HEIGHT = 20
 
@@ -41,9 +43,9 @@ function AudioButton:Refresh()
 	self:Show()
 
 	if SpokenZones:IsPlayingLore(self.mapID, self.areaKey) then
-		self:SetText("Stop")
+		self:SetText(L.STOP)
 	else
-		self:SetText("Play")
+		self:SetText(L.PLAY)
 	end
 end
 
@@ -54,7 +56,7 @@ end
 function SpokenZones:CreateAudioButton(parent)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
 	button:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
-	button:SetText("Play")
+	button:SetText(L.PLAY)
 	button:Hide()
 
 	button.SetTarget = AudioButton.SetTarget
@@ -70,9 +72,9 @@ function SpokenZones:CreateAudioButton(parent)
 	button:SetScript("OnEnter", function(self)
 		GameTooltip:SetOwner(self, "ANCHOR_LEFT")
 		if SpokenZones:IsPlayingLore(self.mapID, self.areaKey) then
-			GameTooltip:SetText("Stop the narration")
+			GameTooltip:SetText(L.AUDIO_STOP_TIP)
 		else
-			GameTooltip:SetText("Read this lore aloud")
+			GameTooltip:SetText(L.AUDIO_READ_TIP)
 		end
 		GameTooltip:Show()
 	end)

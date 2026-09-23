@@ -60,7 +60,7 @@ local function Build()
     -- player who does not know what to do with it will do nothing with it.
     local hint = frame:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     hint:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -34)
-    hint:SetText("Press Ctrl+C, then paste it at:")
+    hint:SetText(L.OPT_COPY_HINT_PASTE)
 
     local scroll = CreateFrame("ScrollFrame", "SpokenContributeBoxScroll", frame)
     scroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -56)
@@ -166,10 +166,10 @@ local function ShowPayload(payload, address, isLink)
         -- The link already carries the address in it (https://.../contribute#e1=...), so a
         -- second line repeating just the host would tell the player nothing the payload above
         -- doesn't already say.
-        box.hint:SetText("Copy this and open it in your browser:")
+        box.hint:SetText(L.OPT_COPY_HINT_LINK)
         box.address:SetText("")
     else
-        box.hint:SetText("Press Ctrl+C, then paste it at:")
+        box.hint:SetText(L.OPT_COPY_HINT_PASTE)
         box.address:SetText(address or "")
     end
 end

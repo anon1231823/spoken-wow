@@ -23,6 +23,8 @@
 
 local ADDON_NAME, SpokenZones = ...
 
+local L = SpokenZones.L
+
 -- THERE IS NO STAND-IN CLIP. A line with no audio in the installed pack plays
 -- nothing and says why.
 --
@@ -222,19 +224,19 @@ function SpokenZones:SetupAudio()
 	-- Switchable from the player's settings, named there by this addon. The quests addon
 	-- declares the same id, so one setting covers whichever is speaking.
 	if Spoken.RegisterOptionalAction then
-		Spoken:RegisterOptionalAction("report", "Report")
+		Spoken:RegisterOptionalAction("report", L.REPORT_BUTTON)
 	end
 
 	Spoken:RegisterCallback("AUDIO_CHANGED", function()
 		SpokenZones:NotifyAudioChanged()
 	end)
 
-	Spoken.Minimap:AddEntry("zones", { id = "lore", text = "Open lore window", order = 1,
+	Spoken.Minimap:AddEntry("zones", { id = "lore", text = L.MENU_LORE_WINDOW, order = 1,
 		onClick = function() SpokenZones:ToggleLoreWindow() end })
-	Spoken.Minimap:AddEntry("zones", { id = "settings", text = "Spoken Zones settings", order = 2,
+	Spoken.Minimap:AddEntry("zones", { id = "settings", text = L.MENU_ZONE_SETTINGS, order = 2,
 		onClick = function() SpokenZones:OpenOptions() end })
 	if Spoken.AddSettingsLink then
-		Spoken:AddSettingsLink("Spoken Zones settings", function() SpokenZones:OpenOptions() end)
+		Spoken:AddSettingsLink(L.MENU_ZONE_SETTINGS, function() SpokenZones:OpenOptions() end)
 	end
 end
 
@@ -386,20 +388,27 @@ function SpokenZones:SetActiveAudioPack(name)
 	return false
 end
 
--- "high (128 kbps)" -- for the options dropdown and /spz audio. The language is
--- named only when it is not the one being read, which is the case worth pointing
--- at: a pack that is installed but will never play.
+-- "high (128 kbps)" -- for the options dropdown and /spz audio. Quality words come
+-- from the packs, so only the known ones translate; anything else keeps its own
+-- word rather than a wrong one. The language is named only when it is not the one
+-- being read, which is the case worth pointing at: a pack that is installed but
+-- will never play. A pack in a language this client cannot draw keeps its ASCII
+-- code, which every client can draw, instead of boxes.
 function SpokenZones:GetAudioPackLabel(pack)
 	if not pack then
 		return "none"
 	end
+	local qualityLabels = { high = L.PACK_QUALITY_HIGH, standard = L.PACK_QUALITY_STANDARD }
 	local quality = pack.quality or "standard"
-	local label = quality
+	local label = qualityLabels[quality] or quality
 	if pack.bitrate and pack.bitrate > 0 then
-		label = ("%s (%d kbps)"):format(quality, pack.bitrate)
+		label = ("%s (%d kbps)"):format(label, pack.bitrate)
 	end
 	local language = pack.language or "enUS"
 	if language ~= self:GetLanguage() then
+		if self:CanRenderLanguage(language) then
+			language = self:GetLanguageName(language)
+		end
 		label = ("%s, %s"):format(label, language)
 	end
 	return label
@@ -453,13 +462,12 @@ local ACTIONS = {
 		-- would be a blank square; `text` is what they draw instead. The addon's own
 		-- CreateReportButton still builds the labelled one the lore window uses.
 		icon = [[Interface\HelpFrame\HelpIcon-Bug]],
-		label = "Report a problem",
+		label = L.OPT_REPORT_PROBLEM,
 		text = "R",
 		anchor = "topright",
 		tooltip = function(tooltip)
-			tooltip:SetText("Report a problem")
-			tooltip:AddLine("Wrong lore, a bad reading, a mispronounced name -- this gives "
-				.. "you a link to say so.", 1, 0.8, 0.2, true)
+			tooltip:SetText(L.OPT_REPORT_PROBLEM)
+			tooltip:AddLine(L.OPT_REPORT_LINE_TIP, 1, 0.8, 0.2, true)
 		end,
 		onClick = function(clip)
 			if not clip then
@@ -467,8 +475,7 @@ local ACTIONS = {
 			end
 			local url = SpokenZones:ReportURL(clip.mapID, clip.areaKey)
 			if url then
-				SpokenZones:ShowCopyLink(url,
-					"Copy this address and open it in your browser to report a problem with this entry.")
+				SpokenZones:ShowCopyLink(url, L.OPT_REPORT_LINE_ADDRESS)
 			end
 		end,
 	}

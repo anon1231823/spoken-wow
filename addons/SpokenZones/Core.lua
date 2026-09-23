@@ -804,18 +804,18 @@ local function CmdLanguage(arg)
 			if not SpokenZones:CanRenderLanguage(locale.code) then
 				SpokenZones:Print(
 					"|cffffcc00this client has no fonts for %s|r -- it would draw as boxes",
-					locale.name
+					SpokenZones:GetLanguageName(locale.code)
 				)
 			else
 				SpokenZones:Print(
 					"|cffffcc00%s is not finished yet|r -- /spz lang %s force to preview it anyway",
-					locale.name, locale.code
+					SpokenZones:GetLanguageName(locale.code), locale.code
 				)
 			end
 			return
 		end
 
-		SpokenZones:Print("language set to %s -- |cffffcc00/reload to apply|r", locale.name)
+		SpokenZones:Print("language set to %s -- |cffffcc00/reload to apply|r", SpokenZones:GetLanguageName(locale.code))
 		return
 	end
 
@@ -826,7 +826,7 @@ local function CmdLanguage(arg)
 		SpokenZones:Print(
 			"  %s %s -- %s",
 			locale.code == SpokenZones:GetLanguage() and "|cff66bbff*|r" or " ",
-			locale.code, locale.name
+			locale.code, SpokenZones:GetLanguageName(locale.code)
 		)
 	end
 	if SpokenZones:GetLanguagePreference() == nil then

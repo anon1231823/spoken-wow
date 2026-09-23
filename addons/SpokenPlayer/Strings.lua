@@ -70,4 +70,6 @@ L = {
     OPT_MINIMAP_SHOW = "Show the minimap button",
     OPT_MINIMAP_LOCK = "Lock the minimap button",
     OPT_NO_SETTINGS_API = "open Game Menu -> Options -> AddOns -> Spoken Player, or type /spoken options",
+    OPT_COPY_HINT_LINK = "Copy this and open it in your browser:",
+    OPT_COPY_HINT_PASTE = "Press Ctrl+C, then paste it at:",
 }

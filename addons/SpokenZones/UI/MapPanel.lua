@@ -213,11 +213,11 @@ local function Refresh(mapID)
 		-- Fallback hit an ancestor (a dungeon or micro-map inheriting its zone's
 		-- lore); say so rather than silently mislabelling the text.
 		if foundOn ~= mapID then
-			SetCaption("lore for " .. (SpokenZones:GetMapName(foundOn) or "parent zone"))
+			SetCaption(string.format(L.MAP_LORE_FOR_FMT, SpokenZones:GetMapName(foundOn) or "parent zone"))
 		else
 			local subzones = SpokenZones.Subzones[mapID]
 			if subzones and next(subzones) then
-				SetCaption("click a subzone on the map for more")
+				SetCaption(L.MAP_SUBZONE_MORE)
 			else
 				SetCaption("")
 			end
