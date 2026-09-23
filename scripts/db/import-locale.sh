@@ -59,6 +59,20 @@ if [ "$vmangos" != "none" ]; then
   }
 fi
 
+# Column 9 is not vmangos's own: fill_locales_from_tdb.py adds it. Asked before anything else,
+# because without it both imports stop at "Unknown column" halfway through.
+if [ "$vmangos" = "9" ]; then
+  (cd pipelines/quests && "${PYTHON:-.venv/bin/python}" -c '
+from tts_cli.sql_queries import make_connection
+cur = make_connection().cursor()
+cur.execute("select count(*) from information_schema.columns where table_schema = database() and column_name = %s", ("Title_loc9",))
+raise SystemExit(0 if cur.fetchone()[0] else 1)') || {
+    echo "error: the vmangos dump has no *_loc9 columns for $LOCALE yet. Fill them first:" >&2
+    echo "  (cd pipelines/quests && python tools/fill_locales_from_tdb.py --tdb335 ... --tdb-world ... --tdb-hotfixes ...)" >&2
+    exit 1
+  }
+fi
+
 TUNNEL_PORT=${TUNNEL_PORT:-55432}
 tunnel=""
 cleanup() { [ -z "$tunnel" ] || kill "$tunnel" 2>/dev/null || true; }

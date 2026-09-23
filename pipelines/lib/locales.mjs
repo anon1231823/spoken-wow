@@ -6,6 +6,10 @@
 // Must stay in step with the addons' own lists (SpokenZones.LOCALES in
 // addons/SpokenZones/Language.lua); pipelines/zones/tools/validate.mjs fails the build if
 // they drift, and apps/web/src/lib/lang.test.ts does the same for the site.
+//
+// The clients the Classic-family addons run on, and no others. Italian was here and went on
+// 2026-09-23: no Classic client has ever shipped it, so no player could run it and no
+// vanilla-era Italian text or audio exists to import.
 
 export const BASE_LOCALE = "enUS";
 
@@ -21,17 +25,16 @@ export const BASE_LOCALE = "enUS";
 // `bcp47` is what a page in the language declares in <html lang>, so a screen reader and a
 // browser's translate prompt know what they are looking at.
 //
-// `vmangos` is the N in the world database's *_locN columns, or null for a language the
-// dump carries no text for. Portuguese and Italian are the cases that matter: a pack may be
-// recorded in either, but their text has to be written rather than extracted.
+// `vmangos` is the N in the world database's *_locN columns. 1 to 8 are vmangos's own; 9 is
+// Portuguese, which 1.12 never shipped and the Classic Era client does -- a fresh dump has no
+// *_loc9 column, and pipelines/quests/tools/fill_locales_from_tdb.py adds and fills it.
 export const LOCALES = [
   { code: "enUS", name: "English", script: "latin", elevenLabs: "en", bcp47: "en-US", vmangos: 0 },
   { code: "deDE", name: "German", script: "latin", elevenLabs: "de", bcp47: "de-DE", vmangos: 3 },
   { code: "esES", name: "Spanish (EU)", script: "latin", elevenLabs: "es", bcp47: "es-ES", vmangos: 6 },
   { code: "esMX", name: "Spanish (AL)", script: "latin", elevenLabs: "es", bcp47: "es-MX", vmangos: 7 },
   { code: "frFR", name: "French", script: "latin", elevenLabs: "fr", bcp47: "fr-FR", vmangos: 2 },
-  { code: "itIT", name: "Italian", script: "latin", elevenLabs: "it", bcp47: "it-IT", vmangos: null },
-  { code: "ptBR", name: "Portuguese", script: "latin", elevenLabs: "pt", bcp47: "pt-BR", vmangos: null },
+  { code: "ptBR", name: "Portuguese", script: "latin", elevenLabs: "pt", bcp47: "pt-BR", vmangos: 9 },
   { code: "ruRU", name: "Russian", script: "cyrillic", elevenLabs: "ru", bcp47: "ru-RU", vmangos: 8 },
   { code: "koKR", name: "Korean", script: "korean", elevenLabs: "ko", bcp47: "ko-KR", vmangos: 1 },
   { code: "zhCN", name: "Chinese (S)", script: "simplifiedchinese", elevenLabs: "zh", bcp47: "zh-CN", vmangos: 4 },

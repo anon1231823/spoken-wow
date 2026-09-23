@@ -40,7 +40,6 @@ SpokenZones.LOCALES = {
 	{ code = "esES", name = "Spanish (EU)", native = "Espanol", script = "latin" },
 	{ code = "esMX", name = "Spanish (AL)", native = "Espanol (AL)", script = "latin" },
 	{ code = "frFR", name = "French", native = "Francais", script = "latin" },
-	{ code = "itIT", name = "Italian", native = "Italiano", script = "latin" },
 	{ code = "ptBR", name = "Portuguese", native = "Portugues", script = "latin" },
 	{ code = "ruRU", name = "Russian", native = "Russkiy", script = "cyrillic" },
 	{ code = "koKR", name = "Korean", native = "Hangugeo", script = "korean" },

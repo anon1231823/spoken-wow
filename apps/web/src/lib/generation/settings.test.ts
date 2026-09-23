@@ -175,7 +175,7 @@ async function noRow() {
 }
 
 afterEach(async () => {
-  await db().query(`delete from "generation_setting_locale" where "lang" = 'itIT'`);
+  await db().query(`delete from "generation_setting_locale" where "lang" = 'koKR'`);
   await db().query(`delete from "generation_setting" where "id"`);
   if (snapshot) {
     await db().query(
@@ -287,7 +287,7 @@ describe("another language's settings", () => {
   it("follow English's, without its accent tags, until the language saves its own", async () => {
     await writeRaceTags({ dwarf: "[Scottish accent]" }, null);
     const english = await readSettings();
-    const italian = await readSettings("itIT");
+    const italian = await readSettings("koKR");
 
     expect(italian.source).toBe("english");
     expect(italian.config.modelId).toBe(english.config.modelId);
@@ -296,13 +296,13 @@ describe("another language's settings", () => {
 
   it("are its own once saved, and English does not move", async () => {
     const before = await readSettings();
-    await writeSettings(validateConfig({ ...VALID, raceTags: {} }), null as unknown as string, "itIT");
+    await writeSettings(validateConfig({ ...VALID, raceTags: {} }), null as unknown as string, "koKR");
 
-    expect((await readSettings("itIT")).source).toBe("database");
-    expect((await readSettings("itIT")).config.modelId).toBe(VALID.modelId);
+    expect((await readSettings("koKR")).source).toBe("database");
+    expect((await readSettings("koKR")).config.modelId).toBe(VALID.modelId);
     expect((await readSettings()).config).toEqual(before.config);
 
-    await resetSettings("itIT");
-    expect((await readSettings("itIT")).source).toBe("english");
+    await resetSettings("koKR");
+    expect((await readSettings("koKR")).source).toBe("english");
   });
 });

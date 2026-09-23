@@ -59,7 +59,7 @@ endef
         package-audio-complete package-meta push-complete icon \
         downloads-status \
         factions release release-audio release-wago release-curse \
-        release-dry import-corpus import-locale export-corpus export-ignores \
+        release-dry import-corpus import-locale fill-locales export-corpus export-ignores \
         sync check-synced full-release
 
 help: ## Show this help
@@ -321,6 +321,18 @@ import-corpus: ## corpus/corpus.json.gz -> quest_line (needs DATABASE_URL and ps
 import-locale: ## vmangos *_locN -> quest_line + entity_name (LOCALE=deDE; needs MySQL and DATABASE_URL)
 	@test -n "$(LOCALE)" || { echo "import-locale: set LOCALE, e.g. LOCALE=deDE"; exit 2; }
 	@$(QUESTS_CLI) import-locale --lang $(LOCALE)
+
+# The gaps vmangos leaves -- esMX, zhTW and zhCN text it lacks, and ptBR, which it has no
+# column for -- filled in the local dump from TrinityCore's releases, before import-locale.
+# Only empty cells, and only where TDB's English is vmangos's; see the tool. The three dumps
+# are the extracted TDB_full_world_335, TDB_full_world_12xx and TDB_full_hotfixes_12xx .sql
+# from https://github.com/TrinityCore/TrinityCore/releases. ARGS=--dry-run counts instead.
+fill-locales: ## Fill vmangos's empty *_locN columns from TrinityCore (TDB335= TDB_WORLD= TDB_HOTFIXES=)
+	@test -n "$(TDB335)" -a -n "$(TDB_WORLD)" -a -n "$(TDB_HOTFIXES)" || { \
+	  echo "fill-locales: set TDB335, TDB_WORLD and TDB_HOTFIXES to the extracted TDB .sql files"; exit 2; }
+	@cd $(QUESTS_DIR) && $(abspath $(PYTHON)) tools/fill_locales_from_tdb.py \
+	  --tdb335 "$(abspath $(TDB335))" --tdb-world "$(abspath $(TDB_WORLD))" \
+	  --tdb-hotfixes "$(abspath $(TDB_HOTFIXES))" $(ARGS)
 
 export-corpus: check-synced ## quest_line -> corpus/corpus.json.gz (ARGS=--check to compare instead)
 	@$(QUESTS_CLI) export-corpus $(ARGS)

@@ -7,7 +7,7 @@
  * `language` table -- and is asked on the server.
  *
  * THE SAME LIST AS pipelines/lib/locales.mjs, restated here as a literal so the type of a
- * code is the eleven codes rather than `string`. lang.test.ts fails if the two drift, the way
+ * code is the ten codes rather than `string`. lang.test.ts fails if the two drift, the way
  * pipelines/zones/tools/validate.mjs guards the addon's copy.
  *
  * It was here before as lib/zones/lang.ts, and went when zones lost its language axis in
@@ -19,7 +19,6 @@ export const LOCALES = [
   { code: "esES", name: "Spanish (EU)", bcp47: "es-ES", elevenLabs: "es" },
   { code: "esMX", name: "Spanish (AL)", bcp47: "es-MX", elevenLabs: "es" },
   { code: "frFR", name: "French", bcp47: "fr-FR", elevenLabs: "fr" },
-  { code: "itIT", name: "Italian", bcp47: "it-IT", elevenLabs: "it" },
   { code: "ptBR", name: "Portuguese", bcp47: "pt-BR", elevenLabs: "pt" },
   { code: "ruRU", name: "Russian", bcp47: "ru-RU", elevenLabs: "ru" },
   { code: "koKR", name: "Korean", bcp47: "ko-KR", elevenLabs: "ko" },
