@@ -1,5 +1,12 @@
 # Changelog — Spoken Player
 
+## 2.2.1 — 2026-09-23
+
+- **No more Lua error on logout or `/reload` with the Minimal Classic layout.** When its
+  settings were all still at their defaults, the game dropped them while logging out, and the
+  panel went on laying itself out as the UI was taken down and failed to find them. It falls
+  back to the defaults now. On the WoW Forever beta this happened on every logout and reload.
+
 ## 2.2.0 — 2026-09-22
 
 - **A second layout, and it is the one the player opens in.** **Minimal Classic** is a
