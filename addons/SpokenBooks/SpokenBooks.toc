@@ -19,6 +19,15 @@
 
 Checksum.lua
 Data/Books.lua
+Locale/enUS.lua
+Locale/deDE.lua
+Locale/esES.lua
+Locale/frFR.lua
+Locale/ptBR.lua
+Locale/ruRU.lua
+Locale/koKR.lua
+Locale/zhCN.lua
+Locale/zhTW.lua
 Core.lua
 Reader.lua
 Contribute.lua

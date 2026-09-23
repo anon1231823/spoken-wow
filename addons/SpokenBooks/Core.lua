@@ -11,6 +11,8 @@
 
 local ADDON_NAME, SpokenBooks = ...
 
+local L = SpokenBooks.L
+
 -- C_AddOns is the modern home of GetAddOnMetadata; the global is the older one. Reading
 -- through whichever exists removes a class of load-time failure on a client this has not
 -- been run on.
@@ -151,14 +153,14 @@ function SpokenBooks:SetupSource()
 	-- indistinguishable, to a reader, from an addon that did not load.
 	--
 	if Spoken.Minimap then
-		Spoken.Minimap:AddEntry("books", { id = "Read", text = "Read this book", order = 1,
+		Spoken.Minimap:AddEntry("books", { id = "Read", text = L.MENU_READ_BOOK, order = 1,
 			onClick = function() SpokenBooks:ReadOrExplain() end })
-		Spoken.Minimap:AddEntry("books", { id = "Options", text = "Spoken Books settings",
+		Spoken.Minimap:AddEntry("books", { id = "Options", text = L.MENU_BOOK_SETTINGS,
 			order = 2, onClick = function() SpokenBooks:OpenOptions() end })
 	end
 
 	if Spoken.AddSettingsLink then
-		Spoken:AddSettingsLink("Spoken Books settings",
+		Spoken:AddSettingsLink(L.MENU_BOOK_SETTINGS,
 			function() SpokenBooks:OpenOptions() end)
 	end
 
