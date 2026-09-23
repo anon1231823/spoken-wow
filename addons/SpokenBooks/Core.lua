@@ -138,7 +138,7 @@ function SpokenBooks:SetupSource()
 	-- Switchable from the player's settings, named there by this addon. The other two
 	-- declare the same id, so one setting covers whichever is speaking.
 	if Spoken.RegisterOptionalAction then
-		Spoken:RegisterOptionalAction("report", "Report")
+		Spoken:RegisterOptionalAction("report", L.REPORT)
 	end
 
 	-- The row bullet the clips ask for. Registered rather than assumed: an unregistered id

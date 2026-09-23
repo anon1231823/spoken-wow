@@ -295,7 +295,7 @@ function Player:Setup()
     -- Switchable from the player's settings, named there by this addon. The zones addon
     -- declares the same id, so one setting covers whichever is speaking.
     if Spoken.RegisterOptionalAction then
-        Spoken:RegisterOptionalAction("report", "Report")
+        Spoken:RegisterOptionalAction("report", L.OPT_REPORT)
     end
 
     Spoken:RegisterBullet("quest-accept",   TEXTURES .. "SoundQueueBulletAccept", 14)
