@@ -15,7 +15,7 @@ _G.SpokenBooksDB = nil
 _G.SpokenBooksCharDB = nil
 
 local B = {}
-for _, file in ipairs({ "Checksum", "Core", "Reader", "Audio", "Playlist",
+for _, file in ipairs({ "Locale/enUS", "Checksum", "Core", "Reader", "Audio", "Playlist",
     "UI/Layout", "UI/Options", "Events", "Commands" }) do
     assert(loadfile(BOOKS .. file .. ".lua"))("SpokenBooks", B)
 end

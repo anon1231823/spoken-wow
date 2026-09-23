@@ -2,6 +2,8 @@
 -- sources, a clip factory, and a recorder for the player's callbacks.
 local M = {}
 
+local ZONES = (debug.getinfo(1, "S").source:match("^@(.*)/[^/]*$") or ".") .. "/../../addons/SpokenZones/"
+
 function M.Fresh(stub, spokenDir)
     stub.SetClient("11509")
     stub.ResetSound()
@@ -83,8 +85,14 @@ function M.NewZoneLore()
         showMapPanel = true, showHoverPreview = true, panelSide = "RIGHT",
         panelWidth = 320, fontSize = 12, showMinimapButton = true }
     local Z = { printed = {}, heard = {}, zoneChanged = {}, clientLocale = "enUS" }
-    Z.L = { QUEUE_HELD_COMBAT = "Waiting for combat to end.", QUEUE_HELD_CINEMATIC = "Waiting for the cinematic to end.",
-        QUEUE_HELD_OFF = "Narration is turned off." }
+    -- The addon's real English strings, so a label a file reads (a minimap entry, a button,
+    -- a settings row) is the one the client would show rather than nil. Language.lua is what
+    -- normally takes the table, and it is not loaded here.
+    local english
+    Z.RegisterStrings = function(_, _, strings) english = strings end
+    assert(loadfile(ZONES .. "Locale/enUS.lua"))("SpokenZones", Z)
+    Z.RegisterStrings = nil
+    Z.L = english
     Z.Subzones = { [1411] = { ["valley of trials"] = { name = "Valley of Trials" } } }
     function Z:Get(key) return cfg[key] end
     function Z:Set(key, value) cfg[key] = value end
@@ -107,6 +115,7 @@ function M.NewZoneLore()
     function Z:GetSelectableLanguages() return { { code = "enUS", name = "English" } } end
     function Z:GetLanguagePreference() return nil end
     function Z:GetLocaleInfo() return { name = "English" } end
+    function Z:GetLanguageName(code) return code and Z.L["LANG_" .. code] or "Automatic" end
     function Z:RedrawPanel() end
     return Z
 end

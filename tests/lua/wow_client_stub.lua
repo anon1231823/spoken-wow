@@ -126,6 +126,8 @@ local function Widget(kind, name)
     function w:AddLine(t) self.lines = self.lines or {}; table.insert(self.lines, t) end
     function w:NumLines() return self.lines and table.getn(self.lines) or 0 end
     function w:GetText() return self.text end
+    -- A rough 7px a character, so a button sized to its label has a width to read back.
+    function w:GetTextWidth() return string.len(self.text or "") * 7 end
     function w:SetWidth(v) self.width = v end
     function w:SetHeight(v) self.height = v end
     function w:SetBackdrop(backdrop) self.backdrop = backdrop end
@@ -621,6 +623,22 @@ function _G.strsplit(sep, str, limit)
     end
     return unpack(out)
 end
+-- The client's string.format takes positional arguments (%1$s), which translations use to
+-- put words in their own order; stock Lua's does not. Reordered here, then formatted plainly.
+-- Replaced on the string table itself, so ("..."):format and the format global get it too.
+local plainFormat = string.format
+string.format = function(fmt, ...)
+    if type(fmt) ~= "string" or not fmt:find("%%%d+%$") then
+        return plainFormat(fmt, ...)
+    end
+    local args, ordered, n = { ... }, {}, 0
+    local plain = fmt:gsub("%%(%d+)%$", function(index)
+        n = n + 1
+        ordered[n] = args[tonumber(index)]
+        return "%"
+    end)
+    return plainFormat(plain, unpack(ordered, 1, n))
+end
 _G.format = string.format
 _G.strlower = string.lower
 _G.strupper = string.upper
@@ -1061,7 +1079,7 @@ function M.LoadQuests(addonDirectory, spokenDirectory)
     for _, module in ipairs({ "QuestOverlayUI", "Options" }) do
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
-    for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "EasterEggs",
+    for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "Strings", "FuzzySearch", "EasterEggs",
         "DataModules", "ReportButton", "Player", "VoiceOver", "Contribute" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
@@ -1086,7 +1104,7 @@ function M.LoadQuestsAlone(addonDirectory)
     for _, module in ipairs({ "QuestOverlayUI", "Options" }) do
         VO[module] = setmetatable({}, { __index = function() return function() end end })
     end
-    for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "FuzzySearch", "EasterEggs",
+    for _, file in ipairs({ "Version", "Enums", "Utils", "Debug", "Strings", "FuzzySearch", "EasterEggs",
         "DataModules", "ReportButton", "Player", "VoiceOver", "Contribute" }) do
         dofile(addonDirectory .. file .. ".lua")
     end
