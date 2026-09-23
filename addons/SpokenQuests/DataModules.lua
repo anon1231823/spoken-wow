@@ -415,23 +415,33 @@ function DataModules:GetNPCGossipTextHash(soundData)
 
     local text_entries = {}
 
-    -- The selected language only, and no fallback. A gossip hash indexes the NPC's text
-    -- as *this* client renders it, so a pack recorded against another locale holds hashes
-    -- for text this client never shows; merging those in would let a pack in the wrong
-    -- language supply the key that then fails to resolve to a clip.
-    local language = Language:GetVoiceLanguage()
-
-    for _, module in self:GetModules() do
-        local data = module[table]
-        if data and module.METADATA.Language == language then
-            local npc_gossip_table = data[npc]
-            if npc_gossip_table then
-                for text, hash in pairs(npc_gossip_table) do
-                    text_entries[text] = text_entries[text] or
-                        hash -- Respect module priority, don't overwrite the entry if there is already one
+    -- A gossip table maps the NPC's text *as a client shows it* to the line's hash, so the
+    -- tables that can match exactly are the ones written in the client's own locale --
+    -- which is not the language the player chose to hear: an English client playing a
+    -- Portuguese pack still shows English text. The hash is the line's, not the recording's,
+    -- so whichever table found it, PrepareSound looks for the clip in the voice language.
+    --
+    -- Only when no pack in the client's locale knows this NPC are the rest searched. That is
+    -- what every non-English client has always done with English packs, and it mostly works:
+    -- most NPCs have a single line, and the fuzzy match lands on it whatever it is shown in.
+    local client = Language:GetClientLanguage()
+    local function collect(inClientLocale)
+        for _, module in self:GetModules() do
+            local data = module[table]
+            if data and (module.METADATA.Language == client) == inClientLocale then
+                local npc_gossip_table = data[npc]
+                if npc_gossip_table then
+                    for text, hash in pairs(npc_gossip_table) do
+                        text_entries[text] = text_entries[text] or
+                            hash -- Respect module priority, don't overwrite the entry if there is already one
+                    end
                 end
             end
         end
+    end
+    collect(true)
+    if next(text_entries) == nil then
+        collect(false)
     end
 
     local best_result = FuzzySearchBestKeys(text, text_entries)
@@ -598,18 +608,12 @@ function DataModules:PrepareSound(soundData)
     -- asked for answers it even if a higher-priority pack holds the same line in another
     -- language; only when no pack in the selected language has it does the fallback
     -- language get a turn, and the packs within each language keep their own priority
-    -- order. A single-language install -- which is every install that exists today --
-    -- runs exactly one pass and behaves as it always has.
+    -- order. With only English packs installed -- every install that exists today -- the
+    -- English pass is the only one that finds anything, so the result is what it always was.
     --
-    -- Gossip is the exception and gets no second pass: a gossip line is addressed by a
-    -- hash of the client's own rendering of the NPC's text, so a pack recorded in another
-    -- language hashes it differently and cannot hold this client's key at all. Falling
-    -- back there could only ever find nothing, and searching for it would be a promise
-    -- this addon cannot keep.
+    -- Gossip falls back like any other line. Its file is named for a hash of the English
+    -- text in every language a pack is built in, so the fallback pack holds the same name.
     local languages = Language:ResolutionOrder()
-    if Enums.SoundEvent:IsGossipEvent(soundData.event) then
-        languages = { languages[1] }
-    end
 
     local wantedFileName = soundData.fileName
     for _, language in ipairs(languages) do

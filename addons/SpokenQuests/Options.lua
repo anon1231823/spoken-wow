@@ -80,6 +80,9 @@ local GeneralTab =
                     end,
                 },
                 LineBreak3 = { type = "description", name = "", order = 7 },
+                -- Its own row: the two selects are one decision, and beside OGThrall they wrap
+                -- unevenly on a narrow options frame.
+                LineBreak4 = { type = "description", name = "", order = 8.5 },
                 VoiceLanguage = {
                     type = "select",
                     width = 1.1,
@@ -103,7 +106,7 @@ local GeneralTab =
                     width = 1.1,
                     order = 10,
                     name = "Fallback Language",
-                    desc = "What to play when no pack in your chosen language holds a line. None leaves that line silent rather than speaking it in a language you did not ask for. NPC greetings never fall back: they are matched on the client's own text.",
+                    desc = "What to play when no pack in your chosen language holds a line. None leaves that line silent rather than speaking it in a language you did not ask for.",
                     values = function()
                         local values = { none = "None (stay silent)" }
                         for _, locale in ipairs(Language.LOCALES) do

@@ -120,28 +120,62 @@ VO = Install(PACKS, "enUS")
 VO.Addon.db.profile.Audio.VoiceLanguage = "ptBR"
 Expect("F. a language may be chosen the client does not run in", (Resolve(VO, 1)), "PortuguesePack")
 
----------------------------------------------------------------- G. gossip is same-language only
--- A gossip line is keyed by a hash of the client's own rendering of the NPC's text, so a
--- pack in another language cannot hold this client's key. It must not be fallen back to.
+---------------------------------------------------------------- G. gossip: text by client, clip by voice
+-- Which line an NPC is saying is found from its text as the *client* shows it; the clip is
+-- then played in the voice language. The file is named for the English text's hash in
+-- every language, so every pack names the same line the same way.
 local GOSSIP_TEXT = "Welcome to the inn, traveller."
+local GOSSIP_TEXT_PT = "Bem-vindo a estalagem, viajante."
 local GOSSIP_HASH = "inn-greeting"
 -- The NPC ID the GUID below names, as Utils:GetIDFromGUID reads it.
 local INNKEEPER = 6929
 local EN_GOSSIP = { [INNKEEPER] = { [GOSSIP_TEXT] = GOSSIP_HASH } }
-
--- The English pack holds the hash and the clip; the Portuguese one holds neither, and is
--- the selected language.
-VO = Install({
-    { folder = "EnglishPack", lines = { [GOSSIP_HASH] = 4.0 }, gossip = EN_GOSSIP },
-    { folder = "PortuguesePack", language = "ptBR", lines = { ["1-accept"] = 5.5 } },
-}, "ptBR")
-Expect("G. gossip does not fall back to another language", ResolveGossip(VO, GOSSIP_TEXT), nil)
-Expect("G. ...even though a quest line in that same pack would", (Resolve(VO, 1)), "PortuguesePack")
+local PT_GOSSIP = { [INNKEEPER] = { [GOSSIP_TEXT_PT] = GOSSIP_HASH } }
 
 VO = Install({ { folder = "EnglishPack", lines = { [GOSSIP_HASH] = 4.0 }, gossip = EN_GOSSIP } }, "enUS")
 local gossipPack, gossipSound = ResolveGossip(VO, GOSSIP_TEXT)
-Expect("G. gossip in the selected language plays", gossipPack, "EnglishPack")
+Expect("G. gossip plays on the install that exists today", gossipPack, "EnglishPack")
 Expect("G. ...resolved through the pack's own hash", gossipSound.fileName, GOSSIP_HASH)
+
+-- A German client with English packs: Follow Client selects German, no pack holds it, and
+-- the English tables are the only ones there are. This is every EU player today; it must
+-- keep playing the English clip rather than go quiet.
+VO = Install({ { folder = "EnglishPack", lines = { [GOSSIP_HASH] = 4.0 }, gossip = EN_GOSSIP } }, "deDE")
+Expect("G. a client in a language no pack declares keeps its English gossip",
+    ResolveGossip(VO, "Willkommen im Gasthaus, Reisender."), "EnglishPack")
+
+-- An English client choosing Portuguese: the English table recognises the text, the
+-- Portuguese pack speaks it.
+local BOTH = {
+    { folder = "EnglishPack", lines = { [GOSSIP_HASH] = 4.0 }, gossip = EN_GOSSIP },
+    { folder = "PortuguesePack", language = "ptBR", lines = { [GOSSIP_HASH] = 4.5 }, gossip = PT_GOSSIP },
+}
+VO = Install(BOTH, "enUS")
+VO.Addon.db.profile.Audio.VoiceLanguage = "ptBR"
+gossipPack, gossipSound = ResolveGossip(VO, GOSSIP_TEXT)
+Expect("G. gossip is spoken in the voice language, not the client's", gossipPack, "PortuguesePack")
+Expect("G. ...under the same hash", gossipSound.fileName, GOSSIP_HASH)
+
+-- The client's own tables are searched first, and only they, when they know the NPC: a
+-- Portuguese client asking with Portuguese text finds it in the Portuguese table even
+-- though the English one lists the NPC too and has higher priority.
+VO = Install({
+    { folder = "EnglishPack", priority = 100, lines = { ["en-only"] = 4.0 },
+      gossip = { [INNKEEPER] = { [GOSSIP_TEXT_PT] = "en-only" } } },
+    { folder = "PortuguesePack", language = "ptBR", lines = { [GOSSIP_HASH] = 4.5 }, gossip = PT_GOSSIP },
+}, "ptBR")
+local _, lookedUp = ResolveGossip(VO, GOSSIP_TEXT_PT)
+Expect("G. the client locale's table outranks another language's", lookedUp.fileName, GOSSIP_HASH)
+
+-- Gossip falls back per line like any other line...
+VO = Install({
+    { folder = "EnglishPack", lines = { [GOSSIP_HASH] = 4.0 }, gossip = EN_GOSSIP },
+    { folder = "PortuguesePack", language = "ptBR", lines = { ["1-accept"] = 5.5 }, gossip = PT_GOSSIP },
+}, "ptBR")
+Expect("G. a gossip line the voice language lacks falls back", ResolveGossip(VO, GOSSIP_TEXT_PT), "EnglishPack")
+-- ...and like any other line, not when the fallback is off.
+VO.Addon.db.profile.Audio.FallbackLanguage = "none"
+Expect("G. ...and is silent with no fallback", ResolveGossip(VO, GOSSIP_TEXT_PT), nil)
 
 ---------------------------------------------------------------- the metadata itself
 VO = Install({ { folder = "Pack", language = "ptBR", lines = EN_LINES } })
@@ -149,6 +183,17 @@ Expect("a declared language is read off the TOC", VO.DataModules:GetPresentModul
 VO = Install({ { folder = "Pack", language = "xxXX", lines = EN_LINES } })
 Expect("a language this addon does not know reads as English",
     VO.DataModules:GetPresentModule("Pack").Language, "enUS")
+
+---------------------------------------------------------------- in step with SpokenZones
+-- The two addons sit side by side; a language one offers and the other does not is a
+-- setting the player makes once and finds half-honoured.
+local zonesCodes = {}
+local zonesFile = assert(io.open(here .. "/../../addons/SpokenZones/Language.lua"))
+for code in zonesFile:read("*a"):gmatch('{ code = "(%a+)"') do table.insert(zonesCodes, code) end
+zonesFile:close()
+local questsCodes = {}
+for _, locale in ipairs(VO.Language.LOCALES) do table.insert(questsCodes, locale.code) end
+Expect("the language list matches SpokenZones'", table.concat(questsCodes, " "), table.concat(zonesCodes, " "))
 
 stub.SetLocale("enUS")
 stub.ResetAddOns()

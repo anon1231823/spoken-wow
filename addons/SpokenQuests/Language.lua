@@ -24,10 +24,10 @@ setfenv(1, VoiceOver)
 -- has been given a bug, not a feature, and the fallback setting is where that choice
 -- is made explicitly.
 --
--- Gossip is same-language only and has no fallback: gossip lines are addressed by a
--- hash of the NPC's text as the *client* renders it, so a pack recorded against a
--- different client locale hashes its gossip differently and cannot be indexed by this
--- client's hashes at all. See DataModules:GetNPCGossipTextHash.
+-- Gossip needs both identifiers. Which line the NPC is saying is found from its text as
+-- the *client* shows it, so the lookup prefers tables in the client locale; the clip is
+-- then played in the voice language like any other line. See
+-- DataModules:GetNPCGossipTextHash.
 
 Language = {}
 
