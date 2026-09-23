@@ -25,16 +25,16 @@ export const BASE_LOCALE = "enUS";
 // `bcp47` is what a page in the language declares in <html lang>, so a screen reader and a
 // browser's translate prompt know what they are looking at.
 //
-// `vmangos` is the N in the world database's *_locN columns, or null for a language the
-// dump carries no text for. Portuguese is the case that matters: the Classic Era client ships
-// it, but 1.12 never did, so its text comes from elsewhere or is written on the site.
+// `vmangos` is the N in the world database's *_locN columns. 1 to 8 are vmangos's own; 9 is
+// Portuguese, which 1.12 never shipped and the Classic Era client does -- a fresh dump has no
+// *_loc9 column, and pipelines/quests/tools/fill_locales_from_tdb.py adds and fills it.
 export const LOCALES = [
   { code: "enUS", name: "English", script: "latin", elevenLabs: "en", bcp47: "en-US", vmangos: 0 },
   { code: "deDE", name: "German", script: "latin", elevenLabs: "de", bcp47: "de-DE", vmangos: 3 },
   { code: "esES", name: "Spanish (EU)", script: "latin", elevenLabs: "es", bcp47: "es-ES", vmangos: 6 },
   { code: "esMX", name: "Spanish (AL)", script: "latin", elevenLabs: "es", bcp47: "es-MX", vmangos: 7 },
   { code: "frFR", name: "French", script: "latin", elevenLabs: "fr", bcp47: "fr-FR", vmangos: 2 },
-  { code: "ptBR", name: "Portuguese", script: "latin", elevenLabs: "pt", bcp47: "pt-BR", vmangos: null },
+  { code: "ptBR", name: "Portuguese", script: "latin", elevenLabs: "pt", bcp47: "pt-BR", vmangos: 9 },
   { code: "ruRU", name: "Russian", script: "cyrillic", elevenLabs: "ru", bcp47: "ru-RU", vmangos: 8 },
   { code: "koKR", name: "Korean", script: "korean", elevenLabs: "ko", bcp47: "ko-KR", vmangos: 1 },
   { code: "zhCN", name: "Chinese (S)", script: "simplifiedchinese", elevenLabs: "zh", bcp47: "zh-CN", vmangos: 4 },
