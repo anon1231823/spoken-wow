@@ -45,8 +45,8 @@ end
 
 function SpokenZones:CreateReportButton(parent)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-	button:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
-	button:SetText(L.REPORT_BUTTON)
+	button:SetHeight(BUTTON_HEIGHT)
+	SpokenZones:FitButtonToLabels(button, BUTTON_WIDTH, { L.REPORT_BUTTON })
 	button:Hide()
 
 	button.SetTarget = ReportButton.SetTarget

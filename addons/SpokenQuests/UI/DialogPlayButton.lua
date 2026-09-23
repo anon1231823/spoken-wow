@@ -21,6 +21,8 @@ setfenv(1, VoiceOver)
 
 local BUTTON_HEIGHT = 20
 local BUTTON_WIDTH = 60
+-- Room the button's end caps take either side of its label.
+local LABEL_PADDING = 24
 local GAP = 2
 local STRIP_OFFSET = 12
 local CORNER_INSET = 32
@@ -48,6 +50,19 @@ local PANELS = {
     QUEST_GREETING = "QuestFrameGreetingPanel",
     GOSSIP_SHOW = "GossipFrame",
 }
+
+--- Widen the button to fit the widest label it will ever show, never below BUTTON_WIDTH.
+--- Measured once over both labels rather than on each SetText, so flipping between Play
+--- and Stop keeps one width. BUTTON_WIDTH was sized to the English labels; a translated one
+--- can be twice as long. Anchored TOPRIGHT, so it grows into the frame, not off it.
+local function FitToLabels(button, labels)
+    local widest = 0
+    for _, label in ipairs(labels) do
+        button:SetText(label)
+        widest = math.max(widest, button:GetTextWidth())
+    end
+    button:SetWidth(math.max(BUTTON_WIDTH, widest + LABEL_PADDING))
+end
 
 local function Refresh() DialogPlayButton:Refresh() end
 local function Relabel() DialogPlayButton:Relabel() end
@@ -166,8 +181,8 @@ function DialogPlayButton:Setup()
     end
 
     local button = CreateFrame("Button", nil, UIParent, "UIPanelButtonTemplate")
-    button:SetWidth(BUTTON_WIDTH)
     button:SetHeight(BUTTON_HEIGHT)
+    FitToLabels(button, { L.OPT_PLAY, L.OPT_STOP })
     button:SetText(L.OPT_PLAY)
     if button.SetFrameStrata then
         button:SetFrameStrata("DIALOG")

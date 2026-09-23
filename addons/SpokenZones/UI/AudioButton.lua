@@ -17,6 +17,22 @@ local BUTTON_HEIGHT = 20
 
 local AudioButton = {}
 
+-- Room the button's end caps take either side of its label.
+local LABEL_PADDING = 24
+
+--- Widen a text button to fit the widest label it will ever show, never below minWidth.
+--- Measured once over every label rather than on each SetText, so a button that flips
+--- between Play and Stop keeps one width instead of jumping as it changes. The widths
+--- above were sized to the English labels; a translated one can be twice as long.
+function SpokenZones:FitButtonToLabels(button, minWidth, labels)
+	local widest = 0
+	for _, label in ipairs(labels) do
+		button:SetText(label)
+		widest = math.max(widest, button:GetTextWidth())
+	end
+	button:SetWidth(math.max(minWidth, widest + LABEL_PADDING))
+end
+
 --------------------------------------------------------------------------------
 -- State
 --------------------------------------------------------------------------------
@@ -55,7 +71,8 @@ end
 
 function SpokenZones:CreateAudioButton(parent)
 	local button = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-	button:SetSize(BUTTON_WIDTH, BUTTON_HEIGHT)
+	button:SetHeight(BUTTON_HEIGHT)
+	SpokenZones:FitButtonToLabels(button, BUTTON_WIDTH, { L.PLAY, L.STOP })
 	button:SetText(L.PLAY)
 	button:Hide()
 

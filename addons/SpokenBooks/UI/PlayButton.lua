@@ -44,6 +44,22 @@ local L = SpokenBooks.L
 
 local BUTTON_WIDTH = 58
 local BUTTON_HEIGHT = 22
+-- Room the button's end caps take either side of its label.
+local LABEL_PADDING = 24
+
+--- Widen the button to fit the widest label it will ever show, never below BUTTON_WIDTH.
+--- Measured once over every label rather than on each SetText, so flipping between Play,
+--- Stop and Contribute keeps one width. BUTTON_WIDTH was sized to the English labels; a
+--- translated one can be twice as long. The button is pinned by its right edge, so it
+--- grows into the page, not off it.
+local function FitToLabels(button, labels)
+	local widest = 0
+	for _, label in ipairs(labels) do
+		button:SetText(label)
+		widest = math.max(widest, button:GetTextWidth())
+	end
+	button:SetWidth(math.max(BUTTON_WIDTH, widest + LABEL_PADDING))
+end
 
 --- Show, hide and re-label the button for whatever is on screen now.
 ---
@@ -101,8 +117,8 @@ function SpokenBooks:SetupPlayButton()
 	end
 
 	local button = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
-	button:SetWidth(BUTTON_WIDTH)
 	button:SetHeight(BUTTON_HEIGHT)
+	FitToLabels(button, { L.PLAY, L.STOP, L.CONTRIBUTE })
 	button:SetText(L.PLAY)
 	button:Hide()
 
