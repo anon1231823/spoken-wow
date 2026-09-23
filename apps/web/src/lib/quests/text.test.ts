@@ -11,7 +11,7 @@ const { questTextHistory, restoreQuestText, saveQuestText, QuestTextConflict } =
 const { saveName, nameHistory } = await import("@/lib/names/store");
 const { clearIgnore, readIgnores, writeIgnore } = await import("./ignores");
 
-const LANG = "itIT";
+const LANG = "koKR";
 let english: { lineId: string; variant: number; questId: number; fileName: string; source: string };
 let userId: string;
 
@@ -80,7 +80,7 @@ describe("a first translation", () => {
 
 describe("a later translation", () => {
   it("is refused when somebody else saved in between", async () => {
-    const base = { lineId: english.lineId, variant: english.variant, lang: LANG as "itIT", editedBy: userId };
+    const base = { lineId: english.lineId, variant: english.variant, lang: LANG as "koKR", editedBy: userId };
     await saveQuestText({ ...base, text: "Uno." });
     await saveQuestText({ ...base, text: "Due.", expectedVersion: 1 });
     await expect(saveQuestText({ ...base, text: "Tre.", expectedVersion: 1 })).rejects.toBeInstanceOf(
@@ -89,7 +89,7 @@ describe("a later translation", () => {
   });
 
   it("can be put back", async () => {
-    const base = { lineId: english.lineId, variant: english.variant, lang: LANG as "itIT", editedBy: userId };
+    const base = { lineId: english.lineId, variant: english.variant, lang: LANG as "koKR", editedBy: userId };
     await saveQuestText({ ...base, text: "Uno." });
     await saveQuestText({ ...base, text: "Due." });
     await restoreQuestText(english.lineId, english.variant, LANG, 1);

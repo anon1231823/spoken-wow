@@ -40,7 +40,6 @@ Locale/deDE.lua
 Locale/esES.lua
 Locale/esMX.lua
 Locale/frFR.lua
-Locale/itIT.lua
 Locale/ptBR.lua
 Locale/ruRU.lua
 Locale/koKR.lua
@@ -56,7 +55,6 @@ Data/deDE/Aliases.lua
 Data/esES/Aliases.lua
 Data/esMX/Aliases.lua
 Data/frFR/Aliases.lua
-Data/itIT/Aliases.lua
 Data/ptBR/Aliases.lua
 Data/ruRU/Aliases.lua
 Data/koKR/Aliases.lua

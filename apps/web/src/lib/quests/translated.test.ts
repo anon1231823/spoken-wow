@@ -13,7 +13,7 @@ const { closeDb, db, query } = await import("@/lib/db");
 const { corpus } = await import("./catalogue");
 
 // A language nothing else in the suite writes, so these rows cannot meet another test's.
-const LANG = "itIT";
+const LANG = "koKR";
 
 type Line = {
   lineId: string;
